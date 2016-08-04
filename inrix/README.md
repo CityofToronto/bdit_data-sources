@@ -4,9 +4,9 @@ Data collected from a variety of traffic probes from 2007 to 2016 for major stre
 
 Format is:
 
-|tx                 | tmc     | spd | score |
-|-------------------------------------------|
-|2012-07-01 00:00:00|9LX7Q6DDB| 32  | 10    |
+tx                 | tmc     | spd | score 
+-------------------|---------|-----|-------
+2012-07-01 00:00:00|9LX7Q6DDB| 32  | 10    
 
 Where:  
  - **tx**: is the timestamp of the record in UTC
