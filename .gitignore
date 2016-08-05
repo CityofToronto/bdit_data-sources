@@ -1,3 +1,7 @@
+# Database connection settings
+
+dbsettings.py
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
