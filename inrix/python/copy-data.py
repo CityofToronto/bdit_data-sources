@@ -25,7 +25,7 @@ def getYYYYMM (filename):
 for filename in os.listdir():
     if filename.endswith('.csv') and bool(regex_yyyymm.search(filename)): 
         yyyymm = getYYYYMM(filename)
-        table = 'inrix.rawdata'+yyyymm
+        table = 'inrix.raw_data'+yyyymm
         logger.info('Creating table {table}'.format(table=table))
         cursor.execute('CREATE TABLE IF NOT EXISTS {table} () INHERITS (inrix.raw_data)'.format(table=table))
         #cursor.execute('ALTER TABLE {table} OWNER TO rdumas'.format(table=table))
