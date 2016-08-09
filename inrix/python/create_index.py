@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 '''Create indexes for each table in the Inrix database.'''
-#Valuable resource: https://devcenter.heroku.com/articles/postgresql-indexes
 import logging
 from psycopg2 import connect
 
@@ -17,15 +16,15 @@ def _index_table(yyyymm, logger, con, cursor):
     logger.info('Creating indexes on table %s', table)
 
     logger.info('Creating score index')
-    cursor.execute("CREATE INDEX CONCURRENTLY ON {table}(score);".format(table=table))
+    cursor.execute("CREATE INDEX ON {table}(score);".format(table=table))
 
     logger.info('Creating tmc index')
-    cursor.execute("CREATE INDEX CONCURRENTLY ON {table}(tmc);".format(table=table))
+    cursor.execute("CREATE INDEX ON {table}(tmc);".format(table=table))
 
     logger.info('Creating timestamp index')
     #Reducing timestamp index size by applying it only to rows
     #where the speed record is based on observed data (score=30)
-    cursor.execute("CREATE INDEX CONCURRENTLY ON {table}(tx) WHERE score = 30;".format(table=table))
+    cursor.execute("CREATE INDEX ON {table}(tx) WHERE score = 30;".format(table=table))
 
 
 def index_tables(years, dbset, logger):
@@ -57,7 +56,8 @@ if __name__ == "__main__":
     YEARS = {"2012":range(7, 13),
              "2013":range(1, 7),
              "2016":range(1, 7),
-             "2014":range(1, 13),
+#             "2014":range(1, 13),             
+             "2014":range(3, 13),
              "2015":range(1, 13)}
     #Configure logging
     FORMAT = '%(asctime)-15s %(message)s'
