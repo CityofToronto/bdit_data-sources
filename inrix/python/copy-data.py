@@ -3,6 +3,7 @@
 import os
 from dbsettings import dbsetting
 from psycopg2 import connect
+from psycopg2.extensions import AsIs
 import logging
 import re
 
@@ -11,7 +12,10 @@ FORMAT = '%(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
-logger.info('Connecting to host:{host} database: {database} with user {user}'.format(database=dbsetting['database'],host=dbsetting['host'],user=dbsetting['user']))
+logger.info('Connecting to host: %s database: %s as user %s', 
+             dbsetting['host'],
+             dbsetting['database'],
+             dbsetting['user'])
 con = connect(database=dbsetting['database'],host=dbsetting['host'],user=dbsetting['user'],password=dbsetting['password'])
 cursor = con.cursor()
 
@@ -26,20 +30,25 @@ for filename in os.listdir():
     if filename.endswith('.csv') and bool(regex_yyyymm.search(filename)): 
         yyyymm = getYYYYMM(filename)
         table = 'inrix.raw_data'+yyyymm
-        logger.info('Creating table {table}'.format(table=table))
-        cursor.execute('CREATE TABLE IF NOT EXISTS {table} () INHERITS (inrix.raw_data)'.format(table=table))
+        logger.info('Creating table %(table)s', {'table': AsIs(table)})
+        cursor.execute('CREATE TABLE IF NOT EXISTS %(table)s () INHERITS (inrix.raw_data)', {'table': AsIs(table)})
         #cursor.execute('ALTER TABLE {table} OWNER TO rdumas'.format(table=table))
-        cursor.execute('ALTER TABLE {table} SET UNLOGGED'.format(table=table))
+        cursor.execute('ALTER TABLE %(table)s SET UNLOGGED', {'table': AsIs(table)})
         con.commit()
         datafile = open(filename)
         logger.info("Copying data from: {filename}".format(filename=datafile.name))
         #Performance tweaks to speed up copying allegedly.
         cursor.execute('SET LOCAL synchronous_commit=off;')
-        cursor.execute('TRUNCATE {table} ;'.format(table=table))
-        cursor.copy_expert("COPY {table} FROM STDIN WITH CSV".format(table=table),datafile)
+        #Creating a temporary table to COPY data to, and then fix timestamps when inserting into {table}
+        cursor.execute('CREATE TEMP TABLE raw_data_import (LIKE inrix.raw_data);')
+        cursor.copy_expert("COPY raw_data_import FROM STDIN WITH CSV",datafile)
+        cursor.execute('TRUNCATE %(table)s ;', {'table': AsIs(table)})
+        cursor.execute('INSERT INTO %(table)s '
+                       'SELECT (tx AT TIME ZONE \'UTC\') AT TIME ZONE \'America/Toronto\' AS tx, tmc, speed, score '
+                       'FROM raw_data_import;', {'table': AsIs(table)})
         con.commit()
         datafile.close()
         logger.info("Setting table status to logged")
-        cursor.execute('ALTER TABLE {table} SET LOGGED'.format(table=table))
+        cursor.execute('ALTER TABLE %(table)s SET LOGGED', {'table': AsIs(table)})
         con.commit()
         

@@ -3,6 +3,7 @@
 import os
 from dbsettings import dbsetting
 from psycopg2 import connect
+from psycopg2.extensions import AsIs
 import logging
 import re
 
@@ -27,29 +28,29 @@ for filename in os.listdir():
         
         table = 'inrix.'+os.path.splitext(filename)[0]
         logger.info('Creating table {table}'.format(table=table))
-        cursor.execute('CREATE UNLOGGED TABLE IF NOT EXISTS {table} (tx timestamp without time zone NOT NULL, tmc char(9) NOT NULL, speed int NOT NULL)'.format(table=table))
-        #cursor.execute('ALTER TABLE {table} OWNER TO rdumas'.format(table=table))
+        cursor.execute('CREATE UNLOGGED TABLE IF NOT EXISTS %(table)s (tx timestamp without time zone NOT NULL, tmc char(9) NOT NULL, speed int NOT NULL)', {'table': AsIs(table)})
+        #cursor.execute('ALTER TABLE %(table)s OWNER TO rdumas', {'table': AsIs(table)})
         
         con.commit()
         datafile = open(filename)
         logger.info("Copying data from: {filename}".format(filename=datafile.name))
         #Performance tweaks to speed up copying allegedly.
         cursor.execute('SET LOCAL synchronous_commit=off;')
-        cursor.execute('TRUNCATE {table} ;'.format(table=table))
-        cursor.copy_expert("COPY {table} (tx,tmc,speed) FROM STDIN WITH CSV".format(table=table),datafile)
+        cursor.execute('TRUNCATE %(table)s ;', {'table': AsIs(table)})
+        cursor.copy_expert("COPY %(table)s (tx,tmc,speed) FROM STDIN WITH CSV", {'table': AsIs(table)},datafile)
         con.commit()
         datafile.close()
         
         #Update timestamps on table then copy data into master by pinging 
         logger.info('Updating timestamps on table %s', table)
-        cursor.execute("UPDATE {table} "
+        cursor.execute("UPDATE %(table)s "
                        "SET tx = (tx AT TIME ZONE 'UTC') AT TIME ZONE 'America/Toronto' ;"
-                       .format(table=table))
+                       , {'table': AsIs(table)})
         con.commit()
         
         #Insert into raw_data, since data are stored in funky tables, using a previously created rule 
         logger.info('Copying data from table %s, to the main table', table)
         cursor.execute("INSERT INTO inrix.raw_data "
-                       "SELECT * FROM {table} ;"
-                       .format(table=table))
+                       "SELECT tx, tmc, speed, 30 FROM %(table)s ;"
+                       , {'table': AsIs(table)})
         con.commit()
