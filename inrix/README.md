@@ -54,3 +54,5 @@ FROM examples```
 By chaining the [`AT TIME ZONE`](https://www.postgresql.org/docs/9.5/static/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT) command the above query converts the *timestamp without timezone* to one **with** at `UTC` and then back to a *timestamp without timezone* at `America/Toronto` time.
 
 This is fully implemented in the python script [`update_timezone.py`](python/update_timezone.py)
+
+Running a speed test on my local machine, the timestamp update should have been combined in the `COPY` transaction. First `COPY` to a `TEMP TABLE` then `INSERT INTO` with a `SELECT fix_timestamp(tx), ...` rather than `COPY` followed by `UPDATE`. The latter was nearly 50% slower (67 minutes vs 46).
