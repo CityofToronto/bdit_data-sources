@@ -47,18 +47,50 @@ def index_tables(years, dbset, logger):
     for year in years:
         for month in years[year]:
             yyyymm = get_yyyymm(year, month)
-            _index_table(yyyymm, logger, con, cursor)
+            
+            #Execution retry loop
+            while True:
+                #Connection retry loop
+                while True:
+                    try:
+                        logger.info('Testing Connection')
+                        cursor.execute('SELECT 1')
+                    except OperationalError as oe:
+                        logger.error(oe)
+                        logger.info('Retrying connection in 2 minutes')
+                        sleep(120)
+                        con = connect(database=dbset['database'],
+                                      host=dbset['host'],
+                                      user=dbset['user'],
+                                      password=dbset['password'])
+                        cursor = con.cursor()
+                    else:
+                        break
+                
+                try:
+                    _index_table(yyyymm, logger, con, cursor)
+                except OperationalError as oe:
+                    logger.error(oe)
+                else:
+                    break
+
+    con.close()
+    logger.info('Processing complete, connection to %s database %s closed',
+                dbset['host'],
+                dbset['database'])
 
     con.close()
 
 if __name__ == "__main__":
     #For initial run, creating years and months of available data as a python dictionary
-    YEARS = {"2012":range(7, 13),
-             "2013":range(1, 7),
-             "2016":range(1, 7),
+    #YEARS = {#"2012":range(7, 13),
+     #        "2013":range(1, 13)},
+#             "2016":range(1, 7),
 #             "2014":range(1, 13),             
-             "2014":range(3, 13),
-             "2015":range(1, 13)}
+#             "2015":range(1, 13)}
+    '''Phase 1'''
+    YEARS = {"2011":range(8,13),
+             "2013":range(7,13)}
     #Configure logging
     FORMAT = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
