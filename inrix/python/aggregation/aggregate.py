@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 '''Aggregrates Inrix data to 15 minute bins'''
 import logging
-from psycopg2 import connect, OperationalError
+from psycopg2 import connect, OperationalError, InterfaceError
 from psycopg2.extensions import AsIs
 from time import sleep
 
@@ -49,27 +49,29 @@ def agg_tables(years, dbset, logger):
     for year in years:
         for month in years[year]:
             yyyymm = get_yyyymm(year, month)
+            #Execution retry loop
             while True:
+                
+                
                 try:
                     _agg_table(yyyymm, logger, con, cursor)
-                except OperationalError as oe:
-                    logger.error(oe)
-                    logger.info('Retrying connection in 2 minutes')
-                    sleep(120)#Wait 2 minutes for connection to reset
-                    try:
-                        con = connect(database=dbset['database'],
-                                      host=dbset['host'],
-                                      user=dbset['user'],
-                                      password=dbset['password'])
-                        cursor = con.cursor()
-                    else:
-                        logger.info('Connection successful')
+                except (OperationalError, InterfaceError) as oe:
+                        logger.error(oe.message)
+                        logger.info('Retrying connection in 2 minutes')
+                        sleep(120)
+                        try:
+                            con = connect(database=dbset['database'],
+                                          host=dbset['host'],
+                                          user=dbset['user'],
+                                          password=dbset['password'])
+                            cursor = con.cursor()
+                        except (OperationalError, InterfaceError) as oe:
+                            pass
                 else:
                     break
-                
 
     con.close()
-    logger.info('Processing complete, connection to %s database %s',
+    logger.info('Processing complete, connection to %s database %s closed',
                 dbset['host'],
                 dbset['database'])
 
