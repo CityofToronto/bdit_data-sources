@@ -56,7 +56,7 @@ def agg_tables(years, dbset, logger):
                 try:
                     _agg_table(yyyymm, logger, con, cursor)
                 except (OperationalError, InterfaceError) as oe:
-                        logger.error(oe.message)
+                        logger.error(oe)
                         logger.info('Retrying connection in 2 minutes')
                         sleep(120)
                         try:
