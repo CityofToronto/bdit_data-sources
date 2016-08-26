@@ -40,7 +40,8 @@ for filename in os.listdir():
         #Performance tweaks to speed up copying allegedly.
         cursor.execute('SET LOCAL synchronous_commit=off;')
         #Creating a temporary table to COPY data to, and then fix timestamps when inserting into {table}
-        cursor.execute('CREATE TEMP TABLE raw_data_import (LIKE inrix.raw_data);')
+        cursor.execute('CREATE TEMP TABLE IF NOT EXISTS raw_data_import (LIKE inrix.raw_data);')
+	cursor.execute('TRUNCATE raw_data_import;')
         cursor.copy_expert("COPY raw_data_import FROM STDIN WITH CSV",datafile)
         cursor.execute('TRUNCATE %(table)s ;', {'table': AsIs(table)})
         cursor.execute('INSERT INTO %(table)s '
