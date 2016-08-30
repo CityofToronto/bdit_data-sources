@@ -108,13 +108,16 @@ if __name__ == "__main__":
 
     #Configure logging
     TIMEFORMAT = logging.Formatter('%(message)s')
-    FORMAT = '%(asctime)-15s %(message)s'
-    logging.basicConfig(filename='log/test.log', level=logging.INFO, format=FORMAT)
-    LOGGER = logging.getLogger(__name__)
     TIMEHANDLER = logging.FileHandler('log/time.log')
     TIMEHANDLER.setFormatter(TIMEFORMAT)
     TIMELOGGER = logging.getLogger('timelog')
     TIMELOGGER.addHandler(TIMEHANDLER)
+    logging.basicConfig(level=logging.INFO)
+    LOGGERHANDLER = logging.FileHandler('log/test.log')
+    LOGGERHANDLER.setFormatter(logging.Formatter('%(asctime)-15s %(message)s'))
+    LOGGER = logging.getLogger(__name__)
+    LOGGER.addHandler(LOGGERHANDLER)
+
 
     import configparser
     CONFIG = configparser.ConfigParser()
