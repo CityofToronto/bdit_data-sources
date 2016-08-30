@@ -7,17 +7,6 @@ from psycopg2.extensions import AsIs
 import logging
 import re
 
-#Configure logging
-FORMAT = '%(asctime)-15s %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger(__name__)
-
-logger.info('Connecting to host: %s database: %s as user %s', 
-             dbsetting['host'],
-             dbsetting['database'],
-             dbsetting['user'])
-con = connect(database=dbsetting['database'],host=dbsetting['host'],user=dbsetting['user'],password=dbsetting['password'])
-cursor = con.cursor()
 
 #Regex to find YYYYMM in filenames
 regex_yyyymm = re.compile(r'\d{6}')
@@ -27,6 +16,19 @@ def getYYYYMM (filename):
     return res[len(res)-1]
 
 if __name__ = "__main__":
+    #Configure logging
+    FORMAT = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    logger = logging.getLogger(__name__)
+
+    logger.info('Connecting to host: %s database: %s as user %s', 
+                 dbsetting['host'],
+                 dbsetting['database'],
+                 dbsetting['user'])
+    con = connect(database=dbsetting['database'],host=dbsetting['host'],user=dbsetting['user'],password=dbsetting['password'])
+    cursor = con.cursor()
+
+    
     for filename in os.listdir():
         if filename.endswith('.csv') and bool(regex_yyyymm.search(filename)): 
             yyyymm = getYYYYMM(filename)
