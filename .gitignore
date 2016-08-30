@@ -1,6 +1,6 @@
 # Database connection settings
-
 dbsettings.py
+db.cfg
 
 #Temporary local files
 TEMP*
