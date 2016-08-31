@@ -105,6 +105,29 @@ def _validate_yearsjson(yearsjson):
 
     return years
 
+def _try_connection(logger, dbset):
+    '''Connection retry loop'''
+    while True:
+        try:
+            logger.info('Connecting to host:%s database: %s with user %s',
+                        dbset['database'],
+                        dbset['host'],
+                        dbset['user'])
+            con = connect(database=dbset['database'],
+                          host=dbset['host'],
+                          user=dbset['user'],
+                          password=dbset['password'])
+            cursor = con.cursor()
+            logger.info('Testing Connection')
+            cursor.execute('SELECT 1')
+        except OperationalError as oe:
+            logger.error(oe)
+            logger.info('Retrying connection in 2 minutes')
+            sleep(120)
+        else:
+            break
+    return con, cursor
+
 def index_tables(years, dbset, logger):
     '''Create indexes for a series of tables based on the years dictionary \
     and the dbset database connection.'''
@@ -154,29 +177,6 @@ def index_tables(years, dbset, logger):
                 dbset['database'])
 
     con.close()
-
-    def _try_connection(logger, dbset):
-        '''Connection retry loop'''
-        while True:
-            try:
-                logger.info('Connecting to host:%s database: %s with user %s',
-                            dbset['database'],
-                            dbset['host'],
-                            dbset['user'])
-                con = connect(database=dbset['database'],
-                              host=dbset['host'],
-                              user=dbset['user'],
-                              password=dbset['password'])
-                cursor = con.cursor()
-                logger.info('Testing Connection')
-                cursor.execute('SELECT 1')
-            except OperationalError as oe:
-                logger.error(oe)
-                logger.info('Retrying connection in 2 minutes')
-                sleep(120)
-            else:
-                break
-        return con, cursor
 
 if __name__ == "__main__":
     import argparse
