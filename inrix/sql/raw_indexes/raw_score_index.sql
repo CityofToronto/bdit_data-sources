@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION inrix.create_raw_score_idx (tablename TEXT)
 RETURNS INTEGER
 AS $$
 BEGIN
-    EXECUTE format('CREATE INDEX ON %I (score);', tablename);
+    EXECUTE format('CREATE INDEX ON inrix.%I (score);', tablename);
     RETURN 1;
 END;
 $$

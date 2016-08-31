@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION inrix.create_raw_tx_idx (tablename TEXT)
 RETURNS INTEGER
 AS $$
 BEGIN
-    EXECUTE format('CREATE INDEX ON %I (tx) WHERE score = 30;', tablename);
+    EXECUTE format('CREATE INDEX ON inrix.%I (tx) WHERE score = 30;', tablename);
     RETURN 1;
 END;
 $$

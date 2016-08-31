@@ -142,7 +142,7 @@ def index_tables(years, dbset, logger):
         for month in years[year]:
             yyyymm = get_yyyymm(year, month)
 
-            table = 'inrix.raw_data'+yyyymm
+            table = 'raw_data'+yyyymm
             logger.info('Creating indexes on table %s', table)
 
             #Execution retry loop score

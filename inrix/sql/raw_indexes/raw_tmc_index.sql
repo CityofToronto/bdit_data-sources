@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION inrix.create_raw_tmc_idx (tablename TEXT)
 RETURNS INTEGER
 AS $$
 BEGIN
-    EXECUTE format('CREATE INDEX ON %I (tmc);', tablename);
+    EXECUTE format('CREATE INDEX ON inrix.%I (tmc);', tablename);
     RETURN 1;
 END;
 $$
