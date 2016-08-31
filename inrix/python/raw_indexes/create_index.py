@@ -120,6 +120,7 @@ def _try_connection(logger, dbset):
             cursor = con.cursor()
             logger.info('Testing Connection')
             cursor.execute('SELECT 1')
+            cursor.fetchall()
         except OperationalError as oe:
             logger.error(oe)
             logger.info('Retrying connection in 2 minutes')
