@@ -105,7 +105,7 @@ def _validate_yearsjson(yearsjson):
 
     return years
 
-def _try_connection(logger, dbset):
+def _try_connection(logger, dbset, **kwargs):
     '''Connection retry loop'''
     while True:
         try:
@@ -117,6 +117,9 @@ def _try_connection(logger, dbset):
                           host=dbset['host'],
                           user=dbset['user'],
                           password=dbset['password'])
+            if kwargs.get('autocommit', False):
+                #Necessary for index building
+                con.autocommit = True
             cursor = con.cursor()
             logger.info('Testing Connection')
             cursor.execute('SELECT 1')
@@ -133,9 +136,7 @@ def index_tables(years, dbset, logger):
     '''Create indexes for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
-    con, cursor = _try_connection(logger, dbset)
-    #Necessary for index building
-    con.autocommit = True
+    con, cursor = _try_connection(logger, dbset, autocommit = True)
 
     for year in years:
         for month in years[year]:
