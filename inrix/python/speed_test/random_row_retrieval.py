@@ -18,6 +18,7 @@ def _get_timerange(cur, tablename):
 def _retrieve_raw_data(cur, tablename, tx, tmc):
     cur.execute("SELECT tx, tmc, score, speed FROM %(tablename)s "
                 "WHERE tmc = %(tmc)s "
+                "AND score = 30 "
                 "AND tx >= %(tx)s "
                 "AND tx < %(tx)s + INTERVAL '30 minutes';",
                 {'tablename':AsIs(tablename), 'tx':tx, 'tmc':tmc})
@@ -79,7 +80,7 @@ def speed_test(tablename, dbset, logger, timelogger, numtests):
 
         timelogger.info('%s, %s, %s, %s, %s',
                         time.time(),
-                        'random_row_retrieval_no_index',
+                        'random_row_retrieval_index_score30',
                         tablename,
                         i,
                         time.time() - time1)
