@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 '''Finish partitioning tables in the Inrix database.'''
 import logging
-from psycopg2 import connect
+from time import sleep
+from psycopg2 import connect, OperationalError
+from psycopg2.extensions import AsIs
 
 def get_yyyymm(yyyy, mm):
     '''Combine integer yyyy and mm into a string yyyymm.'''
@@ -17,37 +19,60 @@ def get_yyyy_mm_dd(yyyy, mm):
     else:
         return str(yyyy)+'-'+str(mm)+'-01'
 
-    
-def _partition_table(yyyymm, logger, con, cursor):
+def _partition_table(yyyymm, startdate, logger, cursor):
     '''Add check constraints on the inrix.raw_data partitioned table ending with yyyymm.'''
     table = 'inrix.raw_data'+yyyymm
     logger.info('Adding check constraits on table %s', table)
-    cursor.execut('ALTER TABLE {table} ADD CHECK (tx >= DATE {startdate} AND tx < DATE {startdate} + INTERVAL \'1 month\')'
-                  .format(table=table, startdate=startdate))
+    cursor.execute("ALTER TABLE %(table)s ADD CHECK (tx >= DATE {startdate} "
+                   "AND tx < DATE %(startdate)s + INTERVAL '1 month')"
+                   , {'table':AsIs(table), 'startdate':startdate})
 
+def _try_connection(logger, dbset, **kwargs):
+    '''Connection retry loop'''
+    while True:
+        try:
+            logger.info('Connecting to host:%s database: %s with user %s',
+                        dbset['database'],
+                        dbset['host'],
+                        dbset['user'])
+            con = connect(database=dbset['database'],
+                          host=dbset['host'],
+                          user=dbset['user'],
+                          password=dbset['password'])
+            if kwargs.get('autocommit', False):
+                #Necessary for index building
+                con.autocommit = True
+            cursor = con.cursor()
+            logger.info('Testing Connection')
+            cursor.execute('SELECT 1')
+            cursor.fetchall()
+        except OperationalError as oe:
+            logger.error(oe)
+            logger.info('Retrying connection in 2 minutes')
+            sleep(120)
+        else:
+            break
+    return con, cursor
 
 def partition_tables(years, dbset, logger):
     '''Add check constraints for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
-    logger.info('Connecting to host:%s database: %s with user %s',
-                dbset['database'],
-                dbset['host'],
-                dbset['user'])
-    con = connect(database=dbset['database'],
-                  host=dbset['host'],
-                  user=dbset['user'],
-                  password=dbset['password'])
-    #Necessary for index building
-    con.autocommit=True
-    
-    cursor = con.cursor()
+    con, cursor = _try_connection(logger, dbset)
 
     for year in years:
         for month in years[year]:
             yyyymm = get_yyyymm(year, month)
             startdate = get_yyyy_mm_dd(year, month)
-            _partition_table(yyyymm, startdate, logger, con, cursor)
+
+            while True:
+                try:
+                    _partition_table(yyyymm, startdate, logger, cursor)
+                except OperationalError as oe:
+                    logger.error(oe)
+                    con, cursor = _try_connection(logger, dbset)
+                else:
+                    break
 
     con.close()
 
