@@ -23,7 +23,7 @@ def _partition_table(yyyymm, startdate, logger, cursor):
     '''Add check constraints on the inrix.raw_data partitioned table ending with yyyymm.'''
     table = 'inrix.raw_data'+yyyymm
     logger.info('Adding check constraits on table %s', table)
-    cursor.execute("ALTER TABLE %(table)s ADD CHECK (tx >= DATE {startdate} "
+    cursor.execute("ALTER TABLE %(table)s ADD CHECK (tx >= DATE %(startdate) "
                    "AND tx < DATE %(startdate)s + INTERVAL '1 month')"
                    , {'table':AsIs(table), 'startdate':startdate})
 
@@ -47,7 +47,7 @@ def _try_connection(logger, dbset, **kwargs):
             cursor.execute('SELECT 1')
             cursor.fetchall()
         except OperationalError as oe:
-            logger.error(oe)
+            logger.error(str(oe))
             logger.info('Retrying connection in 2 minutes')
             sleep(120)
         else:
