@@ -37,14 +37,17 @@ def _validate_yyyymm_range(yyyymmrange):
     if yyyy[0] > yyyy[1] or (yyyy[0] == yyyy[1] and mm[0] > mm[1]):
         raise ValueError('Start date {yyyymm1} after end date {yyyymm2}'
                          .format(yyyymm1=yyyymmrange[0], yyyymm2=yyyymmrange[1]))
-
-    for year in range(yyyy[0], yyyy[1]+1):
-        if year == yyyy[0]:
-            years[year] = range(mm[0], 13)
-        elif year == yyyy[1]:
-            years[year] = range(1, mm[1]+1)
-        else:
-            years[year] = range(1, 13)
+    
+    if yyyy[0] == yyyy[1]:
+        years[yyyy[0]] = range(mm[0], mm[1]+1)
+    else:
+        for year in range(yyyy[0], yyyy[1]+1):
+            if year == yyyy[0]:
+                years[year] = range(mm[0], 13)
+            elif year == yyyy[1]:
+                years[year] = range(1, mm[1]+1)
+            else:
+                years[year] = range(1, 13)
 
     return years
 

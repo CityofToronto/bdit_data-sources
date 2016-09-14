@@ -30,7 +30,7 @@ def partition_tables(years, dbset, logger):
                     _partition_table(yyyymm, startdate, logger, cursor)
                 except OperationalError as oe:
                     logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
+                    con, cursor = try_connection(logger, dbset, autocommit=True)
                 else:
                     break
 
