@@ -15,15 +15,18 @@ def _get_timerange(cur, tablename):
     cur.execute("SELECT MIN(tx), MAX(tx) FROM %(tablename)s", {'tablename':AsIs(tablename)})
     return cur.fetchone()
 
-def _retrieve_raw_data(cur, tablename, tx, tmc):
-    cur.execute("SELECT tx, tmc, score, speed FROM %(tablename)s "
-                "WHERE tmc = %(tmc)s "
-                "AND score = 30 "
-                "AND tx >= %(tx)s "
-                "AND tx < %(tx)s + INTERVAL '30 minutes';",
+def _retrieve_raw_data(cur, tablename, tx, tmc, **kwargs):
+    sql = "SELECT tx, tmc, score, speed FROM %(tablename)s "\
+            "WHERE tmc = %(tmc)s "\
+            "AND tx >= %(tx)s "\
+            "AND tx < %(tx)s + INTERVAL '30 minutes'"
+    if kwargs['score']:
+        sql += cur.mogrify("AND score = %(score)s", {'score':kwargs['score']})
+    
+    cur.execute(sql,
                 {'tablename':AsIs(tablename), 'tx':tx, 'tmc':tmc})
 
-def speed_test(tablename, dbset, logger, timelogger, numtests):
+def speed_test(tablename, dbset, logger, timelogger, numtests, **kwargs):
     '''Run a number (numtests) of random row retrievals on table tablename
 
     Args:
@@ -32,13 +35,13 @@ def speed_test(tablename, dbset, logger, timelogger, numtests):
         logger: logger object for information
         timelogger: logger object to store query timing information
         numtests: the number of queries to perform
+        kwargs: additional arguments to pass to the sql query
     Returns:
         None
     '''
-    logger.info('%s Connecting to host:%s database: %s with user %s',
-                time.time(),
-                dbset['database'],
+    logger.info('Connecting to host:%s database: %s with user %s',
                 dbset['host'],
+                dbset['database'],
                 dbset['user'])
     con = connect(database=dbset['database'],
                   host=dbset['host'],
@@ -46,11 +49,11 @@ def speed_test(tablename, dbset, logger, timelogger, numtests):
                   password=dbset['password'])
     cur = con.cursor()
 
-    logger.info('%s Retrieving distinct tmcs from table %s', time.time(), tablename)
+    logger.info('Retrieving distinct tmcs from table %s', tablename)
     tmcs = _get_tmcs(cur, tablename)
-    logger.info('%s Retrieving min, max dates from table %s', time.time(), tablename)
+    logger.info('Retrieving min, max dates from table %s', tablename)
     timerange = _get_timerange(cur, tablename)
-    logger.info('%s Retrieving tmcs and dates retrieved from table %s', time.time(), tablename)
+    logger.info('Retrieved tmcs and dates from table %s', tablename)
 
     for i in range(numtests):
         tmc = random.choice(tmcs)[0]
@@ -59,7 +62,7 @@ def speed_test(tablename, dbset, logger, timelogger, numtests):
         time1 = time.time()
         while True:
             try:
-                _retrieve_raw_data(cur, tablename, tx, tmc)
+                _retrieve_raw_data(cur, tablename, tx, tmc, **kwargs)
             except OperationalError as oe:
                 logger.error(oe)
 
@@ -78,15 +81,13 @@ def speed_test(tablename, dbset, logger, timelogger, numtests):
             else:
                 break
 
-        timelogger.info('%s, %s, %s, %s, %s',
-                        time.time(),
+        timelogger.info('%s,%s,%s,%s',
                         'random_row_retrieval_index_score30',
                         tablename,
                         i,
                         time.time() - time1)
 
-    logger.info('%s Testing complete. Connection to %s database %s closed',
-                time.time(),
+    logger.info('Testing complete. Connection to %s database %s closed',
                 dbset['host'],
                 dbset['database'])
 
@@ -105,19 +106,28 @@ if __name__ == "__main__":
     PARSER.add_argument("-t", "--tablename",
                         default='inrix.raw_data201604',
                         help="Table on which to retrieve data (default: %(default)s)")
+    PARSER.add_argument("-s", "--score",
+                        help="Optional filtering of a particular score",
+                        choices=[10,20,30])
     ARGS = PARSER.parse_args()
 
     #Configure logging
-    TIMEFORMAT = logging.Formatter('%(message)s')
+    TIMEFORMAT = logging.Formatter('%(asctime)-15s,%(message)s')
     TIMEHANDLER = logging.FileHandler('log/time.log')
     TIMEHANDLER.setFormatter(TIMEFORMAT)
     TIMELOGGER = logging.getLogger('timelog')
     TIMELOGGER.addHandler(TIMEHANDLER)
-    logging.basicConfig(level=logging.INFO)
+    TIMELOGGER.setLevel(logging.INFO)
+    
     LOGGERHANDLER = logging.FileHandler('log/test.log')
     LOGGERHANDLER.setFormatter(logging.Formatter('%(asctime)-15s %(message)s'))
+    CONSOLEHANDLER = logging.StreamHandler()
+    CONSOLEHANDLER.setFormatter(logging.Formatter('%(asctime)-15s %(message)s'))
+    
     LOGGER = logging.getLogger(__name__)
+    LOGGER.setLevel(logging.INFO) 
     LOGGER.addHandler(LOGGERHANDLER)
+    LOGGER.addHandler(CONSOLEHANDLER)
 
 
     import configparser
@@ -127,4 +137,4 @@ if __name__ == "__main__":
 
     TABLENAME = ARGS.tablename
     NUMTEST = ARGS.number
-    speed_test(TABLENAME, DBSETTING, LOGGER, TIMELOGGER, NUMTEST)
+    speed_test(TABLENAME, DBSETTING, LOGGER, TIMELOGGER, NUMTEST, score = ARGS.score)
