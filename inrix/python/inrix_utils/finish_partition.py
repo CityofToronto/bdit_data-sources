@@ -18,7 +18,7 @@ def partition_tables(years, dbset, logger):
     '''Add check constraints for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
-    con, cursor = try_connection(logger, dbset)
+    con, cursor = try_connection(logger, dbset, autocommit=True)
 
     for year in years:
         for month in years[year]:
@@ -34,6 +34,9 @@ def partition_tables(years, dbset, logger):
                 else:
                     break
 
+    logger.info('Partitioning complete, connection to %s database %s closed',
+                dbset['host'],
+                dbset['database'])
     con.close()
 
 if __name__ == "__main__":
