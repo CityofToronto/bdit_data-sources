@@ -19,12 +19,11 @@ def _retrieve_raw_data(cur, tablename, tx, tmc, **kwargs):
     sql = "SELECT tx, tmc, score, speed FROM %(tablename)s "\
             "WHERE tmc = %(tmc)s "\
             "AND tx >= %(tx)s "\
-            "AND tx < %(tx)s + INTERVAL '30 minutes'"
-    if kwargs['score']:
-        sql += cur.mogrify("AND score = %(score)s", {'score':kwargs['score']})
+            "AND tx < %(tx)s + INTERVAL '30 minutes' " \
+            "AND (%(score)s is null OR score = %(score)s) "
     
     cur.execute(sql,
-                {'tablename':AsIs(tablename), 'tx':tx, 'tmc':tmc})
+                {'tablename':AsIs(tablename), 'tx':tx, 'tmc':tmc, 'score': kwargs['score']})
 
 def speed_test(tablename, dbset, logger, timelogger, numtests, **kwargs):
     '''Run a number (numtests) of random row retrievals on table tablename
@@ -106,9 +105,9 @@ if __name__ == "__main__":
     PARSER.add_argument("-t", "--tablename",
                         default='inrix.raw_data201604',
                         help="Table on which to retrieve data (default: %(default)s)")
-    PARSER.add_argument("-s", "--score",
+    PARSER.add_argument("-s", "--score", type=int,
                         help="Optional filtering of a particular score",
-                        choices=[10,20,30])
+                        choices=[10, 20, 30])
     ARGS = PARSER.parse_args()
 
     #Configure logging
