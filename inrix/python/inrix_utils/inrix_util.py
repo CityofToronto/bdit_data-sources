@@ -91,14 +91,14 @@ if __name__ == "__main__":
     import json
     import sys
 
-    PARSER = argparse.ArgumentParser(description='Create indexes on raw inrix data tables.')
+    PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix traffic data in a database.')
     #Must have either a year range or pass a JSON file with years.
     YEARS_ARGUMENTS = PARSER.add_mutually_exclusive_group(required=True)
     YEARS_ARGUMENTS.add_argument("-y", "--years", nargs=2,
                                  help="Range of months (YYYYMM) to operate over"
                                  "from startdate to enddate",
                                  metavar=('YYYYMM', 'YYYYMM'))
-    YEARS_ARGUMENTS.add_argument("-Y", "--yearsjson", type=json.load,
+    YEARS_ARGUMENTS.add_argument("-Y", "--yearsjson", type=json.loads,
                                  help="Written dictionary which contains years as key"
                                  "and start/end month like {'2012'=[1,12]}")
     #Possible action to call inrix_util to perform
@@ -109,11 +109,16 @@ if __name__ == "__main__":
                          help="Add Check Constraints to specified tables to complete table partitioning")
     ACTIONS.add_argument("-a", "--aggregate", action="store_true",
                          help="Aggregate raw data")
-
     PARSER.add_argument("-d", "--dbsetting",
                         default='default.cfg',
                         help="Filename with connection settings to the database"
                         "(default: opens %(default)s)")
+    PARSER.add_argument("-t", "--tablename",
+                        default='inrix.raw_data',
+                        help="Base table on which to perform operation of form %(default)s")
+    PARSER.add_argument("-tx", "--timecolumn",
+                        default='tx',
+                        help="Time column for partitioning, default: %(default)s")
 
     ARGS = PARSER.parse_args()
 
@@ -148,7 +153,7 @@ if __name__ == "__main__":
         index_tables(YEARS, DBSETTING, LOGGER)
     elif ARGS.partition:
         from finish_partition import partition_tables
-        partition_tables(YEARS, DBSETTING, LOGGER)
+        partition_tables(YEARS, DBSETTING, LOGGER, table=ARGS.tablename, timecol=ARGS.timecolumn)
     elif ARGS.aggregate:
         from aggregate import agg_tables
         agg_tables(YEARS, DBSETTING, LOGGER)

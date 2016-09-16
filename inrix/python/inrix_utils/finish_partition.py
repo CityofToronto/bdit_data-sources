@@ -6,15 +6,15 @@ from psycopg2 import connect, OperationalError
 from psycopg2.extensions import AsIs
 from utils import get_yyyymm, get_yyyymmdd, try_connection
 
-def _partition_table(yyyymm, startdate, logger, cursor):
+def _partition_table(tableyyyymm, startdate, logger, cursor, timecol):
     '''Add check constraints on the inrix.raw_data partitioned table ending with yyyymm.'''
-    table = 'inrix.raw_data'+yyyymm
-    logger.info('Adding check constraints on table %s', table)
-    cursor.execute("ALTER TABLE %(table)s ADD CHECK (tx >= DATE %(startdate)s "
-                   "AND tx < DATE %(startdate)s + INTERVAL '1 month')"
-                   , {'table':AsIs(table), 'startdate':startdate})
+    logger.info('Adding check constraints on table %s', tableyyyymm)
+    cursor.execute("ALTER TABLE %(table)s ADD CHECK (%(timecol)s >= DATE %(startdate)s "
+                   "AND %(timecol)s < DATE %(startdate)s + INTERVAL '1 month')"
+                   , {'table':AsIs(tableyyyymm), 'startdate':startdate,
+                   'timecol':AsIs(timecol)})
 
-def partition_tables(years, dbset, logger):
+def partition_tables(years, dbset, logger, table, timecol):
     '''Add check constraints for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
@@ -22,12 +22,12 @@ def partition_tables(years, dbset, logger):
 
     for year in years:
         for month in years[year]:
-            yyyymm = get_yyyymm(year, month)
+            tableyyyymm = table + get_yyyymm(year, month)
             startdate = get_yyyymmdd(year, month)
 
             while True:
                 try:
-                    _partition_table(yyyymm, startdate, logger, cursor)
+                    _partition_table(tableyyyymm, startdate, logger, cursor, timecol)
                 except OperationalError as oe:
                     logger.error(oe)
                     con, cursor = try_connection(logger, dbset, autocommit=True)
@@ -51,4 +51,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
     from dbsettings import dbsetting
-    partition_tables(YEARS, dbsetting, LOGGER)
+    partition_tables(YEARS, dbsetting, LOGGER, table='inrix.raw_data')
