@@ -147,3 +147,4 @@ ENV/
 
 # Rope project settings
 .ropeproject
+inrix/python/localdb.cfg
