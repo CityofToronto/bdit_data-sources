@@ -2,8 +2,6 @@
 '''Perform operations on Inrix data'''
 import logging
 import re
-from time import sleep
-from psycopg2 import connect, OperationalError
 
 def _validate_yyyymm_range(yyyymmrange):
     '''Validate the two yyyymm command line arguments provided
@@ -37,7 +35,7 @@ def _validate_yyyymm_range(yyyymmrange):
     if yyyy[0] > yyyy[1] or (yyyy[0] == yyyy[1] and mm[0] > mm[1]):
         raise ValueError('Start date {yyyymm1} after end date {yyyymm2}'
                          .format(yyyymm1=yyyymmrange[0], yyyymm2=yyyymmrange[1]))
-    
+
     if yyyy[0] == yyyy[1]:
         years[yyyy[0]] = range(mm[0], mm[1]+1)
     else:
@@ -91,7 +89,17 @@ if __name__ == "__main__":
     import json
     import sys
 
-    PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix traffic data in a database.')
+    PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix '
+                                                 'traffic data in a database.')
+    #Possible action to call inrix_util to perform
+    ACTIONS = PARSER.add_mutually_exclusive_group(required=True)
+    ACTIONS.add_argument("-i", "--index", action="store_true",
+                         help="Index the tables specified by the years argument")
+    ACTIONS.add_argument("-p", "--partition", action="store_true",
+                         help="Add Check Constraints to specified tables"
+                              "to complete table partitioning")
+    ACTIONS.add_argument("-a", "--aggregate", action="store_true",
+                         help="Aggregate raw data")
     #Must have either a year range or pass a JSON file with years.
     YEARS_ARGUMENTS = PARSER.add_mutually_exclusive_group(required=True)
     YEARS_ARGUMENTS.add_argument("-y", "--years", nargs=2,
@@ -101,14 +109,6 @@ if __name__ == "__main__":
     YEARS_ARGUMENTS.add_argument("-Y", "--yearsjson", type=json.loads,
                                  help="Written dictionary which contains years as key"
                                  "and start/end month like {'2012'=[1,12]}")
-    #Possible action to call inrix_util to perform
-    ACTIONS = PARSER.add_mutually_exclusive_group(required=True)
-    ACTIONS.add_argument("-i", "--index", action="store_true",
-                         help="Index the tables specified by the years argument")
-    ACTIONS.add_argument("-p", "--partition", action="store_true",
-                         help="Add Check Constraints to specified tables to complete table partitioning")
-    ACTIONS.add_argument("-a", "--aggregate", action="store_true",
-                         help="Aggregate raw data")
     PARSER.add_argument("-d", "--dbsetting",
                         default='default.cfg',
                         help="Filename with connection settings to the database"
@@ -119,7 +119,10 @@ if __name__ == "__main__":
     PARSER.add_argument("-tx", "--timecolumn",
                         default='tx',
                         help="Time column for partitioning, default: %(default)s")
-
+    PARSER.add_argument("--alldata", action="store_true",
+                        help="For aggregating, specify using all rows, regardless of score")
+    PARSER.add_argument("--tmctable", default='gis.inrix_tmc_tor',
+                        help="Specify subset of tmcs to use, default: %(default)s")
     ARGS = PARSER.parse_args()
 
     #Configure logging
@@ -155,5 +158,15 @@ if __name__ == "__main__":
         from finish_partition import partition_tables
         partition_tables(YEARS, DBSETTING, LOGGER, table=ARGS.tablename, timecol=ARGS.timecolumn)
     elif ARGS.aggregate:
+        OPT_ARGS = {}
+        if ARGS.alldata:
+            OPT_ARGS['alldata'] = True
+        if ARGS.tmctable:
+            TMCTABLE = ARGS.tmctable.split(".")
+            if len(TMCTABLE) != 2:
+                LOGGER.fatal('tmc table must be of form "schema.table"')
+                sys.exit(2)
+            OPT_ARGS['tmcschema'] = TMCTABLE[0]
+            OPT_ARGS['tmctable'] = TMCTABLE[1]
         from aggregate import agg_tables
-        agg_tables(YEARS, DBSETTING, LOGGER)
+        agg_tables(YEARS, DBSETTING, LOGGER, **OPT_ARGS)
