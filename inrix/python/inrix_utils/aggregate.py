@@ -11,7 +11,7 @@ def get_yyyymm(yyyy, mm):
     else:
         return str(yyyy)+str(mm)
 
-def _agg_table(yyyymm, logger, cursor, **kwargs):
+def _agg_table(yyyymm, logger, cursor, con, **kwargs):
     '''Aggregate data from the inrix.raw_data partitioned table with yyyymm
     and insert it in inrix.agg_extract_hour.'''
 
@@ -30,7 +30,7 @@ def _agg_table(yyyymm, logger, cursor, **kwargs):
         logger.info('Aggregating table %s', 'inrix.raw_data'+yyyymm)
         cursor.execute('SELECT inrix.agg_extract_hour(%(yyyymm)s)', {'yyyymm':yyyymm})
 
-    cursor.commit()
+    con.commit()
 
 def agg_tables(years, dbset, logger, **kwargs):
     '''Update a series of tables based on the years dictionary \
@@ -52,7 +52,7 @@ def agg_tables(years, dbset, logger, **kwargs):
             #Execution retry loop
             while True:
                 try:
-                    _agg_table(yyyymm, logger, cursor, **kwargs)
+                    _agg_table(yyyymm, logger, cursor, con, **kwargs)
                 except (OperationalError, InterfaceError) as oe:
                     logger.error(oe)
                     logger.info('Retrying connection in 2 minutes')
