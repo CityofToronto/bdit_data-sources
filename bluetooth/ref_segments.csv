@@ -1,0 +1,48 @@
+segment_id,segment_name,startpointname,endpointname,direction,start_road,start_crossstreet,end_road,end_crossstreet,analysisid,orig_startpointname,orig_endpointname
+1,A_B,A,B,EB,Gardiner,Wickham Rd.,Gardiner,Grand Ave.,,A,B
+2,B_B1,B,B1,EB,Gardiner,Grand Ave.,Gardiner,Roncesvalles Ave.,,B5012,B1
+3,B1_C,B1,C,EB,Gardiner,Roncesvalles Ave.,Gardiner,Dufferin St.,,B15056,C5013
+4,C_D,C,D,EB,Gardiner,Dufferin St.,Gardiner,Spadina Ave.,,C,D
+5,D_E,D,E,EB,Gardiner,Spadina Ave.,Gardiner,Parliament St.,,C (Qual),E
+6,E_F,E,F,EB/NB,Gardiner,Parliament St.,DVP,Dundas St. E,,E,F
+7,F_G,F,G,NB,DVP,Dundas St. E,DVP,Bayview Ramp,,F,G
+8,G_H,G,H,NB,DVP,Bayview Ramp,DVP,Don Mills Rd.,,G,H
+9,H_I,H,I,NB,DVP,Don Mills Rd.,DVP,Wynford Dr.,,H,I
+10,I_J,I,J,NB,DVP,Wynford Dr.,DVP,Lawrence St. E,,I,J
+11,J_K,J,K,NB,DVP,Lawrence St. E,DVP,York Mills Rd.,,J,K
+12,K_J,K,J,SB,DVP,York Mills Rd.,DVP,Lawrence St. E,,K,J
+13,J_I,J,I,SB,DVP,Lawrence St. E,DVP,Wynford Dr.,,J,I
+14,I_H,I,H,SB,DVP,Wynford Dr.,DVP,Don Mills Rd.,,I,H
+15,H_G,H,G,SB,DVP,Don Mills Rd.,DVP,Bayview Ramp,,H,G
+16,G_F,G,F,SB,DVP,Bayview Ramp,DVP,Dundas St. E,,G,F
+17,F_E,F,E,SB/WB,DVP,Dundas St. E,Gardiner,Parliament St.,,F,E
+18,E_D,E,D,WB,Gardiner,Parliament St.,Gardiner,Spadina Ave.,,E,D
+19,D_C,D,C,WB,Gardiner,Spadina Ave.,Gardiner,Dufferin St.,,D,C
+20,C_B1,C,B1,WB,Gardiner,Dufferin St.,Gardiner,Roncesvalles Ave.,,C5013,B15056
+21,B1_B,B1,B,WB,Gardiner,Roncesvalles Ave.,Gardiner,Grand Ave.,,B15056,B5012
+22,B_A,B,A,WB,Gardiner,Grand Ave.,Gardiner,Wickham Rd.,,B,A
+23,AC1_AC2,AC1,AC2,EB,College,Dovercourt Rd.,College,Bathurst St.,1412888,AC1,AC2
+24,AC2_AC1,AC2,AC1,WB,College,Bathurst St.,College,Dovercourt Rd.,1412893,AC2,AC1
+25,AC2_AC3,AC2,AC3,EB,College,Bathurst St.,College,University Ave.,1412898,AC2,AC3
+26,AC3_AC2,AC3,AC2,WB,College,University Ave.,College,Bathurst St.,1412903,AC3,AC2
+27,AC3_AC4,AC3,AC4,EB,College,University Ave.,College,Parliament St.,1412908,AC3,AC4
+28,AC4_AC3,AC4,AC3,WB,College,Parliament St.,College,University Ave.,1412913,AC4,AC3
+29,AD1_AD2,AD1,AD2,EB,Dundas,Roncesvalles Ave.,Dundas,Stirling Rd.,1412641,AD1,AD2
+30,AD2_AD1,AD2,AD1,WB,Dundas,Stirling Rd.,Dundas,Roncesvalles Ave.,1412684,AD2,AD1
+31,AD2_AD3,AD2,AD3,EB,Dundas,Stirling Rd.,Dundas,Dovercourt Rd.,1412818,AD2,AD3
+32,AD3_AD2,AD3,AD2,WB,Dundas,Dovercourt Rd.,Dundas,Stirling Rd.,1412848,AD3,AD2
+33,AD3_AD4,AD3,AD4,EB,Dundas,Dovercourt Rd.,Dundas,Spadina Ave.,1412879,AD3,AD4
+34,AD4_AD3,AD4,AD3,WB,Dundas,Spadina Ave.,Dundas,Dovercourt Rd.,1412883,AD4,AD3
+35,AQ1_AQ2,AQ1,AQ2,EB,Queen,Dufferin St.,Queen,Bathurst St.,1412918,AQ1,AQ2
+36,AQ2_AQ1,AQ2,AQ1,WB,Queen,Bathurst St.,Queen,Dufferin St.,1412923,AQ2,AQ1
+37,AQ2_AC2,AQ2,AC2,NB,Bathurst,Queen St.,Bathurst,College St.,1413206,AQ2,AC2
+38,AC2_AQ2,AC2,AQ2,SB,Bathurst,College St.,Bathurst,Queen St.,1413237,AC2,AQ2
+39,Z1_B,Z1,B,WB,Lakeshore,Ellis Ave.,Gardiner,Grand Ave.,,Z1,B
+40,Z1_Z2,Z1,Z2,EB,Lakeshore,Ellis Ave.,Lakeshore,Dufferin St.,,Z1,Z2
+41,Z2_Z1,Z2,Z1,WB,Lakeshore,Dufferin St.,Lakeshore,Ellis Ave.,,Z2,Z1
+42,Z2_Z3,Z2,Z3,EB,Lakeshore,Dufferin St.,Lakeshore,Strachan Ave.,,Z25015,Z35060
+43,Z3_LB,Z3,LB,EB,Lakeshore,Strachan Ave.,Lakeshore,Bay St.,,Z35060,LB5061
+44,Z3_Z2,Z3,Z2,WB,Lakeshore,Strachan Ave.,Lakeshore,Dufferin St.,,Z35060,Z25015
+45,B_Z1,B,Z1,EB,Gardiner,Grand Ave.,Lakeshore,Ellis Ave.,,B,Z1
+46,B_C,B,C,EB,Gardiner,Grand Ave.,Gardiner,Dufferin St.,,B,C
+47,C_B,C,B,WB,Gardiner,Dufferin St.,Gardiner,Grand Ave.,,C,B
