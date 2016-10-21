@@ -20,9 +20,14 @@ def _tmc_index_table(table, logger, cursor):
 def _tx_index_table(table, logger, cursor):
     '''Create tx index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating timestamp index')
-    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':table})
+    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
 
-def index_tables(years, dbset, logger):
+def _analyze_table(table, logger, cursor):
+    '''Analyze inrix.raw_data partitioned table with table.'''
+    logger.info('Analyzing table %s', table)
+    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
+
+def index_tables(years, dbset, logger, **kwargs):
     '''Create indexes for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
@@ -36,7 +41,7 @@ def index_tables(years, dbset, logger):
             logger.info('Creating indexes on table %s', table)
 
             #Execution retry loop score
-            while True:
+            while 'score' in kwargs:
                 try:
                     _score_index_table(table, logger, cursor)
                 except OperationalError as oe:
@@ -45,7 +50,7 @@ def index_tables(years, dbset, logger):
                 else:
                     break
             #Execution retry loop tmc
-            while True:
+            while 'tmc' in kwargs:
                 try:
                     _tmc_index_table(table, logger, cursor)
                 except OperationalError as oe:
@@ -54,9 +59,18 @@ def index_tables(years, dbset, logger):
                 else:
                     break
             #Execution retry loop tx
-            while True:
+            while 'tx' in kwargs:
                 try:
                     _tx_index_table(table, logger, cursor)
+                except OperationalError as oe:
+                    logger.error(oe)
+                    con, cursor = try_connection(logger, dbset)
+                else:
+                    break
+
+            while True:
+                try:
+                    _analyze_table(table, logger, cursor)
                 except OperationalError as oe:
                     logger.error(oe)
                     con, cursor = try_connection(logger, dbset)
@@ -71,53 +85,15 @@ def index_tables(years, dbset, logger):
     con.close()
 
 if __name__ == "__main__":
-    import argparse
-    import json
-    import sys
-
-    PARSER = argparse.ArgumentParser(description='Create indexes on raw inrix data tables.')
-    #Must have either a year range or pass a JSON file with years.
-    YEARS_ARGUMENTS = PARSER.add_mutually_exclusive_group(required=True)
-    YEARS_ARGUMENTS.add_argument("-y", "--years", nargs=2,
-                                 help="Range of months (YYYYMM) to operate over"
-                                 "from startdate to enddate",
-                                 metavar=('YYYYMM', 'YYYYMM'))
-    YEARS_ARGUMENTS.add_argument("-Y", "--yearsjson", type=json.load,
-                                 help="Written dictionary which contains years as key"
-                                 "and start/end month like {'2012'=[1,12]}")
-
-    PARSER.add_argument("-d", "--dbsetting",
-                        default='default.cfg',
-                        help="Filename with connection settings to the database"
-                        "(default: opens %(default)s)")
-
-    ARGS = PARSER.parse_args()
-
+    #For initial run, creating years and months of available data as a python dictionary
+    YEARS = {"2012":range(7, 13),
+             "2013":range(1, 7),
+             "2016":range(1, 7),
+             "2014":range(1, 13),
+             "2015":range(1, 13)}
     #Configure logging
     FORMAT = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
-
-    import configparser
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(ARGS.dbsetting)
-    DBSETTING = CONFIG['DBSETTINGS']
-
-    if ARGS.yearsjson:
-        try:
-            YEARS = _validate_yearsjson(ARGS.yearsjson)
-        except ValueError as err:
-            LOGGER.critical(str(err))
-            sys.exit(2)
-
-    elif ARGS.years:
-        try:
-            YEARS = _validate_yyyymm_range(ARGS.years)
-        except ValueError as err:
-            LOGGER.critical(str(err))
-            sys.exit(2)
-    else:
-        LOGGER.critical('Invalid argument(s) for range of months to process')
-        sys.exit(2)
-
-    index_tables(YEARS, DBSETTING, LOGGER)
+    from dbsettings import dbsetting
+    index_tables(YEARS, dbsetting, LOGGER)
