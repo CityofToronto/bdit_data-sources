@@ -48,3 +48,14 @@ def try_connection(logger, dbset, **kwargs):
         else:
             break
     return con, cursor
+
+def execute_retry(func, funcparams, logger, dbset, **kwargs):
+    '''Execute a function within a psycopg2 connection retry loop'''
+    while True:
+        try:
+            func(funcparams)
+        except (OperationalError, InterfaceError) as oe:
+            logger.error(oe)
+            con, cursor = try_connection(logger, dbset, autocommit=True)
+        else:
+            break
