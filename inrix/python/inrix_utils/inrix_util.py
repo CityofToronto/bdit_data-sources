@@ -123,6 +123,14 @@ if __name__ == "__main__":
                         help="For aggregating, specify using all rows, regardless of score")
     PARSER.add_argument("--tmctable", default='gis.inrix_tmc_tor',
                         help="Specify subset of tmcs to use, default: %(default)s")
+    PARSER.add_argument("--indextmc", action="store_true", 
+                        help="Specify subset of tmcs to use, default: %(default)s")
+    PARSER.add_argument("--indextx", action="store_true", 
+                        help="Specify subset of tmcs to use, default: %(default)s")
+    PARSER.add_argument("--indexscore", action="store_true", 
+                        help="Specify subset of tmcs to use, default: %(default)s")
+    
+    
     ARGS = PARSER.parse_args()
 
     #Configure logging
@@ -152,8 +160,12 @@ if __name__ == "__main__":
         sys.exit(2)
 
     if ARGS.index:
+        tx, tmc, score = True, True, True
+        #Assume indexing on all columns, unless a specific column is specified
+        if ARGS.indextmc or ARGS.indextx or ARGS.indexscore:
+            tx, tmc, score = ARGS.indextx, ARGS.indextmc, ARGS.indexscore
         from create_index import index_tables
-        index_tables(YEARS, DBSETTING, LOGGER)
+        index_tables(YEARS, DBSETTING, LOGGER, tx=tx, tmc=tmc, score=score)
     elif ARGS.partition:
         from finish_partition import partition_tables
         partition_tables(YEARS, DBSETTING, LOGGER, table=ARGS.tablename, timecol=ARGS.timecolumn)

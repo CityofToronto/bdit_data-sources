@@ -1,4 +1,4 @@
-/*Reducing timestamp index size by applying it only to rows
+﻿/*Reducing timestamp index size by applying it only to rows
   where the speed record is based on observed data (score=30)*/
 
 CREATE OR REPLACE FUNCTION inrix.create_raw_tx_idx (tablename TEXT)
@@ -10,4 +10,4 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION inrix.create_raw_score_idx (TEXT) TO rdumas_py;
+GRANT EXECUTE ON FUNCTION inrix.create_raw_tx_idx (TEXT) TO rdumas_py;
