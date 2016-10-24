@@ -41,36 +41,36 @@ SampleCount|the number of devices completing the route from start to end in the 
 	2.Display API: REST-based interface returns live data as JSON or xml in a HTTP(S) response
 	3.WebService API: SOAP-based for programmatic access to the system.
 * Functions that web service includes:
-	o getAvailableDisplayIds() – returns a list of available Public Displays;
-	o getDisplayInfo() – returns detailed information for a Public Display for a given display ID;
-	o getPublicDisplayData() – used to get Public Display data (current result set) for a given display ID;
-	o getDisplayData() – used to get Public Display data (current result set) for a given display ID (for displays with Restricted Access enabled);
-	o getExportableAnalyses() – returns a list of analyses, each with all required information for export;
-	o getExportableLiveAnalyses() – returns a list of live analyses, each with all required;
-	o information for export;
-	o getFilteredAnalyses() – returns a list of analyses matching a specified filter, each with all required information for export;
-	o exportDwelltimeReport() – used to export Measured Time data;
-	o exportLiveDwelltimeReport() – used to export Live Measured Time data;
-	o exportKPIReport() – used to export KPI data;
-	o exportQuarterlyReport() – used to export Quarterly KPI data;	
-	o exportCounterReport() – used to export Counter Reports;
-	o getCurrentDwellTime() – used to get current dwell time for a live analysis;
-	o getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
-	o exportPerUserData() – used to export individual dwell time measurements for an analysis; and
-	o getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+	** getAvailableDisplayIds() – returns a list of available Public Displays;
+	** getDisplayInfo() – returns detailed information for a Public Display for a given display ID;
+	** getPublicDisplayData() – used to get Public Display data (current result set) for a given display ID;
+	** getDisplayData() – used to get Public Display data (current result set) for a given display ID (for displays with Restricted Access enabled);
+	** getExportableAnalyses() – returns a list of analyses, each with all required information for export;
+	** getExportableLiveAnalyses() – returns a list of live analyses, each with all required;
+	** information for export;
+	** getFilteredAnalyses() – returns a list of analyses matching a specified filter, each with all required information for export;
+	** exportDwelltimeReport() – used to export Measured Time data;
+	** exportLiveDwelltimeReport() – used to export Live Measured Time data;
+	** exportKPIReport() – used to export KPI data;
+	** exportQuarterlyReport() – used to export Quarterly KPI data;	
+	** exportCounterReport() – used to export Counter Reports;
+	** getCurrentDwellTime() – used to get current dwell time for a live analysis;
+	** getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
+	** exportPerUserData() – used to export individual dwell time measurements for an analysis; and
+	** getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
 	
 ##Turning Movement Counts
 
 ###Data Elements
-Location Identifier (SLSN Node ID)
-CountType
-Count interval start and end date and times
-AM Peak, PM peak, and off-peak 7:30-9:30, 10:00-12:00,13:00-15:00,16:00-18:00
-Roadway 1 and 2 names (intersectoin)
-15 min aggregated interval time
-15 min aggregated volume per movement (turning and approach) by:
-	*vehicle types
-	*cyclists and pedestrian counts are approach only
+* Location Identifier (SLSN Node ID)
+* CountType
+* Count interval start and end date and times
+* AM Peak, PM peak, and off-peak 7:30-9:30, 10:00-12:00,13:00-15:00,16:00-18:00
+* Roadway 1 and 2 names (intersectoin)
+* 15 min aggregated interval time
+* 15 min aggregated volume per movement (turning and approach) by:
+	** vehicle types
+	** cyclists and pedestrian counts are approach only
 	
 ###Notes
 * No regular data load schedule. 
@@ -87,17 +87,17 @@ Roadway 1 and 2 names (intersectoin)
 ##Permanent Count Stations and Automated Traffic Recorder
 
 ###Data Elements
-Location Identifier(SLSN *Link* (Node?) ID)
-Count Type
-Count interval start and end date and times
-Roadway Names
-Location Description
-Direction
-Number of Lanes
-Median and Type
-Comments
-15 min aggregated interval time
-15 min volume
+* Location Identifier(SLSN *Link* (Node?) ID)
+* Count Type
+* Count interval start and end date and times
+* Roadway Names
+* Location Description
+* Direction
+* Number of Lanes
+* Median and Type
+* Comments
+* 15 min aggregated interval time
+* 15 min volume
 
 ###Notes
 * The counts represent roadway and direction(s), not on a lane-by-lane level
@@ -110,12 +110,12 @@ Comments
 ## Vehicle Detector Station (VDS)
 
 ###Data Elements
-Location Identifier (SLSN Link ID)
-Count Type
-Roadway Names
-Lane Number 
-15 min aggregated interval times
-15 min aggregated volume, occupancy, and speed
+* Location Identifier (SLSN Link ID)
+* Count Type
+* Roadway Names
+* Lane Number 
+* 15 min aggregated interval times
+* 15 min aggregated volume, occupancy, and speed
 
 ###Notes
 * Raw 20sec interval VDS data is available on the processing server, not loaded into FLOW
@@ -128,14 +128,14 @@ Lane Number
 ## Incidents
 
 ### Data Elements
-Unique system (ROdb) identifier
-Location
-DTO district
-Incident start and end times
-Incident description free form
-Incident status and timestamps
-Police activities and timestamps
-RESCU operator shift information
+* Unique system (ROdb) identifier
+* Location
+* DTO district
+* Incident start and end times
+* Incident description free form
+* Incident status and timestamps
+* Police activities and timestamps
+* RESCU operator shift information
 
 ### Notes
 * Manual data entry
@@ -144,18 +144,18 @@ RESCU operator shift information
 
 ## Road Disruption Activity (RoDARS)
 ###Data Elements
-Unique system identifier
-project description freeform
-location
-road types
-event status
-start and end times (may not be accurate)
-district
-applicant information (contractor name, contact, project managers, site inspector, work zone coordinator, etc)
-work event types
-permit types
-RACS permit number (not validated)
-work zone traffic coordinator approval status
+* Unique system identifier
+* project description freeform
+* location
+* road types
+* event status
+* start and end times (may not be accurate)
+* district
+* applicant information (contractor name, contact, project managers, site inspector, work zone coordinator, etc)
+* work event types
+* permit types
+* RACS permit number (not validated)
+* work zone traffic coordinator approval status
 
 ### Notes
 * Information is collected via applicant submission of RoDARS notification form
@@ -166,16 +166,16 @@ work zone traffic coordinator approval status
 
 ## CRASH - Motor Vehicle Accident Report
 ### Data Elements
-Unique MVAR identifier (externally assigned by Toronto Police Service)
-Accident Date & Time
-Type of collision
-Accident location: street name(s), distance offset, municipality, county, etc.
-Description of accident and diagram
-Involved persons:
-	*Motorist/passenger/pedestrian/cyclist
-	*Person age
-	*Gender
-	*Injuries and Fatalities
+* Unique MVAR identifier (externally assigned by Toronto Police Service)
+* Accident Date & Time
+* Type of collision
+* Accident location: street name(s), distance offset, municipality, county, etc.
+* Description of accident and diagram
+* Involved persons:
+	** Motorist/passenger/pedestrian/cyclist
+	** Person age
+	** Gender
+	** Injuries and Fatalities
 ###Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
