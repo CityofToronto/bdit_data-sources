@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 '''Aggregrates Inrix data to 15 minute bins'''
 import logging
-from psycopg2 import connect, OperationalError, InterfaceError
 from utils import get_yyyymm, try_connection
 
-def _agg_table(yyyymm, logger, cursor, con, **kwargs):
+def _agg_table(logger, cursor, **kwargs):
     '''Aggregate data from the inrix.raw_data partitioned table with yyyymm
     and insert it in inrix.agg_extract_hour.'''
+    yyyymm = kwargs['yyyymm']
 
     if 'tmcschema' in kwargs:
         logger.info('Aggregating table %s with subset from schema %s table %s',
@@ -23,8 +23,6 @@ def _agg_table(yyyymm, logger, cursor, con, **kwargs):
         logger.info('Aggregating table %s', 'inrix.raw_data'+yyyymm)
         cursor.execute('SELECT inrix.agg_extract_hour(%(yyyymm)s)', {'yyyymm':yyyymm})
 
-    con.commit()
-
 def agg_tables(years, dbset, logger, **kwargs):
     '''Update a series of tables based on the years dictionary \
     and the dbset database connection.'''
@@ -33,20 +31,14 @@ def agg_tables(years, dbset, logger, **kwargs):
                 dbset['host'],
                 dbset['database'],
                 dbset['user'])
-    con, cursor = try_connection(logger, dbset)
+    con, cursor = try_connection(logger, dbset, autocommit=True)
 
     for year in years:
         for month in years[year]:
-            yyyymm = get_yyyymm(year, month)
-            #Execution retry loop
-            while True:
-                try:
-                    _agg_table(yyyymm, logger, cursor, con, **kwargs)
-                except (OperationalError, InterfaceError) as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
-                else:
-                    break
+            
+            execute_function(_agg_table, logger, cursor, dbset, autocommit=True
+                             **kwargs, 
+                             yyyymm = get_yyyymm(year, month))
 
     con.close()
     logger.info('Processing complete, connection to %s database %s closed',

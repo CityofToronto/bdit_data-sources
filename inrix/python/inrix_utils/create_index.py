@@ -1,31 +1,29 @@
 #!/usr/bin/python3
 '''Create indexes for each table in the Inrix database.'''
 import logging
-import re
-from time import sleep
-from psycopg2 import connect, OperationalError
-from utils import get_yyyymm, try_connection
+from psycopg2.extensions import AsIs
+from utils import get_yyyymm, try_connection, execute_function
 
 
-def _score_index_table(table, logger, cursor):
+def _score_index_table(logger, cursor, **kwargs):
     '''Create score index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating score index')
-    cursor.execute("SELECT inrix.create_raw_score_idx(%(tablename)s)", {'tablename':table})
+    cursor.execute("SELECT inrix.create_raw_score_idx(%(tablename)s)", {'tablename':kwargs['table']})
 
-def _tmc_index_table(table, logger, cursor):
+def _tmc_index_table(logger, cursor, **kwargs):
     '''Create tmc index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating tmc index')
-    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':table})
+    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':kwargs['table']})
 
-def _tx_index_table(table, logger, cursor):
+def _tx_index_table(logger, cursor, **kwargs):
     '''Create tx index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating timestamp index')
-    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
+    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':kwargs['table']})
 
-def _analyze_table(table, logger, cursor):
+def _analyze_table(logger, cursor, **kwargs):
     '''Analyze inrix.raw_data partitioned table with table.'''
-    logger.info('Analyzing table %s', table)
-    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
+    logger.info('Analyzing table %s', kwargs['table'])
+    cursor.execute("ANALYZE inrix.%(tablename)s", {'tablename':AsIs(kwargs['table'])})
 
 def index_tables(years, dbset, logger, **kwargs):
     '''Create indexes for a series of tables based on the years dictionary \
@@ -40,42 +38,16 @@ def index_tables(years, dbset, logger, **kwargs):
             table = 'raw_data'+yyyymm
             logger.info('Creating indexes on table %s', table)
 
-            #Execution retry loop score
-            while 'score' in kwargs:
-                try:
-                    _score_index_table(table, logger, cursor)
-                except OperationalError as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
-                else:
-                    break
-            #Execution retry loop tmc
-            while 'tmc' in kwargs:
-                try:
-                    _tmc_index_table(table, logger, cursor)
-                except OperationalError as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
-                else:
-                    break
-            #Execution retry loop tx
-            while 'tx' in kwargs:
-                try:
-                    _tx_index_table(table, logger, cursor)
-                except OperationalError as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
-                else:
-                    break
+            if 'score' in kwargs:
+                execute_function(_score_index_table, logger, cursor, dbset, table=table, autocommit=True)
 
-            while True:
-                try:
-                    _analyze_table(table, logger, cursor)
-                except OperationalError as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset)
-                else:
-                    break
+            if 'tmc' in kwargs:
+                execute_function(_tmc_index_table, logger, cursor, dbset, table=table, autocommit=True)
+
+            if 'tx' in kwargs:
+                execute_function(_tx_index_table, logger, cursor, dbset, table=table, autocommit=True)
+
+            execute_function(_analyze_table, logger, cursor, dbset, table=table, autocommit=True)
 
     con.close()
     logger.info('Processing complete, connection to %s database %s closed',
