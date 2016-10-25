@@ -9,7 +9,7 @@ phase |table | data inserted | timestamps corrected | indexed | constraints | ag
 1     |201111| Y             | Y                    | Y       | Y           | Y
 1     |201112| Y             | Y                    | Y       | Y           | Y
 1     |201112| Y             | Y                    | Y       | Y           | Y
-2     |201207| Y             | Y                    | Y       | Y           | Y
+2     |201207| Y             | Y                    | N       | Y           | Y
 2     |201208| Y             | Y                    |         | Y           | Y
 2     |201209| Y             | Y                    |         | Y           | Y
 2     |201210| Y             | Y                    |         | Y           | Y

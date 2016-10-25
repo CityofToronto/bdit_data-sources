@@ -1,15 +1,8 @@
 #!/usr/bin/python3
 '''Aggregrates Inrix data to 15 minute bins'''
 import logging
-from time import sleep
 from psycopg2 import connect, OperationalError, InterfaceError
-
-def get_yyyymm(yyyy, mm):
-    '''Combine integer yyyy and mm into a string yyyymm.'''
-    if mm < 10:
-        return str(yyyy)+'0'+str(mm)
-    else:
-        return str(yyyy)+str(mm)
+from utils import get_yyyymm, try_connection
 
 def _agg_table(yyyymm, logger, cursor, con, **kwargs):
     '''Aggregate data from the inrix.raw_data partitioned table with yyyymm
@@ -40,11 +33,7 @@ def agg_tables(years, dbset, logger, **kwargs):
                 dbset['host'],
                 dbset['database'],
                 dbset['user'])
-    con = connect(database=dbset['database'],
-                  host=dbset['host'],
-                  user=dbset['user'],
-                  password=dbset['password'])
-    cursor = con.cursor()
+    con, cursor = try_connection(logger, dbset)
 
     for year in years:
         for month in years[year]:
@@ -55,16 +44,7 @@ def agg_tables(years, dbset, logger, **kwargs):
                     _agg_table(yyyymm, logger, cursor, con, **kwargs)
                 except (OperationalError, InterfaceError) as oe:
                     logger.error(oe)
-                    logger.info('Retrying connection in 2 minutes')
-                    sleep(120)
-                    try:
-                        con = connect(database=dbset['database'],
-                                      host=dbset['host'],
-                                      user=dbset['user'],
-                                      password=dbset['password'])
-                        cursor = con.cursor()
-                    except (OperationalError, InterfaceError) as oe:
-                        pass
+                    con, cursor = try_connection(logger, dbset)
                 else:
                     break
 
