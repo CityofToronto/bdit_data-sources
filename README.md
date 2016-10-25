@@ -37,27 +37,27 @@ SampleCount|the number of devices completing the route from start to end in the 
 
 ###Retrieval
 * Interfaces for retrieving data
-	1.Export from Bliptrack GUI at g4apps.bliptrack.net
-	2.Display API: REST-based interface returns live data as JSON or xml in a HTTP(S) response
-	3.WebService API: SOAP-based for programmatic access to the system.
+	1. Export from Bliptrack GUI at g4apps.bliptrack.net
+	2. Display API: REST-based interface returns live data as JSON or xml in a HTTP(S) response
+	3. WebService API: SOAP-based for programmatic access to the system.
 * Functions that web service includes:
-	** getAvailableDisplayIds() – returns a list of available Public Displays;
-	** getDisplayInfo() – returns detailed information for a Public Display for a given display ID;
-	** getPublicDisplayData() – used to get Public Display data (current result set) for a given display ID;
-	** getDisplayData() – used to get Public Display data (current result set) for a given display ID (for displays with Restricted Access enabled);
-	** getExportableAnalyses() – returns a list of analyses, each with all required information for export;
-	** getExportableLiveAnalyses() – returns a list of live analyses, each with all required;
-	** information for export;
-	** getFilteredAnalyses() – returns a list of analyses matching a specified filter, each with all required information for export;
-	** exportDwelltimeReport() – used to export Measured Time data;
-	** exportLiveDwelltimeReport() – used to export Live Measured Time data;
-	** exportKPIReport() – used to export KPI data;
-	** exportQuarterlyReport() – used to export Quarterly KPI data;	
-	** exportCounterReport() – used to export Counter Reports;
-	** getCurrentDwellTime() – used to get current dwell time for a live analysis;
-	** getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
-	** exportPerUserData() – used to export individual dwell time measurements for an analysis; and
-	** getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+	- getAvailableDisplayIds() – returns a list of available Public Displays;
+	- getDisplayInfo() – returns detailed information for a Public Display for a given display ID;
+	- getPublicDisplayData() – used to get Public Display data (current result set) for a given display ID;
+	- getDisplayData() – used to get Public Display data (current result set) for a given display ID (for displays with Restricted Access enabled);
+	- getExportableAnalyses() – returns a list of analyses, each with all required information for export;
+	- getExportableLiveAnalyses() – returns a list of live analyses, each with all required;
+	- information for export;
+	- getFilteredAnalyses() – returns a list of analyses matching a specified filter, each with all required information for export;
+	- exportDwelltimeReport() – used to export Measured Time data;
+	- exportLiveDwelltimeReport() – used to export Live Measured Time data;
+	- exportKPIReport() – used to export KPI data;
+	- exportQuarterlyReport() – used to export Quarterly KPI data;	
+	- exportCounterReport() – used to export Counter Reports;
+	- getCurrentDwellTime() – used to get current dwell time for a live analysis;
+	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
+	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
+	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
 	
 ##Turning Movement Counts
 
