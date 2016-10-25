@@ -2,7 +2,8 @@
 '''Move Inrix Data which is not in Toronto City Boundaries out of main Inrix tables'''
 import logging
 from psycopg2 import connect, OperationalError, InterfaceError
-from utils import get_yyyymm, try_connection
+from utils import get_yyyymm, try_connection, get_yyyymmdd
+from finish_partition import _partition_table
 
 def _move_data_table(yyyymm, logger, cursor, con, **kwargs):
     '''Move outside data from TMCs outside Toronto to a new schema'''
@@ -43,7 +44,17 @@ def move_data(years, dbset, logger, **kwargs):
                     con, cursor = try_connection(logger, dbset, autocommit=True)
                 else:
                     break
-
+            
+            startdate = getyyyymmdd(year, month)
+            tableyyyymm = 'inrix.raw_data' + yyyymm
+            while True:
+                try:
+                    _partition_table(tableyyyymm, startdate, logger, cursor, timecol = 'tx')
+                except (OperationalError, InterfaceError) as oe:
+                    logger.error(oe)
+                    con, cursor = try_connection(logger, dbset, autocommit=True)
+                else:
+                    break
     con.close()
     logger.info('Processing complete, connection to %s database %s closed',
                 dbset['host'],
