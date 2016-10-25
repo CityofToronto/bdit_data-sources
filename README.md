@@ -143,19 +143,26 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Manual location selection on a map based on location description
 
 ## Road Disruption Activity (RoDARS)
+Data available in big_data.city.restrictions
 ###Data Elements
-* Unique system identifier
-* project description freeform
-* location
-* road types
-* event status
-* start and end times (may not be accurate)
-* district
-* applicant information (contractor name, contact, project managers, site inspector, work zone coordinator, etc)
-* work event types
-* permit types
-* RACS permit number (not validated)
-* work zone traffic coordinator approval status
+Field Name|Description|Type
+----------|-----------|----
+id|Unique system identifier|string
+description|project description freeform (direction and number of lanes affected and reason)|string
+name|location description|string
+road|road of disruption|string
+atroad|road at cross if disruption zone is an intersection|string
+fromroad|start crossroad if disruption zone is a segment|string
+toroad|end crossroad if disruption zone is a segment|stirng
+latitude/longitude|geo-information (not always occupied)|double
+district|district of location|string(from dropdown list)
+roadclass|road types|string(from dropdown list)
+expired|event status|0:ongoing;1:expired
+starttime|start time(may not be accurate)|timestamp
+endtime|end time(may not be accurate)|timestamp
+workperiod|Daily/Continuous/Weekdays/Weekends(not always occupied)|string
+contractor|contractor name(not always occupied)|string(from dropdown list)
+workeventtype|work event types(not always occupied)|string(from dropdown list)
 
 ### Notes
 * Information is collected via applicant submission of RoDARS notification form

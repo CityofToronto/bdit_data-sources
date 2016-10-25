@@ -1,4 +1,4 @@
-from psycopg2 import connect, OperationalError
+from psycopg2 import connect, OperationalError, InterfaceError
 
 def get_yyyymm(yyyy, mm):
     '''Combine integer yyyy and mm into a string yyyymm.'''
@@ -49,13 +49,14 @@ def try_connection(logger, dbset, **kwargs):
             break
     return con, cursor
 
-def execute_retry(func, funcparams, logger, dbset, **kwargs):
+
+def execute_function(func, logger, cursor, dbset, **kwargs):
     '''Execute a function within a psycopg2 connection retry loop'''
     while True:
         try:
-            func(funcparams)
+            func(logger, cursor, **kwargs)
         except (OperationalError, InterfaceError) as oe:
             logger.error(oe)
-            con, cursor = try_connection(logger, dbset, autocommit=True)
+            con, cursor = try_connection(logger, dbset, **kwargs)
         else:
             break

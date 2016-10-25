@@ -1,21 +1,17 @@
 #!/usr/bin/python3
 '''Move Inrix Data which is not in Toronto City Boundaries out of main Inrix tables'''
 import logging
-from psycopg2 import connect, OperationalError, InterfaceError
-from utils import get_yyyymm, try_connection, get_yyyymmdd
-from finish_partition import _partition_table
+from utils import get_yyyymm, try_connection, execute_function
 
-def _move_data_table(yyyymm, logger, cursor, con, **kwargs):
+def _move_data_table(logger, cursor, **kwargs):
     '''Move outside data from TMCs outside Toronto to a new schema'''
-
-    logger.info('Moving data in table inrix.raw_data%s', yyyymm)
-    cursor.execute("SELECT inrix.movedata(%(yyyymm)s)", {'yyyymm':yyyymm})
+    logger.info('Moving data in table inrix.raw_data%s', kwargs['yyyymm'])
+    cursor.execute("SELECT inrix.movedata(%(yyyymm)s)", {'yyyymm':kwargs['yyyymm']})
     
-def _remove_outside_data(yyyymm, logger, cursor, con, **kwargs):
+def _remove_outside_data(logger, cursor, **kwargs):
     '''Then delete it from inrix.raw_data'''
-    logger.info('Removing outside data from table inrix.raw_data%s', yyyymm)
-    cursor.execute("SELECT inrix.removeoutsidedata(%(yyyymm)s)", {'yyyymm':yyyymm})
-
+    logger.info('Removing outside data from table inrix.raw_data%s', kwargs['yyyymm'])
+    cursor.execute("SELECT inrix.removeoutsidedata(%(yyyymm)s)", {'yyyymm':kwargs['yyyymm']})
 
 def move_data(years, dbset, logger, **kwargs):
     '''Move outside data to a new schema and then delete it from inrix.raw_data \
@@ -26,35 +22,10 @@ def move_data(years, dbset, logger, **kwargs):
     for year in years:
         for month in years[year]:
             yyyymm = get_yyyymm(year, month)
-            #Execution retry loop
-            while True:
-                try:
-                    _move_data_table(yyyymm, logger, cursor, con, **kwargs)
-                except (OperationalError, InterfaceError) as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset, autocommit=True)
-                else:
-                    break
-                    
-            while True:
-                try:
-                    _remove_outside_data(yyyymm, logger, cursor, con, **kwargs)
-                except (OperationalError, InterfaceError) as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset, autocommit=True)
-                else:
-                    break
-            
-            startdate = getyyyymmdd(year, month)
-            tableyyyymm = 'inrix.raw_data' + yyyymm
-            while True:
-                try:
-                    _partition_table(tableyyyymm, startdate, logger, cursor, timecol = 'tx')
-                except (OperationalError, InterfaceError) as oe:
-                    logger.error(oe)
-                    con, cursor = try_connection(logger, dbset, autocommit=True)
-                else:
-                    break
+
+            execute_function(_move_data_table, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
+            execute_function(_remove_outside_data, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
+
     con.close()
     logger.info('Processing complete, connection to %s database %s closed',
                 dbset['host'],
