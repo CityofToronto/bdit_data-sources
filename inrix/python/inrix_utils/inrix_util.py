@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 '''Perform operations on Inrix data'''
+import argparse
+import json
+import sys
 import logging
 import re
+from itertools import chain
 from utils import get_yyyymm, get_yyyymmdd, try_connection, execute_function
 
 def _validate_yyyymm_range(yyyymmrange):
@@ -50,6 +54,23 @@ def _validate_yyyymm_range(yyyymmrange):
 
     return years
 
+def _validate_multiple_yyyymm_range(years_list):
+    '''Takes a list of pairs of yearmonth strings like ['YYYYMM','YYYYMM'] and returns
+    a dictionary of years[YYYY] = range(month1, month2 + 1)'''
+    years = {}
+    if len(years_list) == 1:
+        years = _validate_yyyymm_range(years_list[0])
+    else:
+        for yearrange in years_list:
+            years_to_add = _validate_yyyymm_range(yearrange)
+            for year_to_add in years_to_add:
+                if year_to_add not in years:
+                    years[year_to_add] = years_to_add[year_to_add]
+                else:
+                    years[year_to_add] = set.union(set(years_to_add[year_to_add]),
+                                                   set(years[year_to_add]))
+    return years
+    
 def _validate_yearsjson(yearsjson):
     '''Validate the two yyyymm command line arguments provided
 
@@ -85,11 +106,8 @@ def _validate_yearsjson(yearsjson):
 
     return years
 
-if __name__ == "__main__":
-    import argparse
-    import json
-    import sys
-
+def parse_args(args):
+    '''Parser for the command line arguments'''
     PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix '
                                                  'traffic data in a database.')
     #Possible action to call inrix_util to perform
@@ -105,7 +123,7 @@ if __name__ == "__main__":
                          help="Remove data from TMCs outside Toronto")
     #Must have either a year range or pass a JSON file with years.
     YEARS_ARGUMENTS = PARSER.add_mutually_exclusive_group(required=True)
-    YEARS_ARGUMENTS.add_argument("-y", "--years", nargs=2,
+    YEARS_ARGUMENTS.add_argument("-y", "--years", nargs=2, action='append',
                                  help="Range of months (YYYYMM) to operate over"
                                  "from startdate to enddate",
                                  metavar=('YYYYMM', 'YYYYMM'))
@@ -132,9 +150,11 @@ if __name__ == "__main__":
                         help="Specify subset of tmcs to use, default: %(default)s")
     PARSER.add_argument("--indexscore", action="store_true", 
                         help="Specify subset of tmcs to use, default: %(default)s")
-    
-    
-    ARGS = PARSER.parse_args()
+    return PARSER.parse_args(args)
+
+if __name__ == "__main__":
+
+    ARGS = parse_args(sys.argv[1:])
 
     #Configure logging
     FORMAT = '%(asctime)-15s %(message)s'
@@ -154,7 +174,7 @@ if __name__ == "__main__":
             sys.exit(2)
     elif ARGS.years:
         try:
-            YEARS = _validate_yyyymm_range(ARGS.years)
+            YEARS = _validate_multiple_yyyymm_range(ARGS.years)
         except ValueError as err:
             LOGGER.critical(str(err))
             sys.exit(2)
