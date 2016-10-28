@@ -22,7 +22,7 @@ def get_yyyymmdd(yyyy, mm, **kwargs):
     else:
         return str(yyyy)+'-'+str(mm)+'-01'
 
-def try_connection(logger, dbset, **kwargs):
+def try_connection(logger, dbset, *, autocommit=False, **kwargs):
     '''Connection retry loop'''
     while True:
         try:
@@ -34,7 +34,7 @@ def try_connection(logger, dbset, **kwargs):
                           host=dbset['host'],
                           user=dbset['user'],
                           password=dbset['password'])
-            if kwargs.get('autocommit', False):
+            if autocommit:
                 #Necessary for index building
                 con.autocommit = True
             cursor = con.cursor()

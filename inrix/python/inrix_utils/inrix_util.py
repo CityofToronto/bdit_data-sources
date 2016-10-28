@@ -2,6 +2,7 @@
 '''Perform operations on Inrix data'''
 import logging
 import re
+from utils import get_yyyymm, get_yyyymmdd, try_connection, execute_function
 
 def _validate_yyyymm_range(yyyymmrange):
     '''Validate the two yyyymm command line arguments provided
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     import configparser
     CONFIG = configparser.ConfigParser()
     CONFIG.read(ARGS.dbsetting)
-    DBSETTING = CONFIG['DBSETTINGS']
+    dbset = CONFIG['DBSETTINGS']
 
     if ARGS.yearsjson:
         try:
@@ -161,29 +162,56 @@ if __name__ == "__main__":
         LOGGER.critical('Invalid argument(s) for range of months to process')
         sys.exit(2)
 
+    function = None
+        
     if ARGS.index:
+        from create_index import index_tables
+        #Assume indexing on all columns, unless a specific column is specified
         tx, tmc, score = True, True, True
         #Assume indexing on all columns, unless a specific column is specified
         if ARGS.indextmc or ARGS.indextx or ARGS.indexscore:
             tx, tmc, score = ARGS.indextx, ARGS.indextmc, ARGS.indexscore
-        from create_index import index_tables
-        index_tables(YEARS, DBSETTING, LOGGER, tx=tx, tmc=tmc, score=score)
     elif ARGS.partition:
-        from finish_partition import partition_tables
-        partition_tables(YEARS, DBSETTING, LOGGER, table=ARGS.tablename, timecol=ARGS.timecolumn)
+        from finish_partition import partition_table
+        kwargs['startdate'] = get_yyyymmdd(year, month)
+        kwargs['tablename'] = ARGS.tablename
+        function=partition_table
     elif ARGS.aggregate:
         OPT_ARGS = {}
-        if ARGS.alldata:
-            OPT_ARGS['alldata'] = True
         if ARGS.tmctable:
             TMCTABLE = ARGS.tmctable.split(".")
             if len(TMCTABLE) != 2:
                 LOGGER.fatal('tmc table must be of form "schema.table"')
                 sys.exit(2)
-            OPT_ARGS['tmcschema'] = TMCTABLE[0]
-            OPT_ARGS['tmctable'] = TMCTABLE[1]
-        from aggregate import agg_tables
-        agg_tables(YEARS, DBSETTING, LOGGER, **OPT_ARGS)
+            kwargs['tmcschema'] = TMCTABLE[0]
+            kwargs['tmctable'] = TMCTABLE[1]
+        from aggregate import agg_table
+        kwargs['alldata']=ARGS.alldata
+        function=agg_table
     elif ARGS.movedata:
         from move_data import move_data
-        move_data(YEARS, DBSETTING, LOGGER)
+    
+    LOGGER.info('Connecting to host:%s database: %s with user %s',
+                dbset['host'],
+                dbset['database'],
+                dbset['user'])
+    con, cursor = try_connection(LOGGER, dbset, autocommit=True)
+
+    for year in YEARS:
+        for month in YEARS[year]:
+            yyyymm = get_yyyymm(year, month)
+            if ARGS.aggregate or ARGS.partition: 
+                execute_function(function, logger, cursor, dbset, 
+                                 autocommit=True,
+                                 **kwargs, 
+                                 yyyymm=yyyymm)
+            elif ARGS.index: 
+                index_tables(yyyymm, LOGGER, cursor, dbset, tx=tx, tmc=tmc, score=score)
+            elif ARGS.movedata:
+                move_data(yyyymm, logger, cursor, dbset,
+                          startdate = get_yyyymmdd(year, month))
+            
+    con.close()
+    LOGGER.info('Processing complete, connection to %s database %s closed',
+                dbset['host'],
+                dbset['database'])

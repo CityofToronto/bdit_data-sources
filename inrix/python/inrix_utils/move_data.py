@@ -1,35 +1,29 @@
 #!/usr/bin/python3
 '''Move Inrix Data which is not in Toronto City Boundaries out of main Inrix tables'''
 import logging
-from utils import get_yyyymm, try_connection, execute_function
-
-def _move_data_table(logger, cursor, **kwargs):
+from utils import get_yyyymm, get_yyyymmdd, try_connection, execute_function
+from finish_partition import _partition_table
+def _move_data_table(logger, cursor, *, yyyymm, **kwargs):
     '''Move outside data from TMCs outside Toronto to a new schema'''
-    logger.info('Moving data in table inrix.raw_data%s', kwargs['yyyymm'])
-    cursor.execute("SELECT inrix.movedata(%(yyyymm)s)", {'yyyymm':kwargs['yyyymm']})
+    logger.info('Moving data in table inrix.raw_data%s', yyyymm)
+    cursor.execute("SELECT inrix.movedata(%(yyyymm)s)", {'yyyymm':yyyymm})
     
-def _remove_outside_data(logger, cursor, **kwargs):
+def _remove_outside_data(logger, cursor, *, yyyymm, **kwargs):
     '''Then delete it from inrix.raw_data'''
-    logger.info('Removing outside data from table inrix.raw_data%s', kwargs['yyyymm'])
-    cursor.execute("SELECT inrix.removeoutsidedata(%(yyyymm)s)", {'yyyymm':kwargs['yyyymm']})
+    logger.info('Removing outside data from table inrix.raw_data%s', yyyymm)
+    cursor.execute("SELECT inrix.removeoutsidedata(%(yyyymm)s)", {'yyyymm':yyyymm})
 
-def move_data(years, dbset, logger, **kwargs):
+def move_data(yyyymm, logger, cursor, dbset, *, startdate, **kwargs):
     '''Move outside data to a new schema and then delete it from inrix.raw_data \
     using years dictionary and the dbset database connection.'''
 
-    con, cursor = try_connection(logger, dbset, autocommit=True)
-
-    for year in years:
-        for month in years[year]:
-            yyyymm = get_yyyymm(year, month)
-
-            execute_function(_move_data_table, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
-            execute_function(_remove_outside_data, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
-
-    con.close()
-    logger.info('Processing complete, connection to %s database %s closed',
-                dbset['host'],
-                dbset['database'])
+    execute_function(_move_data_table, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
+    execute_function(_remove_outside_data, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
+    execute_function(_partition_table, logger, cursor, dbset,
+                     autocommit=True,
+                     timecol='tx',
+                     tableyyyymm = 'inrix.raw_data' + yyyymm,
+                     startdate = startdate)
 
 if __name__ == "__main__":
     #For initial run, creating years and months of available data as a python dictionary

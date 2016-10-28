@@ -4,32 +4,16 @@ import logging
 from psycopg2.extensions import AsIs
 from utils import get_yyyymm, get_yyyymmdd, try_connection, execute_function
 
-def _partition_table(logger, cursor, **kwargs):
+def partition_table(logger, cursor, *, tablename, yyyymm, startdate, timecol = 'tx', **kwargs):
     '''Add check constraints on the inrix.raw_data partitioned table ending with yyyymm.'''
-    logger.info('Adding check constraints on table %s', kwargs['tableyyyymm'])
+    tableyyyymm = tablename + yyyymm
+    logger.info('Adding check constraints on table %s', tableyyyymm)
     cursor.execute("ALTER TABLE %(table)s ADD CHECK (%(timecol)s >= DATE %(startdate)s "
                    "AND %(timecol)s < DATE %(startdate)s + INTERVAL '1 month')"
-                   , {'table':AsIs(kwargs['tableyyyymm']), 'startdate':kwargs['startdate'],
-                   'timecol':AsIs(kwargs['timecol'])})
+                   , {'table':AsIs(tableyyyymm), 'startdate':startdate,
+                   'timecol':AsIs(timecol)})
 
-def partition_tables(years, dbset, logger, table, timecol):
-    '''Add check constraints for a series of tables based on the years dictionary \
-    and the dbset database connection.'''
 
-    con, cursor = try_connection(logger, dbset, autocommit=True)
-
-    for year in years:
-        for month in years[year]:
-            execute_function(_partition_table, logger, cursor, dbset,
-                             autocommit=True,
-                             timecol=timecol,
-                             tableyyyymm = table + get_yyyymm(year, month),
-                             startdate = get_yyyymmdd(year, month))
-
-    logger.info('Partitioning complete, connection to %s database %s closed',
-                dbset['host'],
-                dbset['database'])
-    con.close()
 
 if __name__ == "__main__":
     #For initial run, creating years and months of available data as a python dictionary

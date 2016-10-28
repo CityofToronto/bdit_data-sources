@@ -5,56 +5,43 @@ from psycopg2.extensions import AsIs
 from utils import get_yyyymm, try_connection, execute_function
 
 
-def _score_index_table(logger, cursor, **kwargs):
+def _score_index_table(logger, cursor, *, table, **kwargs):
     '''Create score index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating score index')
-    cursor.execute("SELECT inrix.create_raw_score_idx(%(tablename)s)", {'tablename':kwargs['table']})
+    cursor.execute("SELECT inrix.create_raw_score_idx(%(tablename)s)", {'tablename':table})
 
-def _tmc_index_table(logger, cursor, **kwargs):
+def _tmc_index_table(logger, cursor, *, table, **kwargs):
     '''Create tmc index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating tmc index')
-    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':kwargs['table']})
+    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':table})
 
-def _tx_index_table(logger, cursor, **kwargs):
+def _tx_index_table(logger, cursor, *, table, **kwargs):
     '''Create tx index on the inrix.raw_data partitioned table with table.'''
     logger.info('Creating timestamp index')
-    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':kwargs['table']})
+    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
 
-def _analyze_table(logger, cursor, **kwargs):
+def _analyze_table(logger, cursor, *, table, **kwargs):
     '''Analyze inrix.raw_data partitioned table with table.'''
-    logger.info('Analyzing table %s', kwargs['table'])
-    cursor.execute("ANALYZE inrix.%(tablename)s", {'tablename':AsIs(kwargs['table'])})
+    logger.info('Analyzing table %s', table)
+    cursor.execute("ANALYZE inrix.%(tablename)s", {'tablename':AsIs(table)})
 
-def index_tables(years, dbset, logger, **kwargs):
+def index_tables(yyyymm, logger, cursor, dbset, *, score=True, tmc=True, tx=True):
     '''Create indexes for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
-    con, cursor = try_connection(logger, dbset, autocommit = True)
+    table = 'raw_data'+yyyymm
+    logger.info('Creating indexes on table %s', table)
 
-    for year in years:
-        for month in years[year]:
-            yyyymm = get_yyyymm(year, month)
+    if score:
+        execute_function(_score_index_table, logger, cursor, dbset, table=table, autocommit=True)
 
-            table = 'raw_data'+yyyymm
-            logger.info('Creating indexes on table %s', table)
+    if tmc:
+        execute_function(_tmc_index_table, logger, cursor, dbset, table=table, autocommit=True)
 
-            if 'score' in kwargs:
-                execute_function(_score_index_table, logger, cursor, dbset, table=table, autocommit=True)
+    if tx:
+        execute_function(_tx_index_table, logger, cursor, dbset, table=table, autocommit=True)
 
-            if 'tmc' in kwargs:
-                execute_function(_tmc_index_table, logger, cursor, dbset, table=table, autocommit=True)
-
-            if 'tx' in kwargs:
-                execute_function(_tx_index_table, logger, cursor, dbset, table=table, autocommit=True)
-
-            execute_function(_analyze_table, logger, cursor, dbset, table=table, autocommit=True)
-
-    con.close()
-    logger.info('Processing complete, connection to %s database %s closed',
-                dbset['host'],
-                dbset['database'])
-
-    con.close()
+    execute_function(_analyze_table, logger, cursor, dbset, table=table, autocommit=True)
 
 if __name__ == "__main__":
     #For initial run, creating years and months of available data as a python dictionary
