@@ -2,7 +2,7 @@
 '''Move Inrix Data which is not in Toronto City Boundaries out of main Inrix tables'''
 import logging
 from utils import get_yyyymm, get_yyyymmdd, try_connection, execute_function
-from finish_partition import _partition_table
+from finish_partition import partition_table
 def _move_data_table(logger, cursor, *, yyyymm, **kwargs):
     '''Move outside data from TMCs outside Toronto to a new schema'''
     logger.info('Moving data in table inrix.raw_data%s', yyyymm)

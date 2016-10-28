@@ -210,11 +210,7 @@ if __name__ == "__main__":
         function=agg_table
     elif ARGS.movedata:
         from move_data import move_data
-    
-    LOGGER.info('Connecting to host:%s database: %s with user %s',
-                dbset['host'],
-                dbset['database'],
-                dbset['user'])
+
     con, cursor = try_connection(LOGGER, dbset, autocommit=True)
 
     for year in YEARS:
@@ -228,7 +224,7 @@ if __name__ == "__main__":
             elif ARGS.index: 
                 index_tables(yyyymm, LOGGER, cursor, dbset, tx=tx, tmc=tmc, score=score)
             elif ARGS.movedata:
-                move_data(yyyymm, logger, cursor, dbset,
+                move_data(yyyymm, LOGGER, cursor, dbset,
                           startdate = get_yyyymmdd(year, month))
             
     con.close()

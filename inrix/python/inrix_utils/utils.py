@@ -27,8 +27,8 @@ def try_connection(logger, dbset, *, autocommit=False, **kwargs):
     while True:
         try:
             logger.info('Connecting to host:%s database: %s with user %s',
-                        dbset['database'],
                         dbset['host'],
+                        dbset['database'],
                         dbset['user'])
             con = connect(database=dbset['database'],
                           host=dbset['host'],
