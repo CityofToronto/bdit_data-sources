@@ -19,10 +19,11 @@ def move_data(yyyymm, logger, cursor, dbset, *, startdate, **kwargs):
 
     execute_function(_move_data_table, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
     execute_function(_remove_outside_data, logger, cursor, dbset, yyyymm=yyyymm, autocommit=True)
-    execute_function(_partition_table, logger, cursor, dbset,
+    execute_function(partition_table, logger, cursor, dbset,
                      autocommit=True,
                      timecol='tx',
-                     tableyyyymm = 'inrix.raw_data' + yyyymm,
+                     tablename = 'inrix.raw_data',
+                     yyyymm = yyyymm,
                      startdate = startdate)
 
 if __name__ == "__main__":

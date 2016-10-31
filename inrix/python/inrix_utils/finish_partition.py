@@ -13,8 +13,6 @@ def partition_table(logger, cursor, *, tablename, yyyymm, startdate, timecol = '
                    , {'table':AsIs(tableyyyymm), 'startdate':startdate,
                    'timecol':AsIs(timecol)})
 
-
-
 if __name__ == "__main__":
     #For initial run, creating years and months of available data as a python dictionary
     YEARS = {"2012":range(7, 13),

@@ -183,7 +183,8 @@ if __name__ == "__main__":
         sys.exit(2)
 
     function = None
-        
+    kwargs = {}
+
     if ARGS.index:
         from create_index import index_tables
         #Assume indexing on all columns, unless a specific column is specified
@@ -193,7 +194,6 @@ if __name__ == "__main__":
             tx, tmc, score = ARGS.indextx, ARGS.indextmc, ARGS.indexscore
     elif ARGS.partition:
         from finish_partition import partition_table
-        kwargs['startdate'] = get_yyyymmdd(year, month)
         kwargs['tablename'] = ARGS.tablename
         function=partition_table
     elif ARGS.aggregate:
@@ -216,11 +216,17 @@ if __name__ == "__main__":
     for year in YEARS:
         for month in YEARS[year]:
             yyyymm = get_yyyymm(year, month)
-            if ARGS.aggregate or ARGS.partition: 
-                execute_function(function, logger, cursor, dbset, 
+            if ARGS.aggregate: 
+                execute_function(function, LOGGER, cursor, dbset, 
                                  autocommit=True,
                                  **kwargs, 
                                  yyyymm=yyyymm)
+            elif ARGS.partition: 
+                execute_function(function, LOGGER, cursor, dbset, 
+                                 autocommit=True,
+                                 yyyymm=yyyymm,
+                                 startdate=get_yyyymmdd(year, month),
+                                 **kwargs)
             elif ARGS.index: 
                 index_tables(yyyymm, LOGGER, cursor, dbset, tx=tx, tmc=tmc, score=score)
             elif ARGS.movedata:
