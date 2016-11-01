@@ -1,4 +1,5 @@
 from psycopg2 import connect, OperationalError, InterfaceError
+from time import sleep
 
 def get_yyyymm(yyyy, mm):
     '''Combine integer yyyy and mm into a string yyyymm.'''
