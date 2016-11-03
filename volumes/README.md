@@ -1,7 +1,24 @@
 # Traffic Volumes
-Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tables currently stored in the `traffic` schema.
+Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tables currently stored in the `traffic` schema. 
 
-[`cal_dictionary.md`](cal_dictionary.md) and [`det_dictionary.md`](det_dictionary.md) contain more detailed data dictionaries of these two 
+## Loading Data
+The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
+
+In a SQL window, create the `TRAFFIC` tablespace for import.
+```sql
+CREATE TABLESPACE TRAFFIC DATAFILE 'trafic.dbf' SIZE 10600M ONLINE;
+```
+And then to import tables
+```shell
+impdp system/pw tables=(traffic.det, traffic.cal) directory=flow_data dumpfile=flow_traffic_data.dmp logfile=flow_traffic_data.log table_exists_action=truncate
+```
+For one really large table (larger than the 11GB max database size for Oracle Express) it was necessary to [filter rows in the table](https://dba.stackexchange.com/questions/152326/how-can-i-restore-a-10-91g-table-in-oracle-express).
+
+Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
+
+# Data Documentation
+
+The [`cal_dictionary.md`](cal_dictionary.md) and [`det_dictionary.md`](det_dictionary.md) docs contain more detailed data dictionaries of these two tables, respectively. 
 
 ## Turning Movement Counts
 
