@@ -129,84 +129,57 @@ def cleanupdatetimeinfo():
     monthDict = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'June':6, 'July':7, 'Aug':8, 'Sept':9, 
                  'Oct':10, 'Nov':11, 'Dec':12, 'January':1, 'February':2, 'March':3, 'April':4, 'August':8,
                  'September':9, 'October':10, 'November':11, 'December':12}
+    year = re.compile('201[0-9]')
     month = re.compile('[A-Z][a-z]+')
-    date = re.compile('[^0-9][1-9][0-9]?[^0-9]')
+    date = re.compile('[1-9][0-9]?')
     for d in Cityevents['date']:
         if any(c.isalpha() for c in d):
+            yr = year.search(d)
+            while yr is not None:
+                d = d[:yr.start()-1] + d[yr.end()+1:]
+                yr = year.search(d)
             mo = month.findall(d)
             da = date.findall(d)
-            print(mo, da)
-            if da is None or mo is None:
+            if not da or not mo or len(da)==1:
                 print(d)
-                break               
-            m1 = monthDict[mo[0]]
-            d1 = int(da[0])
-            d2 = int(da[1])
-            if len(mo) == 2:
-                m2 = monthDict[mo[1]]
-                EndDate.append(pd.to_datetime('2015'+str(m2)+str(d2)))
+                EndDate.append(None)
+                StartDate.append(None)
+            elif any([m1 not in monthDict.keys() for m1 in mo]):
+                print(d)
+                EndDate.append(None)
+                StartDate.append(None)
             else:
-                EndDate.append(pd.to_datetime('2015'+str(m1)+str(d2)))
-            StartDate.append(pd.to_datetime('2015'+str(m1)+str(d1)))            
+                m1 = monthDict[mo[0]]
+                d1 = da[0]
+                d2 = da[1]
+                if m1<10:
+                    m1 = '0'+str(m1)
+                else:
+                    m1 = str(m1)
+                if int(d1) < 10:
+                    d1 = '0' + d1
+                if int(d2) < 10:
+                    d2 = '0' + d2
+                if len(mo) == 2:
+                    m2 = monthDict[mo[1]]
+                    if m2<10: 
+                        m2 = '0'+str(m2)
+                    else:
+                        m2 = str(m2)
+                    EndDate.append(pd.to_datetime('2015'+m2+d2, format = '%Y%m%d'))
+                else:
+        
+                    EndDate.append(pd.to_datetime('2015'+m1+d2, format = '%Y%m%d'))
+                StartDate.append(pd.to_datetime('2015'+m1+d1, format = '%Y%m%d'))            
         else:
-            StartDate.append(pd.to_datetime(d).date)
-            EndDate.append(pd.to_datetime(d).date)
+            StartDate.append(pd.to_datetime(d))
+            EndDate.append(pd.to_datetime(d))
     Cityevents['start_date'] = StartDate
     Cityevents['end_date'] = EndDate
+    Cityevents.to_csv('2015Events.csv')
              
 TMvenues = pd.read_csv('tm_venues.csv',encoding = 'latin-1')
 Cityevents = pd.read_csv('2015EventsFull.csv',encoding = 'latin-1')
+
+#cleanupaddress()
 #cleanupdatetimeinfo()
-StartDate = []
-EndDate = []
-monthDict = {'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'June':6, 'July':7, 'Aug':8, 'Sept':9, 
-             'Oct':10, 'Nov':11, 'Dec':12, 'January':1, 'February':2, 'March':3, 'April':4, 'August':8,
-             'September':9, 'October':10, 'November':11, 'December':12}
-year = re.compile('201[0-9]')
-month = re.compile('[A-Z][a-z]+')
-date = re.compile('[1-9][0-9]?')
-for d in Cityevents['date']:
-    if any(c.isalpha() for c in d):
-        yr = year.search(d)
-        while yr is not None:
-            d = d[:yr.start()-1] + d[yr.end()+1:]
-            yr = year.search(d)
-        mo = month.findall(d)
-        da = date.findall(d)
-        if not da or not mo or len(da)==1:
-            print(d)
-            EndDate.append(None)
-            StartDate.append(None)
-        elif any([m1 not in monthDict.keys() for m1 in mo]):
-            print(d)
-            EndDate.append(None)
-            StartDate.append(None)
-        else:
-            m1 = monthDict[mo[0]]
-            d1 = da[0]
-            d2 = da[1]
-            if m1<10:
-                m1 = '0'+str(m1)
-            else:
-                m1 = str(m1)
-            if int(d1) < 10:
-                d1 = '0' + d1
-            if int(d2) < 10:
-                d2 = '0' + d2
-            if len(mo) == 2:
-                m2 = monthDict[mo[1]]
-                if m2<10: 
-                    m2 = '0'+str(m2)
-                else:
-                    m2 = str(m2)
-                EndDate.append(pd.to_datetime('2015'+m2+d2, format = '%Y%m%d'))
-            else:
-    
-                EndDate.append(pd.to_datetime('2015'+m1+d2, format = '%Y%m%d'))
-            StartDate.append(pd.to_datetime('2015'+m1+d1, format = '%Y%m%d'))            
-    else:
-        StartDate.append(pd.to_datetime(d).date)
-        EndDate.append(pd.to_datetime(d).date)
-Cityevents['start_date'] = StartDate
-Cityevents['end_date'] = EndDate
-Cityevents.to_csv('2015Events.csv')
