@@ -9,11 +9,14 @@ import requests
 import xml.etree.ElementTree as ET
 from pg import DB
 import time
+import configparser
 
+CONFIG = configparser.ConfigParser()
+CONFIG.read('db.cfg')
+dbset = CONFIG['DBSETTINGS']
 
 proxies = {'http':'http://137.15.73.132:8080'}
-db = DB(dbname='bigdata',host='137.15.155.38',port=5432,user='qwang2',passwd='xe3cer4')
-
+db = DB(dbname=dbset['database'],host=dbset['host'],user=dbset['user'],passwd=dbset['password'])
 
 r = requests.get('http://www1.toronto.ca/transportation/roadrestrictions/RoadRestrictions.xml', proxies = proxies)
 
