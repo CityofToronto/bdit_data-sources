@@ -7,7 +7,11 @@ Created on Tue Oct 25 10:51:26 2016
 
 import requests
 import pandas as pd
+from pg import DB
+import time
+import datetime
 
+db = DB(dbname='bigdata',host='137.15.155.38',port=5432,user='qwang2',passwd='xe3cer4')
 proxies = {'https':'https://137.15.73.132:8080'}
 
 
@@ -33,7 +37,7 @@ while (True):
 events = {}
 noEventVenue = {}
 eventVenue = {}
-
+data = []
 i = 0
 for key in venues:
     i = i + 1
@@ -42,38 +46,38 @@ for key in venues:
         eventVenue[key] = venues[key]
         for l in r["_embedded"]["events"]:
             event = {}
-            try:
-                event["name"] = l["name"]
-            except KeyError:
-                event["name"] = ""
-            try:
-                event["date"] = l["dates"]["start"]["localDate"]
-            except KeyError:
-                event["date"] = ""
-            try:
-                event["time"] = l["dates"]["start"]["localTime"]
-            except KeyError:
-                event["time"] = ""
+            event['tm_event_id'] = l["id"]
             try:
                 for c in l["classifications"]:
                     if c["primary"]:
                         try:
                             event["classification"] = c["segment"]["name"]
                         except KeyError:
-                            event["classification"] = ""
-                        try:
-                            event["genre"] = c["genre"]["name"]
-                        except KeyError:
-                            event["genre"] = ""
+                            event["classification"] = None
             except KeyError:
-                event["classification"] = ""
-                event["genre"] = ""
-            event["venue"] = venues[key]
+                event["classification"] = None
+            try:
+                event["date"] = l["dates"]["start"]["localDate"]
+            except KeyError:
+                event["date"] = None
+            try:
+                event["name"] = l["name"]
+            except KeyError:
+                event["name"] = None
+            try:
+                t = time.strptime(l["dates"]["start"]["localTime"], "%H:%M:%S")
+                event["start_time"] = datetime.time(t[3],t[4],t[5])
+            except KeyError:
+                event["start_time"] = None
             event["tm_venue_id"] = key
             events[l["id"]] = event
+            db.upsert('city.TM_events',event)
     else:
         noEventVenue[key] = venues[key]
+        
+db.close()
 
+'''
 #Exporting Events to csv
 def getkey(x):
     for key in x["venue"].keys():
@@ -87,3 +91,4 @@ a["venue name"] = a.apply(getkey, axis = 1)
 a["venue address"] = a.apply(getvalue, axis = 1)
 del a["venue"]
 a.to_csv('events.csv')
+'''
