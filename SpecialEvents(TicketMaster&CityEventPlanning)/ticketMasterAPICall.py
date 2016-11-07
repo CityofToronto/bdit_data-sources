@@ -4,14 +4,14 @@ Created on Tue Oct 25 10:51:26 2016
 
 @author: qwang2
 """
-
 import requests
 import pandas as pd
 from pg import DB
 import time
 import datetime
-import re
 import configparser
+from GenVenueList import geocode
+from GenVenueList import FormatAddress
 
 CONFIG = configparser.ConfigParser()
 CONFIG.read('db.cfg')
@@ -20,38 +20,15 @@ dbset = CONFIG['DBSETTINGS']
 db = DB(dbname=dbset['database'],host=dbset['host'],user=dbset['user'],passwd=dbset['password'])
 proxies = {'https':'https://137.15.73.132:8080'}
 
-def FormatAddress(add):
-    address = re.compile('[1-9][0-9]*\s.*\s(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail)(\.)?(\s[EWNS])?')    
-    if type(add) is str:
-        add = add.replace('Avenue', 'Ave')
-        add = add.replace(' Av ', ' Ave ')
-        add = add.replace('Road', 'Rd')
-        add = add.replace('Street', 'St')
-        add = add.replace('Crescent', 'Cres')
-        add = add.replace('Parkway', 'Pkwy')
-        add = add.replace('Drive', 'Dr')
-        add = add.replace('Terrace', 'Terr')
-        add = add.replace('Boulevard', 'Blvd')
-        add = add.replace('Circle', 'Cir')
-        add = add.replace('West', 'W')
-        add = add.replace('East', 'E')
-        add = add.replace('South', 'S')
-        add = add.replace('North', 'N')
-        add = add.replace(',', '')
-        m = address.search(add)
-        if m is not None:
-            add = add[m.start():m.end()]
-        add = add.replace('.', '')
-        
 # Update Venue List
 venues = []
-curId = db.query('SELECT max(id) FROM city.Venues') + 1
+curId = db.query('SELECT max(id) FROM city.venues').getresult()[0][0]
 url = 'https://app.ticketmaster.com/discovery/v2/venues.json?size=499&stateCode=ON&countryCode=CA&includeTest=no&markets=102&city=Toronto&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
 while (True): 
     r = requests.get(url,proxies = proxies).json()
     for l in r["_embedded"]["venues"]:
         if l["city"]["name"] == 'Toronto':
-            exists = db.query('SELECT exists(SELECT true FROM city.Venues where tm_venue_id = '+l["id"]+')')
+            exists = db.query('SELECT exists(SELECT true FROM city.tm_venues where tm_venue_id = \''+l["id"]+'\')').getresult()[0][0]
             venue = {}
             if "address" in l.keys():
                 venue["venue_address"] = FormatAddress(l["address"]["line1"])
@@ -59,17 +36,22 @@ while (True):
                 venue["venue_address"] = None
             venue["tm_venue_id"] = l["id"]
             venue["venue_name"] = l["name"]
-            venue["id"] = curId
-            if not exists:
+            if exists == False:                
                 curId = curId + 1
-                db.insert('city.Venues', venue)
+                venue["id"] = curId
+                (add,lat,lon) = geocode(venue["venue_address"])
+                venue["venue_address"] = add
+                venue["lat"] = lat
+                venue["lon"] = lon
+                venue["capacity"] = None
+                db.upsert('city.venues', venue)
+                db.upsert('city.tm_venues', {"id":curId, "tm_venue_id":venue["tm_venue_id"]})
             venues.append(venue)
     if "next" in r["_links"].keys():
         url = 'https://app.ticketmaster.com'+r["_links"]["next"]["href"][:len(r["_links"]["next"]["href"])-7]+'&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
     else:
         break;
         
-'''
 # Get Events from List of Venues
 events = {}
 noEventVenue = {}
@@ -112,9 +94,9 @@ for venue in venues:
             db.upsert('city.TM_events',event)
     else:
         noEventVenue[key] = venues[key]
-        
+
 db.close()
-'''
+
 '''
 #Exporting Events to csv
 def getkey(x):
