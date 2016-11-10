@@ -152,3 +152,4 @@ inrix/python/localdb.cfg
 # GTFS Files to Ignore
 gtfs/connect/*
 gtfs/data/*
+gtfs/.Rhistory
