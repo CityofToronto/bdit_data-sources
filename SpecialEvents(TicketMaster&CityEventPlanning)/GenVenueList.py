@@ -10,7 +10,7 @@ import re
 import requests
 
 def FormatAddress(add):
-    address = re.compile('[1-9][0-9]*\s.*\s(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail)(\.)?(\s[EWNS])?')    
+    address = re.compile('[1-9][0-9]*\s.*(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail|Quay|Terr|Square|Grove|Pl|Park|Ct)(\.)?(\s[EWNS])?')    
     add = add.replace('Avenue', 'Ave')
     add = add.replace(' Av ', ' Ave ')
     add = add.replace('Road', 'Rd')
@@ -132,3 +132,4 @@ if __name__ == "__main__":
     completeVenueList['venue_address_formatted'] = newadd
     completeVenueList['lat'] = latitude
     completeVenueList['lon'] = longitude
+    
