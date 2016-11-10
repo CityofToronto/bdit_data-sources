@@ -149,7 +149,9 @@ ENV/
 .ropeproject
 inrix/python/localdb.cfg
 
-# GTFS Files to Ignore
+# Other Files to Ignore
 gtfs/connect/*
 gtfs/data/*
 gtfs/.Rhistory
+parking/lots/connect/*
+parking/lots/.Rhistory
