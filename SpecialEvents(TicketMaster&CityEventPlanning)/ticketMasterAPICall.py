@@ -39,6 +39,7 @@ while (True):
             if exists == False:                
                 curId = curId + 1
                 venue["id"] = curId
+                venue["venue_add_comp"] = venue["venue_address"]
                 (add,lat,lon) = geocode(venue["venue_address"])
                 venue["venue_address"] = add
                 venue["lat"] = lat
