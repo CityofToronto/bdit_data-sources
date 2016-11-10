@@ -2,9 +2,28 @@ library(RPostgreSQL)
 library(rjson)
 library(plyr)
 
+###############################
+# FUNCTIONS
+###############################
+retrieve_cols <- function(table_name){
+  strSQL = paste0('SELECT column_name ',
+                  'FROM information_schema.columns ',
+                  'WHERE table_name =\'',table_name,'\'',
+                  sep = '')
+  cols <- dbGetQuery(con, strSQL)
+  cols <- cols$column_name
+  return(cols)
+}
+
+###############################
+# PULL DATA
+###############################
 loc <- "http://www1.toronto.ca/City Of Toronto/Information & Technology/Open Data/Data Sets/Assets/Files/greenPParking2015.json"
 data <- fromJSON(file=loc)
 
+###############################
+# PROCESS DATA
+###############################
 lots_main <- NULL
 lots_payment_methods <- NULL
 lots_payment_options <- NULL
@@ -36,7 +55,7 @@ for (i in 1:length(data$carparks)){
     if (names(lot[j]) == "payment_options"){
       options_item <- as.data.frame(unlist(lot[j]))
       rownames(options_item) <- NULL
-      colnames(options_item) <- "option"
+      colnames(options_item) <- "opt"
       options_item$id <- id
     }   
     if (names(lot[j]) == "rate_details"){
@@ -61,6 +80,7 @@ for (i in 1:length(data$carparks)){
             }
           }
           periods_item$period_id <- period_id
+          periods_item$id <- id
           lots_periods <- rbind.fill(lots_periods, periods_item)
           period_id <- period_id + 1
         }
@@ -72,11 +92,38 @@ for (i in 1:length(data$carparks)){
   lots_payment_options <- rbind.fill(lots_payment_options, options_item)
 }
 
-
+################################
+# CLEAN DATA
+################################
+lots_main <- lots_main[,1:11]
+lots_periods <- lots_periods[,1:3]
+colnames(lots_periods)[1] <- "period"
+colnames(lots_rates)[1] <- "time_period"
+lots_main$max_height <- as.numeric(as.character(lots_main$max_height))
+lots_main$rate_half_hour <- as.numeric(as.character(lots_main$rate_half_hour))
 ################################
 # WRITE DATA TO POSTGRESQL
 ################################
 drv <- dbDriver("PostgreSQL")
 source("connect/connect.R")
 
-dbWriteTable(con, c("gtfs","agency"), agency[columns], append = T, row.names = FALSE)
+# lots_main
+cols <- retrieve_cols("lots_main")
+dbWriteTable(con, c("parking","lots_main"), lots_main[cols], append = T, row.names = FALSE)
+
+# lots_payment_methods
+cols <- retrieve_cols("lots_payment_methods")
+dbWriteTable(con, c("parking","lots_payment_methods"), lots_payment_methods[cols], append = T, row.names = FALSE)
+
+# lots_payment_options
+cols <- retrieve_cols("lots_payment_options")
+dbWriteTable(con, c("parking","lots_payment_options"), lots_payment_options[cols], append = T, row.names = FALSE)
+
+
+# lots_periods
+cols <- retrieve_cols("lots_periods")
+dbWriteTable(con, c("parking","lots_periods"), lots_periods[cols], append = T, row.names = FALSE)
+
+# lots_rates
+cols <- retrieve_cols("lots_rates")
+dbWriteTable(con, c("parking","lots_rates"), lots_rates[cols], append = T, row.names = FALSE)
