@@ -148,3 +148,10 @@ ENV/
 # Rope project settings
 .ropeproject
 inrix/python/localdb.cfg
+
+# Other Files to Ignore
+gtfs/connect/*
+gtfs/data/*
+gtfs/.Rhistory
+parking/lots/connect/*
+parking/lots/.Rhistory
