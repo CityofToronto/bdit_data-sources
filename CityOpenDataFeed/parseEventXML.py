@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ET
 from pg import DB
 import datetime
 import configparser
-from GenVenueList import geocode
-from GenVenueList import FormatAddress
+from AddressFunctions import geocode
+from AddressFunctions import FormatAddress
 from fuzzywuzzy import fuzz
 
 CONFIG = configparser.ConfigParser()
@@ -27,8 +27,11 @@ r = requests.get('http://wx.toronto.ca/festevents.nsf/tpaview?readviewentries', 
 tree = ET.fromstring(r.content)
 
 curId = db.query('SELECT max(id) FROM city.venues').getresult()[0][0]
+ODID = db.query('SELECT max(id) FROM city.od_venues').getresult()[0][0]
 
 for entry in tree.findall('viewentry'):
+    
+    # Extract Information
     row = {}
     row["id"] = entry.attrib['noteid']
     row["event_name"] = entry.find("./entrydata[@name='EventName']/text").text
@@ -79,7 +82,8 @@ for entry in tree.findall('viewentry'):
         for c in entry.findall("./entrydata[@name='CategoryList']/textlist/text"):
             cat = cat+c.text+','
         row["classification"] = cat[:len(cat)-1]
-        
+    
+    # Update Venues Table    
     exist = db.query("SELECT * FROM city.venues where venue_add_comp = \'"+row["venue_add_comp"]+"\'").getresult()
     if exist == []:
         names = db.query("SELECT venue_name FROM city.venues").getresult()
@@ -104,7 +108,7 @@ for entry in tree.findall('viewentry'):
         venue["lat"] = lat
         venue["lon"] = lon
         db.insert('city.venues', venue)
-        print('INSERT', row["venue_name"])
+        print('INSERT VENUE', row["venue_name"])
         row["venue_id"] = curId
     elif None in exist[0][0:4]:
         #update
@@ -122,15 +126,31 @@ for entry in tree.findall('viewentry'):
         venue["lat"] = lat
         venue["lon"] = lon
         db.upsert('city.venues', venue)
-        print('UPSERT', row["venue_name"])
+        print('UPSERT VENUE', row["venue_name"])
 
     else:
         # do nothing
         row["venue_id"] = exist[0][2]
         
-    db.upsert('city.opendata_events',row)     
    
-    
+   # Update ODVenues Table
+    venue = {}
+    exist = db.query("SELECT * FROM city.od_venues where venue_address = \'"+row["venue_add_comp"]+"\'").getresult()
+    if exist == []:
+        exist = db.query("SELECT * FROM city.od_venues where venue_name = \'"+row["venue_name"]+"\'").getresult()
+    if exist == []:
+        ODID = ODID + 1
+        venue["venue_address"] = row["venue_add_comp"]
+        venue["venue_name"] = row["venue_name"]
+        venue["od_id"] = ODID
+        venue["id"] = row["venue_id"]
+        db.insert('city.od_venues',venue)
+        row["od_venue_id"] = ODID
+    else:
+        row["od_venue_id"] = exist[0][0]
+
+    db.upsert('city.od_events',row)     
+
 db.close()
 
 '''            
