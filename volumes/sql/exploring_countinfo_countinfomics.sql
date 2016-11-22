@@ -1,20 +1,20 @@
-﻿-- SELECT COUNT(DISTINCT c.count_info_id) AS "countinfo count",
---  COUNT(DISTINCT cim.count_info_id) "countinfomics count",
---  SUM(CASE WHEN c.count_info_id = cim.count_info_id THEN 1 ELSE 0 END) AS "Both"
--- FROM traffic.countinfo c
--- FULL OUTER JOIN traffic.countinfomics cim ON c.count_info_id = cim.count_info_id
--- 
--- 'countinfo count','countinfomics count','Both'
--- 762388,20455,4777
+ SELECT COUNT(DISTINCT c.count_info_id) AS "countinfo count",
+ COUNT(DISTINCT cim.count_info_id) "countinfomics count",
+ SUM(CASE WHEN c.count_info_id = cim.count_info_id THEN 1 ELSE 0 END) AS "Both"
+ FROM traffic.countinfo c
+ FULL OUTER JOIN traffic.countinfomics cim ON c.count_info_id = cim.count_info_id
+ /*
+ 'countinfo count','countinfomics count','Both'
+ 762388,20455,4777
+*/
 
 
 
-
--- SELECT COUNT(DISTINCT c.count_info_id) AS "countinfomics count",
---  COUNT(DISTINCT det.count_info_id) "det count",
---  SUM(CASE WHEN c.count_info_id = det.count_info_id THEN 1 ELSE 0 END) AS "Both"
--- FROM traffic.countinfomics c
--- FULL OUTER JOIN traffic.det det ON c.count_info_id = det.count_info_id
+SELECT COUNT(DISTINCT c.count_info_id) AS "countinfomics count",
+COUNT(DISTINCT det.count_info_id) "det count",
+SUM(CASE WHEN c.count_info_id = det.count_info_id THEN 1 ELSE 0 END) AS "Both"
+FROM traffic.countinfomics c
+FULL OUTER JOIN traffic.det det ON c.count_info_id = det.count_info_id
 -- 
 -- 'countinfomics count','det count','Both'
 -- 20455,20454,661937

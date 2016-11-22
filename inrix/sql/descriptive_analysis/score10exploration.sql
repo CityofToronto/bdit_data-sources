@@ -61,5 +61,14 @@ FROM gis.inrix_tmc_tor tmc
 INNER JOIN inrix_score10 s USING(tmc)
 WHERE mon = '2013-01-01'::DATE
 
-SELECT tmc, COUNT(1)
-FROM inrix_
+DROP TABLE IF EXISTS rdumas.score20props;
+WITH score20_cnts AS( SELECT tmc, SUM(count) as cnt
+FROM inrix_score_counts 
+WHERE score = 20
+GROUP BY tmc)
+
+SELECT tmc, cnt/ 3 as num_per_month, 100.0* cnt/(('2016-03-31'::DATE - '2016-01-01'::DATE) *24 * 60) AS pct_observations, 100.0* cnt / SUM(cnt) OVER () AS proportion
+INTO rdumas.score20props
+FROM score20_cnts
+
+SELECT tmc, 

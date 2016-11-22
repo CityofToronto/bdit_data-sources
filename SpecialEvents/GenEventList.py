@@ -4,6 +4,7 @@ Created on Sun Nov  6 17:43:55 2016
 
 @author: qwang2
 """
+
 def caststartdate(x):
     return str(x['start_date'])
 def castenddate(x):
@@ -33,7 +34,7 @@ dbset = CONFIG['DBSETTINGS']
 
 db = DB(dbname=dbset['database'],host=dbset['host'],user=dbset['user'],passwd=dbset['password'])
 
-tm_events = pd.DataFrame(db.query('SELECT tm_event_id,classification,date,name,start_time,id FROM city.tm_events LEFT JOIN city.tm_venues USING (tm_venue_id)').getresult(), 
+tm_events = pd.DataFrame(db.query('SELECT tm_event_id,classification,date,name,start_time,id FROM city.tm_events LEFT JOIN city.tm_venues USING tm_venue_id').getresult(), 
                          columns=['event_id','classification','start_date','event_name','start_time','venue_id'])
 city_events = pd.DataFrame(db.query('SELECT id,event_name,start_date,start_time,end_date,end_time,classification,venue_id FROM city.opendata_events').getresult(),
                            columns = ['event_id','event_name','start_date','start_time','end_date','end_time','classification','venue_id' ])
@@ -72,6 +73,7 @@ for i in range(len(tm_events)):
                 else:
                     city_drop.append(j)
 '''
+print('Duplicate Events:')
 for timeS1,timeE1,date1,venue1,name1 in zip(tm_events['start_time'], tm_events['end_time'], tm_events['start_date'], tm_events['venue_id'], tm_events['event_name']):    
     j = 0
     for timeS2,timeE2,dateS2,dateE2,venue2,name2 in zip(city_events['start_time'], city_events['end_time'], city_events['start_date'], city_events['end_date'], city_events['venue_id'], city_events['event_name']):       
@@ -118,7 +120,7 @@ for timeS1,timeE1,date1,venue1,name1 in zip(tm_events['start_time'], tm_events['
   
 city_events = city_events.drop(city_drop)         
 tm_events = tm_events.drop(tm_drop) 
-events = pd.concat([city_events,tm_events]) 
+events = pd.concat([city_events,tm_events])  
 events.reset_index(inplace = True)
 del events['index']
 
@@ -173,7 +175,6 @@ events = events.values.tolist()
 db.truncate('city.event_groups')
 db.truncate('city.event_details')
 db.inserttable('city.event_groups', event_table)
-
 db.inserttable('city.event_details', events)
 
 db.close()
