@@ -150,8 +150,11 @@ ENV/
 inrix/python/localdb.cfg
 
 # Other Files to Ignore
+bluetooth/hourly_agg/data/*
 gtfs/connect/*
 gtfs/data/*
 gtfs/.Rhistory
 parking/lots/connect/*
 parking/lots/.Rhistory
+bluetooth/hourly_agg/output.csv
+*.Rhistory
