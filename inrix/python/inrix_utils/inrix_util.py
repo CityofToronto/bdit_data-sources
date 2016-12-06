@@ -106,10 +106,11 @@ def _validate_yearsjson(yearsjson):
 
     return years
 
-def parse_args(args):
+def parse_args(args, prog = None, usage = None):
     '''Parser for the command line arguments'''
     PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix '
-                                                 'traffic data in a database.')
+                                                 'traffic data in a database.',
+                                     prog=prog, usage=usage)
     #Possible action to call inrix_util to perform
     ACTIONS = PARSER.add_mutually_exclusive_group(required=True)
     ACTIONS.add_argument("-i", "--index", action="store_true",
@@ -145,11 +146,14 @@ def parse_args(args):
     PARSER.add_argument("--tmctable", default='gis.inrix_tmc_tor',
                         help="Specify subset of tmcs to use, default: %(default)s")
     PARSER.add_argument("--indextmc", action="store_true", 
-                        help="Specify subset of tmcs to use, default: %(default)s")
+                        help="Index based on tmc, if no index option specified, default is "
+                        "to index tmc, time, and score")
     PARSER.add_argument("--indextx", action="store_true", 
-                        help="Specify subset of tmcs to use, default: %(default)s")
+                        help="Index based on timestamp, if no index option specified, default is "
+                        "to index tmc, time, and score")
     PARSER.add_argument("--indexscore", action="store_true", 
-                        help="Specify subset of tmcs to use, default: %(default)s")
+                        help="Index based on score, if no index option specified, default is "
+                        "to index tmc, time, and score")
     return PARSER.parse_args(args)
 
 if __name__ == "__main__":
