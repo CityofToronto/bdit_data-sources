@@ -4,7 +4,7 @@ The relationships between the relevant tables are shown below.
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
 
-More details on each individual table are presented below.
+More details on each individual table are presented below. Note that fields not mentioned are not relevant in our study scope.
 
 ## countinfomics
 ### Content
