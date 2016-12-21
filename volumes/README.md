@@ -2,6 +2,12 @@
 # Traffic Volumes
 Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tables currently stored in the `traffic` schema. 
 
+## Table of Contents
+1. [Loading Data](#1.-Loading Data)
+2. [Schema Overview](#2.-Schema-Overview)
+3. [Traffic Count Types](#3.-Traffic-Count-Types)
+4. [Relevant Tables](#4.-Relevant-Tables) 
+
 ## 1. Loading Data
 The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
 
@@ -17,7 +23,7 @@ For one really large table (larger than the 11GB max database size for Oracle Ex
 
 Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
 
-## 2. Overview
+## 2. Schema Overview
 The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
