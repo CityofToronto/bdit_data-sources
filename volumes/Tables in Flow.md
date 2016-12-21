@@ -1,10 +1,10 @@
 # FLOW TABLES
-Here is an overview of the tables in FLOW that contributes to volume profile construction and analysis. 
-The relationships between the relevant tables are shown below. 
+This document provides an overview of the tables in FLOW (The City's traffic count database) that have being extracted to feed into the centralized Postgres database, and sepcifically acting as the raw data input to build city-wide volume profiles for all City roads.
+The relationships between the relevant tables are shown below. The database is structured aroudn three types of tables: Automatic Traffic Recorder(ATR) counts, manual Turning Movement Counts (TMC) and couunt information tables that detail the geography and count request information.
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
 
-More details on each individual table are presented below. Note that fields not mentioned are not relevant in our study scope.
+More details on each individual table are presented below. Note there are additional fields in the raw tables that are not listed below as they are not relevant to the study scope.
 
 ## countinfomics
 ### Content
@@ -83,7 +83,7 @@ W_OTHER|number|West side - optional field
 Similar to [countinformics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
 
 ### Table Structure
-See that of [countinformics](#countinfomics)
+See [countinformics](#countinfomics)
 
 ## cnt_det
 ### Content
