@@ -17,12 +17,64 @@ For one really large table (larger than the 11GB max database size for Oracle Ex
 
 Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
 
-## 2. Data Documentation
+## 2. Overview
 The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
 
 The database is structured around three types of tables: Automatic Traffic Recorder (ATR) counts, manual Turning Movement Counts (TMC), and other reference tables that provide additional spatial or temporal information.
+
+## 3. Traffic Count Types
+
+### Turning Movement Counts (TMCs)
+
+#### Data Elements
+* Location Identifier (SLSN Node ID)
+* CountType
+* Count interval start and end date and times
+* AM Peak, PM peak, and off-peak 7:30-9:30, 10:00-12:00, 13:00-15:00, 16:00-18:00
+* Roadway 1 and 2 names (intersection)
+* 15 min aggregated interval time
+* 15 min aggregated volume per movement (turning and approach) by:
+	- vehicle types
+	- cyclists and pedestrian counts are approach only
+	
+#### Notes
+* No regular data load schedule. 
+* Data files collected by 2-3 staff members.
+* Manually geo-reference volume data to an SLSN node during data import process
+* Data is manually updated into FLOW.
+* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
+* Strictly conforms to FLOW LOADER data file structure
+* If numbers collected varies more than defined historical value threshold by 10%, the count will not be loaded.
+* Volume available at both signalized and non-signalized intersections
+* Each count station is given a unique identifier to avoid duplicate records
+* Data will not be collected under irregular traffic conditions(construction, closure, etc), but it maybe skewed by unplanned incidents.
+
+### Permanent Count Stations and Automated Traffic Recorders (ATRs)
+
+#### Data Elements
+* Location Identifier (SLSN *Link* ID)
+* Count Type
+* Count interval start and end date and times
+* Roadway Names
+* Location Description
+* Direction
+* Number of Lanes
+* Median and Type
+* Comments
+* 15 min aggregated interval time
+* 15 min volume
+
+#### Notes
+* The counts represent roadway and direction(s), not on a lane-by-lane level
+* No regular data load schedule
+* Manually geo-reference volume data to an SLSN node during data import process
+* Strictly conforms to FLOW LOADER data file structure
+* Typical ATR counts 24h * 3 days at location in either 1 or both directions
+* Each PCS/ATR is given a unique identifier to avoid duplicate records
+
+## 4. Relevant Tables
 
 ### countinfomics
 #### Content
@@ -143,50 +195,4 @@ category_id|int|ID number referred to by [countinformics](#countinfomics) and [c
 category_name|text|name of the data source
 
 
-## Turning Movement Counts
 
-### Data Elements
-* Location Identifier (SLSN Node ID)
-* CountType
-* Count interval start and end date and times
-* AM Peak, PM peak, and off-peak 7:30-9:30, 10:00-12:00,13:00-15:00,16:00-18:00
-* Roadway 1 and 2 names (intersectoin)
-* 15 min aggregated interval time
-* 15 min aggregated volume per movement (turning and approach) by:
-	- vehicle types
-	- cyclists and pedestrian counts are approach only
-	
-### Notes
-* No regular data load schedule. 
-* Data files collected by 2-3 staff members.
-* Manually geo-reference volume data to an SLSN node during data import process
-* Data is manually updated into FLOW.
-* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
-* Strictly conforms to FLOW LOADER data file structure
-* If numbers collected varies more than defined historical value threshold by 10%, the count will not be loaded.
-* Volume available at both signalized and non-signalized intersections
-* Each count station is given a unique identifier to avoid duplicate records
-* Data will not be collected under irregular traffic conditions(construction, closure, etc), but it maybe skewed by unplanned incidents.
-
-## Permanent Count Stations and Automated Traffic Recorder
-
-### Data Elements
-* Location Identifier (SLSN *Link* ID)
-* Count Type
-* Count interval start and end date and times
-* Roadway Names
-* Location Description
-* Direction
-* Number of Lanes
-* Median and Type
-* Comments
-* 15 min aggregated interval time
-* 15 min volume
-
-### Notes
-* The counts represent roadway and direction(s), not on a lane-by-lane level
-* No regular data load schedule
-* Manually geo-reference volume data to an SLSN node during data import process
-* Strictly conforms to FLOW LOADER data file structure
-* Typical ATR counts 24h * 3 days at location in either 1 or both directions
-* Each PCS/ATR is given a unique identifier to avoid duplicate records
