@@ -6,9 +6,15 @@ Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tabl
 1. [Loading Data](#1-loading-data)
 2. [Schema Overview](#2-schema-overview)
 3. [Traffic Count Types](#3-traffic-count-types)
-	- [Turning Movement Counts](#turning-movement-counts-(tmcs))
-	- [Permanent Count Stations and Automated Traffic Recorders (ATRs)](#turning-movement-counts-(tmcs))
+	* [Turning Movement Counts](#turning-movement-counts-tmcs)
+	* [Permanent Count Stations and Automated Traffic Recorders (ATRs)](#permanent-count-stations-and-automated-traffic-recorders-atrs)
 4. [Relevant Tables](#4-relevant-tables) 
+	* [countinfomics](#countinfomics)
+	* [det](#det)
+	* [countinfo](#countinfo)
+	* [cnt_det](#cnt_det)
+	* [arterydata](#arterydata)
+	* [category](#category)
 
 ## 1. Loading Data
 The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
