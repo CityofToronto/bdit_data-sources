@@ -1,3 +1,4 @@
+
 # Traffic Volumes
 Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tables currently stored in the `traffic` schema. 
 
@@ -6,7 +7,7 @@ The data in the schema comes from an image of FLOW Oracle database, which was re
 
 In a SQL window, create the `TRAFFIC` tablespace for import.
 ```sql
-CREATE TABLESPACE TRAFFIC DATAFILE 'trafic.dbf' SIZE 10600M ONLINE;
+CREATE TABLESPACE TRAFFIC DATAFILE 'traffic.dbf' SIZE 10600M ONLINE;
 ```
 And then to import tables
 ```shell
@@ -17,8 +18,11 @@ For one really large table (larger than the 11GB max database size for Oracle Ex
 Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
 
 # Data Documentation
+The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
 
-The [`cal_dictionary.md`](cal_dictionary.md) and [`det_dictionary.md`](det_dictionary.md) docs contain more detailed data dictionaries of these two tables, respectively. 
+!['flow_tables_relationship'](img/flow_tables_relationship.png)
+
+The database is structured around three types of tables: Automatic Traffic Recorder (ATR) counts, manual Turning Movement Counts (TMC), and other reference tables that provide additional spatial or temporal information.
 
 ## Turning Movement Counts
 
