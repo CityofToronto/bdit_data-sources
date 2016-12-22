@@ -9,11 +9,11 @@ Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tabl
 	* [Turning Movement Counts](#turning-movement-counts-tmcs)
 	* [Permanent Count Stations and Automated Traffic Recorders (ATRs)](#permanent-count-stations-and-automated-traffic-recorders-atrs)
 4. [Relevant Tables](#4-relevant-tables) 
+	* [arterydata](#arterydata)
+	* [cnt_det](#cnt_det)
 	* [countinfomics](#countinfomics)
 	* [det](#det)
-	* [countinfo](#countinfo)
-	* [cnt_det](#cnt_det)
-	* [arterydata](#arterydata)
+	* [countinfo](#countinfo)	
 	* [category](#category)
 
 ## 1. Loading Data
@@ -52,11 +52,7 @@ Table Name|Description
 ### Turning Movement Counts (TMCs)
 
 #### Data Elements
-* Location Identifier (SLSN Node ID)
-* CountType
-* Count interval start and end date and times
-* AM Peak, PM peak, and off-peak 7:30-9:30, 10:00-12:00, 13:00-15:00, 16:00-18:00
-* Roadway 1 and 2 names (intersection)
+* Location Identifier (SLSN *Node* ID)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
 	- vehicle types
@@ -65,29 +61,23 @@ Table Name|Description
 #### Notes
 * No regular data load schedule. 
 * Data files collected by 2-3 staff members.
-* Manually geo-reference volume data to an SLSN node during data import process
-* Data is manually updated into FLOW.
-* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
-* Strictly conforms to FLOW LOADER data file structure
-* If numbers collected varies more than defined historical value threshold by 10%, the count will not be loaded.
-* Volume available at both signalized and non-signalized intersections
-* Each count station is given a unique identifier to avoid duplicate records
-* Data will not be collected under irregular traffic conditions(construction, closure, etc), but it maybe skewed by unplanned incidents.
+* Manually geo-reference volume data to an SLSN node during data import process.
+* Data is manually imported into FLOW.
+* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days.
+* Strictly conforms to FLOW LOADER data file structure.
+* If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded.
+* Volumes are available at both signalized and non-signalized intersections
+* Each count station is given a unique identifier to avoid duplicate records.
+* Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents.
 
 ### Automated Traffic Recorders (ATRs)
 
 #### Data Elements
 * Location Identifier (SLSN *Link* ID)
-* Count Type
-* Count interval start and end date and times
-* Roadway Names
-* Location Description
 * Direction
-* Number of Lanes
-* Median and Type
-* Comments
 * 15 min aggregated interval time
 * 15 min volume
+	- typically aggregated by direction, although data may be available by lane
 
 #### Notes
 * The counts represent roadway and direction(s), not on a lane-by-lane level
