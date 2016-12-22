@@ -36,7 +36,16 @@ The following is an overview of tables relevant to traffic volume counts housed 
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
 
-The database is structured around three types of tables: Automatic Traffic Recorder (ATR) counts, manual Turning Movement Counts (TMC), and other reference tables that provide additional spatial or temporal information.
+The database is structured around three types of tables: Turning Movement Counts (TMC), Automatic Traffic Recorder (ATR) counts, and other reference tables that provide additional spatial or temporal information.
+
+Table Name|Description
+----------|-----------
+[arterydata](#arterydata)|Reference table for Artery Codes (internal reference for intersections and segments)
+[det](#det)|Individual Turning Movement Count (TMC) observations
+[countinfomics](#countinfomics)|Intermediate table linking TMC observations to Artery Codes
+[cnt_det](#cnt_det)|Automatic Traffic Recorder (ATR) observations
+[countinfo](#countinfo)|Intermediate table linking ATR observations to Artery Codes
+[category](#category)|Reference table for Category ID (i.e traffic count type)
 
 ## 3. Traffic Count Types
 
@@ -65,7 +74,7 @@ The database is structured around three types of tables: Automatic Traffic Recor
 * Each count station is given a unique identifier to avoid duplicate records
 * Data will not be collected under irregular traffic conditions(construction, closure, etc), but it maybe skewed by unplanned incidents.
 
-### Permanent Count Stations and Automated Traffic Recorders (ATRs)
+### Automated Traffic Recorders (ATRs)
 
 #### Data Elements
 * Location Identifier (SLSN *Link* ID)
@@ -90,19 +99,20 @@ The database is structured around three types of tables: Automatic Traffic Recor
 
 ## 4. Relevant Tables
 
-### countinfomics
+### arterydata
 #### Content
-This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
+This table contains the location information of each volume count. 
 
 #### Table Structure
 Field Name|Type|Description
 ----------|----|-----------
-count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
-arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
-count_date|date|date on which the count was conducted
-day_no|bigint|day of the week
-category_id|int|ID number linked to [category](#category) table containing the source of the count
-
+arterycode|bigint|ID number referred to by [countinformics](#countinfomics) and [countinfo](#countinfo)
+street1|text|first street name
+street2|text|second street name
+location|text|full description of count location
+apprdir|text|direction of the approach referred to by this arterycode
+sideofint|text|the side of the intersection that the arterycode refers to
+linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
 
 ### det 
 #### Content 
@@ -163,13 +173,18 @@ S_OTHER|number|South side - optional field
 E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
 
-### countinfo
+### countinfomics
 #### Content
-Similar to [countinformics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
+This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
 
 #### Table Structure
-See [countinformics](#countinfomics)
-
+Field Name|Type|Description
+----------|----|-----------
+count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
+arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
+count_date|date|date on which the count was conducted
+day_no|bigint|day of the week
+category_id|int|ID number linked to [category](#category) table containing the source of the count
 
 ### cnt_det
 #### Content
@@ -182,21 +197,12 @@ count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containin
 count|bigint|vehicle count
 timecount|Date/Time|Effective time of counts (time displayed is the end time period)
 
-
-### arterydata
+### countinfo
 #### Content
-This table contains the location information of each volume count. 
+Similar to [countinformics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
 
 #### Table Structure
-Field Name|Type|Description
-----------|----|-----------
-arterycode|bigint|ID number referred to by [countinformics](#countinfomics) and [countinfo](#countinfo)
-street1|text|first street name
-street2|text|second street name
-location|text|full description of count location
-apprdir|text|direction of the approach referred to by this arterycode
-sideofint|text|the side of the intersection that the arterycode refers to
-linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
+See [countinformics](#countinfomics)
 
 ### category
 #### Content
