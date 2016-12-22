@@ -1,6 +1,6 @@
 
 # Traffic Volumes
-Turning Movement, Volume, and Occupancy counts from the FLOW database. Data tables currently stored in the `traffic` schema. 
+Traffic volume data (traffic counts and turning movements) from the FLOW database. Data tables currently stored in the `traffic` schema. 
 
 ## Table of Contents
 1. [Loading Data](#1-loading-data)
