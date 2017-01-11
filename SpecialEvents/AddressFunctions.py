@@ -8,6 +8,10 @@ import re
 import requests
 
 def FormatAddress(add):
+    '''
+        INPUT: address text
+        OUTPUT: formatted address text (or original text if function fails to recognize an address)
+    '''
     address = re.compile('[1-9][0-9]*\s.*(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail|Quay|Terr|Square|Grove|Pl|Park|Ct)(\.)?(\s[EWNS])?')    
     add = add.replace('Avenue', 'Ave')
     add = add.replace(' Av ', ' Ave ')
@@ -32,6 +36,10 @@ def FormatAddress(add):
     return add
     
 def geocode(add):
+    ''' 
+        INPUT: address text
+        OUTPUT: (formatted long address, latitude, longitude)
+    '''
     proxies = {'https':'https://137.15.73.132:8080'}
     add = add.replace(' ', '+')
     url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+add+',+Toronto,+ON,+Canada&key=AIzaSyBkp0W5IHAXgcb28MN_8wnUMxO1BGOlM3E'
@@ -48,6 +56,10 @@ def geocode(add):
     return (add,lat,lon)
 
 def rev_geocode(coord):    
+    '''
+        INPUT: latlong coordinates in string form
+        OUTPUT: fortmatted short address and long address
+    '''
     proxies = {'https':'https://137.15.73.132:8080'}
     url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+coord+'&key=AIzaSyBkp0W5IHAXgcb28MN_8wnUMxO1BGOlM3E'
     r = requests.get(url,proxies = proxies).json()
