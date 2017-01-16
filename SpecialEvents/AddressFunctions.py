@@ -12,29 +12,42 @@ def FormatAddress(add):
         INPUT: address text
         OUTPUT: formatted address text (or original text if function fails to recognize an address)
     '''
-    address = re.compile('[1-9][0-9]*\s.*(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail|Quay|Terr|Square|Grove|Pl|Park|Ct)(\.)?(\s[EWNS])?')    
-    add = add.replace('Avenue', 'Ave')
-    add = add.replace(' Av ', ' Ave ')
-    add = add.replace('Road', 'Rd')
-    add = add.replace('Street', 'St')
-    add = add.replace('Crescent', 'Cres')
-    add = add.replace('Parkway', 'Pkwy')
-    add = add.replace('Drive', 'Dr')
-    add = add.replace('Terrace', 'Terr')
-    add = add.replace('Boulevard', 'Blvd')
-    add = add.replace('Circle', 'Cir')
-    add = add.replace('West', 'W')
-    add = add.replace('East', 'E')
-    add = add.replace('South', 'S')
-    add = add.replace('North', 'N')
+    add = add.lower()
+    add = add.replace('avenue', 'ave')
+    add = add.replace(' av ', ' ave ')
+    add = add.replace('road', 'rd')
+    add = add.replace('street', 'st')
+    add = add.replace('crescent', 'cres')
+    add = add.replace('parkway', 'pkwy')
+    add = add.replace('drive', 'dr')
+    add = add.replace('terrace', 'terr')
+    add = add.replace('boulevard', 'blvd')
+    add = add.replace('circle', 'cir')
     add = add.replace(',', '')
     add = add.replace("\'", "")
+    add = add.replace('.', '')
+    add1 = add.split()
+    add = ''
+    print(add1)
+    for word in add1:
+        if word == 'west': 
+            word = 'w'
+        if word == 'east': 
+            word = 'e'
+        if word == 'north': 
+            word = 'n'
+        if word == 'south': 
+            word = 's'
+        add = add + word[0].upper() + word[1:] + ' '
+    
+    address = re.compile('[1-9][0-9]*\s.*(Ave|Rd|St|Cres|Pkwy|Place|Blvd|Dr|Lane|Way|Cir|Towers|Trail|Quay|Terr|Square|Grove|Pl|Park|Ct)(\.)?(\s[EWNS])?')    
     m = address.search(add)
     if m is not None:
         add = add[m.start():m.end()]
-    add = add.replace('.', '')
-    return add
-    
+        return add
+    else:
+        return add[:-1]
+        
 def geocode(add):
     ''' 
         INPUT: address text
