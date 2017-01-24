@@ -88,10 +88,10 @@ A message can contain more than one data value.
 
 ###Database Organization
 ####Site
-The ASTRID database is organised by site which means the location for which the data is collected. Sites are one of several types:
+The ASTRID database is organised by site, which is the location where data is collected. There are several types of sites:
 
-1. An **area** represents a whole cell. Because data can be collected for more than one cell, there may be more than one area. 
-2. A **region** is a SCOOT region, or an equivalent for a non-SCOOT data source. 
+1. An **area** represents a whole cell. There are currently three areas defind (A01, A02 and A03) whcih correspond to (_fill in_). 
+2. A **region** is a SCOOT region, which referes to a single coordination/control area. Currently 72 regions are defined. 
 3. A **node** is a SCOOT node, or an equivalent for a non-SCOOT data source. 
 4. A **stage** is a SCOOT stage, or an equivalent for a non-SCOOT data source. 
 5. A **link** is a SCOOT link, or an equivalent for a non-SCOOT data source. 
