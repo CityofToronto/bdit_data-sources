@@ -8,15 +8,28 @@
 5. [Bliptrack UI](#5-bliptrack-ui)
 6. [Bliptrack API](#6-bliptrack-api)
 
+## 1. Overview (Aakash)
+- coverage
+- what does the data look like?
 
-## 1. Overview
+## 2. Table Structure (Aakash)
+- brief description
+- Sunny-style flow chart
 
-## 2. Table Structure
+## 3. Technology (Open)
+- tbd
 
-## 3. Technology
+## 4. Data Processing (Aakash)
+- process overview, timing
+- reference to API
+- issues
 
-## 4. Data Processing
+## 5. Bliptrack UI (Dan)
+- how to access Bliptrack dashboard
+- how to pull data
+- glossary (i.e. what is a route?, what is a report?, etc.)
+- issues
 
-## 5. Bliptrack UI
-
-## 6. Bliptrack API
+## 6. Bliptrack API (Dan)
+- overview of API methods
+- issues
