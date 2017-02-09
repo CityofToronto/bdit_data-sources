@@ -25,11 +25,13 @@
 - issues
 
 ## 5. Bliptrack UI (Dan)
+The City of Toronto's Bliptrack webservice can be accessed through the browser at `https://g4apps.bliptrack.net`
 - how to access Bliptrack dashboard
 - how to pull data
 - glossary (i.e. what is a route?, what is a report?, etc.)
 - issues
 
 ## 6. Bliptrack API (Dan)
+Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). 
 - overview of API methods
 - issues
