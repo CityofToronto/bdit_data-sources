@@ -34,8 +34,8 @@
   - Detection counts over time 
   
 #### Terms:
-- Route: A combination of any two sensors, can be configued at any time by any superuser. Most useful routes have already been created and follow either a letter or numbered convention. Once a route is created, a corresponding `routeId` is generated which can be used in the API
-- Report: Travel time information for any route, can be configured to a number of different aggregation levels, downloaded as a `.csv` file
+- **Route**: A combination of any two sensors, can be configued at any time by any superuser. Most useful routes have already been created and follow either a letter or numbered convention. Once a route is created, a corresponding `routeId` is generated which can be used in the API
+- **Report**: Travel time information for any route, can be configured to a number of different aggregation levels, downloaded as a `.csv` file
 
 #### Pulling travel time data:
 1. Navigate to the `Reports` window using the bar at the top of the webpage![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/report_tab.PNG)
@@ -45,11 +45,11 @@
   - Outcome columns (Bluetooth, WiFi, Both)
   - Calculation interval
 4. Click `Export Data`, download will begin automatically ![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/config_report.PNG)
-- how to access Bliptrack dashboard
-- how to pull data
-- glossary (i.e. what is a route?, what is a report?, etc.)
+
 
 #### Common Issues:
+- Pulling larges volumes of data can cause the server to time out, pulling more than one month of data at a time is not recommended 
+- Only aggregated data is available through the browser, the API must be used to acess raw data
 
 ## 6. Bliptrack API (Dan)
 Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). 
