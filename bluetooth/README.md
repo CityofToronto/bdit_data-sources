@@ -52,10 +52,18 @@
 - Only aggregated data is available through the browser, the API must be used to acess raw data
 
 ## 6. Bliptrack API (Dan)
-Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). In the context of data analysis, using the API over the browser to pull data has 2 main avantages:
-1. The ability to pull disagregate data
-2. Access to live travel time information 
+Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). For those unfamiliar with SOAP, it is well explained in its [wikipedia](https://en.wikipedia.org/wiki/SOAP) article. In the context of data analysis, using the API over the browser to pull data has 2 main avantages:
+- The ability to pull disagregate data
+- Access to live travel time information 
 
-- overview of API methods
+The WSDL file for accessing Bliptrack can be accessed using `https://g4apps.bliptrack.net/ws/bliptrack/ExportWebServiceStateless?wsdl`
+
+#### Pulling travel time data:
+
+The `exportPerUserData()` method is used to pull raw data. It takes `username`, `password`, and `config` as input parameters. The `config` object contains all information required to specify the route to pull data from. Info about config is shown below
+
+INSERT PHOTO HERE
+
+
 
 
