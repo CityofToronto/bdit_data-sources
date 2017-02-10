@@ -52,7 +52,10 @@
 - Only aggregated data is available through the browser, the API must be used to acess raw data
 
 ## 6. Bliptrack API (Dan)
-Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). 
+Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). In the context of data analysis, using the API over the browser to pull data has 2 main avantages:
+1. The ability to pull disagregate data
+2. Access to live travel time information 
+
 - overview of API methods
 
 
