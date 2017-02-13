@@ -69,8 +69,8 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Roadway 1 and 2 names (intersectoin)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
-	** vehicle types
-	** cyclists and pedestrian counts are approach only
+	- vehicle types
+	- cyclists and pedestrian counts are approach only
 	
 ###Notes
 * No regular data load schedule. 
@@ -179,10 +179,11 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * Accident location: street name(s), distance offset, municipality, county, etc.
 * Description of accident and diagram
 * Involved persons:
-	** Motorist/passenger/pedestrian/cyclist
-	** Person age
-	** Gender
-	** Injuries and Fatalities
+	- Motorist/passenger/pedestrian/cyclist
+	- Person age
+	- Gender
+	- Injuries and Fatalities
+
 ###Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
