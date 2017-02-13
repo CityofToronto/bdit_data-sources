@@ -123,7 +123,9 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Asset information managed in Excel spreadsheets
 * Automated daily import but no real-time integration
 * Strictly conforms to FLOW LOADER data file structure
-* Quality control activities: 1. data gap verification 2. partial data records flagged for manual verification/correction
+* Quality control activities:  
+  1. data gap verification
+  2. partial data records flagged for manual verification/correction
 
 ## Incidents
 
