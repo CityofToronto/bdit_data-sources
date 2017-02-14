@@ -62,7 +62,15 @@ The WSDL file for accessing Bliptrack can be accessed using `https://g4apps.blip
 
 The `exportPerUserData()` method is used to pull raw data. It takes `username`, `password`, and `config` as input parameters. The `config` object contains all information required to specify the route to pull data from. Info about config is shown below
 
-INSERT PHOTO HERE
+![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/config_object.PNG)
+
+Not all of these fields must be assigned in order to pull data. At a minimum the following fields must have a non-`None` value:
+- `analysisId`: `int`, designates route, more on this below
+- `startTime`: `datetime` object indicating first data point
+- `endTime`: `datetime` object indicating last possible data point
+- `includeOutliers`: `boolean` indicating whether or not to indlude detections that Bliptrack deems to be outliers
+- `live`: `boolean` indicating whether live or historic data is being pulled, should be set to `False` to pull historic data
+
 
 
 
