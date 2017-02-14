@@ -158,3 +158,9 @@ parking/lots/connect/*
 parking/lots/.Rhistory
 bluetooth/hourly_agg/output.csv
 *.Rhistory
+inrix/progress.md
+inrix/sql/descriptive_analysis/highway_score_counts_over_time.png
+inrix/sql/descriptive_analysis/score20s_where_dey_at.png
+inrix/progress.md
+inrix/sql/descriptive_analysis/score20s_percent_observed_histo.PNG
+inrix/sql/descriptive_analysis/score_counts_over_time.png
