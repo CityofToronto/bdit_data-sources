@@ -71,7 +71,8 @@ Not all of these fields must be assigned in order to pull data. At a minimum the
 - `includeOutliers`: `boolean` indicating whether or not to indlude detections that Bliptrack deems to be outliers
 - `live`: `boolean` indicating whether live or historic data is being pulled, should be set to `False` to pull historic data
 
-
+#### The `analysisId`
+Each route has a corresponding `routeId`, `reportId`, and `analysisId` - all of which are different. An `analysis` object contains all of this information. The `getExportableAnalyses()` method will return a list of all analyses available. One can then pass the `analysis.id` for any given `analysis` into `config.analysisId` when pulling data.
 
 
 
