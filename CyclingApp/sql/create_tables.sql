@@ -1,4 +1,4 @@
-﻿DROP TABLE IF EXISTS cycling.trip_surveys;
+DROP TABLE IF EXISTS cycling.trip_surveys;
 CREATE TABLE cycling.trip_surveys (
 	trip_id bigint PRIMARY KEY,
 	app_user_id int NOT NULL,
@@ -7,22 +7,24 @@ CREATE TABLE cycling.trip_surveys (
 	notes TEXT
 	);
 
-DROP TABLE IF EXISTS cycling.user_surveys;
-CREATE TABLE cycling.user_surveys (
-	app_user_id int PRIMARY KEY,
-	winter smallint NOT NULL,
-	rider_history smallint NOT NULL,
-	work_zip varchar(7), --Postal Code
-	income smallint NOT NULL,
-	cycling_req smallint ,
-	age  smallint NOT NULL,
-	cycling_level smallint NOT NULL,
-	gender smallint NOT NULL,
-	rider_type smallint,
-	school_zip varchar(7),
-	home_zip varchar(7) ,
-	cycling_exp smallint not null,
-	preference_key_userpref boolean
+DROP TABLE cycling.user_surveys;
+CREATE TABLE cycling.user_surveys
+(
+    app_user_id integer NOT NULL,
+    winter smallint ,
+    rider_history smallint ,
+    work_zip TEXT,
+    income smallint ,
+    cycling_req smallint,
+    age smallint ,
+    cycling_level smallint ,
+    gender smallint,
+    rider_type smallint,
+    school_zip TEXT,
+    home_zip TEXT,
+    cycling_exp smallint,
+    preference_key_userpref boolean,
+    CONSTRAINT user_surveys_pkey PRIMARY KEY (app_user_id)
 );
 
 CREATE TABLE cycling.trips (
