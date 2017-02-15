@@ -38,7 +38,7 @@ notes: Mostly empty, otherwise trip purpose for "other", some are in json format
 
 
 ## User_surveys
-7934 rows, spanning ids from 1 to 8094. Previous years' portals have a subset of the most recent file. 
+7934 rows, spanning ids from 1 to 8094. Previous years' portals have a subset of the most recent file. Some of the values for the variables don't seem to match the answer key in the json below.
 
 |column| type| notes|
 |------|-----|------|
@@ -56,6 +56,8 @@ notes: Mostly empty, otherwise trip purpose for "other", some are in json format
 |homeZIP| varchar(7) |Postal Code||
 |cyclingExperience| [0-4]| see below |
 |preference_key_userpref| boolean | TRUE or null |
+
+The `preference_key_userpref` column starts at app_user 6821, only three users have the "True" value. The number of commas in the csv wasn't consistent, so use [`python/fix_user_surveys.py`](python/fix_user_surveys.py) to correct this.
 
 The dictionary for most of the answers are in the json below. See [`sql/insert_json_data.sql`](sql/insert_json_data.sql) for a way of automating creation of a normalized table structure for each variable in the json.
 
