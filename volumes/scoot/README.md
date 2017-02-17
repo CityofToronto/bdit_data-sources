@@ -11,7 +11,9 @@
  * [Database Organization](#database-organization)
  * [Basic Data Types](#basic-data-types)
 3. [Key Terminology](#3-key-terminology)
-4. [Sources](#4-sources)
+4. [Extracting Data From ASTRID](#4-extracting-data-from-astrid)
+ * [Extracting Archived Data](#extracting-archived-data)
+ * [Extracting High Resolution Data](#extracting-high-resolution-data)
 
 ##1. Background
 ###Traffic Signal Control in Toronto [<sup>1</sup>](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=a6c4fec1181ec410VgnVCM10000071d60f89RCRD&vgnextchannel=9452722c231ec410VgnVCM10000071d60f89RCRD)
@@ -173,9 +175,121 @@ slen|stg|M17|p5|s|Stage|length
 **MTSS**: Main Traffic Control System: Legacy computer controlled traffic control system developed in house at the City of Toronto in the 1960s. MTSS has been fully phased out.
 **LPU**: Link Profile Units: interal SCOOT units that result from SCOOT's traffi cprocessing. Can be converted to link volume using a conversion factor calibrated to each site. Where one loop per lane, lpu = vehicles.
 
+
+##4. Extracting Data From ASTRID
+###Extracting Archived Data
+
+The following information was provided by Siemens to extract data from a windows command prompt with administrator access on the UTC/SCOOT server. The easiest way to get this to run the “UTC Command Prompt” from Start-> All Program -> Siemens Traffic Controls -> UTC -> Support Tools or on recent version of Windows, just type “UTC Command Prompt” at the Start Menu.
+
+1) Set the current directory to wherever the ASTRID data is stored. (Normally D:\ASTRID)
+
+    cd /d D:\ASTRID
+    mkdir extract
+    cd extract
+
+2) Extract the names of all the detectors into a file called dets.tmp
+
+    dirsite ..\profiles\*.pro dets.tmp /m:N99999Z9
+
+3) Use detectors file as an input to “extract” to select the sites wanted. If you don't want all detectors, edit this file and remove the ones you don't want. We extract rflow (Detector Flow), rocc (Detector Occupancy), vocc (Vehicle Occupancy) and lpuf (LPU factor) data sets. *See ASTRID Handbook User Guide, page 14 for data types available.*
+
+4)Extract the current days data. (up to 20 minute lag).
+
+    extract @dets.tmp day /d:rflow:rocc /it:M /o:dets_current_day.txt
+
+5)Extract the data for the current month.
+
+    extract @dets.tmp bac /d:rflow:rocc /it:M /o:dets_current_month.txt
+
+6) Extract the data for a single month
+
+    extract @dets.tmp bac /d:rflow:rocc /it:M /ms:201612 /o:dets_2016_12.txt
+
+These examples just extract the specified data in the default format which is a fixed with text format that could easily be parsed. E.g.
+
+    ;================================================================
+    ; EXTRACT @dets.tmp BAC /D:RFLOW:ROCC:VOCC:LPUF /IT:M /MS:201701 /O:DETS_201701.TXT
+    ;
+    ; We 15-Feb-2017 16:30:15
+    ;                                       Det    Det Vehic-    LPU 
+    ;                        Start   End  Flow*   Occ* le Occ Factor 
+    ;  Site      Day  Date    Time  Time   Mean   Mean   Mean   Mean 
+    ;               yyyymmdd hh:mm hh:mm  veh/h      % ms/veh lpu/ve 
+    ;----------- -- -------- ----- ----- ------ ------ ------ ------ 
+    N10111A1     SU 20170101 00:15 00:30    344    4.1    429  11.40 
+    N10111A1     SU 20170101 00:30 00:45    332    4.0    434  11.51 
+    N10111A1     SU 20170101 00:45 01:00    392    4.9    450  11.88 
+    N10111A1     SU 20170101 01:00 01:15    396    4.8    436  11.56 
+    N10111A1     SU 20170101 01:15 01:30    316    3.8    433  11.49 
+    N10111A1     SU 20170101 01:30 01:45    360    4.0    400  10.72 
+    N10111A1     SU 20170101 01:45 02:00    336    3.8    407  10.88 
+    N10111A1     SU 20170101 02:00 02:15    356    4.0    404  10.81 
+    N10111A1     SU 20170101 02:15 02:30    348    3.8    393  10.55 
+    N10111A1     SU 20170101 02:30 02:45    268    3.3    443  11.72 
+    N10111A1     SU 20170101 02:45 03:00    176    2.2    450  11.88 
+    ...
+
+If you have savefiles, those zip files contain the zipped up bamfiles. However, if you just unzip them to bac_YYYYMM_saved, the directory will get deleted by ASTRID within the next 24 hours (?) as it is older than 5 years, so instead you should unzip to a folder in the form bac_YYYYMM_restored, and then ASTRID will leave it alone. On the ‘extract’ command line you should use the /mr switch instead of /ms. Alternatively, disk space allowing, we could just increase the period of time that the files will be kept – e.g. 10 years, by sending you a new license file.
+
+###Extracting High Resolution Data
+
+Using rflow as example. From ASTRID -> Options -> Messages we can see that rflow comes from M29 and it multiples that raw count by 900 and divides it by the period (time interval) to convert to a 15 minute flow rate for storage. The period is parameter 5, the data (vehicle count) appears in parameter 6. In this context, the parameter number relates to the internal structure. What you need to know is that parameter 5  => data value 1, parameter 6 => data value 2, etc. From ASTRID -> Options -> Graphs, we can see that the 15 minute rate is multiplied by 4 when extracted (to convert the 15 minute flow rate to vehicles per hour).
+
+It is also useful to look at the definition of the message. In this case, HELP SCOOT MESSAGE M29 shows
+
+      M29     Det  <DET> PERIOD aaa  FLOW bbb  OCC cccc
+      Raw detector flow and occupancy during whole cycle.
+      PERIOD  is the region cycle time (period s).
+      FLOW    is the number of 0 to 1 transitions of the detector (raw flow).
+      OCC     is the number of 1 bits seen on the detector (raw occupancy).
+      This message is output once per cycle, 20 seconds into the region cycle.
+
+So now we are ready to make sense of the data.
+
+The raw data is stored in hourly files in <ASTRID>\rawfiles in the form asCCYYYYMMDDHH.dat where YYYY,MM,DD,HH are the date and hour and CC is the TCC (01 for TCC A)
+
+From a UTC support command prompt, use ast2mes
+
+    CD /D D:\ASTRID\extract
+    REM extract raw M29 data for all sites on TCC A for 17:00-18:00 24th Jan 2017.
+    ast2mes ..\rawfiles\as012017012408.dat /m:m29 m29.txt
+
+This generates a file that looks like this. (This comes from a simulated system so won’t be realistic).
+
+    ; ASTRID data  Header 1  Cell '01'  Date 24-Jan-2017  Reg size 6  Site size 12
+    08:00:06 M29  N93113B1      96     21    56
+    08:00:06 M29  N93113D1      96     21    56
+    08:00:06 M29  N93123F1      96     21    56
+    08:00:06 M29  N93123H1      96     21    56
+    08:00:06 M29  N93131A1      96     16    24
+    08:00:06 M29  N93131B1      96     21    56
+    08:00:06 M29  N93131D1      96     16    24
+    08:00:06 M29  N57123A1      40      8    16
+    08:00:09 M29  N12113K1     112     24    61
+    08:00:09 M29  N12123D1     112     24    61
+    08:00:09 M29  N12131I1     112     24    61
+    08:00:09 M29  N12131J1     112     19    29
+    08:00:09 M29  N12131K1     112     24    61
+    08:00:09 M29  N12131L1     112     19    29
+    08:00:09 M29  N12131X1     112     19    29
+    08:00:09 M29  N12143A1     112     24    61
+    08:00:09 M29  N12143B1     112     23    60
+    08:00:09 M29  N12151I1     112     24    61
+    08:00:09 M29  N12151J1     112     22    58
+    08:00:09 M29  N12151K1     112     18    28
+    08:00:09 M29  N12151L1     112     18    28
+    08:00:09 M29  N12151M1     112     18    28
+    08:00:09 M29  N12151X1     112     18    28
+    ...
+
+So remember that data value 1 (parameter 5) is the period in seconds. Data value 2 is the raw count. So taking N12151X1 as the an example, this is 18 vehicles in 112 seconds => flow rate of 578 vehicles/hr
+
+
 ##4. Sources
 
 Blackett, Matthew. 2010. “Traffic Lights: Organizing Chaos - Spacing Magazine.” Spacing. February 12. http://spacing.ca/magazine/section/infrastructure-fetish/traffic-lights-organizing-chaos/.
+
+Bowen, G T. 2002. “ASTRID Handbook: User Guide.” 0530 Issue C.
 
 Greenough, John C., and W. Les Kelman. 1998. “METRO TORONTO SCOOT : TRAFFIC ADAPTIVE CONTROL OPERATION.” ITE Journal on the WEB. http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.417.5832&rep=rep1&type=pdf.
 
