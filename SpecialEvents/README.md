@@ -5,7 +5,7 @@ Currently, the databases hosts data from two data sources: City of Toronto Open 
 
 Item|City of Toronto Open Data|Ticketmaster Discovery API| 
 ----|-------------------------|--------------------------|
-Link|[Link](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=8b0689fe9c18b210VgnVCM1000003dd60f89RCRD&vgnextchannel=1a66e03bb8d1e310VgnVCM10000071d60f89RCRD)|[Link](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=8b0689fe9c18b210VgnVCM1000003dd60f89RCRD&vgnextchannel=1a66e03bb8d1e310VgnVCM10000071d60f89RCRD) 
+Link|[Link](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=8b0689fe9c18b210VgnVCM1000003dd60f89RCRD&vgnextchannel=1a66e03bb8d1e310VgnVCM10000071d60f89RCRD)|[Link](http://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) 
 Format|JSON|JSON
 Historical Data|NO|NO
 Content|event name, venue name, venue address, start date and time, end date and time, classification|event name,  venue name, venue address, start date and time, classification
