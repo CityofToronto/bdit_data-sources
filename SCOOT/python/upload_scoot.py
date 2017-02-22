@@ -24,13 +24,22 @@ def makeenddatetime(x):
         x['Time_End'] = '00:00'
     return str(pd.to_datetime(str(x['Date']) + ' ' + x['Time_End'],format='%Y%m%d %H:%M'))
 
-for year in range(2015, 2017):
-    if year == 2015:
-        sm = 5
+start_year = 2010
+end_year = 2012
+start_month = 7
+end_month = 1
+
+for year in range(start_year, end_year+1):
+    
+    if year == start_year and start_year != end_year:
+        sm = start_month
         em = 13
-    elif year == 2017:
+    elif year == start_year and start_year == end_year:
+        sm = start_month
+        em = end_month+1
+    elif year == end_year:
         sm = 1
-        em = 2
+        em = end_month+1
     else:
         sm = 1
         em = 13
