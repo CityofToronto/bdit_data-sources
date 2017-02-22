@@ -12,13 +12,14 @@ This table stores information on SCOOT detectors in the city. The px and scn num
 ### **Table scoot.detector_tcl**
 This table contains the mapping of each SCOOT detector to the centreline segment it is located at. Exact mapping process can be found [below] (# Mapping Process).
 ### **Tables scoot.raw_yyyymm**
-Monthly data exported from the scoot system in 15min bins.   
+Monthly data exported from the scoot system in 15min bins.
+
 |column|type|notes|
 |------|----|-----|
-|detector|text|in the form of N(scn #)(approach letter)(detector number) Example: N10111A1 where 10111 is intersection that detector is counting towards, A indicates the approach, and 1 means this is detector 1 of this approach.
+|detector|text|in the form of N(scn #)(approach letter)(detector number) Example: N10111A1 where 10111 is intersection that detector is counting towards, A indicates the approach, and 1 means this is detector 1 of this approach.|
 |start_time|timestamp||
 |end_time|timestamp|start_time+15mins if count is present, but not necessarily start_time+15min if counts are missing|
-|flow_mean|int|volume in veh/h, calculated by 15min_volume*4|
+|flow_mean|int|volume in veh/h|
 |occ_mean|double precision|expressed in %|
 |vehicle_occ_mean|int|ms/veh|
 |lpu_factor_mean|double precision|lpu/veh|  
