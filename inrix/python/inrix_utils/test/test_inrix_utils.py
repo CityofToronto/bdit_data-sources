@@ -1,7 +1,21 @@
 import unittest
 import argparse
+import sys
+from io import StringIO
 from argparse import ArgumentError
 from inrix_util import _validate_yyyymm_range, _validate_yearsjson, parse_args, _validate_multiple_yyyymm_range
+from contextlib import contextmanager
+
+
+@contextmanager
+def capture_sys_output():
+    capture_out, capture_err = StringIO(), StringIO()
+    current_out, current_err = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = capture_out, capture_err
+        yield capture_out, capture_err
+    finally:
+        sys.stdout, sys.stderr = current_out, current_err
 
 class CreateUtilsTestCase(unittest.TestCase):
     '''Tests for `inrix_util.py`'''
@@ -97,8 +111,11 @@ class CreateUtilsTestCase(unittest.TestCase):
             _validate_yearsjson(incorrect_month_range)
         self.assertEqual('For year 2012, first month 12 comes after second month 2', str(cm.exception))
         
-class ParserTestCase(unittest.TestCase):
-    
+class ArgParseTestCase(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        self.testing_params = {'prog':'TESTING', 'usage':''}
+        super(ArgParseTestCase, self).__init__(*args, **kwargs)
+
     def test_years_y_single(self):
         '''Test if a single pair of years produces the right values'''
         valid_result = [['201407','201506']]
@@ -113,9 +130,10 @@ class ParserTestCase(unittest.TestCase):
         
     def test_years_y_only_one(self):
         '''Test if a single pair of years produces the right values'''
-        with self.assertRaises(ArgumentError) as cm:
-            args = parse_args('-i -y 201207'.split())
-        self.assertEqual('argument -y/--years: expected 2 arguments', str(cm.exception))
+        with self.assertRaises(SystemExit) as cm, capture_sys_output() as (stdout, stderr):
+            args = parse_args('-i -y 201207'.split(), **self.testing_params)
+        self.assertEqual(2, cm.exception.code)
+        self.assertEqual('usage: \nTESTING: error: argument -y/--years: expected 2 arguments\n', stderr.getvalue())
         
     
 if __name__ == '__main__':

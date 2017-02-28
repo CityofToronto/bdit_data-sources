@@ -19,11 +19,12 @@ def _retrieve_raw_data(cur, tablename, tx, tmc, **kwargs):
     sql = "SELECT tx, tmc, score, speed FROM %(tablename)s "\
             "WHERE tmc = %(tmc)s "\
             "AND tx >= %(tx)s "\
-            "AND tx < %(tx)s + INTERVAL '30 minutes' " \
+            "AND tx < %(tx)s + INTERVAL '1 hour' " \
             "AND (%(score)s is null OR score = %(score)s) "
     
     cur.execute(sql,
                 {'tablename':AsIs(tablename), 'tx':tx, 'tmc':tmc, 'score': kwargs['score']})
+    test_data = cur.fetchall()
 
 def speed_test(tablename, dbset, logger, timelogger, numtests, **kwargs):
     '''Run a number (numtests) of random row retrievals on table tablename
@@ -85,7 +86,8 @@ def speed_test(tablename, dbset, logger, timelogger, numtests, **kwargs):
                         tablename,
                         i,
                         time.time() - time1)
-
+    cur.close()
+    con.close()
     logger.info('Testing complete. Connection to %s database %s closed',
                 dbset['host'],
                 dbset['database'])
