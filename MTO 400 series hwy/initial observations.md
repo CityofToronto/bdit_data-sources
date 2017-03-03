@@ -17,7 +17,7 @@ TOTAL|1308
 * Each row is a standalone xml (i.e. trying to parse everything at once will fail due to the lack of a root element)
 * Each row contains detections for all detectors in a 20-second period.
 * Schema is shown in the diagram below  
-[!Schema](XML Schema.png)
+!['Schema'](XML Schema.png)
 
 
 ## ONE-ITS Monthly Traffic Count Summary
