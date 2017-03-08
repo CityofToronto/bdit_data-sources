@@ -224,15 +224,6 @@ UPDATE scoot.px_tcl
 SET sideofint = 'S'
 WHERE px = 1871 AND centreline_id=14257769;
 
-DELETE FROM scoot.px_tcl
-WHERE px = 299;
-
-INSERT INTO scoot.px_tcl (px,centreline_id,sideofint,point,shape)
-SELECT B.px, A.centreline_id, 'W' AS sideofint, C.point, A.shape
-FROM (prj_volume.centreline A CROSS JOIN scoot.px B) JOIN scoot.px_tcl C USING (PX)
-WHERE B.px=299 AND A.centreline_id=30020765
-LIMIT 1;
-
 SELECT px,sideofint
 FROM scoot.px_tcl
 GROUP BY px, sideofint
