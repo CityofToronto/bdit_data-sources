@@ -6,7 +6,7 @@ Format is:
 
 record|tx                 | tmc     | spd | score 
 ------|-------------------|---------|-----|-------
-ex    |2012-07-01 00:00:00|9LX7Q6DDB| 32  | 10    
+ex    |2012-07-01 00:00:00|C09N32465| 32  | 10    
 
 Where:  
  - **tx** (`timestamp`): is the timestamp of the record in UTC 
@@ -18,7 +18,28 @@ You can create sample data (like [`sampledata.csv`](sampledata.csv)) using the [
 
 ## Table Partitioning
 
-Since the data is so massive, it's better not to have it all in one massive table.
+Since the dataset is so massive, it's better not to have it all in one massive table. 
+
+>Partitioning refers to splitting what is logically one large table into smaller physical pieces. Partitioning can provide several benefits
+
+See [the documentation](https://www.postgresql.org/docs/current/static/ddl-partitioning.htm) for more details on the benefits.
+
+Data are stored in partitioned monthly tables that inherit from  one master table which is empty. Partitioning is enabled by having a check constraint on the timestamp of each monthly table, so the query planner knows where to look for data:
+```sql
+CHECK (tx >= DATE '2014-01-01' AND tx < DATE '2014-01-01' + INTERVAL '1 month')
+```
+
+This works for retrieving data, and for Phase 2 data each file was already partitioned by month, so bulk loading was simple. Phase 1 data had 3-4 months in each file, so an option to automate import was to create rules on the master table on insert to assign rows to the appropriate child table. These are coded in the form:
+```sql
+CREATE OR REPLACE RULE inrix_raw_data_insert_201107 AS
+    ON INSERT TO inrix.raw_data
+    WHERE new.tx >= '2011-07-01'::date AND new.tx < ('2011-07-01'::date + '1 mon'::interval)
+    DO INSTEAD
+INSERT INTO inrix.raw_data201107 (tx, tmc, speed, score)
+  VALUES (new.tx, new.tmc, new.speed, new.score);
+```
+From [the documentation](https://www.postgresql.org/docs/current/static/ddl-partitioning.html#DDL-PARTITIONING-ALTERNATIVES)
+>A rule has significantly more overhead than a trigger, but the overhead is paid once per query rather than once per row, so this method might be advantageous for bulk-insert situations.
 
 ## Indexes
 Indexes can be created with the [`python/create_index.py`](python/create_index.py) script. The script creates an index on:  
