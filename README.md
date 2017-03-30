@@ -2,9 +2,10 @@
 
 This is a master repo for all of the data sources that we use. Each folder is for a different data source and contains an explanation of what the data source is and how it can be used, a sample of the data, and scripts to import the data into the PostgreSQL database.
 
-##INRIX
+## INRIX
 
-###Data Elements
+### Data Elements
+
 Field Name|Description|Type
 ----------|-----------|----
 RoadName/Number|Road names or numbers|string
@@ -14,16 +15,19 @@ spd|Link speed estimate|double
 count|Sample Size Used|int
 score|Quality Indicator|10/20/30
 
-###Notes
+### Notes
+
 * INRIX vehicles disproportionately include heavy vehicles. 
 * There's additional sampling bias in that the heavy vehicles do not reflect the general travel patterns.
 * Two sections of freeway(the southernmost sections of 427 and 404) have no available data. These approaches may be imssing due to the idiosyncratic geometries of TMCs near the major freeway-to-freeway interchanges.
 * In any given 15 minute interval between 5am and 10pm, 88.7% of freeway links and 48% of arterial links have observations.
 
-##BlipTrack Bluetooth Detectors
+## BlipTrack Bluetooth Detectors
 
-###Data Elements
-####Historical Data
+### Data Elements
+
+#### Historical Data
+
 Field Name|Description|Type
 ----------|-----------|----
 TimeStamp|timestamp|datetime
@@ -35,7 +39,8 @@ AvgMeasuredTime|average waiting time of users completing the route from start to
 MedianMeasuredTime|median waiting time of users completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
 SampleCount|the number of devices completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
 
-###Retrieval
+### Retrieval
+
 * Interfaces for retrieving data
 	1. Export from Bliptrack GUI at g4apps.bliptrack.net
 	2. Display API: REST-based interface returns live data as JSON or xml in a HTTP(S) response
@@ -59,9 +64,10 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
 	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
 	
-##Turning Movement Counts
+## Turning Movement Counts
 
-###Data Elements
+### Data Elements
+
 * Location Identifier (SLSN Node ID)
 * CountType
 * Count interval start and end date and times
@@ -72,7 +78,8 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- vehicle types
 	- cyclists and pedestrian counts are approach only
 	
-###Notes
+### Notes
+
 * No regular data load schedule. 
 * Data files collected by 2-3 staff members.
 * Manually geo-reference volume data to an SLSN node during data import process
@@ -84,9 +91,10 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Each count station is given a unique identifier to avoid duplicate records
 * Data will not be collected under irregular traffic conditions(construction, closure, etc), but it maybe skewed by unplanned incidents.
 
-##Permanent Count Stations and Automated Traffic Recorder
+## Permanent Count Stations and Automated Traffic Recorder
 
-###Data Elements
+### Data Elements
+
 * Location Identifier(SLSN *Link* (Node?) ID)
 * Count Type
 * Count interval start and end date and times
@@ -99,7 +107,8 @@ SampleCount|the number of devices completing the route from start to end in the 
 * 15 min aggregated interval time
 * 15 min volume
 
-###Notes
+### Notes
+
 * The counts represent roadway and direction(s), not on a lane-by-lane level
 * No regular data load schedule
 * Manually geo-reference volume data to an SLSN node during data import process
@@ -109,7 +118,8 @@ SampleCount|the number of devices completing the route from start to end in the 
 
 ## Vehicle Detector Station (VDS)
 
-###Data Elements
+### Data Elements
+
 * Location Identifier (SLSN Link ID)
 * Count Type
 * Roadway Names
@@ -117,7 +127,8 @@ SampleCount|the number of devices completing the route from start to end in the 
 * 15 min aggregated interval times
 * 15 min aggregated volume, occupancy, and speed
 
-###Notes
+### Notes
+
 * Raw 20sec interval VDS data is available on the processing server, not loaded into FLOW
 * VDS device health/communication statuses are not recorded.
 * Asset information managed in Excel spreadsheets
@@ -145,8 +156,10 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Manual location selection on a map based on location description
 
 ## Road Disruption Activity (RoDARS)
-Data available in big_data.city.restrictions
-###Data Elements
+Data available in `city.restrictions`
+
+### Data Elements
+
 Field Name|Description|Type
 ----------|-----------|----
 id|Unique system identifier|string
@@ -186,6 +199,6 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 	- Gender
 	- Injuries and Fatalities
 
-###Notes
+### Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
