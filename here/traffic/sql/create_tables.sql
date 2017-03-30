@@ -1,4 +1,6 @@
-﻿CREATE TABLE here.ta
+﻿DROP TABLE IF EXISTS here.ta CASCADE;
+
+CREATE TABLE here.ta
 (
   link_id text NOT NULL,
   tx timestamp without time zone NOT NULL,
@@ -66,6 +68,7 @@ BEGIN
 				(--CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month')
 				) INHERITS (here.ta)$$
 				, tablename);
+			EXECUTE format($$ALTER TABLE here.%I OWNER TO here_admins$$, tablename);
 			rulename := baserulename||yyyymm;
 			EXECUTE format($$CREATE OR REPLACE RULE %I AS
 				    ON INSERT TO here.ta
