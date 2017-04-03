@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-'''Perform operations on Inrix data'''
+'''Perform operations on large data in postgresql'''
 import argparse
 import json
 import sys
@@ -108,7 +108,7 @@ def _validate_yearsjson(yearsjson):
 
 def parse_args(args, prog = None, usage = None):
     '''Parser for the command line arguments'''
-    PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate Inrix '
+    PARSER = argparse.ArgumentParser(description='Index, partition, or aggregate '
                                                  'traffic data in a database.',
                                      prog=prog, usage=usage)
     #Possible action to call inrix_util to perform
