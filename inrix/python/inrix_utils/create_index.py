@@ -2,44 +2,33 @@
 '''Create indexes for each table in the Inrix database.'''
 import logging
 from psycopg2.extensions import AsIs
-from utils import get_yyyymm, try_connection, execute_function
+from utils import try_connection, execute_function
 
+SQL_FUNCTIONS = {'score': "SELECT inrix.create_raw_score_idx(%(tablename)s)",
+                 'tmc': "SELECT inrix.create_raw_tmc_idx(%(tablename)s)",
+                 'timestamp': "SELECT inrix.create_raw_tx_idx(%(tablename)s)"}
 
-def _score_index_table(logger, cursor, *, table, **kwargs):
-    '''Create score index on the inrix.raw_data partitioned table with table.'''
-    logger.info('Creating score index')
-    cursor.execute("SELECT inrix.create_raw_score_idx(%(tablename)s)", {'tablename':table})
-
-def _tmc_index_table(logger, cursor, *, table, **kwargs):
-    '''Create tmc index on the inrix.raw_data partitioned table with table.'''
-    logger.info('Creating tmc index')
-    cursor.execute("SELECT inrix.create_raw_tmc_idx(%(tablename)s)", {'tablename':table})
-
-def _tx_index_table(logger, cursor, *, table, **kwargs):
+def _create_index(logger, cursor, *, table, index, **kwargs):
     '''Create tx index on the inrix.raw_data partitioned table with table.'''
-    logger.info('Creating timestamp index')
-    cursor.execute("SELECT inrix.create_raw_tx_idx(%(tablename)s)", {'tablename':table})
+    logger.info('Creating %s index', index)
+    sql = SQL_FUNCTIONS[index]
+    cursor.execute(sql, {'tablename':table})
 
 def _analyze_table(logger, cursor, *, table, **kwargs):
     '''Analyze inrix.raw_data partitioned table with table.'''
     logger.info('Analyzing table %s', table)
     cursor.execute("ANALYZE inrix.%(tablename)s", {'tablename':AsIs(table)})
 
-def index_tables(yyyymm, logger, cursor, dbset, *, score=True, tmc=True, tx=True):
+def index_tables(yyyymm, logger, cursor, dbset, *, indexes=['score','tmc','timestamp'], **kwargs):
     '''Create indexes for a series of tables based on the years dictionary \
     and the dbset database connection.'''
 
     table = 'raw_data'+yyyymm
     logger.info('Creating indexes on table %s', table)
 
-    if score:
-        execute_function(_score_index_table, logger, cursor, dbset, table=table, autocommit=True)
-
-    if tmc:
-        execute_function(_tmc_index_table, logger, cursor, dbset, table=table, autocommit=True)
-
-    if tx:
-        execute_function(_tx_index_table, logger, cursor, dbset, table=table, autocommit=True)
+    for index in indexes:
+        #Execute the specified "CREATE INDEX" sql function on the specified table
+        execute_function(_create_index, logger, cursor, dbset, table=table, index=index, autocommit=True)
 
     execute_function(_analyze_table, logger, cursor, dbset, table=table, autocommit=True)
 
@@ -55,4 +44,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
     from dbsettings import dbsetting
-    index_tables(YEARS, dbsetting, LOGGER)
+    con, cursor = try_connection(LOGGER, dbset, autocommit=True)
+    index_tables(YEARS, LOGGER, cursor, dbsettings)

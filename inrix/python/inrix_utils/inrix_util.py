@@ -192,16 +192,22 @@ if __name__ == "__main__":
     if ARGS.index:
         from create_index import index_tables
         #Assume indexing on all columns, unless a specific column is specified
-        tx, tmc, score = True, True, True
-        #Assume indexing on all columns, unless a specific column is specified
+        #If a specific column is specified
         if ARGS.indextmc or ARGS.indextx or ARGS.indexscore:
-            tx, tmc, score = ARGS.indextx, ARGS.indextmc, ARGS.indexscore
+            kwargs['index'] = []
+            if ARGS.indextmc:
+                kwargs['index'].append('tmc')
+            if ARGS.ARGS.indexscore:
+                kwargs['index'].append('score')
+            if ARGS.indextx:
+                kwargs['index'].append('timestamp')
+        else:
+            kwargs['indexes'] = ['score','tmc','timestamp']
     elif ARGS.partition:
         from finish_partition import partition_table
         kwargs['tablename'] = ARGS.tablename
         function=partition_table
     elif ARGS.aggregate:
-        OPT_ARGS = {}
         if ARGS.tmctable:
             TMCTABLE = ARGS.tmctable.split(".")
             if len(TMCTABLE) != 2:
@@ -220,22 +226,16 @@ if __name__ == "__main__":
     for year in YEARS:
         for month in YEARS[year]:
             yyyymm = get_yyyymm(year, month)
-            if ARGS.aggregate: 
+            kwargs['startdate']=get_yyyymmdd(year, month)
+            if ARGS.aggregate or ARGS.partition: 
                 execute_function(function, LOGGER, cursor, dbset, 
                                  autocommit=True,
                                  **kwargs, 
                                  yyyymm=yyyymm)
-            elif ARGS.partition: 
-                execute_function(function, LOGGER, cursor, dbset, 
-                                 autocommit=True,
-                                 yyyymm=yyyymm,
-                                 startdate=get_yyyymmdd(year, month),
-                                 **kwargs)
             elif ARGS.index: 
-                index_tables(yyyymm, LOGGER, cursor, dbset, tx=tx, tmc=tmc, score=score)
+                index_tables(yyyymm, LOGGER, cursor, dbset, **kwargs)
             elif ARGS.movedata:
-                move_data(yyyymm, LOGGER, cursor, dbset,
-                          startdate = get_yyyymmdd(year, month))
+                move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
             
     con.close()
     LOGGER.info('Processing complete, connection to %s database %s closed',
