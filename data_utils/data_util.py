@@ -133,11 +133,14 @@ def parse_args(args, prog = None, usage = None):
                                  "and start/end month like {'2012'=[1,12]}")
     PARSER.add_argument("-d", "--dbsetting",
                         default='default.cfg',
-                        help="Filename with connection settings to the database"
+                        help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
     PARSER.add_argument("-t", "--tablename",
-                        default='inrix.raw_data',
-                        help="Base table on which to perform operation of form %(default)s")
+                        default='raw_data',
+                        help="Base table on which to perform operation, like %(default)s")
+    PARSER.add_argument("-s", "--schemaname",
+                        default='inrix',
+                        help="Base schema on which to perform operation, like %(default)s")
     PARSER.add_argument("-tx", "--timecolumn",
                         default='tx',
                         help="Time column for partitioning, default: %(default)s")
@@ -145,15 +148,9 @@ def parse_args(args, prog = None, usage = None):
                         help="For aggregating, specify using all rows, regardless of score")
     PARSER.add_argument("--tmctable", default='gis.inrix_tmc_tor',
                         help="Specify subset of tmcs to use, default: %(default)s")
-    PARSER.add_argument("--indextmc", action="store_true", 
-                        help="Index based on tmc, if no index option specified, default is "
-                        "to index tmc, time, and score")
-    PARSER.add_argument("--indextx", action="store_true", 
-                        help="Index based on timestamp, if no index option specified, default is "
-                        "to index tmc, time, and score")
-    PARSER.add_argument("--indexscore", action="store_true", 
-                        help="Index based on score, if no index option specified, default is "
-                        "to index tmc, time, and score")
+    PARSER.add_argument("--idx", action='append', 
+                        help="Index functions to call, parameters are keys "
+                        "for index_functions.json") 
     return PARSER.parse_args(args)
 
 if __name__ == "__main__":
@@ -190,22 +187,21 @@ if __name__ == "__main__":
     kwargs = {}
 
     if ARGS.index:
-        from create_index import index_tables
+        from create_index import IndexCreator
         #Assume indexing on all columns, unless a specific column is specified
         #If a specific column is specified
-        if ARGS.indextmc or ARGS.indextx or ARGS.indexscore:
-            kwargs['index'] = []
-            if ARGS.indextmc:
-                kwargs['index'].append('tmc')
-            if ARGS.ARGS.indexscore:
-                kwargs['index'].append('score')
-            if ARGS.indextx:
-                kwargs['index'].append('timestamp')
-        else:
-            kwargs['indexes'] = ['score','tmc','timestamp']
+        if ARGS.idx is None:
+            LOGGER.critical('--idx flag needs at least one key')
+            sys.exit(2)
+
+        try:
+            indexor = IndexCreator(LOGGER, dbset, ARGS.idx)
+        except ValueError as err:
+            LOGGER.critical(err)
+            sys.exit(2)
     elif ARGS.partition:
         from finish_partition import partition_table
-        kwargs['tablename'] = ARGS.tablename
+        kwargs['tablename'] = ARGS.schemaname + '.' + ARGS.tablename
         function=partition_table
     elif ARGS.aggregate:
         if ARGS.tmctable:
@@ -233,7 +229,7 @@ if __name__ == "__main__":
                                  **kwargs, 
                                  yyyymm=yyyymm)
             elif ARGS.index: 
-                index_tables(yyyymm, LOGGER, cursor, dbset, **kwargs)
+                indexor.run(yyyymm, ARGS.tablename)
             elif ARGS.movedata:
                 move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
             
