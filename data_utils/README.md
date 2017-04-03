@@ -1,7 +1,9 @@
-# Inrix Utils
-*Command line python utility to index, partition, aggregate, or move Inrix data within a PostgreSQL database with partitioned tables*
+# Data Utils
+*Command line python utility to index, partition, aggregate, or move large datasets (Inrix, HERE) within a PostgreSQL database with partitioned tables*
 
-Since the Inrix dataset is so large, it is partitioned by month in the database, and operations should be batched so that these workloads can be scheduled for off-peak hours on the database server. While it would have been possible to write these loops in PostgreSQL, because of the way [transaction isolation occurs in PostgreSQL](http://dba.stackexchange.com/a/145785/101712), **no change would be committed until the loop finishes**. So it is therefore preferable to call each operation from an external script, in this case Python.
+Since these datasets are so large, it is partitioned by month in the database, and operations should be batched so that these workloads can be scheduled for off-peak hours on the database server. While it would have been possible to write these loops in PostgreSQL, because of the way [transaction isolation occurs in PostgreSQL](http://dba.stackexchange.com/a/145785/101712), **no change would be committed until the loop finishes**. So it is therefore preferable to call each operation from an external script, in this case Python.
+
+**Note:** This utility was initially created for Inrix data, it is being migrated to be more generalizable to looping over lengthy PostgreSQL maintenance tasks for big datasets.
 
 ## Usage
 Download the contents of this folder. Test with `python -m unittest`. This project assumes Python 3.5 and above and has not been tested in Python 2.x. The only external dependency is psycopg2, a database connection package for PostgreSQL ([installation instructions](http://initd.org/psycopg/docs/install.html#install-from-a-package)). The following sql functions are necessary for the functionality to work: 

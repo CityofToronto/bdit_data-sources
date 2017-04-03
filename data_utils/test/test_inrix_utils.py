@@ -3,7 +3,7 @@ import argparse
 import sys
 from io import StringIO
 from argparse import ArgumentError
-from inrix_util import _validate_yyyymm_range, _validate_yearsjson, parse_args, _validate_multiple_yyyymm_range
+from data_util import _validate_yyyymm_range, _validate_yearsjson, parse_args, _validate_multiple_yyyymm_range
 from contextlib import contextmanager
 
 
@@ -18,7 +18,7 @@ def capture_sys_output():
         sys.stdout, sys.stderr = current_out, current_err
 
 class CreateUtilsTestCase(unittest.TestCase):
-    '''Tests for `inrix_util.py`'''
+    '''Tests for `data_util.py`'''
 
     def test_valid_yyyymm_range(self):
         '''Test if the range ['201206','201403'] produces the right range'''
