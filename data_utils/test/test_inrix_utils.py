@@ -134,7 +134,16 @@ class ArgParseTestCase(unittest.TestCase):
             args = parse_args('-i -y 201207'.split(), **self.testing_params)
         self.assertEqual(2, cm.exception.code)
         self.assertEqual('usage: \nTESTING: error: argument -y/--years: expected 2 arguments\n', stderr.getvalue())
+
+    def test_idx_one(self):
+        valid_result = ['tx']
+        args = parse_args('-i -y 201203 201301 --idx tx'.split())
+        self.assertEqual(valid_result, args.idx)
         
-    
+    def test_idx_two(self):
+        valid_result = ['tx', 'tmc']
+        args = parse_args('-i -y 201203 201301 --idx tx --idx tmc'.split())
+        self.assertEqual(valid_result, args.idx)
+
 if __name__ == '__main__':
     unittest.main()
