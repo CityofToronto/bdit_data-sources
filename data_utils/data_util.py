@@ -158,7 +158,7 @@ if __name__ == "__main__":
     ARGS = parse_args(sys.argv[1:])
 
     #Configure logging
-    FORMAT = '%(asctime)-15s %(message)s'
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ if __name__ == "__main__":
             sys.exit(2)
 
         try:
-            indexor = IndexCreator(LOGGER, dbset, ARGS.idx)
+            indexor = IndexCreator(LOGGER, dbset, ARGS.idx, ARGS.schemaname)
         except ValueError as err:
             LOGGER.critical(err)
             sys.exit(2)
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     elif ARGS.movedata:
         from move_data import move_data
 
-    con, cursor = try_connection(LOGGER, dbset, autocommit=True)
+    #con, cursor = try_connection(LOGGER, dbset, autocommit=True)
 
     for year in YEARS:
         for month in YEARS[year]:
@@ -233,7 +233,7 @@ if __name__ == "__main__":
             elif ARGS.movedata:
                 move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
             
-    con.close()
+    #con.close()
     LOGGER.info('Processing complete, connection to %s database %s closed',
                 dbset['host'],
                 dbset['database'])

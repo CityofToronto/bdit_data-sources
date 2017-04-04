@@ -61,9 +61,9 @@ class SqlAction( object ):
         '''Execute a function within a psycopg2 connection retry loop'''
         while True:
             try:
-                func(self.logger, self.cur, **kwargs)
+                func(**kwargs)
             except (OperationalError, InterfaceError) as oe:
-                logger.error(oe)
+                self.logger.error(oe)
                 self.con, self.cursor = self.try_connection(**kwargs)
             else:
                 break
