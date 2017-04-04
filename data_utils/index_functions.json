@@ -1,0 +1,2 @@
+{"link_id": "SELECT here.create_link_id_idx(%(tablename)s)",
+ "timestamp": "SELECT here.create_tx_idx(%(tablename)s)"}
