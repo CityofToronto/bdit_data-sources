@@ -195,7 +195,7 @@ if __name__ == "__main__":
             sys.exit(2)
 
         try:
-            indexor = IndexCreator(LOGGER, dbset, ARGS.idx, ARGS.schemaname)
+            indexor = IndexCreator(LOGGER, dbset, indexes=ARGS.idx, schemaname=ARGS.schemaname)
         except ValueError as err:
             LOGGER.critical(err)
             sys.exit(2)
