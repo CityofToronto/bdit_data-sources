@@ -229,7 +229,7 @@ if __name__ == "__main__":
                                  **kwargs, 
                                  yyyymm=yyyymm)
             elif ARGS.index: 
-                indexor.run(yyyymm, ARGS.tablename)
+                indexor.run(yyyymm, table=ARGS.tablename)
             elif ARGS.movedata:
                 move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
             
