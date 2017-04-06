@@ -1,0 +1,24 @@
+# HERE GIS Data
+
+Here GIS data is provided through the Enterprise Data Download portal. Each Revision contains ~41 layers provided for the province of Ontario. Consult the encyclopedic `NAVSTREETS Street Data Reference Manual.pdf` in the K drive for further info on a layer.
+
+## Loading procedure 
+
+After downloading to the EC2, uncompress and un-tar the file with
+```shell
+mkdir HERE_GIS_DATAR1/
+tar -xvf HERE_GIS_DATA.tar.gz -C HERE_GIS_DATAR1/
+```
+
+The [`batch_upload.sh`] shell script loops over each shape file and pipes the output of [`shp2pgsql`](http://postgis.net/docs/manual-2.1/using_postgis_dbmanagement.html#shp2pgsql_usage) to psql ([inspiration](http://gis.stackexchange.com/a/7806/36886)) to upload into the `here_gis` schema. Not that this shortened use of `psql` assumes the current Ubuntu username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory.
+
+Prior to running `shp2pgsql` the script performs some manipulation of the `$f` filename variable in order to lowercase it and remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
+
+After the data is loaded, `psql` is called again to alter each table's owner to the here_admins group and then run [`gis.clip_to(schemaname, tablename)`](https://github.com/CityofToronto/bdit_pgutils/blob/master/gis/clip_to) to clip the layer to within the City's boundary. 
+
+Subsequently [`split_streets_att.sql`](split_streets_att.sql) can be run to split the streets layer into a GIS layer and an attributes table (there are a lot of columns in the attributes table) in order to reduce the size of the streets layer when loading it in QGIS.
+
+Run the shell script in the background with nohup with the following command. The `tail -f` piece will continually display the tail of the log in the terminal. To cancel the command do `CTRL-C` to stop `tail` and then `fg` to return the job to the foreground and then `CTRL-C` again.
+```shell
+nohup ./batch_upload.sh > batch_upload.log& tail -f batch_upload.log
+```
