@@ -15,7 +15,7 @@ class IndexCreator( SqlAction ):
                      'timestamp': "SELECT inrix.create_raw_tx_idx(%(tablename)s)"}
     
     def __init__(self, logger, dbsettings, *args, indexes=None, schemaname=None, **kwargs):
-        super(IndexCreator, self).__init__(logger, dbsettings, *args, **kwargs)
+        super(IndexCreator, self).__init__(logger, dbsettings, *args, autocommit=True, **kwargs)
         
         try:
             with open("index_functions.json") as f:
