@@ -1,4 +1,4 @@
-from psycopg2 import connect, OperationalError, InterfaceError
+from psycopg2 import connect, OperationalError, InterfaceError, DatabaseError
 from time import sleep
 
 class SqlAction( object ):
@@ -52,6 +52,8 @@ class SqlAction( object ):
                 self.logger.error(oe)
                 self.logger.info('Retrying connection in 2 minutes')
                 sleep(120)
+            except DatabaseError as dbe:
+                self.logger.error(dbe.pgerror)
             else:
                 break
         return con, cursor
