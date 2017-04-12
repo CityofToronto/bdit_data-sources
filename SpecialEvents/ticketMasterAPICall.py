@@ -71,9 +71,7 @@ while (True):
                         if venue["venue_address"] is not None and lat != 0 and lon != 0:
                             add = venue["venue_address"]+", Toronto, ON " + l["postalCode"] +", Canada"
                         elif lat!=0 and lon!=0:
-                            coord = list(l["location"].values())
-                            coord.reverse()
-                            coord = ','.join(coord)
+                            coord = str(lat) + ',' + str(lon)
                             r = requests.get(url,proxies = proxies).json()
                             (venue["venue_add_comp"],add) = rev_geocode(coord)
                         elif venue["venue_address"] is not None:
@@ -86,7 +84,7 @@ while (True):
                     venue["lat"] = lat
                     venue["lon"] = lon
                     venue["capacity"] = None
-                    db.upsert('city.venues', venue)
+                    db.insert('city.venues', venue)
             else:
                 for venue["id"] in exist[0]:
                     if type(venue["id"]) == int:
@@ -96,7 +94,7 @@ while (True):
             # Update TM venues table
             exist = db.query("SELECT * FROM city.tm_venues where tm_venue_id = \'"+venue["tm_venue_id"]+"\'").getresult()
             if exist == []:
-                db.upsert('city.tm_venues', venue)
+                db.insert('city.tm_venues', venue)
                 
     # Get next page
     if "next" in r["_links"].keys():
@@ -105,41 +103,48 @@ while (True):
         break;
 
 # Get Events from List of Venues
+#cla = []
 events = {}
 i = 0
 for venue in venues:
     i = i + 1
-    key = venue["tm_venue_id"]
-    r = requests.get('https://app.ticketmaster.com/discovery/v2/events.json?venueId='+key+'&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg',proxies = proxies).json();
-    if "_embedded" in r.keys():
-        for l in r["_embedded"]["events"]:
-            event = {}
-            event['tm_event_id'] = l["id"]
-            try:
-                for c in l["classifications"]:
-                    if c["primary"]:
-                        try:
-                            event["classification"] = c["segment"]["name"]
-                        except KeyError:
-                            event["classification"] = None
-            except KeyError:
-                event["classification"] = None
-            try:
-                event["date"] = l["dates"]["start"]["localDate"]
-            except KeyError:
-                event["date"] = None
-            try:
-                event["name"] = l["name"]
-            except KeyError:
-                event["name"] = None
-            try:
-                t = time.strptime(l["dates"]["start"]["localTime"], "%H:%M:%S")
-                event["start_time"] = datetime.time(t[3],t[4],t[5])
-            except KeyError:
-                event["start_time"] = None
-            event["tm_venue_id"] = key
-            events[l["id"]] = event
-            db.upsert('city.TM_events',event)
+    if i > 0:
+        key = venue["tm_venue_id"]
+        r = requests.get('https://app.ticketmaster.com/discovery/v2/events.json?venueId='+key+'&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg',proxies = proxies).json();
+        if "_embedded" in r.keys():
+            for l in r["_embedded"]["events"]:
+                event = {}
+                event['tm_event_id'] = l["id"]
+                try:
+                    for c in l["classifications"]:
+                        if c["primary"]:
+                            try:
+                                event["classification"] = c["segment"]["name"]
+                                '''
+                                if event["classification"] not in cla:
+                                    cla.append(event["classification"])'''
+                            except KeyError:
+                                event["classification"] = None
+                except KeyError:
+                    event["classification"] = None
+                try:
+                    event["date"] = l["dates"]["start"]["localDate"]
+                except KeyError:
+                    event["date"] = None
+                try:
+                    event["name"] = l["name"]
+                except KeyError:
+                    event["name"] = None
+                try:
+                    t = time.strptime(l["dates"]["start"]["localTime"], "%H:%M:%S")
+                    event["start_time"] = datetime.time(t[3],t[4],t[5])
+                except KeyError:
+                    event["start_time"] = None
+                event["tm_venue_id"] = key
+                events[l["id"]] = event
+                exist = db.query("SELECT * FROM city.TM_events where tm_event_id = \'"+event["tm_event_id"]+"\'").getresult()
+                if exist == []:
+                    db.insert('city.TM_events',event)
 db.close()
 
 '''
