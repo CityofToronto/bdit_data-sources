@@ -195,14 +195,17 @@ if __name__ == "__main__":
             sys.exit(2)
 
         try:
-            indexor = IndexCreator(LOGGER, dbset, indexes=ARGS.idx, schemaname=ARGS.schemaname)
+            engine = IndexCreator(LOGGER, dbset, indexes=ARGS.idx,
+                                  table=ARGS.tablename,
+                                  schemaname=ARGS.schemaname)
         except ValueError as err:
             LOGGER.critical(err)
             sys.exit(2)
     elif ARGS.partition:
-        from finish_partition import partition_table
-        kwargs['tablename'] = ARGS.schemaname + '.' + ARGS.tablename
-        function=partition_table
+        from finish_partition import TablePartitioner
+        engine = TablePartitioner(LOGGER, dbset, schemaname=ARGS.schemaname,
+                                  table=ARGS.tablename,
+                                  timecol=ARGS.timecolumn)
     elif ARGS.aggregate:
         if ARGS.tmctable:
             TMCTABLE = ARGS.tmctable.split(".")
@@ -217,20 +220,22 @@ if __name__ == "__main__":
     elif ARGS.movedata:
         from move_data import move_data
 
-    #con, cursor = try_connection(LOGGER, dbset, autocommit=True)
+    if ARGS.aggregate or ARGS.movedata:
+        con, cursor = try_connection(LOGGER, dbset, autocommit=True)
 
     for year in YEARS:
         for month in YEARS[year]:
             yyyymm = get_yyyymm(year, month)
-            kwargs['startdate']=get_yyyymmdd(year, month)
-            if ARGS.aggregate or ARGS.partition: 
+            
+            if ARGS.aggregate: 
                 execute_function(function, LOGGER, cursor, dbset, 
                                  autocommit=True,
                                  **kwargs, 
                                  yyyymm=yyyymm)
-            elif ARGS.index: 
-                indexor.run(yyyymm, table=ARGS.tablename)
+            elif ARGS.index or ARGS.partition: 
+                engine.run(year, month, table=ARGS.tablename)
             elif ARGS.movedata:
+                kwargs['startdate']=get_yyyymmdd(year, month)
                 move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
             
     #con.close()

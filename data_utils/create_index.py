@@ -14,7 +14,7 @@ class IndexCreator( SqlAction ):
                      'tmc': "SELECT inrix.create_raw_tmc_idx(%(tablename)s)",
                      'timestamp': "SELECT inrix.create_raw_tx_idx(%(tablename)s)"}
     
-    def __init__(self, logger, dbsettings, *args, indexes=None, schemaname=None, **kwargs):
+    def __init__(self, logger, dbsettings, *args, indexes=None, schemaname=None, table='raw_data', **kwargs):
         super(IndexCreator, self).__init__(logger, dbsettings, *args, autocommit=True, **kwargs)
         
         try:
@@ -37,6 +37,7 @@ class IndexCreator( SqlAction ):
         #raises ValueError
         self._test_schema(schemaname)
         self.schema = schemaname
+        self.table = table
             
     def _test_schema(self, schema):
         '''Test existence of schema'''
@@ -60,11 +61,12 @@ class IndexCreator( SqlAction ):
                                                                  'tablename':AsIs(table)})
         return self
 
-    def run(self, yyyymm, *, table='raw_data', **kwargs):
+    def run(self, year, month, *args, **kwargs):
         '''Create indexes for a series of tables based on the years dictionary \
         and the dbset database connection.'''
-
-        tablename = table+str(yyyymm)
+        yyyymm = self.get_yyyymm(year, month)
+        tablename = self.table+str(yyyymm)
+        
         self.logger.info('Creating indexes on table %s', tablename)
 
         for index in self.indexes:
@@ -88,4 +90,6 @@ if __name__ == "__main__":
     LOGGER = logging.getLogger(__name__)
     from dbsettings import dbsetting
     indexor = IndexCreator(LOGGER, dbsettings)
-    indexor.index_tables(YEARS, LOGGER, cursor, dbsettings)
+    for year in YEARS:
+        for month in YEARS[year]:
+            indexor.run(year, month)
