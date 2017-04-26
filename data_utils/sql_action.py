@@ -1,6 +1,7 @@
 from psycopg2 import connect, OperationalError, InterfaceError, DatabaseError
 from time import sleep
 
+
 class SqlAction( object ):
     '''Base class for holding settings to automate functions on the DB
     '''
@@ -10,13 +11,8 @@ class SqlAction( object ):
         self.dbsettings = dbsettings
         self.con, self.cur = self.try_connection(**kwargs)
         
-    def get_yyyymm(yyyy, mm):
-        '''Combine integer yyyy and mm into a string yyyymm.'''
-        if mm < 10:
-            return str(yyyy)+'0'+str(mm)
-        else:
-            return str(yyyy)+str(mm)
     
+    @staticmethod
     def get_yyyymmdd(yyyy, mm, **kwargs):
         '''Combine integer yyyy and mm into a string date yyyy-mm-dd.'''
 
@@ -32,6 +28,14 @@ class SqlAction( object ):
         else:
             return str(yyyy)+'-'+str(mm)+'-01'
 
+    @staticmethod
+    def get_yyyymm(yyyy, mm):
+        '''Combine integer yyyy and mm into a string yyyymm.'''
+        if mm < 10:
+            return str(yyyy)+'0'+str(mm)
+        else:
+            return str(yyyy)+str(mm)
+        
     def try_connection(self, *, autocommit=False, **kwargs):
         '''Connection retry loop'''
         while True:
