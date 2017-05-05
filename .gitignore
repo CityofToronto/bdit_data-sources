@@ -165,3 +165,6 @@ inrix/progress.md
 inrix/sql/descriptive_analysis/score20s_percent_observed_histo.PNG
 inrix/sql/descriptive_analysis/score_counts_over_time.png
 inrix/python/speed_test/oldie.cfg
+bluetooth/bluetooth_data/*
+bluetooth/api/display.xml
+gtfs/import_gtfs_data.R

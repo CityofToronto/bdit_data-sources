@@ -1,0 +1,61 @@
+API_id,RouteName,RoadType,Code
+4,Gardiner-A to Gardiner-B,Expressway,A_B
+16,Gardiner-B to Gardiner-A,Expressway,B_A
+75,Gardiner-B to Gardiner-B1,Expressway,B_B1
+83,Gardiner-B to Lakeshore-Z1,Expressway,B_Z1
+87,Gardiner-B to Lakeshore-Z2,Expressway,B_Z2
+74,Gardiner-B1 to Gardiner-B,Expressway,B1_B
+77,Gardiner-B1 to Gardiner-C,Expressway,B1_C
+79,Gardiner-C to Gardiner-B1,Expressway,C_B1
+58,Gardiner-C to Gardiner-D,Expressway,C_D
+61,Gardiner-D to Gardiner-C,Expressway,D_C
+84,Gardiner-D to Gardiner-E,Expressway,D_E
+78,Gardiner-E to Gardiner-D,Expressway,E_D
+59,Gardiner-E to DVP-F,Expressway,E_F
+70,Gardiner-E to Lakeshore-LY,Expressway,E_LY
+60,DVP-F to Gardiner-E,Expressway,F_E
+6,DVP-F to DVP-G,Expressway,F_G
+13,DVP-G to DVP-F,Expressway,G_F
+7,DVP-G to DVP-H,Expressway,G_H
+12,DVP-H to DVP-G,Expressway,H_G
+8,DVP-H to DVP-I,Expressway,H_I
+11,DVP-I to DVP-H,Expressway,I_H
+1,DVP-I to DVP-J,Expressway,I_J
+0,DVP-J to DVP-I,Expressway,J_I
+9,DVP-J to DVP-K,Expressway,J_K
+10,DVP-K to DVP-J,Expressway,K_J
+99,Lakeshore-LE to Lakeshore-LY,Expressway,LE_LY
+71,Lakeshore-LY to Gardiner-D,Expressway,LY_D
+80,Lakeshore-LY to Lakeshore-Z2,Expressway,LY_Z2
+97,Lakeshore-LY to Lakeshore-Z3,Expressway,LY_Z3
+82,Lakeshore-Z1 to Gardiner-B,Expressway,Z1_B
+85,Lakeshore-Z1 to Lakeshore-Z2,Expressway,Z1_Z2
+86,Lakeshore-Z2 to Lakeshore-LB,Expressway,Z2_LB
+81,Lakeshore-Z2 to Lakeshore-Z1,Expressway,Z2_Z1
+95,Lakeshore-Z2 to Lakeshore-Z3,Expressway,Z2_Z3
+96,Lakeshore-Z3 to Lakeshore-LB,Expressway,Z3_LB
+98,Lakeshore-Z3 to Lakeshore-Z2,Expressway,Z3_Z2
+117,DT- Bathurst - AC2 - AQ2,Arterial,AC2_AQ2
+116,DT- Bathurst - AQ2 - AC2,Arterial,AQ2_AC2
+108,DT- College - AC1 to AC2,Arterial,AC1_AC2
+109,DT- College - AC2 to AC1,Arterial,AC2_AC1
+110,DT- College - AC2 to AC3,Arterial,AC2_AC3
+111,DT- College - AC3 to AC2,Arterial,AC3_AC2
+112,DT- College - AC3 to AC4,Arterial,AC3_AC4
+113,DT- College - AC4 to AC3,Arterial,AC4_AC3
+121,DT- Dovercourt - AD3 - AC1,Arterial,AD3_AC1
+120,DT- Dovercourt - AC1 - AD3,Arterial,AC1_AD3
+102,DT- Dundas - AD1 to AD2,Arterial,AD1_AD2
+103,DT- Dundas - AD2 to AD1,Arterial,AD2_AD1
+104,DT- Dundas - AD2 to AD3,Arterial,AD2_AD3
+105,DT- Dundas - AD3 to AD2,Arterial,AD3_AD2
+106,DT- Dundas - AD3 to AD4,Arterial,AD3_AD4
+107,DT- Dundas - AD4 to AD3,Arterial,AD4_AD3
+114,DT- Queen - AQ1 - AQ2,Arterial,AQ1_AQ2
+115,DT- Queen - AQ2 - AQ1,Arterial,AQ2_AQ1
+151,DTB - Adelaide - BA2-BA1,Arterial,BA2_BA1
+150,DTB - Adelaide - BA3-BA2,Arterial,BA3_BA2
+181,DTB - Adelaide - BA4-BA3,Arterial,BA4_BA3
+149,DTB - Richmond -BR1-BR2,Arterial,BR1_BR2
+183,DTB - Richmond -BR2-BR3,Arterial,BR2_BR3
+182,DTB - Richmond -BR3-BR4,Arterial,BR3_BR4
