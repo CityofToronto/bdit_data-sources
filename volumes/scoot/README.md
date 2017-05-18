@@ -133,9 +133,9 @@ These data types are collected directly from messages and are stored in the
 ASTRID database.
 
 1. **Flow**: The M02 message gives SCOOT flow. It is measured in lpu/h and differs from actual flow in several respects:
-  - Because it is measured in lpu/h it should strictly be converted to vehicles with a link-dependent (and possibly time-dependent) conversion factor. 
-  - It is subject to the maximum queue; flow which is measured but which is modelled as exceeding the maximum queue is not included. 
-  - The modelled flow is retained from a previous cycle if the SCOOT detector is seen as congested This is essential for the correct operation of the SCOOT optimisers in congested conditions, but does mean that the flow values obtained do not necessarily reflect the street in the circumstances. The F01 message gives a flow value based on count detector input 
+    - Because it is measured in lpu/h it should strictly be converted to vehicles with a link-dependent (and possibly time-dependent) conversion factor. 
+    - It is subject to the maximum queue; flow which is measured but which is modelled as exceeding the maximum queue is not included. 
+    - The modelled flow is retained from a previous cycle if the SCOOT detector is seen as congested This is essential for the correct operation of the SCOOT optimisers in congested conditions, but does mean that the flow values obtained do not necessarily reflect the street in the circumstances. The F01 message gives a flow value based on count detector input 
 2. **Stops**: The M02 message gives SCOOT stops, which represent the number of stops on the link as modelled by SCOOT. It is measured in lpu/h and is output by ASTRID in veh/h. 
 3. **Delay**: The M02 message gives SCOOT delay, which represents the delay on the link as modelled by SCOOT. The value is in lpus and can be thought of as the average queue length on the link throughout the period. It is stored in ASTRID to a resolution of 0-l vehicles and is output in vehicles. 
 4. **Congestion**: The M02 message gives raw congestion, unprocessed by SCOOT. The term 'congestion' in SCOOT is based on the concept of a congested interval; this is a period of 4 seconds for which the detector (or any one of the detectors) on the link is covered. The raw congestion is the total length of these congested intervals as a proportion of the length of the period; it has not been processed by the SCOOT model. It is stored in ASTRID to a resolution of l% and is output in percent. 
@@ -185,28 +185,33 @@ slen|stg|M17|p5|s|Stage|length
 The following information was provided by Siemens to extract data from a windows command prompt with administrator access on the UTC/SCOOT server. The easiest way to get this to run the “UTC Command Prompt” from Start-> All Program -> Siemens Traffic Controls -> UTC -> Support Tools or on recent version of Windows, just type “UTC Command Prompt” at the Start Menu.
 
 1) Set the current directory to wherever the ASTRID data is stored. (Normally D:\ASTRID)
-
+    ```
     cd /d D:\ASTRID
     mkdir extract
     cd extract
+    ```
 
 2) Extract the names of all the detectors into a file called dets.tmp
-
+    ```
     dirsite ..\profiles\*.pro dets.tmp /m:N99999Z9
+    ```
 
 3) Use detectors file as an input to “extract” to select the sites wanted. If you don't want all detectors, edit this file and remove the ones you don't want. We extract rflow (Detector Flow), rocc (Detector Occupancy), vocc (Vehicle Occupancy) and lpuf (LPU factor) data sets. *See ASTRID Handbook User Guide, page 14 for data types available.*
 
 4) Extract the current days data. (up to 20 minute lag).
-
+    ```
     extract @dets.tmp day /d:rflow:rocc /it:M /o:dets_current_day.txt
+    ```
 
 5) Extract the data for the current month.
-
+    ```
     extract @dets.tmp bac /d:rflow:rocc /it:M /o:dets_current_month.txt
+    ```
 
 6) Extract the data for a single month
-
+    ```
     extract @dets.tmp bac /d:rflow:rocc /it:M /ms:201612 /o:dets_2016_12.txt
+    ```
 
 These examples just extract the specified data in the default format which is a fixed with text format that could easily be parsed. E.g.
 
@@ -252,10 +257,12 @@ So now we are ready to make sense of the data.
 The raw data is stored in hourly files in <ASTRID>\rawfiles in the form `asCCYYYYMMDDHH.dat` where YYYY,MM,DD,HH are the date and hour and CC is the TCC (01 for TCC A)
 
 From a UTC support command prompt, use `ast2mes`
-
+    
+    ```
     CD /D D:\ASTRID\extract
     REM extract raw M29 data for all sites on TCC A for 17:00-18:00 24th Jan 2017.
     ast2mes ..\rawfiles\as012017012408.dat /m:m29 m29.txt
+    ```
 
 This generates a file that looks like this. (This comes from a simulated system so won’t be realistic).
 
