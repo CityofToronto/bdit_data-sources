@@ -258,11 +258,9 @@ The raw data is stored in hourly files in <ASTRID>\rawfiles in the form `asCCYYY
 
 From a UTC support command prompt, use `ast2mes`
     
-    ```
     CD /D D:\ASTRID\extract
     REM extract raw M29 data for all sites on TCC A for 17:00-18:00 24th Jan 2017.
     ast2mes ..\rawfiles\as012017012408.dat /m:m29 m29.txt
-    ```
 
 This generates a file that looks like this. (This comes from a simulated system so won’t be realistic).
 
