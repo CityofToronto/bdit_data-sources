@@ -1,39 +1,41 @@
-#Scoot Documentation
+# Scoot Documentation
 ------
 ## Table of Contents
 1. [Background](#1-background)
- * [Traffic Signal Control in Toronto](#traffic-signal-control-in-toronto-1)
- * [How SCOOT Works](#how-scoot-works-2)
- * [SCOOT Locations](#scoot-locations-3)
+   * [Traffic Signal Control in Toronto](#traffic-signal-control-in-toronto-1)
+   * [How SCOOT Works](#how-scoot-works-2)
+   * [SCOOT Locations](#scoot-locations-3)
 2. [Objective](#2-objective)
 3. [Overview of ASTRID](#3-overview-of-astrid)
- * [Data Sources](#data-sources)
- * [Database Organization](#database-organization)
- * [Basic Data Types](#basic-data-types)
-3. [Key Terminology](#3-key-terminology)
-4. [Extracting Data From ASTRID](#4-extracting-data-from-astrid)
- * [Extracting Archived Data](#extracting-archived-data)
- * [Extracting High Resolution Data](#extracting-high-resolution-data)
+   * [Data Sources](#data-sources)
+   * [Database Organization](#database-organization)
+   * [Basic Data Types](#basic-data-types)
+4. [Key Terminology](#4-key-terminology)
+5. [Extracting Data From ASTRID](#5-extracting-data-from-astrid)
+   * [Extracting Archived Data](#extracting-archived-data)
+   * [Extracting High Resolution Data](#extracting-high-resolution-data)
 
-##1. Background
-###Traffic Signal Control in Toronto [<sup>1</sup>](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=a6c4fec1181ec410VgnVCM10000071d60f89RCRD&vgnextchannel=9452722c231ec410VgnVCM10000071d60f89RCRD)
+## 1. Background
+### Traffic Signal Control in Toronto [<sup>1</sup>](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=a6c4fec1181ec410VgnVCM10000071d60f89RCRD&vgnextchannel=9452722c231ec410VgnVCM10000071d60f89RCRD)
 Transportation Services uses two traffic signal systems to control its 2,330 traffic control signals.
 
 **TransSuite Traffic Control System (TransSuite TCS)**: TransSuite TCS is a hybrid traffic control system that relies on second-by-second communication to monitor signal operations, but relies on field equipment to maintain coordination (i.e. the field equipment can maintain signal coordination for about 24 hours if there is a loss of communication). TransSuite TCS does not directly control signal movements, but commands each intersection controller to follow a timing plan that resides within its local database. TransSuite then verifies that the controller adheres to the commanded timing plan. Intersection controllers are monitored and controlled through a user interface. TransSuite TCS supports a variety of phase-based controllers.
 
 **Split Cycle Offset Optimization Technique/Urban Traffic Control (SCOOT/UTC)**: SCOOT is an adaptive traffic control system that determines its traffic timing plans based on real-time information received from vehicle detectors located on the approaches to signalized intersections. Like MTSS, SCOOT relies on telephone communication to maintain signal coordination. UTC is a traffic control system that operates in tandem with SCOOT; it also relies on telephone communications. UTC provides pre-determined signal timing plans and is used as a stopgap measure if SCOOT is not available. SCOOT signals are sometimes called "smart" signals.
 
-###How SCOOT Works [<sup>2</sup>](http://www.scoot-utc.com/DetailedHowSCOOTWorks.php) 
-The operation of the SCOOT model is summarised in the diagram below. SCOOT obtains information on traffic flows from detectors. As an adaptive system, SCOOT depends on good traffic data so that it can respond to changes in flow. Detectors are normally required on every link. Their location is important and they are usually positioned at the upstream end of the approach link. Inductive loops are normally used, but other methods are also available.
+### How SCOOT Works [<sup>2</sup>](http://www.scoot-utc.com/DetailedHowSCOOTWorks.php) 
+The operation of the SCOOT model is summarised in the diagram below. SCOOT obtains information on traffic flows from detectors. As an adaptive system, SCOOT depends on good traffic data so that it can respond to changes in flow. Detectors are normally required on every link. Their location is important and they are usually positioned at the upstream end of the approach link. Inductive loops are normally used, but other methods are also available.  
+
 !['how_scoot_works'](http://www.scoot-utc.com/images/HowWorks.gif)
+
 When vehicles pass the detector, SCOOT receives the information and converts the data into its internal units and uses them to construct "Cyclic flow profiles" for each link. The sample profile shown in the diagram is colour coded green and red according to the state of the traffic signals when the vehicles will arrive at the stopline at normal cruise speed. Vehicles are modelled down the link at cruise speed and join the back of the queue (if present). During the green, vehicles discharge from the stopline at the validated saturation flow rate.
 
 The data from the model is then used by SCOOT in three optimisers which are continuously adapting three key traffic control parameters - the amount of green for each approach (Split), the time between adjacent signals (Offset) and the time allowed for all approaches to a signalled intersection (Cycle time). These three optimisers are used to continuously adapt these parameters for all intersections in the SCOOT controlled area, minimising wasted green time at intersections and reducing stops and delays by synchronising adjacent sets of signals. This means that signal timings evolve as the traffic situation changes without any of the harmful disruption caused by changing fixed time plans on more traditional urban traffic control systems.
 
-####Scoot Detector Processing
+#### Scoot Detector Processing
 The way that SCOOT processes data from its detectors affects the information available. In SCOOT detectors are required on every link under control and so flow data is available for every link. However, to minimise costs, the flow and occupancy data from detectors is processed in a way that allows good control with only one loop per 2 lanes on a link. The result of the processing is traffic demand on the link in SCOOT's internal units, **link profile units** (LPUs). Whilst LPUs are good for traffic control the relationship between LPU and vehicle flow is link dependant. A good measure of vehicle flow is directly available for those links that have one loop per lane (at least all single lane approaches). For other links a basic conversion value of 17 LPU per vehicle is provided as standard, but for more accurate flow information a link specific LPU to vehicle factor should be manually measured.
 
-###SCOOT Locations [<sup>3</sup>](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=965b868b5535b210VgnVCM1000003dd60f89RCRD) 
+### SCOOT Locations [<sup>3</sup>](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=965b868b5535b210VgnVCM1000003dd60f89RCRD) 
 SCOOT is currently installed on the following routes:
 
 - Lake Shore Blvd from East Don Roadway to Windermere Ave
@@ -53,10 +55,10 @@ SCOOT is currently installed on the following routes:
 
 !['SCOOT Intersection Locations'](img/scoot_locations.png)
 
-##2. Objective
+## 2. Objective
 This document provides an overview of SCOOT data, including how to extract information from the ASTRID system, and overview of file structure, and (eventually) how to set up ongoing messages/reporting from SCOOT.
 
-##2. Overview of ASTRID
+## 3. Overview of ASTRID
 This information is mostly transcribed from the ASTRID User Guide.
 
 ASTRID is the database designed to colelct infomration and store the data for later retreieval and analysis, as described in the ASTRID User Guide:
@@ -70,12 +72,12 @@ ASTRID is a database designed to collect information from a SCOOT traffic contro
 The on-line version of ASTRID runs on a computer operating under the Open VMS operating system. In the past ASTRID has required a separate machine for 
 its operation. Feasibility studies showed that it was possible to run ASTRID in the same machine as a UTC system, and ASTRID has now been issued to allow this to be used in practice.
 
-###Data Sources
+### Data Sources
 
-####Cells 
+#### Cells 
 ASTRID is designed primarily to receive data from SCOOT traffic control systems, but data can also be received from other sources. Each source of data is referred to as a cell, which often refers to a specific SCOOT computer but can equally well mean an independent source of data. A cell is given a name consisting of 2 digits. 
 
-####Messages
+#### Messages
 Each cell supplies a stream of messages that contain the data required to be stored in the database. The messages for ASTRID are in an amended format from the standard SCOOT messages, but contain the same information. The following information is required for each message to be processed by ASTRID:
 
 1. Date 
@@ -88,8 +90,8 @@ Each cell supplies a stream of messages that contain the data required to be sto
 
 A message can contain more than one data value. 
 
-###Database Organization
-####Site
+### Database Organization
+#### Site
 The ASTRID database is organised by site, which is the location where data is collected. There are several types of sites:
 
 1. An **area** represents a whole cell. There are currently three areas defind (A01, A02 and A03) whcih correspond to (_fill in_). 
@@ -110,14 +112,14 @@ Additional unknown site types (They exist in ASTRID but not in the documentation
 13. Intersection
 14. Pelican
 
-####Resolution 
+#### Resolution 
 The time resolution of data (except the trend periods) can be configured as part of the initial installation of ASTRID. The values given here are typical values. Data are stored at one of three types of resolution
 
 1. Data entering ASTRID are at high resolution. The exact resolution depends on the message being processed, but M02 messages are normally cyclic or at 5-minute resolution, and M08 and M29 messages are cyclic. Data at their resolution are stored for a few days, at most, as the storage requirements are very large. This resolution of data can be appropriate for analysing incidents or other effects on the network. The raw files are stored at this resolution. 
 2. Data are stored at medium resolution for the longer term. The time resolution of 15 minutes is a compromise between detail of information and storage requirements. The profiles are stored at this resolution.
 3. Data at low resolution are divided into a few time periods per day, covering peak and off-peak periods as a whole. Because the storage requirements are so much less, data can be stored for years at this resolution. The trend files are stored at this resolution. 
 
-####File types 
+#### File types 
 The files are organised as four separate file types which contain data at different 
 resolutions and for different periods:
 
@@ -126,7 +128,7 @@ resolutions and for different periods:
 3. **Trend files**: contain data per day at low resolution. 
 4. **Bac files**: contain data per day at medium resolution. 
 
-###Basic Data Types
+### Basic Data Types
 These data types are collected directly from messages and are stored in the
 ASTRID database.
 
@@ -141,7 +143,7 @@ ASTRID database.
 6. **Historic flow parameters** The M45 message produces 4 parameters which are stored by ASTRID and can be fed back into SCOOT. They enable SCOOT to produce a default profile when detectors are faulty and can be used instead of the default split and default offset values. The four values are: Historic cyclic flow, Historic green flow, Historic cycle length and Historic green length.
 7. **Detector flow**: The detector flow is a value for flow calculated by counting the number of transitions of the detector state from off to on. For detectors covering only one lane it should give an accurate flow count; for other detectors it will give an underestimate depending on the amount of masking. This parameter is not suitable for use by the SCOOT model or optimisers but is used by the INGRID incident detection system, and can be used wherever a value for flow is required which is not influenced by the SCOOT model. 
 
-###Derived Data Tpyes
+### Derived Data Tpyes
 These data types are not stored in the ASTRID database but are derived from data stored there by straightforward calculations. The user can access and display these data types in the same way as the basic data types.
 
 1. **Vehicle delay** The vehicle delay, or delay per vehicle, is obtained by dividing the delay by the flow, giving a value in seconds and eliminating the dependence on lpu factors. This is SCOOT's estimate of the delay suffered by a vehicle on the link.
@@ -152,7 +154,8 @@ The congestion index is a dimensionless measure of the delay on the link such th
 5. **Vehicle occupancy**: This is derived by dividing the detector occupancy by the detector flow to give the average occupancy of a vehicle. It is output in milliseconds per vehicle (ms/veh).
 6. **Lpu factor**: An estimate of the lpu factor is derived from the vehicle occupancy. It is output in lpus per vehicle (lpu/veh).
 
-####Summary of Data Types
+#### Summary of Data Types
+
 Code|Level|Message|Parameter|Units|Description
 ----|-----|-------|---------|-----|-----------
 flow|link|M02|p8|veh/h|Flow
@@ -168,16 +171,16 @@ rflow|det|M29|p6|veh/h|Det|flow
 rocc|det|M29|p7|%|Det|occ
 slen|stg|M17|p5|s|Stage|length
 
-##3. Key Terminology
-**ASTRID**: Automatic SCOOT Traffic Information Database. ASTRID is the database used to collect, store and process the traffic information used for the SCOOT model (delays, flows and congestion)for display or analysis.
-**SCOOT**: Split Cycle Offset Optimisation Technique. The Traffic-Adaptive signal control system that optimises signal timings (splits, cycles lengths and offsets) in a network to minimise stops and delay
-**UTC**: Urban Traffic Control: The traffic control system that operates in tandem with SCOOT. UTC provides pre-determined signal timing plans and is used as a stopgap measure if SCOOT is not available
-**MTSS**: Main Traffic Control System: Legacy computer controlled traffic control system developed in house at the City of Toronto in the 1960s. MTSS has been fully phased out.
+## 4. Key Terminology
+**ASTRID**: Automatic SCOOT Traffic Information Database. ASTRID is the database used to collect, store and process the traffic information used for the SCOOT model (delays, flows and congestion)for display or analysis.  
+**SCOOT**: Split Cycle Offset Optimisation Technique. The Traffic-Adaptive signal control system that optimises signal timings (splits, cycles lengths and offsets) in a network to minimise stops and delay  
+**UTC**: Urban Traffic Control: The traffic control system that operates in tandem with SCOOT. UTC provides pre-determined signal timing plans and is used as a stopgap measure if SCOOT is not available  
+**MTSS**: Main Traffic Control System: Legacy computer controlled traffic control system developed in house at the City of Toronto in the 1960s. MTSS has been fully phased out.  
 **LPU**: Link Profile Units: interal SCOOT units that result from SCOOT's traffi cprocessing. Can be converted to link volume using a conversion factor calibrated to each site. Where one loop per lane, lpu = vehicles.
 
 
-##4. Extracting Data From ASTRID
-###Extracting Archived Data
+## 5. Extracting Data From ASTRID
+### Extracting Archived Data
 
 The following information was provided by Siemens to extract data from a windows command prompt with administrator access on the UTC/SCOOT server. The easiest way to get this to run the “UTC Command Prompt” from Start-> All Program -> Siemens Traffic Controls -> UTC -> Support Tools or on recent version of Windows, just type “UTC Command Prompt” at the Start Menu.
 
@@ -193,11 +196,11 @@ The following information was provided by Siemens to extract data from a windows
 
 3) Use detectors file as an input to “extract” to select the sites wanted. If you don't want all detectors, edit this file and remove the ones you don't want. We extract rflow (Detector Flow), rocc (Detector Occupancy), vocc (Vehicle Occupancy) and lpuf (LPU factor) data sets. *See ASTRID Handbook User Guide, page 14 for data types available.*
 
-4)Extract the current days data. (up to 20 minute lag).
+4) Extract the current days data. (up to 20 minute lag).
 
     extract @dets.tmp day /d:rflow:rocc /it:M /o:dets_current_day.txt
 
-5)Extract the data for the current month.
+5) Extract the data for the current month.
 
     extract @dets.tmp bac /d:rflow:rocc /it:M /o:dets_current_month.txt
 
@@ -231,7 +234,7 @@ These examples just extract the specified data in the default format which is a 
 
 If you have savefiles, those zip files contain the zipped up bamfiles. However, if you just unzip them to bac_YYYYMM_saved, the directory will get deleted by ASTRID within the next 24 hours (?) as it is older than 5 years, so instead you should unzip to a folder in the form bac_YYYYMM_restored, and then ASTRID will leave it alone. On the ‘extract’ command line you should use the /mr switch instead of /ms. Alternatively, disk space allowing, we could just increase the period of time that the files will be kept – e.g. 10 years, by sending you a new license file.
 
-###Extracting High Resolution Data
+### Extracting High Resolution Data
 
 Using rflow as example. From ASTRID -> Options -> Messages we can see that rflow comes from M29 and it multiples that raw count by 900 and divides it by the period (time interval) to convert to a 15 minute flow rate for storage. The period is parameter 5, the data (vehicle count) appears in parameter 6. In this context, the parameter number relates to the internal structure. What you need to know is that parameter 5  => data value 1, parameter 6 => data value 2, etc. From ASTRID -> Options -> Graphs, we can see that the 15 minute rate is multiplied by 4 when extracted (to convert the 15 minute flow rate to vehicles per hour).
 
@@ -246,9 +249,9 @@ It is also useful to look at the definition of the message. In this case, HELP S
 
 So now we are ready to make sense of the data.
 
-The raw data is stored in hourly files in <ASTRID>\rawfiles in the form asCCYYYYMMDDHH.dat where YYYY,MM,DD,HH are the date and hour and CC is the TCC (01 for TCC A)
+The raw data is stored in hourly files in <ASTRID>\rawfiles in the form `asCCYYYYMMDDHH.dat` where YYYY,MM,DD,HH are the date and hour and CC is the TCC (01 for TCC A)
 
-From a UTC support command prompt, use ast2mes
+From a UTC support command prompt, use `ast2mes`
 
     CD /D D:\ASTRID\extract
     REM extract raw M29 data for all sites on TCC A for 17:00-18:00 24th Jan 2017.
@@ -285,7 +288,7 @@ This generates a file that looks like this. (This comes from a simulated system 
 So remember that data value 1 (parameter 5) is the period in seconds. Data value 2 is the raw count. So taking N12151X1 as the an example, this is 18 vehicles in 112 seconds => flow rate of 578 vehicles/hr
 
 
-##4. Sources
+## 4. Sources
 
 Blackett, Matthew. 2010. “Traffic Lights: Organizing Chaos - Spacing Magazine.” Spacing. February 12. http://spacing.ca/magazine/section/infrastructure-fetish/traffic-lights-organizing-chaos/.
 
