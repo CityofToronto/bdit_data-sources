@@ -1,4 +1,4 @@
-﻿DROP TABLE IF EXISTS here.ta CASCADE;
+/*DROP TABLE IF EXISTS here.ta CASCADE;
 
 CREATE TABLE here.ta
 (
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS here.ta_staging (
 LIKE here.ta)
 ;
 ALTER TABLE here.ta_staging
-OWNER TO here_admins;
+OWNER TO here_admins;*/
 
 /*Loops through the years and then months for which we currently have data in order to create a partitioned table for each month*/
 
