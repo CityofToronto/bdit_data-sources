@@ -2,7 +2,7 @@
 
 Here GIS data is provided through the Enterprise Data Download portal. Each Revision contains ~41 layers provided for the province of Ontario. Consult the encyclopedic `NAVSTREETS Street Data Reference Manual.pdf` in the K drive for further info on a layer.
 
-## Loading procedure 
+## Loading New Data 
 
 After downloading to the EC2, uncompress and un-tar the file with
 ```shell
@@ -22,3 +22,7 @@ Run the shell script in the background with nohup with the following command. Th
 ```shell
 nohup ./batch_upload.sh > batch_upload.log& tail -f batch_upload.log
 ```
+
+## Reference Node
+
+Links are defined by a reference node, and a non-reference node. The reference node is *always* the node with the lowest latitude, in the case of two nodes with equal latitude, the node with the lowest longitude is the reference node. This impacts things like traffic direction, which can be towards or from a reference node, or addressing whether addresses are on the right or left side of a link (facing the non-reference node). 
