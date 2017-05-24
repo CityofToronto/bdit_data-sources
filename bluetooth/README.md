@@ -77,3 +77,35 @@ Each route has a corresponding `routeId`, `reportId`, and `analysisId` - all of 
 
 
 
+## 2. Table Structure (Aakash)
+- brief description
+- Sunny-style flow chart
+
+### Observations 
+|Column|Type|Notes|
+|------|----|-----|
+|id|bigserial| Primary Key |
+|user_id|bigint| |
+|analysis_id|integer| |
+|measured_time|integer| |
+|measured_time_no_filter|integer| |
+|startpoint_number|smallint| |
+|startpoint_name|character varying(8)| |
+|endpoint_number|smallint| |
+|endpoint_name|character varying(8)| |
+|measured_timestamp|timestamp without time zone| |
+|outlier_level|smallint| |
+|cod|bigint| integer representation of 24 bit Bluetooth class |
+|device_class|smallint| |
+
+#### Filtering devices
+Two fields are relevant for this endeavour, both are integer representations of binary. They are aggregations/concatenations of multiple different boolean values (bits).
+ - **device_classes:** "are report/filtering dependent as they are configurable property mappings". These appear to be somewhat independent from the `cod` values below. A cursory examination of the binary forms of the two fields didn't reveal any common patterns.
+ - **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). It must be converted to binary since this property is an aggregation of a number of .  The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. For further filtering, have a look at the documentation linked above. 
+    For example, the most common `cod` after WiFi (0) is `7995916`, its binary is `011110100000001000001100` which is exactly the example [given here](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained): a smartphone. 
+    
+To get major and minor classes from the cod:
+```sql
+substring(cod::bit(24) from 17 for 6) as minor_device_class,
+substring(cod::bit(24) from 12 for 5) as major_device_class
+```
