@@ -33,7 +33,7 @@ class IndexCreator( SqlAction ):
         if set(indexes) <= self.SQL_FUNCTIONS.keys():
             self.indexes = indexes
         else:
-            raise ValueError('Invalid set of index keys %s', indexes)
+            raise ValueError('Invalid set of index keys %s'.format(indexes))
         #raises ValueError
         self._test_schema(schemaname)
         self.schema = schemaname
@@ -44,7 +44,7 @@ class IndexCreator( SqlAction ):
         self.cur.execute("SELECT schema_name FROM information_schema.schemata "
                          "WHERE schema_name =%(schema)s", {'schema':schema})
         if self.cur.rowcount == 0:
-            raise ValueError('Schema name --schemaname %s does not exist', schema)
+            raise ValueError('Schema name --schemaname %s does not exist'.format(schema))
         return self
 
     def _create_index(self, *, table=None, index=None, **kwargs):
@@ -53,14 +53,14 @@ class IndexCreator( SqlAction ):
         sql = self.SQL_FUNCTIONS[index]
         self.cur.execute(sql, {'tablename':table})
         return self
-
+    
     def _analyze_table(self, *, table, **kwargs):
         '''Analyze inrix.raw_data partitioned table with table.'''
         self.logger.info('Analyzing table %s', table)
         self.cur.execute("ANALYZE %(schemaname)s.%(tablename)s", {'schemaname':AsIs(self.schema),
                                                                  'tablename':AsIs(table)})
         return self
-
+    
     def run(self, year, month, *args, **kwargs):
         '''Create indexes for a series of tables based on the years dictionary \
         and the dbset database connection.'''
@@ -75,7 +75,7 @@ class IndexCreator( SqlAction ):
 
         self.execute_function(self._analyze_table, table=tablename, autocommit=True)
         return self
-
+    
 if __name__ == "__main__":
     import logging
     #For initial run, creating years and months of available data as a python dictionary
