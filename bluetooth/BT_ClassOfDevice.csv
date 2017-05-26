@@ -1,0 +1,146 @@
+CoDHex,CoDBinary,DeviceType,DeviceExample,Confirmed,ConfirmedExample,MajorDeviceClass,ClassOfDevice
+0x000000,0,none,Dell Wireless 370 Bluetooth Mini-card,Yes,00:16:44 - LITE-ON Technology Co,Uncategorized,0
+0x000020,100000,Unknown,TC1920 32-Bit Single-Chip Microcontroller,Yes,00:03:19 - Infineon AG,Uncategorized,32
+0x000104,100000100,Desktop Workstation,Desktop PC,Yes,"00:25:56 - Hon Hai Precision Ind. Co., Ltd.",Computer,260
+0x00010c,100001100,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,268
+0x000116,100010110,Palm sized PC/PDA,Gumstix Overo Air single-board,Yes,00:80:37 - Ericsson Group,Computer,278
+0x000204,1000000100,Cellular,Samsung SGH-T259,Yes,"38:16:D1 - Samsung Electronics Co.,Ltd",Phone,516
+0x000208,1000001000,Cordless,Bluetooth Car Kit,Yes,"00:1C:12 - Motorola Mobility, Inc.",Phone,520
+0x000408,10000001000,Hands-free Device,Bluetooth Car Kit,Yes,"00:1C:12 - Motorola Mobility, Inc.",Audio/Video,1032
+0x00041c,10000011100,Portable Audio,iPad 3,Yes,"4C:B1:99 - Apple, Inc.",Audio/Video,1052
+0x000424,10000100100,Set-top Box,Roku,Yes,"CC:6D:A0 - Roku, Inc.",Audio/Video,1060
+0x00043c,10000111100,Video Display,"Samsung 32"" LE32D550",Yes,"60:6B:BD - Samsung Electronics Co., LTD",Audio/Video,1084
+0x000508,1010000100,Joystick,Nintendo Wii Remote PLus,Yes,"58:BD:A3 - Nintendo Co., Ltd.",Peripheral,1288
+0x000540,10101000000,Keyboard,Gametel Portable Game Controller,Yes,"88:94:F9 - Gemicom Technology, Inc.",Peripheral,1344
+0x000584,10110000100,Joystick,Zeemote JS1,Yes,00:1C:4D - Zeemote Technology Inc. (part of Aplix).,Peripheral,1412
+0x000704,11100000100,Wrist Watch,Unknown,Yes,00:06:66 - Roving Networks,Wearable,1796
+0x000908,100100001000,Thermometer,Unknown Wearable Bluetooth Headset,Yes,00:15:B4 - Polymap Wireless LLC,Health,2312
+0x001101,1000100000001,none,Possible SMA Solar Panel Controller,Yes,00:80:25 - STOLLMANN GMBH,Uncategorized,4353
+0x001f00,1111100000000,none,OBDII,Yes,"00:19:5D ShenZhen XinHuaTong Opto Electronics Co.,Ltd",Uncategorized,7936
+0x001f1f,1111100011111,Unknown,unknown,Yes,"00:19:5D - ShenZhen XinHuaTong Opto Electronics Co.,Ltd",Uncategorized,7967
+0x0020fc,10000011111100,Unknown,Sony Ericsson LiveView Phone Remote w/Micro Display,Yes,B8:F9:34 - Sony Ericsson Mobile Communications AB,Uncategorized,8444
+0x00250c,10010100001100,Remote Control,PS3 BD Remote Control,Yes,"00:06:F5 - ALPS Co,. Ltd.",Peripheral,9484
+0x002540,10010101000000,Keyboard,IOGear Keyboard,Yes,00:18:A3 - StarBoard FX - Murata Manufacturing,Peripheral,9536
+0x002580,10010110000000,Pointing Device,Apple Magic Mouse,Yes,"60:FB:42 - Apple, Inc",Peripheral,9600
+0x002594,10010110010100,Digitizer Tablet,Apple Magic Trackpad,Yes,"60:C5:47 - Apple, Inc.",Peripheral,9620
+0x01020c,10000001000001100,Smart phone,iPhone,Yes,54:26:96 - Apple,Phone,66060
+0x010500,10000010100000000,Smart phone,Unknown Device,Yes,"00:A0:96 - MITSUMI ELECTRIC CO., LTD.",Peripheral,66816
+0x011f00,10001111100000000,none,Unknown,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Uncategorized,73472
+0x020000,100000000000000000,Desktop Workstation,Windows Desktop Computer,Yes,"74:F0:6D - AzureWave Technologies, Inc.",Uncategorized,131072
+0x020104,100000000100000000,Desktop Workstation,Desktop PC,Yes,00:21:86 - USI,Computer,131332
+0x02010c,100000000100001000,Laptop,Laptop,Yes,E0:AE:5E - Cambridge Silicon Radio (10),Computer,131340
+0x020110,100000000100010000,Handheld PC/PDA,Microsoft PDA Computer,Yes,60:45:BD - Microsoft,Computer,131344
+0x020300,100000001100000000,Fully available,"JCMED4 (Possible Jefferson County, KY Ambulance)",Yes,00:21:3E - Tomtom,LAN / Network Access Point,131840
+0x022100,100010000100000000,Uncategorized,Unknown,Yes,00:80:98 - TDK CORPORATION,Computer,139520
+0x040600,1000000011000000000,Uncategorized,", defaultN465",Yes,00:12:F35 - connectBlue AB,Imaging,263680
+0x040640,1000000011001000000,Scanner,VoyagerBT Scanner,Yes,00:0C:A7 - Metro (Suzhou) Techno,Imaging,263744
+0x040680,1000000011010000000,Printer,Bluetooth Combo Printer Adapter,Yes,00:02:72 - CC&C Technologies,Imaging,263808
+0x060104,1100000000100000000,Desktop Workstation,iBuyPower Windows 7 Desktop,Yes,00:02:72 - CC&C Technologies,Computer,393476
+0x06010c,1100000000100000000,Laptop,Unknown Desktop,Yes,"5C:AC:4C - Hon Hai Precision Ind. Co.,Ltd.",Computer,393484
+0x080208,10000000001000000000,Cordless,Kyocera KWC-M2000,Yes,00:1F:BD - Kyocera Wireless Corp.,Phone,524808
+0x08043c,10000000010000100000,Video Display,"Samsung UE32D5520 32"" LCD TV",Yes,"E4:E0:C5 - Samsung Electronics Co., LTD",Audio/Video,525372
+0x080500,10000000010100000000,Uncategorized,deviceStarBoard FX,Yes,00:0E:6D - Murata Manufacturing,Peripheral,525568
+0x080618,10000000011000000000,Display,Zebra MZ320 Printer,Yes,"00:22:58 - Taiyo Yuden Co., Ltd.",Imaging,525848
+0x0a0110,10100000000100000000,Handheld PC/PDA,Blackberry PlayBook,Yes,14:74:11 - Rim,Computer,655632
+0x0a041c,10100000010000000000,Portable Audio,iPod,Yes,"00:26:4A - Apple, Inc.",Audio/Video,656412
+0x0c010c,11000000000100000000,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,786700
+0x0c010f,11000000000100000000,Laptop,Laptop,Yes,"00:22:58 - Taiyo Yuden Co., Ltd.",Computer,786703
+0x100000,100000000000000000000,none,Unknown,Yes,00:24:01 - D-Link Corporation,Uncategorized,1048576
+0x10010c,100000000000100000000,Laptop,Laptop,Yes,"00:22:58 - Taiyo Yuden Co., Ltd.",Computer,1048844
+0x100114,100000000000100000000,Palm sized PC/PDA,Palm Device,Yes,00:07:E0 - Palm Inc.,Computer,1048852
+0x100204,100000000001000000000,Cellular,iPod,Yes,"00:26:4A - Apple, Inc.",Phone,1049092
+0x100208,100000000001000000000,Cordless,Unknown Kyocera Cordless Phone,Yes,00:1F:BD - Kyocera Wireless Corp.,Phone,1049096
+0x102104,100000010000100000000,Desktop Workstation,iMac,Yes,"00:0A:95 - Apple Computer, Inc.",Computer,1057028
+0x10210c,100000010000100000000,Laptop,Unknown Apple Computer,Yes,00:17:F2 - Apple Computer,Computer,1057036
+0x120104,100100000000100000000,Desktop Workstation,Unknown,Yes,00:15:83 - IVT corporation,Computer,1179908
+0x12010c,100100000000100000000,Laptop,USB Bluetooth Module,Yes,"90:4C:E5 - Hon Hai Precision Ind. Co.,Ltd.",Computer,1179916
+0x120114,100100000000100000000,Palm sized PC/PDA,Unknown PDA or Tablet,Yes,00:16:D3 - Wistron Corporation,Computer,1179924
+0x120300,100100000001100000000,none,Unknown,Yes,"00:01:95 - Sena Technologies, Inc.",LAN / Network Access Point,1180416
+0x140680,101000000011010000000,Printer,HP DeskJet 995c,Yes,00:05:4E - Philips Components,Imaging,1312384
+0x18010c,110000000000100000000,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,1573132
+0x180204,110000000001000000000,Cellular,Samsung Blast,Yes,"00:21:D1 - Samsung Electronics Co.,Ltd",Phone,1573380
+0x1a010c,110100000000100000000,Laptop,Laptop,Yes,"00:22:58 - Taiyo Yuden Co., Ltd.",Computer,1704204
+0x1a0110,110100000000100000000,Handheld PC/PDA,Google Nexus 7 32GB,Yes,30:85:A9 - Asustek Computer Inc,Computer,1704208
+0x1a0114,110100000000100000000,Palm sized PC/PDA,Unknown,Yes,98:59:45 - Texas Instruments,Computer,1704212
+0x1c010c,111000000000100000000,Laptop,Fujitsu Lifebook,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,1835276
+0x1c010e,111000000000100000000,Laptop,Laptop,Yes,"00:22:58 - Taiyo Yuden Co., Ltd.",Computer,1835278
+0x200204,1000000000001000000000,Cellular,Unknown,Yes,00:12:D1 - Texas Instruments Inc,Phone,2097668
+0x200404,1000000000010000000000,Wearable Headset Device,PLT 510 Headset,Yes,"00:19:7F - PLT 510 Headset - PLANTRONICS, INC.g",Audio/Video,2098180
+0x200408,1000000000010000000000,Hands-free Device,Audi UHV,Yes,00:0E:9F - TEMIC SDS GmbH,Audio/Video,2098184
+0x22011C,1000100000000100000000,Tablet,none,No,none,Computer,2228508
+0x240400,1001000000010000000000,none,GDI-IRP600 WiFi Internet Radio,Yes,"00:1D:DF - Sunitec Enterprise Co., Ltd.",Audio/Video,2360320
+0x240404,1001000000010000000000,Wearable Headset Device,Voyager Pro+ Headset,Yes,00:23:7F - PLANTRONICS,Audio/Video,2360324
+0x240408,1001000000010000000000,Hands-free Device,Dension GWF,Yes,01:36:05 - Unknown,Audio/Video,2360328
+0x240414,110100100000000000000000,Loudspeaker,HDMX JAM,Yes,46:8F:E8 - Unknown,Audio/Video,2360340
+0x240704,1001000000011100000000,Wrist Watch,Scosche myTREK - Wireless Pulse Monitor,Yes,"00:1D:DF - Sunitec Enterprise Co., Ltd.",Wearable,2361092
+0x280408,1010000000010000000000,Hands-free Device,TomTom GO 930,Yes,00:13:6C - TomTom,Audio/Video,2622472
+0x2a010c,1010100000000100000000,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,2752780
+0x2a0110,1010100000000100000000,Handheld PC/PDA,CRAVEN Handheld PC/PDA,Yes,60:45:BD - Microsoft,Computer,2752784
+0x2c0404,1011000000010000000000,Wearable Headset Device,KENWOOD BT CD/R-5T1,Yes,00:08:E0 - ATO Technology Ltd.,Audio/Video,2884612
+0x2e010c,1011100000000100000000,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,3014924
+0x300204,1100000000001000000000,Cellular,NokiaE61i,Yes,00:17:E3 - Texas Instruments,Phone,3146244
+0x300408,1100000000010000000000,Hands-free Device,StreetPilot c550,Yes,00:05:4F - Private,Audio/Video,3146760
+0x302104,1100000010000100000000,Desktop Workstation,Mac Pro,Yes,00:1F:5B - Apple Inc,Computer,3154180
+0x30210c,1100000010000100000000,Laptop,Macbook,Yes,00:1F:F3 - Apple Inc,Computer,3154188
+0x340404,1101000000010000000000,Wearable Headset Device,Kenwood KCA-BT300,Yes,00:26:7E - Parrot SA,Audio/Video,3408900
+0x340408,1101000000010000000000,Hands-free Device,Kenwood BT Adapter KCA-BT200,Yes,00:12:1C - PARROT S.A.,Audio/Video,3408904
+0x36010c,1101100000000100000000,Laptop,Laptop,Yes,"00:03:7A - Taiyo Yuden Co., Ltd",Computer,3539212
+0x380104,1110000000000100000000,Desktop Workstation,iMac,Yes,"00:0A:95 - Apple Computer, Inc.",Computer,3670276
+0x38010c,1110000000000100000000,Laptop,"Macbook 17""",Yes,"00:17:F2 - Apple Computer, Inc.",Computer,3670284
+0x380408,1110000000010000000000,Hands-free Device,Pulscom Bluetooth Dongle :Class 2 (CSR - bc4),Yes,"00:21:E8 - Murata Manufacturing Co., Ltd.",Audio/Video,3671048
+0x3a0104,1110100000000100000000,Desktop Workstation,Apple Desktop,Yes,00:1E:52 - Apple Computer Inc,Computer,3801348
+0x3a010c,1110100000000100000000,Laptop,Macbook Pro (early 2010),Yes,"00:26:08 - Apple, Inc",Computer,3801356
+0x3c0104,1111000000000100000000,Desktop Workstation,Desktop PC,Yes,00:07:61 - Logitech SA,Computer,3932420
+0x3c010c,1111000000000100000000,Laptop,IBM Thinkpad Laptop,Yes,"E0:06:E6 - Hon Hai Precision Ind. Co.,Ltd.",Computer,3932428
+0x3e0104,1111100000000100000000,Desktop Workstation,Desktop PC,Yes,D0:DF:9A - Liteon Technology Corporation,Computer,4063492
+0x3e0108,1111100000000100000000,Server-Class Computer,Server,Yes,00:02:72 - CC&C Technologies,Computer,4063496
+0x3e010c,1111100000000100000000,Laptop,Dell Latitude e6410,Yes,1C:65:9D - Liteon Technology Corporation,Computer,4063500
+0x400204,10000000000001000000000,Cellular,Motorola h700,Yes,"00:07:BA - UTStarcom, Inc. (was: Xebeo Communications)",Phone,4194820
+0x400210,10000000000001000000000,Wired modem or voice gateway,Unknown Voice Gateway,Yes,"00:07:88 - Clipcomm, Inc.",Phone,4194832
+0x402204,10000000010001000000000,Cellular,Samsung Trender,Yes,"6C:83:36 - Samsung Electronics Co.,Ltd",Phone,4203012
+0x41031c,10000010000001100000000,Fully available,Nonin 4100 Pulse Oximeter,Yes,"00:A0:96 - MITUMI ELECTRIC CO., LTD.",LAN / Network Access Point,4260636
+0x422100,10000100010000100000000,none,MEDIC 4,Yes,"00:01:95 - Sena Technologies, Inc.",Computer,4333824
+0x4a0100,10010100000000100000000,Uncategorized,Uncategorized,Yes,"00:17:F2 - Apple Computer, Inc.",Computer,4849920
+0x4a0204,10010100000001000000000,Cellular,Motorola Cell Phone,Yes,00:26:BA - Motorola Mobile Devices,Phone,4850180
+0x500204,10100000000001000000000,Cellular,Nokia 6600,Yes,00:0E:6D - Murata Manufacturing,Phone,5243396
+0x50020c,10100000000001000000000,Smart phone,Nokia 3250,Yes,00:19:4F - Nokia Danmark A/S,Phone,5243404
+0x520204,10100100000001000000000,Cellular,Nokia 2720a-2b,Yes,C0:38:F9 - Nokia Danmark A/S,Phone,5374468
+0x520208,10100100000001000000000,Cordless,Samsung SGH-D357,Yes,"00:15:B9 - Samsung Electronics Co., Ltd.",Phone,5374472
+0x52020c,10100100000001000000000,Palm sized PC/PDA,Pocket_PC,Yes,00:15:70 - Symbol Technologies Wholly owned Subsidiary of Motorola,Computer,5374476
+0x52020c,10100100000001000000000,Smart phone,SGH-i607,Yes,"00:1B:98 - Samsung Electronics Co., Ltd.",Phone,5374476
+0x522204,10100100010001000000000,Cellular,Samsung SPH-M450,Yes,"60:D0:A9 - Samsung Electronics Co., Ltd.",Phone,5382660
+0x580204,10110000000001000000000,Cellular,SGH-A707,Yes,"00:18:AF - Samsung Electronics Co., Ltd.",Phone,5767684
+0x58020c,10110000000001000000000,Smart phone,HUAWEI M860,Yes,"54:A5:1B - Huawei Device Co., Ltd",Phone,5767692
+0x5a0100,10110100000000100000000,Uncategorized,Nokia N900,Yes,00:BD:3A - Nokia Corporation,Computer,5898496
+0x5a0204,10110100000001000000000,Cellular,Motorola Phone,Yes,40:BA:61 - Arima Communications Corp.,Phone,5898756
+0x5a0208,10110100000001000000000,Cordless,LG GT365,Yes,00:24:83 - LG Electronics,Phone,5898760
+0x5a020c,10110100000001000000000,Smart phone,Nokia 5230,Yes,A0:4E:04 - Nokia Corporation,Phone,5898764
+0x5a2204,10110100010001000000000,Cellular,Samsung SPH-M800,Yes,00:1F:CD - Samsung Electronics,Phone,5906948
+0x5e0204,10111100000001000000000,Cellular,Unknown,Yes,"00:21:D1 - Samsung Electronics Co.,Ltd",Phone,6160900
+0x62020c,11000100000001000000000,Smart phone,Blackberry 7130e,Yes,00:0F:86 - Research In Motion Limited,Phone,6423052
+0x6a041c,11010100000010000000000,Portable Audio,iPad2,Yes,"70:DE:E2 - Apple, Inc.",Audio/Video,6947868
+0x6e010c,11011100000000100000000,Laptop,Unknown,Yes,"08:ED:B9 - Hon Hai Precision Ind. Co.,Ltd.",Computer,7209228
+0x70020c,11100000000001000000000,Smart phone,Unknown,Yes,40:6A:AB - Rim,Phone,7340556
+0x700404,11100000000010000000000,Wearable Headset Device,Unknown AV Headset,Yes,"00:16:74 - EuroCB (Phils.), Inc.",Audio/Video,7341060
+0x720204,11100100000001000000000,Cellular,Samsung SPH-M320,Yes,00:23:D7 - Samsung Electronics,Phone,7471620
+0x72020c,11100100000001000000000,Smart phone,BlackBerry 8800,Yes,00:0F:86 - Research In Motion Limited,Phone,7471628
+0x720408,11100100000010000000000,Hands-free Device,Magellan GPS,Yes,00:40:D0 - MITAC INTERNATIONAL CORP.,Audio/Video,7472136
+0x722404,11100100010010000000000,Wearable Headset Device,Magellan GPS,Yes,00:40:D0 - Mitac International Corp.,Audio/Video,7480324
+0x740408,11101000000010000000000,Hands-free Device,Eonon Car DVD Player,Yes,00:13:04 - Flaircomm Technologies Co. LTD,Audio/Video,7603208
+0x760408,11101100000010000000000,Hands-free Device,Porsche PCM (Porsche Communication Management System),Yes,00:0E:9F - TEMIC SDS GmbH,Audio/Video,7734280
+0x78020c,11110000000001000000000,Smart phone,Sidekick LX 2009,Yes,00:22:F3 - SHARP CORPORATION,Phone,7864844
+0x7a010c,11110100000000100000000,Laptop,Laptop,Yes,"00:1F:E1 - Hon Hai Precision Ind. Co., Ltd.",Computer,7995660
+0x7a020c,11110100000001000000000,Smart phone,iPhone 4S,Yes,"78:A3:E4 - Apple, Inc.",Phone,7995916
+0x7e0104,11111100000000100000000,Desktop Workstation,Desktop PC,Yes,00:21:86 - USI,Computer,8257796
+0x7e010c,11111100000000100000000,Laptop,HP Netbook,Yes,"00:22:43 - AzureWave Technologies, Inc.",Computer,8257804
+0x920100,100100100000000000000000,Uncategorized,Mentor Ranger,Yes,00:0C:8E - Mentor Engineering Inc,Computer,9568512
+0x9a0100,100110100000000000000000,Uncategorized,Uncategorized,Yes,00:09:DD - Mavin Technology Inc.,Computer,10092800
+0x9a0114,100110100000000000000000,Palm sized PC/PDA,Samsung SGH-i907,Yes,00:23:39 - Samsung Electronics,Computer,10092820
+0xb16404,101100010110010000000100,Wearable Headset Device,Unknown Wearable Bluetooth Headset,Yes,00:08:E0 - ATO Technology Ltd.,Audio/Video,11625476
+0xb50404,101101010000010000000000,Wearable Headset Device,Unknown,Yes,00:08:E0 - ATO Technology Ltd.,Audio/Video,11863044
+0xb56404,101101010110010000000000,Wearable Headset Device,Bluetooth Headset,Yes,00:08:E0 - ATO Technology Ltd.,Audio/Video,11887620
+0xd20110,110100100000000000000000,Handheld PC/PDA,CE500 Core Mobile Data Terminal,Yes,00:24:23 - AzureWave Technologies (Shanghai) Inc.,Computer,13762832
+0xf40404,111101000000010000000000,Hands-free Device,JVC Unit,Yes,"00:10:60 - BILLIONTON SYSTEMS, INC.",Audio/Video,15991812
+0xf62404,111101100010010000000000,Wearable Headset Device,Unknown,Yes,00:08:E0 - ATO Technology Ltd.,Audio/Video,16131076
+0xff0104,111111110000000000000000,Desktop Workstation,Windows Desktop Computer,Yes,"74:F0:6D - AzureWave Technologies, Inc.",Computer,16711940
+0xff010c,111111110000000000000000,Laptop,Dell Intel Centrino,Yes,4C:EB:42 - Intel Corporate,Computer,16711948
