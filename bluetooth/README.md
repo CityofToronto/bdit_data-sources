@@ -37,9 +37,32 @@ The live feed, and archived data are available on the [Open Data Portal](http://
 #### Filtering devices
 Two fields are relevant for this endeavour, both are integer representations of binary. They are aggregations/concatenations of multiple different boolean values (bits).
  - **device_classes:** "are report/filtering dependent as they are configurable property mappings". These appear to be somewhat independent from the `cod` values below. A cursory examination of the binary forms of the two fields didn't reveal any common patterns.
- - **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). It must be converted to binary since this property is an aggregation of a number of .  The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. For further filtering, have a look at the documentation linked above. 
-    For example, the most common `cod` after WiFi (0) is `7995916`, its binary is `011110100000001000001100` which is exactly the example [given here](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained): a smartphone. 
-    
+ - **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. There is no way of knowing what kind of device a WiFi device is. See the [`ClassOfDevice`](#classofdevice) table below for more information.
+
+### ClassOfDevice
+
+|Column|Type|Notes|
+|------|----|-----|
+|cod_hex|bytea| Class of device in hexidecimal|
+|cod_binary|bit varying(24)| Class of device in binary|
+|device_type|character varying(64)| Major-minor device class description |
+|device_example|text| Example of the device|
+|confirmed|character varying(10)| Observed example (Y/N) |
+|confirmed_example|text| Example of the device |
+|major_device_class|text| Primary type of device, e.g.: Computer, Phone, etc... |
+|cod|bigint| Integer representation of the `cod_binary`, key in [`observations`](#observations) above|
+
+The Class of Device property helps broadcast the functionality of a given Bluetooth device. It is an aggregation of a number of bits (0,1), hence having a binary representation. This comprises 3 sub-fields (see [this explanation](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained)), binary strings are indexed from right to left:
+ - **Device Functionality (Major Service Class, bits 13-23)**: 11 different boolean values to represent whether the device can be used for positioning, for audio, telephony, etc... 
+ - **Major Device Class (Bits 8-12)**: Primary categories for the device: Miscellaneous, Computer, Phone, LAN/Network Access Point, Peripheral, Imaging, Wearable, Toy, Health, Uncategorized, and Reserved. These are present in the `major_device_class` column. 
+ - **Minor Device Class (Bits 2-7)**: Further device details. These are dependent on the Major Device Class. 
+
+The most common `cod` after WiFi (0) is `7995916`, its binary is `011110100000001000001100` which is exactly the example [given here](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained): a smartphone. 
+
+Commonly accepted filters for cars are:
+ - Car Audio: major class 00100 and minor class 001000
+ - Hands Free: major class 00100 and minor class 000100
+
 To get major and minor classes from the cod:
 ```sql
 substring(cod::bit(24) from 17 for 6) as minor_device_class,
