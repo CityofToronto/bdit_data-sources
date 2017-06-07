@@ -168,3 +168,6 @@ inrix/python/speed_test/oldie.cfg
 bluetooth/bluetooth_data/*
 bluetooth/api/display.xml
 gtfs/import_gtfs_data.R
+volumes/compass/csv/sensors.csv
+volumes/compass/r/connect/connect.R
+volumes/compass/r/connect/one-its.R
