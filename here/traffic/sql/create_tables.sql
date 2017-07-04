@@ -2,7 +2,7 @@
 
 CREATE TABLE here.ta
 (
-  link_id text NOT NULL,
+  link_dir text NOT NULL,
   tx timestamp without time zone NOT NULL,
   epoch_min integer NOT NULL,
   length int,
