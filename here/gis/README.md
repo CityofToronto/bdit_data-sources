@@ -10,7 +10,7 @@ mkdir HERE_GIS_DATAR1/
 tar -xvf HERE_GIS_DATA.tar.gz -C HERE_GIS_DATAR1/
 ```
 
-The [`batch_upload.sh`] shell script loops over each shape file and pipes the output of [`shp2pgsql`](http://postgis.net/docs/manual-2.1/using_postgis_dbmanagement.html#shp2pgsql_usage) to psql ([inspiration](http://gis.stackexchange.com/a/7806/36886)) to upload into the `here_gis` schema. Not that this shortened use of `psql` assumes the current Ubuntu username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory.
+The [`batch_upload.sh`](batch_upload.sh) shell script loops over each shape file and pipes the output of [`shp2pgsql`](http://postgis.net/docs/manual-2.1/using_postgis_dbmanagement.html#shp2pgsql_usage) to psql ([inspiration](http://gis.stackexchange.com/a/7806/36886)) to upload into the `here_gis` schema. Not that this shortened use of `psql` assumes the current Ubuntu username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory.
 
 Prior to running `shp2pgsql` the script performs some manipulation of the `$f` filename variable in order to lowercase it and remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
 
