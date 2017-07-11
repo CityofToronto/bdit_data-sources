@@ -171,3 +171,4 @@ gtfs/import_gtfs_data.R
 volumes/compass/csv/sensors.csv
 volumes/compass/r/connect/connect.R
 volumes/compass/r/connect/one-its.R
+bluetooth/api/config.cfg
