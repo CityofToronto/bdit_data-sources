@@ -5,18 +5,42 @@ Created on Tue Jul 11 17:37:51 2017
 @author: qwang2
 """
 
+import ast
+
+from io import StringIO
+
+import logging
+
 import pandas as pd
+
+import requests
+from requests.auth import HTTPBasicAuth
 
 from utilities import db_connect
 from utilities import get_sql_results
 
+logger = logging.getLogger('upload_mto_data')
+logger.setLevel(logging.INFO)
+    
+if not logger.handlers:
+    handler = logging.FileHandler('upload_mto_data.log', mode='w')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 db = db_connect()
 sensors = get_sql_results(db, "SELECT detector_id, ABS(lat)>1 FROM mto.sensors", ['detectorid','loc'])
+auth = open('auth.txt','r').read()
+auth = ast.literal_eval(auth)
+baseurl = auth['baseurl']
+auth = HTTPBasicAuth(auth['username'],auth['password'])
 
-start_year = 2017
-start_month = 5
-end_year = 2017
-end_month = 5
+logger.info('Database connected.')
+
+start_year = 2010
+start_month = 11
+end_year = 2016
+end_month = 12
 
 for year in range(start_year, end_year+1):
     
@@ -38,14 +62,15 @@ for year in range(start_year, end_year+1):
             m = '0' + str(month)
         else:
             m = str(month)
-          
         table = []
         for s,l in zip(sensors['detectorid'], sensors['loc']):
+            params = {'year':year, 'month':month, 'reportType':'min_30', 'sensorName':s} 
             try:
+                data = StringIO(requests.get(url=baseurl, params=params, auth=auth).text)
                 if l:
-                    data = pd.read_csv(str(year)+'/'+str(month)+'/'+s+'.csv', skiprows=4, nrows=48, index_col=0)
+                    data = pd.read_csv(data, skiprows=4, nrows=48, index_col=0)
                 else:
-                    data = pd.read_csv(str(year)+'/'+str(month)+'/'+s+'.csv', skiprows=2, nrows=48, index_col=0)
+                    data = pd.read_csv(data, skiprows=2, nrows=48, index_col=0)
             except OSError:
                 print(s, 'not found')
                 continue
@@ -71,4 +96,6 @@ for year in range(start_year, end_year+1):
         db.query(sql_create)
         db.query(sql_trunc)
         db.query(sql_crrule)
-        db.inserttable('mto.mto_agg_30', table)
+        db.inserttable('mto.mto_agg_30_'+str(year)+m, table)
+
+        logger.info(str(year)+m+' Uploaded.')
