@@ -14,7 +14,6 @@ dbset = CONFIG['DBSETTINGS']
 
 db = DB(dbname=dbset['database'],host=dbset['host'],user=dbset['user'],passwd=dbset['password'])
 
-
 def makestartdatetime(x):
     if x['Time_Start'] == '24:00':
         x['Time_Start'] = '00:00'
@@ -24,10 +23,10 @@ def makeenddatetime(x):
         x['Time_End'] = '00:00'
     return str(pd.to_datetime(str(x['Date']) + ' ' + x['Time_End'],format='%Y%m%d %H:%M'))
 
-start_year = 2010
-end_year = 2012
-start_month = 7
-end_month = 1
+start_year = 2017
+end_year = 2017
+start_month = 3
+end_month = 5
 
 for year in range(start_year, end_year+1):
     
@@ -46,8 +45,6 @@ for year in range(start_year, end_year+1):
 
     for month in range(sm,em):
         print('Start Uploading...', year, month)
-        if year==2012 and (month == 1 or month==2):
-            continue
         if month < 10:
             m = '0' + str(month)
         else:
@@ -64,11 +61,17 @@ for year in range(start_year, end_year+1):
         sdata = sdata[['detector','start_time','end_time','flow_mean','occ_mean','vehicle_occ_mean','lpu_factor_mean']]
         sdata = sdata.values.tolist()
         print('Data Ready')
-        q = 'CREATE TABLE scoot.raw_'+str(year)+m+'(detector text, \
+        r = 'CREATE OR REPLACE RULE scoot_'+str(year)+m+'_insert AS\
+            ON INSERT TO scoot.scoot_agg_15_all\
+            WHERE date_part(\'month\'::text, new.start_time) = 1::double precision AND date_part(\'year\'::text, new.start_time) = 2017::double precision DO INSTEAD  INSERT INTO scoot.agg_15_'+str(year)+m+' (detector, start_time, end_time, flow_mean, occ_mean, vehicle_occ_mean, lpu_factor_mean)\
+            VALUES (new.detector, new.start_time, new.end_time, new.flow_mean, new.occ_mean, new.vehicle_occ_mean, new.lpu_factor_mean)'
+        q = 'CREATE TABLE scoot.agg_15_'+str(year)+m+'(detector text, \
         start_time timestamp without time zone, end_time timestamp without time zone, \
         flow_mean int, occ_mean double precision, vehicle_occ_mean int, \
-        LPU_factor_mean double precision)'
+        LPU_factor_mean double precision, \
+        CONSTRAINT c'+str(year)+m+' CHECK (date_part(\'month\'::text, start_time) = ' + m + '::double precision AND date_part(\'year\'::text, start_time) = ' + str(year) + '::double precision))'
         db.query(q)
+        db.query(r)
         print('Table Created')
-        db.inserttable('scoot.raw_'+str(year)+m, sdata)
+        db.inserttable('scoot.scoot_agg_15_all', sdata)
         print('Table Inserted')
