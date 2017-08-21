@@ -32,8 +32,10 @@ class TablePartitioner( SqlAction ):
         
         self.logger.info('Adding check constraints on table %s.%s', self.schema, table)
         self.cur.execute("ALTER TABLE %(schemaname)s.%(tablename)s "
-                         "ADD CHECK (%(timecol)s >= DATE %(startdate)s "
-                         "AND %(timecol)s < DATE %(startdate)s + INTERVAL '1 month')"
+                         "DROP CONSTRAINT IF EXISTS %(tablename)s_tx_check; "
+                         "ALTER TABLE %(schemaname)s.%(tablename)s "
+                         "ADD CHECK (%(timecol)s >= TIMESTAMP %(startdate)s "
+                         "AND %(timecol)s < TIMESTAMP %(startdate)s + INTERVAL '1 month')"
                          , {'schemaname':AsIs(self.schema),
                             'tablename':AsIs(table),
                             'startdate':startdate,

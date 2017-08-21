@@ -33,7 +33,7 @@ class IndexCreator( SqlAction ):
         if set(indexes) <= self.SQL_FUNCTIONS.keys():
             self.indexes = indexes
         else:
-            raise ValueError('Invalid set of index keys %s'.format(indexes))
+            raise ValueError('Invalid set of index keys {}'.format(indexes))
         #raises ValueError
         self._test_schema(schemaname)
         self.schema = schemaname
