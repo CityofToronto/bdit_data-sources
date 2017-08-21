@@ -1,3 +1,4 @@
+-- Called from Python for a side-by-side comparison of MTO loops and turning movement counts on select high way ramps
 -- Parameters: $1 - detector_id, $2 - count_date_mto, $3 - centreline_id, $4 - count_date_tmc
 
 SELECT LEFT(hwy_name,3), loc_desc, time_15, C.volume AS mto_vol, D.volume AS tmc_vol

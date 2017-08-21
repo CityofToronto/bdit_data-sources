@@ -6,16 +6,11 @@ Created on Tue Jul 11 17:37:51 2017
 """
 
 import ast
-
 from io import StringIO
-
 import logging
-
 import pandas as pd
-
 import requests
 from requests.auth import HTTPBasicAuth
-
 from utilities import db_connect
 from utilities import get_sql_results
 
@@ -37,10 +32,12 @@ auth = HTTPBasicAuth(auth['username'],auth['password'])
 
 logger.info('Database connected.')
 
+# ---------------TO BE MODIFIED----------------
 start_year = 2012
 start_month = 4
 end_year = 2016
 end_month = 12
+# --------------------END----------------------
 
 for year in range(start_year, end_year+1):
     
@@ -64,7 +61,8 @@ for year in range(start_year, end_year+1):
             m = str(month)
 
         table = []
-
+        
+        # Get data for each sensor
         for s in sensors['detectorid']:
             params = {'year':year, 'month':month, 'reportType':'min_30', 'sensorName':s} 
             try:
@@ -72,9 +70,11 @@ for year in range(start_year, end_year+1):
             except requests.exceptions.RequestException as err:
                 logger.critial(err)
                 continue
+            # if there's no data for the sensor
             if len(data) == 0:
                 logger.error(s+'not found in'+str(year)+m)
                 continue
+            # Find number of headerlines (there are two versions depending on whether lat/lon are in)
             count = 0
             for line in data.split('\n'):
                 if line[:4]=='Time':
@@ -85,13 +85,14 @@ for year in range(start_year, end_year+1):
                 continue
             else:
                 data = pd.read_csv(StringIO(data), skiprows=count, nrows=48, index_col=0)
-	
+            # Format the data and append to lists
             data = data.transpose()  
             for dt in data.index:
                 if dt != ' ':
                     for v,t in zip(data.loc[dt], data.columns):
                         table.append([s,dt + ' ' + t,v])
-                      
+        
+        # Create table -> Truncate (if exists) -> Create partition rules         
         sql_trunc = 'TRUNCATE mto.mto_agg_30_placeholder_yearplaceholder_month'
         sql_create = 'CREATE TABLE IF NOT EXISTS mto.mto_agg_30_placeholder_yearplaceholder_month (CHECK (EXTRACT(MONTH FROM count_bin) = placeholder_month AND EXTRACT(YEAR FROM count_bin) = placeholder_year)) INHERITS (mto.mto_agg_30)'
         sql_crrule = 'CREATE OR REPLACE RULE mto_agg_30_placeholder_yearplaceholder_month AS ON INSERT TO mto.mto_agg_30 WHERE date_part(\'month\'::text, new.count_bin) = ' + m + ' AND date_part(\'year\'::text, new.count_bin) = placeholder_year DO INSTEAD INSERT INTO mto.mto_agg_30_placeholder_yearplaceholder_month (detector_id, count_bin, volume) VALUES (new.detector_id, new.count_bin, new.volume);'

@@ -1,3 +1,4 @@
+-- Returns the volume buckets and the count for MTO highway data for histogram plotting.
 SELECT width_bucket(volume/num_lanes*2, 0, 3600, 35) AS buckets, COUNT(*)
 FROM mto.sensors JOIN mto.mto_agg_30 USING (detector_id)
 WHERE num_lanes IS NOT NULL AND volume !=0 AND within_cot=TRUE
