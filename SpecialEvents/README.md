@@ -14,7 +14,7 @@ Content|event name, venue name, venue address, start date and time, end date and
 The schema and table relations produced by the scripts are as follows. (PK: primary key; FK: foreign key)
 
 
-!['Special Events Schema'](img/Special Events Schema.png)
+!['Special Events Schema'](img/schema.png)
 
 ## Files
 
