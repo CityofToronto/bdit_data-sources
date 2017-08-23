@@ -9,6 +9,7 @@ import time
 import datetime
 import configparser
 import logging
+import traceback
 import argparse
 
 
@@ -140,10 +141,13 @@ def update_venues(db, proxies, curId):
             logger.info('Ticketmaster venues pages exhausted')
             break
         
-        r = requests.get(url, proxies=proxies, params=params).json()
+        r = requests.get(url, proxies=proxies, params=params)
+        
+        r.raise_for_status()
+        r = r.json()
         
         logger.info('Processing venues')
-        
+        logger.debug(r.keys())
         for i, l in enumerate(r["_embedded"]["venues"]):
             if l["city"]["name"] == 'Toronto':
                 venue, inserted_venue = process_venue(i, l, db, curId)
@@ -236,4 +240,4 @@ if __name__ == '__main__':
     try:
         main(**vars(parse_args(sys.argv[1:])))
     except Exception as exc:
-        logger.critical(exc)
+        logger.critical(traceback.format_exc())
