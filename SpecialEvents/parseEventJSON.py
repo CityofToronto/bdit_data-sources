@@ -9,6 +9,7 @@ import sys
 import configparser
 import argparse
 import logging
+import traceback
 import datetime
 
 import requests
@@ -212,7 +213,7 @@ if __name__ == '__main__':
     try:
         main(**vars(parse_args(sys.argv[1:])))
     except Exception as exc:
-        logger.critical(exc)
+        logger.critical(traceback.format_exc())
             
 #Events = pd.DataFrame({'Event':event, 'Venue':venue, 'Venue Address':venueAdd, 'Category':category, 'DateBegin':dateBegin, 'TimeBegin':timeBegin, 'DateEnd':dateEnd, 'TimeEnd':timeEnd})
 #Events.to_csv('city_open_data_events.csv')
