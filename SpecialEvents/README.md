@@ -31,7 +31,7 @@ Get events from tables **od_events** and **tm_events**, delete extra records of 
 
 ### AddressFunctions.py
 Contains 3 utility functions:
-1. FormatAddress(address)  
+1. format_address(address)  
 	This function takes in an address and formats it to its short form and strips punctuation and redundant characters. 
 	Example: Takes '118 O'Connor Street, Toronto, ON, Canada' and returns '118 OConnor St'
 	If the address is not in the form of 'street number + street name' will return the input address.
