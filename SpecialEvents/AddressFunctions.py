@@ -28,7 +28,6 @@ def FormatAddress(add):
     add = add.replace('.', '')
     add1 = add.split()
     add = ''
-    print(add1)
     for word in add1:
         if word == 'west': 
             word = 'w'
