@@ -7,7 +7,7 @@ Created on Mon Nov 14 10:55:15 2016
 import re
 import requests
 
-def format_address(add):
+def FormatAddress(add):
     '''
         INPUT: address text
         OUTPUT: formatted address text (or original text if function fails to recognize an address)
