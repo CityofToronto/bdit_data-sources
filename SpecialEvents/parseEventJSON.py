@@ -195,10 +195,15 @@ def main(**kwargs):
     inserted_events, inserted_venues, updated_venues = 0, 0, 0
     
     for i, entry0 in enumerate(events):
-        inserted_venue, updated_venue = process_event(i, entry0['calEvent'], db)
-        inserted_events += 1
-        inserted_venues += inserted_venue
-        updated_venues += updated_venue
+        try:
+            inserted_venue, updated_venue = process_event(i, entry0['calEvent'], db)
+            inserted_events += 1
+            inserted_venues += inserted_venue
+            updated_venues += updated_venue
+        except KeyError as key_error:
+            logger.error('Key error with event: %s, key %s, skipping', 
+                         entry0['calEvent'].get('eventName', ''),
+                         key_error.args[0])
 
     logger.info('%s events processed, %s venues inserted, %s venues updated',
                 inserted_events,
