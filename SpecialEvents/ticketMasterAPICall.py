@@ -15,9 +15,8 @@ import argparse
 
 import requests
 from pg import DB
-from AddressFunctions import geocode
-from AddressFunctions import rev_geocode
-from AddressFunctions import format_address
+from AddressFunctions import geocode, rev_geocode, format_address, AddressParserException
+
 from fuzzywuzzy import fuzz
 
 
@@ -54,8 +53,11 @@ def process_venue(i, l, db, curId):
 
     if i % 50 == 0:
         logger.info('Processing venue #%s', i+1)
-        logger.info('Venue: %s, id: %s', venue["venue_name"], venue["tm_venue_id"])
+        logger.info('Venue: %s, id: %s',
+                    venue["venue_name"],
+                    venue["tm_venue_id"])
 
+    exist = []
     if "address" in l.keys():
         if bool(l["address"]):
             (dummy, venue["venue_address"]) = l['address'].popitem()
@@ -96,7 +98,10 @@ def process_venue(i, l, db, curId):
                     add = venue["venue_address"]+", Toronto, ON " + l["postalCode"] +", Canada"
                 elif lat != 0 and lon != 0:
                     coord = str(lat) + ',' + str(lon)
-                    (venue["venue_add_comp"], add) = rev_geocode(coord)
+                    try:
+                        (venue["venue_add_comp"], add) = rev_geocode(coord)
+                    except AddressParserException as ape:
+                        logger.error(ape)
                 elif venue["venue_address"] is not None:
                     (add, lat, lon) = geocode(venue["venue_address"])
                 else:
@@ -119,23 +124,22 @@ def update_venues(db, proxies, curId):
     r = {}
     venues = []
     inserted_venues = 0
-    
+    venues_processed = 0
     while True: 
         
         if not r:
             logger.info('Requesting initial ticketmaster venues page')
             url = 'https://app.ticketmaster.com/discovery/v2/venues.json'
-            params = {'size':499,
+            params = {'size':200,
                       'stateCode':'ON',
                       'countryCode':'CA',
                       'includeTest':'no',
-                      'markets':102,
-                      'city':'Toronto',
+                      'keyword':'Toronto',
                       'apikey':API_KEY}
         elif "next" in r["_links"].keys():
             logger.info('Requesting next ticketmaster venues page')
             url = 'https://app.ticketmaster.com'
-            url += r["_links"]["next"]["href"][:len(r["_links"]["next"]["href"])-7]
+            url += r["_links"]["next"]["href"]
             params = {'apikey':API_KEY}
         else:
             logger.info('Ticketmaster venues pages exhausted')
@@ -148,9 +152,14 @@ def update_venues(db, proxies, curId):
         
         logger.info('Processing venues')
         logger.debug(r.keys())
-        for i, l in enumerate(r["_embedded"]["venues"]):
+        
+        for l in r["_embedded"]["venues"]:
             if l["city"]["name"] == 'Toronto':
-                venue, inserted_venue = process_venue(i, l, db, curId)
+                venues_processed += 1
+                venue, inserted_venue = process_venue(venues_processed,
+                                                      l,
+                                                      db,
+                                                      curId)
                 venues.append(venue)
 
                 # Update TM venues table
@@ -161,7 +170,7 @@ def update_venues(db, proxies, curId):
                     inserted_venue += 1
                     logger.error('Venue %s, inserted twice', venue['name'])
                 inserted_venues += inserted_venue
-    
+        
     return venues, inserted_venues
 
 def update_events(db, venues):
