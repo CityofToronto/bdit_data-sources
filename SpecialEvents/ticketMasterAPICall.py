@@ -25,7 +25,7 @@ proxies = {'https':'https://137.15.73.132:8080'}
 # Update Venue List
 venues = []
 curId = db.query('SELECT max(id) FROM city.venues').getresult()[0][0]
-url = 'https://app.ticketmaster.com/discovery/v2/venues.json?size=200&stateCode=ON&countryCode=CA&includeTest=no&keyword=Toronto&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
+url = 'https://app.ticketmaster.com/discovery/v2/venues.json?size=499&stateCode=ON&countryCode=CA&includeTest=no&markets=102&city=Toronto&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
 while (True): 
     r = requests.get(url,proxies = proxies).json()
     for l in r["_embedded"]["venues"]:
@@ -98,7 +98,7 @@ while (True):
                 
     # Get next page
     if "next" in r["_links"].keys():
-        url = 'https://app.ticketmaster.com'+r["_links"]["next"]["href"]+'&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
+        url = 'https://app.ticketmaster.com'+r["_links"]["next"]["href"][:len(r["_links"]["next"]["href"])-7]+'&apikey=A3sEV24x7118ADXEEDhenqtDxmH3ijxg'
     else:
         break;
 

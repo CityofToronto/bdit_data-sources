@@ -34,9 +34,9 @@ dbset = CONFIG['DBSETTINGS']
 
 db = DB(dbname=dbset['database'],host=dbset['host'],user=dbset['user'],passwd=dbset['password'])
 
-tm_events = pd.DataFrame(db.query('SELECT tm_event_id,classification,date,name,start_time,id AS venue_id FROM city.tm_events LEFT JOIN city.tm_venues USING (tm_venue_id)').getresult(), 
+tm_events = pd.DataFrame(db.query('SELECT tm_event_id,classification,date,name,start_time,id FROM city.tm_events LEFT JOIN city.tm_venues USING tm_venue_id').getresult(), 
                          columns=['event_id','classification','start_date','event_name','start_time','venue_id'])
-city_events = pd.DataFrame(db.query('SELECT ev.id,event_name,start_date,start_time,end_date,end_time,classification,ve.id AS venue_id FROM city.od_events ev LEFT JOIN city.od_venues ve ON ev.od_venue_id = ve.od_id').getresult(),
+city_events = pd.DataFrame(db.query('SELECT id,event_name,start_date,start_time,end_date,end_time,classification,venue_id FROM city.opendata_events').getresult(),
                            columns = ['event_id','event_name','start_date','start_time','end_date','end_time','classification','venue_id' ])
 tm_events.dropna(subset=['start_date'],inplace=True)
 city_events.dropna(subset=['start_date'],inplace=True)
