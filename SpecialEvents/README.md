@@ -14,7 +14,7 @@ Content|event name, venue name, venue address, start date and time, end date and
 The schema and table relations produced by the scripts are as follows. (PK: primary key; FK: foreign key)
 
 
-!['Special Events Schema'](img/schema.png)
+!['Special Events Schema'](img/Special Events Schema.png)
 
 ## Files
 
@@ -31,7 +31,7 @@ Get events from tables **od_events** and **tm_events**, delete extra records of 
 
 ### AddressFunctions.py
 Contains 3 utility functions:
-1. format_address(address)  
+1. FormatAddress(address)  
 	This function takes in an address and formats it to its short form and strips punctuation and redundant characters. 
 	Example: Takes '118 O'Connor Street, Toronto, ON, Canada' and returns '118 OConnor St'
 	If the address is not in the form of 'street number + street name' will return the input address.
