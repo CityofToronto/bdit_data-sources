@@ -32,27 +32,23 @@ ODID = db.query('SELECT max(od_id) FROM city.od_venues').getresult()[0][0]
 for entry0 in tree:
     entry = entry0['calEvent']
     # Extract Information
-    try:
-        row = {}
-        row["id"] = entry['recId']
-        row["event_name"] = entry['eventName']
-        
-        row["venue_name"] = entry['locations'][0]['locationName'].replace("\'", "")
-        
-        row["venue_address"] = row["venue_add_comp"] = entry['locations'][0]['address'].replace('\'', '')
-        row["start_date"] = datetime.datetime.strptime(entry['startDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).date()
-        row["end_date"] = datetime.datetime.strptime(entry['endDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).date()
-        row["start_time"] = datetime.datetime.strptime(entry['startDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).time()
-        row["end_time"] = datetime.datetime.strptime(entry['endDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).time()
-        
-        cat=''
-        for c in entry['category']:
-            cat = cat+c['name']+','
-        row["classification"] = cat[:len(cat)-1]
-    except KeyError:
-        print('Not Successful:', entry['eventName'])
-        continue
-
+    row = {}
+    row["id"] = entry['recId']
+    row["event_name"] = entry['eventName']
+    
+    #if entry['locations'][0]['locationName'] is not None:
+    row["venue_name"] = entry['locations'][0]['locationName'].replace("\'", "")
+    
+    row["venue_address"] = row["venue_add_comp"] = entry['locations'][0]['address']
+    row["start_date"] = datetime.datetime.strptime(entry['startDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).date()
+    row["end_date"] = datetime.datetime.strptime(entry['endDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).date()
+    row["start_time"] = datetime.datetime.strptime(entry['startDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).time()
+    row["end_time"] = datetime.datetime.strptime(entry['endDate'],'%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc).astimezone(tz=None).time()
+    
+    cat=''
+    for c in entry['category']:
+        cat = cat+c['name']+','
+    row["classification"] = cat[:len(cat)-1]
     
     # Update Venues Table    
     exist = db.query("SELECT * FROM city.venues where venue_add_comp = \'"+row["venue_add_comp"]+"\'").getresult()
@@ -106,7 +102,7 @@ for entry0 in tree:
         venue["venue_address"] = add
         venue["lat"] = lat
         venue["lon"] = lon
-        db.update('city.venues', venue, id=venue["id"])
+        db.upsert('city.venues', venue)
         print('UPSERT VENUE', row["venue_name"])
 
     else:
@@ -127,10 +123,10 @@ for entry0 in tree:
         venue["id"] = row["venue_id"]
         db.insert('city.od_venues',venue)
         row["od_venue_id"] = ODID
-        db.insert('city.od_events',row)
     else:
         row["od_venue_id"] = exist[0][0]
-        db.update('city.od_events',row,od_venue_id=row["od_venue_id"])
+
+    db.upsert('city.od_events',row)
      
 
 db.close()
