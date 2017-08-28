@@ -42,6 +42,7 @@ original data (upper case V):
 The task here is to decompose V0 (30min volume) into v0 and v1 (15min volumes). 
 The original plan (method1 in the example below) was to distribute the volume based on the 30min before and after, that is, ![formula](http://www.sciweavers.org/tex2img.php?eq=%0A%0A%5Cbegin%7Bcases%7Dv2%20%3D%20v2%2A%20%5Cfrac%7Bv0%7D%7Bv0%2Bv4%7D%20%5C%5Cv3%20%3D%20v2%2A%20%5Cfrac%7Bv4%7D%7Bv0%2Bv4%7D%20%20%5Cend%7Bcases%7D%20&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0). However, this method results in cusps during times of rapid growth because the distribution of volume in the half-hour before and after is much more rapid than during the target half-hour.
 
+Implementation (method2 in the example below) in the [script](query-mto-tmc-comparison.sql) by window functions in SQL is based on distributing the growth evenly to the two 15min bins. The principle is illustrated below.
 
 ![formula_illustration](img/formula_illustration.png)
 
