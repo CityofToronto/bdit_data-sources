@@ -88,15 +88,17 @@ def process_venue(i, l, db, curId):
             venue["id"] = 2
         else:
             logger.info('INSERT VENUE: %s', venue['venue_name'])
+            logger.debug('Address: %s', venue["venue_address"])
             curId = curId + 1
             venue["id"] = curId
             if "location" in l.keys() and "postalCode" in l.keys():
-                if "latitude" in l["location"].keys() and "longitude" in l["location"].keys():
-                    lat = l["location"]["latitude"]
-                    lon = l["location"]["longitude"]
+                logger.debug('Postal Code: %s', l["postalCode"])
+                lat = l["location"].get("latitude", 0)
+                lon = l["location"].get("longitude", 0)
+                logger.debug('Coords: (%s, %s)', lat, lon)
                 if venue["venue_address"] is not None and lat != 0 and lon != 0:
                     add = venue["venue_address"]+", Toronto, ON " + l["postalCode"] +", Canada"
-                elif lat != 0 and lon != 0:
+                elif int(lat) != 0 and int(lon) != 0:
                     coord = str(lat) + ',' + str(lon)
                     try:
                         (venue["venue_add_comp"], add) = rev_geocode(coord)
@@ -173,10 +175,14 @@ def update_venues(db, proxies, curId):
         
     return venues, inserted_venues
 
-def update_events(db, venues):
+def update_events(db, proxies, venues):
     inserted_count = 0
-    for venue in venues:
+    for i, venue in enumeratate(venues):
 
+        if i % 50 == 0:
+        logger.info('Getting events for venue #%s', i+1)
+        logger.info('Venue: %s, id: %s',
+                    venue["venue_name"])
         params = {'apikey': API_KEY,
                   'venueId': venue["tm_venue_id"]}
         r = requests.get('https://app.ticketmaster.com/discovery/v2/events.json',
@@ -240,12 +246,12 @@ def main(**kwargs):
     #cla = []
     logger.info('Finished updating venues tables, %s new venues inserted', inserted_venues)
     
-    inserted_count = update_events(db, venues)
+    inserted_count = update_events(db, proxies, venues)
     logger.info('Finished processing events, %s events inserted', inserted_count)
     db.close()
 
 if __name__ == '__main__':
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     try:
         main(**vars(parse_args(sys.argv[1:])))
     except Exception as exc:
