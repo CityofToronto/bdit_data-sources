@@ -5,16 +5,9 @@ Created on Mon Nov 14 10:55:15 2016
 @author: qwang2
 """
 import re
-import logging
 import requests
 
-LOGGER = logging.getLogger(__name__)
-
-class AddressParserException(Exception):
-    pass
-
-def format_address(add):
-    global LOGGER
+def FormatAddress(add):
     '''
         INPUT: address text
         OUTPUT: formatted address text (or original text if function fails to recognize an address)
@@ -35,7 +28,7 @@ def format_address(add):
     add = add.replace('.', '')
     add1 = add.split()
     add = ''
-    LOGGER.debug(add1)
+    print(add1)
     for word in add1:
         if word == 'west': 
             word = 'w'
@@ -60,11 +53,10 @@ def geocode(add):
         INPUT: address text
         OUTPUT: (formatted long address, latitude, longitude)
     '''
-    global LOGGER
     proxies = {'https':'https://137.15.73.132:8080'}
     add = add.replace(' ', '+')
     url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+add+',+Toronto,+ON,+Canada&key=AIzaSyBkp0W5IHAXgcb28MN_8wnUMxO1BGOlM3E'
-    r = requests.get(url, proxies = proxies).json()
+    r = requests.get(url,proxies = proxies).json()
     if r["status"] == 'ZERO_RESULTS':
         return (add.replace('+', ' '),None,None)
     try:
@@ -72,8 +64,7 @@ def geocode(add):
         lon = r["results"][0]["geometry"]["location"]["lng"]
         add = r["results"][0]["formatted_address"]
     except:
-        LOGGER.error('Geocoding failed for %s', add)
-        LOGGER.error('Request status: %s', r["status"])
+        print(r["status"])
         return(add,None,None)
     return (add,lat,lon)
 
@@ -82,18 +73,9 @@ def rev_geocode(coord):
         INPUT: latlong coordinates in string form
         OUTPUT: fortmatted short address and long address
     '''
-    global LOGGER
     proxies = {'https':'https://137.15.73.132:8080'}
     url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+coord+'&key=AIzaSyBkp0W5IHAXgcb28MN_8wnUMxO1BGOlM3E'
-    r = requests.get(url,proxies = proxies)
-    if r.status_code != requests.codes.ok:
-        errmsg = 'Reverse geocoding failed with {}'.format(coord)
-        raise AddressParserException(errmsg)
-    r = r.json()
-    
-    if len(r["results"]==0):
-        errmsg = 'No reverse geocoding results for {}'.format(coord)
-        raise AddressParserException(errmsg)
+    r = requests.get(url,proxies = proxies).json()
     for d in r["results"]:
         if any((t in ['street_address', 'intersection', 'point_of_interest'] for t in d["types"])):
             add_sh = d['address_components'][0]['short_name']+ ' ' + d['address_components'][1]['short_name']
