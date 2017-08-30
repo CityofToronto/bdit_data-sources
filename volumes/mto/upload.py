@@ -128,6 +128,12 @@ class MTOVolumeScraper( object ):
                         table.append([s, dt + ' ' + t, v])
 
         # Create table -> Truncate (if exists) -> Create partition rules
+        
+        if month < 10:
+            month = '0' + str(month)
+        else:
+            month = str(month)
+        
         tablename = pgsql.Identifier('mto.mto_agg_30' + str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
 
@@ -187,11 +193,6 @@ def main(yyyymm = None, **kwargs):
         else:
             raise ValueError('{yyyymm} is not a valid year-month value of format YYYYMM'
                              .format(yyyymm=yyyymm))
-
-    if month < 10:
-        month = '0' + str(month)
-    else:
-        month = str(month)
 
     mto_scraper.get_and_process_data(year, month)
 
