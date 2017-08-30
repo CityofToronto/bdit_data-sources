@@ -87,18 +87,18 @@ class MTOVolumeScraper( object ):
         table = []
 
         # Get data for each sensor
-        for s in self.sensors['detectorid']:
+        for s in self.sensors:
             params = {'year': year,
                       'month': month,
                       'reportType': 'min_30',
-                      'sensorName': s}
+                      'sensorName': s[0]}
             try:
                 data = requests.get(url=self.baseurl,
                                     params=params,
                                     auth=self.auth,
                                     timeout=10).text
             except requests.exceptions.RequestException as err:
-                logger.critial(err)
+                logger.critical(err)
                 continue
             # if there's no data for the sensor
             if len(data) == 0:
@@ -192,10 +192,9 @@ def main(yyyymm = None, **kwargs):
     else:
         month = str(month)
 
-    get_and_process_data(year, month)
+    mto_scraper.get_and_process_data(year, month)
 
-
-    db.close()
+    mto_scraper.db.close()
 
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
