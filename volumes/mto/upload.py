@@ -104,7 +104,7 @@ class MTOVolumeScraper( object ):
                 continue
             # if there's no data for the sensor
             if len(data) == 0:
-                logger.error(s + 'not found in' + str(year) + month)
+                logger.error(s + 'not found in' + str(year) + str(month))
                 continue
             # Find number of headerlines
             #(there are two versions depending on whether lat/lon are in)
@@ -114,7 +114,7 @@ class MTOVolumeScraper( object ):
                     break
                 count = count + 1
             if count == len(data.split('\n')):
-                logger.error(s + ' not found in ' + str(year) + '-' + month)
+                logger.error(s + ' not found in ' + str(year) + '-' + str(month))
                 continue
             else:
                 data = pd.read_csv(StringIO(data),
@@ -157,10 +157,12 @@ class MTOVolumeScraper( object ):
 
         with self.db as con:
             with con.cursor() as cur:
-                cur.execute(sql_create.format(tablename=tablename))
+                cur.execute(sql_create.format(tablename=tablename,
+                                              start_date=start_date))
                 cur.execute(sql_trunc.format(tablename=tablename))
                 cur.execute(sql_crrule.format(tablename=tablename,
-                                              rulename=rulename))
+                                              rulename=rulename,
+                                              start_date=start_date))
                 execute_values(cur,
                                sql_insert.format(tablename=tablename),
                                table)
