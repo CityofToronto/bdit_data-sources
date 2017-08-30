@@ -135,27 +135,29 @@ class MTOVolumeScraper( object ):
         else:
             month = str(month)
         
-        table_name_id = pgsql.Identifier('mto.mto_agg_30_' + str(year) + month)
-        table_name_str = pgsql.Literal('mto.mto_agg_30_' + str(year) + month)
+        table_name_id = pgsql.Identifier('mto_agg_30_' + str(year) + month)
+        schema_name = pgsql.Identifier('mto')
+        table_name_str = pgsql.Literal(str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
         start_date = pgsql.Literal(str(year)+'-'+month+'-01')
 
         logger.info('Data pulled successfully, sending to database...')
         
-        sql_trunc = pgsql.SQL('TRUNCATE {table_name};')
-        sql_insert = pgsql.SQL('INSERT INTO {table_name} VALUES %s')
+        sql_trunc = pgsql.SQL('TRUNCATE {schema_name}.{table_name};')
+        sql_insert = pgsql.SQL('INSERT INTO {schema_name}.{table_name} VALUES %s')
         
         sql_create_function = pgsql.SQL('''
-            SELECT mto.agg_thirty_create_table({table_name}, 
-                {start_date}::TIMESTAMP);''')
+            SELECT mto.agg_thirty_create_table({table_name}, {start_date};''')
 
         with self.db as con:
             with con.cursor() as cur:
-                cur.execute(sql_trunc.format(table_name=table_name_id))
                 cur.execute(sql_create_function.format(table_name=table_name_str,
                                                        start_date=start_date))
+                cur.execute(sql_trunc.format(table_name=table_name_id,
+                                             schema_name=schema_name))
                 execute_values(cur,
-                               sql_insert.format(table_name=table_name_id),
+                               sql_insert.format(table_name=table_name_id,
+                                                 schema_name=schema_name),
                                table)
 
         logger.info(str(year) + month + ' uploaded.')
