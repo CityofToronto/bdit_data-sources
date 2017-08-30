@@ -7,13 +7,13 @@ Created on Tue Jul 11 17:37:51 2017
 
 import sys
 import time
-import datetime
+from datetime import date
+from dateutil.relativedelta import relativedelta
 import configparser
 import logging
 import traceback
 import argparse
 
-import ast
 from io import StringIO
 import pandas as pd
 from psycopg2 import connect
@@ -31,6 +31,24 @@ if not logger.handlers:
     formatter = logging.Formatter(log_format)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+
+def parse_args(args):
+    """Parse command line arguments
+    
+    Args:
+        sys.argv[1]: command line arguments
+        
+    Returns:
+        dictionary of parsed arguments
+    """
+    parser = argparse.ArgumentParser(description='Fetch month of MTO volume data')
+    
+    parser.add_argument('--yyyymm',
+                        help='Specify month to fetch data as YYYYMM,'\
+                        ' program defaults to last month')
+    
+    return parser.parse_args(args)
 
 
 class MTOVolumeScraper(Object):
@@ -52,15 +70,24 @@ class MTOVolumeScraper(Object):
         self.baseurl = auth['baseurl']
         self.sensors = self.get_sensors()
 
+
     def get_sensors(self):
         '''Query database for list of sensors'''
+        logger.debug('Getting sensors from database')
         get_sql = "SELECT detector_id as detectorid FROM mto.sensors"
         with self.db.cursor() as cur:
             cur.execute(get_sql)
             return cur.fetchall()
 
+
     def get_and_process_data(self, year, month):
-        '''Send a request for each MTO sensor for the given year, month.'''
+        '''
+        Send a request for each MTO sensor for the given year, month.
+        :param year:
+            year to grab data for
+        :param month:
+            month to grab data for
+        '''
         table = []
 
         # Get data for each sensor
@@ -107,6 +134,8 @@ class MTOVolumeScraper(Object):
         tablename = pgsql.Identifier('mto.mto_agg_30' + str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
 
+        logger.info('Data pulled successfully, sending to database...')
+        
         sql_create = pgsql.SQL('''CREATE TABLE IF NOT EXISTS {tablename}
         INHERITS (mto.mto_agg_30);''')
         sql_crrule = pgsql.SQL('''CREATE OR REPLACE RULE {rulename}
@@ -118,19 +147,25 @@ class MTOVolumeScraper(Object):
         sql_trunc = pgsql.SQL('TRUNCATE {tablename};')
         sql_insert = pgsql.SQL('INSERT INTO {tablename} VALUES %s')
 
-        with con.cursor() as cur:
-            cur.execute(sql_create.format(tablename=tablename))
-            cur.execute(sql_trunc.format(tablename=tablename))
-            cur.execute(sql_crrule.format(tablename=tablename,
-                                          rulename=rulename) )
-            execute_values(cur,
-                           sql_insert.format(tablename=tablename),
-                           table)
+        with self.db as con:
+            with con.cursor() as cur:
+                cur.execute(sql_create.format(tablename=tablename))
+                cur.execute(sql_trunc.format(tablename=tablename))
+                cur.execute(sql_crrule.format(tablename=tablename,
+                                              rulename=rulename))
+                execute_values(cur,
+                               sql_insert.format(tablename=tablename),
+                               table)
 
-        logger.info(str(year) + month + ' Uploaded.')
+        logger.info(str(year) + month + ' uploaded.')
 
-def main(start_year = 2012, start_month = 4,
-         end_year = 2016, end_month = 12, **kwargs):
+
+def main(yyyyymm = None, **kwargs):
+    '''
+    
+    :param yyyyymm:
+        Year-month to be processed
+    '''
     CONFIG = configparser.ConfigParser()
     CONFIG.read('db.cfg')
     dbset = CONFIG['DBSETTINGS']
@@ -140,6 +175,21 @@ def main(start_year = 2012, start_month = 4,
     mto_scraper = MTOVolumeScraper(dbset, auth)
 
     logger.info('Database connected.')
+
+    if yyyymm is None:
+        #Use today's day to determine month to process
+        last_month = date.today() + relativedelta(months=-1)
+        year = last_month.year
+        month = last_month.month
+    else:
+        #Process and test whether the provided yyyymm is accurate
+        regex_yyyymm = re.compile(r'20\d\d(0[1-9]|1[0-2])')
+        if fullmatch(regex_yyyymm.pattern, yyyymm):
+            year = int(yyyymm[:4])
+            month = int(yyyymm[-2:])
+        else:
+            raise ValueError('{yyyymm} is not a valid year-month value of format YYYYMM'
+                             .format(yyyymm=yyyymm))
 
     if month < 10:
         month = '0' + str(month)

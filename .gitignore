@@ -172,3 +172,6 @@ volumes/compass/csv/sensors.csv
 volumes/compass/r/connect/connect.R
 volumes/compass/r/connect/one-its.R
 bluetooth/api/config.cfg
+*.project
+.pydevproject
+*.prefs
