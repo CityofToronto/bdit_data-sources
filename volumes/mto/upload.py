@@ -51,7 +51,7 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-class MTOVolumeScraper(Object):
+class MTOVolumeScraper( object ):
 
     def __init__(self, dbset, auth):
         '''Create a MTOVolumeScraper to iterate over months and pull volume data
