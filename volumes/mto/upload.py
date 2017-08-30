@@ -23,13 +23,14 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 logger = logging.getLogger('upload_mto_data')
-logger.setLevel(logging.INFO)
 
 log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 formatter = logging.Formatter(log_format)
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+logger.setLevel(logging.INFO)
 
 
 def parse_args(args):
@@ -84,6 +85,7 @@ class MTOVolumeScraper( object ):
         :param month:
             month to grab data for
         '''
+        from argcomplete.compat import str
         table = []
 
         # Get data for each sensor
@@ -134,17 +136,21 @@ class MTOVolumeScraper( object ):
         else:
             month = str(month)
         
-        tablename = pgsql.Identifier('mto.mto_agg_30' + str(year) + month)
+        tablename = pgsql.Identifier('mto.mto_agg_30_' + str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
+        start_date = pgsql.Literal(str(year)+'-'+month+'01')
 
         logger.info('Data pulled successfully, sending to database...')
         
-        sql_create = pgsql.SQL('''CREATE TABLE IF NOT EXISTS {tablename}
+        sql_create = pgsql.SQL('''CREATE TABLE IF NOT EXISTS {tablename} 
+        (PRIMARY KEY (detector_id, count_bin),
+        CHECK count_bin >= {start_date}::TIMESTAMP AND
+             count_bin < {start_date}::TIMESTAMP + '1 mon'::interval)
         INHERITS (mto.mto_agg_30);''')
         sql_crrule = pgsql.SQL('''CREATE OR REPLACE RULE {rulename}
         AS ON INSERT TO mto.mto_agg_30
-        WHERE new.count_bin >= '{year}-{month}-01'::TIMESTAMP
-        AND new.count_bin < '{year}-{month}-01'::TIMESTAMP + '1 mon'::interval
+        WHERE new.count_bin >= {start_date}::TIMESTAMP
+        AND new.count_bin < {start_date}::TIMESTAMP + '1 mon'::interval
         DO INSTEAD INSERT INTO {tablename} (detector_id, count_bin, volume)
         VALUES (new.detector_id, new.count_bin, new.volume);''')
         sql_trunc = pgsql.SQL('TRUNCATE {tablename};')
