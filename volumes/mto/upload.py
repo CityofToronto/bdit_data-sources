@@ -135,37 +135,27 @@ class MTOVolumeScraper( object ):
         else:
             month = str(month)
         
-        tablename = pgsql.Identifier('mto.mto_agg_30_' + str(year) + month)
+        table_name_id = pgsql.Identifier('mto.mto_agg_30_' + str(year) + month)
+        table_name_str = pgsql.Literal('mto.mto_agg_30_' + str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
         start_date = pgsql.Literal(str(year)+'-'+month+'-01')
 
         logger.info('Data pulled successfully, sending to database...')
         
-        sql_create = pgsql.SQL('''CREATE TABLE IF NOT EXISTS {tablename} 
-        (PRIMARY KEY (detector_id, count_bin),
-        CHECK (count_bin >= {start_date}::TIMESTAMP AND
-             count_bin < {start_date}::TIMESTAMP + '1 mon'::interval)
-             )
-        INHERITS (mto.mto_agg_30);''')
-        sql_crrule = pgsql.SQL('''CREATE OR REPLACE RULE {rulename}
-        AS ON INSERT TO mto.mto_agg_30
-        WHERE new.count_bin >= {start_date}::TIMESTAMP
-        AND new.count_bin < {start_date}::TIMESTAMP + '1 mon'::interval
-        DO INSTEAD INSERT INTO {tablename} (detector_id, count_bin, volume)
-        VALUES (new.detector_id, new.count_bin, new.volume);''')
-        sql_trunc = pgsql.SQL('TRUNCATE {tablename};')
-        sql_insert = pgsql.SQL('INSERT INTO {tablename} VALUES %s')
+        sql_trunc = pgsql.SQL('TRUNCATE {table_name};')
+        sql_insert = pgsql.SQL('INSERT INTO {table_name} VALUES %s')
+        
+        sql_create_function = pgsql.SQL('''
+            SELECT mto.agg_thirty_create_table({table_name}, 
+                {start_date}::TIMESTAMP);''')
 
         with self.db as con:
             with con.cursor() as cur:
-                cur.execute(sql_create.format(tablename=tablename,
-                                              start_date=start_date))
-                cur.execute(sql_trunc.format(tablename=tablename))
-                cur.execute(sql_crrule.format(tablename=tablename,
-                                              rulename=rulename,
-                                              start_date=start_date))
+                cur.execute(sql_trunc.format(table_name=table_name_id))
+                cur.execute(sql_create_function.format(table_name=table_name_str,
+                                                       start_date=start_date))
                 execute_values(cur,
-                               sql_insert.format(tablename=tablename),
+                               sql_insert.format(table_name=table_name_id),
                                table)
 
         logger.info(str(year) + month + ' uploaded.')
