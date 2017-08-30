@@ -88,10 +88,11 @@ class MTOVolumeScraper( object ):
 
         # Get data for each sensor
         for s in self.sensors:
+            s = s[0]
             params = {'year': year,
                       'month': month,
                       'reportType': 'min_30',
-                      'sensorName': s[0]}
+                      'sensorName': s}
             try:
                 data = requests.get(url=self.baseurl,
                                     params=params,
