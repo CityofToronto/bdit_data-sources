@@ -21,7 +21,6 @@ import psycopg2.sql as pgsql
 from psycopg2.extras import execute_values
 import requests
 from requests.auth import HTTPBasicAuth
-from argcomplete.compat import sys_encoding
 
 logger = logging.getLogger('upload_mto_data')
 logger.setLevel(logging.INFO)
