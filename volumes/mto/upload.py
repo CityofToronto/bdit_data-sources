@@ -85,7 +85,6 @@ class MTOVolumeScraper( object ):
         :param month:
             month to grab data for
         '''
-        from argcomplete.compat import str
         table = []
 
         # Get data for each sensor
