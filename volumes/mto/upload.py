@@ -137,14 +137,15 @@ class MTOVolumeScraper( object ):
         
         tablename = pgsql.Identifier('mto.mto_agg_30_' + str(year) + month)
         rulename = pgsql.Identifier('mto_insert_' + str(year) + month)
-        start_date = pgsql.Literal(str(year)+'-'+month+'01')
+        start_date = pgsql.Literal(str(year)+'-'+month+'-01')
 
         logger.info('Data pulled successfully, sending to database...')
         
         sql_create = pgsql.SQL('''CREATE TABLE IF NOT EXISTS {tablename} 
         (PRIMARY KEY (detector_id, count_bin),
-        CHECK count_bin >= {start_date}::TIMESTAMP AND
+        CHECK (count_bin >= {start_date}::TIMESTAMP AND
              count_bin < {start_date}::TIMESTAMP + '1 mon'::interval)
+             )
         INHERITS (mto.mto_agg_30);''')
         sql_crrule = pgsql.SQL('''CREATE OR REPLACE RULE {rulename}
         AS ON INSERT TO mto.mto_agg_30
