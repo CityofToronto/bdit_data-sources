@@ -21,12 +21,14 @@ import psycopg2.sql as pgsql
 from psycopg2.extras import execute_values
 import requests
 from requests.auth import HTTPBasicAuth
+from argcomplete.compat import sys_encoding
 
 logger = logging.getLogger('upload_mto_data')
 logger.setLevel(logging.INFO)
 
 log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 formatter = logging.Formatter(log_format)
+handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
