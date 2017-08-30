@@ -156,10 +156,10 @@ class MTOVolumeScraper( object ):
         logger.info(str(year) + month + ' uploaded.')
 
 
-def main(yyyyymm = None, **kwargs):
+def main(yyyymm = None, **kwargs):
     '''
     
-    :param yyyyymm:
+    :param yyyymm:
         Year-month to be processed
     '''
     CONFIG = configparser.ConfigParser()
