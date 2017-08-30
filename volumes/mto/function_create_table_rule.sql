@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION mto.agg_thirty_create_table(yyyymm TEXT, start_date TIMESTAMP)
+﻿CREATE OR REPLACE FUNCTION mto.agg_thirty_create_table(yyyymm TEXT, start_date TEXT)
 RETURNS INTEGER
 AS $$
 DECLARE
@@ -7,21 +7,22 @@ DECLARE
 BEGIN
     EXECUTE format('CREATE TABLE IF NOT EXISTS mto.%I 
 			(PRIMARY KEY (detector_id, count_bin),
-			CHECK (count_bin >= $1 AND
-			count_bin < $1 + ''1 mon''::interval)
+			CHECK (count_bin >= %L::TIMESTAMP AND
+			count_bin < %L::TIMESTAMP + ''1 mon''::interval)
 			)
-        INHERITS (mto.mto_agg_30);', table_name) USING start_date;
+        INHERITS (mto.mto_agg_30);', table_name, start_date, start_date);
         
     EXECUTE format('CREATE OR REPLACE RULE %I
         AS ON INSERT TO mto.mto_agg_30
-        WHERE new.count_bin >= $1
-        AND new.count_bin < $1 + ''1 mon''::interval
-        DO INSTEAD INSERT INTO %I (detector_id, count_bin, volume)
+        WHERE new.count_bin >= %L::TIMESTAMP
+        AND new.count_bin < %L::TIMESTAMP + ''1 mon''::interval
+        DO INSTEAD INSERT INTO mto.%I (detector_id, count_bin, volume)
         VALUES (new.detector_id, new.count_bin, new.volume);'
-        , rule_name, table_name) USING start_date;
+        , rule_name, start_date, start_date, table_name) ;
     
     RETURN 1;
 END;
 $$
 SECURITY DEFINER
 LANGUAGE plpgsql;
+GRANT EXECUTE ON FUNCTION mto.agg_thirty_create_table(text, text) TO mto_bot;
