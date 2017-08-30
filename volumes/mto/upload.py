@@ -25,12 +25,10 @@ from requests.auth import HTTPBasicAuth
 logger = logging.getLogger('upload_mto_data')
 logger.setLevel(logging.INFO)
 
-if not logger.handlers:
-    handler = logging.FileHandler('upload_mto_data.log')
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    formatter = logging.Formatter(log_format)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+formatter = logging.Formatter(log_format)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def parse_args(args):
@@ -62,10 +60,7 @@ class MTOVolumeScraper( object ):
 
         '''
         super(MTOVolumeScraper, self).__init__()
-        self.db = connect(dbname=dbset['database'],
-                          host=dbset['host'],
-                          user=dbset['user'],
-                          passwd=dbset['password'])
+        self.db = connect(**dbset)
         self.auth = HTTPBasicAuth(auth['username'], auth['password'])
         self.baseurl = auth['baseurl']
         self.sensors = self.get_sensors()
