@@ -10,7 +10,9 @@ BEGIN
 			CHECK (count_bin >= %L::TIMESTAMP AND
 			count_bin < %L::TIMESTAMP + ''1 mon''::interval)
 			)
-        INHERITS (mto.mto_agg_30);', table_name, start_date, start_date);
+        INHERITS (mto.mto_agg_30);
+        GRANT SELECT, INSERT, DELETE, TRUNCATE ON mto.%I TO mto_bot;',
+         table_name, start_date, start_date, table_name);
         
     EXECUTE format('CREATE OR REPLACE RULE %I
         AS ON INSERT TO mto.mto_agg_30
