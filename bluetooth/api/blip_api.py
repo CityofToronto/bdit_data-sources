@@ -1,9 +1,13 @@
 import calendar
 import datetime
+import datetime.date as date
 import time
 import logging
 import configparser
+import argparse
+import sys
 
+import zeep
 from zeep import Client
 from zeep.transports import Transport
 from requests import Session, RequestException
@@ -11,6 +15,7 @@ from requests import Session, RequestException
 from pg import DB
 from parsing_utilities import validate_multiple_yyyymm_range
 
+from dateutil import relativedelta
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +59,8 @@ def get_data_for_config(blip, un, pw, config):
 def insertDF(df, dbset):
     try:    
         LOGGER.info('Uploading to PostgreSQL' + ', ' + datetime.datetime.now().strftime('%H:%M:%S'))     
-        engine = create_engine(**dbset)
+        #TODO Fix this
+        engine = DB.create_engine(**dbset)
         df.to_sql('raw_data',engine, schema = 'bluetooth', if_exists = 'append', index = False)
     except:
         LOGGER.info('Server Connection Error Handler' + ', '+ datetime.datetime.now().strftime('%H:%M:%S'))
@@ -76,6 +82,12 @@ def get_wsdl_client(wsdlfile):
     config = blip.type_factory('ns0').perUserDataExportConfiguration()
     config.live = False
     config.includeOutliers = True
+    #Weird hack to prevent a bug
+    #See https://stackoverflow.com/a/46062820/4047679
+    for key in config:
+        if config[key] is None:
+            config[key] = zeep.xsd.SkipValue
+    
     return blip, config
 
 if __name__ == '__main__':
