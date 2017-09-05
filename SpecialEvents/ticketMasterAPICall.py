@@ -186,9 +186,9 @@ def update_events(db, proxies, venues):
     for i, venue in enumeratate(venues):
 
         if i % 50 == 0:
-        logger.info('Getting events for venue #%s', i+1)
-        logger.info('Venue: %s, id: %s',
-                    venue["venue_name"])
+            logger.info('Getting events for venue #%s', i+1)
+            logger.info('Venue: %s, id: %s',
+                        venue["venue_name"])
         params = {'apikey': API_KEY,
                   'venueId': venue["tm_venue_id"]}
         r = requests.get('https://app.ticketmaster.com/discovery/v2/events.json',
