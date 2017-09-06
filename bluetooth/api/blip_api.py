@@ -1,11 +1,12 @@
 import calendar
 import datetime
-import datetime.date as date
+from datetime import date 
 import time
 import logging
 import configparser
 import argparse
 import sys
+import traceback
 
 import zeep
 from zeep import Client
@@ -14,8 +15,8 @@ from requests import Session, RequestException
 
 from pg import DB
 from parsing_utilities import validate_multiple_yyyymm_range
-
 from dateutil import relativedelta
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,10 +39,6 @@ def parse_args(args, prog = None, usage = None):
                         "(default: opens %(default)s)")
     return PARSER.parse_args(args)
 
-def selectDate():
-    dateStr = str(input('Input a date [YYYY-MM-DD]: '))
-    return(datetime.datetime.strptime(dateStr, '%Y-%m-%d'))
-
 def get_data_for_config(blip, un, pw, config):
     
     try:
@@ -50,27 +47,43 @@ def get_data_for_config(blip, un, pw, config):
         LOGGER.error(err)            
         time.sleep(30)
         data = blip.service.exportPerUserData(un, pw, config) 
-    except Exception: 
-        LOGGER.error('In the error handler (SUDS error)...')            
+    except Exception as exc: 
+        LOGGER.error(exc)            
         time.sleep(15)
         data = blip.service.exportPerUserData(un, pw, config) 
     return data
 
-def insertDF(df, dbset):
-    try:    
-        LOGGER.info('Uploading to PostgreSQL' + ', ' + datetime.datetime.now().strftime('%H:%M:%S'))     
-        #TODO Fix this
-        engine = DB.create_engine(**dbset)
-        df.to_sql('raw_data',engine, schema = 'bluetooth', if_exists = 'append', index = False)
-    except:
-        LOGGER.info('Server Connection Error Handler' + ', '+ datetime.datetime.now().strftime('%H:%M:%S'))
-        time.sleep(60)                    
-        insertDF(df)
+def insert_data(data, dbset):
+    '''
+    Upload data to the database
+    
+    :param data:
+        List of dictionaries, gets converted to list of tuples
+    :param dbset:
+        DB settings passed to Pygresql to create a connection 
+    '''
+
+    LOGGER.info('Uploading to PostgreSQL')     
+    to_insert = []
+    for dic in data:
+        #convert each observation dictionary into a tuple row for inserting
+        row = (dic["userId"], dic["analysisId"], dic["measuredTime"], 
+               dic["measuredTimeNoFilter"],dic["startPointNumber"], 
+               dic["startPointName"],dic["endPointNumber"], dic["endPointName"],
+               dic["measuredTimeTimestamp"],dic["outlierLevel"], dic["cod"], 
+               dic["deviceClass"])
+        to_insert.append(row)
+    
+    db = DB(**dbset)
+    db.inserttable('bluetooth.raw_data', to_insert)
+    db.close()
+    
         
 def get_wsdl_client(wsdlfile):
     # workaround for insecure SSL certificate
     session = Session()
-    session.verify = False
+    #session.verify = False
+    session.proxies = {'https':'https://137.15.73.132:8080'}
     transport = Transport(session=session)
     try:
         blip = Client(wsdlfile, transport=transport)
@@ -90,16 +103,9 @@ def get_wsdl_client(wsdlfile):
     
     return blip, config
 
-if __name__ == '__main__':
-    
-    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
-    
-
-    ARGS = parse_args(sys.argv[1:])
-    
+def main(dbsetting = None, years = None):
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(ARGS.dbsetting)
+    CONFIG.read(dbsetting)
     dbset = CONFIG['DBSETTINGS']
     api_settings = CONFIG['API']
     
@@ -112,7 +118,7 @@ if __name__ == '__main__':
                                                      api_settings['pw'])
 
 
-    if ARGS.years is None:
+    if years is None:
         #Use today's day to determine month to process
         last_month = date.today() + relativedelta(months=-1)
         years = {last_month.year: last_month.month}
@@ -157,12 +163,16 @@ if __name__ == '__main__':
                     config.startTime = config.startTime + datetime.timedelta(hours = 5)
                 time.sleep(1)
     
-            try:
-                x = pd.DataFrame([Client.dict(item) for sublist in objectList for item in sublist])
-                x = x.rename(columns={"userId" : "user_id", "analysisId" : "analysis_id", "measuredTime" : "measured_time", "measuredTimeNoFilter" : "measured_time_no_filter", \
-                "startPointNumber" : "startpoint_number", "startPointName" : "startpoint_name", "endPointNumber" : "endpoint_number", "endPointName" : "endpoint_name", \
-                "measuredTimeTimestamp" : "measured_timestamp", "outlierLevel" : "outlier_level", "deviceClass" : "device_class"})
-                x.measured_timestamp = pd.to_datetime(x.measured_timestamp, infer_datetime_format=True, format='%m/%d/%Y  %H:%M:%S %p')
-                insertDF(x, dbset)
-            except:
-                LOGGER.error('FAILED: ' + str(allAnalyses[j].reportName) + ' y: ' + str(year) + ' m: ' + str(month))
+            insert_data(objectList, dbset)
+            
+if __name__ == '__main__':
+    
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    
+    args = parse_args(sys.argv[1:])
+    
+    try:
+        main(**vars(args))
+    except Exception as exc:
+        LOGGER.critical(traceback.format_exc())
