@@ -7,15 +7,20 @@ import configparser
 import argparse
 import sys
 import traceback
+from itertools import product
 
 import zeep
 from zeep import Client
 from zeep.transports import Transport
 from requests import Session, RequestException
+#Suppress HTTPS Warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 from pg import DB
 from parsing_utilities import validate_multiple_yyyymm_range
-from dateutil import relativedelta
+from dateutil.relativedelta import relativedelta
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,7 +39,7 @@ def parse_args(args, prog = None, usage = None):
                                  "previous month",
                                  metavar=('YYYYMM', 'YYYYMM'))
     PARSER.add_argument("-d", "--dbsetting",
-                        default='default.cfg',
+                        default='config.cfg',
                         help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
     return PARSER.parse_args(args)
@@ -44,11 +49,13 @@ def get_data_for_config(blip, un, pw, config):
     try:
         data = blip.service.exportPerUserData(un, pw, config) 
     except RequestException as err: 
-        LOGGER.error(err)            
+        LOGGER.error(err)
+        LOGGER.error(config)            
         time.sleep(30)
         data = blip.service.exportPerUserData(un, pw, config) 
     except Exception as exc: 
-        LOGGER.error(exc)            
+        LOGGER.error(exc)
+        LOGGER.error(config)            
         time.sleep(15)
         data = blip.service.exportPerUserData(un, pw, config) 
     return data
@@ -82,8 +89,8 @@ def insert_data(data, dbset):
 def get_wsdl_client(wsdlfile):
     # workaround for insecure SSL certificate
     session = Session()
-    #session.verify = False
-    session.proxies = {'https':'https://137.15.73.132:8080'}
+    session.verify = False
+    #session.proxies = {'https':'https://137.15.73.132:8080'}
     transport = Transport(session=session)
     try:
         blip = Client(wsdlfile, transport=transport)
@@ -121,7 +128,7 @@ def main(dbsetting = None, years = None):
     if years is None:
         #Use today's day to determine month to process
         last_month = date.today() + relativedelta(months=-1)
-        years = {last_month.year: last_month.month}
+        years = {last_month.year: [last_month.month]}
 
     else:
         #Process and test whether the provided yyyymm is accurate
@@ -130,7 +137,7 @@ def main(dbsetting = None, years = None):
     
     
     for year in years:
-        for j, month in zip(ALL_IND, years[year]):
+        for j, month in product(ALL_IND, years[year]):
             ndays = calendar.monthrange(year, month)[1]
             # ndays = 10
             LOGGER.info('Reading from: ' + str(allAnalyses[j].reportName) + ' y: ' + str(year) + ' m: ' + str(month))
@@ -138,19 +145,20 @@ def main(dbsetting = None, years = None):
             config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
     
             days = list(range(ndays))
-            ks = [0, 1, 2, 3, 4]
+            ks = [0, 1, 2, 3]
             
             objectList = []
             
-            for i, k in zip(days, ks):               
+            for i, k in product(days, ks):               
                 if k == 0:                        
                     config.endTime = config.startTime + datetime.timedelta(hours = 8)
                 elif k == 1:
                     config.endTime = config.startTime + datetime.timedelta(hours = 6)
                 elif k == 2 or k == 3:
                     config.endTime = config.startTime + datetime.timedelta(hours = 5)
-    
-                objectList.append(get_data_for_config(blip,
+                    
+                
+                objectList.extend(get_data_for_config(blip,
                                                       api_settings['un'],
                                                       api_settings['pw'],
                                                       config))
