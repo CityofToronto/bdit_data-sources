@@ -1,3 +1,4 @@
+import os
 import calendar
 import datetime
 from datetime import date 
@@ -42,6 +43,10 @@ def parse_args(args, prog = None, usage = None):
                         default='config.cfg',
                         help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
+    PARSER.add_argument("--direct",
+                        action='store_true',
+                        help="Use DIRECT proxy if using from workstation")
+    
     return PARSER.parse_args(args)
 
 def get_data_for_config(blip, un, pw, config):
@@ -86,11 +91,14 @@ def insert_data(data, dbset):
     db.close()
     
         
-def get_wsdl_client(wsdlfile):
+def get_wsdl_client(wsdlfile, direct = None):
     # workaround for insecure SSL certificate
     session = Session()
     session.verify = False
-    #session.proxies = {'https':'https://137.15.73.132:8080'}
+    if direct is True:
+        session.proxies = {'https':'',
+                           'http': ''}
+        os.environ['HTTPS_PROXY']=''
     transport = Transport(session=session)
     try:
         blip = Client(wsdlfile, transport=transport)
@@ -107,10 +115,9 @@ def get_wsdl_client(wsdlfile):
     for key in config:
         if config[key] is None:
             config[key] = zeep.xsd.SkipValue
-    
     return blip, config
 
-def main(dbsetting = None, years = None):
+def main(dbsetting = None, years = None, direct = None):
     CONFIG = configparser.ConfigParser()
     CONFIG.read(dbsetting)
     dbset = CONFIG['DBSETTINGS']
@@ -118,7 +125,7 @@ def main(dbsetting = None, years = None):
     
     # Access the API using zeep 
     LOGGER.info('Going in!')
-    blip, config = get_wsdl_client(api_settings['WSDLfile'])
+    blip, config = get_wsdl_client(api_settings['WSDLfile'], direct)
 
     # list of all route segments
     allAnalyses = blip.service.getExportableAnalyses(api_settings['un'],
@@ -132,7 +139,7 @@ def main(dbsetting = None, years = None):
 
     else:
         #Process and test whether the provided yyyymm is accurate
-        years = validate_multiple_yyyymm_range(ARGS.years, 'month')
+        years = validate_multiple_yyyymm_range(years, 'month')
 
     
     
