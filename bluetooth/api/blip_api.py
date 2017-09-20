@@ -117,6 +117,25 @@ def get_wsdl_client(wsdlfile, direct = None):
             config[key] = zeep.xsd.SkipValue
     return blip, config
 
+
+#untested, had to hack because lists weren't working
+def upload_analyses(all_analyses, dbset):
+    db = DB.db(**dbset)
+    for report in all_analyses:
+        report.outcomes = [db.encode_json(outcome.__json__()) for outcome in report.outcomes]
+        report.routePoints = [db.encode_json(route_point.__json__()) for route_point in report.routePoints]
+        row = dict(device_class_set_name = report.deviceClassSetName,
+                   id = report.id,
+                   minimum_point_completed = db.encode_json(report.minimumPointCompleted.__json__()),
+                   outcomes = report.outcomes, 
+                   report_id = report.reportId, 
+                   report_name = report.reportName,
+                   route_id = report.routeId,
+                   route_name = report.routeName,
+                   route_points = report.routePoints)
+        db.upsert('bluetooth.all_analyses', row)
+
+
 def main(dbsetting = None, years = None, direct = None):
     CONFIG = configparser.ConfigParser()
     CONFIG.read(dbsetting)
@@ -179,6 +198,7 @@ def main(dbsetting = None, years = None, direct = None):
                 time.sleep(1)
     
             insert_data(objectList, dbset)
+    LOGGER.info('Processing Complete.')
             
 if __name__ == '__main__':
     
