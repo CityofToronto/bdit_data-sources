@@ -16,6 +16,7 @@ from zeep.transports import Transport
 from requests import Session, RequestException
 #Suppress HTTPS Warnings
 import urllib3
+from _sqlite3 import Row
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -120,10 +121,13 @@ def get_wsdl_client(wsdlfile, direct = None):
 
 #untested, had to hack because lists weren't working
 def upload_analyses(all_analyses, dbset):
-    db = DB.db(**dbset)
+    db = DB(**dbset)
+    existing_analyses = db.get_as_dict('bluetooth.all_analyses')
+    insert_num = 0
+    updated_num= 0 
     for report in all_analyses:
-        report.outcomes = [db.encode_json(outcome.__json__()) for outcome in report.outcomes]
-        report.routePoints = [db.encode_json(route_point.__json__()) for route_point in report.routePoints]
+        report.outcomes = [outcome.__json__() for outcome in report.outcomes]
+        report.routePoints = [route_point.__json__() for route_point in report.routePoints]
         row = dict(device_class_set_name = report.deviceClassSetName,
                    id = report.id,
                    minimum_point_completed = db.encode_json(report.minimumPointCompleted.__json__()),
@@ -134,6 +138,16 @@ def upload_analyses(all_analyses, dbset):
                    route_name = report.routeName,
                    route_points = report.routePoints)
         db.upsert('bluetooth.all_analyses', row)
+        if existing_analyses.get(row.id, None) is None:
+            insert_num += insert_num
+        elif False:
+            updated_num += updated_num
+        
+    if insert_num > 0:
+        LOGGER.info('%s new report configurations uploaded', insert_num)
+    if updated_num > 0:
+        LOGGER.info('%s new report configurations uploaded', insert_num)
+    db.close()
 
 
 def main(dbsetting = None, years = None, direct = None):
