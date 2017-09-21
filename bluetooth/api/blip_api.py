@@ -16,7 +16,6 @@ from zeep.transports import Transport
 from requests import Session, RequestException
 #Suppress HTTPS Warnings
 import urllib3
-from _sqlite3 import Row
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -27,9 +26,6 @@ from dateutil.relativedelta import relativedelta
 
 LOGGER = logging.getLogger(__name__)
 
-ALL_IND = [0,1,4,6,7,8,9,10,11,12,13,14,15,16,58,59,60,61,70,71,74,75,76,77,78,79,80,81,82,83,84,85,86,87,95,96,97,98,99,149,150,151,181,182,183]
-ALL_IND.extend(list(range(102,131)))
-
 def parse_args(args, prog = None, usage = None):
     '''Parser for the command line arguments'''
     PARSER = argparse.ArgumentParser(description='Pull data from blip API and '
@@ -38,7 +34,7 @@ def parse_args(args, prog = None, usage = None):
     PARSER.add_argument("-y", "--years", nargs=2, action='append',
                                  help="Range of months (YYYYMM) to operate over "
                                  "from startdate to enddate, else defaults to "
-                                 "previous month",
+                                 "previous day. ",
                                  metavar=('YYYYMM', 'YYYYMM'))
     PARSER.add_argument("-d", "--dbsetting",
                         default='config.cfg',
@@ -119,10 +115,19 @@ def get_wsdl_client(wsdlfile, direct = None):
     return blip, config
 
 
-#untested, had to hack because lists weren't working
-def upload_analyses(all_analyses, dbset):
+def update_configs(all_analyses, dbset):
+    '''
+    Syncs configs from blip server with database and returns configs to pull 
+    data from. 
+    :param all_analyses:
+        List of blip configurations
+    :param dbset:
+        Dictionary to connect to PostgreSQL database
+    '''
+    
     db = DB(**dbset)
     existing_analyses = db.get_as_dict('bluetooth.all_analyses')
+    analyses_pull_data = {}
     insert_num = 0
     updated_num= 0 
     for report in all_analyses:
@@ -137,20 +142,28 @@ def upload_analyses(all_analyses, dbset):
                    route_id = report.routeId,
                    route_name = report.routeName,
                    route_points = report.routePoints)
-        db.upsert('bluetooth.all_analyses', row)
-        if existing_analyses.get(row.id, None) is None:
+        upserted = db.upsert('bluetooth.all_analyses', row, pull_data='included.pull_data')
+        existing_row = existing_analyses.get(upserted['id'], None)
+        if existing_row is None:
             insert_num += insert_num
-        elif False:
+        elif dict(existing_row._asdict(), id=upserted['id']) != upserted:
             updated_num += updated_num
+        analyses_pull_data[upserted['id']] = {'pull_data': upserted['pull_data'],
+                                        'report_name' : upserted['report_name']}
         
     if insert_num > 0:
         LOGGER.info('%s new report configurations uploaded', insert_num)
     if updated_num > 0:
         LOGGER.info('%s new report configurations uploaded', insert_num)
+            
     db.close()
+    
+    analyses_to_pull = {analysis_id:analysis for (analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data'] == True}
+    return analyses_to_pull
 
 
 def main(dbsetting = None, years = None, direct = None):
+    from jedi.evaluate import analysis
     CONFIG = configparser.ConfigParser()
     CONFIG.read(dbsetting)
     dbset = CONFIG['DBSETTINGS']
@@ -163,12 +176,15 @@ def main(dbsetting = None, years = None, direct = None):
     # list of all route segments
     allAnalyses = blip.service.getExportableAnalyses(api_settings['un'],
                                                      api_settings['pw'])
-
+    
+    routes_to_pull = update_configs(allAnalyses, dbset)
+    
+    date_to_process = None
 
     if years is None:
         #Use today's day to determine month to process
-        last_month = date.today() + relativedelta(months=-1)
-        years = {last_month.year: [last_month.month]}
+        date_to_process = date.today() + relativedelta(days=-1)
+        years = {date_to_process.year: [date_to_process.month]}
 
     else:
         #Process and test whether the provided yyyymm is accurate
@@ -177,12 +193,24 @@ def main(dbsetting = None, years = None, direct = None):
     
     
     for year in years:
-        for j, month in product(ALL_IND, years[year]):
-            ndays = calendar.monthrange(year, month)[1]
-            # ndays = 10
-            LOGGER.info('Reading from: ' + str(allAnalyses[j].reportName) + ' y: ' + str(year) + ' m: ' + str(month))
-            config.analysisId = allAnalyses[j].id
-            config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
+        for (analysis_id, analysis), month in product(routes_to_pull.items(), years[year]):
+            if date_to_process is None:
+                ndays = calendar.monthrange(year, month)[1]
+                # ndays = 10
+                LOGGER.info('Reading from: %s y: %s m: %s ', 
+                            analysis['report_name'],
+                            str(year),
+                            str(month))
+                config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
+            else:
+                ndays=1
+                config.startTime = datetime.datetime.combine(date_to_process,
+                                                             datetime.datetime.min.time())
+                LOGGER.info('Reading from: %s for %s ', 
+                            analysis['report_name'],
+                            date_to_process.strftime('%Y-%m-%d'))
+                
+            config.analysisId = analysis_id
     
             days = list(range(ndays))
             ks = [0, 1, 2, 3]
