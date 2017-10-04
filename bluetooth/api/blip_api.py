@@ -163,7 +163,6 @@ def update_configs(all_analyses, dbset):
 
 
 def main(dbsetting = None, years = None, direct = None):
-    from jedi.evaluate import analysis
     CONFIG = configparser.ConfigParser()
     CONFIG.read(dbsetting)
     dbset = CONFIG['DBSETTINGS']
