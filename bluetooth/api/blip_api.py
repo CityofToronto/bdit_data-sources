@@ -1,41 +1,40 @@
-import os
-import calendar
-import datetime
-from datetime import date 
-import time
-import logging
-import configparser
 import argparse
+import calendar
+import configparser
+import datetime
+import logging
+import os
 import sys
+import time
 import traceback
+from datetime import date
 from itertools import product
 
 import zeep
+from dateutil.relativedelta import relativedelta
+from requests import RequestException, Session
 from zeep import Client
 from zeep.transports import Transport
-from requests import Session, RequestException
+
 #Suppress HTTPS Warnings
 import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
+from parsing_utilities import validate_multiple_yyyymmdd_range
 from pg import DB
-from parsing_utilities import validate_multiple_yyyymm_range
-from dateutil.relativedelta import relativedelta
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 LOGGER = logging.getLogger(__name__)
 
-def parse_args(args, prog = None, usage = None):
+def parse_args(args, prog=None, usage=None):
     '''Parser for the command line arguments'''
     PARSER = argparse.ArgumentParser(description='Pull data from blip API and '
                                                  'send to database',
                                      prog=prog, usage=usage)
     PARSER.add_argument("-y", "--years", nargs=2, action='append',
-                                 help="Range of months (YYYYMM) to operate over "
-                                 "from startdate to enddate, else defaults to "
-                                 "previous day. ",
-                                 metavar=('YYYYMM', 'YYYYMM'))
+                        help="Range of dates (YYYYMMDD) to operate over "
+                        "from startdate to enddate, else defaults to "
+                        "previous day. ",
+                        metavar=('YYYYMMDD', 'YYYYMMDD'))
     PARSER.add_argument("-d", "--dbsetting",
                         default='config.cfg',
                         help="Filename with connection settings to the database "
@@ -77,9 +76,9 @@ def insert_data(data, dbset):
     for dic in data:
         #convert each observation dictionary into a tuple row for inserting
         row = (dic["userId"], dic["analysisId"], dic["measuredTime"], 
-               dic["measuredTimeNoFilter"],dic["startPointNumber"], 
-               dic["startPointName"],dic["endPointNumber"], dic["endPointName"],
-               dic["measuredTimeTimestamp"],dic["outlierLevel"], dic["cod"], 
+               dic["measuredTimeNoFilter"], dic["startPointNumber"], 
+               dic["startPointName"], dic["endPointNumber"], dic["endPointName"],
+               dic["measuredTimeTimestamp"], dic["outlierLevel"], dic["cod"], 
                dic["deviceClass"])
         to_insert.append(row)
     
@@ -88,14 +87,14 @@ def insert_data(data, dbset):
     db.close()
     
         
-def get_wsdl_client(wsdlfile, direct = None):
+def get_wsdl_client(wsdlfile, direct=None):
     # workaround for insecure SSL certificate
     session = Session()
     session.verify = False
     if direct is True:
         session.proxies = {'https':'',
                            'http': ''}
-        os.environ['HTTPS_PROXY']=''
+        os.environ['HTTPS_PROXY'] = ''
     transport = Transport(session=session)
     try:
         blip = Client(wsdlfile, transport=transport)
@@ -169,13 +168,13 @@ def main(dbsetting = None, years = None, direct = None):
     api_settings = CONFIG['API']
     
     # Access the API using zeep 
-    LOGGER.info('Going in!')
+    LOGGER.info('Fetching config from blip server')
     blip, config = get_wsdl_client(api_settings['WSDLfile'], direct)
 
     # list of all route segments
     allAnalyses = blip.service.getExportableAnalyses(api_settings['un'],
                                                      api_settings['pw'])
-    
+    LOGGER.info('Updating route configs')
     routes_to_pull = update_configs(allAnalyses, dbset)
     
     date_to_process = None
@@ -187,22 +186,23 @@ def main(dbsetting = None, years = None, direct = None):
 
     else:
         #Process and test whether the provided yyyymm is accurate
-        years = validate_multiple_yyyymm_range(years, 'month')
+        years = validate_multiple_yyyymmdd_range(years)
 
     
     
     for year in years:
         for (analysis_id, analysis), month in product(routes_to_pull.items(), years[year]):
             if date_to_process is None:
-                ndays = calendar.monthrange(year, month)[1]
-                # ndays = 10
-                LOGGER.info('Reading from: %s y: %s m: %s ', 
+                days = list(years[year][month])
+                LOGGER.info('Reading from: %s y: %s m: %s days: %s-%s', 
                             analysis['report_name'],
                             str(year),
-                            str(month))
+                            str(month),
+                            str(days[0]),
+                            str(days[-1]))
                 config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
             else:
-                ndays=1
+                days=[1]
                 config.startTime = datetime.datetime.combine(date_to_process,
                                                              datetime.datetime.min.time())
                 LOGGER.info('Reading from: %s for %s ', 
@@ -210,8 +210,7 @@ def main(dbsetting = None, years = None, direct = None):
                             date_to_process.strftime('%Y-%m-%d'))
                 
             config.analysisId = analysis_id
-    
-            days = list(range(ndays))
+
             ks = [0, 1, 2, 3]
             
             objectList = []
@@ -247,7 +246,12 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     
     args = parse_args(sys.argv[1:])
-    
+    if args.years is None:
+        date_to_process = date.today() + relativedelta(days=-1)
+        LOGGER.info('Pulling data from %s', date_to_process)
+    else:
+        LOGGER.info('Pulling data from %s to %s',
+                    args.years[0][0], args.years[-1][-1])
     try:
         main(**vars(args))
     except Exception as exc:
