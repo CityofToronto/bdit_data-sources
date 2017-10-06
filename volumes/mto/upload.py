@@ -140,11 +140,6 @@ class MTOVolumeScraper( object ):
         :param month:
         '''
         
-        if month < 10:
-            month = '0' + str(month)
-        else:
-            month = str(month)
-        
         table_name_id = pgsql.Identifier('mto_agg_30_' + str(year) + month)
         schema_name = pgsql.Identifier('mto')
         table_name_str = pgsql.Literal(str(year) + month)
@@ -197,12 +192,17 @@ def main(yyyymm = None, **kwargs):
     else:
         #Process and test whether the provided yyyymm is accurate
         regex_yyyymm = re.compile(r'20\d\d(0[1-9]|1[0-2])')
-        if fullmatch(regex_yyyymm.pattern, yyyymm):
+        if re.fullmatch(regex_yyyymm.pattern, yyyymm):
             year = int(yyyymm[:4])
             month = int(yyyymm[-2:])
         else:
             raise ValueError('{yyyymm} is not a valid year-month value of format YYYYMM'
                              .format(yyyymm=yyyymm))
+
+    if month < 10:
+        month = '0' + str(month)
+    else:
+        month = str(month)
 
     mto_scraper.get_and_process_data(year, month).upload_data(year, month)
 
