@@ -25,7 +25,6 @@ from requests import RequestException, Session
 
 import urllib3
 from parsing_utilities import validate_multiple_yyyymmdd_range
-from email_notifications import send_email
 from pg import DB
 
 # Suppress HTTPS Warnings
@@ -153,11 +152,12 @@ def update_configs(all_analyses, dbset):
     '''
 
     db = DB(**dbset)
-    existing_analyses = db.get_as_dict('bluetooth.all_analyses')
+    db.begin()
+    db.query('''TRUNCATE bluetooth.all_analyses_day_old;
+    INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;
+    TRUNCATE bluetooth.all_analyses;''')
+    db.commit()
     analyses_pull_data = {}
-    insert_num = 0
-    updated_num = 0
-    upserted_analyses = []
     for report in all_analyses:
         report.outcomes = [outcome.__json__() for outcome in report.outcomes]
         report.routePoints = [route_point.__json__()
@@ -174,53 +174,14 @@ def update_configs(all_analyses, dbset):
                    route_points=report.routePoints)
         upserted = db.upsert('bluetooth.all_analyses', row,
                              pull_data='included.pull_data')
-        existing_row = existing_analyses.get(upserted['id'], None)
-        if existing_row is None:
-            insert_num += insert_num
-            upserted_analyses.append(
-                (report.id, report.reportName, report.routeName))
-        elif dict(existing_row._asdict(), id=upserted['id']) != upserted:
-            updated_num += updated_num
-            upserted_analyses.append(
-                (report.id, report.reportName, report.routeName))
         analyses_pull_data[upserted['id']] = {'pull_data': upserted['pull_data'],
                                               'report_name': upserted['report_name']}
-
-    if insert_num > 0:
-        LOGGER.info('%s new report configurations uploaded', insert_num)
-    if updated_num > 0:
-        LOGGER.info('%s new report configurations uploaded', insert_num)
 
     db.close()
 
     analyses_to_pull = {analysis_id: analysis for (
         analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
-    return analyses_to_pull, upserted_analyses
-
-
-def email_upserted_analyses(subject: str, to: str, upserted_analyses: list):
-    """
-    Email updated or new analysis configurations
-        :param subject: 
-            Email subject line
-        :param to: 
-            String of addresses to send to
-        :param upserted_analyses: 
-            A list containg tuples of (report.id, report.reportName, report.routeName)
-    """
-
-    message = ''
-    for analysis in upserted_analyses:
-        message += 'Route id: {route_id}, '\
-                   'Report Name: {report_name}, '\
-                   'Route Name: {route_name}'.format(route_id=analysis[0],
-                                                     report_name=analysis[1],
-                                                     route_name=analysis[2])
-        message += "\n"
-    sender = "Blip API Script"
-
-    send_email(to, sender, subject, message)
-
+    return analyses_to_pull
 
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
@@ -240,7 +201,6 @@ def main(dbsetting: 'path/to/config.cfg' = None,
     config.read(dbsetting)
     dbset = config['DBSETTINGS']
     api_settings = config['API']
-    email_settings = config['EMAIL']
 
     # Access the API using zeep
     LOGGER.info('Fetching config from blip server')
@@ -250,12 +210,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
     all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
                                                       api_settings['pw'])
     LOGGER.info('Updating route configs')
-    routes_to_pull, upserted_analyses = update_configs(all_analyses, dbset)
-
-    if len(upserted_analyses) > 0:
-        email_upserted_analyses(email_settings['subject'],
-                                email_settings['to'],
-                                upserted_analyses)
+    routes_to_pull = update_configs(all_analyses, dbset)
 
     date_to_process = None
 
