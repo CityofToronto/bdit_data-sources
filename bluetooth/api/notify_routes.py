@@ -6,7 +6,11 @@ import configparser
 
 from psycopg2 import connect
 
-from email_notifications import send_email
+try:
+    from email_notifications import send_email
+except (ImportError, ImportWarning) as err:
+    pass
+
 
 def email_updates(subject: str, to: str, updates: list):
     """
