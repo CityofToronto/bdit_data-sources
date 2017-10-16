@@ -6,7 +6,7 @@ import configparser
 
 from psycopg2 import connect
 
-from email_notifications import send_email
+from email_notifications import send_mail
 
 def email_updates(subject: str, to: str, updates: list):
     """
@@ -29,7 +29,7 @@ def email_updates(subject: str, to: str, updates: list):
         message += "\n"
     sender = "Blip API Script"
 
-    send_email(to, sender, subject, message)
+    send_mail(to, sender, subject, message)
 
 def load_diff(dbsettings):
     con = connect(**dbsettings)
