@@ -57,8 +57,8 @@ def main():
     dbset, email_settings = load_config()
 
     updated_rows = load_diff(dbset)
-
-    email_updates(email_settings['subject'], email_settings['to'], updated_rows)
+    if len(updated_rows) > 0:
+        email_updates(email_settings['subject'], email_settings['to'], updated_rows)
 
 if __name__ == '__main__':
     main()
