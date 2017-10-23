@@ -154,8 +154,7 @@ def update_configs(all_analyses, dbset):
     db = DB(**dbset)
     db.begin()
     db.query('''TRUNCATE bluetooth.all_analyses_day_old;
-    INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;
-    TRUNCATE bluetooth.all_analyses;''')
+    INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;''')
     db.commit()
     analyses_pull_data = {}
     for report in all_analyses:
