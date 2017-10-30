@@ -90,8 +90,13 @@ def insert_data(data: list, dbset: dict):
     :param dbset:
         DB settings passed to Pygresql to create a connection 
     '''
-
-    LOGGER.info('Uploading to PostgreSQL')
+    num_rows = len(data)
+    if num_rows > 0:
+        LOGGER.info('Uploading %s rows to PostgreSQL', len(data))
+        LOGGER.debug(data[0])
+    else:
+        LOGGER.warning('No data to upload')
+        return 
     to_insert = []
     for dic in data:
         # convert each observation dictionary into a tuple row for inserting
@@ -232,7 +237,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                             str(month),
                             str(days[0]),
                             str(days[-1]))
-                config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
+                config.startTime = datetime.datetime(year, month, days[0], 0, 0, 0)
             else:
                 days = [1]
                 config.startTime = datetime.datetime.combine(date_to_process,
@@ -273,8 +278,15 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                     config.startTime = config.startTime + \
                         datetime.timedelta(hours=5)
                 time.sleep(1)
+            try:
+                insert_data(objectList, dbset)
+            except OSError as ose:
+                LOGGER.error('Inserting data failed')
+                LOGGER.error(ose.msg)
+            except ValueError as valu:
+                LOGGER.error('Unsupported Value in insert')
+                LOGGER.error(valu.msg)
 
-            insert_data(objectList, dbset)
     LOGGER.info('Processing Complete.')
 
 
