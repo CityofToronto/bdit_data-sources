@@ -167,7 +167,7 @@ def update_configs(all_analyses, dbset):
         report.routePoints = [route_point.__json__()
                               for route_point in report.routePoints]
         row = dict(device_class_set_name=report.deviceClassSetName,
-                   id=report.id,
+                   analysis_id=report.id,
                    minimum_point_completed=db.encode_json(
                        report.minimumPointCompleted.__json__()),
                    outcomes=report.outcomes,
@@ -178,8 +178,8 @@ def update_configs(all_analyses, dbset):
                    route_points=report.routePoints)
         upserted = db.upsert('bluetooth.all_analyses', row,
                              pull_data='included.pull_data')
-        analyses_pull_data[upserted['id']] = {'pull_data': upserted['pull_data'],
-                                              'report_name': upserted['report_name']}
+        analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
+                                                       'report_name': upserted['report_name']}
 
     db.close()
 
