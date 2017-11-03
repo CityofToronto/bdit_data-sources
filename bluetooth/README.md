@@ -148,11 +148,11 @@ Each record is a dictionary, which follows the structure and format as seen in t
 |measuredTime|integer|Duration (seconds) between when the device was first seen and last seen|
 |measuredTimeNoFilter|integer| |
 |startPointNumber|smallint| |
-|startPointName|character varying(8)| |
+|startPointName|string| |
 |endPointNumber|smallint| |
-|endPointName|character varying(8)| |
-|measuredTimestamp|timestamp without time zone|timestamp of when the device was last detected|
-|routeStartTimestamp|text|None|
+|endPointName|string| |
+|measuredTimestamp|timestamp string|timestamp of when the device was last detected|
+|routeStartTimestamp|string|None|
 |outlierLevel|smallint| |
 |cod|bigint| integer representation of Bluetooth class |
 |deviceClass|numeric|stores bit representation of sensors that the device passed|
@@ -171,10 +171,10 @@ To get the gate values from the `deviceClass` value:
 2. Reverse the order of the bits
 3. Iterate through the bitstring to find the positions of the set bits
 4. Take the position of each set bit `p` and calculate the gate value `g`
-	- `g = 2^p`
+	* `g = 2^p`
 
 #### For the Start-End Data:
-`deviceClass` is expected to return 2 values: the first value being the start gate, and the second value being the end gate. If there is a third value, it means that the device was detected at only one sensor; the expected two values will point to the same sensor but with different numbers, and the third value will be `324518553658426726783156020576256`, representing `OneSensorOnly`.
+`deviceClass` is expected to return 2 values, but can return up to 3: the first value being the start gate, and the second value being the end gate. If there is a third value, it means that the device was detected at only one sensor; the expected two values will point to the same sensor but with different numbers, and the third value will be `324518553658426726783156020576256`, representing `OneSensorOnly`.
 
 #### For the Others Data:
 `deviceClass` is expected to return at least 2 values, with the last value always representing if the device was `HandsFree` or `Non-HandsFree`. The other values it returns are the gates that the device was seen at, in the order of the lookup list. With OD Data alone we cannot tell the order of gates a device is seen by. 
