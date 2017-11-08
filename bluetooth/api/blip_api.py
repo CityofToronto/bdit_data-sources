@@ -26,6 +26,7 @@ from requests import RequestException, Session
 import urllib3
 from parsing_utilities import validate_multiple_yyyymmdd_range
 from pg import DB
+from pg import IntegrityError
 
 # Suppress HTTPS Warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -176,10 +177,14 @@ def update_configs(all_analyses, dbset):
                    route_id=report.routeId,
                    route_name=report.routeName,
                    route_points=report.routePoints)
-        upserted = db.upsert('bluetooth.all_analyses', row,
-                             pull_data='included.pull_data')
-        analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
-                                                       'report_name': upserted['report_name']}
+        #If upsert fails, log error and continue, don't add analysis to analyses to pull
+        try:
+            upserted = db.upsert('bluetooth.all_analyses', row,
+                                 pull_data='included.pull_data')
+            analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
+                                                           'report_name': upserted['report_name']}
+        except IntegrityError as err:
+            LOGGER.error(err)
 
     db.close()
 
