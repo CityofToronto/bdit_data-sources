@@ -10,6 +10,6 @@ SELECT
 
 
 	FROM bluetooth.observations OBS
-	WHERE OBS.outlier_level = 0
+	WHERE OBS.outlier_level = 0 AND device_class = 1
 	GROUP BY OBS.analysis_id, (floor((extract('epoch' from OBS.measured_timestamp)-1) / 300) * 300)
 	ORDER BY OBS.analysis_id, (floor((extract('epoch' from OBS.measured_timestamp)-1) / 300) * 300);
