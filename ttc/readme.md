@@ -1,4 +1,6 @@
-# Incoming Data Structure
+# TTC Data
+## Incoming Data Structure
+Incoming data is stored in the `avl` table of the `ttc` schema.
 
 | Column                              | Type/Format                                     | Description/Format                                                                  | 
 |-------------------------------------|--------------------------------|-------------------------------------------------------------------------------------| 
@@ -25,3 +27,19 @@
 | Lead_Latitude                       | numeric                        | ToStop; Latitude to 6 decimal points                                                | 
 | Lead_Longitude                      | numeric                        | ToStop; Longitude to 6 decimal points                                               | 
 | Lead_PointStop_Key                  | integer                        | ToStop; Identifier for lookup to PointStop table                                    | 
+
+## TTC to Bluetooth Lookup Table
+Using `route_id` stored in table `ttc_routes`, `segment_id` stored in table `ttc_segments`, and the connection and order provided by table `ttc_route_segments`, a lookup table was created so that TTC segments could be aggregated into matching Bluetooth segments.
+
+### Lookup Table Structure
+|Column|Type|Description|
+|------|----|-----------|
+|bdit_id|serial|unique id|
+|bt_id|integer|Bluetooth id derived from report name|
+|bt_id_name|text|report name of Bluetooth segment, from all_analyses|
+|segment_id|integer|TTC segment id|
+|f_id|integer|from stop id|
+|f_stopname|text|from stop name|
+|t_id|integer|to stop id|
+|t_stopname|text|to stop name|
+
