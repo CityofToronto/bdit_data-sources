@@ -137,7 +137,7 @@ def get_wsdl_client(wsdlfile, direct=None):
         blip = Client(wsdlfile, transport=transport)
     # Create a config object
     config = blip.type_factory('ns0').perUserDataExportConfiguration()
-    config.live = True
+    config.live = False
     config.includeOutliers = True
     # Weird hack to prevent a bug
     # See https://stackoverflow.com/a/46062820/4047679
