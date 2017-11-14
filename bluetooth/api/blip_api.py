@@ -51,6 +51,9 @@ def parse_args(args, prog=None, usage=None):
     parser.add_argument("--direct",
                         action='store_true',
                         help="Use DIRECT proxy if using from workstation")
+    parser.add_argument("--live",
+                        action='store_true',
+                        help="Pull most recent clock hour of live data")
 
     return parser.parse_args(args)
 
@@ -82,7 +85,7 @@ def get_data_for_config(blip, un: str, pw: str, config):
     return data
 
 
-def insert_data(data: list, dbset: dict):
+def insert_data(data: list, dbset: dict, live: bool):
     '''
     Upload data to the database
 
@@ -109,11 +112,14 @@ def insert_data(data: list, dbset: dict):
         to_insert.append(row)
 
     db = DB(**dbset)
-    db.inserttable('bluetooth.raw_data', to_insert)
+    if live:
+        db.inserttable('king_pilot.daily_raw_bt', to_insert)
+    else:
+        db.inserttable('bluetooth.raw_data', to_insert)
     db.close()
 
 
-def get_wsdl_client(wsdlfile, direct=None):
+def get_wsdl_client(wsdlfile, direct=None, live=False):
     """
     Create a zeep Client from the WSDL Url provided
         :param wsdlfile: 
@@ -137,7 +143,7 @@ def get_wsdl_client(wsdlfile, direct=None):
         blip = Client(wsdlfile, transport=transport)
     # Create a config object
     config = blip.type_factory('ns0').perUserDataExportConfiguration()
-    config.live = False
+    config.live = live
     config.includeOutliers = True
     # Weird hack to prevent a bug
     # See https://stackoverflow.com/a/46062820/4047679
@@ -194,7 +200,8 @@ def update_configs(all_analyses, dbset):
 
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
-         direct: bool = None):
+         direct: bool = None,
+         live: bool = False):
     """
     Main method. Connect to blip WSDL Client, update analysis configurations,
     then pull data for specified dates
@@ -213,21 +220,28 @@ def main(dbsetting: 'path/to/config.cfg' = None,
 
     # Access the API using zeep
     LOGGER.info('Fetching config from blip server')
-    blip, config = get_wsdl_client(api_settings['WSDLfile'], direct)
+    blip, config = get_wsdl_client(api_settings['WSDLfile'], direct, live)
 
-    # list of all route segments
-    all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
-                                                      api_settings['pw'])
-    LOGGER.info('Updating route configs')
-    routes_to_pull = update_configs(all_analyses, dbset)
+    if live:
+        db = DB(**dbset)
+        query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
+        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+    else:
+        # list of all route segments
+        all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
+                                                          api_settings['pw'])
+        LOGGER.info('Updating route configs')
+        routes_to_pull = update_configs(all_analyses, dbset)
 
-    date_to_process = None
+        date_to_process = None
 
-    if years is None:
+    if years is None and live:
+        date_to_process = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        years = {date_to_process.year: [date_to_process.month]}
+    elif years is None:
         # Use today's day to determine month to process
         date_to_process = date.today() + relativedelta(days=-1)
         years = {date_to_process.year: [date_to_process.month]}
-
     else:
         # Process and test whether the provided yyyymm is accurate
         years = validate_multiple_yyyymmdd_range(years)
@@ -243,8 +257,15 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                             str(days[0]),
                             str(days[-1]))
                 config.startTime = datetime.datetime(year, month, days[0], 0, 0, 0)
+            elif live:
+                LOGGER.info('Reading from: %s at %s ',
+                            analysis['report_name'],
+                            date_to_process.strftime('%Y-%m-%d %H:00'))
+                config.startTime = date_to_process + relativedelta(hours=-1)
+                config.endTime = date_to_process
             else:
-                days = [1]
+                days = [date_to_process]
+
                 config.startTime = datetime.datetime.combine(date_to_process,
                                                              datetime.datetime.min.time())
                 LOGGER.info('Reading from: %s for %s ',
@@ -252,39 +273,42 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                             date_to_process.strftime('%Y-%m-%d'))
 
             config.analysisId = analysis_id
-
-            ks = [0, 1, 2, 3]
-
             objectList = []
-
-            for i, k in product(days, ks):
-                if k == 0:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=8)
-                elif k == 1:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=6)
-                elif k == 2 or k == 3:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=5)
-
+            if live:
                 objectList.extend(get_data_for_config(blip,
                                                       api_settings['un'],
                                                       api_settings['pw'],
                                                       config))
+            else:
+                ks = [0, 1, 2, 3]
+                for i, k in product(days, ks):
+                    if k == 0:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=8)
+                    elif k == 1:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=6)
+                    elif k == 2 or k == 3:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=5)
 
-                if k == 0:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=8)
-                elif k == 1:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=6)
-                elif k == 2 or k == 3:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=5)
-                time.sleep(1)
+                    objectList.extend(get_data_for_config(blip,
+                                                        api_settings['un'],
+                                                        api_settings['pw'],
+                                                        config))
+
+                    if k == 0:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=8)
+                    elif k == 1:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=6)
+                    elif k == 2 or k == 3:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=5)
+                    time.sleep(1)
             try:
-                insert_data(objectList, dbset)
+                insert_data(objectList, dbset, live)
             except OSError as ose:
                 LOGGER.error('Inserting data failed')
                 LOGGER.error(ose.msg)
