@@ -26,7 +26,7 @@ from requests import RequestException, Session
 import urllib3
 from parsing_utilities import validate_multiple_yyyymmdd_range
 from pg import DB
-from pg import IntegrityError
+from pg import IntegrityError, DatabaseError
 
 # Suppress HTTPS Warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -315,6 +315,26 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             except ValueError as valu:
                 LOGGER.error('Unsupported Value in insert')
                 LOGGER.error(valu.msg)
+
+    if not live:
+        LOGGER.info('Moving raw data to observations.')
+        try:
+            db = DB(**dbset)
+            query = db.query("SELECT bluetooth.move_raw_data();")
+            if query.getresult()[0][0] != 1:
+                raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
+            query = db.query("TRUNCATE bluetooth.raw_data;")
+            db.commit()
+            query = db.query("SELECT king_pilot.load_bt_data();")
+            if query.getresult()[0][0] != 1:
+                raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
+            db.commit()
+            db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
+            db.commit()
+        except DatabaseError dberr:
+            LOGGER.error(dberr.msg)
+        finally 
+            db.close()
 
     LOGGER.info('Processing Complete.')
 
