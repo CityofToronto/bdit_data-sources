@@ -6,3 +6,7 @@ CREATE TABLE bluetooth.aggr_5min(
 	tt numeric,
 	obs integer
 );
+ALTER TABLE bluetooth.aggr_5min
+OWNER TO bt_admins;
+GRANT SELECT, INSERT ON TABLE bluetooth.aggr_5min TO bt_insert_bot;
+  
