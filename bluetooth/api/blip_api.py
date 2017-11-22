@@ -198,6 +198,25 @@ def update_configs(all_analyses, dbset):
         analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
     return analyses_to_pull
 
+def move_data(dbset):
+    try:
+        db = DB(**dbset)
+        query = db.query("SELECT bluetooth.move_raw_data();")
+        if query.getresult()[0][0] != 1:
+            raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
+        query = db.query("TRUNCATE bluetooth.raw_data;")
+        db.commit()
+        query = db.query("SELECT king_pilot.load_bt_data();")
+        if query.getresult()[0][0] != 1:
+            raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
+        db.commit()
+        db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
+        db.commit()
+    except DatabaseError as dberr:
+        LOGGER.error(dberr)
+    finally:
+        db.close()
+
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
          direct: bool = None,
@@ -318,23 +337,9 @@ def main(dbsetting: 'path/to/config.cfg' = None,
 
     if not live:
         LOGGER.info('Moving raw data to observations.')
-        try:
-            db = DB(**dbset)
-            query = db.query("SELECT bluetooth.move_raw_data();")
-            if query.getresult()[0][0] != 1:
-                raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
-            query = db.query("TRUNCATE bluetooth.raw_data;")
-            db.commit()
-            query = db.query("SELECT king_pilot.load_bt_data();")
-            if query.getresult()[0][0] != 1:
-                raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
-            db.commit()
-            db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
-            db.commit()
-        except DatabaseError dberr:
-            LOGGER.error(dberr.msg)
-        finally 
-            db.close()
+        
+        move_data(dbset)
+        
 
     LOGGER.info('Processing Complete.')
 
