@@ -31,6 +31,10 @@ BEGIN
 END
 $BODY$
   LANGUAGE plpgsql VOLATILE
+  SECURITY DEFINER
   COST 100;
+  ALTER FUNCTION bluetooth.move_raw_data()
+  OWNER TO bt_admins;
    GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO aharpal;
    GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO bt_insert_bot;
+GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO aharpal;
