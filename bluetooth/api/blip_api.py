@@ -201,19 +201,21 @@ def update_configs(all_analyses, dbset):
 def move_data(dbset):
     try:
         db = DB(**dbset)
+        db.begin()
         query = db.query("SELECT bluetooth.move_raw_data();")
         if query.getresult()[0][0] != 1:
+            db.rollback()
             raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
         query = db.query("TRUNCATE bluetooth.raw_data;")
-        db.commit()
         query = db.query("SELECT king_pilot.load_bt_data();")
         if query.getresult()[0][0] != 1:
+            db.rollback()
             raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
-        db.commit()
         db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
         db.commit()
     except DatabaseError as dberr:
         LOGGER.error(dberr)
+        db.rollback()
     finally:
         db.close()
 
