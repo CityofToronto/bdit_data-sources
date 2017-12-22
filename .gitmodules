@@ -1,3 +1,6 @@
-[submodule "TTC_scraper"]
-	path = TTC_scraper
+[submodule "ttc_scraper/TTC_scraper"]
+	path = ttc_scraper/TTC_scraper
+	url = https://github.com/SAUSy-Lab/retro-gtfs.git
+[submodule "ttc_scraper/retro-gtfs"]
+	path = ttc_scraper/retro-gtfs
 	url = https://github.com/SAUSy-Lab/retro-gtfs.git
