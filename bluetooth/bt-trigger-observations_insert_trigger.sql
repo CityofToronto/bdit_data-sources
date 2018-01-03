@@ -146,6 +146,12 @@ BEGIN
     ELSIF ( NEW.measured_timestamp > DATE '2017-12-01' AND
          NEW.measured_timestamp <= DATE '2018-01-01' ) THEN
         INSERT INTO bluetooth.observations_201712 VALUES (NEW.*);
+    ELSIF ( NEW.measured_timestamp > DATE '2018-01-01' AND
+         NEW.measured_timestamp <= DATE '2018-02-01' ) THEN
+        INSERT INTO bluetooth.observations_201801 VALUES (NEW.*);
+    ELSIF ( NEW.measured_timestamp > DATE '2018-02-01' AND
+         NEW.measured_timestamp <= DATE '2018-03-01' ) THEN
+        INSERT INTO bluetooth.observations_201802 VALUES (NEW.*);
     ELSE
         RAISE EXCEPTION 'Date out of range.';
     END IF;
