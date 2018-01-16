@@ -49,9 +49,9 @@ Generally following instructions from the [OSRM-Backend repository](https://gith
    ```
 6. And then to run serve OSRM routing, run the below. Note that this will run in the foreground (within the terminal window), which is fine for a few processing tasks, but you'll want to run it in the background for continous processing. 
 	```shell
-	docker run -t -i -p 5000:5000 -v $(pwd):/data osrm/osrm-backend osrm-routed --algorithm mld /data/berlin-latest.osrm
+	docker run -t -i -p 5000:5000 -v $(pwd):/data osrm/osrm-backend osrm-routed --algorithm mld /data/toronto_canada.osrm
 	```
-
+7. To [run in the background](https://codefresh.io/docker-guides/create-docker-containers-command-line-interface/) just add a `--d` flag before `osrm/osrm-backend` and also give it a name like `--name=ttc_osrm`
 ### Process Data
 Edit `conf.py` to point to the local version of OSRM: `http://127.0.0.1:5000`
 And then run `python process.py`and choose one of the [relevant prompts](https://github.com/SAUSy-Lab/retro-gtfs/wiki/Running-the-scripts#running-processpy)
