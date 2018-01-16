@@ -6,7 +6,14 @@
 
 CREATE SCHEMA ttc_scraper;
 
-SET search_path = ttc_scraper;
+/*
+Eliminates need to set schema before every table name.
+public needs to be included so that the geometry type can be found
+*/
+
+SET search_path TO ttc_scraper, public;
+
+
 
 /*
 	equivalent to GTFS stops table
