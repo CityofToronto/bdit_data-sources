@@ -12,7 +12,7 @@
 	'stop_times':'ttc_scrape.ttc_stop_times',
 	'directions':'ttc_scrape.ttc_directions'
 	```
-	Then set projection to:
+    Then set projection to:
 	```
 		'projection':partial(
 			pyproj.transform,
@@ -46,7 +46,7 @@ Generally following instructions from the [OSRM-Backend repository](https://gith
    ```shell
    docker run -t -v $(pwd):/data osrm/osrm-backend osrm-partition /data/toronto_canada.osrm
    docker run -t -v $(pwd):/data osrm/osrm-backend osrm-customize /data/toronto_canada.osrm
-```
+   ```
 6. And then to run serve OSRM routing, run the below. Note that this will run in the foreground (within the terminal window), which is fine for a few processing tasks, but you'll want to run it in the background for continous processing. 
 	```shell
 	docker run -t -i -p 5000:5000 -v $(pwd):/data osrm/osrm-backend osrm-routed --algorithm mld /data/berlin-latest.osrm
