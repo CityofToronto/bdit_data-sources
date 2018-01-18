@@ -33,12 +33,30 @@ The live feed, and archived data are available on the [Open Data Portal](http://
 |measured_timestamp|timestamp without time zone| |
 |outlier_level|smallint| |
 |cod|bigint| integer representation of 24 bit Bluetooth class |
-|device_class|smallint| |
+|device_class|smallint| integer representation of a bitstring `outcome` defined for that particular route |
 
 #### Filtering devices
 Two fields are relevant for this endeavour, both are integer representations of binary. They are aggregations/concatenations of multiple different boolean values (bits).
  - **device_classes:** "are report/filtering dependent as they are configurable property mappings". These appear to be somewhat independent from the `cod` values below. A cursory examination of the binary forms of the two fields didn't reveal any common patterns.
  - **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. There is no way of knowing what kind of device a WiFi device is. See the [`ClassOfDevice`](#classofdevice) table below for more information.
+
+### all_analyses
+
+The script pulls the route configurations nightly from the Blip server. These are currently being primarily dumped as json records, which makes using some of the elements of the configuration trickier in PostgreSQL
+
+|Column|Type|Notes|
+|------|----|-----|
+|device_class_set_name|text|Name of the configuration for setting the `device_class` bits, see `outcomes` |
+|analysis_id|bigint| One of the unique IDs for this route |
+|minimum_point_completed|json| spatial configuration of the gates in the route (some have particular waypoints, or exit gates) |
+|outcomes|json| lookup for `deviceClassMask` the value for `device_class` and the `name` of that particular result |
+|report_id|bigint|One of the unique IDs for this route|
+|report_name|text| |
+|route_id|bigint|One of the unique IDs for this route|
+|route_name|text| |
+|route_points|json| spatial representation of the route |
+|pull_data|boolean| (defaults to false) whether the script should pull observations |
+`outcomes` are set for different routes for purposes like: filtering BT and WiFi, or tracking Origin Destination points. 
 
 ### ClassOfDevice
 
@@ -58,9 +76,9 @@ The Class of Device property helps broadcast the functionality of a given Blueto
  - **Major Device Class (Bits 8-12)**: Primary categories for the device: Miscellaneous, Computer, Phone, LAN/Network Access Point, Peripheral, Imaging, Wearable, Toy, Health, Uncategorized, and Reserved. These are present in the `major_device_class` column. 
  - **Minor Device Class (Bits 2-7)**: Further device details. These are dependent on the Major Device Class. 
 
-The most common `cod` after WiFi (0) is `7995916`, its binary is `011110100000001000001100` which is exactly the example [given here](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained): a smartphone. 
+[`Examples/class_of_device.ipynb`](Examples/class_of_device.ipynb) explores the distributions of these different device classes between Adelaide, an arterial, and the expressways. The most common `cod` after WiFi (0) is `7995916`, its binary is `011110100000001000001100` which is exactly the example [given here](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained): a smartphone. 
 
-Commonly accepted filters for cars are:
+According to the vendor, commonly accepted filters for cars are:
  - Car Audio: major class 00100 and minor class 001000
  - Hands Free: major class 00100 and minor class 000100
 
