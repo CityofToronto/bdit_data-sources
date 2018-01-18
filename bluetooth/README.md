@@ -37,8 +37,11 @@ The live feed, and archived data are available on the [Open Data Portal](http://
 
 #### Filtering devices
 Two fields are relevant for this endeavour, both are integer representations of binary. They are aggregations/concatenations of multiple different boolean values (bits).
- - **device_classes:** "are report/filtering dependent as they are configurable property mappings". These appear to be somewhat independent from the `cod` values below. A cursory examination of the binary forms of the two fields didn't reveal any common patterns.
- - **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. There is no way of knowing what kind of device a WiFi device is. See the [`ClassOfDevice`](#classofdevice) table below for more information.
+
+- **device_class:** "are report/filtering dependent as they are configurable property mappings". These values are defined by particular reports, for example: for OD analyses or for filtering by Bluetooth vs. WiFi, see the [all_analyses](#all_analyses) table below.
+- **cod:** Is the integer representation of the [Bluetooth Class of Device property](https://www.question-defense.com/2013/01/12/bluetooth-cod-bluetooth-class-of-deviceclass-of-service-explained). The main filter is that if this value is 0, the device is a WiFi device, else it's a Bluetooth device. There is no way of knowing what kind of device a WiFi device is. See the [`ClassOfDevice`](#classofdevice) table below for more information.
+
+The [`Examples/cod_vs_DeviceClass.ipynb`](Examples/cod_vs_DeviceClass.ipynb) notebook examines the relationship between `cod` and `device_class` for the routes for which `device_class` is configured to filter based on `cod`.
 
 ### all_analyses
 
