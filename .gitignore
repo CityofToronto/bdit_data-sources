@@ -179,8 +179,6 @@ bluetooth/api/config.cfg
 .spyproject/codestyle.ini
 .spyproject/encoding.ini
 .spyproject/vcs.ini
-bluetooth/api/blip_api.py
-bluetooth/api/README.md
 bluetooth/api/session_with_raph.py
 bluetooth/api/se_deviceclass.py
 
