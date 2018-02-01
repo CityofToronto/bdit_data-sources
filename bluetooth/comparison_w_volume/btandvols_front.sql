@@ -1,4 +1,4 @@
-﻿select bt.datetime_bin, bt.obs, mio.v from (
+﻿select bt.datetime_bin, bt.obs, mio.v as volume from (
 select intersection_uid, datetime_bin, leg, dir, sum(volume) as v from miovision.volumes_15min
 where (intersection_uid = 6  and leg = 'W' and dir = 'EB' 
 and datetime_bin::date >= '2017-11-01' and datetime_bin::date <= '2017-11-08' and classification_uid in (1,4,5))
