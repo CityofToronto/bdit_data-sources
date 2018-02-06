@@ -14,19 +14,20 @@ BEGIN
 	  outlier_level,
 	  cod,
 	  device_class)
-	SELECT * FROM bluetooth.raw_data rs;
+	SELECT * FROM bluetooth.raw_data rs
+	ON CONFLICT DO NOTHING; --If there are duplicate rows don't insert them
 
 	-- LOAD bluetooth.aggr_5min with new data
 	INSERT INTO bluetooth.aggr_5min (analysis_id, datetime_bin, tt, obs)
 	SELECT	rs.analysis_id,
 		TIMESTAMP WITHOUT TIME ZONE 'epoch' +
 		INTERVAL '1 second' * (floor((extract('epoch' from rs.measured_timestamp)-1) / 300) * 300) as datetime_bin,
-		median(rs.measured_time) AS travel_time,
+		percentile_cont(0.5) WITHIN GROUP (ORDER BY rs.measured_time) AS travel_time,
 		COUNT(rs.user_id) AS obs
 	FROM bluetooth.raw_data rs
 	WHERE rs.outlier_level = 0 AND device_class = 1
 	GROUP BY rs.analysis_id, (floor((extract('epoch' from rs.measured_timestamp)-1) / 300) * 300)
-	ORDER BY rs.analysis_id, (floor((extract('epoch' from rs.measured_timestamp)-1) / 300) * 300);
+	ON CONFLICT DO NOTHING;
 	RETURN 1;
 END
 $BODY$
