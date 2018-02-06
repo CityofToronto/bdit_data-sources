@@ -1,2 +1,3 @@
 {"link_id": "SELECT here.create_link_id_idx(%(tablename)s)",
- "timestamp": "SELECT here.create_tx_idx(%(tablename)s)"}
+ "timestamp": "SELECT here.create_tx_idx(%(tablename)s)",
+ "observations_unique": "SELECT bluetooth.create_obs_unique(%(tablename)s)"}
