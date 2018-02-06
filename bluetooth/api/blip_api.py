@@ -216,6 +216,8 @@ def move_data(dbset):
     except DatabaseError as dberr:
         LOGGER.error(dberr)
         db.rollback()
+    except IntegrityError:
+        LOGGER.critical('Moving data failed due to violation of a constraint. Data will have to be moved manually')
     finally:
         db.close()
 
@@ -336,6 +338,8 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             except ValueError as valu:
                 LOGGER.error('Unsupported Value in insert')
                 LOGGER.error(valu.msg)
+            except IntegrityError:
+                LOGGER.warning('Insert violated table constraints, likely duplicate data')
 
     if not live:
         LOGGER.info('Moving raw data to observations.')
