@@ -25,8 +25,8 @@ from requests import RequestException, Session
 
 import urllib3
 from parsing_utilities import validate_multiple_yyyymmdd_range
-from email_notifications import send_email
 from pg import DB
+from pg import IntegrityError, DatabaseError
 
 # Suppress HTTPS Warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -51,6 +51,9 @@ def parse_args(args, prog=None, usage=None):
     parser.add_argument("--direct",
                         action='store_true',
                         help="Use DIRECT proxy if using from workstation")
+    parser.add_argument("--live",
+                        action='store_true',
+                        help="Pull most recent clock hour of live data")
 
     return parser.parse_args(args)
 
@@ -82,7 +85,7 @@ def get_data_for_config(blip, un: str, pw: str, config):
     return data
 
 
-def insert_data(data: list, dbset: dict):
+def insert_data(data: list, dbset: dict, live: bool):
     '''
     Upload data to the database
 
@@ -91,8 +94,13 @@ def insert_data(data: list, dbset: dict):
     :param dbset:
         DB settings passed to Pygresql to create a connection 
     '''
-
-    LOGGER.info('Uploading to PostgreSQL')
+    num_rows = len(data)
+    if num_rows > 0:
+        LOGGER.info('Uploading %s rows to PostgreSQL', len(data))
+        LOGGER.debug(data[0])
+    else:
+        LOGGER.warning('No data to upload')
+        return 
     to_insert = []
     for dic in data:
         # convert each observation dictionary into a tuple row for inserting
@@ -104,11 +112,14 @@ def insert_data(data: list, dbset: dict):
         to_insert.append(row)
 
     db = DB(**dbset)
-    db.inserttable('bluetooth.raw_data', to_insert)
+    if live:
+        db.inserttable('king_pilot.daily_raw_bt', to_insert)
+    else:
+        db.inserttable('bluetooth.raw_data', to_insert)
     db.close()
 
 
-def get_wsdl_client(wsdlfile, direct=None):
+def get_wsdl_client(wsdlfile, direct=None, live=False):
     """
     Create a zeep Client from the WSDL Url provided
         :param wsdlfile: 
@@ -132,7 +143,7 @@ def get_wsdl_client(wsdlfile, direct=None):
         blip = Client(wsdlfile, transport=transport)
     # Create a config object
     config = blip.type_factory('ns0').perUserDataExportConfiguration()
-    config.live = False
+    config.live = live
     config.includeOutliers = True
     # Weird hack to prevent a bug
     # See https://stackoverflow.com/a/46062820/4047679
@@ -153,17 +164,17 @@ def update_configs(all_analyses, dbset):
     '''
 
     db = DB(**dbset)
-    existing_analyses = db.get_as_dict('bluetooth.all_analyses')
+    db.begin()
+    db.query('''TRUNCATE bluetooth.all_analyses_day_old;
+    INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;''')
+    db.commit()
     analyses_pull_data = {}
-    insert_num = 0
-    updated_num = 0
-    upserted_analyses = []
     for report in all_analyses:
         report.outcomes = [outcome.__json__() for outcome in report.outcomes]
         report.routePoints = [route_point.__json__()
                               for route_point in report.routePoints]
         row = dict(device_class_set_name=report.deviceClassSetName,
-                   id=report.id,
+                   analysis_id=report.id,
                    minimum_point_completed=db.encode_json(
                        report.minimumPointCompleted.__json__()),
                    outcomes=report.outcomes,
@@ -172,59 +183,48 @@ def update_configs(all_analyses, dbset):
                    route_id=report.routeId,
                    route_name=report.routeName,
                    route_points=report.routePoints)
-        upserted = db.upsert('bluetooth.all_analyses', row,
-                             pull_data='included.pull_data')
-        existing_row = existing_analyses.get(upserted['id'], None)
-        if existing_row is None:
-            insert_num += insert_num
-            upserted_analyses.append(
-                (report.id, report.reportName, report.routeName))
-        elif dict(existing_row._asdict(), id=upserted['id']) != upserted:
-            updated_num += updated_num
-            upserted_analyses.append(
-                (report.id, report.reportName, report.routeName))
-        analyses_pull_data[upserted['id']] = {'pull_data': upserted['pull_data'],
-                                              'report_name': upserted['report_name']}
-
-    if insert_num > 0:
-        LOGGER.info('%s new report configurations uploaded', insert_num)
-    if updated_num > 0:
-        LOGGER.info('%s new report configurations uploaded', insert_num)
+        #If upsert fails, log error and continue, don't add analysis to analyses to pull
+        try:
+            upserted = db.upsert('bluetooth.all_analyses', row,
+                                 pull_data='included.pull_data')
+            analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
+                                                           'report_name': upserted['report_name']}
+        except IntegrityError as err:
+            LOGGER.error(err)
 
     db.close()
 
     analyses_to_pull = {analysis_id: analysis for (
         analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
-    return analyses_to_pull, upserted_analyses
+    return analyses_to_pull
 
-
-def email_upserted_analyses(subject: str, to: str, upserted_analyses: list):
-    """
-    Email updated or new analysis configurations
-        :param subject: 
-            Email subject line
-        :param to: 
-            String of addresses to send to
-        :param upserted_analyses: 
-            A list containg tuples of (report.id, report.reportName, report.routeName)
-    """
-
-    message = ''
-    for analysis in upserted_analyses:
-        message += 'Route id: {route_id}, '\
-                   'Report Name: {report_name}, '\
-                   'Route Name: {route_name}'.format(route_id=analysis[0],
-                                                     report_name=analysis[1],
-                                                     route_name=analysis[2])
-        message += "\n"
-    sender = "Blip API Script"
-
-    send_email(to, sender, subject, message)
-
+def move_data(dbset):
+    try:
+        db = DB(**dbset)
+        db.begin()
+        query = db.query("SELECT bluetooth.move_raw_data();")
+        if query.getresult()[0][0] != 1:
+            db.rollback()
+            raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
+        query = db.query("TRUNCATE bluetooth.raw_data;")
+        query = db.query("SELECT king_pilot.load_bt_data();")
+        if query.getresult()[0][0] != 1:
+            db.rollback()
+            raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
+        db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
+        db.commit()
+    except DatabaseError as dberr:
+        LOGGER.error(dberr)
+        db.rollback()
+    except IntegrityError:
+        LOGGER.critical('Moving data failed due to violation of a constraint. Data will have to be moved manually')
+    finally:
+        db.close()
 
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
-         direct: bool = None):
+         direct: bool = None,
+         live: bool = False):
     """
     Main method. Connect to blip WSDL Client, update analysis configurations,
     then pull data for specified dates
@@ -240,30 +240,31 @@ def main(dbsetting: 'path/to/config.cfg' = None,
     config.read(dbsetting)
     dbset = config['DBSETTINGS']
     api_settings = config['API']
-    email_settings = config['EMAIL']
 
     # Access the API using zeep
     LOGGER.info('Fetching config from blip server')
-    blip, config = get_wsdl_client(api_settings['WSDLfile'], direct)
+    blip, config = get_wsdl_client(api_settings['WSDLfile'], direct, live)
 
-    # list of all route segments
-    all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
-                                                      api_settings['pw'])
-    LOGGER.info('Updating route configs')
-    routes_to_pull, upserted_analyses = update_configs(all_analyses, dbset)
+    if live:
+        db = DB(**dbset)
+        query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
+        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+    else:
+        # list of all route segments
+        all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
+                                                          api_settings['pw'])
+        LOGGER.info('Updating route configs')
+        routes_to_pull = update_configs(all_analyses, dbset)
 
-    if len(upserted_analyses) > 0:
-        email_upserted_analyses(email_settings['subject'],
-                                email_settings['to'],
-                                upserted_analyses)
+        date_to_process = None
 
-    date_to_process = None
-
-    if years is None:
+    if years is None and live:
+        date_to_process = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        years = {date_to_process.year: [date_to_process.month]}
+    elif years is None:
         # Use today's day to determine month to process
         date_to_process = date.today() + relativedelta(days=-1)
         years = {date_to_process.year: [date_to_process.month]}
-
     else:
         # Process and test whether the provided yyyymm is accurate
         years = validate_multiple_yyyymmdd_range(years)
@@ -278,9 +279,16 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                             str(month),
                             str(days[0]),
                             str(days[-1]))
-                config.startTime = datetime.datetime(year, month, 1, 0, 0, 0)
+                config.startTime = datetime.datetime(year, month, days[0], 0, 0, 0)
+            elif live:
+                LOGGER.info('Reading from: %s at %s ',
+                            analysis['report_name'],
+                            date_to_process.strftime('%Y-%m-%d %H:00'))
+                config.startTime = date_to_process + relativedelta(hours=-1)
+                config.endTime = date_to_process
             else:
-                days = [1]
+                days = [date_to_process]
+
                 config.startTime = datetime.datetime.combine(date_to_process,
                                                              datetime.datetime.min.time())
                 LOGGER.info('Reading from: %s for %s ',
@@ -288,39 +296,57 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                             date_to_process.strftime('%Y-%m-%d'))
 
             config.analysisId = analysis_id
-
-            ks = [0, 1, 2, 3]
-
             objectList = []
-
-            for i, k in product(days, ks):
-                if k == 0:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=8)
-                elif k == 1:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=6)
-                elif k == 2 or k == 3:
-                    config.endTime = config.startTime + \
-                        datetime.timedelta(hours=5)
-
+            if live:
                 objectList.extend(get_data_for_config(blip,
                                                       api_settings['un'],
                                                       api_settings['pw'],
                                                       config))
+            else:
+                ks = [0, 1, 2, 3]
+                for i, k in product(days, ks):
+                    if k == 0:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=8)
+                    elif k == 1:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=6)
+                    elif k == 2 or k == 3:
+                        config.endTime = config.startTime + \
+                            datetime.timedelta(hours=5)
 
-                if k == 0:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=8)
-                elif k == 1:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=6)
-                elif k == 2 or k == 3:
-                    config.startTime = config.startTime + \
-                        datetime.timedelta(hours=5)
-                time.sleep(1)
+                    objectList.extend(get_data_for_config(blip,
+                                                        api_settings['un'],
+                                                        api_settings['pw'],
+                                                        config))
 
-            insert_data(objectList, dbset)
+                    if k == 0:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=8)
+                    elif k == 1:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=6)
+                    elif k == 2 or k == 3:
+                        config.startTime = config.startTime + \
+                            datetime.timedelta(hours=5)
+                    time.sleep(1)
+            try:
+                insert_data(objectList, dbset, live)
+            except OSError as ose:
+                LOGGER.error('Inserting data failed')
+                LOGGER.error(ose.msg)
+            except ValueError as valu:
+                LOGGER.error('Unsupported Value in insert')
+                LOGGER.error(valu.msg)
+            except IntegrityError:
+                LOGGER.warning('Insert violated table constraints, likely duplicate data')
+
+    if not live:
+        LOGGER.info('Moving raw data to observations.')
+        
+        move_data(dbset)
+        
+
     LOGGER.info('Processing Complete.')
 
 
