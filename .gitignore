@@ -175,3 +175,13 @@ bluetooth/api/config.cfg
 *.project
 .pydevproject
 *.prefs
+.spyproject/workspace.ini
+.spyproject/codestyle.ini
+.spyproject/encoding.ini
+.spyproject/vcs.ini
+bluetooth/api/session_with_raph.py
+bluetooth/api/se_deviceclass.py
+
+
+.vscode
+bluetooth/api/psyconfig.cfg
