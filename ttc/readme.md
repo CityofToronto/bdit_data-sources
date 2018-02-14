@@ -5,6 +5,7 @@
 These data are stored in the partitioned table schema `ttc.cis`.
 
 | Column          | Type/Format        | Description/Format |
+|-----------------|--------------------|--------------------|
 |message_datetime | timestamp | Position timestamp (from server poll, not vehicle) |
 |route | INT | route id |
 |run | INT | run id |
