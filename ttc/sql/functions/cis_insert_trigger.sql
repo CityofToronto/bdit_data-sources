@@ -8,7 +8,9 @@ ELSIF (message_datetime >= '2018-01-01' AND message_datetime < '2018-01-01' + IN
     INSERT INTO ttc.cis_2018 VALUES (NEW.*) ON CONFLICT DO NOTHING;
 ELSE 
     RAISE EXCEPTION 'message_datetime out of range';
+END IF;
 RETURN NULL;
 END;
 $BODY$
-LANGUAGE plgpsql VOLATILE SECURITY DEFINER;
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
