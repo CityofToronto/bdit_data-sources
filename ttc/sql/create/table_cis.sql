@@ -9,7 +9,7 @@ CREATE TABLE ttc.cis (
     PRIMARY KEY(vehicle, message_datetime)
 );
 
-CREATE TRIGGER ttc.insert_cis
+CREATE TRIGGER insert_cis
   BEFORE INSERT
   ON ttc.cis
   FOR EACH ROW
