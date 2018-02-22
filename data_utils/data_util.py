@@ -230,8 +230,8 @@ if __name__ == "__main__":
             if ARGS.aggregate: 
                 execute_function(function, LOGGER, cursor, dbset, 
                                  autocommit=True,
-                                 **kwargs, 
-                                 yyyymm=yyyymm)
+                                 yyyymm=yyyymm,
+                                 **kwargs)
             elif ARGS.index or ARGS.partition: 
                 engine.run(year, month, table=ARGS.tablename)
             elif ARGS.movedata:
