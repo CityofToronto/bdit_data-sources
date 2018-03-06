@@ -68,11 +68,26 @@ for i in final:
             break
         else:
             j = j-1
-
-final = [i + [list(badroutes.loc[badroutes['startpoint_name'] == i[0]]['analysis_id'])+ \
-         list(badroutes.loc[badroutes['endpoint_name'] == i[0]]['analysis_id'])] \
-        for i in final]
+for i in final:
+    final[final.index(i)].append([])
+    starts = list(badroutes['startpoint_name'].values)
+    ends = list(badroutes['endpoint_name'].values)
+    j = 0 
+    while j < len(starts):
+        if i[0] == starts[j]: 
+            final[final.index(i)][2].append('"' + starts[j] + ' to ' + ends[j] + '"')
+            j += 1
+        else:
+            j += 1
+    j = 0
+    while j < len(ends):
+        if i[0] == ends[j]:
+            final[final.index(i)][2].append('"' + starts[j] + ' to ' + ends[j] + '"')
+            j += 1
+        else:
+            j += 1
 
 broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
+borken _readers = broken_readers.style.set_properties(subset=['Routes Affected'], **{'width': '600px'})
 
 from notify_email.py import send_mail
