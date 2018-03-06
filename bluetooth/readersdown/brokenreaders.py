@@ -25,17 +25,54 @@ query = ''' SELECT segments.analysis_id
 
 df = pandasql.read_sql(pg.SQL(query), con)
 
-broken_readers = []
+badroutes = []
 for i in range(len(df['analysis_id'])):
     string = '''SELECT analysis_id, startpoint_name, endpoint_name,  measured_timestamp as last_active FROM bluetooth.observations
                 WHERE analysis_id = %d 
                 ORDER BY measured_timestamp desc 
                 LIMIT 1''' % list(df['analysis_id'])[i]
     row = pandasql.read_sql(pg.SQL(string), con)
-    broken_readers.append(list(row.loc[0]))
+    badroutes.append(list(row.loc[0]))
 
-broken_readers = pd.DataFrame(broken_readers, columns = list(row.columns.values))
+string2 = '''SELECT analysis_id, startpoint_name, endpoint_name
+            FROM bluetooth.observations
+                WHERE observations.measured_timestamp <= (( SELECT max(observations_1.measured_timestamp) AS max
+                FROM bluetooth.observations observations_1)) AND observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
+                FROM bluetooth.observations observations_1)) AND (observations.analysis_id IN ( SELECT segments.analysis_id
+                FROM bluetooth.segments))
+                GROUP BY analysis_id, startpoint_name, endpoint_name;'''
+
+df2 = pandasql.read_sql(pg.SQL(string2), con)
+    
+
+final = []
+for i in range(len(badroutes)): 
+    if (badroutes['startpoint_name'].values[i] not in df2['startpoint_name'].values \
+    and badroutes['startpoint_name'].values[i] not in df2['endpoint_name'].values):
+        final.append(badroutes['startpoint_name'].values[i])
+for i in range(len(badroutes)):
+    if badroutes['endpoint_name'].values[i] not in df2['startpoint_name'].values \
+    and badroutes['endpoint_name'].values[i] not in df2 ['endpoint_name'].values:
+        final.append(badroutes['endpoint_name'].values[i])
+        
+final = list(set(final))
+
+for i in final: 
+    j = (len(badroutes))-1
+    while j < len(badroutes):
+        if i == badroutes['startpoint_name'].values[j]:
+            final[final.index(i)] = ([i, badroutes['last_active'].values[j]])
+            break
+        elif i == badroutes['endpoint_name'].values[j]:
+            final[final.index(i)] = ([i, badroutes['last_active'].values[j]])
+            break
+        else:
+            j = j-1
+
+final = [i + [list(badroutes.loc[badroutes['startpoint_name'] == i[0]]['analysis_id'])+ \
+         list(badroutes.loc[badroutes['endpoint_name'] == i[0]]['analysis_id'])] \
+        for i in final]
+
+broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
 
 from notify_email.py import send_mail
-
-
