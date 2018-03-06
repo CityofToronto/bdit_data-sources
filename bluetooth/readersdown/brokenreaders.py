@@ -27,7 +27,7 @@ df = pandasql.read_sql(pg.SQL(query), con)
 
 broken_readers = []
 for i in range(len(df['analysis_id'])):
-    string = '''SELECT * FROM bluetooth.observations
+    string = '''SELECT analysis_id, startpoint_name, endpoint_name,  measured_timestamp as last_active FROM bluetooth.observations
                 WHERE analysis_id = %d 
                 ORDER BY measured_timestamp desc 
                 LIMIT 1''' % list(df['analysis_id'])[i]
@@ -35,3 +35,7 @@ for i in range(len(df['analysis_id'])):
     broken_readers.append(list(row.loc[0]))
 
 broken_readers = pd.DataFrame(broken_readers, columns = list(row.columns.values))
+
+from notify_email.py import send_mail
+
+
