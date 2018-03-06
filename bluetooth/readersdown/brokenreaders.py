@@ -88,6 +88,7 @@ for i in final:
             j += 1
 
 broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
-borken _readers = broken_readers.style.set_properties(subset=['Routes Affected'], **{'width': '600px'})
+broken_readers
 
-from notify_email.py import send_mail
+path="C:\\Users\\alouis2\\Documents"
+broken_readers.to_csv(os.path.join(path,r'broken_readers.csv'))
