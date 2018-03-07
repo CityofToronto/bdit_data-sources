@@ -6,7 +6,7 @@ import configparser
 from psycopg2 import connect
 import psycopg2.sql as pg
 import pandas.io.sql as pandasql
-import io
+import io 
 from os.path import expanduser
 import os
 
