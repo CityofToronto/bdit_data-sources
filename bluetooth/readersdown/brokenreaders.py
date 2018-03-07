@@ -12,13 +12,20 @@ import os
 
 # connect to database 
 
-CONFIG = configparser.ConfigParser()
-CONFIG.read(r'C:\Users\alouis2\Documents\Python Scripts\db.cfg')
-dbset = CONFIG['DBSETTINGS']
-con = connect(**dbset)
+def con_to_db(cfg_path): 
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read(r'%s' % cfg_path)
+    dbset = CONFIG['DBSETTINGS']
+    con = connect(**dbset)
 
+###################################################################################################    
+    
+con_to_db('your cfg file path here')
+
+###################################################################################################
 
 def find_badroutes():
+    
     # finds instances of potentially 'bad routes', i.e. routes who may have readers that are down. 
     # returns dataframe with these routes
     
@@ -51,6 +58,7 @@ def find_badroutes():
 badroutes = find_badroutes()
 
 def find_goodroutes():
+    
     # finds all 'good routes', i.e. routes with seemingly working readers
     
     string2 = '''SELECT analysis_id, startpoint_name, endpoint_name
@@ -67,6 +75,7 @@ def find_goodroutes():
 goodroutes = find_goodroutes()
     
 def find_brokenreaders(badroutes, goodroutes):
+    
     ### INPUTS
     # badroutes: a dataframe returned by `badroutes()` 
     # goodroutes: a dataframe returned by `goodroutes()`
