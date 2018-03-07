@@ -1,8 +1,8 @@
 # How to use brokenreaders.py
 ***
 The script `brokenreaders.py` finds all of the most recent non-functioning bluetooth readers, and creates a `.csv` file that contains the names of these readers, the time they were last active, in addition to the routes that were affected by these readers. Follow these steps to use this script:
-
 <br>
+
 1. Download and open the script.
 
 <br>
