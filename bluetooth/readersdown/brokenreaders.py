@@ -10,19 +10,18 @@ import io
 from os.path import expanduser
 import os
 
-# connect to database 
-
-def con_to_db(cfg_path): 
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'%s' % cfg_path)
-    dbset = CONFIG['DBSETTINGS']
-    con = connect(**dbset)
-
 ###################################################################################################    
     
-con_to_db('your cfg file path here')
+cfg_path = 'your file path'
 
 ###################################################################################################
+
+# connect to database 
+
+CONFIG = configparser.ConfigParser()
+CONFIG.read(r'%s' % cfg_path)
+dbset = CONFIG['DBSETTINGS']
+con = connect(**dbset)
 
 def find_badroutes():
     
@@ -135,6 +134,6 @@ def find_brokenreaders(badroutes, goodroutes):
     home = expanduser("~")
     path=  home + '\\Documents'
     broken_readers.to_csv(os.path.join(path,r'broken_readers.csv'), index = False)
-    return broken_readers
+    
 
 broken_readers = find_brokenreaders(badroutes, goodroutes)
