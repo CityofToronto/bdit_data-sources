@@ -10,15 +10,18 @@
 7. [Bliptrack API OD Data](#7-bliptrack-api-od-data)
 
 ## 1. Overview (Aakash)
+
 - coverage
 - what does the data look like?
 The live feed, and archived data are available on the [Open Data Portal](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=0b3abcfaf9c6a510VgnVCM10000071d60f89RCRD&vgnextchannel=1a66e03bb8d1e310VgnVCM10000071d60f89RCRD)
 
 ## 2. Table Structure (Aakash)
+
 - brief description
 - Sunny-style flow chart
 
-### Observations 
+### Observations
+
 |Column|Type|Notes|
 |------|----|-----|
 |id|bigserial| Primary Key |
