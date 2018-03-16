@@ -1,20 +1,66 @@
 # Bluetooth - Bliptrack
 
 ## Table of Contents
+
 1. [Overview](#1-overview)
 2. [Table Structure](#2-table-structure)
 3. [Technology](#3-technology)
-4. [Data Processing](#4-data-processing)
-5. [Bliptrack UI](#5-bliptrack-ui)
-6. [Bliptrack API](#6-bliptrack-api)
-7. [Bliptrack API OD Data](#7-bliptrack-api-od-data)
+4. [Bliptrack UI](#4-bliptrack-ui)
+5. [Bliptrack API](#5-bliptrack-api)
+6. [Bliptrack API OD Data](#6-bliptrack-api-od-data)
 
 ## 1. Overview
-The City collects traffic data from strategically place sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The live feed, and archived data are available on the [Open Data Portal](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=0b3abcfaf9c6a510VgnVCM10000071d60f89RCRD&vgnextchannel=1a66e03bb8d1e310VgnVCM10000071d60f89RCRD). Because of differences in filtering between the live feed and historical data, values between the two datasets may not exactly match up.  
 
-## 2. Table Structure 
+The City collects traffic data from strategically place sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The live feed, and archived data are available on the [Open Data Portal](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#4c1f1f4d-4394-8b47-bf00-262b6800ba81). Because of differences in filtering between the live feed and historical data, values between the two datasets may not exactly match up.
 
-### Observations
+## 2. Table Structure
+
+### Open Data Tables
+
+#### Live Feed
+
+The live feed can be accessed at [this url](https://bliptracktor.bliptrack.net:4443/blipzones/api/rest/public/display?displayId=PUBLIC), ironically, due to its non-standard port number `4443`, this can't actually be accessed behind the City's firewall. The feed is an xml for all the route reports configured to be published publically and is updated every five minutes.
+
+**Field Name**|**Description**|**Example**
+:-----:|:-----:|:-----:
+resultId|Unique segment identifier representing a route between two point locations|F_G
+time|Median five-minute travel time on this segment, in HH:MM:SS format|00:01:45
+timeInSeconds|Median five-minute travel time on this segment in seconds|105
+speed|Median five-minute travel speed on this segment|109.71
+speedUnit|Unit of the value provided in field "speed"|kph
+normalDrivingTime|Baseline travel time (derived from speed limit along route), in seconds|90
+count|Total number of vehicles within five-minute sample|23
+trafficColor|Suggested segment colour for illustrating traffic conditions|#dd0000
+trafficTextColor|Suggested text colour for illustrating traffic conditions|#ffffff
+open|Boolean field indicating whether route is currently active|true
+updated|Timestamp when this record was updated|2017-02-08T15:40:00-05
+
+#### Historical Data
+
+The historical data is also aggregated to 5-min bins.
+
+**Field Name**|**Description**|**Example**
+:-----:|:-----:|-----:
+resultId      |Unique segment identifier representing a route between two point locations|F_G
+timeInSeconds|Median five-minute travel time on this segment in seconds|105
+count|Total number of vehicles within five-minute sample|23
+updated|Timestamp representing the end of the 5-min aggregate period|2017-02-08T15:40:00-05
+
+#### Geography
+
+Join this using `resultId` to get the geography of the above data, or get the normal driving time or the length to convert to speed.
+
+**Field Name**|**Description**
+:-----:|:-----:
+resultId|Unique segment identifier representing a route between two point locations
+normalDriv|Baseline travel time (derived from speed limit along route), in seconds
+length_m|Length of segment, in metres
+
+### Internal Tables
+
+These tables are created based on data the team accesses from our vendor's API and are not released as OpenData. This documentation is here for team documentation, to give the public a sense of how the OpenData is generated, and to help other teams who might be using this type of data.
+
+#### Observations
 
 |Column|Type|Notes|
 |------|----|-----|
@@ -32,7 +78,8 @@ The City collects traffic data from strategically place sensors at intersections
 |cod|bigint| integer representation of 24 bit Bluetooth class |
 |device_class|smallint| integer representation of a bitstring `outcome` defined for that particular route |
 
-#### Filtering devices
+##### Filtering devices
+
 Two fields are relevant for this endeavour, both are integer representations of binary. They are aggregations/concatenations of multiple different boolean values (bits).
 
 - **device_class:** "are report/filtering dependent as they are configurable property mappings". These values are defined by particular reports, for example: for OD analyses or for filtering by Bluetooth vs. WiFi, see the [all_analyses](#all_analyses) table below.
@@ -40,7 +87,7 @@ Two fields are relevant for this endeavour, both are integer representations of 
 
 The [`Examples/cod_vs_DeviceClass.ipynb`](Examples/cod_vs_DeviceClass.ipynb) notebook examines the relationship between `cod` and `device_class` for the routes for which `device_class` is configured to filter based on `cod`.
 
-### all_analyses
+#### all_analyses
 
 The script pulls the route configurations nightly from the Blip server. These are currently being primarily dumped as json records, which makes using some of the elements of the configuration trickier in PostgreSQL
 
@@ -58,7 +105,7 @@ The script pulls the route configurations nightly from the Blip server. These ar
 |pull_data|boolean| (defaults to false) whether the script should pull observations |
 `outcomes` are set for different routes for purposes like: filtering BT and WiFi, or tracking Origin Destination points. 
 
-### ClassOfDevice
+#### ClassOfDevice
 
 |Column|Type|Notes|
 |------|----|-----|
@@ -88,28 +135,33 @@ substring(cod::bit(24) from 17 for 6) as minor_device_class,
 substring(cod::bit(24) from 12 for 5) as major_device_class
 ```
 
-## 3. Technology (Open)
-- tbd
+## 3. Technology
 
-## 4. Data Processing (Aakash)
-- process overview, timing
-- reference to API
-- issues
+The BlipTrack sensors have two directional Bluetooth antennas and an omnidirectional WiFi antenna. 
 
-## 5. Bliptrack UI (Dan)
+1. Each sensor records the Mac address and a series of observations for each device, with different strengths, as well as Class of Device information for Bluetooth devices ([see above](#ClassOfDevice)).
+2. The server hashes Mac addresses to help anonymize data, and then creates an observation record based on pre-defined parameters, e.g.: detection by both antennas for Bluetooth, first-strongest, last-strongest, etc.
+3. If a device is deteced by a different sensor, the travel time is calculated between the two sensors **if** a `route` is configured between that pair of sensors. Every five minutes this data is averaged and published on the live feed for configured routes.
+4. Every night a historical archive of the disaggregate routes is created, with additional filtering/inclusion of data points done server-side at that time.
+5. Every morning the [api pulling script](api) pulls this historical archive and puts it into the team's database.
 
-#### Accessing Bliptrack:
-- The City of Toronto's Bliptrack webservice can be accessed through the browser at `https://g4apps.bliptrack.net`
+## 4. Bliptrack UI
+
+### Accessing Bliptrack
+
+- The City of Toronto's Bliptrack webservice can be accessed through the browser by using the IP starting with 172. Your computer needs to be cleared by network security to access that IP address.
 - After logging in, the default homepage is the Dashboard which is completely configurable. Some exaples of what can be displayed here are:
   - Maps of sensor locations
   - Travel time distributions for key corridors
-  - Detection counts over time 
-  
-#### Terms:
+  - Detection counts over time
+
+#### Terms
+
 - **Route**: A combination of any two sensors, can be configured at any time by any superuser. Most useful routes have already been created and follow either a letter or numbered convention. Once a route is created, a corresponding `routeId` is generated which can be used in the API
 - **Report**: Travel time information for any route, can be configured to a number of different aggregation levels, downloaded as a `.csv` file
 
-#### Pulling travel time data:
+#### Downloading travel time data:
+
 1. Navigate to the `Reports` window using the bar at the top of the webpage![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/report_tab.PNG)
 2. Select the route you want to export data for by right clicking on it and navigating to `export data` ![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/select_route.PNG)
 3. Configure export settings, most important parameters are:
@@ -118,25 +170,28 @@ substring(cod::bit(24) from 12 for 5) as major_device_class
   - Calculation interval
 4. Click `Export Data`, download will begin automatically ![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/config_report.PNG)
 
-
 #### Common Issues:
+
 - Pulling larges volumes of data can cause the server to time out, pulling more than one month of data at a time is not recommended 
 - Only aggregated data is available through the browser, the API must be used to acess raw data
 
-## 6. Bliptrack API (Dan)
-Bliptrack provides an API for accessing their system through the Simple Object Access Protocol (SOAP). For those unfamiliar with SOAP, it is well explained in its [wikipedia](https://en.wikipedia.org/wiki/SOAP) article. In the context of data analysis, using the API over the browser to pull data has 2 main advantages:
+## 5. Bliptrack API
+
+Bliptrack hosts an API to provide clients (not the public) authenticated access to their system through the Simple Object Access Protocol (SOAP). For those unfamiliar with SOAP, it is well explained in its [wikipedia](https://en.wikipedia.org/wiki/SOAP) article. Using the API over the browser to pull data has 2 main advantages:
+
 - The ability to pull disaggregate data
-- Access to live travel time information 
+- Access to live travel time information
 
 The WSDL file for accessing Bliptrack can be accessed using `https://g4apps.bliptrack.net/ws/bliptrack/ExportWebServiceStateless?wsdl`
 
-#### Pulling travel time data:
+### Pulling travel time data
 
 The `exportPerUserData()` method is used to pull raw data. It takes `username`, `password`, and `config` as input parameters. The `config` object contains all information required to specify the route to pull data from. Info about config is shown below
 
 ![](https://github.com/CityofToronto/bdit_data-sources/blob/master/bluetooth/blip_screenshots/config_object.PNG)
 
 Not all of these fields must be assigned in order to pull data. At a minimum the following fields must have a non-`None` value:
+
 - `analysisId`: `int`, designates route, more on this below
 - `startTime`: `datetime` object indicating first data point
 - `endTime`: `datetime` object indicating last possible data point
@@ -144,13 +199,15 @@ Not all of these fields must be assigned in order to pull data. At a minimum the
 - `live`: `boolean` indicating whether live or historic data is being pulled, should be set to `False` to pull historic data
 
 #### The `analysisId`
+
 Each route has a corresponding `routeId`, `reportId`, and `analysisId` - all of which are different. An `analysis` object contains all of this information. The `getExportableAnalyses()` method will return a list of all analyses available. One can then pass the `analysis.id` for any given `analysis` into `config.analysisId` when pulling data.
 
+## 6. Bliptrack API OD Data
 
-## 7. Bliptrack API OD Data
 The API pulls a lot of data from BlipTrack, some of which is Origin-Destination (OD) data. OD describes the first and last sensors a device is seen at (Start-End Data), as well as the in-between sensors the device is seen at (Others Data).
 
 ### Start-End Data
+
 The Start-End Data describes the trips of each device, with each device being identified with a `userId`. Attributes of interest are `measuredTime`, `measuredTimestamp`, `outlierLevel`, `cod`, `deviceClass`. 
 
 *Some notes on `measuredTime` and records:*
@@ -159,7 +216,8 @@ If a device moves within range of a sensor after having not been seen by a senso
 Each record is a dictionary, which follows the structure and format as seen in the table below.
 
 #### Dictionary Structure
-|Attribute|Type|Notes|
+
+|**Attribute**|**Type**|**Notes**|
 |---------|----|-----|
 |userId|bigint| |
 |analysisId|integer| |
@@ -177,14 +235,17 @@ Each record is a dictionary, which follows the structure and format as seen in t
 |outcome_match|array|empty|
 
 ### Others Data
+
 The Others Data is differentiated from the Start-End Data by the `analysisId` that is called, and the data itself differs by the `deviceClass` and the `outlierLevel`. It follows the same structure and format as the Start-End Data. 
 
 ### deviceClass and outlierLevel
+
 `deviceClass` is a numerical value with 17 to 33 digits. This number, when converted into a bitstring, reflects the sensors ("gates") that the device `userId` has been seen at. The positions of the bits that are set `1` directly correspond to gate values, which are tied to human-friendly descriptions. 
 
 Gate values are powers of 2, based on the order of the gates in the lookup list, starting from 0 (e.g. 5th gate value = 2^(5-1)). The value in `deviceClass` is the sum of gates' values that the device has passed. To know which gates were passed, the `deviceClass` can be converted into bits, and the positions of the set bits in the bitstring are also the position of the gates in their lookup list. 
 
 To get the gate values from the `deviceClass` value:
+
 1. Convert the `deviceClass` value into bits
 2. Reverse the order of the bits
 3. Iterate through the bitstring to find the positions of the set bits
@@ -192,12 +253,15 @@ To get the gate values from the `deviceClass` value:
 	* `g = 2^p`
 
 #### For the Start-End Data:
+
 `deviceClass` is expected to return 2 values, but can return up to 3: the first value being the start gate, and the second value being the end gate. If there is a third value, it means that the device was detected at only one sensor; the expected two values will point to the same sensor but with different numbers, and the third value will be `324518553658426726783156020576256`, representing `OneSensorOnly`.
 
 #### For the Others Data:
+
 `deviceClass` is expected to return at least 2 values, with the last value always representing if the device was `HandsFree` or `Non-HandsFree`. The other values it returns are the gates that the device was seen at, in the order of the lookup list. With OD Data alone we cannot tell the order of gates a device is seen by. 
 
 If the values of a Others `deviceClass` are calculated, sharing the same `UserId` and timestamp as a Start-End `deviceClass` that was `OneSensorOnly`, then the Others `deviceClass` will only return 2 values, the first being the value of the one sensor that detected the device, and the second still being the value indicating if the device was or was not a handsfree device.
 
 #### outliersLevel
+
 Looking at the `outliersLevel` of the Start-End Data is a quick way to check if a device only passed by one sensor. If the `deviceClass` has the `OneSensorOnly` value, the `outlierLevel` attribute will have a value of `3`. The `outlierLevel` of the Others Data of the same record (`userId` and timestamp) will be 0, however. 
