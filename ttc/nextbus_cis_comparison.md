@@ -21,6 +21,8 @@ Output:
 | time_minimum              | time_maximum              |
 | --------------------------|---------------------------|
 | 2017-10-17 22:34:25.790152| 2017-11-24 17:11:49.63896 |
+
+
 Thus, next bus data in `ttc_shared` is from Oct.17, 2017 to Nov.24, 2017.
 
 ##### Step 2:
@@ -50,7 +52,7 @@ DELETE FROM dzou2.cis_514 a USING (
         FROM dzou2.cis_514
         GROUP BY message_datetime, vehicle, run, route, latitude, longitude HAVING COUNT(*) > 1
       ) b
-      WHERE  a.date_time = b.date_time
+      WHERE  a.message_datetime = b.message_datetime
       AND a.vehicle = b.vehicle
       AND a.run = b.run
       AND a.route = b.route
@@ -62,10 +64,9 @@ DELETE FROM dzou2.cis_514 a USING (
 Delete the exact duplicates in the table.
 
 ### Step 3:
-Import the data table into QGIS.
+Import the data tables into QGIS.
 
-!['nextbus_cis_514'](gtfs\img\nextbus_cis_504.png)
-
+!['nextbus_cis_514'](gtfs/img/nextbus_cis_514.png)
 ---
 
 ### ROUTE 504
@@ -98,7 +99,7 @@ DELETE FROM dzou2.cis_504 a USING (
         FROM dzou2.cis_504
         GROUP BY message_datetime, vehicle, run, route, latitude, longitude HAVING COUNT(*) > 1
       ) b
-      WHERE  a.date_time = b.date_time
+      WHERE  a.message_datetime = b.message_datetime
       AND a.vehicle = b.vehicle
       AND a.run = b.run
       AND a.route = b.route
@@ -110,6 +111,6 @@ DELETE FROM dzou2.cis_504 a USING (
 Delete the exact duplicates in the table.
 
 ### Step 3:
-Import the data table into QGIS.
+Import the data tables into QGIS.
 
-!['nextbus_cis_504'](gtfs\img\nextbus_cis_504.png)
+!['nextbus_cis_504'](gtfs/img/nextbus_cis_504.png)
