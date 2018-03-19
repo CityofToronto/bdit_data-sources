@@ -66,7 +66,7 @@ Delete the exact duplicates in the table.
 ### Step 3:
 Import the data tables into QGIS.
 
-!['nextbus_cis_514'](gtfs/img/nextbus_cis_514.png)
+!['nextbus_cis_514'](gtfs/img/nextbus_cis_514.PNG)
 
 
 ---
@@ -115,4 +115,4 @@ Delete the exact duplicates in the table.
 ### Step 3:
 Import the data tables into QGIS.
 
-!['nextbus_cis_504'](gtfs/img/nextbus_cis_504.png)
+!['nextbus_cis_504'](gtfs/img/nextbus_cis_504.PNG)
