@@ -4,9 +4,9 @@
 
 ---
 
-### ROUTE 514
+### ALL DATA
 #### Next bus:
-##### Step 1:
+
 Find the start and end time of the next bus data (`ttc_shared`) for filtering the CIS data to have the data in the same period.
 
 ```sql
@@ -25,7 +25,23 @@ Output:
 
 Thus, next bus data in `ttc_shared` is from Oct.17, 2017 to Nov.24, 2017.
 
-##### Step 2:
+#### CIS data:
+
+```sql
+SELECT * into dzou2.cis_514
+FROM ttc.cis_2017
+WHERE date(message_datetime)>= '2017-10-17' AND date(message_date_time) <= '2017-11-24'
+```
+Select the GPS points data that only recorded at the same period as the next bus data.
+
+
+!['nextbus_cis_all'](gtfs/img/nextbus_cis_all.png)
+
+---
+
+### ROUTE 514
+#### Next bus:
+
 
 ```sql
 SELECT * FROM ttc_shared.ttc_trips
@@ -44,7 +60,7 @@ WHERE route = 514 AND date(message_datetime)>= '2017-10-17' AND date(message_dat
 ```
 Select the GPS points data that only indicate they are route 514.
 
-#### Step 2:
+##### Step 2:
 
 ```sql
 DELETE FROM dzou2.cis_514 a USING (
@@ -63,7 +79,7 @@ DELETE FROM dzou2.cis_514 a USING (
 ```
 Delete the exact duplicates in the table.
 
-### Step 3:
+##### Step 3:
 Import the data tables into QGIS.
 
 !['nextbus_cis_514'](gtfs/img/nextbus_cis_514.PNG)
@@ -93,7 +109,7 @@ WHERE route = 504 AND date(message_datetime)>= '2017-10-17' AND date(message_dat
 ```
 Select the GPS points data that only indicate they are route 504.
 
-#### Step 2:
+##### Step 2:
 
 ```sql
 DELETE FROM dzou2.cis_504 a USING (
@@ -112,7 +128,7 @@ DELETE FROM dzou2.cis_504 a USING (
 ```
 Delete the exact duplicates in the table.
 
-### Step 3:
+##### Step 3:
 Import the data tables into QGIS.
 
 !['nextbus_cis_504'](gtfs/img/nextbus_cis_504.PNG)
