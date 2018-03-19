@@ -64,7 +64,6 @@ Delete the exact duplicates in the table.
 ### Step 3:
 Import the data table into QGIS.
 
-!['nb&cis_relationship'](gtfs/img/nextbus_cis_514.png)
 
 ---
 
@@ -112,4 +111,3 @@ Delete the exact duplicates in the table.
 ### Step 3:
 Import the data table into QGIS.
 
-!['nb&cis_relationship2'](gtfs/img/nextbus_cis_504.png)
