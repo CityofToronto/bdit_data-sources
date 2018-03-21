@@ -169,7 +169,7 @@ Data output on QGIS:
 
 Filtering by the GPS density by counting the number of points are in a about 10-metre buffer. The purpose of this step is to filter the messy GPS points in downtown area and only remain the GPS points that are closed to each other.
 
-Since the process of counting closed GPS points is time-consuming, so doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
+Since the process of counting closed GPS points is time-consuming, doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
 
 First,
 
@@ -408,19 +408,7 @@ Data output on QGIS:
 
 #### Step 5:
 
-Filtering by the GPS density by counting the number of points are in a about 10-metre buffer. The purpose of this step is to filter the messy GPS points in downtown area and only remain the GPS points that are closed to each other.
-
-Since the process of counting closed GPS points is time-consuming, so doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
-
-First,
-
-```sql
-VACUUM ANALYZE dzou2.cis_504_1004_f2
-```
-
-Then, clicking `analyze` option in the `maintenance` option from right-clicking the table (as described in the spatial indexing link).
-
-After that, running the SQL of counting.
+Filtering by the GPS density by counting the number of points are in a about 10-metre buffer.
 
 ```SQL
 SELECT A.message_datetime, A.run, A.vehicle, A.position, count(B.position) AS num_points
@@ -431,28 +419,9 @@ ON ST_DWithin(A.position, B.position, 0.0001)
 GROUP BY A.message_datetime, A.run, A.vehicle, A.position
 ```
 
-The table output has a column to store the number of GPS points in its about 10-metre buffer.
-To filter out the GPS points by the low density, the ratio that the number of closed points out of the number of all the GPS points in step 4 can be used as the indicator. In this case, ratio of **0.02%** because the data are small, or using a number as the filter may be better.
+Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query exceeds more than an hour.
 
-Thus, using this SQL query:
-
-```SQL
-SELECT * INTO dzou2.cis_504_1004_f4
-FROM dzou2.cis_504_1004_f3
-WHERE num_points/(count(*)) > 0.0002
-```
-**OR using this SQL query only in this example**:
-
-```SQL
-SELECT * INTO dzou2.cis_504_1004_f4
-FROM dzou2.cis_504_1004_f3
-WHERE num_points >= 4
-```
-
-
-Data output on QGIS:
-
-!['ttc_1004_504_s5'](gtfs/img/ttc_1004_504_s5.png)
+Thus, filtering by the GPS point density **is not suitable** in this case.
 
 
 #### Step 6:
@@ -486,7 +455,8 @@ Data output on QGIS:
 
 !['ttc_1004_504_s6'](gtfs/img/ttc_1004_504_s6.png)
 
-The green points represent the GTFS data, and the red points are the CIS data.
+The map compares the GTFS stops with the CIS data of route 504 on 10/04/2017, and the CIS data is filtered by route number, date, spatial frame, distances and speeds between points.
+The green points represent the GTFS data, and the orange points are the CIS data.
 
 ---
 
@@ -651,7 +621,7 @@ Data output on QGIS:
 
 Filtering by the GPS density by counting the number of points are in a about 10-metre buffer. The purpose of this step is to filter the messy GPS points in downtown area and only remain the GPS points that are closed to each other.
 
-Since the process of counting closed GPS points is time-consuming, so doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
+Since the process of counting closed GPS points is time-consuming, doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
 
 First,
 
@@ -726,7 +696,7 @@ Data output on QGIS:
 
 !['ttc_1114_514_s6'](gtfs/img/ttc_1114_514_s6.png)
 
-The green points represent the GTFS data, and the red points are the CIS data.
+The green points represent the GTFS data, and the purple points are the CIS data.
 
 ---
 
@@ -802,7 +772,7 @@ WHERE b.message_datetime IS NOT NULL
 
 Data output on QGIS:
 
-!['ttc_1114_504_s3'](gtfs/img/ttc_1114_504_S3.png)
+!['ttc_1114_504_s3'](gtfs/img/ttc_1114_504_s3.png)
 
 
 #### Step 4:
@@ -889,19 +859,7 @@ Data output on QGIS:
 
 #### Step 5:
 
-Filtering by the GPS density by counting the number of points are in a about 10-metre buffer. The purpose of this step is to filter the messy GPS points in downtown area and only remain the GPS points that are closed to each other.
-
-Since the process of counting closed GPS points is time-consuming, so doing [spatial indexing](http://revenant.ca/www/postgis/workshop/indexing.html) before counting can increase the speed of processing.
-
-First,
-
-```sql
-VACUUM ANALYZE dzou2.cis_504_1114_f2
-```
-
-Then, clicking `analyze` option in the `maintenance` option from right-clicking the table (as described in the spatial indexing link).
-
-After that, running the SQL of counting.
+Filtering by the GPS density by counting the number of points are in a about 10-metre buffer.
 
 ```SQL
 SELECT A.message_datetime, A.run, A.vehicle, A.position, count(B.position) AS num_points
@@ -912,27 +870,9 @@ ON ST_DWithin(A.position, B.position, 0.0001)
 GROUP BY A.message_datetime, A.run, A.vehicle, A.position
 ```
 
-In this case, ratio of **0.02%** because the data are small, or using a number as the filter may be better.
+Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query exceeds more than an hour.
 
-Thus, using this SQL query:
-
-```SQL
-SELECT * INTO dzou2.cis_504_1114_f4
-FROM dzou2.cis_504_1114_f3
-WHERE num_points/(count(*)) > 0.0002
-```
-**OR using this SQL query only in this example**:
-
-```SQL
-SELECT * INTO dzou2.cis_504_1114_f4
-FROM dzou2.cis_504_1114_f3
-WHERE num_points >= 6
-```
-
-
-Data output on QGIS:
-
-!['ttc_1114_504_s5'](gtfs/img/ttc_1114_504_s5.png)
+Thus, filtering by the GPS point density **is not suitable** in this case.
 
 
 #### Step 6:
@@ -966,4 +906,5 @@ Data output on QGIS:
 
 !['ttc_1114_504_s6'](gtfs/img/ttc_1114_504_s6.png)
 
-The green points represent the GTFS data, and the red points are the CIS data.
+The map compares the GTFS stops with the CIS data of route 504 on 11/14/2017, and the CIS data is filtered by route number, date, spatial frame, distances and speeds between points.
+The green points represent the GTFS data, and the blue points are the CIS data.
