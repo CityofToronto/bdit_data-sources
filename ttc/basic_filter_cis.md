@@ -904,7 +904,7 @@ GROUP BY stop_code, stop_name, route_short_name, geom
 
 Data output on QGIS:
 
-!['ttc_1114_504_s6'](gtfs/img/ttc_1114_504_s6.png)
+!['ttc_1114_504_s6'](gtfs/img/ttc_1114_504_6.png)
 
 The map compares the GTFS stops with the CIS data of route 504 on 11/14/2017, and the CIS data is filtered by route number, date, spatial frame, distances and speeds between points.
 The green points represent the GTFS data, and the blue points are the CIS data.
