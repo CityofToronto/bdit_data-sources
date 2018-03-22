@@ -410,6 +410,16 @@ Data output on QGIS:
 
 Filtering by the GPS density by counting the number of points are in a about 10-metre buffer.
 
+First,
+
+```sql
+VACUUM ANALYZE dzou2.cis_504_1004_f2
+```
+
+Then, clicking `analyze` option in the `maintenance` option from right-clicking the table (as described in the spatial indexing link).
+
+After that, running the SQL of counting.
+
 ```SQL
 SELECT A.message_datetime, A.run, A.vehicle, A.position, count(B.position) AS num_points
 INTO dzou2.cis_504_1004_f3
@@ -419,9 +429,21 @@ ON ST_DWithin(A.position, B.position, 0.0001)
 GROUP BY A.message_datetime, A.run, A.vehicle, A.position
 ```
 
-Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query exceeds more than an hour.
+Then,
+**using this SQL query only in this example**:
+
+```SQL
+SELECT * INTO dzou2.cis_504_1004_f4
+FROM dzou2.cis_504_1004_f3
+WHERE num_points >= 2
+```
+Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query **requires 3 hours**.
+
+Another disadvantage of using GPS density to filter out the GPS points in this case is that the diversion on the Danforth Ave. drives too fast and most of points might be filtered out in last step, and the result is that it is hard to filter out the wrong GPS points in downtown area and keep the diversion points because both of their density of GPS points are low.
 
 Thus, filtering by the GPS point density **is not suitable** in this case.
+
+!['ttc_1004_504_s5'](gtfs/img/ttc_1004_504_s5.png)
 
 
 #### Step 6:
@@ -453,10 +475,10 @@ GROUP BY stop_code, stop_name, route_short_name, geom
 
 Data output on QGIS:
 
-!['ttc_1004_504_s6'](gtfs/img/ttc_1004_504_s6.png)
+!['ttc_1004_504_s6'](gtfs/img/ttc_1004_504_st6.png)
 
-The map compares the GTFS stops with the CIS data of route 504 on 10/04/2017, and the CIS data is filtered by route number, date, spatial frame, distances and speeds between points.
 The green points represent the GTFS data, and the orange points are the CIS data.
+
 
 ---
 
@@ -861,6 +883,16 @@ Data output on QGIS:
 
 Filtering by the GPS density by counting the number of points are in a about 10-metre buffer.
 
+First,
+
+```sql
+VACUUM ANALYZE dzou2.cis_504_1114_f2
+```
+
+Then, clicking `analyze` option in the `maintenance` option from right-clicking the table (as described in the spatial indexing link).
+
+After that, running the SQL of counting.
+
 ```SQL
 SELECT A.message_datetime, A.run, A.vehicle, A.position, count(B.position) AS num_points
 INTO dzou2.cis_504_1114_f3
@@ -870,10 +902,21 @@ ON ST_DWithin(A.position, B.position, 0.0001)
 GROUP BY A.message_datetime, A.run, A.vehicle, A.position
 ```
 
-Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query exceeds more than an hour.
+Then,
+**using this SQL query only in this example**:
+
+```SQL
+SELECT * INTO dzou2.cis_504_1114_f4
+FROM dzou2.cis_504_1114_f3
+WHERE num_points >= 3
+```
+Since the process of counting closed GPS points is time-consuming and there are too many data, the time of running the query **requires 3 hours**.
+
+Another disadvantage of using GPS density to filter out the GPS points in this case is that the diversion on the Dundas E. drives too fast and most of points might be filtered out in last step, and the result is that it is hard to filter out the wrong GPS points in downtown area and keep the diversion points because both of their density of GPS points are low.
 
 Thus, filtering by the GPS point density **is not suitable** in this case.
 
+!['ttc_1114_504_s5'](gtfs/img/ttc_1114_504_s5.png)
 
 #### Step 6:
 
@@ -904,7 +947,7 @@ GROUP BY stop_code, stop_name, route_short_name, geom
 
 Data output on QGIS:
 
-!['ttc_1114_504_s6'](gtfs/img/ttc_1114_504_6.png)
+!['ttc_1114_504_s6'](gtfs/img/ttc_1114_504_step6.png)
 
 The map compares the GTFS stops with the CIS data of route 504 on 11/14/2017, and the CIS data is filtered by route number, date, spatial frame, distances and speeds between points.
 The green points represent the GTFS data, and the blue points are the CIS data.
