@@ -7,6 +7,7 @@
 3. [Technology](#3-technology)
 4. [Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
 5. [Processing Data from API](#5-processing-data-from-api)
+6. [Filtering and Interpolation](#6-filtering-and-interpolation)
 
 ## 1. Overview
 
@@ -144,19 +145,51 @@ volume|integer|Total 15-minute volume|107|
 
 ## 4. Processing Data from CSV Dumps
 
-###A. Populate `raw_data`
-1. Make a copy of `raw_data` AS `raw_data_old` using following code:
+### A. Populate `raw_data`
+Ensure that `raw_data` has been updated with all new data (either from new collection periods, or replacing older data with corrected 1-minute observations).
+
+1. Make a backup copy of `raw_data` using the following:
+
 	`CREATE TABLE miovision.raw_data_old AS SELECT * FROM miovision.raw_data`
+
+	You can delete this copy after fully QCing the dataset.
+	
 2. Delete any studies / data that is being replaced by new data (if data only covers a new set of dates, ignore this step).
+
 3. Import new dataset using PostgreSQL COPY functionality into `raw_data`.
 
+### b. Populate `volumes`
+This will transform 1-minute data from `raw_data` into a standard normalized structure stored in `volumes`.
 
-2. Populate `volumes` with normalized 1-minute volume data, with links to `intersections`, `movements`, and `classifications`.
-3. Populate `volumes_15min_tmc` using following criteria:
-   1. **Remove**: Eliminate all 15-minute bins where 5 or fewer 1-minute bins are populated with data
-   2. **Keep**: If 15-minute bin consists of 15 populated 1-minute bins, leave as is
-   3. **Keep**: If difference between first and last 1-minute bin within 15-minute period is **greater than** the total number of populated 1-minute bins
+1. Run `populate-table-volumes.sql`. This will truncate `volumes` and replace with data from `raw_data`.
+2. Ensure that the number of records in `volumes` is identical to that in `raw_data`. If a discrepancy exists, investigate further.
+
+### c. Populate `volumes_15min_tmc` and `volumes_15min`
+This will aggregate the 1-minute data from `volumes` into 15-minute turning movement counts (stored in `volumes_15min_tmc`) and segment-level counts (stored in `volumes_15min`). This process also filter potential partial 1-minute data and interpolates missing records where possible (see [Section 6](#6-filtering-and-interpolation))
+
+1. Run `populate-table-volumes_15_min_tmc.sql`. This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling.
+2. Run `populate-table-volumes_15_min.sql`. This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging).
+
+### d. Populate `report_dates`
+This produces a lookup table of date-intersection combinations to be used for formal reporting (this filters into various views).
+
+1. Run `populate-table-report_dates.sql`. This creates a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
+2. If needed, modify query once the data has undergone QC if specific intersection-date combinations need to be removed, and re-run `populate-table-report_dates.sql`.
+
+### e. Refresh reporting views
+Refresh the relevant materialized views for monthly reporting:
+
+- `miovision.report_volumes_15min`
+- `miovision.volumes_15min_by_class`
+
+### f. Produce summarized monthly reporting data
+
+1. Run `miovision.report_summary` and copy over to relevant reporting templates.
 
 ## 5. Processing Data from API
+
+(to be filled in)
+
+## 6. Filtering and Interpolation
 
 (to be filled in)
