@@ -15,6 +15,7 @@
 ## 2. Table Structure
 
 ### Original Data
+
 #### `raw_data`
 Data table storing all 1-minute observations in its **original** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination. All subsequent tables are derived from the records in this table.
 
@@ -35,6 +36,7 @@ volume|integer|Total 1-minute volume|12|
 
 
 ### Reference Tables
+
 #### `classifications`
 Reference table for all 7 classifications: Lights, Bicycles on Road, Buses, Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, and Bicycles on Crosswalk.
 
@@ -92,6 +94,7 @@ period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00
 
 
 ### Disaggregate Data
+
 #### `volumes`
 Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
 
