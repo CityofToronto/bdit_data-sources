@@ -88,7 +88,7 @@ Reference table for all unique time periods. Used primarily to aggregate 15-minu
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 period_id|integer|Unique identifier for table|3|
-day_type|text|Day type for date filter|[Weekday|Weekend]|
+day_type|text|Day type for date filter|[Weekday OR Weekend]|
 period_name|text|Textual description of period|14 Hour|
 period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
 
@@ -110,7 +110,31 @@ volume|integer|Total 1-minute volume|12|
 
 ### Aggregated Data
 
+#### `volumes_15min_tmc`
+Data table storing aggregated 15-minute turning movement data. 
 
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_tmc_uid|serial|Unique identifier for table|14524|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Entry leg of movement|E|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+volume|integer|Total 15-minute volume|78|
+
+#### `volumes_15min`
+Data table storing aggregated 15-minute segment-level data.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_uid|serial|Unique identifier for table|12412|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Segment leg of intersection|E|
+dir|text|Direction of traffic on specific leg|EB|
+volume|integer|Total 15-minute volume|107|
 
 ### Important Views
 
@@ -120,9 +144,13 @@ volume|integer|Total 1-minute volume|12|
 
 ## 4. Processing Data from CSV Dumps
 
-(needs to be expanded)
+###A. Populate `raw_data`
+1. Make a copy of `raw_data` AS `raw_data_old` using following code:
+	`CREATE TABLE miovision.raw_data_old AS SELECT * FROM miovision.raw_data`
+2. Delete any studies / data that is being replaced by new data (if data only covers a new set of dates, ignore this step).
+3. Import new dataset using PostgreSQL COPY functionality into `raw_data`.
 
-1. Import raw data into `raw_data`.
+
 2. Populate `volumes` with normalized 1-minute volume data, with links to `intersections`, `movements`, and `classifications`.
 3. Populate `volumes_15min_tmc` using following criteria:
    1. **Remove**: Eliminate all 15-minute bins where 5 or fewer 1-minute bins are populated with data
