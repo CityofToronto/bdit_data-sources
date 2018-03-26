@@ -33,7 +33,7 @@ exit_name|text|(not currently populated)|
 movement|text|Specific turning movement (see `movements` below)|thru
 volume|integer|Total 1-minute volume|12
 
-<br/>
+
 ### Reference Tables
 #### `classifications`
 Reference table for all 7 classifications: Lights, Bicycles on Road, Buses, Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, and Bicycles on Crosswalk.
@@ -45,7 +45,7 @@ classification|text|Textual description of mode|Bicycles
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists
 
-<br/>
+
 #### `intersections`
 Reference table for each unique intersection at which data has been collected.
 
@@ -58,7 +58,7 @@ street_cross|text|Name of secondary street|Bathurst
 lat|numeric|Latitude of intersection location|43.643945
 lng|numeric|Longitude of intersection location|-79.402667
 
-<br/>
+
 #### `movement_map`
 Reference table for transforming aggregated turning movement counts (see `volumes_15min_tmc`) into segment-level volumes (see `volumes_15min`).
 
@@ -69,7 +69,7 @@ dir|text|Direction on which 15-minute volume will be assigned|EB
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W
 movement_uid|integer|Identifier representing current turning movement|1
 
-<br/>
+
 #### `movements`
 Reference table for all unique movements: through, left turn, right turn, u-turn, clockwise movement on crosswalk, and counter-clockwise movement on crosswalk.
 
@@ -79,7 +79,7 @@ movement_uid|serial|Unique identifier for table|3
 movement|text|Textual description of specific turning movement|right
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE
 
-<br/>
+
 #### `periods`
 Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes.
 
@@ -90,7 +90,7 @@ day_type|text|Day type for date filter|[Weekday|Weekend]
 period_name|text|Textual description of period|14 Hour
 period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)
 
-<br/>
+
 ### Disaggregate Data
 #### `volumes`
 Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
