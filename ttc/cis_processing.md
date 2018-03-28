@@ -184,7 +184,7 @@ nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
 )
 
 SELECT *, ST_Distance(cis_position::geography,nearest_stop::geography)
-INTO dzou2.test6_cis_direction_2
+INTO dzou2.test6_cis_direction
 FROM nearest_point
 WHERE (cis_angle_pre BETWEEN stop_angle_pre - 45 AND stop_angle_pre + 45) AND
       (cis_angle_next BETWEEN stop_angle_next - 45 AND stop_angle_next + 45)
