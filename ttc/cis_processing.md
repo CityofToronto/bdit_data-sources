@@ -172,10 +172,10 @@ WHERE date(date_time) = '2017-10-04'),
 
 nearest_point AS (
 
-SELECT date_time, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
+SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
 CIS.angle_previous AS cis_angle_pre, CIS.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
 nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
-	FROM  (SELECT date_time, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
+	FROM  (SELECT date_time, vehicle, run, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
 	CROSS JOIN LATERAL
 		(SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
 		WHERE direction_id IN (0, 1)
@@ -184,7 +184,7 @@ nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
 )
 
 SELECT *, ST_Distance(cis_position::geography,nearest_stop::geography)
-INTO dzou2.test6_cis_direction
+INTO dzou2.test6_cis_direction_2
 FROM nearest_point
 WHERE (cis_angle_pre BETWEEN stop_angle_pre - 45 AND stop_angle_pre + 45) AND
       (cis_angle_next BETWEEN stop_angle_next - 45 AND stop_angle_next + 45)
@@ -200,10 +200,10 @@ WHERE date(date_time) = '2017-10-04'),
 
 nearest_point AS (
 
-SELECT date_time, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
+SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
 CIS.angle_previous AS cis_angle_pre, CIS.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
 nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
-	FROM  (SELECT date_time, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
+	FROM  (SELECT date_time, vehicle, run, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
 	CROSS JOIN LATERAL
 		(SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
 		WHERE direction_id IN (0, 1)
