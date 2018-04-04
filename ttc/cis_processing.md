@@ -11,31 +11,21 @@ FROM ttc.cis_2017
 WHERE route = 514
 ```
 
-### Step 2: Created the table that having the CIS data of route 514 and its angles with previous and next points.
+### Step 2: Created the table that having the CIS data of route 514 On 10/04/2017 and its angles with previous and next points.
 
 ```sql
-WITH orders AS (
-
 SELECT rank() OVER (order by date_time) AS rank_time,
         date_time, run, vehicle, latitude, longitude, position,
         degrees(ST_Azimuth(position, lag(position,1) OVER (partition by run order by date_time))) AS angle_previous,
         degrees(ST_Azimuth(position, lag(position,-1) OVER (partition by run order by date_time))) AS angle_next
+    INTO dzou2.test6_cis_514_angle
     FROM dzou2.test2_cis_514
-)
-
-SELECT * INTO dzou2.test6_cis_514_angle
-FROM orders
+    WHERE date(date_time) = '2017-10-04'
 ```
 
-The first `angle_previous` and the last `angle_next` will be NULL, as well as the angles between two points which did not move. Thus, the next step is to change the NULL value to 0.
+The first `angle_previous` and the last `angle_next` will be NULL, as well as the angles between two points which did not move.
 
-```sql
-UPDATE dzou2.test6_cis_514_angle SET angle_next = 0 WHERE angle_next IS NULL
-```
 
-```sql
-UPDATE dzou2.test6_cis_514_angle SET angle_previous = 0 WHERE angle_previous IS NULL
-```
 
 ### Step 3: Obtained the stop patterns and directions of route 514 on 10/04/2017 by Raph's query.
 
@@ -69,8 +59,6 @@ Thus, there are 2 patterns of the stops, and each pattern has 2 directions. Tota
 
 ### Step 4: Obtained the order and position for each stop based on last step.
 
-This step is a little repetitive because there are 4 patterns.
-
 ```sql
 WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
                                 FROM gtfs_raph.trips_20171004
@@ -79,72 +67,24 @@ WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) sha
                                 WHERE route_short_name = '514'
                                 ORDER BY shape_id, stop_sequence)
 
-SELECT shape_id, direction_id, stop_name, geom, ROW_NUMBER() OVER (ORDER BY stop_sequence) AS geom_order
+SELECT shape_id, direction_id, stop_name, geom, stop_sequence
 INTO dzou2.test6_stop_pattern
 FROM distinct_stop_patterns
 NATURAL JOIN gtfs_raph.stops_20171004
-WHERE shape_id = 691040 AND direction_id = 0
-ORDER BY stop_sequence
+ORDER BY shape_id, stop_sequence
 ```
 
-```sql
-WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
-                                FROM gtfs_raph.trips_20171004
-                                NATURAL JOIN gtfs_raph.stop_times_20171004
-                                NATURAL JOIN gtfs_raph.routes_20171004
-                                WHERE route_short_name = '514'
-                                ORDER BY shape_id, stop_sequence)
-
-INSERT INTO dzou2.test6_stop_pattern
-SELECT shape_id, direction_id, stop_name, geom, ROW_NUMBER() OVER (ORDER BY stop_sequence) AS geom_order
-FROM distinct_stop_patterns
-NATURAL JOIN gtfs_raph.stops_20171004
-WHERE shape_id = 691041 AND direction_id = 0
-ORDER BY stop_sequence
-```
-
-```sql
-WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
-                                FROM gtfs_raph.trips_20171004
-                                NATURAL JOIN gtfs_raph.stop_times_20171004
-                                NATURAL JOIN gtfs_raph.routes_20171004
-                                WHERE route_short_name = '514'
-                                ORDER BY shape_id, stop_sequence)
-
-INSERT INTO dzou2.test6_stop_pattern
-SELECT shape_id, direction_id, stop_name, geom, ROW_NUMBER() OVER (ORDER BY stop_sequence) AS geom_order
-FROM distinct_stop_patterns
-NATURAL JOIN gtfs_raph.stops_20171004
-WHERE shape_id = 691042 AND direction_id = 1
-ORDER BY stop_sequence
-```
-
-```sql
-WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
-                                FROM gtfs_raph.trips_20171004
-                                NATURAL JOIN gtfs_raph.stop_times_20171004
-                                NATURAL JOIN gtfs_raph.routes_20171004
-                                WHERE route_short_name = '514'
-                                ORDER BY shape_id, stop_sequence)
-
-INSERT INTO dzou2.test6_stop_pattern
-SELECT shape_id, direction_id, stop_name, geom, ROW_NUMBER() OVER (ORDER BY stop_sequence) AS geom_order
-FROM distinct_stop_patterns
-NATURAL JOIN gtfs_raph.stops_20171004
-WHERE shape_id = 691043 AND direction_id = 1
-ORDER BY stop_sequence
-```
-
-After running these queries, the table `dzou2.test6_stop_pattern` has the data of shape_id, direction_id, stop_name, and the order of stops for each pattern.
+After running the query, the table `dzou2.test6_stop_pattern` has the data of shape_id, direction_id, stop_name, and stop_sequence is the order of stops for each pattern.
 
 ### Step 5:  Created the table that having the GTFS stop data of route 514 on 10/04/2017 and its angles with previous and next points.
 
 ```sql
 WITH order_stop AS (
 
-SELECT shape_id, direction_id, stop_name, geom, geom_order,
-        degrees(ST_Azimuth(geom, lag(geom,1) OVER (geom_order))) AS angle_previous,
-        degrees(ST_Azimuth(geom, lag(geom,-1) OVER (geom_order))) AS angle_next
+SELECT shape_id, direction_id, stop_name, geom, stop_sequence,
+        degrees(ST_Azimuth(geom, lag(geom,1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_previous,
+        degrees(ST_Azimuth(geom, lag(geom,-1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_next
+
     FROM dzou2.test6_stop_pattern
 )
 
@@ -152,70 +92,56 @@ SELECT * INTO dzou2.test6_stop_angle
 FROM order_stop
 ```
 
-The first `angle_previous` and the last `angle_next` will be NULL. Thus, the next step is to change the NULL value to 0.
+The terminal stops, first `angle_previous` and the last `angle_next` of each pattern will be NULL.
 
-```sql
-UPDATE dzou2.test6_stop_angle SET angle_next = 0 WHERE angle_next IS NULL
-```
-
-```sql
-UPDATE dzou2.test6_stop_angle SET angle_previous = 0 WHERE angle_previous IS NULL
-```
 
 ### Step 6: Find the nearest GTFS stop for each CIS data and the distance between them
 
 ```sql
-WITH cis_1004 AS (
+WITH cis AS (
 SELECT *
 FROM dzou2.test6_cis_514_angle
-WHERE date(date_time) = '2017-10-04'),
-
-nearest_point AS (
+WHERE date(date_time) = '2017-10-04')
 
 SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
-CIS.angle_previous AS cis_angle_pre, CIS.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
-nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
-	FROM  (SELECT date_time, vehicle, run, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
-	CROSS JOIN LATERAL
-		(SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
-		WHERE direction_id IN (0, 1)
-		ORDER BY stops.geom <-> CIS.position LIMIT 1
-		) nearest
-)
-
-SELECT *, ST_Distance(cis_position::geography,nearest_stop::geography)
+cis.angle_previous AS cis_angle_pre, cis.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
+nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id, ST_Distance(position::geography,geom::geography)
 INTO dzou2.test6_cis_direction
-FROM nearest_point
-WHERE (cis_angle_pre BETWEEN stop_angle_pre - 45 AND stop_angle_pre + 45) AND
-      (cis_angle_next BETWEEN stop_angle_next - 45 AND stop_angle_next + 45)
+    FROM cis
+    CROSS JOIN LATERAL
+        (SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
+        WHERE direction_id IN (0, 1)
+        ORDER BY stops.geom <-> CIS.position LIMIT 1
+        ) nearest
+     WHERE (cis.angle_previous IS NULL OR nearest.angle_previous IS NULL OR
+	          (cis.angle_previous BETWEEN nearest.angle_previous - 45 AND nearest.angle_previous + 45))
+	         AND
+           (cis.angle_next IS NULL OR nearest.angle_next IS NULL OR
+	          (cis.angle_next BETWEEN nearest.angle_next - 45 AND nearest.angle_next + 45))
 ```
 
 ### Step 7: Created a table stores the the non-matches
 
 ```sql
-WITH cis_1004 AS (
+WITH cis AS (
 SELECT *
 FROM dzou2.test6_cis_514_angle
-WHERE date(date_time) = '2017-10-04'),
-
-nearest_point AS (
+WHERE date(date_time) = '2017-10-04')
 
 SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
-CIS.angle_previous AS cis_angle_pre, CIS.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
-nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id
-	FROM  (SELECT date_time, vehicle, run, latitude, longitude, position, angle_previous, angle_next FROM cis_1004) CIS
-	CROSS JOIN LATERAL
-		(SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
-		WHERE direction_id IN (0, 1)
-		ORDER BY stops.geom <-> CIS.position LIMIT 1
-		) nearest
-)
-
-SELECT *, ST_Distance(cis_position::geography,nearest_stop::geography)
+cis.angle_previous AS cis_angle_pre, cis.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
+nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id, ST_Distance(position::geography,geom::geography)
 INTO dzou2.test6_non_match
-FROM nearest_point
-WHERE cis_angle_pre < stop_angle_pre - 45 OR cis_angle_pre > stop_angle_pre + 45
-      OR cis_angle_next < stop_angle_next - 45 OR cis_angle_next > stop_angle_next + 45
+    FROM cis
+    CROSS JOIN LATERAL
+        (SELECT stop_name, angle_previous, angle_next, direction_id, geom FROM dzou2.test6_stop_angle stops
+        WHERE direction_id IN (0, 1)
+        ORDER BY stops.geom <-> CIS.position LIMIT 1
+        ) nearest
+     WHERE NOT (cis.angle_previous IS NULL OR cis.angle_next IS NULL
+	       OR nearest.angle_previous IS NULL OR nearest.angle_next IS NULL
+	       OR ((cis.angle_previous BETWEEN nearest.angle_previous - 45 AND nearest.angle_previous + 45) AND
+               (cis.angle_next BETWEEN nearest.angle_next - 45 AND nearest.angle_next + 45)))
 ```
 
 ### Result shows on the map:
@@ -228,17 +154,17 @@ Yellow points: the nearest GTFS stops of the blues
 
 Red points: the non-matches
 
-!['cp1'](gtfs/img/cp1.png)
+!['cp5'](gtfs/img/cp5.PNG)
 
 [The distribution of the CIS data with a matched direction]
 
-!['cp2'](gtfs/img/cp2.png)
+!['cp6'](gtfs/img/cp6.png)
 
 [The distribution of the non-matched CIS data]
 
-!['cp3'](gtfs/img/cp3.png)
+!['cp7'](gtfs/img/cp7.png)
 
 [comparison between CIS data with a matched direction and their nearest GTFS stops in downtown area]
 
-!['cp4'](gtfs/img/cp4.png)
+!['cp8'](gtfs/img/cp8.png)
 [comparison among non-matches, CIS data with a matched direction and their nearest GTFS stops in downtown area]
