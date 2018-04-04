@@ -28,9 +28,9 @@ Thus, next bus data in `ttc_shared` is from Oct.17, 2017 to Nov.24, 2017.
 #### CIS data:
 
 ```sql
-SELECT * into dzou2.cis_514
+SELECT * into dzou2.cis_1017_124
 FROM ttc.cis_2017
-WHERE date(message_datetime)>= '2017-10-17' AND date(message_date_time) <= '2017-11-24'
+WHERE date(message_datetime) BETWEEN '2017-10-17' AND '2017-11-24'
 ```
 Select the GPS points data that only recorded at the same period as the next bus data.
 
@@ -54,18 +54,18 @@ Select the next bus line data that only indicate they are route 514.
 ##### Step 1:
 
 ```sql
-SELECT * into dzou2.cis_514
+SELECT * INTO dzou2.cis_514_1017_1124
 FROM ttc.cis_2017
-WHERE route = 514 AND date(message_datetime)>= '2017-10-17' AND date(message_date_time) <= '2017-11-24'
+WHERE route = 514 AND date(message_datetime) BETWEEN '2017-10-17' AND '2017-11-24'
 ```
 Select the GPS points data that only indicate they are route 514.
 
 ##### Step 2:
 
 ```sql
-DELETE FROM dzou2.cis_514 a USING (
+DELETE FROM dzou2.cis_514_1017_1124 a USING (
       SELECT MIN(ctid) as ctid, message_datetime, vehicle, run, route, latitude, longitude
-        FROM dzou2.cis_514
+        FROM dzou2.cis_514_1017_1124
         GROUP BY message_datetime, vehicle, run, route, latitude, longitude HAVING COUNT(*) > 1
       ) b
       WHERE  a.message_datetime = b.message_datetime
@@ -103,18 +103,18 @@ Select the next bus line data that only indicate they are route 504.
 ##### Step 1:
 
 ```sql
-SELECT * into dzou2.cis_504
+SELECT * into dzou2.cis_504_1017_1124
 FROM ttc.cis_2017
-WHERE route = 504 AND date(message_datetime)>= '2017-10-17' AND date(message_date_time) <= '2017-11-24'
+WHERE route = 504 AND date(message_datetime) BETWEEN '2017-10-17' AND '2017-11-24'
 ```
 Select the GPS points data that only indicate they are route 504.
 
 ##### Step 2:
 
 ```sql
-DELETE FROM dzou2.cis_504 a USING (
+DELETE FROM dzou2.cis_504_1017_1124 a USING (
       SELECT MIN(ctid) as ctid, message_datetime, vehicle, run, route, latitude, longitude
-        FROM dzou2.cis_504
+        FROM dzou2.cis_504_1017_1124
         GROUP BY message_datetime, vehicle, run, route, latitude, longitude HAVING COUNT(*) > 1
       ) b
       WHERE  a.message_datetime = b.message_datetime
