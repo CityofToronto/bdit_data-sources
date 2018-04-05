@@ -40,7 +40,7 @@ FROM io WHERE inside = TRUE
 
 The process filtered out 504 GPS points.
 
-### Step 2: Created the table that having the CIS data and its angles with previous and next points.
+### Step 3: Created the table that having the CIS data and its angles with previous and next points.
 
 ```sql
 SELECT rank() OVER (order by date_time) AS rank_time,
@@ -55,7 +55,7 @@ The first `angle_previous` and the last `angle_next` will be NULL, as well as th
 
 
 
-### Step 3: Obtained the stop patterns and directions of route 514 on 10/04/2017 by Raph's query.
+### Step 4: Obtained the stop patterns and directions of route 514 on 10/04/2017 by Raph's query.
 
 ```sql
 WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
@@ -85,7 +85,7 @@ shape_id | direction_id | stop_order
 Thus, there are 2 patterns of the stops, and each pattern has 2 directions. Total 4 patterns.
 
 
-### Step 4: Obtained the order and position for each stop based on last step.
+### Step 5: Obtained the order and position for each stop based on last step.
 
 ```sql
 WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) shape_id, direction_id, stop_sequence, stop_id
@@ -95,7 +95,7 @@ WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) sha
                                 WHERE route_short_name = '514'
                                 ORDER BY shape_id, stop_sequence)
 
-SELECT shape_id, direction_id, stop_name, geom, stop_sequence
+SELECT shape_id, direction_id, stop_id, geom, stop_sequence
 INTO dzou2.test6_stop_pattern
 FROM distinct_stop_patterns
 NATURAL JOIN gtfs_raph.stops_20171004
@@ -104,10 +104,10 @@ ORDER BY shape_id, stop_sequence
 
 After running the query, the table `dzou2.test6_stop_pattern` has the data of shape_id, direction_id, stop_name, and stop_sequence is the order of stops for each pattern.
 
-### Step 5:  Created the table that having the GTFS stop data of route 514 on 10/04/2017 and its angles with previous and next points.
+### Step 6:  Created the table that having the GTFS stop data of route 514 on 10/04/2017 and its angles with previous and next points.
 
 ```sql
-SELECT shape_id, direction_id, stop_name, geom, stop_sequence,
+SELECT shape_id, direction_id, stop_id, geom, stop_sequence,
         degrees(ST_Azimuth(geom, lag(geom,1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_previous,
         degrees(ST_Azimuth(geom, lag(geom,-1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_next
 INTO dzou2.test6_stop_angle
@@ -118,49 +118,43 @@ FROM dzou2.test6_stop_pattern
 The terminal stops, first `angle_previous` and the last `angle_next` of each pattern will be NULL.
 
 
-### Step 6: Find the nearest GTFS stop for each CIS data and the distance between them
+### Step 7: Add some columns that are needed in the next step
 
 ```sql
-SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
-cis.angle_previous AS cis_angle_pre, cis.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
-nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id, ST_Distance(position::geography,geom::geography)
-INTO dzou2.test6_cis_direction
-    FROM dzou2.test6_cis_514_angle cis
-    CROSS JOIN LATERAL
-        (SELECT stop_name, angle_previous, angle_next, direction_id, geom
+ALTER TABLE test6_cis_514_angle
+ADD COLUMN id SERIAL PRIMARY KEY,
+ADD COLUMN stop_id integer, ADD COLUMN direction_id smallint
+```
+
+### Step 8: Find the nearest GTFS stop for each CIS data and its direction
+
+```sql
+UPDATE dzou2.test6_cis_514_angle
+SET stop_id = nearest.stop_id, direction_id = nearest.direction_id
+FROM (SELECT b.id, stop_data.stop_id, stop_data.direction_id
+      FROM dzou2.test6_cis_514_angle b
+      CROSS JOIN LATERAL
+	(SELECT stop_id, direction_id
          FROM dzou2.test6_stop_angle stops
          WHERE
-         ((cis.angle_previous IS NULL OR stops.angle_previous IS NULL OR
-           (cis.angle_previous BETWEEN stops.angle_previous - 45 AND stops.angle_previous + 45))
+         ((b.angle_previous IS NULL OR stops.angle_previous IS NULL OR
+           (b.angle_previous BETWEEN stops.angle_previous - 45 AND stops.angle_previous + 45))
            AND
-           (cis.angle_next IS NULL OR stops.angle_next IS NULL OR
-           (cis.angle_next BETWEEN stops.angle_next - 45 AND stops.angle_next + 45)))
-        ORDER BY stops.geom <-> CIS.position LIMIT 1
-        ) nearest
+           (b.angle_next IS NULL OR stops.angle_next IS NULL OR
+           (b.angle_next BETWEEN stops.angle_next - 45 AND stops.angle_next + 45)))
+        ORDER BY stops.geom <-> b.position LIMIT 1
+        ) stop_data) nearest
+WHERE nearest.id = dzou2.test6_cis_514_angle.id
 ```
-23153
 
-### Step 7: Created a table stores the the non-matches
+
+### Step 9: Finds the non-matches
 
 ```sql
-SELECT date_time, vehicle, run, latitude AS cis_latitude, longitude AS cis_longitude, position AS cis_position,
-cis.angle_previous AS cis_angle_pre, cis.angle_next AS cis_angle_next, stop_name, nearest.angle_previous AS stop_angle_pre,
-nearest.angle_next AS stop_angle_next, geom AS nearest_stop, direction_id, ST_Distance(position::geography,geom::geography)
-INTO dzou2.test6_non_match
-    FROM dzou2.test6_cis_514_angle cis
-    CROSS JOIN LATERAL
-        (SELECT stop_name, angle_previous, angle_next, direction_id, geom
-         FROM dzou2.test6_stop_angle stops
-         WHERE NOT
-         ((cis.angle_previous IS NULL OR stops.angle_previous IS NULL OR
-           (cis.angle_previous BETWEEN stops.angle_previous - 45 AND stops.angle_previous + 45))
-           AND
-           (cis.angle_next IS NULL OR stops.angle_next IS NULL OR
-           (cis.angle_next BETWEEN stops.angle_next - 45 AND stops.angle_next + 45)))
-        ORDER BY stops.geom <-> CIS.position LIMIT 1
-        ) nearest
+SELECT * FROM dzou2.test6_cis_514_angle
+WHERE direction_id IS NULL
 ```
-19737
+There are 51 rows outputted.
 
 ### Result shows on the map:
 
@@ -168,21 +162,17 @@ INTO dzou2.test6_non_match
 
 Blue points: the CIS data with a matched direction
 
-Yellow points: the nearest GTFS stops of the blues
+Yellow points: the GTFS stops
 
 Red points: the non-matches
 
-!['cp5'](gtfs/img/cp5.PNG)
+!['cp9'](gtfs/img/cp9.png)
 
 [The distribution of the CIS data with a matched direction]
 
-!['cp6'](gtfs/img/cp6.png)
-
-[The distribution of the non-matched CIS data]
-
-!['cp7'](gtfs/img/cp7.png)
+!['cp10'](gtfs/img/cp10.png)
 
 [comparison between CIS data with a matched direction and their nearest GTFS stops in downtown area]
 
-!['cp8'](gtfs/img/cp8.png)
+!['cp11'](gtfs/img/cp11.png)
 [comparison among non-matches, CIS data with a matched direction and their nearest GTFS stops in downtown area]
