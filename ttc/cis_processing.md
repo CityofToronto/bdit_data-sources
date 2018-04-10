@@ -1,12 +1,13 @@
 # The CIS processing procedure
 
+## Determine Direction issue #89
 
 ### Step 1: Created the table that having the CIS data of route 514 on Oct.04, 2017
 Also, since the name of the time column in `ttc.cis_2017` is long, I shorten it to `date_time`.
 
 ```sql
 SELECT message_datetime AS date_time, route, run, vehicle, latitude, longitude, position
-INTO dzou2.test6_cis_514_1004
+INTO dzou2.dd_cis_514_1004
 FROM ttc.cis_2017
 WHERE route = 514 AND date(message_datetime) = '2017-10-04'
 ```
@@ -31,10 +32,10 @@ SELECT ST_GeomFromText (
 
 io AS (
 SELECT *, ST_Within (position, frame) AS inside
-FROM geo_frame,dzou2.test6_cis_514_1004
+FROM geo_frame,dzou2.dd_cis_514_1004
 )
 
-SELECT * INTO test6_cis_514_1004_f
+SELECT * INTO dzou2.dd_cis_514_1004_f
 FROM io WHERE inside = TRUE
 ```
 
@@ -47,8 +48,8 @@ SELECT rank() OVER (order by date_time) AS rank_time,
         date_time, run, vehicle, latitude, longitude, position,
         degrees(ST_Azimuth(position, lag(position,1) OVER (partition by run order by date_time))) AS angle_previous,
         degrees(ST_Azimuth(position, lag(position,-1) OVER (partition by run order by date_time))) AS angle_next
-    INTO dzou2.test6_cis_514_angle
-    FROM dzou2.test6_cis_514_1004_f
+    INTO dzou2.dd_cis_514_angle
+    FROM dzou2.dd_cis_514_1004_f
 ```
 
 The first `angle_previous` and the last `angle_next` will be NULL, as well as the angles between two points which did not move.
@@ -96,13 +97,13 @@ WITH distinct_stop_patterns AS (SELECT DISTINCT ON (shape_id, stop_sequence) sha
                                 ORDER BY shape_id, stop_sequence)
 
 SELECT shape_id, direction_id, stop_id, geom, stop_sequence
-INTO dzou2.test6_stop_pattern
+INTO dzou2.dd_stop_pattern
 FROM distinct_stop_patterns
 NATURAL JOIN gtfs_raph.stops_20171004
 ORDER BY shape_id, stop_sequence
 ```
 
-After running the query, the table `dzou2.test6_stop_pattern` has the data of shape_id, direction_id, stop_name, and stop_sequence is the order of stops for each pattern.
+After running the query, the table named `dzou2.dd_stop_pattern` has the data of shape_id, direction_id, stop_name, and stop_sequence is the order of stops for each pattern.
 
 ### Step 6:  Created the table that having the GTFS stop data of route 514 on 10/04/2017 and its angles with previous and next points.
 
@@ -110,8 +111,8 @@ After running the query, the table `dzou2.test6_stop_pattern` has the data of sh
 SELECT shape_id, direction_id, stop_id, geom, stop_sequence,
         degrees(ST_Azimuth(geom, lag(geom,1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_previous,
         degrees(ST_Azimuth(geom, lag(geom,-1) OVER (partition by shape_id, direction_id order by stop_sequence))) AS angle_next
-INTO dzou2.test6_stop_angle
-FROM dzou2.test6_stop_pattern
+INTO dzou2.dd_stop_angle
+FROM dzou2.dd_stop_pattern
 
 ```
 
@@ -121,7 +122,7 @@ The terminal stops, first `angle_previous` and the last `angle_next` of each pat
 ### Step 7: Add some columns that are needed in the next step
 
 ```sql
-ALTER TABLE test6_cis_514_angle
+ALTER TABLE dd_cis_514_angle
 ADD COLUMN id SERIAL PRIMARY KEY,
 ADD COLUMN stop_id integer, ADD COLUMN direction_id smallint
 ```
@@ -129,13 +130,13 @@ ADD COLUMN stop_id integer, ADD COLUMN direction_id smallint
 ### Step 8: Find the nearest GTFS stop for each CIS data and its direction
 
 ```sql
-UPDATE dzou2.test6_cis_514_angle
+UPDATE dzou2.dd_cis_514_angle
 SET stop_id = nearest.stop_id, direction_id = nearest.direction_id
 FROM (SELECT b.id, stop_data.stop_id, stop_data.direction_id
-      FROM dzou2.test6_cis_514_angle b
+      FROM dzou2.dd_cis_514_angle b
       CROSS JOIN LATERAL
 	(SELECT stop_id, direction_id
-         FROM dzou2.test6_stop_angle stops
+         FROM dzou2.dd_stop_angle stops
          WHERE
          ((b.angle_previous IS NULL OR stops.angle_previous IS NULL OR
            (b.angle_previous BETWEEN stops.angle_previous - 45 AND stops.angle_previous + 45))
@@ -144,14 +145,14 @@ FROM (SELECT b.id, stop_data.stop_id, stop_data.direction_id
            (b.angle_next BETWEEN stops.angle_next - 45 AND stops.angle_next + 45)))
         ORDER BY stops.geom <-> b.position LIMIT 1
         ) stop_data) nearest
-WHERE nearest.id = dzou2.test6_cis_514_angle.id
+WHERE nearest.id = dzou2.dd_cis_514_angle.id
 ```
 
 
 ### Step 9: Finds the non-matches
 
 ```sql
-SELECT * FROM dzou2.test6_cis_514_angle
+SELECT * FROM dzou2.dd_cis_514_angle
 WHERE direction_id IS NULL
 ```
 There are 51 rows outputted.
@@ -176,3 +177,74 @@ Red points: the non-matches
 
 !['cp11'](gtfs/img/cp11.png)
 [comparison among non-matches, CIS data with a matched direction and their nearest GTFS stops in downtown area]
+
+
+## Match Stops issue #88
+
+### Step 1 & 2:
+ST_LineLocatePoint to get the GPS point on the appropriate shapes_geom, then compared distance along line with matched stop to see if GPS record is before or after stop,
+
+```sql
+WITH line_data AS(
+SELECT ST_MakeLine(geom) AS line, direction_id FROM dzou2.dd_stop_pattern
+	WHERE shape_id = 691040 OR shape_id = 691042
+	GROUP BY shape_id, direction_id
+	ORDER BY shape_id
+	)
+
+SELECT date_time, position AS cis_position, stop_id, geom, a.direction_id,
+ST_LineLocatePoint(line, position) AS cis_to_line,
+ST_LineLocatePoint(line, geom) AS stop_to_line,
+(CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
+      THEN 'after'
+      WHEN ST_LineLocatePoint(line, position) < ST_LineLocatePoint(line, geom)
+      THEN 'before'
+      WHEN ST_LineLocatePoint(line, position) = ST_LineLocatePoint(line, geom)
+      THEN 'same'
+      END) AS position,
+ST_Distance(position::geography, geom::geography) AS distance
+FROM line_data a, dzou2.dd_cis_514_angle b
+INNER JOIN dzou2.dd_stop_angle USING (stop_id)
+WHERE a.direction_id = b.direction_id
+ORDER BY direction_id
+```
+
+### Step 3:
+Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them by the time interval at most 5 minutes.
+
+```sql
+WITH line_data AS(
+SELECT ST_MakeLine(geom) AS line, direction_id FROM gtfs_raph.shapes_geom_20171004
+	INNER JOIN gtfs_raph.trips_20171004 USING (shape_id)
+	WHERE shape_id = 691040 OR shape_id = 691042
+	GROUP BY shape_id, direction_id
+	ORDER BY shape_id
+	),
+
+cis_gtfs AS(
+SELECT date_time, id AS cis_id, stop_id, a.direction_id,
+ST_LineLocatePoint(line, position) AS cis_to_line, vehicle,
+ST_LineLocatePoint(line, geom) AS stop_to_line,
+(CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
+      THEN 'after'
+      WHEN ST_LineLocatePoint(line, position) < ST_LineLocatePoint(line, geom)
+      THEN 'before'
+      WHEN ST_LineLocatePoint(line, position) = ST_LineLocatePoint(line, geom)
+      THEN 'same'
+      END) AS line_position,
+ST_Distance(position::geography, geom::geography) AS distance
+FROM line_data a, dzou2.dd_cis_514_angle b
+INNER JOIN gtfs_raph.stops_20171004 USING (stop_id)
+WHERE a.direction_id = b.direction_id
+ORDER BY direction_id, date_time)
+
+SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time,
+       vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) as cis_id
+INTO dzou2.match_stop
+FROM cis_gtfs
+WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10)
+GROUP BY vehicle, stop_id, direction_id, (floor((extract('epoch' from date_time)-1) / 300) * 300)
+ORDER BY arrival_time, departure_time, direction_id
+```
+
+It outputs the `arrival_time` and `departure_time` for each vehicle in each stop in directions, and the column called `cis_id` represents the list of cis id which are matched to the stop under the conditions of 200m upstream and 10m downstream.
