@@ -181,8 +181,8 @@ Red points: the non-matches
 
 ## Match Stops issue #88
 
-### Step 1:
-ST_LineLocatePoint to get the GPS point on the appropriate shapes_geom, then compared distance along line with matched stop to see if GPS record is before or after stop.
+### Step 1 & 2:
+ST_LineLocatePoint to get the GPS point on the appropriate shapes_geom, then compared distance along line with matched stop to see if GPS record is before or after stop,
 
 ```sql
 WITH line_data AS(
@@ -192,7 +192,7 @@ SELECT ST_MakeLine(geom) AS line, direction_id FROM dzou2.dd_stop_pattern
 	ORDER BY shape_id
 	)
 
-SELECT position AS cis_position, a.direction_id,
+SELECT date_time, position AS cis_position, stop_id, geom, a.direction_id,
 ST_LineLocatePoint(line, position) AS cis_to_line,
 ST_LineLocatePoint(line, geom) AS stop_to_line,
 (CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
@@ -201,9 +201,47 @@ ST_LineLocatePoint(line, geom) AS stop_to_line,
       THEN 'before'
       WHEN ST_LineLocatePoint(line, position) = ST_LineLocatePoint(line, geom)
       THEN 'same'
-      END) AS position
-FROM line_data a, dd_cis_514_angle b
+      END) AS position,
+ST_Distance(position::geography, geom::geography) AS distance
+FROM line_data a, dzou2.dd_cis_514_angle b
 INNER JOIN dzou2.dd_stop_angle USING (stop_id)
 WHERE a.direction_id = b.direction_id
 ORDER BY direction_id
 ```
+
+### Step 3:
+Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them by the time interval at most 5 minutes.
+
+```sql
+WITH line_data AS(
+SELECT ST_MakeLine(geom) AS line, direction_id FROM dd_stop_pattern
+	WHERE shape_id = 691040 OR shape_id = 691042
+	GROUP BY shape_id, direction_id
+	ORDER BY shape_id
+	),
+
+cis_gtfs AS(
+SELECT date_time, position AS cis_position, id AS cis_id, stop_id, a.direction_id,
+ST_LineLocatePoint(line, position) AS cis_to_line, vehicle,
+ST_LineLocatePoint(line, geom) AS stop_to_line,
+(CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
+      THEN 'after'
+      WHEN ST_LineLocatePoint(line, position) < ST_LineLocatePoint(line, geom)
+      THEN 'before'
+      WHEN ST_LineLocatePoint(line, position) = ST_LineLocatePoint(line, geom)
+      THEN 'same'
+      END) AS position,
+ST_Distance(position::geography, geom::geography) AS distance
+FROM line_data a, dd_cis_514_angle b
+INNER JOIN dd_stop_angle USING (stop_id)
+WHERE a.direction_id = b.direction_id
+ORDER BY direction_id, date_time)
+
+SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id, array_agg(cis_id) as cis_id
+FROM cis_gtfs
+WHERE (position = 'before' AND distance <= 200) OR (position = 'after' AND distance <= 10)
+GROUP BY vehicle, stop_id, (floor((extract('epoch' from date_time)-1) / 300) * 300), direction_id
+ORDER BY arrival_time, departure_time, direction_id
+```
+
+It outputs the `arrival_time` and `departure_time` for each vehicle in each stop in directions, and the column called `cis_id` represents the list of cis id which are matched to the stop under the conditions of 200m upstream and 10m downstream.
