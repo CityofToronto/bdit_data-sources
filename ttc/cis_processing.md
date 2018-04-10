@@ -214,7 +214,8 @@ Get arrival time and departure time within 200m upstream, 10m downstream as per 
 
 ```sql
 WITH line_data AS(
-SELECT ST_MakeLine(geom) AS line, direction_id FROM dzou2.dd_stop_pattern
+SELECT ST_MakeLine(geom) AS line, direction_id FROM gtfs_raph.shapes_geom_20171004
+	INNER JOIN gtfs_raph.trips_20171004 USING (shape_id)
 	WHERE shape_id = 691040 OR shape_id = 691042
 	GROUP BY shape_id, direction_id
 	ORDER BY shape_id
@@ -230,10 +231,10 @@ ST_LineLocatePoint(line, geom) AS stop_to_line,
       THEN 'before'
       WHEN ST_LineLocatePoint(line, position) = ST_LineLocatePoint(line, geom)
       THEN 'same'
-      END) AS position,
+      END) AS line_position,
 ST_Distance(position::geography, geom::geography) AS distance
 FROM line_data a, dzou2.dd_cis_514_angle b
-INNER JOIN dzou2.dd_stop_angle USING (stop_id)
+INNER JOIN gtfs_raph.stops_20171004 USING (stop_id)
 WHERE a.direction_id = b.direction_id
 ORDER BY direction_id, date_time)
 
@@ -241,9 +242,9 @@ SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time,
        vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) as cis_id
 INTO dzou2.match_stop
 FROM cis_gtfs
-WHERE (position = 'before' AND distance <= 200) OR (position = 'after' AND distance <= 10)
+WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10)
 GROUP BY vehicle, stop_id, direction_id, (floor((extract('epoch' from date_time)-1) / 300) * 300)
-ORDER BY vehicle, arrival_time, departure_time, direction_id
+ORDER BY arrival_time, departure_time, direction_id
 ```
 
 It outputs the `arrival_time` and `departure_time` for each vehicle in each stop in directions, and the column called `cis_id` represents the list of cis id which are matched to the stop under the conditions of 200m upstream and 10m downstream.
