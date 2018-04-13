@@ -25,7 +25,8 @@ BEGIN
 		percentile_cont(0.5) WITHIN GROUP (ORDER BY rs.measured_time) AS travel_time,
 		COUNT(rs.user_id) AS obs
 	FROM bluetooth.raw_data rs
-	WHERE rs.outlier_level = 0 AND device_class = 1
+	LEFT OUTER JOIN bluetooth.segments USING (analysis_id)
+	WHERE rs.outlier_level = 0 AND (device_class = 1 OR ( street LIKE 'Gardiner%' OR street LIKE 'Lakeshore%' OR street LIKE 'DVP%'))
 	GROUP BY rs.analysis_id, (floor((extract('epoch' from rs.measured_timestamp)-1) / 300) * 300)
 	ON CONFLICT DO NOTHING;
 	RETURN 1;
@@ -38,4 +39,4 @@ $BODY$
   OWNER TO bt_admins;
    GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO aharpal;
    GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO bt_insert_bot;
-GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO aharpal;
+GRANT EXECUTE ON FUNCTION bluetooth.move_raw_data() TO bt_admins;
