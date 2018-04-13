@@ -10,14 +10,15 @@ CREATE OR REPLACE VIEW open_data.miovision_2017 AS
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume)
+    SUM(volumes_15min.volume),
+    period_type
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-      
-  WHERE date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir;
+   INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
+  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2017
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2017 TO rdumas;
@@ -33,14 +34,15 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume)
+    SUM(volumes_15min.volume),
+    period_type
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-      
-  WHERE date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir;
+   INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
+  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2018 TO rdumas;
