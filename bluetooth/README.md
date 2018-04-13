@@ -11,7 +11,7 @@
 
 ## 1. Overview
 
-The City collects traffic data from strategically place sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The live feed, and archived data are available on the [Open Data Portal](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#4c1f1f4d-4394-8b47-bf00-262b6800ba81). Because of differences in filtering between the live feed and historical data, values between the two datasets may not exactly match up.
+The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The live feed and archived data are available on the [Open Data Portal](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#4c1f1f4d-4394-8b47-bf00-262b6800ba81). Because of differences in filtering between the live feed and historical data, values between the two datasets may not exactly match up.
 
 ## 2. Table Structure
 
@@ -27,7 +27,7 @@ resultId|Unique segment identifier representing a route between two point locati
 time|Median five-minute travel time on this segment, in HH:MM:SS format|00:01:45
 timeInSeconds|Median five-minute travel time on this segment in seconds|105
 speed|Median five-minute travel speed on this segment|109.71
-speedUnit|Unit of the value provided in field "speed"|kph
+speedUnit|Unit of the value provided in the "speed" field|kph
 normalDrivingTime|Baseline travel time (derived from speed limit along route), in seconds|90
 count|Total number of vehicles within five-minute sample|23
 trafficColor|Suggested segment colour for illustrating traffic conditions|#dd0000
@@ -258,10 +258,10 @@ To get the gate values from the `deviceClass` value:
 
 #### For the Others Data:
 
-`deviceClass` is expected to return at least 2 values, with the last value always representing if the device was `HandsFree` or `Non-HandsFree`. The other values it returns are the gates that the device was seen at, in the order of the lookup list. With OD Data alone we cannot tell the order of gates a device is seen by. 
+`deviceClass` is expected to return at least 2 values, with the last value always representing if the device was `HandsFree` or `Non-HandsFree`. The other values it returns are the gates that the device was seen at, in the order of the lookup list. We cannot tell the order of gates a device is seen by with OD data alone.
 
-If the values of a Others `deviceClass` are calculated, sharing the same `UserId` and timestamp as a Start-End `deviceClass` that was `OneSensorOnly`, then the Others `deviceClass` will only return 2 values, the first being the value of the one sensor that detected the device, and the second still being the value indicating if the device was or was not a handsfree device.
+If the values of an Others `deviceClass` are calculated, sharing the same `UserId` and timestamp as a Start-End `deviceClass` that was `OneSensorOnly`, then the Others `deviceClass` will only return 2 values, the first being the value of the one sensor that detected the device, and the second still being the value indicating if the device was or was not a handsfree device.
 
 #### outliersLevel
 
-Looking at the `outliersLevel` of the Start-End Data is a quick way to check if a device only passed by one sensor. If the `deviceClass` has the `OneSensorOnly` value, the `outlierLevel` attribute will have a value of `3`. The `outlierLevel` of the Others Data of the same record (`userId` and timestamp) will be 0, however. 
+Looking at the `outliersLevel` of the Start-End Data is a quick way to check if a device only passed by one sensor. If the `deviceClass` has the `OneSensorOnly` value, the `outlierLevel` attribute will have a value of `3`. However, the `outlierLevel` of the Others Data of the same record (`userId` and timestamp) will be 0. 
