@@ -97,13 +97,18 @@ WITH valid_bins AS (
     a.dir,
     a.period_type,
     a.datetime_bin::date AS dt,
-    b.period_name,
+    b.period_name || 
+    CASE WHEN period_id = 7 THEN '' --24 hour
+    ELSE --Append period range 
+	(((' ('::text || to_char(lower(b.period_range)::interval, 'HH24:MM'::text)) || '-'::text) || to_char(upper(b.period_range)::interval, 'HH24:MM'::text)) || ')'::text 
+    END
+    AS "period_name",
     sum(a.volume) AS total_volume
    FROM volumes_15 a
      CROSS JOIN miovision.periods b
      JOIN miovision.intersections c USING (intersection_uid)
   WHERE a.datetime_bin::time without time zone <@ b.period_range AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
-  GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name
+  GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
 )
 SELECT intersections.int_id,
     centreline_intersection.intersec5 AS intersection_name,
