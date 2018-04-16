@@ -17,7 +17,7 @@ The analysis can be broken down into a few sections:
 * An exponential fit was tried
 <br>
 
-A supplementary analysis, found in `prcentage_analysis.ipynb`, was conducted with the purpose of analyzing bluetooth observations as a percentage of volume.
+A supplementary analysis, found in `vol_percentage_analysis.ipynb`, was conducted with the purpose of analyzing bluetooth observations as a percentage of volume.
 
 <br>
 It was concluded that as the data exsits now, bluetooth observations may not be a good proxy for volume data. 
