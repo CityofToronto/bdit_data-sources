@@ -597,7 +597,7 @@ The changing slope did not change the results at all. In fact, it just increased
 <p>
 From the above, if multilevel modelling were the chosen approach for predicting traffic volumes, `ml2` would be our best choice.
 <p>
-#### ***Multiplicative Model***
+####***Multiplicative Model***
 
 <p>
 Multilevel modelling was generally better than simple linear regression. Moreover, it reduced the sinusoidal effect on the residuals.
