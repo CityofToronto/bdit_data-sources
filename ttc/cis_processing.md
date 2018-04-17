@@ -482,7 +482,7 @@ ORDER BY arrival_time, departure_time, direction_id
 ```
 
 
-## Determine Direction issue #89
+## Trip filtering issue #87
 
 ### Step 1: Gets the CIS data that belong to route 514
 
