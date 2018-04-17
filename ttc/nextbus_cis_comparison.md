@@ -28,7 +28,7 @@ Thus, next bus data in `ttc_shared` is from Oct.17, 2017 to Nov.24, 2017.
 #### CIS data:
 
 ```sql
-SELECT * into dzou2.cis_1017_124
+SELECT * into dzou2.cis_1017_1124
 FROM ttc.cis_2017
 WHERE date(message_datetime) BETWEEN '2017-10-17' AND '2017-11-24'
 ```
