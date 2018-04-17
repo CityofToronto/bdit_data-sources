@@ -1,0 +1,303 @@
+---
+title: "Modelling Traffic Volume Data"
+author: "Andrew Louis"
+date: "January 24, 2018"
+output:
+  github_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+This readme will provide information regarding the Miovision traffic volume model. It will go over the objectives, background info and other different steps involved in approaching this model.
+
+## Objective of the Model
+
+The objective of this model is to predict baseline average traffic volume values for historical data. Several different variables are incorporated into this model. 
+
+* Response Variable:
+
+    * Traffic Volume 
+  
+* Explanatory Variables:
+
+    * Intersection Leg (N, S, E, W) - a string corresponding to which part of the intersection the volume is coming from
+    * Direction (NB, SB, EB, WB) - a string corresponding to the direction the traffic is headed
+    * Day (1, 2, 3, 4, 5) - an integer corresponding to the weekday the volume was counted; i.e. 1 = Monday, 5= Friday, etc
+    * Dt (Datetime Value) - datetime variable corresponding to the date the volume was counted
+    
+    
+
+<p>The model should consider these different inputs and their potential interactions, producing an appropriate baseline value. There are five primary steps taken in modelling this problem. 
+
+1. Running an SQL query to extract necessary data
+
+2. Connecting R to the SQL query
+
+3. Simple Linear Regression 
+
+4. Multilevel Regression
+
+5. Multiplicative Regression
+<p>
+
+### Running an SQL query to extract necessary data
+
+<p>
+Data is grabbed via an `.SQL` file containing a query. The file is `final.sql`. The query essentially joins multiple subqueries on different attributes. The query was made with 6 very simple parts:
+
+* `dt` and `intersection_uid` are queried from the `miovision.volumes_15min` table
+* `intersection_uid`, `leg`, `dir` are queried and joined on `intersection_uid` from the previous query
+* A time bin attribute is generated for each `intersection_uid`, `dt`, `leg`, `dir` combination
+* Data is added to the above query by joining data on the `time`, `intersection_uid`, `dt`, `leg`, `dir` combinations- resulting in a sparse data query
+* Date is added in missing time bin according to averages of historic data
+* Data is aggregated (summed) over 24 hours. Intersection 30 is excluded due to the incorrect directions on November 8th. 
+
+Refer to the `final.sql` document for further details. 
+<p>
+
+### Connecting to R
+
+We import relevant modules and extract the data from `final.sql` using the `RPostgreSQL` package. The data is read from `readlines()`, and the data is assigned to the variable `data`. 
+
+
+A new column, `day`, is added, containing the integer value corresponding to day of week. We factor the day and intersection as they are integer values. 
+
+```{r}
+# Import Relevant Packages
+library(RPostgreSQL)
+library(arm)
+library(lme4)
+library(gnm)
+
+drv <- dbDriver("PostgreSQL")
+source("C:\\Users\\alouis2\\Documents\\R\\connect\\connect.R")
+filepath = "C:\\Users\\alouis2\\Documents\\final.sql"
+strSQL = readLines(filepath, encoding = "UTF-8")
+data <- dbGetQuery(con, strSQL)
+data$day <- as.POSIXlt(data$dt)$wday
+data$day <- factor(data$day)
+data$intersection_uid <- factor(data$intersection_uid)
+```
+
+
+### Modelling
+
+We start with simple linear regression, then multilevel modelling, and we conclude with a multiplicative model. 
+
+####  **Simple Linear Regression**
+
+Simple model with a single intercept, no other explanatory variables. 
+
+$Vol = \beta_0 + error$ 
+
+
+
+$error \sim N(0, \sigma^2)$
+
+```{r}
+grandmean = lm(data$totaladjusted_vol ~ 1)
+summary(grandmean)
+```
+
+<p>We perform a simple linear regression, incorporating the other explanatory variables. We exclude `dt`, as incorporating datetime values into this simple linear regression is quite complex.<p>
+
+
+$Vol = intersection + leg + direction + day  + error$
+
+
+```{r}
+glm = glm(totaladjusted_vol ~ intersection_uid + leg + dir + day, data = data)
+summary(glm)
+plot(glm, which = 1)
+```
+
+From the above, we can see many components of the model are statistically significant, with the exception of a few variables. 
+
+One aspect missing from the above model is the fact that leg and direction of an intersection are correlated. Let's make an interaction component in the model to account for this fact. 
+
+
+$Vol = intersectioni + day + leg:direction   + error$
+
+
+```{r}
+glm2 = glm(totaladjusted_vol ~ intersection_uid + day + leg:day, data = data)
+summary(glm2)
+plot(glm2, which = 1)
+```
+
+<p>The model is very similar to the previous.  The AIC for the second model is only 30 units greater. <p>
+
+
+#### ***Multilevel Modelling***
+
+Let's look at box plots of each of our attributes of interest. We suspect there may be some random variation within attributes. 
+
+```{r}
+boxplot(data$totaladjusted_vol ~ data$intersection_uid, xlab = 'Intersection', ylab = 'Volume')
+boxplot(data$totaladjusted_vol ~ data$leg, xlab = 'Leg', ylab = 'Volume')
+boxplot(data$totaladjusted_vol ~ data$dir, xlab = 'Direction', ylab = 'Volume')
+boxplot(data$totaladjusted_vol ~ data$day, xlab = 'Day of Week', ylab = 'Volume')
+boxplot(data$totaladjusted_vol ~ data$dt, xlab = 'Date', ylab = 'Volume')
+
+```
+
+
+
+<p>From the above, it can be clearly seen that for leg and direction, North/South and NB/SB are greater than East/West and EB/WB. Moreover, for day, it seems as the week progresses, the traffic increases, indicating a clear linear trend.<p>
+
+<p>Now consider date and intersection. The variation seems absolutely random, i.e. the difference in traffic volumes do not indicate any clear pattern. This gives us reason to believe that a multilevel component may be at play. Ignoring date, let us consider a multilevel model with `intersection_uid` being the multilevel component, i.e. the intercept for the intersection changes in addition containing a random error component.<p>
+
+$Vol = intersection_{i} + direction +  leg + day  + error$
+
+
+
+
+$intersection_i = \beta_0 + error_i$
+
+
+```{r}
+ml1 = lmer(totaladjusted_vol ~ dir + leg + day + (1|intersection_uid), data = data)
+summary(ml1)
+# the lme4 package doesn't have nice default residual plots, so we make our own
+plot(fitted(ml1), residuals(ml1), ylab =  "Residuals") 
+abline(h = 0, lty = 2)
+lines(lowess(fitted(ml1), residuals(ml1)), col = 'red')
+```
+
+<p>There seems to be some sort of a sinusoidal pattern in the residuals. Let's try different combinations of this model.<p> 
+
+Recall that legs are a component of each intersection. Rather than just varying the intercept, let's vary the slope as well. 
+
+$Vol = (leg|intersection) + dir + leg + day + error$
+
+
+```{r}
+ml2 = lmer(totaladjusted_vol ~ (leg | intersection_uid) + dir + leg + day, data = data)
+summary(ml2)
+plot(fitted(ml2), residuals(ml2), ylab =  "Residuals") 
+abline(h = 0, lty = 2)
+lines(lowess(fitted(ml2), residuals(ml2)), col = 'red')
+```
+
+
+This model seems much better. The sinusoidal pattern in the residuals has decreased. Let's do an anova test to see if this model is better than the varying intercept model from before. 
+
+```{r}
+anova(ml1, ml2) 
+```
+
+From the above, it is clear that the second model is significantly better. This difference is statistically significant.
+
+<p> Instead of including a `leg:dir` interaction component, what if we account for their interaction through a change slope multilevel componnent? 
+
+$Vol = (leg|intersection) + (dir|leg) + dir + leg + day + error$
+
+```{r}
+ml3 = lmer(totaladjusted_vol ~ (leg | intersection_uid) + (dir|leg) + dir + leg + day, data = data)
+summary(ml3)
+plot(fitted(ml3), residuals(ml3), ylab =  "Residuals") 
+abline(h = 0, lty = 2)
+lines(lowess(fitted(ml3), residuals(ml3)), col = 'red')
+```
+
+This looks extremely similar to `ml2`. Let's test to see if there are any statistically significant differences. 
+
+```{r}
+anova(ml2, ml3)
+```
+
+<p>The changing slope did not change the results at all. In fact, it just increased the AIC. <p>
+
+
+<p>From the above, if multilevel modelling were the chosen approach for predicting traffic volumes, `ml2` would be our best choice.<p>
+
+
+
+#### ***Multiplicative Model***
+
+<p>Multilevel modelling was generally better than simple linear regression. Moreover, it reduced the sinusoidal effect on the residuals.<p>
+
+
+<p>We consider a multiplicative approach to the model. This way variables will have more of an impact on the model, i.e. a scaling effect.<p>
+
+
+We consider a simple multiplicative model in which we multiply all elements. 
+
+
+$Vol = Intersection*Day*Leg*Dir$
+
+
+```{r}
+
+mult1 = gnm( totaladjusted_vol ~ Mult(intersection_uid, day, leg, dir), data = data)
+summary(mult1)
+plot(mult1, which = 1)
+
+```
+
+The sinusoidal pattern seems to have reduced. Let's break up the model into two separate components. 
+
+$Vol = (Intersection*Day) + (Leg*Dir)$
+
+```{r}
+
+mult2 = gnm( totaladjusted_vol ~ Mult(intersection_uid, day) + Mult(leg, dir), data = data)
+summary(mult2)
+plot(mult2, which = 1)
+
+```
+
+
+This model isn't much better and still retains that sinusoidal pattern in the residuals. 
+
+```{r}
+
+mult3 = gnm( totaladjusted_vol ~ Mult(intersection_uid, leg) + dir + day, data = data)
+summary(mult3)
+plot(mult3, which = 1)
+```
+
+
+<p>This model isn't any better either. If we were to choose a multiplicative model, we should choose `mult1` due to the lowest AIC.<p>
+
+
+## Conclusion
+
+Some sound starting points to modelling traffic volumes would be `ml2` and `mult1`, whos formulas are respectively as follows: 
+
+
+
+
+
+
+
+
+$Vol = (leg|intersection) + dir + leg + day + error$
+
+
+
+
+
+$Vol = Intersection*Day*Leg*Dir$
+
+
+
+
+
+
+
+These are not conclusive results, just solid starting points to approach traffic volumes. The data is quite noisy and sparse, and more data points are definitely needed to accurately predict volume baselines. 1600 data points is too few to build a reliable model. Hoewever, multiplicative and multilevel approaches are great stepping stones. 
+
+
+
+
+
+
+
+
+
