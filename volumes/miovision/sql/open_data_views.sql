@@ -5,6 +5,7 @@ DROP VIEW open_data.miovision_2017;
 CREATE OR REPLACE VIEW open_data.miovision_2017 AS 
  SELECT int_id,
     intersec5 AS intersection_name,
+    px,
     volumes_15min.datetime_bin,
     CASE WHEN classification ='Buses' THEN 'Buses and streetcars'
     ELSE classification END AS classification,
@@ -15,10 +16,11 @@ CREATE OR REPLACE VIEW open_data.miovision_2017 AS
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
+   INNER JOIN gis.traffic_signals on node_id = int_id
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
-  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
+  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2017
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2017 TO rdumas;
@@ -29,6 +31,7 @@ DROP VIEW open_data.miovision_2018;
 CREATE OR REPLACE VIEW open_data.miovision_2018 AS 
  SELECT int_id,
     intersec5 AS intersection_name,
+    px,
     volumes_15min.datetime_bin,
     CASE WHEN classification ='Buses' THEN 'Buses and streetcars'
     ELSE classification END AS classification,
@@ -39,10 +42,11 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
+   INNER JOIN gis.traffic_signals on node_id = int_id
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
-  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
+  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2018 TO rdumas;
@@ -51,7 +55,7 @@ GRANT SELECT ON TABLE open_data.miovision_2018 TO od_extract_svc;
 
 -- View: open_data.ksp_miovision_summary
 
--- DROP VIEW open_data.ksp_miovision_summary;
+DROP VIEW open_data.ksp_miovision_summary;
 
 CREATE OR REPLACE VIEW open_data.ksp_miovision_summary AS 
 WITH valid_bins AS (
@@ -111,7 +115,7 @@ WITH valid_bins AS (
   GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
 )
 SELECT intersections.int_id,
-    centreline_intersection.intersec5 AS intersection_name,
+    centreline_intersection.intersec5 AS intersection_name, px,
     CASE
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
             ELSE class_type
@@ -119,6 +123,7 @@ SELECT intersections.int_id,
         dir, period_name, AVG(total_volume) as average_volume
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
-     JOIN gis.centreline_intersection USING (int_id)
-GROUP BY int_id, class_type, intersec5, dir, period_name;
+JOIN gis.centreline_intersection USING (int_id)
+INNER JOIN gis.traffic_signals on node_id = int_id
+GROUP BY int_id, class_type, intersec5, px, dir, period_name;
 GRANT SELECT ON TABLE open_data.ksp_miovision_summary TO od_extract_svc;
