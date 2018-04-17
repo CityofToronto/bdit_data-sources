@@ -45,7 +45,7 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
    INNER JOIN gis.traffic_signals on node_id = int_id
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
-  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2018::double precision
 GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
   OWNER TO rdumas;
