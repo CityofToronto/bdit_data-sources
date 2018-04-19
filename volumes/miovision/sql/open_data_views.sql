@@ -120,7 +120,7 @@ SELECT period_type as aggregation_period, intersections.int_id,
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
             ELSE class_type
         END AS classification,
-        dir, period_name, AVG(total_volume)::INT as average_volume
+        dir, period_name, round(AVG(total_volume), -1)::int as average_volume
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
 JOIN gis.centreline_intersection USING (int_id)
