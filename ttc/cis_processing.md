@@ -386,7 +386,7 @@ WHERE a.direction_id = b.direction_id
 ORDER BY direction_id, date_time
 )
 
-SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id
+SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) AS cis_id
 INTO dzou2.match_stop_514
 FROM cis_gtfs
 WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10) OR (line_position = 'same' AND distance <= 100)
@@ -475,50 +475,65 @@ ORDER BY arrival_time, direction_id
 
 ### Route 514 on 10/04/2017
 
+First of all, we need a sequence of counting.
+
+```sql
+CREATE SEQUENCE cis_lst START 100
+```
+
+Then, validating the sequence.
+
+```sql
+SELECT nextval('cis_lst')
+```
+
+At the same window:
+
 ```sql
 WITH
-match_stop AS (
-SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, array_agg(DISTINCT cis_id) AS cis_group,
-       vehicle, stop_id, direction_id
-FROM dzou2.match_stop_514_point_to_line
-WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10) OR (line_position = 'same' AND distance <= 100)
-GROUP BY vehicle, stop_id, direction_id, (floor((extract('epoch' from date_time)-1) / 1200) * 1200)
-ORDER BY arrival_time, departure_time, direction_id
-),
-
 order_data AS (
-SELECT arrival_time, departure_time, vehicle, stop_id, stop_name, direction_id, cis_group,
+SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_id,
 rank() OVER (PARTITION BY vehicle ORDER BY arrival_time) AS order_id
-FROM match_stop
-INNER JOIN gtfs_raph.stops_20171004 USING (stop_id)
+FROM match_stop_514
+
 ORDER BY vehicle, arrival_time
 ),
 
 trips AS(
 SELECT
-(CASE WHEN order_id = 1
-      THEN currval('cis_lst')
-      WHEN direction_id <> lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time)
+(CASE WHEN lag(vehicle, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time) IS NULL
       THEN nextval('cis_lst')
-      WHEN direction_id = lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time)
+      WHEN (direction_id <> lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
+      THEN nextval('cis_lst')
+      WHEN (direction_id = lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
       THEN currval('cis_lst')
 END) AS trip_id,
-arrival_time, departure_time, unnest(cis_group) AS cis_id, direction_id, vehicle, stop_id
+arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id
 FROM order_data
+ORDER BY vehicle, arrival_time
+),
+
+open_array AS (
+SELECT trip_id, arrival_time, departure_time, unnest(cis_id) AS cis_id, direction_id, vehicle, stop_id
+FROM trips
 ORDER BY vehicle, arrival_time
 ),
 
 good_trip_id AS(
 SELECT trip_id, count(*), array_agg(cis_id) AS groups
-FROM trips
+FROM open_array
 GROUP BY trip_id
 HAVING count(*) > 10
 ORDER BY count DESC)
 
 SELECT a.trip_id, a.arrival_time, a.departure_time, a.cis_id, a.direction_id, a.vehicle, a.stop_id
-FROM trips a, good_trip_id b
+INTO dzou2.trips_cis_514
+FROM open_array a, good_trip_id b
 WHERE a.trip_id = b.trip_id
 ```
+
+The table `dzou2.trips_cis_514` stores the trip IDs assigned for each trip which has the more than 10 CIS data records, and `bdit_data-sources/ttc/validating_cis_processing.ipynb` has illustrated the reason of choosing 10 as the indicator.
+
 
 ## Trip filtering issue #87
 
