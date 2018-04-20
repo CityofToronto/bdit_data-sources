@@ -534,6 +534,61 @@ WHERE a.trip_id = b.trip_id
 
 The table `dzou2.trips_cis_514` stores the trip IDs assigned for each trip which has the more than 10 CIS data records, and `bdit_data-sources/ttc/validating_cis_processing.ipynb` has illustrated the reason of choosing 10 as the indicator.
 
+### Route 504 on 10/04/2017
+
+Using the same sequence,
+
+```sql
+SELECT nextval('cis_lst')
+```
+
+At the same window:
+
+```sql
+WITH
+order_data AS (
+SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_id,
+rank() OVER (PARTITION BY vehicle ORDER BY arrival_time) AS order_id
+FROM match_stop_504
+
+ORDER BY vehicle, arrival_time
+),
+
+trips AS(
+SELECT
+(CASE WHEN lag(vehicle, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time) IS NULL
+      THEN nextval('cis_lst')
+      WHEN (direction_id <> lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
+      THEN nextval('cis_lst')
+      WHEN (direction_id = lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
+      THEN currval('cis_lst')
+END) AS trip_id,
+arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id
+FROM order_data
+ORDER BY vehicle, arrival_time
+),
+
+open_array AS (
+SELECT trip_id, arrival_time, departure_time, unnest(cis_id) AS cis_id, direction_id, vehicle, stop_id
+FROM trips
+ORDER BY vehicle, arrival_time
+),
+
+good_trip_id AS(
+SELECT trip_id, count(*), array_agg(cis_id) AS groups
+FROM open_array
+GROUP BY trip_id
+HAVING count(*) >= 10
+ORDER BY count DESC)
+
+SELECT a.trip_id, a.arrival_time, a.departure_time, a.cis_id, a.direction_id, a.vehicle, a.stop_id
+INTO dzou2.trips_cis_504
+FROM open_array a, good_trip_id b
+WHERE a.trip_id = b.trip_id
+```
+
+`bdit_data-sources/ttc/validating_cis_processing.ipynb` has illustrated the reason of filtering out the trips have less than 10 CIS data records.
+
 
 ## Trip filtering issue #87
 
