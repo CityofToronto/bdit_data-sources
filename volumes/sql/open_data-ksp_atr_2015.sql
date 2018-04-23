@@ -9,7 +9,7 @@ regexp_REPLACE(fromstreet.intersec5, '(King St W / )|(King St E / )|( / King St 
 	volume
 FROM prj_volume.centreline_volumes_2015
 INNER JOIN gis.street_centreline s ON centreline_id = geo_id
-INNER JOIN rdumas.king_pilot_polygon k ON ST_within(s.geom, k.geom)
+INNER JOIN rdumas.king_pilot_polygon k ON ST_within(s.geom, k.geom) AND id = 2
 INNER JOIN gis.centreline_intersection tostreet ON tnode = tostreet.int_id
 INNER JOIN gis.centreline_intersection fromstreet ON fnode = fromstreet.int_id
 WHERE lf_name LIKE 'King St %' AND count_type = 1
