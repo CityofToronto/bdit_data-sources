@@ -3,22 +3,25 @@
 DROP VIEW open_data.miovision_2017;
 
 CREATE OR REPLACE VIEW open_data.miovision_2017 AS 
- SELECT int_id,
+ SELECT period_type as aggregation_period,
+    int_id,
     intersec5 AS intersection_name,
+    px,
     volumes_15min.datetime_bin,
     CASE WHEN classification ='Buses' THEN 'Buses and streetcars'
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume),
-    period_type
+    SUM(volumes_15min.volume)::INT
+    
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
+   INNER JOIN gis.traffic_signals on node_id = int_id
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
-  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
+  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
+GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2017
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2017 TO rdumas;
@@ -27,22 +30,24 @@ GRANT SELECT ON TABLE open_data.miovision_2017 TO od_extract_svc;
 DROP VIEW open_data.miovision_2018;
 
 CREATE OR REPLACE VIEW open_data.miovision_2018 AS 
- SELECT int_id,
+ SELECT period_type as aggregation_period,
+    int_id,
     intersec5 AS intersection_name,
+    px,
     volumes_15min.datetime_bin,
     CASE WHEN classification ='Buses' THEN 'Buses and streetcars'
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume),
-    period_type
+    SUM(volumes_15min.volume)::INT
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
+   INNER JOIN gis.traffic_signals on node_id = int_id
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision.report_dates USING (intersection_uid, class_type) 
-  WHERE dt = datetime_bin AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
-GROUP BY int_id, intersec5, datetime_bin, classification, leg, dir, period_type;
+  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2018::double precision
+GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2018 TO rdumas;
@@ -51,7 +56,7 @@ GRANT SELECT ON TABLE open_data.miovision_2018 TO od_extract_svc;
 
 -- View: open_data.ksp_miovision_summary
 
--- DROP VIEW open_data.ksp_miovision_summary;
+DROP VIEW open_data.ksp_miovision_summary;
 
 CREATE OR REPLACE VIEW open_data.ksp_miovision_summary AS 
 WITH valid_bins AS (
@@ -110,15 +115,16 @@ WITH valid_bins AS (
   WHERE a.datetime_bin::time without time zone <@ b.period_range AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
   GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
 )
-SELECT intersections.int_id,
-    centreline_intersection.intersec5 AS intersection_name,
+SELECT period_type as aggregation_period, intersections.int_id,
+    centreline_intersection.intersec5 AS intersection_name, px,
     CASE
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
             ELSE class_type
         END AS classification,
-        dir, period_name, AVG(total_volume) as average_volume
+        dir, period_name, round(AVG(total_volume), -1)::int as average_volume
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
-     JOIN gis.centreline_intersection USING (int_id)
-GROUP BY int_id, class_type, intersec5, dir, period_name;
+JOIN gis.centreline_intersection USING (int_id)
+INNER JOIN gis.traffic_signals on node_id = int_id
+GROUP BY period_type, int_id, class_type, intersec5, px, dir, period_name;
 GRANT SELECT ON TABLE open_data.ksp_miovision_summary TO od_extract_svc;
