@@ -5,148 +5,39 @@ import configparser
 from psycopg2 import connect
 import psycopg2.sql as pg
 import pandas.io.sql as pandasql
-from emailnotifications import send_mail
+from email_notifications import send_mail
 
-###################################################################################################    
+def update_empty_date_reports(con):
+    with con:
+        with con.cursor() as cur:
+            cur.execute('SELECT bluetooth.insert_dates_without_data()')
     
-cfg_path = "C:\\Users\\alouis2\\Documents\\Python Scripts\\db.cfg"
+def find_brokenreaders(con):
+    
+    sql = '''SELECT DISTINCT ON (sensor) (json_array_elements(route_points)->'name')::TEXT as sensor
+             FROM bluetooth.all_analyses
+             INNER JOIN (SELECT analysis_id 
+                         FROM bluetooth.dates_without_data WHERE day_without_data > current_date - 7 --Ensure recency
+                         GROUP BY analysis_id 
+                         HAVING MAX(day_without_data) = current_date - 1 AND COUNT(1) < 2  --Ensure there was no data from the day before but 
+                                                                                           --detector wasn't previously flagged
+                         ) missing_dates USING (analysis_id)
 
-###################################################################################################
+    '''
 
-# connect to database 
-
-CONFIG = configparser.ConfigParser()
-CONFIG.read(r'%s' % cfg_path)
-dbset = CONFIG['DBSETTINGS']
-con = connect(**dbset)
-
-def find_badroutes():
-    
-    # finds instances of potentially 'bad routes', i.e. routes who may have readers that are down. 
-    # returns dataframe with these routes
-    
-    string = ''' SELECT segments.analysis_id
-                 FROM bluetooth.segments
-                 
-                 EXCEPT
-                 
-                 SELECT DISTINCT f.analysis_id
-                 FROM (SELECT observations.analysis_id,
-                       observations.measured_timestamp
-                       FROM bluetooth.observations
-                       WHERE observations.measured_timestamp <= (( SELECT max(observations_1.measured_timestamp) AS max
-                               FROM bluetooth.observations observations_1)) AND 
-                               observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
-                               FROM bluetooth.observations observations_1)) AND  
-                               (observations.analysis_id IN ( SELECT segments.analysis_id
-                               FROM bluetooth.segments))
-                      ORDER BY observations.measured_timestamp DESC) f'''
-
-    df = pandasql.read_sql(pg.SQL(string), con)
-    badroutes = []
-    
-    for i in range(len(df['analysis_id'])):
-        string = '''SELECT analysis_id, startpoint_name, endpoint_name,  measured_timestamp as last_active 
-                    FROM bluetooth.observations
-                    WHERE analysis_id = %d 
-                    ORDER BY measured_timestamp desc 
-                    LIMIT 1''' % list(df['analysis_id'])[i]
-        row = pandasql.read_sql(pg.SQL(string), con)
-        if row.empty == False: 
-            badroutes.append(list(row.loc[0]))
-    badroutes = pd.DataFrame(badroutes, columns = list(row.columns.values)).sort_values(by='last_active').reset_index(drop=True)
-    return badroutes
-    
-
-
-def find_goodroutes():
-    
-    # finds all 'good routes', i.e. routes with seemingly working readers
-    
-    string2 = '''SELECT analysis_id, startpoint_name, endpoint_name
-                 FROM bluetooth.observations
-                 WHERE observations.measured_timestamp <= 
-                    (( SELECT max(observations_1.measured_timestamp) AS max
-                    FROM bluetooth.observations observations_1)) AND observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
-                    FROM bluetooth.observations observations_1)) AND (observations.analysis_id IN ( SELECT segments.analysis_id
-                    FROM bluetooth.segments))
-                    GROUP BY analysis_id, startpoint_name, endpoint_name;'''
-
-    df2 = pandasql.read_sql(pg.SQL(string2), con)
-    return df2
-
-    
-def find_brokenreaders(badroutes, goodroutes):
-    
-    ### INPUTS
-    # badroutes: a dataframe returned by `badroutes()` 
-    # goodroutes: a dataframe returned by `goodroutes()`
-    
-    # returns a final dataframe contianing all individual broken readers, the last time they were 
-    # active, and also the routes affected by those broken readers. 
-    
     final = []
-    for i in range(len(badroutes)): 
-        if (badroutes['startpoint_name'].values[i] not in goodroutes['startpoint_name'].values \
-        and badroutes['startpoint_name'].values[i] not in goodroutes['endpoint_name'].values):
-            final.append(badroutes['startpoint_name'].values[i])
-    for i in range(len(badroutes)):
-        if badroutes['endpoint_name'].values[i] not in goodroutes['startpoint_name'].values \
-        and badroutes['endpoint_name'].values[i] not in goodroutes ['endpoint_name'].values:
-            final.append(badroutes['endpoint_name'].values[i])
-    final = list(set(final))
-    for i in final: 
-        j = (len(badroutes))-1
-        while j < len(badroutes):
-            if i == badroutes['startpoint_name'].values[j]:
-                final[final.index(i)] = ([i, badroutes['last_active'].values[j]])
-                break
-            elif i == badroutes['endpoint_name'].values[j]:
-                final[final.index(i)] = ([i, badroutes['last_active'].values[j]])
-                break
-            else:
-                j = j-1
-    for i in final:
-        final[final.index(i)].append([])
-        starts = list(badroutes['startpoint_name'].values)
-        ends = list(badroutes['endpoint_name'].values)
-        j = 0 
-        while j < len(starts):
-            if i[0] == starts[j]: 
-                final[final.index(i)][2].append('' + starts[j] + ' to ' + ends[j] + '')
-                j += 1
-            else:
-                j += 1
-        j = 0
-        while j < len(ends):
-            if i[0] == ends[j]:
-                final[final.index(i)][2].append('' + starts[j] + ' to ' + ends[j] + '')
-                j += 1
-            else:
-                j += 1
-        final[final.index(i)][2] = (", ".join(final[final.index(i)][2]))
-    for i in range(len(badroutes)): 
-        if (badroutes['startpoint_name'].values[i] in goodroutes['startpoint_name'].values or \
-            badroutes['startpoint_name'].values[i] in goodroutes['endpoint_name'].values)\
-        and (badroutes['endpoint_name'].values[i] in goodroutes['startpoint_name'].values or \
-             badroutes['endpoint_name'].values[i] in goodroutes['endpoint_name'].values):
-            final.append(['-', '-', badroutes['startpoint_name'].values[i]])
-
+    with con.cursor() as cur:
+        cur.execute(sql)
+        final = cur.fetchall()
     return final 
 
 
 def email_updates(subject: str, to: str, updates: list):
     
-    #taken from notify_routes.py
-    
     message = ''
-    for i in updates:
-        message += 'Reader: {reader_name}, '\
-                   'Last Active: {report_name}, '\
-                   'Routes Afftected: {routes}'.format(reader_name=i[0],
-                                                     report_name=i[1],
-                                                     routes=i[2])
-        message += "\n"
+    for broken_reader in updates:
+            message += 'Reader: {reader_name}, '.format(reader_name=broken_reader[0])
+            message += "\n" 
     sender = "Broken Readers Detection Script"
 
     send_mail(to, sender, subject, message)
@@ -166,23 +57,12 @@ def load_config(config_path='config.cfg'):
 def main (): 
 
     dbset, email_settings = load_config()
-    
-    badroutes = find_badroutes()
-    
-    goodroutes = find_goodroutes()
-    
-    broken_readers = find_brokenreaders(badroutes, goodroutes)
+    con = connect(**dbset)
+
+    update_empty_date_reports(con)
+    broken_readers = find_brokenreaders(con)
     
     if broken_readers != []:
-        
-       message = ''
-       for i in broken_readers:
-            message += 'Reader: {reader_name}, '\
-                       'Last Active: {report_name}, '\
-                       'Routes Afftected: {routes}'.format(reader_name=i[0],
-                                                         report_name=i[1],
-                                                         routes=i[2])
-            message += "\n" 
                     
        email_updates(email_settings['subject'], email_settings['to'], broken_readers)
 
