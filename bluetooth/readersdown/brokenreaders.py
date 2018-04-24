@@ -1,18 +1,15 @@
 # import relevant modules
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import configparser
 from psycopg2 import connect
 import psycopg2.sql as pg
 import pandas.io.sql as pandasql
-import io 
-from os.path import expanduser
-import os
+from emailnotifications import send_mail
 
 ###################################################################################################    
     
-cfg_path = 'your file path'
+cfg_path = "C:\\Users\\alouis2\\Documents\\Python Scripts\\db.cfg"
 
 ###################################################################################################
 
@@ -29,15 +26,19 @@ def find_badroutes():
     # returns dataframe with these routes
     
     string = ''' SELECT segments.analysis_id
-               FROM bluetooth.segments
-            EXCEPT
-             SELECT DISTINCT f.analysis_id
-               FROM (SELECT observations.analysis_id,
-                        observations.measured_timestamp
+                 FROM bluetooth.segments
+                 
+                 EXCEPT
+                 
+                 SELECT DISTINCT f.analysis_id
+                 FROM (SELECT observations.analysis_id,
+                       observations.measured_timestamp
                        FROM bluetooth.observations
-                      WHERE observations.measured_timestamp <= (( SELECT max(observations_1.measured_timestamp) AS max
-                               FROM bluetooth.observations observations_1)) AND observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
-                               FROM bluetooth.observations observations_1)) AND (observations.analysis_id IN ( SELECT segments.analysis_id
+                       WHERE observations.measured_timestamp <= (( SELECT max(observations_1.measured_timestamp) AS max
+                               FROM bluetooth.observations observations_1)) AND 
+                               observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
+                               FROM bluetooth.observations observations_1)) AND  
+                               (observations.analysis_id IN ( SELECT segments.analysis_id
                                FROM bluetooth.segments))
                       ORDER BY observations.measured_timestamp DESC) f'''
 
@@ -45,24 +46,27 @@ def find_badroutes():
     badroutes = []
     
     for i in range(len(df['analysis_id'])):
-        string = '''SELECT analysis_id, startpoint_name, endpoint_name,  measured_timestamp as last_active FROM bluetooth.observations
+        string = '''SELECT analysis_id, startpoint_name, endpoint_name,  measured_timestamp as last_active 
+                    FROM bluetooth.observations
                     WHERE analysis_id = %d 
                     ORDER BY measured_timestamp desc 
                     LIMIT 1''' % list(df['analysis_id'])[i]
         row = pandasql.read_sql(pg.SQL(string), con)
-        badroutes.append(list(row.loc[0]))
+        if row.empty == False: 
+            badroutes.append(list(row.loc[0]))
     badroutes = pd.DataFrame(badroutes, columns = list(row.columns.values)).sort_values(by='last_active').reset_index(drop=True)
     return badroutes
     
-badroutes = find_badroutes()
+
 
 def find_goodroutes():
     
     # finds all 'good routes', i.e. routes with seemingly working readers
     
     string2 = '''SELECT analysis_id, startpoint_name, endpoint_name
-                FROM bluetooth.observations
-                    WHERE observations.measured_timestamp <= (( SELECT max(observations_1.measured_timestamp) AS max
+                 FROM bluetooth.observations
+                 WHERE observations.measured_timestamp <= 
+                    (( SELECT max(observations_1.measured_timestamp) AS max
                     FROM bluetooth.observations observations_1)) AND observations.measured_timestamp >= (( SELECT max(observations_1.measured_timestamp) - '02:00:00'::interval
                     FROM bluetooth.observations observations_1)) AND (observations.analysis_id IN ( SELECT segments.analysis_id
                     FROM bluetooth.segments))
@@ -71,7 +75,6 @@ def find_goodroutes():
     df2 = pandasql.read_sql(pg.SQL(string2), con)
     return df2
 
-goodroutes = find_goodroutes()
     
 def find_brokenreaders(badroutes, goodroutes):
     
@@ -81,7 +84,6 @@ def find_brokenreaders(badroutes, goodroutes):
     
     # returns a final dataframe contianing all individual broken readers, the last time they were 
     # active, and also the routes affected by those broken readers. 
-    # Moreover, it puts this dataframe into a csv for the user, into their documents folder
     
     final = []
     for i in range(len(badroutes)): 
@@ -129,11 +131,84 @@ def find_brokenreaders(badroutes, goodroutes):
         and (badroutes['endpoint_name'].values[i] in goodroutes['startpoint_name'].values or \
              badroutes['endpoint_name'].values[i] in goodroutes['endpoint_name'].values):
             final.append(['-', '-', badroutes['startpoint_name'].values[i]])
-    
-    broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
-    home = expanduser("~")
-    path=  home + '\\Documents'
-    broken_readers.to_csv(os.path.join(path,r'broken_readers.csv'), index = False)
-    
 
-broken_readers = find_brokenreaders(badroutes, goodroutes)
+    return final 
+
+
+def email_updates(subject: str, to: str, updates: list):
+    
+    #taken from notify_routes.py
+    
+    message = ''
+    for i in updates:
+        message += 'Reader: {reader_name}, '\
+                   'Last Active: {report_name}, '\
+                   'Routes Afftected: {routes}'.format(reader_name=i[0],
+                                                     report_name=i[1],
+                                                     routes=i[2])
+        message += "\n"
+    sender = "Broken Readers Detection Script"
+
+    send_mail(to, sender, subject, message)
+
+
+
+def load_config(config_path='config.cfg'):
+    
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    dbset = config['DBSETTINGS']
+    email_settings = config['EMAIL']
+    return dbset, email_settings
+
+
+
+def main (): 
+
+    dbset, email_settings = load_config()
+    
+    badroutes = find_badroutes()
+    
+    goodroutes = find_goodroutes()
+    
+    broken_readers = find_brokenreaders(badroutes, goodroutes)
+    
+    if broken_readers != []:
+        
+       message = ''
+       for i in broken_readers:
+            message += 'Reader: {reader_name}, '\
+                       'Last Active: {report_name}, '\
+                       'Routes Afftected: {routes}'.format(reader_name=i[0],
+                                                         report_name=i[1],
+                                                         routes=i[2])
+            message += "\n" 
+                    
+       email_updates(email_settings['subject'], email_settings['to'], broken_readers)
+
+
+if __name__ == '__main__': 
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#import io 
+#from os.path import expanduser
+#import os    
+#broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
+#home = expanduser("~")
+#path=  home + '\\Documents'
+#broken_readers.to_csv(os.path.join(path,r'broken_readers.csv'), index = False)
+
+
