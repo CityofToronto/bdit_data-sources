@@ -277,13 +277,13 @@ Some sound starting points to modelling traffic volumes would be `ml2` and `mult
 
 
 
-$Vol = (leg|intersection) + dir + leg + day + error$
+$ Vol = (leg|intersection) + dir + leg + day + error $
 
 
 
 
 
-$Vol = Intersection*Day*Leg*Dir$
+$ Vol = Intersection*Day*Leg*Dir $
 
 
 
