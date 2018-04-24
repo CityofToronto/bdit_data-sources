@@ -357,7 +357,21 @@ ORDER BY direction_id, date_time
 ```
 
 ### Step 3:
-Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them by the time interval at most 5 minutes.
+Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them at each stop.
+
+First of all, we need a sequence of counting.
+
+```sql
+CREATE SEQUENCE stops START 100
+```
+
+Then, validating the sequence.
+
+```sql
+SELECT nextval('stops')
+```
+
+At the same window:
 
 ```sql
 WITH line_data AS(
@@ -369,8 +383,8 @@ SELECT geom AS line, direction_id FROM gtfs_raph.shapes_geom_20171004
 ),
 
 cis_gtfs AS(
-SELECT date_time, id AS cis_id, stop_id, a.direction_id,
-ST_LineLocatePoint(line, position) AS cis_to_line, vehicle,
+SELECT date_time, id AS cis_id, stop_id, vehicle, a.direction_id,
+ST_LineLocatePoint(line, position) AS cis_to_line,
 ST_LineLocatePoint(line, geom) AS stop_to_line,
 (CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
       THEN 'after'
@@ -383,20 +397,32 @@ ST_Distance(position::geography, geom::geography) AS distance
 FROM line_data a, dzou2.dd_cis_514_angle b
 INNER JOIN gtfs_raph.stops_20171004 USING (stop_id)
 WHERE a.direction_id = b.direction_id
-ORDER BY direction_id, date_time
-)
+ORDER BY vehicle, a.direction_id, date_time
+),
 
-SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) AS cis_id
-INTO dzou2.match_stop_514
+stop_orders AS (
+SELECT *,
+(CASE WHEN lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time) IS NULL
+      THEN nextval('stops')
+      WHEN stop_id <> lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time)
+      THEN nextval('stops')
+      WHEN stop_id = lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time)
+      THEN currval('stops')
+END) AS stop_order
 FROM cis_gtfs
 WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10) OR (line_position = 'same' AND distance <= 100)
-GROUP BY vehicle, stop_id, direction_id, (floor((extract('epoch' from date_time)-1) / 3700) * 3700)
-ORDER BY arrival_time, direction_id
+ORDER BY vehicle, direction_id, date_time
+)
+
+SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) AS cis_group
+INTO dzou2.match_stop_514
+FROM stop_orders
+GROUP BY stop_order, vehicle, stop_id, direction_id
 ```
 
 It outputs the `arrival_time` and `departure_time` for each vehicle in each stop in directions, and representing the earliest time record the GPS records at 200m upstream of the stop and lastest time record at 10m downstream.
 
-The reason why choosing `3700` as the time interval in step 3 is written on `bdit_data-sources/ttc/validating_cis_processing.ipynb`.
+The heat maps of the result is on `bdit_data-sources/ttc/validating_cis_processing.ipynb`.
 
 
 ## Route 504
@@ -432,7 +458,19 @@ ORDER BY direction_id, date_time
 ```
 
 ### Step 3:
-Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them by the time interval at most 5 minutes.
+Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them at each stop.
+
+The same as the steps for route 514:
+
+```sql
+CREATE SEQUENCE stops START 100
+```
+
+```sql
+SELECT nextval('stops')
+```
+
+At the same window:
 
 ```sql
 WITH line_data AS(
@@ -444,8 +482,8 @@ SELECT geom AS line, direction_id FROM gtfs_raph.shapes_geom_20171004
 ),
 
 cis_gtfs AS(
-SELECT date_time, id AS cis_id, stop_id, a.direction_id,
-ST_LineLocatePoint(line, position) AS cis_to_line, vehicle,
+SELECT date_time, id AS cis_id, stop_id, vehicle, a.direction_id,
+ST_LineLocatePoint(line, position) AS cis_to_line,
 ST_LineLocatePoint(line, geom) AS stop_to_line,
 (CASE WHEN ST_LineLocatePoint(line, position) > ST_LineLocatePoint(line, geom)
       THEN 'after'
@@ -458,18 +496,30 @@ ST_Distance(position::geography, geom::geography) AS distance
 FROM line_data a, dzou2.dd_cis_504_angle b
 INNER JOIN gtfs_raph.stops_20171004 USING (stop_id)
 WHERE a.direction_id = b.direction_id
-ORDER BY direction_id, date_time
-)
+ORDER BY vehicle, a.direction_id, date_time
+),
 
-SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id
-INTO dzou2.match_stop_504
+stop_orders AS (
+SELECT *,
+(CASE WHEN lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time) IS NULL
+      THEN nextval('stops')
+      WHEN stop_id <> lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time)
+      THEN nextval('stops')
+      WHEN stop_id = lag(stop_id, 1) OVER (PARTITION BY vehicle ORDER BY date_time)
+      THEN currval('stops')
+END) AS stop_order
 FROM cis_gtfs
 WHERE (line_position = 'before' AND distance <= 200) OR (line_position = 'after' AND distance <= 10) OR (line_position = 'same' AND distance <= 100)
-GROUP BY vehicle, stop_id, direction_id, (floor((extract('epoch' from date_time)-1) / 3700) * 3700)
-ORDER BY arrival_time, direction_id
+ORDER BY vehicle, direction_id, date_time
+)
+
+SELECT MIN(date_time) AS arrival_time, MAX(date_time) AS departure_time, vehicle, stop_id, direction_id, array_agg(DISTINCT cis_id) AS cis_group
+INTO dzou2.match_stop_504
+FROM stop_orders
+GROUP BY stop_order, vehicle, stop_id, direction_id
 ```
 
-`bdit_data-sources/ttc/validating_cis_processing.ipynb` also shows the heat maps with time interval as 3700 for route 504.
+`bdit_data-sources/ttc/validating_cis_processing.ipynb` also shows the heat maps for route 504.
 
 ## Assign Trip IDs to CIS data #104
 
@@ -492,7 +542,7 @@ At the same window:
 ```sql
 WITH
 order_data AS (
-SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_id,
+SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_group,
 rank() OVER (PARTITION BY vehicle ORDER BY arrival_time) AS order_id
 FROM match_stop_514
 
@@ -508,13 +558,13 @@ SELECT
       WHEN (direction_id = lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
       THEN currval('cis_lst')
 END) AS trip_id,
-arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id
+arrival_time, departure_time, cis_group, direction_id, vehicle, stop_id
 FROM order_data
 ORDER BY vehicle, arrival_time
 ),
 
 open_array AS (
-SELECT trip_id, arrival_time, departure_time, unnest(cis_id) AS cis_id, direction_id, vehicle, stop_id
+SELECT trip_id, arrival_time, departure_time, unnest(cis_group) AS cis_id, direction_id, vehicle, stop_id
 FROM trips
 ORDER BY vehicle, arrival_time
 ),
@@ -547,7 +597,7 @@ At the same window:
 ```sql
 WITH
 order_data AS (
-SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_id,
+SELECT arrival_time, departure_time, vehicle, stop_id, direction_id, cis_group,
 rank() OVER (PARTITION BY vehicle ORDER BY arrival_time) AS order_id
 FROM match_stop_504
 
@@ -563,13 +613,13 @@ SELECT
       WHEN (direction_id = lag(direction_id, 1) OVER (PARTITION BY vehicle ORDER BY arrival_time))
       THEN currval('cis_lst')
 END) AS trip_id,
-arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id
+arrival_time, departure_time, cis_group, direction_id, vehicle, stop_id
 FROM order_data
 ORDER BY vehicle, arrival_time
 ),
 
 open_array AS (
-SELECT trip_id, arrival_time, departure_time, unnest(cis_id) AS cis_id, direction_id, vehicle, stop_id
+SELECT trip_id, arrival_time, departure_time, unnest(cis_group) AS cis_id, direction_id, vehicle, stop_id
 FROM trips
 ORDER BY vehicle, arrival_time
 ),
@@ -596,11 +646,11 @@ WHERE a.trip_id = b.trip_id
 
 ### Step 1: Select the points that are in the pilot area (Bathurst to Jarvis).
 
-Step 2.1: create a geoframe that represents the pilot area
+Step 1.1: create a geoframe that represents the pilot area
 
 !['Bathurst_Jarvis'](gtfs/img/Bathurst_Jarvis.png)
 
-Step 2.2: Use the geoframe to filter the CIS line_data
+Step 1.2: Use the geoframe to filter the CIS trips
 
 ```sql
 WITH geo_frame AS (
@@ -609,22 +659,20 @@ SELECT ST_GeomFromText (
 -79.37452111612254 43.658241189360304,-79.36928544412547 43.64513751014725,-79.40035615335398 43.63780813971652))', 4326) AS frame
 ),
 
-io AS (
-SELECT *, ST_Within(position, frame) AS inside
-FROM geo_frame, dzou2.cis_514_1004
+trip_location AS (
+SELECT a.*, b.position FROM dzou2.trips_cis_514 a
+INNER JOIN dzou2.dd_cis_514_angle b ON a.cis_id = b.id
 )
 
-SELECT message_datetime, route, run, vehicle, latitude, longitude, position
-FROM io
-WHERE inside = TRUE
+SELECT trip_id, arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id, ST_Within(position, frame) AS pilot_area
+INTO tf_cis_514
+FROM geo_frame, trip_location
 ```
 
-Reminder: the table named `cis_514_1004` us created by
+The table named `tf_cis_514` includes all the data from `trips_cis_514` and a column named `pilot_area` which indicates if the CIS data point is in the pilot area or not.
+
+### Step 2: Filtered out the trips linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis).
 
 ```sql
-SELECT * into dzou2.cis_514_1004
-FROM ttc.cis_2017
-WHERE date(message_datetime) = '2017-10-04' AND route = 514
-```
 
-in the `bdit_data-sources/ttc/basic_filter_cis.md` on Github.
+```
