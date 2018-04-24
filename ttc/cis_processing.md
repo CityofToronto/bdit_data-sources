@@ -671,8 +671,143 @@ FROM geo_frame, trip_location
 
 The table named `tf_cis_514` includes all the data from `trips_cis_514` and a column named `pilot_area` which indicates if the CIS data point is in the pilot area or not.
 
+There are 9373 rows of data in `tf_cis_514` at this point.
+
 ### Step 2: Filtered out the trips linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis).
 
 ```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area,
+ST_DistanceSphere(position,
+lag(position,1) OVER (partition by trip_id order by arrival_time)) AS distance
+FROM tf_cis_514 a
+INNER JOIN dzou2.dd_cis_514_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
 
+total_d AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time, direction_id,
+vehicle, SUM(distance)/1000 AS total_distance_km
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+),
+
+fail_trip_id AS (
+SELECT trip_id
+FROM total_d
+WHERE total_distance_km < 1 OR total_distance_km > 4
+)
+
+DELETE FROM tf_cis_514 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
 ```
+
+The temporary table `fail_trip_id` stores the trip IDs which linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis). There are 6 trips fulfill the requirements, and 109 CIS data are affected after running the query.
+
+There are 9264 rows of data in `tf_cis_514` at this point.
+
+### Step 3: Filtered out the trips linked to vehicles that spend more than 100 minutes in the pilot area.
+
+```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area
+FROM tf_cis_514 a
+INNER JOIN dzou2.dd_cis_514_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
+
+total_time AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time,
+EXTRACT(EPOCH FROM (MAX(departure_time) - MIN(arrival_time)))/60 AS time_diff,
+direction_id, vehicle
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+),
+
+fail_trip_id AS (
+SELECT trip_id
+FROM total_time
+WHERE time_diff > 100
+)
+
+DELETE FROM tf_cis_514 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
+```
+
+The column `time_diff` in the temporary table `total_time` is the time (in minutes) of a vehicle spent in the pilot area; however, there is not any trip spent more than 100 minutes in the pilot area, so 0 rows are affected.
+
+There are 9264 rows of data in `tf_cis_514` at this point.
+
+To know the longest time period for a vehicle to spend in the pilot area, using the query
+
+```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area
+FROM tf_cis_514 a
+INNER JOIN dzou2.dd_cis_514_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
+
+total_time AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time,
+EXTRACT(EPOCH FROM (MAX(departure_time) - MIN(arrival_time)))/60 AS time_diff,
+direction_id, vehicle
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+)
+
+SELECT MAX(time_diff) FROM total_time
+```
+
+The result output:
+
+|max|
+|---|
+|31|
+
+Thus, the maximum time for a vehicle to spend in the pilot area is 31 minutes (route 514 on 10/04/2017).
+
+### Step 4: Filtered out the trips with run numbers between 60 and 89.
+
+```sql
+WITH fail_trip_id AS(
+SELECT trip_id
+FROM tf_cis_514 a
+INNER JOIN dzou2.dd_cis_514_angle b ON (a.cis_id = b.id)
+WHERE run BETWEEN 60 AND 89
+)
+
+DELETE FROM tf_cis_514 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
+```
+
+There is not a trip has the run number between 60 and 89, so 0 rows are affected after running the query.
+
+To know the run  number for route 514 on 10/04/2017,
+
+```sql
+SELECT DISTINCT run FROM ttc.cis_20171004
+WHERE route = 514
+ORDER BY run
+```
+
+|run|
+|---|
+|50|
+|51|
+|52|
+|53|
+|54|
+|55|
+|56|
+|57|
+|58|
+|59|
+
+Thus, the run numbers of route 514 on 10/04/2017 are from 50 to 59.
