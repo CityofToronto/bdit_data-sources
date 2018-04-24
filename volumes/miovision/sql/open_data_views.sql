@@ -87,12 +87,17 @@ WITH valid_bins AS (
     b.dir,
     b.leg,
     COALESCE(c.total_volume, b.avg_volume) AS volume
-   FROM valid_bins a
+  FROM valid_bins a
      JOIN int_avg b USING (intersection_uid, class_type, period_type)
      LEFT JOIN miovision.volumes_15min_by_class c USING (datetime_bin, intersection_uid, class_type, dir, leg, period_type)
   WHERE b.time_bin = a.datetime_bin::time without time zone
   ORDER BY a.intersection_uid, a.period_type, a.datetime_bin, a.class_type, b.dir, b.leg
-)
+),
+ intersection_days AS (
+	SELECT intersection_uid, datetime_bin::date AS dt, COUNT(DISTINCT datetime_bin) AS num_daily_observations
+	FROM volumes_15
+	GROUP BY intersection_uid, dt
+ )
 , daily AS(
  SELECT a.intersection_uid,
     c.intersection_name,
@@ -112,8 +117,12 @@ WITH valid_bins AS (
    FROM volumes_15 a
      CROSS JOIN miovision.periods b
      JOIN miovision.intersections c USING (intersection_uid)
-  WHERE a.datetime_bin::time without time zone <@ b.period_range AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
+     JOIN intersection_days d ON d.intersection_uid = a.intersection_uid AND a.datetime_bin::date = dt
+  WHERE a.datetime_bin::time without time zone <@ b.period_range AND report_flag AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) 
+	AND (period_id != 7 OR num_daily_observations > 23 * 4) --Make sure 24hour counts have data for most of the 24-hour period
+	AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
   GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
+   
 )
 SELECT period_type as aggregation_period, intersections.int_id,
     centreline_intersection.intersec5 AS intersection_name, px,
