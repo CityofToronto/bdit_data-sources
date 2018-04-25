@@ -18,6 +18,10 @@ These data are stored in the partitioned table schema `ttc.cis`.
 
 The data were sent to us in monthly compressed csvs. The `cis_batch_upload.sh` bash script cycles through `.csv.gz` files in the current directory and copies them to `ttc.cis`, a partitioned table with the above structure. Partitioning is currently by year and is handled by the [`cis_insert_trigger`](functions/cis_insert_trigger.sql) function.
 
+### Processing
+
+[`cis_processing.md`](cis_processing.md) details the process for generating stop arrival and departure times from the CIS GPS positions with a companion Jupyter Notebook [`validating_cis_processing.ipynb`](validating_cis_processing.ipynb) that details validation of each step of the processing.
+
 ## Old Data Structure
 
 **Previous version of the AVL TTC data.**
