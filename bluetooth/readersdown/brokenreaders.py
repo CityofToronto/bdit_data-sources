@@ -14,14 +14,26 @@ def update_empty_date_reports(con):
     
 def find_brokenreaders(con):
     
-    sql = '''SELECT DISTINCT ON (sensor) (json_array_elements(route_points)->'name')::TEXT as sensor
+    sql = '''WITH broken_routes AS (SELECT DISTINCT (json_array_elements(route_points)->'name')::TEXT as sensor
              FROM bluetooth.all_analyses
              INNER JOIN (SELECT analysis_id 
-                         FROM bluetooth.dates_without_data WHERE day_without_data > current_date - 7 --Ensure recency
+                         FROM bluetooth.dates_without_data WHERE day_without_data > current_date - 2 --Ensure recency
                          GROUP BY analysis_id 
                          HAVING MAX(day_without_data) = current_date - 1 AND COUNT(1) < 2  --Ensure there was no data from the day before but 
-                                                                                           --detector wasn't previously flagged
+                                                                                           --sensor didn't get emailed the previous day
                          ) missing_dates USING (analysis_id)
+             )
+             , working_routes AS (SELECT DISTINCT (json_array_elements(route_points)->'name')::TEXT as sensor
+             FROM bluetooth.all_analyses
+             INNER JOIN (SELECT DISTINCT analysis_id
+                         FROM bluetooth.observations
+                         WHERE measured_timestamp > current_date - 1) routes_with_recent_data USING (analysis_id)            
+             )
+             SELECT sensor
+             FROM broken_routes
+             EXCEPT 
+             SELECT sensor
+             FROM working_routes
 
     '''
 
