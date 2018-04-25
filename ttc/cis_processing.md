@@ -642,7 +642,7 @@ WHERE a.trip_id = b.trip_id
 
 ## Trip filtering issue #87
 
-#### Route 514 on 10/04/2017
+## Route 514 on 10/04/2017
 
 ### Step 1: Select the points that are in the pilot area (Bathurst to Jarvis).
 
@@ -789,7 +789,7 @@ WHERE a.trip_id = fail_trip_id.trip_id
 
 There is not a trip has the run number between 60 and 89, so 0 rows are affected after running the query.
 
-To know the run  number for route 514 on 10/04/2017,
+To know the run number for route 514 on 10/04/2017,
 
 ```sql
 SELECT DISTINCT run FROM ttc.cis_20171004
@@ -811,3 +811,152 @@ ORDER BY run
 |59|
 
 Thus, the run numbers of route 514 on 10/04/2017 are from 50 to 59.
+
+## Route 504 on 10/04/2017
+
+### Step 1: Select the points that are in the pilot area (Bathurst to Jarvis).
+
+```sql
+WITH geo_frame AS (
+SELECT ST_GeomFromText (
+'POLYGON((-79.40035615335398 43.63780813971652,-79.40593514810496 43.65184496379264,-79.38997064004832 43.655074211367626,
+-79.37452111612254 43.658241189360304,-79.36928544412547 43.64513751014725,-79.40035615335398 43.63780813971652))', 4326) AS frame
+),
+
+trip_location AS (
+SELECT a.*, b.position FROM dzou2.trips_cis_504 a
+INNER JOIN dzou2.dd_cis_504_angle b ON a.cis_id = b.id
+)
+
+SELECT trip_id, arrival_time, departure_time, cis_id, direction_id, vehicle, stop_id, ST_Within(position, frame) AS pilot_area
+INTO tf_cis_504
+FROM geo_frame, trip_location
+```
+
+There are 47470 rows of data in `tf_cis_504` at this point.
+
+### Step 2: Filtered out the trips linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis).
+
+```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area,
+ST_DistanceSphere(position,
+lag(position,1) OVER (partition by trip_id order by arrival_time)) AS distance
+FROM tf_cis_504 a
+INNER JOIN dzou2.dd_cis_504_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
+
+total_d AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time, direction_id,
+vehicle, SUM(distance)/1000 AS total_distance_km
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+),
+
+fail_trip_id AS (
+SELECT trip_id
+FROM total_d
+WHERE total_distance_km < 1 OR total_distance_km > 4
+)
+
+DELETE FROM tf_cis_504 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
+```
+
+There are 2 trips fulfill the requirements, and 653 CIS data are affected after running the query.
+
+There are 46817 rows of data in `tf_cis_504` at this point.
+
+### Step 3: Filtered out the trips linked to vehicles that spend more than 100 minutes in the pilot area.
+
+```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area
+FROM tf_cis_504 a
+INNER JOIN dzou2.dd_cis_504_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
+
+total_time AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time,
+EXTRACT(EPOCH FROM (MAX(departure_time) - MIN(arrival_time)))/60 AS time_diff,
+direction_id, vehicle
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+),
+
+fail_trip_id AS (
+SELECT trip_id
+FROM total_time
+WHERE time_diff > 100
+)
+
+DELETE FROM tf_cis_504 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
+```
+
+0 rows are affected.
+
+There are 46817 rows of data in `tf_cis_504` at this point.
+
+To know the longest time period for a vehicle to spend in the pilot area, using the query
+
+```sql
+WITH trips AS(
+SELECT trip_id, arrival_time, departure_time, a.direction_id, a.vehicle, a.stop_id, pilot_area
+FROM tf_cis_504 a
+INNER JOIN dzou2.dd_cis_504_angle b ON (a.cis_id = b.id)
+WHERE pilot_area = TRUE
+),
+
+total_time AS (
+SELECT trip_id, MIN(arrival_time) AS begin_time, MAX(departure_time) AS end_time,
+EXTRACT(EPOCH FROM (MAX(departure_time) - MIN(arrival_time)))/60 AS time_diff,
+direction_id, vehicle
+FROM trips
+GROUP BY trip_id, direction_id, vehicle
+ORDER BY trip_id, begin_time
+)
+
+SELECT MAX(time_diff) FROM total_time
+```
+
+The result output:
+
+|max|
+|---|
+|32|
+
+Thus, the maximum time for a vehicle to spend in the pilot area is 32 minutes (route 504 on 10/04/2017).
+
+### Step 4: Filtered out the trips with run numbers between 60 and 89.
+
+```sql
+WITH fail_trip_id AS(
+SELECT trip_id
+FROM tf_cis_504 a
+INNER JOIN dzou2.dd_cis_504_angle b ON (a.cis_id = b.id)
+WHERE run BETWEEN 60 AND 89
+)
+
+DELETE FROM tf_cis_504 a
+USING fail_trip_id
+WHERE a.trip_id = fail_trip_id.trip_id
+```
+
+0 rows are affected after running the query.
+
+To know the run number for route 504 on 10/04/2017,
+
+```sql
+SELECT DISTINCT run FROM ttc.cis_20171004
+WHERE route = 504
+ORDER BY run
+```
+
+Based on the result outputted, the run numbers of route 504 on 10/04/2017 are from 1 to 40, 50-58, and 91.
