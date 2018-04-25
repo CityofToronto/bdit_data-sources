@@ -14,6 +14,8 @@ These data are stored in the partitioned table schema `ttc.cis`.
 |longitude | TEXT | longitude position, stored as string |
 |position | geometry(Point, 4326) | geometry of the position, derived from the two previous columns using the [`trg_mk_position_geom`](functions/trg_mk_position_geom.sql) |
 
+See [`CIStable.ipynb`](CIStable.ipynb) for an exploration of the 2017 data we received from the TTC.
+
 ### Data upload
 
 The data were sent to us in monthly compressed csvs. The `cis_batch_upload.sh` bash script cycles through `.csv.gz` files in the current directory and copies them to `ttc.cis`, a partitioned table with the above structure. Partitioning is currently by year and is handled by the [`cis_insert_trigger`](functions/cis_insert_trigger.sql) function.
