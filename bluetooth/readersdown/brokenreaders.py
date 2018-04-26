@@ -34,6 +34,7 @@ def find_brokenreaders(con):
              EXCEPT 
              SELECT sensor
              FROM working_routes
+             ORDER BY sensor
 
     '''
 
