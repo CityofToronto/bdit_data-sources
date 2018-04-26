@@ -14,10 +14,11 @@ GRANT SELECT ON bluetooth.routes_not_reporting_yesterday TO bdit_humans;
 GRANT SELECT ON bluetooth.routes_not_reporting_yesterday TO bt_insert_bot;
 ALTER TABLE bluetooth.routes_not_reporting_yesterday OWNER TO bt_admins;
 
+DROP TABLE IF EXISTS bluetooth.dates_without_data;
 CREATE TABLE bluetooth.dates_without_data(
 	analysis_id BIGINT NOT NULL,
 	day_without_data DATE NOT NULL,
-	PRIMARY KEY (analysis_id, day_without_data)
+	UNIQUE(analysis_id, day_without_data)
 );
 ALTER TABLE bluetooth.dates_without_data OWNER TO bt_admins;
 GRANT SELECT ON bluetooth.dates_without_data TO bdit_humans;
