@@ -359,6 +359,8 @@ ORDER BY direction_id, date_time
 ### Step 3:
 Get arrival time and departure time within 200m upstream, 10m downstream as per above data, and grouped them at each stop.
 
+!['match_stop'](gtfs/img/match_stop.png)
+
 First of all, we need a sequence of counting.
 
 ```sql
@@ -673,6 +675,12 @@ The table named `tf_cis_514` includes all the data from `trips_cis_514` and a co
 
 There are 9373 rows of data in `tf_cis_514` at this point.
 
+```sql
+SELECT count(DISTINCT trip_id) FROM dzou2.tf_cis_514
+```
+
+186 trips are remaining at this point.
+
 ### Step 2: Filtered out the trips linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis).
 
 ```sql
@@ -707,6 +715,9 @@ WHERE a.trip_id = fail_trip_id.trip_id
 The temporary table `fail_trip_id` stores the trip IDs which linked to vehicles that spend less than 1 km or more than 4 km in the pilot area (Bathurst to Jarvis). There are 6 trips fulfill the requirements, and 109 CIS data are affected after running the query.
 
 There are 9264 rows of data in `tf_cis_514` at this point.
+186 trips are remaining at this point.
+
+
 
 ### Step 3: Filtered out the trips linked to vehicles that spend more than 100 minutes in the pilot area.
 
@@ -741,6 +752,7 @@ WHERE a.trip_id = fail_trip_id.trip_id
 The column `time_diff` in the temporary table `total_time` is the time (in minutes) of a vehicle spent in the pilot area; however, there is not any trip spent more than 100 minutes in the pilot area, so 0 rows are affected.
 
 There are 9264 rows of data in `tf_cis_514` at this point.
+186 trips are remaining at this point.
 
 To know the longest time period for a vehicle to spend in the pilot area, using the query
 
@@ -771,6 +783,9 @@ The result output:
 |31|
 
 Thus, the maximum time for a vehicle to spend in the pilot area is 31 minutes (route 514 on 10/04/2017).
+
+Also, there are 9264 rows of data in `tf_cis_514` at this point.
+186 trips are remaining at this point.
 
 ### Step 4: Filtered out the trips with run numbers between 60 and 89.
 
@@ -811,6 +826,14 @@ ORDER BY run
 |59|
 
 Thus, the run numbers of route 514 on 10/04/2017 are from 50 to 59.
+
+There are 9264 rows of data in `tf_cis_514` at this point.
+
+The map of filtered trips:
+
+!['filtered_trips_514'](gtfs/img/filtered_trips_514.png)
+
+
 
 ## Route 504 on 10/04/2017
 
@@ -867,8 +890,15 @@ WHERE a.trip_id = fail_trip_id.trip_id
 ```
 
 There are 2 trips fulfill the requirements, and 653 CIS data are affected after running the query.
+Also, these CIS data all belong to one `trip_id` which is 345.
 
 There are 46817 rows of data in `tf_cis_504` at this point.
+
+```sql
+SELECT count(DISTINCT trip_id) FROM dzou2.tf_cis_504
+```
+
+605 trips are remaining at this point.
 
 ### Step 3: Filtered out the trips linked to vehicles that spend more than 100 minutes in the pilot area.
 
@@ -903,6 +933,8 @@ WHERE a.trip_id = fail_trip_id.trip_id
 0 rows are affected.
 
 There are 46817 rows of data in `tf_cis_504` at this point.
+
+605 trips are remaining at this point.
 
 To know the longest time period for a vehicle to spend in the pilot area, using the query
 
@@ -951,6 +983,10 @@ WHERE a.trip_id = fail_trip_id.trip_id
 
 0 rows are affected after running the query.
 
+There are 46817 rows of data in `tf_cis_504` at this point.
+
+605 trips are remaining at this point.
+
 To know the run number for route 504 on 10/04/2017,
 
 ```sql
@@ -960,3 +996,9 @@ ORDER BY run
 ```
 
 Based on the result outputted, the run numbers of route 504 on 10/04/2017 are from 1 to 40, 50-58, and 91.
+
+The map of filtered trips:
+
+!['filtered_trips_504'](gtfs/img/filtered_trips_504.png)
+
+The filtered CIS data all belong to `trip_id` = 345.
