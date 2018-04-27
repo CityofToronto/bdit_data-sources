@@ -17,7 +17,7 @@ def find_brokenreaders(con):
     sql = '''WITH broken_routes AS (SELECT DISTINCT (json_array_elements(route_points)->'name')::TEXT as sensor
              FROM bluetooth.all_analyses
              INNER JOIN (SELECT analysis_id 
-                         FROM bluetooth.dates_without_data WHERE day_without_data > current_date - 2 --Ensure recency
+                         FROM bluetooth.dates_without_data WHERE day_without_data >= current_date - 2 --Ensure recency
                          GROUP BY analysis_id 
                          HAVING MAX(day_without_data) = current_date - 1 AND COUNT(1) < 2  --Ensure there was no data from the day before but 
                                                                                            --sensor didn't get emailed the previous day
