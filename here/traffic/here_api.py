@@ -143,8 +143,8 @@ def send_data_to_database(dbsetting, filename):
     subprocess.Popen('gunzip -c ' + filename +' | psql -h '+ dbsetting['host'] +r' -d bigdata -c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"', shell=True)
 
 @click.command()
-@click.argument('startdate', help='Start date for pulling data (YYYYMMDD)')
-@click.argument('enddate', help='End date for pulling data (YYYYMMDD)')
+@click.argument('startdate')
+@click.argument('enddate')
 def main(start_date, end_date):
     config = configparser.ConfigParser()
     config.read('db.cfg')
