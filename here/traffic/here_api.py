@@ -23,57 +23,6 @@ def _get_date_yyyymmdd(yyyymmdd):
                          .format(yyyymmdd=yyyymmdd))
     return date
 
-def _validate_yyyymmdd_range(yyyymmdd_range):
-    """Validate the two yyyymm command line arguments provided
-    Args:
-        yyyymmdd_range: List containing a start and end year-month in yyyymm format
-    
-    Returns:
-        A nested dictionary with the processed range like {'yyyy':range(mm1,mm2+1)}
-    
-    Raises:
-        ValueError: If the values entered are incorrect
-    """
-
-    if len(yyyymmdd_range) != 2:
-        raise ValueError('{yyyymmdd_range} should contain two YYYYMMDD arguments'
-                         .format(yyyymmdd_range=yyyymmdd_range))
-    
-    
-    date1, date2 = (_get_date_yyyymmdd(date) for date in yyyymmdd_range)
-
-    if date1 > date2:
-        raise ValueError('Start date {yyyymm1} after end date {yyyymm2}'
-                         .format(yyyymm1=yyyymmdd_range[0], yyyymm2=yyyymmdd_range[1]))
-
-    years = defaultdict(dict)
-
-    #Same YYYYMM combo
-    if (date1.year == date2.year) and (date1.month == date2.month):
-        years[date1.year] = {date1.month: range(date1.day, date2.day + 1)}
-        return years
-    #Iterate over years and months
-    for year in range(date1.year, date2.year + 1):
-        if(year == date1.year) and (date1.year == date2.year):
-            month1, month2 = date1.month, date2.month
-        elif year == date1.year:
-            month1, month2 = date1.month, 12
-        elif year == date2.year:
-            month1, month2 = 1, date2.month
-        else:
-            month1, month2 = 1, 12
-        for month in range(month1, month2 + 1):
-            #Start of the YYYYMMDD range
-            if(year == date1.year) and (month == date1.month):
-                years[year][month] = range(date1.day, calendar.monthrange(year, month)[1] + 1)
-            #End of the YYYYMMDD range
-            elif(year == date2.year) and (month == date2.month):
-                years[year][month] = range(1, date2.day + 1)
-            #Full month
-            else:
-                years[year][month] = range(1, calendar.monthrange(year, month)[1] + 1)
- 
-    return years
 
 def get_access_token(key_id, key_secret, token_url):
     '''Uses Oauth1 to get an access token using the key_id and client_secret'''
@@ -153,9 +102,7 @@ def main(startdate, enddate):
 
     access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-    dates_list = _validate_yyyymmdd_range([startdate, enddate])
-
-    request_id = query_dates(access_token, dates_list[0], dates_list[1], apis['query_url'], apis['user_id'], apis['user_email'])
+    request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
     download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
     filename = 'here_data_'+str(startdate)+'_'+str(enddate)
