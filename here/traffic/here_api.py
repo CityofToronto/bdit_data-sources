@@ -145,7 +145,7 @@ def send_data_to_database(dbsetting, filename):
 @click.command()
 @click.argument('startdate')
 @click.argument('enddate')
-def main(start_date, end_date):
+def main(startdate, enddate):
     config = configparser.ConfigParser()
     config.read('db.cfg')
     dbsettings = config['DBSETTINGS']
@@ -153,12 +153,12 @@ def main(start_date, end_date):
 
     access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-    dates_list = _validate_yyyymmdd_range([start_date, end_date])
+    dates_list = _validate_yyyymmdd_range([startdate, enddate])
 
     request_id = query_dates(access_token, dates_list[0], dates_list[1], apis['query_url'], apis['user_id'], apis['user_email'])
 
     download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
-    filename = 'here_data_'+str(start_date)+'_'+str(end_date)
+    filename = 'here_data_'+str(startdate)+'_'+str(enddate)
     download_data(download_url, filename)
 
     send_data_to_database(dbsettings, filename+'.csv.gz')
