@@ -9,6 +9,7 @@ setup(
         'requests-oauthlib',
         'requests'
     ],
+    python_requires='>=3',
     entry_points='''
         [console_scripts]
         here_api=here_api:main
