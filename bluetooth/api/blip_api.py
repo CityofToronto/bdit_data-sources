@@ -16,6 +16,7 @@ import sys
 import time
 import traceback
 from itertools import product
+from typing import List
 
 import zeep
 from zeep import Client
@@ -44,6 +45,8 @@ def parse_args(args, prog=None, usage=None):
                         "from startdate to enddate, else defaults to "
                         "previous day. ",
                         metavar=('YYYYMMDD', 'YYYYMMDD'))
+    parser.add_argument("-a", "--analysis", action='append', type= int,
+                        help="Analysis ID to pull. Add more flags for multiple IDs")
     parser.add_argument("-d", "--dbsetting",
                         default='config.cfg',
                         help="Filename with connection settings to the database "
@@ -224,7 +227,8 @@ def move_data(dbset):
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
          direct: bool = None,
-         live: bool = False):
+         live: bool = False,
+         analysis: List[int] = []):
     """
     Main method. Connect to blip WSDL Client, update analysis configurations,
     then pull data for specified dates
@@ -250,12 +254,20 @@ def main(dbsetting: 'path/to/config.cfg' = None,
         query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
         routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
     else:
-        # list of all route segments
-        all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
-                                                          api_settings['pw'])
-        LOGGER.info('Updating route configs')
-        routes_to_pull = update_configs(all_analyses, dbset)
-
+        #Querying data that's been further processed overnight
+        if not analysis:
+            # list of all route segments
+            all_analyses = blip.service.getExportableAnalyses(api_settings['un'],
+                                                            api_settings['pw'])
+            LOGGER.info('Updating route configs')
+            routes_to_pull = update_configs(all_analyses, dbset)
+        else:
+            db = DB(**dbset)
+            LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
+            sql = '''WITH analyses AS (SELECT unnest(%(analysis)s::bigint[]) AS analysis_id)
+                    SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
+            query = db.query_formatted(sql, {'analysis':analysis})
+            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
         date_to_process = None
 
     if years is None and live:
@@ -304,7 +316,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                                                       config))
             else:
                 ks = [0, 1, 2, 3]
-                for i, k in product(days, ks):
+                for _, k in product(days, ks):
                     if k == 0:
                         config.endTime = config.startTime + \
                             datetime.timedelta(hours=8)
