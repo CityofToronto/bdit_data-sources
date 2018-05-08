@@ -1,11 +1,10 @@
 import calendar
 import configparser
-import datetime
 import re
 import shutil
 import subprocess
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 import requests
@@ -23,6 +22,13 @@ def _get_date_yyyymmdd(yyyymmdd):
                          .format(yyyymmdd=yyyymmdd))
     return date
 
+def default_start_date():
+    dt = datetime.today() - timedelta(days=8)
+    return dt.date().strftime('%Y%m%d')
+
+def default_end_date():
+    dt = datetime.today() - timedelta(days=2)
+    return dt.date().strftime('%Y%m%d')
 
 def get_access_token(key_id, key_secret, token_url):
     '''Uses Oauth1 to get an access token using the key_id and client_secret'''
@@ -83,17 +89,22 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
     return query_status.json()['outputUrl']
 
 def download_data(download_url, filename):
+    '''Download data from specified url to specified filename'''
     download = requests.get(download_url, stream=True)
 
     with open(filename+'.csv.gz', 'wb') as f:
         shutil.copyfileobj(download.raw, f)
 
 def send_data_to_database(dbsetting, filename):
-    subprocess.Popen('gunzip -c ' + filename +' | psql -h '+ dbsetting['host'] +r' -d bigdata -c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"', shell=True)
+    '''Unzip the file and pipe the data to a database COPY statement'''
+    cmd = 'gunzip -c ' + filename 
+    cmd += ' | psql -h '+ dbsetting['host'] +' -d bigdata -v "ON_ERROR_STOP=1"'
+    cmd += r'-c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'
+    subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 
 @click.command()
-@click.argument('startdate')
-@click.argument('enddate')
+@click.option('-s','--startdate', default=default_start_date())
+@click.option('-e','--enddate', default=default_end_date())
 def main(startdate, enddate):
     config = configparser.ConfigParser()
     config.read('db.cfg')
