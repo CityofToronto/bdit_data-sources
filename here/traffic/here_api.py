@@ -39,7 +39,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
                 for record in self.buffer:
                     s = self.format(record)
                     msg = msg + s + "\r\n"
-                send_mail(self.fromaddr, self.toaddrs, self.subject, msg)
+                send_mail(self.toaddrs, self.fromaddr, self.subject, msg)
             except:
                 self.handleError(None)  # no particular record
             self.buffer = []
@@ -168,7 +168,7 @@ def main(startdate, enddate, config):
 
     LOGGER.setLevel(logging.INFO)
     LOGGER.addHandler(BufferingSMTPHandler(email['from'], email['to'], email['subject'], 20))
-    LOGGER.addHandler(logging.FileHandler('here_api.log'))
+    LOGGER.addHandler(logging.FileHandler('here_api.log').setFormatter('%(asctime)s %(levelname)-5s %(message)s'))
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
