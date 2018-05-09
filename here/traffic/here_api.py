@@ -168,7 +168,7 @@ def main(startdate, enddate, config):
 
     LOGGER.setLevel(logging.INFO)
     LOGGER.addHandler(BufferingSMTPHandler(email['from'], email['to'], email['subject'], 20))
-    LOGGER.addHandler(logging.FileHandler('here_api.log').setFormatter('%(asctime)s %(levelname)-5s %(message)s'))
+    LOGGER.addHandler(logging.FileHandler('here_api.log').setFormatter(logging.Formatter('%(asctime)s %(levelname)-5s %(message)s')))
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
