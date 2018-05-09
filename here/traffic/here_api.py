@@ -14,35 +14,10 @@ import click
 import requests
 from requests_oauthlib import OAuth1
 
+from notify_email import send_mail
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
-
-class BufferingSMTPHandler(logging.handlers.BufferingHandler):
-    '''From https://gist.github.com/anonymous/1379446
-    
-    Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
-    '''
-
-    def __init__(self, fromaddr, toaddrs, subject, capacity):
-        logging.handlers.BufferingHandler.__init__(self, capacity)
-        self.fromaddr = fromaddr
-        self.toaddrs = toaddrs
-        self.subject = subject
-        self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
-
-    def flush(self):
-        if len(self.buffer) > 0:
-            try:
-                from notify_email import send_mail
-                msg = ''
-                for record in self.buffer:
-                    s = self.format(record)
-                    msg = msg + s + "\r\n"
-                send_mail(self.toaddrs, self.fromaddr, self.subject, msg)
-            except:
-                self.handleError(None)  # no particular record
-            self.buffer = []
 
 LOGGER = logging.getLogger(__name__)
 
@@ -165,11 +140,9 @@ def main(startdate, enddate, config):
     dbsettings = configuration['DBSETTINGS']
     apis = configuration['API']
     email = configuration['EMAIL']
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-    LOGGER.setLevel(logging.INFO)
-    LOGGER.addHandler(BufferingSMTPHandler(email['from'], email['to'], email['subject'], 20))
-    fh = logging.FileHandler('here_api.log')
-    LOGGER.addHandler(fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)-5s %(message)s')))
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
@@ -183,8 +156,8 @@ def main(startdate, enddate, config):
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
-        logging.shutdown()
+        send_mail(email['to'], email['from'], email['subject'], here_exc)
     except Exception:
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
-        logging.shutdown()
+        send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
