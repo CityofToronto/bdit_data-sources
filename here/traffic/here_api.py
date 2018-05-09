@@ -1,17 +1,50 @@
 import calendar
 import configparser
+import logging
+import logging.handlers
 import re
 import shutil
 import subprocess
+import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import sleep
 
-import requests
-
 import click
+import requests
 from requests_oauthlib import OAuth1
 
+
+class HereAPIException(Exception):
+    '''Base Exception for all errors thrown by this module'''
+
+class BufferingSMTPHandler(logging.handlers.BufferingHandler):
+    '''From https://gist.github.com/anonymous/1379446
+    
+    Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
+    '''
+
+    def __init__(self, fromaddr, toaddrs, subject, capacity):
+        logging.handlers.BufferingHandler.__init__(self, capacity)
+        self.fromaddr = fromaddr
+        self.toaddrs = toaddrs
+        self.subject = subject
+        self.setFormatter(logging.Formatter("%(asctime)s %(levelname)-5s %(message)s"))
+
+    def flush(self):
+        if len(self.buffer) > 0:
+            try:
+                from notify_email import send_mail
+                msg = ''
+                for record in self.buffer:
+                    s = self.format(record)
+                    msg = msg + s + "\r\n"
+                send_mail(self.fromaddr, self.toaddrs, self.subject, msg)
+            except:
+                self.handleError(None)  # no particular record
+            self.buffer = []
+
+LOGGER = logging.getLogger(__name__)
 
 def _get_date_yyyymmdd(yyyymmdd):
     datetime_format = '%Y%m%d'
@@ -35,7 +68,7 @@ def get_access_token(key_id, key_secret, token_url):
     oauth1 = OAuth1(key_id, client_secret=key_secret)
     headers = {'content-type': 'application/json'}
     payload = {'grantType':'client_credentials', 'expiresIn': 3600}
-
+    LOGGER.info('Getting Access Token')
     r = requests.post(token_url, auth=oauth1, json=payload, headers=headers)
 
     access_token = r.json()['accessToken']
@@ -69,9 +102,15 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             "userId":user_id,
             'userEmail':user_email}
 
+    LOGGER.info('Querying data from %s to %s', str(start_date.date()), str(end_date.date()))
     query_header = {'Authorization':'Bearer '+ access_token, 'Content-Type': 'application/json'}
 
     query_response = requests.post(query_url, headers=query_header, json=query)
+    try:
+        query_response.raise_for_status()
+    except requests.exceptions.HTTPError:
+        LOGGER.error('Error in requesting query')
+        raise HereAPIException(query_response.json()['message'])
     return str(query_response.json()['requestId'])
 
 def get_download_url(request_id, status_base_url, access_token, user_id):
@@ -83,13 +122,15 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 
     while status != "Completed Successfully":
         sleep(60)
+        LOGGER.info('Polling status of query request: %s', request_id)
         query_status = requests.get(status_url, headers = status_header)
         status = str(query_status.json()['status'])
-
+    LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
 def download_data(download_url, filename):
     '''Download data from specified url to specified filename'''
+    LOGGER.info('Downloading data')
     download = requests.get(download_url, stream=True)
 
     with open(filename+'.csv.gz', 'wb') as f:
@@ -100,27 +141,49 @@ def send_data_to_database(dbsetting, filename):
     cmd = 'gunzip -c ' + filename 
     cmd += ' | psql -h '+ dbsetting['host'] +' -d bigdata -v "ON_ERROR_STOP=1"'
     cmd += r'-c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'
-    subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+    LOGGER.info('Sending data to database')
+    try:
+        subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+        subprocess.run(['rm', filename], stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as err:
+        LOGGER.critical('Error sending data to database')
+        LOGGER.critical(err.stderr)
+
 
 @click.command()
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
+@click.option('-d','--config', default='db.cfg')
 def main(startdate, enddate):
-    config = configparser.ConfigParser()
-    config.read('db.cfg')
-    dbsettings = config['DBSETTINGS']
-    apis = config['API']
+    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+    
+    The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
+    
+    '''
+    configuration = configparser.ConfigParser()
+    configuration.read(config)
+    dbsettings = configuration['DBSETTINGS']
+    apis = configuration['API']
+    email = configuration['EMAIL']
 
-    access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
+    LOGGER.setLevel(logging.INFO)
+    LOGGER.addHandler(BufferingSMTPHandler(email['from'], email['to'], email['subject'], 20))
+    LOGGER.addHandler(logging.FileHandler('here_api.log'))
+    try:
+        access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-    request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
-    download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
-    filename = 'here_data_'+str(startdate)+'_'+str(enddate)
-    download_data(download_url, filename)
+        download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
+        filename = 'here_data_'+str(startdate)+'_'+str(enddate)
+        download_data(download_url, filename)
 
-    send_data_to_database(dbsettings, filename+'.csv.gz')
-
-
-# if __name__ == '__main__':
-#     main()
+        send_data_to_database(dbsettings, filename+'.csv.gz')
+    except HereAPIException as here_exc:
+        LOGGER.critical('Fatal error in pulling data')
+        LOGGER.critical(here_exc)
+        logging.shutdown()
+    except Exception:
+        LOGGER.critical(traceback.format_exc())
+        # Only send email if critical error
+        logging.shutdown()
