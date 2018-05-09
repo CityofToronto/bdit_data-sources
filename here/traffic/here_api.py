@@ -154,7 +154,7 @@ def send_data_to_database(dbsetting, filename):
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', default='db.cfg')
-def main(startdate, enddate):
+def main(startdate, enddate, config):
     '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
     
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
