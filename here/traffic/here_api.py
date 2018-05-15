@@ -31,11 +31,11 @@ def _get_date_yyyymmdd(yyyymmdd):
     return date
 
 def default_start_date():
-    dt = datetime.today() - timedelta(days=8)
+    dt = datetime.today() - timedelta(days=9)
     return dt.date().strftime('%Y%m%d')
 
 def default_end_date():
-    dt = datetime.today() - timedelta(days=2)
+    dt = datetime.today() - timedelta(days=3)
     return dt.date().strftime('%Y%m%d')
 
 def get_access_token(key_id, key_secret, token_url):
@@ -99,7 +99,11 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
         query_status = requests.get(status_url, headers = status_header)
-        status = str(query_status.json()['status'])
+        try:
+            status = str(query_status.json()['status'])
+        except KeyError as _:
+            LOGGER.error('Missing "status" in response')
+            raise HereAPIException(query_status.text)
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
@@ -122,7 +126,7 @@ def send_data_to_database(dbsetting, filename):
         subprocess.run(['rm', filename], stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
-        LOGGER.critical(err.stderr)
+        raise HereAPIException(err.stderr)
 
 
 @click.command()
@@ -156,7 +160,7 @@ def main(startdate, enddate, config):
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
-        send_mail(email['to'], email['from'], email['subject'], here_exc)
+        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
     except Exception:
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
