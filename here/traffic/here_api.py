@@ -14,7 +14,7 @@ import click
 import requests
 from requests_oauthlib import OAuth1
 
-from notify_email import send_mail
+# from notify_email import send_mail
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -107,6 +107,9 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
+@click.command('download')
+@click.argument('download_url')
+@click.argument('filename')
 def download_data(download_url, filename):
     '''Download data from specified url to specified filename'''
     LOGGER.info('Downloading data')
@@ -115,15 +118,23 @@ def download_data(download_url, filename):
     with open(filename+'.csv.gz', 'wb') as f:
         shutil.copyfileobj(download.raw, f)
 
-def send_data_to_database(dbsetting, filename):
+@click.command('upload')
+@click.argument('dbconfig', type=click.Path(exists=True))
+@click.argument('datafile', type=click.Path(exists=True))
+def send_data_to_database(datafile, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    cmd = 'gunzip -c ' + filename 
-    cmd += ' | psql -h '+ dbsetting['host'] +' -d bigdata -v "ON_ERROR_STOP=1"'
+    if dbconfig:
+        configuration = configparser.ConfigParser()
+        configuration.read(dbconfig)
+        dbsetting = configuration['DBSETTINGS']
+
+    cmd = 'gunzip -c ' + datafile 
+    cmd += ' | psql -h '+ dbsetting['host'] +' -U '+dbsetting['user'] + ' -d bigdata -v "ON_ERROR_STOP=1"'
     cmd += r'-c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'
     LOGGER.info('Sending data to database')
     try:
         subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
-        subprocess.run(['rm', filename], stderr=subprocess.PIPE)
+        subprocess.run(['rm', datafile], stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
@@ -156,12 +167,12 @@ def main(startdate, enddate, config):
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
         download_data(download_url, filename)
 
-        send_data_to_database(dbsettings, filename+'.csv.gz')
+        send_data_to_database(filename+'.csv.gz', dbsetting=dbsettings)
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
-        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
+        # send_mail(email['to'], email['from'], email['subject'], str(here_exc))
     except Exception:
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
-        send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+        # send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
