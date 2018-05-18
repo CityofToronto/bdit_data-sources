@@ -15,7 +15,7 @@ Historical data acquired through the Traffic Analytics download portal. Data goe
 |stddev|numeric| Observed speed standard deviation|
 |min_spd|integer| Observed min speed|
 |max_spd|integer| Observed max speed|
-|confidence|integer| [70-100] degree to which observation depends on historical data|
+|confidence|integer| [10-40] degree to which observation depends on historical data (higher is better)|
 |pct_x|integer| Speed at the x percentile in 5% bins|
 
 For an exploratory description of the data check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb)
