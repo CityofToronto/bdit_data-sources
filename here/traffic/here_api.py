@@ -14,7 +14,7 @@ import click
 import requests
 from requests_oauthlib import OAuth1
 
-# from notify_email import send_mail
+from notify_email import send_mail
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -111,7 +111,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
-@click.option('-d','--config', type=click.Path(exists=True), default='db.cfg')
+@click.option('-d','--config', type=click.Path(exists=True))
 @click.pass_context
 def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
     '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
