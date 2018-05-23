@@ -143,12 +143,12 @@ def send_data_to_database(datafile, dbsetting=None, dbconfig=None):
         configuration.read(dbconfig)
         dbsetting = configuration['DBSETTINGS']
 
-    cmd = 'gunzip -c ' + datafile 
-    cmd += ' | psql -h '+ dbsetting['host'] +' -U '+dbsetting['user'] + ' -d bigdata -v "ON_ERROR_STOP=1"'
-    cmd += r'-c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'
     LOGGER.info('Sending data to database')
     try:
-        subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+        unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        upload_data = subprocess.Popen(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','"ON_ERROR_STOP=1"',
+                                        '-c',r'"\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'],
+                                        stdin=unzip.stdout, stderr=subprocess.PIPE)
         subprocess.run(['rm', datafile], stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
