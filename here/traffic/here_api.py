@@ -49,9 +49,10 @@ def get_access_token(key_id, key_secret, token_url):
     access_token = r.json()['accessToken']
     return access_token
 
-def query_dates(access_token, start_date, end_date, query_url, user_id, user_email):
-    query= {"queryFilter": {"requestType":"PROBE_PATH",
-                            "vehicleType":"ALL",
+def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
+                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5):
+    query= {"queryFilter": {"requestType":request_type,
+                            "vehicleType":vehicle_type,
                             "adminId":21055226,
                             "adminLevel":3,
                             "isoCountryCode":"CAN",
@@ -63,7 +64,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "mapVersion":"2017Q3"},
             "outputFormat":{"mean":True,
                             "tmcBased":False,
-                            "epochType":5,
+                            "epochType":epoch_type,
                             "percentiles":[5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95],
                             "minMax":True,
                             "stdDev":True,
@@ -107,7 +108,24 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
-def download_data(download_url, filename):
+@click.group(invoke_without_command=True)
+@click.option('-s','--startdate', default=default_start_date())
+@click.option('-e','--enddate', default=default_end_date())
+@click.option('-d','--config', type=click.Path(exists=True))
+@click.pass_context
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
+    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+
+    The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
+    
+    '''
+    if ctx.invoked_subcommand is None:
+        pull_here_data(ctx, startdate, enddate, config)
+
+@cli.command('download')
+@click.argument('download_url')
+@click.argument('filename')
+def download_data(ctx = None, download_url = None, filename = None):
     '''Download data from specified url to specified filename'''
     LOGGER.info('Downloading data')
     download = requests.get(download_url, stream=True)
@@ -115,30 +133,32 @@ def download_data(download_url, filename):
     with open(filename+'.csv.gz', 'wb') as f:
         shutil.copyfileobj(download.raw, f)
 
-def send_data_to_database(dbsetting, filename):
+@cli.command('upload')
+@click.argument('dbconfig', type=click.Path(exists=True))
+@click.argument('datafile', type=click.Path(exists=True))
+def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    cmd = 'gunzip -c ' + filename 
-    cmd += ' | psql -h '+ dbsetting['host'] +' -d bigdata -v "ON_ERROR_STOP=1"'
-    cmd += r'-c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;"'
+    if dbconfig:
+        configuration = configparser.ConfigParser()
+        configuration.read(dbconfig)
+        dbsetting = configuration['DBSETTINGS']
+
     LOGGER.info('Sending data to database')
     try:
-        subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
-        subprocess.run(['rm', filename], stderr=subprocess.PIPE)
+        #First subprocess needs to use Popen because piping stdout
+        unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
+        #process doesn't run befor psql is finished.
+        LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
+                                        '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
+                                        stdin=unzip.stdout))
+        subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
+def pull_here_data(ctx, startdate, enddate, config):
 
-@click.command()
-@click.option('-s','--startdate', default=default_start_date())
-@click.option('-e','--enddate', default=default_end_date())
-@click.option('-d','--config', default='db.cfg')
-def main(startdate, enddate, config):
-    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
-    
-    The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
-    
-    '''
     configuration = configparser.ConfigParser()
     configuration.read(config)
     dbsettings = configuration['DBSETTINGS']
@@ -154,9 +174,9 @@ def main(startdate, enddate, config):
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
-        download_data(download_url, filename)
+        ctx.invoke(download_data, download_url=download_url, filename=filename)
 
-        send_data_to_database(dbsettings, filename+'.csv.gz')
+        ctx.invoke(send_data_to_database, datafile=filename+'.csv.gz', dbsetting=dbsettings)
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
@@ -165,3 +185,10 @@ def main(startdate, enddate, config):
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
         send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+
+def main():
+    #https://github.com/pallets/click/issues/456#issuecomment-159543498
+    cli(obj={})  
+
+if __name__ == '__main__':
+    main()
