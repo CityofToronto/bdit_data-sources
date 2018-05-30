@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='here_api',
-    version='0.2',
+    version='1.0',
     py_modules=['here_api'],
     install_requires=[
         'click',
