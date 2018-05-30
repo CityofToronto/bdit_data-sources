@@ -120,10 +120,9 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     
     '''
     if ctx.invoked_subcommand is None:
-        pull_here_data(startdate, enddate, config)
+        pull_here_data(ctx, startdate, enddate, config)
 
 @cli.command('download')
-@click.pass_context
 @click.argument('download_url')
 @click.argument('filename')
 def download_data(ctx = None, download_url = None, filename = None):
@@ -135,10 +134,9 @@ def download_data(ctx = None, download_url = None, filename = None):
         shutil.copyfileobj(download.raw, f)
 
 @cli.command('upload')
-@click.pass_context
 @click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(ctx = None, datafile = None, dbsetting=None, dbconfig=None):
+def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
     if dbconfig:
         configuration = configparser.ConfigParser()
@@ -159,7 +157,7 @@ def send_data_to_database(ctx = None, datafile = None, dbsetting=None, dbconfig=
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(startdate, enddate, config):
+def pull_here_data(ctx, startdate, enddate, config):
 
     configuration = configparser.ConfigParser()
     configuration.read(config)
@@ -176,9 +174,9 @@ def pull_here_data(startdate, enddate, config):
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
-        download_data(download_url=download_url, filename=filename)
+        ctx.invoke(download_data, download_url=download_url, filename=filename)
 
-        send_data_to_database(datafile=filename+'.csv.gz', dbsetting=dbsettings)
+        ctx.invoke(send_data_to_database, datafile=filename+'.csv.gz', dbsetting=dbsettings)
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
