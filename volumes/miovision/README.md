@@ -18,6 +18,7 @@
 ### Original Data
 
 #### `raw_data`
+
 Data table storing all 1-minute observations in its **original** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination. All subsequent tables are derived from the records in this table.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -35,10 +36,10 @@ exit_name|text|(not currently populated)||
 movement|text|Specific turning movement (see `movements` below)|thru|
 volume|integer|Total 1-minute volume|12|
 
-
 ### Reference Tables
 
 #### `classifications`
+
 Reference table for all 7 classifications: Lights, Bicycles on Road, Buses, Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, and Bicycles on Crosswalk.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -48,8 +49,8 @@ classification|text|Textual description of mode|Bicycles|
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
-
 #### `intersections`
+
 Reference table for each unique intersection at which data has been collected.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -61,8 +62,8 @@ street_cross|text|Name of secondary street|Bathurst|
 lat|numeric|Latitude of intersection location|43.643945|
 lng|numeric|Longitude of intersection location|-79.402667|
 
-
 #### `movement_map`
+
 Reference table for transforming aggregated turning movement counts (see `volumes_15min_tmc`) into segment-level volumes (see `volumes_15min`).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -72,8 +73,8 @@ dir|text|Direction on which 15-minute volume will be assigned|EB|
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
 movement_uid|integer|Identifier representing current turning movement|1|
 
-
 #### `movements`
+
 Reference table for all unique movements: through, left turn, right turn, u-turn, clockwise movement on crosswalk, and counter-clockwise movement on crosswalk.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -82,8 +83,8 @@ movement_uid|serial|Unique identifier for table|3|
 movement|text|Textual description of specific turning movement|right|
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
 
-
 #### `periods`
+
 Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -93,10 +94,10 @@ day_type|text|Day type for date filter|[Weekday OR Weekend]|
 period_name|text|Textual description of period|14 Hour|
 period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
 
-
 ### Disaggregate Data
 
 #### `volumes`
+
 Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -112,6 +113,7 @@ volume|integer|Total 1-minute volume|12|
 ### Aggregated Data
 
 #### `volumes_15min_tmc`
+
 Data table storing aggregated 15-minute turning movement data. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -125,6 +127,7 @@ movement_uid|integer|Identifier linking to specific turning movement stored in `
 volume|integer|Total 15-minute volume|78|
 
 #### `volumes_15min`
+
 Data table storing aggregated 15-minute segment-level data.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -148,11 +151,14 @@ volume|integer|Total 15-minute volume|107|
 ## 4. Processing Data from CSV Dumps
 
 ### A. Populate `raw_data`
+
 Ensure that `raw_data` has been updated with all new data (either from new collection periods, or replacing older data with corrected 1-minute observations).
 
 1. Make a backup copy of `raw_data` using the following:
 
-	`CREATE TABLE miovision.raw_data_old AS SELECT * FROM miovision.raw_data`
+	```sql
+	CREATE TABLE miovision.raw_data_old AS SELECT * FROM miovision.raw_data
+	```
 
 	You can delete this copy after fully QCing the dataset.
 	
@@ -160,33 +166,37 @@ Ensure that `raw_data` has been updated with all new data (either from new colle
 
 3. Import new dataset using PostgreSQL COPY functionality into `raw_data`.
 
-### b. Populate `volumes`
+### B. Populate `volumes`
+
 This will transform 1-minute data from `raw_data` into a standard normalized structure stored in `volumes`.
 
-1. Run `populate-table-volumes.sql`. This will truncate `volumes` and replace with data from `raw_data`.
-2. Ensure that the number of records in `volumes` is identical to that in `raw_data`. If a discrepancy exists, investigate further.
+1. The trigger function [`trigger-populate-volumes.sql`](sql/trigger-populate-volumes.sql) automatically populates `volumes` with new data from `raw_data`.
+2. Ensure that the number of new records in `volumes` is identical to that in `raw_data`. If a discrepancy exists, investigate further.
 
-### c. Populate `volumes_15min_tmc` and `volumes_15min`
+### C. Populate `volumes_15min_tmc` and `volumes_15min`
+
 This will aggregate the 1-minute data from `volumes` into 15-minute turning movement counts (stored in `volumes_15min_tmc`) and segment-level counts (stored in `volumes_15min`). This process also filter potential partial 1-minute data and interpolates missing records where possible (see [Section 6](#6-filtering-and-interpolation))
 
-1. Run `populate-table-volumes_15_min_tmc.sql`. This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling.
-2. Run `populate-table-volumes_15_min.sql`. This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging).
+1. Run [`SELECT mioviosion.aggregate_15_min_tmc();`](sql/function-aggregate-volumes_15min_tmc.sql). This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling for rows which have not yet been aggregated (the `FOREIGN KEY volume_15min_tmc_uid` is NULL).
+2. Run [`SELECT mioviosion.aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql). This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging) for rows in the `miovision.volumes_15min_tmc` that have not yet been aggregated.
 
-### d. Populate `report_dates`
+### D. Populate `report_dates`
+
 This produces a lookup table of date-intersection combinations to be used for formal reporting (this filters into various views).
 
-1. Run `populate-table-report_dates.sql`. This creates a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
-2. If needed, modify query once the data has undergone QC if specific intersection-date combinations need to be removed, and re-run `populate-table-report_dates.sql`.
+1. [`Refresh MATERIALIZED VIEW miovision.report_dates WITH DATA`](sql/materialized-view-report_dates.sql). This creates a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
+2. If needed, modify [the query](sql/materialized-view-report_dates.sql) once the data has undergone QC if specific intersection-date combinations need to be removed.
 
-### e. Refresh reporting views
+### E. Refresh reporting views
+
 Refresh the relevant materialized views for monthly reporting:
 
 - `miovision.report_volumes_15min`
 - `miovision.volumes_15min_by_class`
 
-### f. Produce summarized monthly reporting data
+### F. Produce summarized monthly reporting data
 
-1. Run `miovision.report_summary` and copy over to relevant reporting templates.
+1. Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql) and copy over to relevant reporting templates.
 
 ## 5. Processing Data from API
 

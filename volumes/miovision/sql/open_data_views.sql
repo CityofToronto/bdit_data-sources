@@ -12,7 +12,7 @@ CREATE OR REPLACE VIEW open_data.miovision_2017 AS
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume)::INT
+    SUM(volumes_15min.volume)::INT as volume
     
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
@@ -39,7 +39,7 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
     ELSE classification END AS classification,
     volumes_15min.leg,
     volumes_15min.dir,
-    SUM(volumes_15min.volume)::INT
+    SUM(volumes_15min.volume)::INT as volume
    FROM miovision.volumes_15min
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
@@ -130,7 +130,7 @@ SELECT period_type as aggregation_period, intersections.int_id,
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
             ELSE class_type
         END AS classification,
-        dir, period_name, round(AVG(total_volume), -1)::int as average_volume
+        dir, period_name, round(AVG(total_volume), -1)::int as volume
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
 JOIN gis.centreline_intersection USING (int_id)
