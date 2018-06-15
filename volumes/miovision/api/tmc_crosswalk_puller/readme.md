@@ -67,7 +67,7 @@ def get_movement(item):
     else:
         return 'u_turn'
 ```
-Function to determine movement directions. Returns left turn, right turn, thru movement or u-turn depending on the entry and exit direction of the vehicle.
+Function to determine movement directions. Returns left turn, right turn, thru movement or u-turn depending on the entrance and exit direction of the vehicle.
 
 ```python
 with open('time_range.txt', 'r') as f:
@@ -79,7 +79,7 @@ start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
 end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
 ```
 
-Parses out the start and end times from the `time_range.txt` file. It also assigns a timezone (EST/EDT). Input dates are based EST/EDT dates. `start_date` and `end_date` will be used later for the logger file.
+Parses out the start and end times from the `time_range.txt` file. It also assigns a timezone (EST/EDT) and times to the date. Input dates in `time_range.txt` are based EST/EDT dates. `start_date` and `end_date` will be used later for the logger file.
 
 ```python
 with open('study_id_logger.csv', 'r') as study_id_logger:
@@ -93,7 +93,7 @@ with open('api_key.txt','r') as api:
     api_key=api.read()
 ```
 
-Creates a unique `study_id` based on previous `study_id` contained in the `study_id_logger.csv` file. Also reads the `api_key` from the `api_key.txt` file.
+Creates a unique `study_id` based on previous `study_id` contained in `study_id_logger.csv`. Also reads the `api_key` from  `api_key.txt`.
 
 ```python
 def get_intersection_tmc():
@@ -120,7 +120,7 @@ def get_intersection_tmc():
         return None
 ```
 
-Function to get tmc data, parse out the json output it reades and returns the information as a list of dictionaries (Each item in the list is a dictionary). It also creates and populate fields to match formatting in previous data dump files. 
+Function to get tmc data, parse out the json output it reades and returns the information as a list of dictionaries (Each item in the list is a dictionary). It also creates and populate fields to match formatting in previous data dumps. 
 
 ```python
 def get_pedestrian():
