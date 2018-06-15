@@ -2,7 +2,7 @@
 
 ### Overview
 
-The puller currently can currently grab crosswalk and tmc data from the Miovision API using specified intersections and dates, output a csv file and upload the resulting csv to the database. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision.
+The puller can currently grab crosswalk and tmc data from the Miovision API using specified intersections and dates, output a csv file and upload the resulting csv to the database. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision.
 
 Future steps would be to add the raw data to the volumes table and run the aggregation functions.
 
