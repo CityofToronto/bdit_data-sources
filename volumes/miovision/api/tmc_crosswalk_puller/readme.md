@@ -279,7 +279,7 @@ report = conn.cursor()
 report.execute(report_dates)
 conn.commit()
 ```
-Runs the two aggregation functions and also creates the report dates table. These SQL queries are written as SQL functions and any changes to the queries should be done in Postgres. This is done to simplify the process to change the aggregation method and reduce unnecessary code.
+Runs the two aggregation functions and also creates the report dates table. These SQL queries are written as SQL functions and any changes to the queries should be done in Postgres. This is done to simplify the process to change queries and reduce unnecessary python code.
 
 ```python
 refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
