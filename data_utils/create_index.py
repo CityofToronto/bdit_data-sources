@@ -88,8 +88,11 @@ if __name__ == "__main__":
     FORMAT = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
-    from dbsettings import dbsetting
-    indexor = IndexCreator(LOGGER, dbsettings)
+    import configparser
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read('db.cfg')
+    dbset = CONFIG['DBSETTINGS']
+    indexor = IndexCreator(LOGGER, dbset)
     for year in YEARS:
         for month in YEARS[year]:
             indexor.run(year, month)
