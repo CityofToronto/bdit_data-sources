@@ -26,17 +26,7 @@ import datetime
 import pytz
 import dateutil.parser
 from psycopg2 import connect
-
-
-session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
-url='https://api.miovision.com/intersections/'
-tmc_endpoint = '/tmc'
-ped_endpoint='/crosswalktmc'
-time_delta = datetime.timedelta(days=1)
-
 ```
-Declares url variables to access the API. Also sets out parameters to work with the proxy. `time_delta` is the length of time to iterate over. Miovision currently only supports a maximum of 48 hours of data per request so `time_delta` is set to 1 day. 
 
 ```python
 def get_movement(item):
@@ -70,32 +60,6 @@ def get_movement(item):
 Function to determine movement directions. Returns left turn, right turn, thru movement or u-turn depending on the entrance and exit direction of the vehicle.
 
 ```python
-with open('time_range.txt', 'r') as f:
-    t_rng=f.readlines()
-    start_date=dateutil.parser.parse(t_rng[1])
-    end_date=dateutil.parser.parse(t_rng[3])
-
-start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
-```
-
-Parses out the start and end times from the `time_range.txt` file. It also assigns a timezone (EST/EDT) and times to the date. Input dates in `time_range.txt` are based EST/EDT dates. `start_date` and `end_date` will be used later for the logger file.
-
-```python
-with open('study_id_logger.csv', 'r') as study_id_logger:
-    for row in reversed(list(csv.reader(study_id_logger))):
-        study_id=int(row[1])+1
-        break
-start_id=study_id
-id_counter=1
-
-with open('api_key.txt','r') as api:
-    api_key=api.read()
-```
-
-Creates a unique `study_id` based on previous `study_id` contained in `study_id_logger.csv`. Also reads the `api_key` from  `api_key.txt`.
-
-```python
 def get_intersection_tmc():
     headers={'Content-Type':'application/json','Authorization':api_key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
@@ -119,7 +83,6 @@ def get_intersection_tmc():
     else:
         return None
 ```
-
 Function to get tmc data, parse out the json output it reades and returns the information as a list of dictionaries (Each item in the list is a dictionary). It also creates and populate fields to match formatting in previous data dumps. 
 
 ```python
@@ -148,14 +111,47 @@ def get_pedestrian():
     else:
         return None 
 ```
-
 Function to grab crosswalk data. 
+
+```python
+session = Session()
+session.proxies = {'https': 'https://137.15.73.132:8080'}
+url='https://api.miovision.com/intersections/'
+tmc_endpoint = '/tmc'
+ped_endpoint='/crosswalktmc'
+time_delta = datetime.timedelta(days=1)
+```
+Declares url variables to access the API. Also sets out parameters to work with the proxy. `time_delta` is the length of time to iterate over. Miovision currently only supports a maximum of 48 hours of data per request so `time_delta` is set to 1 day. 
+
+```python
+with open('time_range.txt', 'r') as f:
+    t_rng=f.readlines()
+    start_date=dateutil.parser.parse(t_rng[1])
+    end_date=dateutil.parser.parse(t_rng[3])
+
+start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
+end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
+```
+Parses out the start and end times from the `time_range.txt` file. It also assigns a timezone (EST/EDT) and times to the date. Input dates in `time_range.txt` are based EST/EDT dates. `start_date` and `end_date` will be used later for the logger file.
+
+```python
+with open('study_id_logger.csv', 'r') as study_id_logger:
+    for row in reversed(list(csv.reader(study_id_logger))):
+        study_id=int(row[1])+1
+        break
+start_id=study_id
+id_counter=1
+
+with open('api_key.txt','r') as api:
+    api_key=api.read()
+```
+Creates a unique `study_id` based on previous `study_id` contained in `study_id_logger.csv`. Also reads the `api_key` from  `api_key.txt`.
 
 ```python
 while True:
     end_iteration_time= start_time + time_delta
 ```
-Iterates over time until it reaches the end date.   
+Iterates over time until it reaches the end date. 
 
 ```python
     with open('intersection_id.csv', 'r') as int_id_file:
@@ -166,8 +162,7 @@ Iterates over time until it reaches the end date.
             print(intersection_name)
             lat=str(row['lat'])
             lng=str(row['lng'])
-            
-``` 
+```
 Reads the `intersection_id.csv` to get `intersection_id` for the API. the name, lat and long are also read to write in the output file. Iterates over the `intersection_id.csv` file until all the intersections have data.
 
 ```python
@@ -188,14 +183,13 @@ Reads the `intersection_id.csv` to get `intersection_id` for the API. the name, 
             id_counter+=1
 ```
 Calls the functions to get tmc and crosswalk data. For the first intersection and the first date (noted by the `id_counter`), it creates a list `intersection_tmc` to store the data, while in every iteration after that, it appends the data to `intersection_tmc`. `intersection_tmc` is also a list of dictionaries.
-    
-```python    
+
+```python
     print(start_time)
     start_time+=time_delta
     if start_time==end_time:
         break
 ```
-
 To summarize the process, the puller first iterates over the number of intersections to grab the data for all the intersections listed on the start date. After thats done, it moves on to the next day and and grabs the for all intersections for the following date. It continues to iterate over the date until it reaches the `end_time` specified.
 
 ```python
@@ -205,65 +199,35 @@ with open('intersection_tmc_'+str(datetime.date.today())+'.csv','w', newline='')
     writer.writeheader()
     for item in intersection_tmc:
         writer.writerow(item)
-```
 
-Writes a csv for all the information. The name of the file contains the date the pull occured.
+intersection_tmc=[]
+```
+Writes a csv for all the information. The name of the file contains the date the pull occured. It also clears `intersection_tmc` to clear memory.
 
 ```python
-
 logger=[start_id, study_id,  start_date.strftime('%Y-%m-%d'),  end_date.strftime('%Y-%m-%d'), datetime.date.today()]
 
 with open('study_id_logger.csv', 'a', newline='') as logger_csv:
     write=csv.writer(logger_csv)
     write.writerow(logger)
 ```
-
 Writes the `study_id_logger.csv` file.
 
-```python
+```
 with open('sql_credentials.csv', 'r') as sql_credentials:
     conn_dict=csv.DictReader(sql_credentials)
     for row in conn_dict:
         conn_string="host='"+row['host']+"' dbname='"+row['dbname']+"' user='"+row['user']+"' password='"+row['password']+"'"
         conn=connect(conn_string)
         break
-``` 
 
+cur = conn.cursor()    
+
+print('Connected to PostgreSQL')
+```
 Connects to the database by opening and reading the information in the `sql_credentials.csv` file.
 
 ```python
-
-upload = '''DROP TABLE IF EXISTS rliu.raw_data;
-
-CREATE TABLE rliu.raw_data
-(
-  study_id bigint,
-  study_name text,
-  lat numeric,
-  lng numeric,
-  datetime_bin timestamp with time zone,
-  classification text,
-  entry_dir_name text,
-  entry_name text,
-  exit_dir_name text,
-  exit_name text,
-  movement text,
-  volume integer
-)
-WITH (
-  OIDS=FALSE
-);
-ALTER TABLE rliu.raw_data
-  OWNER TO rliu;
-GRANT ALL ON TABLE rliu.raw_data TO rds_superuser WITH GRANT OPTION;
-GRANT ALL ON TABLE rliu.raw_data TO dbadmin;
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE rliu.raw_data TO bdit_humans WITH GRANT OPTION;
-GRANT ALL ON TABLE rliu.raw_data TO rliu;'''
-
-cur = conn.cursor()
-cur.execute(upload)
-conn.commit()
-
 with open('intersection_tmc_'+str(datetime.date.today())+'.csv', 'r') as csv:
     
     next(csv)  
@@ -271,5 +235,71 @@ with open('intersection_tmc_'+str(datetime.date.today())+'.csv', 'r') as csv:
     
 conn.commit()
 ```
-First creates a raw data table in the database. For development purposes, everything is being dumped into the rliu schema. Then it reads the outputted csv file and copys it into the raw data table.
+Uploads the CSV to the database using the `COPY` function in Postgres. For development purposes, everything is being dumped into the rliu schema. Then it reads the outputted csv file and copys it into the raw data table.
 
+```python
+populate_volumes_tmc= '''TRUNCATE rliu.volumes;
+
+INSERT INTO rliu.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+SELECT B.intersection_uid, (A.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, A.entry_dir_name as leg, D.movement_uid, A.volume
+FROM rliu.raw_data A
+INNER JOIN miovision.intersections B ON regexp_replace(A.study_name,'Yong\M','Yonge') = B.intersection_name
+INNER JOIN miovision.movements D USING (movement)
+INNER JOIN rliu.classifications C USING (classification)
+ORDER BY (A.datetime_bin AT TIME ZONE 'America/Toronto'), B.intersection_uid, C.classification_uid, A.entry_name, D.movement_uid;'''
+
+pop_vol = conn.cursor()
+pop_vol.execute(populate_volumes_tmc)
+conn.commit()
+
+print('Populated Volumes')
+```
+Inserts the raw data into the volumes table.
+
+```python
+aggregation ='''SELECT rliu.aggregate_15_min_tmc();'''
+
+tmc = conn.cursor()
+tmc.execute(aggregation)
+conn.commit()
+
+print('Populated 15 Minute TMC')
+
+populate_volume='''SELECT rliu.aggregate_15_min();'''
+
+pop_vol = conn.cursor()
+pop_vol.execute(populate_volume)
+conn.commit()
+
+print('Populated 15 Minute Segment Level')
+
+report_dates='''SELECT rliu.report_dates();'''
+
+report = conn.cursor()
+report.execute(report_dates)
+conn.commit()
+```
+Runs the two aggregation functions and also creates the report dates table. These SQL queries are written as SQL functions and any changes to the queries should be done in Postgres. This is done to simplify the process to change the aggregation method and reduce unnecessary code.
+
+```python
+refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
+
+report_daily = conn.cursor()
+report_daily.execute(refresh_report_daily)
+conn.commit()
+
+refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min_by_class WITH DATA;'''
+
+report_volumes_class = conn.cursor()
+report_volumes_class.execute(refresh_volumes_class)
+conn.commit()
+
+refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
+
+report_volumes = conn.cursor()
+report_volumes.execute(refresh_volumes)
+conn.commit()
+
+print('Refreshed Views')
+```
+Refreshes all the views. `report_daily` is a materialized view instead of a view so that the process to refresh the views is contained in the code. `report_daily` is currently a normal view in the `miovision` schema.
