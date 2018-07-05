@@ -1,25 +1,10 @@
 # How to use brokenreaders.py
-***
-The script `brokenreaders.py` finds all of the most recent non-functioning bluetooth readers, and creates a `.csv` file that contains the names of these readers, the time they were last active, in addition to the routes that were affected by these readers. Follow these steps to use this script:
 
-<br>
+The script `brokenreaders.py` finds all of the sensors which stopped reporting yesterday and emails a list of them. This script currently runs every day.
 
-1. Download and open the script.
+This script requires the [`email_notifications`](https://github.com/CityofToronto/bdit_python_utilities/tree/master/email_notifications) python module.
 
-<br>
-
-2. Between the two pound sign breaks, there is a variable `cfg_path`. To this variable, assign the file path of your `.cfg` file used for connecting to the Postgres database.
-
-<br>
-
-3. Run the `brokenreaders.py` file in your python environment.
-
-<br>
-
-4. Proceed to your `documents` folder on your computer. You will see a `broken_readers.csv` file. It will contain the table mentioned above. 
-
-
-# Backfilling `bluetooth.dates_without_data`
+## Backfilling `bluetooth.dates_without_data`
 
 In case something happens when running `brokenreaders.py`, or the blip_api script didn't complete successfully so not all the data went into our database, you can run the below query to insert dates that are missing data for those particular analyses, just change the range of dates.
 
@@ -33,3 +18,4 @@ INSERT INTO bluetooth.dates_without_data
   GROUP BY all_analyses.analysis_id, date_with_data
 --   ORDER BY COUNT
   HAVING COUNT(obs.analysis_id) =0
+```
