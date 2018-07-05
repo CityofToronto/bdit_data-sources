@@ -9,25 +9,24 @@ main defaults to getting the previous day's data
 import argparse
 import configparser
 import datetime
-from datetime import date
 import logging
 import os
 import sys
 import time
 import traceback
+from datetime import date
 from itertools import product
 from typing import List
 
+import urllib3
 import zeep
+from dateutil.relativedelta import relativedelta
+from pg import DB, DatabaseError, IntegrityError
+from requests import RequestException, Session
 from zeep import Client
 from zeep.transports import Transport
-from dateutil.relativedelta import relativedelta
-from requests import RequestException, Session
 
-import urllib3
 from parsing_utilities import validate_multiple_yyyymmdd_range
-from pg import DB
-from pg import IntegrityError, DatabaseError
 
 # Suppress HTTPS Warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
