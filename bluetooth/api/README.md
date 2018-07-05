@@ -6,9 +6,17 @@
 
 Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data.
 
+#### Installation
+
+Install the necessary packages using `pip` or `pipenv`: `pip install -r requirements.txt`
+
+Make sure [`parsing_utilities`](https://github.com/CityofToronto/bdit_python_utilities) is available to your python environment.
+
+#### Usage
+
 ```shell
-usage: blip_api.py [-h] [-y YYYYMMDD YYYYMMDD] [-d DBSETTING] [--direct]
-                   [--live]
+usage: blip_api.py [-h] [-y YYYYMMDD YYYYMMDD] [-a ANALYSIS] [-d DBSETTING]
+                   [--direct] [--live]
 
 Pull data from blip API and send to database
 
@@ -17,6 +25,8 @@ optional arguments:
   -y YYYYMMDD YYYYMMDD, --years YYYYMMDD YYYYMMDD
                         Range of dates (YYYYMMDD) to operate over from
                         startdate to enddate, else defaults to previous day.
+  -a ANALYSIS, --analysis ANALYSIS
+                        Analysis ID to pull. Add more flags for multiple IDs
   -d DBSETTING, --dbsetting DBSETTING
                         Filename with connection settings to the database
                         (default: opens config.cfg)
