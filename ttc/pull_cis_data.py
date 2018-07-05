@@ -14,7 +14,6 @@ import click
 
 from notify_email import send_mail
 
-
 class TTCSFTPException(Exception):
     '''Base Exception for all errors thrown by this module'''
 
@@ -75,34 +74,37 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
         LOGGER.critical('Error sending data to database')
         raise TTCSFTPException(err.stderr)
 
+@cli.command('get')
+@click.argument('host')
+@click.argument('user')
+@click.argument('password')
+@click.argument('date')
+def get_data(host = None, user=None, password=None, date=None):
+    '''Transfer data file for date'''
+
 def pull_cis_data(ctx, startdate, enddate, config):
 
     configuration = configparser.ConfigParser()
     configuration.read(config)
     dbsettings = configuration['DBSETTINGS']
-    apis = configuration['API']
+    sftp_cfg = configuration['SFTP']
     email = configuration['EMAIL']
     FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     try:
-        access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
-
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
-
-        download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
-        filename = 'here_data_'+str(startdate)+'_'+str(enddate)
-        ctx.invoke(download_data, download_url=download_url, filename=filename)
+              
+        ctx.invoke(get_data, sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], date)
 
         ctx.invoke(send_data_to_database, datafile=filename+'.csv.gz', dbsetting=dbsettings)
-    except TTCSFTPException as here_exc:
+    except TTCSFTPException as ttc_exc:
         LOGGER.critical('Fatal error in pulling data')
-        LOGGER.critical(here_exc)
-        #send_mail(email['to'], email['from'], email['subject'], str(here_exc))
+        LOGGER.critical(ttc_exc)
+        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
     except Exception:
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
-        #send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+        send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
 
 def main():
     #https://github.com/pallets/click/issues/456#issuecomment-159543498
