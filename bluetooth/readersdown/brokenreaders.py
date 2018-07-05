@@ -5,6 +5,9 @@ import psycopg2.sql as pg
 import pandas.io.sql as pandasql
 from email_notifications import send_mail
 
+class BlipScriptFailed(Exception):
+    pass
+
 def update_empty_date_reports(con):
     '''Update dates_without_data table with the inactive routes from the previous day'''
     with con:
@@ -12,7 +15,9 @@ def update_empty_date_reports(con):
             cur.execute('SELECT bluetooth.insert_dates_without_data()')
     
 def find_brokenreaders(con):
-    '''Identify the sensors which stopped reporting yesterday'''
+    '''Identify the sensors which stopped reporting yesterday. 
+    
+    If this number is equal to the number of routes, then the Blip script likely failed and this exception is raise'''
 
     sql = '''WITH broken_routes AS (SELECT DISTINCT (json_array_elements(route_points)->'name')::TEXT as sensor
              FROM bluetooth.all_analyses
@@ -42,8 +47,12 @@ def find_brokenreaders(con):
     with con.cursor() as cur:
         cur.execute(sql)
         final = cur.fetchall()
-
+        count_routes_sql = 'SELECT COUNT(1) FROM bluetooth.all_analyses WHERE pull_data'
+        length = cur.execute(count_routes_sql).fetchone()[0]
     
+    if length == len(final):
+        raise BlipScriptFailed()
+
     return final 
 
 
@@ -57,8 +66,6 @@ def email_updates(subject: str, to: str, updates: list):
 
     send_mail(to, sender, subject, message)
 
-
-
 def load_config(config_path='config.cfg'):
     
     config = configparser.ConfigParser()
@@ -67,43 +74,19 @@ def load_config(config_path='config.cfg'):
     email_settings = config['EMAIL']
     return dbset, email_settings
 
-
-
 def main (): 
 
     dbset, email_settings = load_config()
     con = connect(**dbset)
 
     update_empty_date_reports(con)
-    broken_readers = find_brokenreaders(con)
-    
-    if broken_readers != []:
-                    
-       email_updates(email_settings['subject'], email_settings['to'], broken_readers)
-
+    try:
+        broken_readers = find_brokenreaders(con)
+    except BlipScriptFailed:
+        send_mail(email_settings['to'], "Broken Readers Detection Script", "Blip Script Failed this morning", '')
+    else:
+        if broken_readers != []:
+            email_updates(email_settings['subject'], email_settings['to'], broken_readers)
 
 if __name__ == '__main__': 
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#import io 
-#from os.path import expanduser
-#import os    
-#broken_readers = pd.DataFrame(final, columns = ['Reader', 'Last Active', 'Routes Affected'])
-#home = expanduser("~")
-#path=  home + '\\Documents'
-#broken_readers.to_csv(os.path.join(path,r'broken_readers.csv'), index = False)
-
-
