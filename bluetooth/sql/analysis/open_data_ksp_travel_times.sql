@@ -5,9 +5,9 @@ SELECT
 		B.datetime_bin,
 		c.day_type, 
 		category,
+		period_name,
 		tt,
-		obs,
-                period_name
+		obs
                 
 	FROM king_pilot.bt_segments A
 	INNER JOIN bluetooth.aggr_5min B USING (analysis_id)
@@ -19,16 +19,17 @@ GRANT ALL ON open_data.ksp_travel_times_2017 TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON open_data.ksp_travel_times_2017 TO dbadmin;
  GRANT SELECT ON open_data.ksp_travel_times_2017 TO bdit_humans;
 
-DROP VIEW IF EXISTS open_data.ksp_travel_times_2018;
+DROP VIEW IF EXISTS open_data.ksp_travel_times_2018 CASCADE;
 CREATE OR REPLACE VIEW open_data.ksp_travel_times_2018 AS 
 SELECT 
 	segment_name AS result_id, 	
 		B.datetime_bin,
 		c.day_type, 
 		category,
+		period_name,
 		tt,
-		obs,
-                period_name
+		obs
+                
                 
 	FROM king_pilot.bt_segments A
 	INNER JOIN bluetooth.aggr_5min B USING (analysis_id)
