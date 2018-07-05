@@ -1,5 +1,3 @@
-# import relevant modules
-
 import pandas as pd
 import configparser
 from psycopg2 import connect
@@ -8,12 +6,14 @@ import pandas.io.sql as pandasql
 from email_notifications import send_mail
 
 def update_empty_date_reports(con):
+    '''Update dates_without_data table with the inactive routes from the previous day'''
     with con:
         with con.cursor() as cur:
             cur.execute('SELECT bluetooth.insert_dates_without_data()')
     
 def find_brokenreaders(con):
-    
+    '''Identify the sensors which stopped reporting yesterday'''
+
     sql = '''WITH broken_routes AS (SELECT DISTINCT (json_array_elements(route_points)->'name')::TEXT as sensor
              FROM bluetooth.all_analyses
              INNER JOIN (SELECT analysis_id 
@@ -42,11 +42,13 @@ def find_brokenreaders(con):
     with con.cursor() as cur:
         cur.execute(sql)
         final = cur.fetchall()
+
+    
     return final 
 
 
 def email_updates(subject: str, to: str, updates: list):
-    
+    '''Send email with a list of sensors stopped reporting yesterday'''
     message = ''
     for broken_reader in updates:
             message += 'Reader: {reader_name}, '.format(reader_name=broken_reader[0])
