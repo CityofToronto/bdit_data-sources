@@ -47,10 +47,14 @@ def find_brokenreaders(con):
     with con.cursor() as cur:
         cur.execute(sql)
         final = cur.fetchall()
-        count_routes_sql = 'SELECT COUNT(1) FROM bluetooth.all_analyses WHERE pull_data'
-        length = cur.execute(count_routes_sql).fetchone()[0]
+        all_routes_count = 'SELECT COUNT(1) FROM bluetooth.all_analyses WHERE pull_data'
+        noreport_routes_count = 'SELECT COUNT(1) FROM bluetooth.routes_not_reporting_yesterday'
+        cur.execute(all_routes_count)
+        routes_count = cur.fetchone()[0]
+        cur.execute(noreport_routes_count)
+        bad_routes_count = cur.fetchone()[0]
     
-    if length == len(final):
+    if routes_count == bad_routes_count:
         raise BlipScriptFailed()
 
     return final 
