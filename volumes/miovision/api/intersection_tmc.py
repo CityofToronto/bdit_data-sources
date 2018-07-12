@@ -4,16 +4,33 @@ from requests import Session
 import datetime
 import pytz
 import dateutil.parser
+from psycopg2.extras import execute_values
 from psycopg2 import connect
 
-
-session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
-url='https://api.miovision.com/intersections/'
-tmc_endpoint = '/tmc'
-ped_endpoint='/crosswalktmc'
-time_delta = datetime.timedelta(days=1)
-
+with open('sql_credentials.csv', 'r') as sql_credentials:
+    conn_dict=csv.DictReader(sql_credentials)
+    for row in conn_dict:
+        conn_string="host='"+row['host']+"' dbname='"+row['dbname']+"' user='"+row['user']+"' password='"+row['password']+"'"
+        conn=connect(conn_string)
+        break
+    
+cur = conn.cursor()   
+conn.autocommit = True
+truncate_rawdata_new='''TRUNCATE rliu.raw_data_new;'''
+cur.execute(truncate_rawdata_new)
+aggregations='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
+        SELECT * FROM rliu.raw_data_new;
+        INSERT INTO rliu.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+        SELECT B.intersection_uid, (A.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, A.entry_dir_name as leg, D.movement_uid, A.volume
+        FROM rliu.raw_data A
+        INNER JOIN miovision.intersections B ON regexp_replace(A.study_name,'Yong\M','Yonge') = B.intersection_name
+        INNER JOIN miovision.movements D USING (movement)
+        INNER JOIN rliu.classifications C USING (classification)
+        ORDER BY (A.datetime_bin AT TIME ZONE 'America/Toronto'), B.intersection_uid, C.classification_uid, A.entry_name, D.movement_uid;
+        SELECT rliu.aggregate_15_min_tmc();
+        SELECT rliu.aggregate_15_min();
+        TRUNCATE rliu.raw_data_new;'''
+        
 def get_movement(item):
     if (item['entrance'] == 'N' and item['exit'] =='S'):
         return 'thru'
@@ -42,23 +59,6 @@ def get_movement(item):
     else:
         return 'u_turn'
 
-with open('time_range.txt', 'r') as f:
-    t_rng=f.readlines()
-    start_date=dateutil.parser.parse(t_rng[1])
-    end_date=dateutil.parser.parse(t_rng[3])
-
-start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
-with open('study_id_logger.csv', 'r') as study_id_logger:
-    for row in reversed(list(csv.reader(study_id_logger))):
-        study_id=int(row[1])+1
-        break
-start_id=study_id
-id_counter=1
-
-with open('api_key.txt','r') as api:
-    api_key=api.read()
-    
 def get_intersection_tmc():
     headers={'Content-Type':'application/json','Authorization':api_key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
@@ -67,18 +67,26 @@ def get_intersection_tmc():
     if response.status_code==200:
         tmc=json.loads(response.content)
         for item in tmc:
-            item['study_id']=study_id
+            
+            
             item['study_name']=intersection_name
             item['lat']=lat
             item['lng']=lng
             item['classification']=item.pop('class')
             item['volume']=item.pop('qty')
             item['movement']=get_movement(item)
-            item['entry_name']=None
-            item['exit_name']=None
+            
             item['entry_dir_name']=item.pop('entrance')
             item['exit_dir_name']=item.pop('exit')
-        return tmc
+            table=[(intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume'])]
+            with conn:
+                with conn.cursor() as cur:
+                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table, template=None)
+                    
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(aggregations)
+        return 1
     else:
         return None
 
@@ -90,7 +98,7 @@ def get_pedestrian():
     if response.status_code==200:
         ped=json.loads(response.content)
         for item in ped:
-            item['study_id']=study_id
+            
             item['study_name']=intersection_name
             item['lat']=lat
             item['lng']=lng
@@ -99,14 +107,40 @@ def get_pedestrian():
             temp=str(item['direction'])
             item.pop('direction', None)
             item['movement']=temp.lower()
-            item['entry_name']=None
-            item['exit_name']=None
+            item['entry_name']=0
+            item['exit_name']=0
             item['entry_dir_name']=item.pop('crosswalkSide')
-            item['exit_dir_name']=None
-        return ped
+            item['exit_dir_name']=0
+            table=[(intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['movement'], item['volume'])]
+            with conn:
+                with conn.cursor() as cur:
+                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, movement, volume) VALUES %s', table, template=None)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(aggregations)
+        return 1
     else:
         return None 
+    
+session = Session()
+session.proxies = {'https': 'https://137.15.73.132:8080'}
+url='https://api.miovision.com/intersections/'
+tmc_endpoint = '/tmc'
+ped_endpoint='/crosswalktmc'
+time_delta = datetime.timedelta(days=1)
 
+with open('time_range.txt', 'r') as f:
+    t_rng=f.readlines()
+    start_date=dateutil.parser.parse(t_rng[1])
+    end_date=dateutil.parser.parse(t_rng[3])
+
+start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
+end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
+
+
+with open('api_key.txt','r') as api:
+    api_key=api.read()
+    
 while True:
     end_iteration_time= start_time + time_delta
     
@@ -115,84 +149,46 @@ while True:
         for row in intersection_id:
             intersection_id1=str(row['id'])
             intersection_name=str(row['name'])
-            print(intersection_name)
             lat=str(row['lat'])
             lng=str(row['lng'])
-            if id_counter==1:
-                intersection_tmc=get_intersection_tmc()
-                ped=get_pedestrian()
-                for item in ped:
-                    intersection_tmc.append(item)
-                study_id+=1
-            else:
-                temp_tmc=get_intersection_tmc()
-                for item in temp_tmc:
-                    intersection_tmc.append(item)
-                ped=get_pedestrian()
-                for item in ped:
-                    intersection_tmc.append(item)
-                study_id+=1
-            id_counter+=1
-    
+            get_intersection_tmc()
+            get_pedestrian()
+            print(intersection_name)
     print(start_time)
     start_time+=time_delta
     if start_time==end_time:
         break
 
-with open('intersection_tmc_'+str(datetime.date.today())+'.csv','w', newline='') as csvfile:
-    fieldnames=['study_id', 'study_name', 'lat', 'lng', 'timestamp', 'classification', 'entry_dir_name', 'entry_name', 'exit_dir_name', 'exit_name', 'movement', 'volume']
-    writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
-    writer.writeheader()
-    for item in intersection_tmc:
-        writer.writerow(item)
 
-logger=[start_id, study_id,  start_date.strftime('%Y-%m-%d'),  end_date.strftime('%Y-%m-%d'), datetime.date.today()]
+with conn:
+    with conn.cursor() as cur:
+        report_dates='''SELECT rliu.report_dates();'''
 
-with open('study_id_logger.csv', 'a', newline='') as logger_csv:
-    write=csv.writer(logger_csv)
-    write.writerow(logger)
-    
-with open('sql_credentials.csv', 'r') as sql_credentials:
-    conn_dict=csv.DictReader(sql_credentials)
-    for row in conn_dict:
-        conn_string="host='"+row['host']+"' dbname='"+row['dbname']+"' user='"+row['user']+"' password='"+row['password']+"'"
-        conn=connect(conn_string)
-        break
-    
-upload = '''DROP TABLE IF EXISTS rliu.raw_data;
 
-CREATE TABLE rliu.raw_data
-(
-  study_id bigint,
-  study_name text,
-  lat numeric,
-  lng numeric,
-  datetime_bin timestamp with time zone,
-  classification text,
-  entry_dir_name text,
-  entry_name text,
-  exit_dir_name text,
-  exit_name text,
-  movement text,
-  volume integer
-)
-WITH (
-  OIDS=FALSE
-);
-ALTER TABLE rliu.raw_data
-  OWNER TO rliu;
-GRANT ALL ON TABLE rliu.raw_data TO rds_superuser WITH GRANT OPTION;
-GRANT ALL ON TABLE rliu.raw_data TO dbadmin;
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE rliu.raw_data TO bdit_humans WITH GRANT OPTION;
-GRANT ALL ON TABLE rliu.raw_data TO rliu;'''
+        execute(report_dates)
 
-cur = conn.cursor()
-cur.execute(upload)
-conn.commit()
 
-with open('intersection_tmc_'+str(datetime.date.today())+'.csv', 'r') as csv:
-    
-    next(csv)  
-    cur.copy_from(csv, 'rliu.raw_data', sep=',')
-    
-conn.commit()
+with conn:
+    with conn.cursor() as cur:        
+
+
+        refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.volumes_15min_by_class WITH DATA;'''
+
+
+        execute(refresh_volumes_class)
+with conn:
+    with conn.cursor() as cur:        
+
+        refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
+
+
+        execute(refresh_volumes)
+with conn:
+    with conn.cursor() as cur:        
+        refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
+
+
+        execute(refresh_report_daily)
+
+
+print('Refreshed Views')
