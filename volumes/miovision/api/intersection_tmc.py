@@ -1,3 +1,5 @@
+
+
 import json
 import csv
 from requests import Session
@@ -13,16 +15,18 @@ with open('sql_credentials.csv', 'r') as sql_credentials:
         conn_string="host='"+row['host']+"' dbname='"+row['dbname']+"' user='"+row['user']+"' password='"+row['password']+"'"
         conn=connect(conn_string)
         break
-    
+
 cur = conn.cursor()   
-conn.autocommit = True
-truncate_rawdata_new='''TRUNCATE rliu.raw_data_new;'''
-cur.execute(truncate_rawdata_new)
+#conn.autocommit = True
+with conn:
+    with conn.cursor() as cur:
+        truncate_rawdata_new='''TRUNCATE rliu.raw_data_new;'''
+        cur.execute(truncate_rawdata_new)
 aggregations='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
         SELECT * FROM rliu.raw_data_new;
         INSERT INTO rliu.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
         SELECT B.intersection_uid, (A.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, A.entry_dir_name as leg, D.movement_uid, A.volume
-        FROM rliu.raw_data A
+        FROM rliu.raw_data_new A
         INNER JOIN miovision.intersections B ON regexp_replace(A.study_name,'Yong\M','Yonge') = B.intersection_name
         INNER JOIN miovision.movements D USING (movement)
         INNER JOIN rliu.classifications C USING (classification)
@@ -59,7 +63,7 @@ def get_movement(item):
     else:
         return 'u_turn'
 
-def get_intersection_tmc():
+def get_intersection_tmc(table):
     headers={'Content-Type':'application/json','Authorization':api_key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
@@ -78,19 +82,14 @@ def get_intersection_tmc():
             
             item['entry_dir_name']=item.pop('entrance')
             item['exit_dir_name']=item.pop('exit')
-            table=[(intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume'])]
-            with conn:
-                with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table, template=None)
-                    
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(aggregations)
-        return 1
+            temp=[intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume']]
+            table.append(temp)
+
+        return table
     else:
         return None
 
-def get_pedestrian():
+def get_pedestrian(table):
     headers={'Content-Type':'application/json','Authorization':api_key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+intersection_id1+ped_endpoint, params=params, 
@@ -111,14 +110,10 @@ def get_pedestrian():
             item['exit_name']=0
             item['entry_dir_name']=item.pop('crosswalkSide')
             item['exit_dir_name']=0
-            table=[(intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['movement'], item['volume'])]
-            with conn:
-                with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, movement, volume) VALUES %s', table, template=None)
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(aggregations)
-        return 1
+            temp=[intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume']]
+            table.append(temp)
+            
+        return table
     else:
         return None 
     
@@ -143,7 +138,7 @@ with open('api_key.txt','r') as api:
     
 while True:
     end_iteration_time= start_time + time_delta
-    
+    table=[]
     with open('intersection_id.csv', 'r') as int_id_file:
         intersection_id=csv.DictReader(int_id_file)
         for row in intersection_id:
@@ -151,44 +146,39 @@ while True:
             intersection_name=str(row['name'])
             lat=str(row['lat'])
             lng=str(row['lng'])
-            get_intersection_tmc()
-            get_pedestrian()
+            table=get_intersection_tmc(table)
+            table=get_pedestrian(table)
+            
+            
+            
             print(intersection_name)
     print(start_time)
+    with conn:
+        with conn.cursor() as cur:
+            execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+
+            
+            conn.commit
+    with conn:
+        with conn.cursor() as cur:             
+            cur.execute(aggregations)
+            conn.commit
     start_time+=time_delta
     if start_time==end_time:
         break
 
 
+
 with conn:
     with conn.cursor() as cur:
         report_dates='''SELECT rliu.report_dates();'''
-
-
-        execute(report_dates)
-
-
-with conn:
-    with conn.cursor() as cur:        
-
-
+        cur.execute(report_dates)
         refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.volumes_15min_by_class WITH DATA;'''
-
-
-        execute(refresh_volumes_class)
-with conn:
-    with conn.cursor() as cur:        
-
+        cur.execute(refresh_volumes_class)
         refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
-
-
-        execute(refresh_volumes)
-with conn:
-    with conn.cursor() as cur:        
+        cur.execute(refresh_volumes)
         refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
-
-
-        execute(refresh_report_daily)
+        cur.execute(refresh_report_daily)
 
 
 print('Refreshed Views')
