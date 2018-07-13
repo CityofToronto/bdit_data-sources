@@ -345,10 +345,10 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                 insert_data(objectList, dbset, live)
             except OSError as ose:
                 LOGGER.error('Inserting data failed')
-                LOGGER.error(ose.msg)
+                LOGGER.error(ose)
             except ValueError as valu:
                 LOGGER.error('Unsupported Value in insert')
-                LOGGER.error(valu.msg)
+                LOGGER.error(valu)
             except IntegrityError:
                 LOGGER.warning('Insert violated table constraints, likely duplicate data')
 

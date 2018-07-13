@@ -4,7 +4,7 @@
 
 ### blip_api
 
-Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data.
+Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
 
 #### Installation
 
@@ -36,6 +36,12 @@ optional arguments:
 
 `--direct` is a work-around to make this work on a workstation instead of the terminal server.
 `--live` is for pulling "live" data, versus "historical" data. This is to update the King Street Transit Pilot internal dashboards more frequently than daily. "live" data is less well filtered by the vendor's database.
+
+If you want to pull individual analyses for a particular date, use the `-a` flag. For example, the below command will pull data for analysis IDs 156435 and  165375 from May 1st to May 12th 2018 inclusive:
+
+```shell
+python blip_api.py -y 20180501 20180512 -a 156435 -a 165375 -d config.cfg
+```
 
 #### Steps
 

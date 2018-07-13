@@ -3,3 +3,4 @@ zeep
 python-dateutil
 pygresql
 requests
+git+https://github.com/CityofToronto/bdit_python_utilities.git#egg=parsing_utilities-0.1&subdirectory=parsing_utilities
