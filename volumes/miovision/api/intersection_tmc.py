@@ -1,5 +1,4 @@
-
-
+import sys
 import json
 import csv
 from requests import Session
@@ -8,21 +7,48 @@ import pytz
 import dateutil.parser
 from psycopg2.extras import execute_values
 from psycopg2 import connect
+import logging
+import configparser
 
-with open('sql_credentials.csv', 'r') as sql_credentials:
-    conn_dict=csv.DictReader(sql_credentials)
-    for row in conn_dict:
-        conn_string="host='"+row['host']+"' dbname='"+row['dbname']+"' user='"+row['user']+"' password='"+row['password']+"'"
-        conn=connect(conn_string)
-        break
+
+class Logger:
+    def logger(self):
+        if (logger.hasHandlers()):
+            logger.handlers.clear()
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+        formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
+        file_handler = logging.FileHandler('logging.log')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        return logger
+    with open('logging.log', 'w'):
+            pass
+logger.debug('Start')
+
+
+CONFIG = configparser.ConfigParser()
+CONFIG.read(r'config.cfg')
+api_key=CONFIG['API']
+key=api_key['key']
+dbset = CONFIG['DBSETTINGS']
+conn = connect(**dbset)
+
+logger.debug('Connected to DB')
 
 cur = conn.cursor()   
 #conn.autocommit = True
 with conn:
     with conn.cursor() as cur:
-        truncate_rawdata_new='''TRUNCATE rliu.raw_data_new;'''
-        cur.execute(truncate_rawdata_new)
-aggregations='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
+        try:
+             truncate_rawdata_new='''TRUNCATE rliu.raw_data_new;'''
+             cur.execute(truncate_rawdata_new)
+        except:
+            logger.exception('SQL query and/or connection error')
+            sys.exit()
+        
+        
+insert='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
         SELECT * FROM rliu.raw_data_new;
         INSERT INTO rliu.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
         SELECT B.intersection_uid, (A.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, A.entry_dir_name as leg, D.movement_uid, A.volume
@@ -30,10 +56,8 @@ aggregations='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, dateti
         INNER JOIN miovision.intersections B ON regexp_replace(A.study_name,'Yong\M','Yonge') = B.intersection_name
         INNER JOIN miovision.movements D USING (movement)
         INNER JOIN rliu.classifications C USING (classification)
-        ORDER BY (A.datetime_bin AT TIME ZONE 'America/Toronto'), B.intersection_uid, C.classification_uid, A.entry_name, D.movement_uid;
-        SELECT rliu.aggregate_15_min_tmc();
-        SELECT rliu.aggregate_15_min();
-        TRUNCATE rliu.raw_data_new;'''
+        ORDER BY (A.datetime_bin AT TIME ZONE 'America/Toronto'), B.intersection_uid, C.classification_uid, A.entry_name, D.movement_uid;'''
+
         
 def get_movement(item):
     if (item['entrance'] == 'N' and item['exit'] =='S'):
@@ -64,7 +88,7 @@ def get_movement(item):
         return 'u_turn'
 
 def get_intersection_tmc(table):
-    headers={'Content-Type':'application/json','Authorization':api_key}
+    headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
                          headers=headers, proxies=session.proxies)
@@ -87,10 +111,12 @@ def get_intersection_tmc(table):
 
         return table
     else:
+        logger.exception('Could not pull intersection from API')
+        
         return None
 
 def get_pedestrian(table):
-    headers={'Content-Type':'application/json','Authorization':api_key}
+    headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+intersection_id1+ped_endpoint, params=params, 
                          headers=headers, proxies=session.proxies)
@@ -106,15 +132,14 @@ def get_pedestrian(table):
             temp=str(item['direction'])
             item.pop('direction', None)
             item['movement']=temp.lower()
-            item['entry_name']=0
-            item['exit_name']=0
             item['entry_dir_name']=item.pop('crosswalkSide')
-            item['exit_dir_name']=0
+            item['exit_dir_name']=None
             temp=[intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume']]
             table.append(temp)
             
         return table
     else:
+        logger.exception('Could not pull intersection from API')
         return None 
     
 session = Session()
@@ -146,39 +171,61 @@ while True:
             intersection_name=str(row['name'])
             lat=str(row['lat'])
             lng=str(row['lng'])
-            table=get_intersection_tmc(table)
-            table=get_pedestrian(table)
+            logger.info(intersection_name)
+            try:
+                table=get_intersection_tmc(table)
+            except:
+                logger.exception('Could not connect to Api')
+                sys.exit()
+            try:
+                table=get_pedestrian(table)
+            except:
+                logger.exception('Could not connect to Api')
+                sys.exit()
+      
             
-            
-            
-            print(intersection_name)
-    print(start_time)
-    with conn:
-        with conn.cursor() as cur:
-            execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
-
-            
-            conn.commit
-    with conn:
-        with conn.cursor() as cur:             
-            cur.execute(aggregations)
-            conn.commit
+    logger.info('Completed data pulling for {}'.format(start_time))
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+                conn.commit
+        with conn:
+            with conn.cursor() as cur:             
+                cur.execute(insert)
+                conn.commit
+                
+        with conn:
+            with conn.cursor() as cur:             
+                cur.execute('''SELECT rliu.aggregate_15_min_tmc();''')
+                conn.commit
+        with conn:
+            with conn.cursor() as cur:             
+                cur.execute('''SELECT rliu.aggregate_15_min(); TRUNCATE rliu.raw_data_new;''')
+                conn.commit
+        logger.info('Completed data processing for {}'.format(start_time))
+    except:
+        logger.exception('Data Processing and/or connection error')
+        sys.exit()
     start_time+=time_delta
     if start_time==end_time:
         break
 
 
-
-with conn:
-    with conn.cursor() as cur:
-        report_dates='''SELECT rliu.report_dates();'''
-        cur.execute(report_dates)
-        refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.volumes_15min_by_class WITH DATA;'''
-        cur.execute(refresh_volumes_class)
-        refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
-        cur.execute(refresh_volumes)
-        refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
-        cur.execute(refresh_report_daily)
-
-
-print('Refreshed Views')
+try:
+    with conn:
+        with conn.cursor() as cur:
+            report_dates='''SELECT rliu.report_dates();'''
+            cur.execute(report_dates)
+            refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.volumes_15min_by_class WITH DATA;'''
+            cur.execute(refresh_volumes_class)
+            refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
+            cur.execute(refresh_volumes)
+            refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
+            cur.execute(refresh_report_daily)
+    logger.info('Updated Views')
+    logger.info('Done')
+except:
+    logger.exception('Cannot Refresh Views')
+    sys.exit()
+    
