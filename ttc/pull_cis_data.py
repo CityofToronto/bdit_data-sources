@@ -1,7 +1,7 @@
 import calendar
 import configparser
 import logging
-import logging.handlers
+import os
 import re
 import shutil
 import subprocess
@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 import click
+import pysftp
 
 from notify_email import send_mail
 
@@ -53,6 +54,9 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
 @cli.command('upload')
 @click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
+def _send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
+    return send_data_to_database(datafile, dbsetting, dbconfig)
+
 def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
     if dbconfig:
@@ -79,8 +83,16 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
 @click.argument('user')
 @click.argument('password')
 @click.argument('date')
+def _get_data(host = None, user=None, password=None, date=None):
+    return get_data(host, user, password, date)
+
 def get_data(host = None, user=None, password=None, date=None):
     '''Transfer data file for date'''
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys.load(os.path.expanduser('~/.ssh/known_hosts'))
+    with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts):
+        #TODO
+
 
 def pull_cis_data(ctx, startdate, enddate, config):
 
@@ -94,9 +106,9 @@ def pull_cis_data(ctx, startdate, enddate, config):
 
     try:
               
-        ctx.invoke(get_data, sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], date)
+        filename = get_data(sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], date)
 
-        ctx.invoke(send_data_to_database, datafile=filename+'.csv.gz', dbsetting=dbsettings)
+        send_data_to_database(datafile=filename+'.csv.gz', dbsetting=dbsettings)
     except TTCSFTPException as ttc_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(ttc_exc)
