@@ -34,3 +34,7 @@ CREATE INDEX volumes_intersection_uid_idx
   USING btree
   (intersection_uid);
 
+CREATE INDEX volume_15min_tmc_uid_idx
+  ON miovision.volumes
+  USING btree
+  (volume_15min_tmc_uid);
