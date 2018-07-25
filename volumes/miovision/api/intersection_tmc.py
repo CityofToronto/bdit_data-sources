@@ -2,16 +2,23 @@ import sys
 import json
 import csv
 from requests import Session
+from requests import exceptions
 import datetime
 import pytz
 import dateutil.parser
+import psycopg2
 from psycopg2.extras import execute_values
-from psycopg2 import connect
+from psycopg2 import connect, Error
 import logging
 import configparser
 import click
 from time import sleep
 
+class MiovisionAPIException(Exception):
+    """Base class for exceptions."""
+    pass
+    
+    
 def logger():
     
     logger = logging.getLogger(__name__)
@@ -69,6 +76,7 @@ def run_api(flag):
         start_date, end_date=dates()
         logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
         pull_data(start_date, end_date)
+           
     else:
         start_date= dateutil.parser.parse(str(default_start))
         end_date= dateutil.parser.parse(str(default_end))
@@ -76,6 +84,8 @@ def run_api(flag):
         end_time=start_date.astimezone(pytz.timezone('US/Eastern'))
         logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
         pull_data(start_time, end_time)
+        views()
+        
     
 def dates():
     time_delta = datetime.timedelta(days=1)
@@ -109,78 +119,6 @@ def dates():
             break
     return start_time, end_time  
 
-def pull_data(start_date, end_date):
-    time_delta = datetime.timedelta(days=1)
-    end_iteration_time= start_date + time_delta
-    while True:
-        table=[]
-        with open('intersection_test.csv', 'r') as int_id_file:
-            intersection_id=csv.DictReader(int_id_file)
-            for row in intersection_id:
-                intersection_id1=str(row['id'])
-                intersection_name=str(row['name'])
-                lat=str(row['lat'])
-                lng=str(row['lng'])
-                logger.info(intersection_name+'     '+str(start_date))
-                try:
-                    table=get_intersection_tmc(table, start_date, end_iteration_time, key, intersection_id1, intersection_name, lat, lng, end_date)
-                except:
-                    logger.exception('Could not connect to Api')
-                    sleep(250)
-                    logger.warning('Retrying')
-                    pull_data(start_date, end_date)
-                    #sys.exit()
-                try:
-                    table=get_pedestrian(table, start_date, end_iteration_time, key, intersection_id1, intersection_name, lat, lng, end_date)
-                except:
-                    logger.exception('Could not connect to Api')
-                    sleep(250)
-                    logger.warning('Retrying')
-                    pull_data(start_date, end_date)
-                    #sys.exit()
-          
-                
-        logger.info('Completed data pulling for {}'.format(start_date))
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
-                    conn.commit
-            logger.info('Inserted into raw data new') 
-            with conn:
-                with conn.cursor() as cur: 
-                    insert='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
-        SELECT * FROM rliu.raw_data_new;
-        INSERT INTO rliu.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-        SELECT B.intersection_uid, (A.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, A.entry_dir_name as leg, D.movement_uid, A.volume
-        FROM rliu.raw_data_new A
-        INNER JOIN miovision.intersections B ON regexp_replace(A.study_name,'Yong\M','Yonge') = B.intersection_name
-        INNER JOIN miovision.movements D USING (movement)
-        INNER JOIN rliu.classifications C USING (classification)
-        ORDER BY (A.datetime_bin AT TIME ZONE 'America/Toronto'), B.intersection_uid, C.classification_uid, A.entry_name, D.movement_uid;'''
-                    cur.execute(insert)
-                    conn.commit
-            logger.info('Inserted into raw data')        
-            with conn:
-                with conn.cursor() as cur:             
-                    cur.execute('''SELECT rliu.aggregate_15_min_tmc();''')
-                    conn.commit
-            logger.info('Aggregated into 15 minute turning movement counts')
-            with conn:
-                with conn.cursor() as cur:             
-                    cur.execute('''SELECT rliu.aggregate_15_min(); TRUNCATE rliu.raw_data_new;''')
-                    conn.commit
-            logger.info('Completed data processing for {}'.format(start_date))
-        except:
-            logger.exception('Data Processing and/or connection error')
-            sys.exit()
-        start_date+=time_delta
-        print(str(start_date)+' '+str(end_date))
-        if start_date==end_date:
-            break
-    views()
-    return
-
 def get_movement(item):
     if (item['entrance'] == 'N' and item['exit'] =='S'):
         return 'thru'
@@ -209,7 +147,7 @@ def get_movement(item):
     else:
         return 'u_turn'
 
-def get_intersection_tmc(table, start_date, end_iteration_time, key, intersection_id1, intersection_name, lat, lng, end_date):
+def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
@@ -218,10 +156,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, key, intersectio
         tmc=json.loads(response.content)
         for item in tmc:
             
-            
-            item['study_name']=intersection_name
-            item['lat']=lat
-            item['lng']=lng
+        
             item['classification']=item.pop('class')
             item['volume']=item.pop('qty')
             item['movement']=get_movement(item)
@@ -232,26 +167,27 @@ def get_intersection_tmc(table, start_date, end_iteration_time, key, intersectio
             table.append(temp)
 
         return table
-    else:
-        logger.exception('Could not pull intersection from API')
-        sleep(150)
-        logger.warning('Retrying')
-        pull_data(start_date, end_date)
-        
-        return None
+    elif response.status_code==404:
+        error=json.loads(response.content)
+        logger.error(error['error'])
 
-def get_pedestrian(table, start_date, end_iteration_time, key, intersection_id1, intersection_name, lat, lng, end_date):
+    elif response.status_code==404:
+        error=json.loads(response.content)
+        logger.error(error['error'])
+    else:
+        raise MiovisionAPIException(str(response.status_code))
+        sys.exit()
+
+def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
+    
     response=session.get(url+intersection_id1+ped_endpoint, params=params, 
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
         ped=json.loads(response.content)
         for item in ped:
             
-            item['study_name']=intersection_name
-            item['lat']=lat
-            item['lng']=lng
             item['classification']=item.pop('class')
             item['volume']=item.pop('qty')
             temp=str(item['direction'])
@@ -263,12 +199,16 @@ def get_pedestrian(table, start_date, end_iteration_time, key, intersection_id1,
             table.append(temp)
             
         return table
+    elif response.status_code==404:
+        error=json.loads(response.content)
+        logger.error(error['error'])
+        
+    elif response.status_code==400:
+        error=json.loads(response.content)
+        logger.error(error['error'])
     else:
-        logger.exception('Could not pull intersection from API')
-        sleep(150)
-        logger.warning('Retrying')
-        pull_data(start_date, end_date)
-        return None 
+        raise MiovisionAPIException(str(response.status_code))
+        sys.exit()
 
 def views():
     try:
@@ -284,11 +224,75 @@ def views():
                 cur.execute(refresh_report_daily)
         logger.info('Updated Views')
         logger.info('Done')
+        
     except:
         logger.exception('Cannot Refresh Views')
         sys.exit()
-    return
+        
+
+def pull_data(start_date, end_date):
+    time_delta = datetime.timedelta(days=1)
+    end_iteration_time= start_date + time_delta
+    while True:
+        table=[]
+        with open('intersection_id.csv', 'r') as int_id_file:
+            intersection_id=csv.DictReader(int_id_file)
+            for row in intersection_id:
+                intersection_id1=str(row['id'])
+                intersection_name=str(row['name'])
+                lat=str(row['lat'])
+                lng=str(row['lng'])
+                logger.info(intersection_name+'     '+str(start_date))
+                for attempt in range(3):
+                    try:
+                        table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
+                        table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
+                        break
+                    except exceptions.ProxyError as prox:
+                        logger.error(prox)
+                        logger.warning('Retrying in 2 minutes')
+                        sleep(120)
+                    except exceptions.RequestException as err:
+                        logger.error(err)
+                        #sys.exit()
+                    except MiovisionAPIException as miovision_exc:
+                        logger.error('Cannot pull data')
+                        logger.error(miovision_exc)
+                        #sleep(60)
+                
+        logger.info('Completed data pulling for {}'.format(start_date))
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+                    conn.commit
+            logger.info('Inserted into raw data new') 
+            with conn:
+                with conn.cursor() as cur: 
+                    insert='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
+                                SELECT * FROM rliu.raw_data_new;
+        SELECT rliu.aggregate_15_min_tmc_new()'''
+                    cur.execute(insert)
+                    conn.commit
+            logger.info('Aggregated to 15 minute bins and inserted to raw data')        
+
+            with conn:
+                with conn.cursor() as cur:             
+                    cur.execute('''SELECT rliu.aggregate_15_min(); TRUNCATE rliu.raw_data_new;''')
+                    conn.commit
+            logger.info('Completed data processing for {}'.format(start_date))
+        except psycopg2.Error as exc:
+            
+            logger.exception(exc)
+            with conn:
+                    conn.rollback()
+            sys.exit()
+        views()
+        start_date+=time_delta
+        end_iteration_time= start_date + time_delta
+        if start_date>=end_date:
+            break
     
-    
+
 if __name__ == '__main__':
     cli()
