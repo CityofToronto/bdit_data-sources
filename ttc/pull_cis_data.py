@@ -82,19 +82,24 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
 @click.argument('host')
 @click.argument('user')
 @click.argument('password')
-@click.argument('date')
-def _get_data(host = None, user=None, password=None, date=None):
-    return get_data(host, user, password, date)
+@click.option('--date', help="The date to grab data for [YYYYMMDD]")
+@click.option('--filename', help="The full name of the filename, mutually exclusive with --date")
+def _get_data(host: str = None, user:str =None, password: str = None,
+              date: str = None, filename: str = None)
+    if date and filename:
+        raise click.BadOptionUsage('Cannot set both --date and --filename')
+    return get_data(host, user, password, date, filename=filename)
 
-def get_data(host = None, user=None, password=None, date=None):
+def get_data(host: str = None, user:str =None, password: str = None,
+             date: str = None, filename: str = None):
     '''Transfer data file for date'''
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys.load(os.path.expanduser('~/.ssh/known_hosts'))
-    with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts):
-        #TODO
+    with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts) as sftp:
+        if filename is not None:
+            sftp.get('cityoftor_kingstpilot/'+filename, '/data/ttc/cis/'+filename)
 
-
-def pull_cis_data(ctx, startdate, enddate, config):
+def pull_cis_data(ctx: click.Context, startdate: str, enddate: str, config: str):
 
     configuration = configparser.ConfigParser()
     configuration.read(config)
