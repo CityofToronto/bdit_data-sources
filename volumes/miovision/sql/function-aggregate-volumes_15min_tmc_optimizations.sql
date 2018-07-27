@@ -30,32 +30,43 @@ BEGIN
 	GROUP BY intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900)
 	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
 
-
 	-- REMOVE ALL 15-minute bins where 5 or less of the 1-minute bins are populated with volume
-
-	-- IF # of populated 1-minute bins exceeds difference between start and end time, assume no interpolation needed
-	UPDATE bins SET interpolated = FALSE WHERE (EXTRACT(minutes FROM end_time - start_time)+1) > avail_minutes AND avail_minutes < 15;
-
-	-- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
 	UPDATE bins A 
 	SET interpolated = FALSE
-	FROM (SELECT intersection_uid, datetime_bin, SUM(volume) AS total_volume FROM rliu.volumes WHERE volume_15min_tmc_uid IS NULL GROUP BY intersection_uid, datetime_bin) B
-	INNER JOIN (SELECT intersection_uid, datetime_bin, SUM(volume) AS total_volume FROM rliu.volumes WHERE volume_15min_tmc_uid IS NULL GROUP BY intersection_uid, datetime_bin) C ON B.intersection_uid = C.intersection_uid
-	WHERE 	A.interpolated IS NULL 
-		AND A.avail_minutes < 15 
-		AND A.intersection_uid = B.intersection_uid 
-		AND A.intersection_uid = C.intersection_uid 
-		AND (B.datetime_bin >= (A.datetime_bin + INTERVAL '15 minutes') AND B.datetime_bin <= (A.datetime_bin + INTERVAL '16 minutes')) 
-		AND (C.datetime_bin <= (A.datetime_bin - INTERVAL '1 minute') AND C.datetime_bin >= A.datetime_bin - (INTERVAL '2 minutes'));
+	FROM (SELECT DISTINCT intersection_uid, datetime_bin FROM rliu.volumes WHERE volume_15min_tmc_uid IS NULL) B 
+	WHERE A.interpolated IS NULL 
+	AND A.avail_minutes < 15 
+	AND A.intersection_uid = B.intersection_uid 
+	AND (B.datetime_bin BETWEEN (A.datetime_bin + INTERVAL '15 minutes') AND  (A.datetime_bin + INTERVAL '16 minutes')
+	OR B.datetime_bin BETWEEN(A.datetime_bin - INTERVAL '1 minute') AND (A.datetime_bin - (INTERVAL '2 minutes')));
+
+	UPDATE bins A
+	SET interpolated = CASE
+				WHEN 	(EXTRACT(minutes FROM A.end_time - A.start_time)+1) > A.avail_minutes AND A.avail_minutes < 15
+				THEN 	FALSE
+				WHEN 	interpolated IS NULL AND A.avail_minutes < 15	
+				THEN	TRUE
+				END;
+
+
+
+	-- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
+
+
+
 
 	-- ASSUME for all other 15-minute bins with missing data, interpolation needed due to missing video
-	UPDATE bins SET interpolated = TRUE WHERE interpolated IS NULL AND avail_minutes < 15;
-
+	
 	-- FOR 15-minute bins with interpolation needed, IF missing data at end of 15-minute period, SET end_time = end_time - 1 minute to account for potential partial count
-	UPDATE bins SET end_time = end_time - INTERVAL '1 minute' WHERE interpolated = TRUE AND datetime_bin = start_time;
-
+	UPDATE bins 
+	SET end_time = CASE
+		WHEN interpolated = TRUE AND datetime_bin = start_time THEN end_time - INTERVAL '1 minute' ELSE end_time
+		END,
+	start_time = CASE
+		WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN start_time + INTERVAL '1 minute' ELSE start_time
+		END;
 	-- FOR 15-minute bins with interpolation needed, IF missing data at start of 15-minute period, SET start_time = start_time + 1 minute to account for potential partial count
-	UPDATE bins SET start_time = start_time + INTERVAL '1 minute' WHERE interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time;
+
 
 	-- INSERT INTO volumes_15min_tmc, with interpolated volumes
 	WITH aggregate_insert AS(
@@ -73,7 +84,7 @@ BEGIN
 	RETURNING volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid
 	)
 	UPDATE rliu.volumes a
-	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
+	SET a.volume_15min_tmc_uid = b.volume_15min_tmc_uid
 	FROM aggregate_insert b
 	WHERE a.datetime_bin >= b.datetime_bin AND a.datetime_bin < b.datetime_bin + INTERVAL '15 minutes'
 	AND a.classification_uid  = b.classification_uid 
