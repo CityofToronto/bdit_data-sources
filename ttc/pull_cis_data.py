@@ -30,31 +30,35 @@ def _get_date_yyyymmdd(yyyymmdd):
     return date
 
 def default_start_date():
-    dt = datetime.today() - timedelta(days=4)
+    dt = datetime.today() - timedelta(days=1)
     return dt.date().strftime('%Y%m%d')
 
 def default_end_date():
-    dt = datetime.today() - timedelta(days=3)
+    dt = datetime.today() - timedelta(days=1)
     return dt.date().strftime('%Y%m%d')
 
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', type=click.Path(exists=True))
+@click.option('--filename', type=click.Path(exists=True))
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
-    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', filename=None):
+    '''Pull CIS data from the TTC's sftp server from --startdate to --enddate
 
-    The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
+    The default is to grab yesterday's data. If using --startdate to --enddate, will loop through those dates 
+    inclusively to pull each day of data. If a dump of data spanning multiple days is available, use 
+    --filename instead
     
     '''
     if ctx.invoked_subcommand is None:
-        pull_cis_data(ctx, startdate, enddate, config)
+        pull_cis_data(ctx, startdate, enddate, config, filename)
 
 @cli.command('upload')
 @click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def _send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
+def _send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
+    '''Upload datafile to database'''
     return send_data_to_database(datafile, dbsetting, dbconfig)
 
 def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
@@ -85,7 +89,8 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
 @click.option('--date', help="The date to grab data for [YYYYMMDD]")
 @click.option('--filename', help="The full name of the filename, mutually exclusive with --date")
 def _get_data(host: str = None, user:str =None, password: str = None,
-              date: str = None, filename: str = None)
+              date: str = None, filename: str = None):
+    '''Copy file of data from TTC's sftp server'''
     if date and filename:
         raise click.BadOptionUsage('Cannot set both --date and --filename')
     return get_data(host, user, password, date, filename=filename)
