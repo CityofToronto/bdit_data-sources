@@ -14,36 +14,29 @@ import click
 import pysftp
 
 from notify_email import send_mail
+from time_parsing import validate_multiple_yyyymmdd_range
 
 class TTCSFTPException(Exception):
     '''Base Exception for all errors thrown by this module'''
 
 LOGGER = logging.getLogger(__name__)
 
-def _get_date_yyyymmdd(yyyymmdd):
-    datetime_format = '%Y%m%d'
-    try:
-        date = datetime.strptime(str(yyyymmdd), datetime_format)
-    except ValueError:
-        raise ValueError('{yyyymmdd} is not a valid year-month value of format YYYYMMDD'
-                         .format(yyyymmdd=yyyymmdd))
-    return date
+BASE_FILENAME = 'KingSteetPilot'
+REMOTE_FILEPATH = 'cityoftor_kingstpilot'
+LOCAL_FILEPATH = os.path.expanduser('~/Downloads')
+#LOCAL_FILEPATH = '/data/ttc/cis'
 
-def default_start_date():
-    dt = datetime.today() - timedelta(days=1)
-    return dt.date().strftime('%Y%m%d')
-
-def default_end_date():
+def default_date():
     dt = datetime.today() - timedelta(days=1)
     return dt.date().strftime('%Y%m%d')
 
 @click.group(invoke_without_command=True)
-@click.option('-s','--startdate', default=default_start_date())
-@click.option('-e','--enddate', default=default_end_date())
-@click.option('-d','--config', type=click.Path(exists=True))
-@click.option('--filename', type=click.Path(exists=True))
+@click.option('-s','--startdate', default=default_date(), help='YYYYMMDD')
+@click.option('-e','--enddate', default=default_date(), help='YYYYMMDD')
+@click.option('-d','--config', type=click.Path(exists=True), help='.cfg file containing db, email, and sftp settings')
+@click.option('--filename', type=click.Path(exists=True), help='filename to pull from sftp instead of using dates.')
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', filename=None):
+def cli(ctx, startdate=default_date(), enddate=default_date(), config='config.cfg', filename=None):
     '''Pull CIS data from the TTC's sftp server from --startdate to --enddate
 
     The default is to grab yesterday's data. If using --startdate to --enddate, will loop through those dates 
@@ -51,15 +44,66 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     --filename instead
     
     '''
-    if ctx.invoked_subcommand is None:
-        pull_cis_data(ctx, startdate, enddate, config, filename)
 
-@cli.command('upload')
-@click.argument('dbconfig', type=click.Path(exists=True))
+    if startdate != enddate and filename:
+        raise click.BadOptionUsage('Cannot use --startdate/--enddate and --filename')
+
+    ctx.obj['config'] = config
+
+    if ctx.invoked_subcommand is None:
+        pull_cis_data(ctx, startdate, enddate, filename)
+
+    if startdate != enddate:
+        raise click.BadOptionUsage('Cannot use different --startdate/--enddate with the get command')
+    ctx.obj['date'] = enddate
+    ctx.obj['filename'] = filename
+
+
+@cli.command('get', short_help="Copy datafile from TTC's sftp server")
+@click.option('--date', help='Specify the date to pull in YYYYMM.' + \
+                             'Cannot be used in conjunction with startdate/enddate')
+@click.pass_context
+def _get_data(ctx, date=None):
+    '''Copy a CIS datafile from the TTC's sftp server to the default destination. 
+    Defaults to yesterday's date or you can specify a --date DATE in YYYYMMDD format. 
+    Assumes there is a default `config.cfg` in the same folder
+    or else you must specify a config file with --config conf.cfg before the get command
+    
+    Ex: pull_data_cis --config CONFIG get --date YYYYMMDD
+    '''
+    configuration = configparser.ConfigParser()
+    configuration.read(ctx.obj['config'])
+    sftp_settings = configuration['SFTP']
+    host = sftp_settings['host']
+    user = sftp_settings['user']
+    password = sftp_settings['password']
+    if date is None:
+        date = ctx.obj['date']
+    return get_data(host, user, password, date, filename=ctx.obj['filename'])
+
+def get_data(host: str = None, user:str =None, password: str = None,
+             date: str = None, filename: str = None):
+    '''Transfer data file for date'''
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys.load(os.path.expanduser('~/.ssh/known_hosts'))
+    with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts) as sftp:
+        if filename is None:
+            filename = BASE_FILENAME + '_' + date + '_' + date + '.csv.gz'
+        sftp.get(REMOTE_FILEPATH+'/'+filename, LOCAL_FILEPATH+'/'+filename)
+    return LOCAL_FILEPATH +'/'+filename
+
+@cli.command('upload', short_help="Upload datafile to database")
 @click.argument('datafile', type=click.Path(exists=True))
-def _send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
-    '''Upload datafile to database'''
-    return send_data_to_database(datafile, dbsetting, dbconfig)
+@click.pass_context
+def _send_data_to_database(ctx: click.Context, datafile = None):
+    '''Upload datafile [DATAFILE] to the database. Assumes there is a default `config.cfg` in the same folder
+    or else you must specify a config file with --config conf.cfg before the get command
+    
+    Ex: pull_data_cis --config CONFIG upload FILENAME'''
+    configuration = configparser.ConfigParser()
+    configuration.read(config)
+    dbsettings = configuration['DBSETTINGS']
+    return send_data_to_database(datafile, dbsetting=ctx.obj['dbsettings'])
 
 def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
@@ -68,57 +112,29 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
         configuration.read(dbconfig)
         dbsetting = configuration['DBSETTINGS']
 
-    LOGGER.info('Sending data to database')
+    LOGGER.debug('Sending data from %s to database', datafile)
     try:
         #First subprocess needs to use Popen because piping stdout
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
+        output = subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
                                         '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
-                                        stdin=unzip.stdout))
+                                        stdin=unzip.stdout)
+        LOGGER.debug(output)
         subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
-        LOGGER.critical('Error sending data to database')
+        LOGGER.critical('Error sending %s to database', datafile)
         raise TTCSFTPException(err.stderr)
 
-@cli.command('get')
-@click.argument('host')
-@click.argument('user')
-@click.argument('password')
-@click.option('--date', help="The date to grab data for [YYYYMMDD]")
-@click.option('--filename', help="The full name of the filename, mutually exclusive with --date")
-def _get_data(host: str = None, user:str =None, password: str = None,
-              date: str = None, filename: str = None):
-    '''Copy file of data from TTC's sftp server'''
-    if date and filename:
-        raise click.BadOptionUsage('Cannot set both --date and --filename')
-    return get_data(host, user, password, date, filename=filename)
-
-def get_data(host: str = None, user:str =None, password: str = None,
-             date: str = None, filename: str = None):
-    '''Transfer data file for date'''
-    cnopts = pysftp.CnOpts()
-    cnopts.hostkeys.load(os.path.expanduser('~/.ssh/known_hosts'))
-    with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts) as sftp:
-        if filename is not None:
-            sftp.get('cityoftor_kingstpilot/'+filename, '/data/ttc/cis/'+filename)
-
-def pull_cis_data(ctx: click.Context, startdate: str, enddate: str, config: str):
-
-    configuration = configparser.ConfigParser()
-    configuration.read(config)
-    dbsettings = configuration['DBSETTINGS']
-    sftp_cfg = configuration['SFTP']
-    email = configuration['EMAIL']
-    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
-
+def get_and_upload_data(dbsetting: dict = None, email: dict = None, sftp_cfg:dict = None,
+                        date: str = None, filename: str = None):
     try:
-              
-        filename = get_data(sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], date)
+        LOGGER.info('Pulling CIS data for %s', date)
+        filename = get_data(sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], 
+                            date=date, filename=filename)
 
-        send_data_to_database(datafile=filename+'.csv.gz', dbsetting=dbsettings)
+        send_data_to_database(datafile=filename, dbsetting=dbsettings)
     except TTCSFTPException as ttc_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(ttc_exc)
@@ -127,6 +143,25 @@ def pull_cis_data(ctx: click.Context, startdate: str, enddate: str, config: str)
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
         send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+
+def pull_cis_data(config: str, startdate: str, enddate: str, filename: str = None):
+    configuration = configparser.ConfigParser()
+    configuration.read(config)
+    dbsettings = configuration['DBSETTINGS']
+    sftp_cfg = configuration['SFTP']
+    email = configuration['EMAIL']
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    LOGGER.info('Pulling CIS data from %s to %s', startdate, enddate)
+
+    if filename:
+        get_and_upload_data(dbsettings, email, sftp_cfg, filename=filename)
+    else:
+        dates = validate_multiple_yyyymmdd_range([[startdate, enddate]])
+        for year in dates:
+            for month in dates[year]:
+                for date in dates[year][month]:
+                    get_and_upload_data(dbsettings, email, sftp_cfg, date=date)
 
 def main():
     #https://github.com/pallets/click/issues/456#issuecomment-159543498
