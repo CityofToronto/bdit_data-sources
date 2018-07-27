@@ -22,7 +22,7 @@ The data were sent to us in monthly compressed csvs. The `cis_batch_upload.sh` b
 
 #### SFTP
 
-Currently data is provided in daily extracts available through sftp.
+Currently data is provided in daily extracts available through sftp. This can be pulled using the [`pull_cis_data`](pull_cis_data.py) python script.
 
 ##### Setup
 
@@ -35,6 +35,32 @@ ssh-keyscan -p 2222 sftp_url.ca
 ```
 
 Copy the second line of output and paste it into your `known_hosts` file. Do some text editing to remove the port number such that you're left with `sftp_url.ca ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...`.
+
+##### Usage
+
+```shell
+Usage: pull_cis_data.py [OPTIONS] COMMAND [ARGS]...
+
+  Pull CIS data from the TTC's sftp server from --startdate to --enddate
+
+  The default is to grab yesterday's data. If using --startdate to
+  --enddate, will loop through those dates  inclusively to pull each day of
+  data. If a dump of data spanning multiple days is available, use
+  --filename instead
+
+Options:
+  -s, --startdate TEXT  YYYYMMDD
+  -e, --enddate TEXT    YYYYMMDD
+  -d, --config PATH     .cfg file containing db, email, and sftp settings
+  --filename PATH       filename to pull from sftp instead of using dates.
+  --help                Show this message and exit.
+
+Commands:
+  get     Copy file of data from TTC's sftp server
+  upload  Upload datafile to database
+```
+
+The default usage would be to run `python pull_cis_data.py` to pull yesterday's data and upload it to the server. If there has been a large dump of data you can use the `--filename` option like: `python pull_cis_data.py --filename 
 
 ### Processing
 
