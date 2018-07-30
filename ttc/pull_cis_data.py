@@ -51,11 +51,11 @@ def cli(ctx, startdate=None, enddate=None, config='config.cfg', filename=None):
 
     if ctx.invoked_subcommand is None:
         pull_cis_data(config, startdate, enddate, filename)
-
-    if startdate != enddate:
+    elif startdate != enddate:
         raise click.BadOptionUsage('Cannot use different --startdate/--enddate with subcommands')
-    ctx.obj['date'] = enddate
-    ctx.obj['filename'] = filename
+    else:
+        ctx.obj['date'] = enddate
+        ctx.obj['filename'] = filename
 
 
 @cli.command('get', short_help="Copy datafile from TTC's sftp server")
