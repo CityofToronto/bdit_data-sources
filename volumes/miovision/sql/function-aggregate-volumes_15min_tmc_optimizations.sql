@@ -28,9 +28,11 @@ BEGIN
 	FROM rliu.volumes A
 	WHERE volume_15min_tmc_uid IS NULL
 	GROUP BY intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900)
-	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
 
 	-- REMOVE ALL 15-minute bins where 5 or less of the 1-minute bins are populated with volume
+	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
+
+	-- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
 	UPDATE bins A 
 	SET interpolated = FALSE
 	FROM (SELECT DISTINCT intersection_uid, datetime_bin FROM rliu.volumes WHERE volume_15min_tmc_uid IS NULL) B 
@@ -42,22 +44,17 @@ BEGIN
 
 	UPDATE bins A
 	SET interpolated = CASE
+	-- IF # of populated 1-minute bins exceeds difference between start and end time, assume no interpolation needed										    
 				WHEN 	(EXTRACT(minutes FROM A.end_time - A.start_time)+1) > A.avail_minutes AND A.avail_minutes < 15
 				THEN 	FALSE
 				WHEN 	interpolated IS NULL AND A.avail_minutes < 15	
+				-- ASSUME for all other 15-minute bins with missing data, interpolation needed due to missing video
 				THEN	TRUE
 				END;
-
-
-
-	-- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
-
-
-
-
-	-- ASSUME for all other 15-minute bins with missing data, interpolation needed due to missing video
-	
+											       
 	-- FOR 15-minute bins with interpolation needed, IF missing data at end of 15-minute period, SET end_time = end_time - 1 minute to account for potential partial count
+	-- FOR 15-minute bins with interpolation needed, IF missing data at start of 15-minute period, SET start_time = start_time + 1 minute to account for potential partial count
+
 	UPDATE bins 
 	SET end_time = CASE
 		WHEN interpolated = TRUE AND datetime_bin = start_time THEN end_time - INTERVAL '1 minute' ELSE end_time
@@ -65,7 +62,6 @@ BEGIN
 	start_time = CASE
 		WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN start_time + INTERVAL '1 minute' ELSE start_time
 		END;
-	-- FOR 15-minute bins with interpolation needed, IF missing data at start of 15-minute period, SET start_time = start_time + 1 minute to account for potential partial count
 
 
 	-- INSERT INTO volumes_15min_tmc, with interpolated volumes
