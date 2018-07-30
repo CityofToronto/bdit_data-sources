@@ -23,12 +23,23 @@ LOGGER = logging.getLogger(__name__)
 
 BASE_FILENAME = 'KingSteetPilot'
 REMOTE_FILEPATH = 'cityoftor_kingstpilot'
-LOCAL_FILEPATH = os.path.expanduser('~/Downloads')
-#LOCAL_FILEPATH = '/data/ttc/cis'
+LOCAL_FILEPATH = '/data/ttc/cis'
 
 def default_date():
     dt = datetime.today() - timedelta(days=1)
     return dt.date().strftime('%Y%m%d')
+
+def get_yyyymmdd(yyyy, mm, dd):
+    """Combine integer yyyy and mm into a string date yyyy-mm-dd."""
+    
+    if dd >= 10:
+        dd = str(dd)
+    if dd < 10:
+        dd = '0'+str(dd)
+            
+    if mm < 10:
+        return str(yyyy)+'0'+str(mm)+str(dd)
+    return str(yyyy)+str(mm)+str(dd)
 
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_date(), help='YYYYMMDD')
@@ -160,8 +171,8 @@ def pull_cis_data(config: str, startdate: str, enddate: str, filename: str = Non
         dates = validate_multiple_yyyymmdd_range([[startdate, enddate]])
         for year in dates:
             for month in dates[year]:
-                for date in dates[year][month]:
-                    get_and_upload_data(dbsettings, email, sftp_cfg, date=date)
+                for dd in dates[year][month]:
+                    get_and_upload_data(dbsettings, email, sftp_cfg, date=get_yyyymmdd(year, month, dd))
 
 def main():
     #https://github.com/pallets/click/issues/456#issuecomment-159543498
