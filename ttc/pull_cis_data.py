@@ -33,10 +33,10 @@ def default_date():
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_date(), help='YYYYMMDD')
 @click.option('-e','--enddate', default=default_date(), help='YYYYMMDD')
-@click.option('-d','--config', type=click.Path(exists=True), help='.cfg file containing db, email, and sftp settings')
+@click.option('-d','--config', type=click.Path(exists=True), help='.cfg file containing db, email, and sftp settings', default='config.cfg')
 @click.option('--filename', type=click.Path(exists=True), help='filename to pull from sftp instead of using dates.')
 @click.pass_context
-def cli(ctx, startdate=default_date(), enddate=default_date(), config='config.cfg', filename=None):
+def cli(ctx, startdate=None, enddate=None, config='config.cfg', filename=None):
     '''Pull CIS data from the TTC's sftp server from --startdate to --enddate
 
     The default is to grab yesterday's data. If using --startdate to --enddate, will loop through those dates 
@@ -134,11 +134,11 @@ def get_and_upload_data(dbsetting: dict = None, email: dict = None, sftp_cfg:dic
         filename = get_data(sftp_cfg['host'], sftp_cfg['user'], sftp_cfg['password'], 
                             date=date, filename=filename)
 
-        send_data_to_database(datafile=filename, dbsetting=dbsettings)
+        send_data_to_database(datafile=filename, dbsetting=dbsetting)
     except TTCSFTPException as ttc_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(ttc_exc)
-        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
+        send_mail(email['to'], email['from'], email['subject'], str(ttc_exc))
     except Exception:
         LOGGER.critical(traceback.format_exc())
         # Only send email if critical error
