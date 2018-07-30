@@ -51,10 +51,10 @@ def cli(ctx, startdate=default_date(), enddate=default_date(), config='config.cf
     ctx.obj['config'] = config
 
     if ctx.invoked_subcommand is None:
-        pull_cis_data(ctx, startdate, enddate, filename)
+        pull_cis_data(config, startdate, enddate, filename)
 
     if startdate != enddate:
-        raise click.BadOptionUsage('Cannot use different --startdate/--enddate with the get command')
+        raise click.BadOptionUsage('Cannot use different --startdate/--enddate with subcommands')
     ctx.obj['date'] = enddate
     ctx.obj['filename'] = filename
 
@@ -101,9 +101,9 @@ def _send_data_to_database(ctx: click.Context, datafile = None):
     
     Ex: pull_data_cis --config CONFIG upload FILENAME'''
     configuration = configparser.ConfigParser()
-    configuration.read(config)
+    configuration.read(ctx.obj['config'])
     dbsettings = configuration['DBSETTINGS']
-    return send_data_to_database(datafile, dbsetting=ctx.obj['dbsettings'])
+    return send_data_to_database(datafile, dbsetting=dbsettings)
 
 def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
