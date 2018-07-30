@@ -14,7 +14,7 @@ import click
 import pysftp
 
 from notify_email import send_mail
-from time_parsing import validate_multiple_yyyymmdd_range
+from time_parsing import validate_multiple_yyyymmdd_range, get_yyyymmdd
 
 class TTCSFTPException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -28,18 +28,6 @@ LOCAL_FILEPATH = '/data/ttc/cis'
 def default_date():
     dt = datetime.today() - timedelta(days=1)
     return dt.date().strftime('%Y%m%d')
-
-def get_yyyymmdd(yyyy, mm, dd):
-    """Combine integer yyyy and mm into a string date yyyy-mm-dd."""
-    
-    if dd >= 10:
-        dd = str(dd)
-    if dd < 10:
-        dd = '0'+str(dd)
-            
-    if mm < 10:
-        return str(yyyy)+'0'+str(mm)+str(dd)
-    return str(yyyy)+str(mm)+str(dd)
 
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_date(), help='YYYYMMDD')
@@ -130,7 +118,7 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
         output = subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
-                                        '-c',r'\COPY ttc.cis FROM STDIN WITH (FORMAT csv, HEADER TRUE);'],
+                                        '-c',r"\COPY ttc.cis(message_datetime, route, run, vehicle, latitude, longitude)  FROM STDIN WITH (FORMAT csv, HEADER TRUE, DELIMITER '|');"],
                                         stdin=unzip.stdout)
         LOGGER.debug(output)
         subprocess.check_call(['rm', datafile])
