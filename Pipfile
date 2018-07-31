@@ -22,6 +22,6 @@ seaborn = "*"
 pandas = "*"
 click = "*"
 requests-oauthlib = "*"
-parsing_utlities = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "parsing_utlities"}
+parsing_utlities = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "parsing_utilities"}
 "email_notifications-0.2" = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "email_notifications"}
 pysftp = "*"
