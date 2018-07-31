@@ -1,4 +1,6 @@
-﻿DROP TABLE IF EXISTS miovision.volumes_15min_tmc;
+﻿-- Table: miovision.volumes_15min_tmc
+
+-- DROP TABLE miovision.volumes_15min_tmc;
 
 CREATE TABLE miovision.volumes_15min_tmc
 (
@@ -11,9 +13,7 @@ CREATE TABLE miovision.volumes_15min_tmc
   volume numeric,
   volume_15min_uid integer,
   CONSTRAINT volumes_15min_tmc_pkey PRIMARY KEY (volume_15min_tmc_uid),
-  CONSTRAINT volumes_15min_tmc_volumes_15min_uid_fkey FOREIGN KEY (volume_15min_uid)
-      REFERENCES miovision.volumes_15min (volume_15min_uid) MATCH SIMPLE
-      ON UPDATE NO ACTION ON DELETE SET NULL
+  CONSTRAINT volumes_15min_tmc_intersection_uid_datetime_bin_classificat_key UNIQUE (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 )
 WITH (
   OIDS=FALSE
@@ -24,7 +24,16 @@ GRANT ALL ON TABLE miovision.volumes_15min_tmc TO rds_superuser WITH GRANT OPTIO
 GRANT ALL ON TABLE miovision.volumes_15min_tmc TO dbadmin;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision.volumes_15min_tmc TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision.volumes_15min_tmc TO aharpal;
-GRANT INSERT, TRUNCATE ON TABLE miovision.volumes_15min_tmc TO alouis2;
+GRANT UPDATE, INSERT ON TABLE miovision.volumes_15min_tmc TO rliu;
+
+-- Index: miovision.volumes_15min_tmc_classification_uid_idx
+
+-- DROP INDEX miovision.volumes_15min_tmc_classification_uid_idx;
+
+CREATE INDEX volumes_15min_tmc_classification_uid_idx
+  ON miovision.volumes_15min_tmc
+  USING btree
+  (classification_uid);
 
 -- Index: miovision.volumes_15min_tmc_datetime_bin_idx
 
@@ -35,11 +44,30 @@ CREATE INDEX volumes_15min_tmc_datetime_bin_idx
   USING btree
   (datetime_bin);
 
--- Index: miovision.volumes_15min_tmc_volumes_15min_uid_idx
+-- Index: miovision.volumes_15min_tmc_intersection_uid_idx
 
--- DROP INDEX miovision.volumes_15min_tmc_volumes_15min_uid_idx;
+-- DROP INDEX miovision.volumes_15min_tmc_intersection_uid_idx;
 
-CREATE INDEX volumes_15min_tmc_volumes_15min_uid_idx
+CREATE INDEX volumes_15min_tmc_intersection_uid_idx
+  ON miovision.volumes_15min_tmc
+  USING btree
+  (intersection_uid);
+
+-- Index: miovision.volumes_15min_tmc_leg_movement_uid_idx
+
+-- DROP INDEX miovision.volumes_15min_tmc_leg_movement_uid_idx;
+
+CREATE INDEX volumes_15min_tmc_leg_movement_uid_idx
+  ON miovision.volumes_15min_tmc
+  USING btree
+  (leg COLLATE pg_catalog."default", movement_uid);
+
+-- Index: miovision.volumes_15min_tmc_volume_15min_uid_idx
+
+-- DROP INDEX miovision.volumes_15min_tmc_volume_15min_uid_idx;
+
+CREATE INDEX volumes_15min_tmc_volume_15min_uid_idx
   ON miovision.volumes_15min_tmc
   USING btree
   (volume_15min_uid);
+
