@@ -114,7 +114,7 @@ volume|integer|Total 1-minute volume|12|
 
 #### `volumes_15min_tmc`
 
-Data table storing aggregated 15-minute turning movement data. 
+Data table storing aggregated 15-minute turning movement data.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -161,7 +161,7 @@ Ensure that `raw_data` has been updated with all new data (either from new colle
 	```
 
 	You can delete this copy after fully QCing the dataset.
-	
+
 2. Delete any studies / data that is being replaced by new data (if data only covers a new set of dates, ignore this step).
 
 3. Import new dataset using PostgreSQL COPY functionality into `raw_data`.
@@ -180,23 +180,20 @@ This will aggregate the 1-minute data from `volumes` into 15-minute turning move
 1. Run [`SELECT mioviosion.aggregate_15_min_tmc();`](sql/function-aggregate-volumes_15min_tmc.sql). This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling for rows which have not yet been aggregated (the `FOREIGN KEY volume_15min_tmc_uid` is NULL).
 2. Run [`SELECT mioviosion.aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql). This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging) for rows in the `miovision.volumes_15min_tmc` that have not yet been aggregated.
 
-### D. Populate `report_dates`
+### D. Refresh reporting views
 
 This produces a lookup table of date-intersection combinations to be used for formal reporting (this filters into various views).
 
-1. [`Refresh MATERIALIZED VIEW miovision.report_dates WITH DATA`](sql/materialized-view-report_dates.sql). This creates a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
-2. If needed, modify [the query](sql/materialized-view-report_dates.sql) once the data has undergone QC if specific intersection-date combinations need to be removed.
+1. If needed, modify [the `report_dates` VIEW query](sql/materialized-view-report_dates.sql) once the data has undergone QC if specific intersection-date combinations need to be removed.
 
-### E. Refresh reporting views
+2. Refresh the `MATERIALIZED VIEW`s for reporting by running [`SELECT miovision.refresh_views()`](sql/function_refresh_materialized_views.sql). The following views are refreshed:
+   - [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
+   - [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql)
+   - [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql)
 
-Refresh the relevant materialized views for monthly reporting:
+### E. Produce summarized monthly reporting data
 
-- `miovision.report_volumes_15min`
-- `miovision.volumes_15min_by_class`
-
-### F. Produce summarized monthly reporting data
-
-1. Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql) and copy over to relevant reporting templates.
+Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql) and copy over to relevant reporting templates.
 
 ## 5. Processing Data from API
 
