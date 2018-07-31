@@ -185,3 +185,4 @@ bluetooth/api/se_deviceclass.py
 
 .vscode
 bluetooth/api/psyconfig.cfg
+*.lock
