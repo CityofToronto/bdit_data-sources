@@ -6,8 +6,6 @@ CREATE OR REPLACE FUNCTION aggregate_15_min_tmc()
   RETURNS integer AS
 $BODY$
 BEGIN
-
-	RAISE NOTICE '% Function Start', timeofday();
 	DROP TABLE IF EXISTS bins;
 	CREATE TEMPORARY TABLE bins (
 		intersection_uid integer,
@@ -29,27 +27,20 @@ BEGIN
 	FROM miovision.volumes A
 	WHERE volume_15min_tmc_uid IS NULL
 	GROUP BY intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900)
-	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
-	RAISE NOTICE '% Insert Finished', timeofday();
 	-- REMOVE ALL 15-minute bins where 5 or less of the 1-minute bins are populated with volume
-
-
+	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
 
 	-- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
 	UPDATE bins A 
 	SET interpolated = FALSE
 	FROM (SELECT DISTINCT intersection_uid, datetime_bin from miovision.volumes) B
-	
 	WHERE 	A.interpolated IS NULL 
 		AND A.avail_minutes < 15 
 		AND A.intersection_uid = B.intersection_uid 
-
 		AND (B.datetime_bin >= (A.datetime_bin + INTERVAL '15 minutes') AND B.datetime_bin <= (A.datetime_bin + INTERVAL '16 minutes')) 
 		AND (B.datetime_bin <= (A.datetime_bin - INTERVAL '1 minute') AND B.datetime_bin >= A.datetime_bin - (INTERVAL '2 minutes'));
 
 	-- IF # of populated 1-minute bins exceeds difference between start and end time, assume no interpolation needed	
-
-	RAISE NOTICE '% 2nd update', timeofday();
 	UPDATE bins A
 	SET interpolated = CASE
 				WHEN 	(EXTRACT(minutes FROM A.end_time - A.start_time)+1) > A.avail_minutes AND A.avail_minutes < 15
@@ -60,7 +51,6 @@ BEGIN
 				END;
 
 	-- FOR 15-minute bins with interpolation needed, IF missing data at start of 15-minute period, SET start_time = start_time + 1 minute to account for potential partial count
-
 	-- FOR 15-minute bins with interpolation needed, IF missing data at end of 15-minute period, SET end_time = end_time - 1 minute to account for potential partial count
 	UPDATE bins 
 	SET end_time = CASE
@@ -69,11 +59,6 @@ BEGIN
 	start_time = CASE
 		WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN start_time + INTERVAL '1 minute' ELSE start_time
 		END;
-		RAISE NOTICE '% Adjusting Interpolated Bins', timeofday();
-
-
-	RAISE NOTICE '% Rest of interpolated conditional', timeofday();
-
 
 	-- INSERT INTO volumes_15min_tmc, with interpolated volumes
 	WITH aggregate_insert AS(
@@ -100,7 +85,6 @@ BEGIN
 	AND a.movement_uid = b.movement_uid
 	AND a.intersection_uid = b.intersection_uid
 	AND a.volume_15min_tmc_uid IS NULL;
-	RAISE NOTICE '% Inserted and Updated Primary Key', timeofday();
     RETURN 1;
 END;
 $BODY$
