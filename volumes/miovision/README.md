@@ -186,10 +186,11 @@ This produces a lookup table of date-intersection combinations to be used for fo
 
 1. If needed, modify [the `report_dates` VIEW query](sql/materialized-view-report_dates.sql) once the data has undergone QC if specific intersection-date combinations need to be removed.
 
-2. Refresh the `MATERIALIZED VIEW`s for reporting by running [`SELECT miovision.refresh_views()`](sql/function_refresh_materialized_views.sql). The following views are refreshed:
-   - [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
-   - [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql)
-   - [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql)
+2. Refresh the `MATERIALIZED VIEW WITH DATA`s in the following order for reporting by running [`SELECT miovision.refresh_views()`](sql/function_refresh_materialized_views.sql). The following views are refreshed:
+   a. [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. If only limited/peak period data is collected, exceptions should be added with a `WHERE` clause specifying the dates. There are exceptions which are explicitly removed at the end of the query.
+   b. [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql): Contains segment level data in 15 minute bins, categorized by cyclists, pedestrians, and vehicles.
+   c. [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql) 
+   d. [`miovision.report_daily`](sql/create-view-report-daily.sql): Contains total volumes in AM peak, PM peak and 14 hours. The records are grouped by intersection, class, and date. 
 
 ### E. Produce summarized monthly reporting data
 
