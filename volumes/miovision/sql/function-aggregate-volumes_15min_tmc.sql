@@ -2,7 +2,7 @@
 
 -- DROP FUNCTION aggregate_15_min_tmc();
 
-CREATE OR REPLACE FUNCTION aggregate_15_min_tmc()
+CREATE OR REPLACE FUNCTION miovision.aggregate_15_min_tmc()
   RETURNS integer AS
 $BODY$
 BEGIN
@@ -61,37 +61,42 @@ BEGIN
 		END;
 
 	-- INSERT INTO volumes_15min_tmc, with interpolated volumes
-	WITH aggregate_insert AS(
-	INSERT INTO miovision.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-	SELECT 	A.intersection_uid,
-		TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin,
-		A.classification_uid,
-		A.leg,
-		A.movement_uid,
-		CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/((EXTRACT(minutes FROM B.end_time - B.start_time)+1)*1.0) ELSE SUM(A.volume) END AS volume
-	FROM miovision.volumes A
-	INNER JOIN bins B USING (intersection_uid)
-	WHERE A.datetime_bin BETWEEN B.start_time AND B.end_time
-	GROUP BY A.intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900), A.classification_uid, A.leg, A.movement_uid, B.interpolated, (EXTRACT(minutes FROM B.end_time - B.start_time)+1)
+	BEGIN
+		WITH aggregate_insert AS(
+		INSERT INTO miovision.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+		SELECT 	A.intersection_uid,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin,
+			A.classification_uid,
+			A.leg,
+			A.movement_uid,
+			CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/((EXTRACT(minutes FROM B.end_time - B.start_time)+1)*1.0) ELSE SUM(A.volume) END AS volume
+		FROM miovision.volumes A
+		INNER JOIN bins B USING (intersection_uid)
+		WHERE A.datetime_bin BETWEEN B.start_time AND B.end_time
+		GROUP BY A.intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900), A.classification_uid, A.leg, A.movement_uid, B.interpolated, (EXTRACT(minutes FROM B.end_time - B.start_time)+1)
 
-	RETURNING volume_15min_tmc_uid, intersection_uid, datetime_bin, classification_uid, leg, movement_uid
-	)
-	UPDATE miovision.volumes a
-	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
-	FROM aggregate_insert b
-	WHERE a.datetime_bin >= b.datetime_bin AND a.datetime_bin < b.datetime_bin + INTERVAL '15 minutes'
-	AND a.classification_uid  = b.classification_uid 
-	AND a.leg = b.leg
-	AND a.movement_uid = b.movement_uid
-	AND a.intersection_uid = b.intersection_uid
-	AND a.volume_15min_tmc_uid IS NULL;
-    RETURN 1;
+		RETURNING volume_15min_tmc_uid, intersection_uid, datetime_bin, classification_uid, leg, movement_uid
+		)
+		UPDATE miovision.volumes a
+		SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
+		FROM aggregate_insert b
+		WHERE a.volume_15min_tmc_uid IS NULL
+		AND a.datetime_bin >= b.datetime_bin AND a.datetime_bin < b.datetime_bin + INTERVAL '15 minutes'
+		AND a.classification_uid  = b.classification_uid 
+		AND a.leg = b.leg
+		AND a.movement_uid = b.movement_uid
+		AND a.intersection_uid = b.intersection_uid;
+		RETURN 1;
+	EXCEPTION
+		WHEN unique_violation THEN 
+			RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
+			RETURN 0;
+	END;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
+  LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
-ALTER FUNCTION aggregate_15_min_tmc()
-  OWNER TO bdit_humans;
-GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO public;
-GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO dbadmin WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO bdit_humans WITH GRANT OPTION;
+ALTER FUNCTION miovision.aggregate_15_min_tmc()
+  OWNER TO dbadmin;
+GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min_tmc() TO dbadmin WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min_tmc() TO bdit_humans WITH GRANT OPTION;
