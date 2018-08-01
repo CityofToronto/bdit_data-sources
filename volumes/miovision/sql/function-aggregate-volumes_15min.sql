@@ -36,10 +36,15 @@ BEGIN
 		FROM transformed 
 		INNER JOIN aggregate_insert USING (intersection_uid, datetime_bin, classification_uid, leg, dir)) b
 	WHERE a.volume_15min_tmc_uid = b.volume_15min_tmc_uid;
-RETURN 1;
+	RETURN 1;
+EXCEPTION
+	WHEN unique_violation THEN 
+		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
+		RETURN 0;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
+  LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
 ALTER FUNCTION miovision.aggregate_15_min()
   OWNER TO dbadmin;
+GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min() TO bdit_humans WITH GRANT OPTION;
