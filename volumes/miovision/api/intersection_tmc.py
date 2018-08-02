@@ -276,14 +276,12 @@ def pull_data(start_date, end_date):
         try:
             with conn:
                 with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+                    execute_values(cur, 'INSERT INTO rliu.raw_data (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
                     conn.commit()
-            logger.info('Inserted into raw data new') 
+            logger.info('Inserted into raw data') 
             with conn:
                 with conn.cursor() as cur: 
-                    insert='''SELECT rliu.insert_volumes();
-                                INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
-                                SELECT * FROM rliu.raw_data_new;
+                    insert='''
         SELECT rliu.aggregate_15_min_tmc_new()'''
                     cur.execute(insert)
                     conn.commit()
