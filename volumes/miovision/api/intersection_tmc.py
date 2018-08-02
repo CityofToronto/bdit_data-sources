@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun 13 10:15:56 2018
+
+@author: rliu4
+"""
 import sys
 import json
 import csv
@@ -56,7 +62,7 @@ ped_endpoint='/crosswalktmc'
 
 
 CONTEXT_SETTINGS = dict(
-    default_map={'runserver': {'flag': 0}}
+    default_map={'runs_api': {'flag': 0}}
 )
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -84,7 +90,7 @@ def run_api(flag):
         end_time=start_date.astimezone(pytz.timezone('US/Eastern'))
         logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
         pull_data(start_time, end_time)
-        views()
+
         
     
 def dates():
@@ -171,7 +177,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         error=json.loads(response.content)
         logger.error(error['error'])
 
-    elif response.status_code==404:
+    elif response.status_code==400:
         error=json.loads(response.content)
         logger.error(error['error'])
     else:
@@ -222,6 +228,7 @@ def views():
                 cur.execute(refresh_volumes)
                 refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
                 cur.execute(refresh_report_daily)
+                conn.commit()
         logger.info('Updated Views')
         logger.info('Done')
         
@@ -235,51 +242,57 @@ def pull_data(start_date, end_date):
     end_iteration_time= start_date + time_delta
     while True:
         table=[]
-        with open('intersection_id.csv', 'r') as int_id_file:
-            intersection_id=csv.DictReader(int_id_file)
-            for row in intersection_id:
-                intersection_id1=str(row['id'])
-                intersection_name=str(row['name'])
-                lat=str(row['lat'])
-                lng=str(row['lng'])
-                logger.info(intersection_name+'     '+str(start_date))
-                for attempt in range(3):
-                    try:
-                        table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
-                        table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
-                        break
-                    except exceptions.ProxyError as prox:
-                        logger.error(prox)
-                        logger.warning('Retrying in 2 minutes')
-                        sleep(120)
-                    except exceptions.RequestException as err:
-                        logger.error(err)
-                        #sys.exit()
-                    except MiovisionAPIException as miovision_exc:
-                        logger.error('Cannot pull data')
-                        logger.error(miovision_exc)
-                        #sleep(60)
+        with conn:
+            with conn.cursor() as cur:
+                select='''SELECT * from miovision.intersection_id;'''
+                cur.execute(select)
+                intersection_list=cur.fetchall()
+                conn.commit()
+
+        for intersection_list in intersection_list:
+            intersection_id1=intersection_list[1]
+            intersection_name=intersection_list[2]
+            lat=str(intersection_list[3])
+            lng=str(intersection_list[4])
+            logger.info(intersection_name+'     '+str(start_date))
+            for attempt in range(3):
+                try:
+                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
+                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
+                    break
+                except exceptions.ProxyError as prox:
+                    logger.error(prox)
+                    logger.warning('Retrying in 2 minutes')
+                    sleep(120)
+                except exceptions.RequestException as err:
+                    logger.error(err)
+                    #sys.exit()
+                except MiovisionAPIException as miovision_exc:
+                    logger.error('Cannot pull data')
+                    logger.error(miovision_exc)
+                    #sleep(60)
                 
         logger.info('Completed data pulling for {}'.format(start_date))
         try:
             with conn:
                 with conn.cursor() as cur:
                     execute_values(cur, 'INSERT INTO rliu.raw_data_new (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
-                    conn.commit
+                    conn.commit()
             logger.info('Inserted into raw data new') 
             with conn:
                 with conn.cursor() as cur: 
-                    insert='''INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
+                    insert='''SELECT rliu.insert_volumes();
+                                INSERT INTO rliu.raw_data(study_id, study_name, lat, lng, datetime_bin, classification, entry_dir_name, entry_name, exit_dir_name, exit_name, movement, volume)
                                 SELECT * FROM rliu.raw_data_new;
         SELECT rliu.aggregate_15_min_tmc_new()'''
                     cur.execute(insert)
-                    conn.commit
+                    conn.commit()
             logger.info('Aggregated to 15 minute bins and inserted to raw data')        
 
             with conn:
                 with conn.cursor() as cur:             
                     cur.execute('''SELECT rliu.aggregate_15_min(); TRUNCATE rliu.raw_data_new;''')
-                    conn.commit
+                    conn.commit()
             logger.info('Completed data processing for {}'.format(start_date))
         except psycopg2.Error as exc:
             
@@ -287,11 +300,11 @@ def pull_data(start_date, end_date):
             with conn:
                     conn.rollback()
             sys.exit()
-        views()
         start_date+=time_delta
         end_iteration_time= start_date + time_delta
         if start_date>=end_date:
             break
+    views()
     
 
 if __name__ == '__main__':
