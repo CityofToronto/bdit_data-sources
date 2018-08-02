@@ -185,3 +185,4 @@ bluetooth/api/se_deviceclass.py
 
 .vscode
 bluetooth/api/psyconfig.cfg
+volumes/miovision/api/config.cfg
