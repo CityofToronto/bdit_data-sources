@@ -194,11 +194,15 @@ This produces a lookup table of date-intersection combinations to be used for fo
    * [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. If only limited/peak period data is collected, exceptions should be added with a `WHERE` clause specifying the dates. There are exceptions which are explicitly removed at the end of the query.
    * [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql): Contains segment level data in 15 minute bins, categorized by cyclists, pedestrians, and vehicles.
    * [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql) 
-   * [`miovision.report_daily`](sql/create-view-report-daily.sql): Contains total volumes in AM peak, PM peak and 14 hours. The records are grouped by intersection, class, and date. 
+   * [`miovision.report_daily`](sql/create-view-report-daily.sql): Contains total volumes in AM peak, PM peak and 14 hours. The records are grouped by intersection, class, and date.
 
 ### E. Produce summarized monthly reporting data
 
 Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql) and copy over to relevant reporting templates.
+
+### Refreshing Data
+
+It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `volumes` will trigger deleting the resulting rows in `volumes_15min_tmc` and `volumes_15min`.
 
 ## 5. Processing Data from API
 
