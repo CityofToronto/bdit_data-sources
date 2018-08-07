@@ -109,8 +109,11 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 1-minute volume|12|
+volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_tmc)|14524|
 
 ### Aggregated Data
+
+The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-dumps) aggregates up the 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents. Starting with `volumes` each table has a FOREIGN KEY relationship to the next step of aggregation so that an aggregated record can be traced back to its source data. For example: a row in `volumes_15min` has a unique ID `volumes_15min_uid`, and the foreign key `volumes_15min_tmc.volumes_15min_uid` identifies the row(s) that produced that `volumes_15min` row.
 
 #### `volumes_15min_tmc`
 
@@ -125,6 +128,7 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 15-minute volume|78|
+volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
 
 #### `volumes_15min`
 
