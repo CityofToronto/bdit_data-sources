@@ -60,6 +60,9 @@ url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
 
+time_delta = datetime.timedelta(days=1)
+default_start=str(datetime.date.today()-time_delta)
+default_end=str(datetime.date.today())
 
 CONTEXT_SETTINGS = dict(
     default_map={'runs_api': {'flag': 0}}
@@ -70,60 +73,16 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--flag', default=0, help='Set flag=1 to set a custom date range to pull data')
-def run_api(flag):
-    time_delta = datetime.timedelta(days=1)
+@click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
+def run_api(start_date, end_date):
+    start_date= dateutil.parser.parse(str(start_date))
+    end_date= dateutil.parser.parse(str(end_date))
+    start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
+    end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
+    logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
+    pull_data(start_time, end_time)
 
-    default_start=datetime.date.today()-time_delta
-    default_end=datetime.date.today()
-    click.echo(flag)
-    if flag==1:
-        
-        start_date, end_date=dates()
-        logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
-        pull_data(start_date, end_date)
-           
-    else:
-        start_date= dateutil.parser.parse(str(default_start))
-        end_date= dateutil.parser.parse(str(default_end))
-        start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-        end_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-        logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
-        pull_data(start_time, end_time)
-
-        
-    
-def dates():
-    time_delta = datetime.timedelta(days=1)
-    max_date=datetime.datetime.now()-time_delta
-    max_start=max_date.astimezone(pytz.timezone('US/Eastern'))
-    while True:
-        while True:
-            start = click.prompt('Enter the start date in YYYY-MM-DD format', default=str)
-            start_date=dateutil.parser.parse(start)
-            start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-            if start_time>=max_start:
-                print('Date not valid, must be at least 1 day before today')
-                continue
-            else:
-                break
-            
-        while True:  
-            end = click.prompt('Enter the end date in YYYY-MM-DD format', default=str)
-            end_date=dateutil.parser.parse(end)
-            end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
-            if end_time>=datetime.datetime.now().astimezone(pytz.timezone('US/Eastern')):
-                print('Date not valid, end date cannot be after today')
-                continue
-            elif end_date<=start_date:
-                print('Date not valid, must be at least 1 day after the start date')
-                continue
-            else:
-                break
-        confirm = click.prompt('Type Y to confirm %s is your start date and %s is your end date' %(str(start_time),str(end_time)), default=str)
-        if confirm == 'Y':
-            break
-    return start_time, end_time  
 
 def get_movement(item):
     if (item['entrance'] == 'N' and item['exit'] =='S'):
@@ -181,7 +140,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         error=json.loads(response.content)
         logger.error(error['error'])
     else:
-        raise MiovisionAPIException(str(response.status_code))
+        raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
 
 def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng):
@@ -213,7 +172,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
         error=json.loads(response.content)
         logger.error(error['error'])
     else:
-        raise MiovisionAPIException(str(response.status_code))
+        raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
 
 def views():
@@ -300,6 +259,7 @@ def pull_data(start_date, end_date):
             sys.exit()
         start_date+=time_delta
         end_iteration_time= start_date + time_delta
+        print(str(start_date)+' '+str(end_iteration_time)+' '+str(end_date))
         if start_date>=end_date:
             break
     views()
