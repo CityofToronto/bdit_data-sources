@@ -81,6 +81,36 @@ password=database password
 
 In command prompt, navigate to the folder where the python file is located and run `python intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
 
-To collect data from a custom date range, run `python intersection_tmc.py run_api --flag=1`. The flag will indicate that a custom date range will be specified. The command line will then prompt you to enter the start and end dates to pull data from.
+To collect data from a custom date range, run `python intersection_tmc.py run_api --start=YYYY-MM-DD --end=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
+
+`start` and `end` must be separated by at least 1 day, and `end` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
+
+## Classifications
+
+The classification given in the api is different than the ones given in the csv dumps, or the datalink. 
+
+### Exisiting Classification (csv dumps and datalink)
+
+|classification_uid|classification|location_only|class_type|
+|-----|-----|-----|-----|
+1|Lights|f|Vehicles
+2|Bicycles|f|Cyclists
+3|Buses|f||
+4|Single-Unit Trucks|f|Vehicles
+5|Articulated Trucks|f|Vehicles
+6|Pedestrians|t|Pedestrians
+7|Bicycles|t|Cyclists
+
+### API Classifications
+
+|classification_uid|classification|location_only|class_type|
+|-----|-----|-----|-----|
+1|Light|f|Vehicles
+2|Bicycle|f|Cyclists
+3|Bus|f||
+4|SingleUnitTruck|f|Vehicles
+5|ArticulatedTruck|f|Vehicles"
+6|Pedestrian|t|Pedestrians"
+8|WorkVan|f|Vehicles"
 
 
