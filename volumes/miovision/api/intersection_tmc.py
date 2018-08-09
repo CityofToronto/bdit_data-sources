@@ -135,7 +135,6 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
     elif response.status_code==404:
         error=json.loads(response.content)
         logger.error(error['error'])
-
     elif response.status_code==400:
         error=json.loads(response.content)
         logger.error(error['error'])
@@ -179,13 +178,13 @@ def views():
     try:
         with conn:
             with conn.cursor() as cur:
-                report_dates='''SELECT rliu.report_dates();'''
+                report_dates='''SELECT miovision_api.report_dates();'''
                 cur.execute(report_dates)
-                refresh_volumes_class='''REFRESH MATERIALIZED VIEW rliu.volumes_15min_by_class WITH DATA;'''
+                refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
                 cur.execute(refresh_volumes_class)
-                refresh_volumes='''REFRESH MATERIALIZED VIEW rliu.report_volumes_15min WITH DATA;'''
+                refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
                 cur.execute(refresh_volumes)
-                refresh_report_daily='''REFRESH MATERIALIZED VIEW rliu.report_daily WITH DATA;'''
+                refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
                 cur.execute(refresh_report_daily)
                 conn.commit()
         logger.info('Updated Views')
@@ -225,7 +224,7 @@ def pull_data(start_date, end_date):
                     sleep(120)
                 except exceptions.RequestException as err:
                     logger.error(err)
-                    #sys.exit()
+                    sleep(60)
                 except MiovisionAPIException as miovision_exc:
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
@@ -235,20 +234,20 @@ def pull_data(start_date, end_date):
         try:
             with conn:
                 with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO rliu.raw_data (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+                    execute_values(cur, 'INSERT INTO miovision_api.raw_data (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
                     conn.commit()
             logger.info('Inserted into raw data') 
             with conn:
                 with conn.cursor() as cur: 
                     insert='''
-        SELECT rliu.aggregate_15_min_tmc_new()'''
+        SELECT miovision_api.aggregate_15_min_tmc_new()'''
                     cur.execute(insert)
                     conn.commit()
-            logger.info('Aggregated to 15 minute bins and inserted to raw data')        
+            logger.info('Aggregated to 15 minute bins')        
 
             with conn:
                 with conn.cursor() as cur:             
-                    cur.execute('''SELECT rliu.aggregate_15_min(); TRUNCATE rliu.raw_data_new;''')
+                    cur.execute('''SELECT miovision_api.aggregate_15_min();''')
                     conn.commit()
             logger.info('Completed data processing for {}'.format(start_date))
         except psycopg2.Error as exc:
@@ -259,7 +258,6 @@ def pull_data(start_date, end_date):
             sys.exit()
         start_date+=time_delta
         end_iteration_time= start_date + time_delta
-        print(str(start_date)+' '+str(end_iteration_time)+' '+str(end_date))
         if start_date>=end_date:
             break
     views()
