@@ -47,10 +47,11 @@ def cli(ctx, startdate=None, enddate=None, config='config.cfg', filename=None):
     if startdate != enddate and filename:
         raise click.BadOptionUsage('Cannot use --startdate/--enddate and --filename')
     configuration = configparser.ConfigParser()
-    ctx.obj['config'] = configuration.read(config)
+    configuration.read(config)
+    ctx.obj['config'] = configuration
 
     if ctx.invoked_subcommand is None:
-        pull_cis_data(config, startdate, enddate, filename)
+        pull_cis_data(ctx.obj['config'], startdate, enddate, filename)
     elif startdate != enddate:
         raise click.BadOptionUsage('Cannot use different --startdate/--enddate with subcommands')
     else:
