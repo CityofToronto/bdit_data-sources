@@ -46,8 +46,8 @@ def cli(ctx, startdate=None, enddate=None, config='config.cfg', filename=None):
 
     if startdate != enddate and filename:
         raise click.BadOptionUsage('Cannot use --startdate/--enddate and --filename')
-
-    ctx.obj['config'] = config
+    configuration = configparser.ConfigParser()
+    ctx.obj['config'] = configuration.read(config)
 
     if ctx.invoked_subcommand is None:
         pull_cis_data(config, startdate, enddate, filename)
@@ -70,8 +70,7 @@ def _get_data(ctx, date=None):
     
     Ex: pull_data_cis --config CONFIG get --date YYYYMMDD
     '''
-    configuration = configparser.ConfigParser()
-    configuration.read(ctx.obj['config'])
+    configuration = ctx.obj['config']
     sftp_settings = configuration['SFTP']
     host = sftp_settings['host']
     user = sftp_settings['user']
@@ -88,6 +87,9 @@ def get_data(host: str = None, user:str =None, password: str = None,
     with pysftp.Connection(host, username=user, password=password, port=2222, cnopts=cnopts) as sftp:
         if filename is None:
             filename = BASE_FILENAME + '_' + date + '_' + date + '.csv.gz'
+            LOGGER.debug('Getting data for date: %s, with filename %s', date, filename)
+        else:
+            LOGGER.debug('Getting data for filename %s', filename)
         sftp.get(REMOTE_FILEPATH+'/'+filename, LOCAL_FILEPATH+'/'+filename)
     return LOCAL_FILEPATH +'/'+filename
 
@@ -99,9 +101,7 @@ def _send_data_to_database(ctx: click.Context, datafile = None):
     or else you must specify a config file with --config conf.cfg before the get command
     
     Ex: pull_data_cis --config CONFIG upload FILENAME'''
-    configuration = configparser.ConfigParser()
-    configuration.read(ctx.obj['config'])
-    dbsettings = configuration['DBSETTINGS']
+    dbsettings = ctx.obj['config']['DBSETTINGS']
     return send_data_to_database(datafile, dbsetting=dbsettings)
 
 def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
@@ -143,12 +143,10 @@ def get_and_upload_data(dbsetting: dict = None, email: dict = None, sftp_cfg:dic
         # Only send email if critical error
         send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
 
-def pull_cis_data(config: str, startdate: str, enddate: str, filename: str = None):
-    configuration = configparser.ConfigParser()
-    configuration.read(config)
-    dbsettings = configuration['DBSETTINGS']
-    sftp_cfg = configuration['SFTP']
-    email = configuration['EMAIL']
+def pull_cis_data(config: dict, startdate: str, enddate: str, filename: str = None):
+    dbsettings = config['DBSETTINGS']
+    sftp_cfg = config['SFTP']
+    email = config['EMAIL']
     FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER.info('Pulling CIS data from %s to %s', startdate, enddate)
