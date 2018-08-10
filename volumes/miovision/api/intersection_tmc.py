@@ -172,21 +172,23 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
         raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
 
-def views():
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                report_dates='''SELECT miovision_api.report_dates();'''
-                cur.execute(report_dates)
-                refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-                cur.execute(refresh_volumes_class)
-                refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-                cur.execute(refresh_volumes)
-                refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-                cur.execute(refresh_report_daily)
-                conn.commit()
-        logger.info('Updated Views')
-        logger.info('Done')
+# =============================================================================
+# def views():
+#     try:
+#         with conn:
+#             with conn.cursor() as cur:
+#                 report_dates='''SELECT miovision_api.report_dates();'''
+#                 cur.execute(report_dates)
+#                 refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
+#                 cur.execute(refresh_volumes_class)
+#                 refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
+#                 cur.execute(refresh_volumes)
+#                 refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
+#                 cur.execute(refresh_report_daily)
+#                 conn.commit()
+#         logger.info('Updated Views')
+# =============================================================================
+
         
     except:
         logger.exception('Cannot Refresh Views')
@@ -248,6 +250,7 @@ def pull_data(start_date, end_date):
                     cur.execute('''SELECT miovision_api.aggregate_15_min();''')
                     conn.commit()
             logger.info('Completed data processing for {}'.format(start_date))
+           
         except psycopg2.Error as exc:
             
             logger.exception(exc)
@@ -258,7 +261,8 @@ def pull_data(start_date, end_date):
         end_iteration_time= start_date + time_delta
         if start_date>=end_date:
             break
-    views()
+    #views()
+    logger.info('Done')
     
 
 if __name__ == '__main__':
