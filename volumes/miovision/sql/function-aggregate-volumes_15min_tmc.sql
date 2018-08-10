@@ -73,6 +73,7 @@ BEGIN
 		FROM miovision.volumes A
 		INNER JOIN bins B USING (intersection_uid)
 		WHERE A.datetime_bin BETWEEN B.start_time AND B.end_time
+		AND A.volume_15min_tmc_uid IS NULL
 		GROUP BY A.intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900), A.classification_uid, A.leg, A.movement_uid, B.interpolated, (EXTRACT(minutes FROM B.end_time - B.start_time)+1)
 
 		RETURNING volume_15min_tmc_uid, intersection_uid, datetime_bin, classification_uid, leg, movement_uid
