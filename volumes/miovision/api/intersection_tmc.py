@@ -6,7 +6,6 @@ Created on Wed Jun 13 10:15:56 2018
 """
 import sys
 import json
-import csv
 from requests import Session
 from requests import exceptions
 import datetime
@@ -32,8 +31,7 @@ def logger():
     formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
     file_handler = logging.FileHandler('logging.log')
     file_handler.setFormatter(formatter)
-    if (logger.hasHandlers()):
-        logger.handlers.clear()
+    logger.handlers.clear()
     stream_handler=logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -53,9 +51,9 @@ dbset = CONFIG['DBSETTINGS']
 conn = connect(**dbset)
 
 logger.debug('Connected to DB')
-
+local_tz=pytz.timezone('US/Eastern')
 session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
+session.proxies = {'https': ''}
 url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
@@ -78,8 +76,8 @@ def cli():
 def run_api(start_date, end_date):
     start_date= dateutil.parser.parse(str(start_date))
     end_date= dateutil.parser.parse(str(end_date))
-    start_time=start_date.astimezone(pytz.timezone('US/Eastern'))
-    end_time=end_date.astimezone(pytz.timezone('US/Eastern'))
+    start_time=local_tz.localize(start_date)
+    end_time=local_tz.localize(end_date)
     logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
     pull_data(start_time, end_time)
 
@@ -118,7 +116,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
-        tmc=json.loads(response.content)
+        tmc=json.loads(response.content.decode('utf-8'))
         for item in tmc:
             
         
@@ -149,7 +147,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
     response=session.get(url+intersection_id1+ped_endpoint, params=params, 
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
-        ped=json.loads(response.content)
+        ped=json.loads(response.content.decode('utf-8'))
         for item in ped:
             
             item['classification']=item.pop('class')
@@ -212,7 +210,7 @@ def pull_data(start_date, end_date):
             intersection_name=intersection_list[2]
             lat=str(intersection_list[3])
             lng=str(intersection_list[4])
-            logger.info(intersection_name+'     '+str(start_date))
+            logger.debug(intersection_name+'     '+str(start_date))
             for attempt in range(3):
                 try:
                     table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
