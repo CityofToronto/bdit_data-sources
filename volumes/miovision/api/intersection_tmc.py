@@ -173,28 +173,30 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
         sys.exit()
 
 # =============================================================================
-# def views():
-#     try:
-#         with conn:
-#             with conn.cursor() as cur:
-#                 report_dates='''SELECT miovision_api.report_dates();'''
-#                 cur.execute(report_dates)
-#                 refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-#                 cur.execute(refresh_volumes_class)
-#                 refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-#                 cur.execute(refresh_volumes)
-#                 refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-#                 cur.execute(refresh_report_daily)
-#                 conn.commit()
-#         logger.info('Updated Views')
+# # =============================================================================
+# # def views():
+# #     try:
+# #         with conn:
+# #             with conn.cursor() as cur:
+# #                 report_dates='''SELECT miovision_api.report_dates();'''
+# #                 cur.execute(report_dates)
+# #                 refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
+# #                 cur.execute(refresh_volumes_class)
+# #                 refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
+# #                 cur.execute(refresh_volumes)
+# #                 refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
+# #                 cur.execute(refresh_report_daily)
+# #                 conn.commit()
+# #         logger.info('Updated Views')
+# # =============================================================================
+# 
+#         
+#     except:
+#         logger.exception('Cannot Refresh Views')
+#         sys.exit()
+#         
+# 
 # =============================================================================
-
-        
-    except:
-        logger.exception('Cannot Refresh Views')
-        sys.exit()
-        
-
 def pull_data(start_date, end_date):
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_date + time_delta
