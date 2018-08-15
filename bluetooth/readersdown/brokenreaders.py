@@ -1,8 +1,5 @@
-import pandas as pd
 import configparser
 from psycopg2 import connect
-import psycopg2.sql as pg
-import pandas.io.sql as pandasql
 from email_notifications import send_mail
 
 class BlipScriptFailed(Exception):
