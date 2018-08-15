@@ -43,6 +43,41 @@ def logger():
 logger=logger()
 logger.debug('Start')
 
+
+time_delta = datetime.timedelta(days=1)
+default_start=str(datetime.date.today()-time_delta)
+default_end=str(datetime.date.today())
+
+
+
+CONTEXT_SETTINGS = dict(
+    default_map={'run_api': {'flag': 0}}
+)
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.command()
+@click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
+@click.option('--path' ,'--path', default='config.cfg', help='format is YYYY-MM-DD for end date')
+def run_api(start_date, end_date, path):
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read(path)
+    api_key=CONFIG['API']
+    key=api_key['key']
+    dbset = CONFIG['DBSETTINGS']
+    conn = connect(**dbset)
+    
+    start_date= dateutil.parser.parse(str(start_date))
+    end_date= dateutil.parser.parse(str(end_date))
+    start_time=local_tz.localize(start_date)
+    end_time=local_tz.localize(end_date)
+    logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
+    pull_data(start_time, end_time)
+  
+    
 CONFIG = configparser.ConfigParser()
 CONFIG.read(r'config.cfg')
 api_key=CONFIG['API']
@@ -57,29 +92,6 @@ session.proxies = {'https': ''}
 url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
-
-time_delta = datetime.timedelta(days=1)
-default_start=str(datetime.date.today()-time_delta)
-default_end=str(datetime.date.today())
-
-CONTEXT_SETTINGS = dict(
-    default_map={'runs_api': {'flag': 0}}
-)
-
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    pass
-
-@cli.command()
-@click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-def run_api(start_date, end_date):
-    start_date= dateutil.parser.parse(str(start_date))
-    end_date= dateutil.parser.parse(str(end_date))
-    start_time=local_tz.localize(start_date)
-    end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
-    pull_data(start_time, end_time)
 
 
 def get_movement(item):
