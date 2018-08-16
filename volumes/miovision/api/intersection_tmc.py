@@ -43,6 +43,8 @@ def logger():
 logger=logger()
 logger.debug('Start')
 
+class directory:
+    pass
 
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
@@ -62,33 +64,22 @@ def cli():
 @click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--path' ,'--path', default='config.cfg', help='format is YYYY-MM-DD for end date')
-def run_api(start_date, end_date, path):
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
-    api_key=CONFIG['API']
-    key=api_key['key']
-    dbset = CONFIG['DBSETTINGS']
-    conn = connect(**dbset)
+@click.option('--intersection' ,'--intersection', default=0, help='format is YYYY-MM-DD for end date')
+def run_api(start_date, end_date, path, intersection):
+
     
     start_date= dateutil.parser.parse(str(start_date))
     end_date= dateutil.parser.parse(str(end_date))
     start_time=local_tz.localize(start_date)
     end_time=local_tz.localize(end_date)
     logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
-    pull_data(start_time, end_time)
+    pull_data(start_time, end_time, intersection, path)
   
-    
-CONFIG = configparser.ConfigParser()
-CONFIG.read(r'config.cfg')
-api_key=CONFIG['API']
-key=api_key['key']
-dbset = CONFIG['DBSETTINGS']
-conn = connect(**dbset)
 
-logger.debug('Connected to DB')
+
 local_tz=pytz.timezone('US/Eastern')
 session = Session()
-session.proxies = {'https': ''}
+session.proxies = {'https': 'https://137.15.73.132:8080'}
 url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
@@ -122,7 +113,7 @@ def get_movement(item):
     else:
         return 'u_turn'
 
-def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng):
+def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
@@ -152,7 +143,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
 
-def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng):
+def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
     
@@ -209,17 +200,33 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
 #         
 # 
 # =============================================================================
-def pull_data(start_date, end_date):
+def pull_data(start_date, end_date, intersection, path):
     time_delta = datetime.timedelta(days=1)
-    end_iteration_time= start_date + time_delta
+    end_iteration_time= start_date + time_delta        
+    
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read(path)
+    api_key=CONFIG['API']
+    key=api_key['key']
+    dbset = CONFIG['DBSETTINGS']
+    conn = connect(**dbset)
+    logger.debug('Connected to DB')
     while True:
         table=[]
-        with conn:
-            with conn.cursor() as cur:
-                select='''SELECT * from miovision.intersection_id;'''
-                cur.execute(select)
-                intersection_list=cur.fetchall()
-                conn.commit()
+        if intersection>0:
+            with conn:
+                with conn.cursor() as cur:
+                    string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
+                    cur.execute(str(string))
+                    intersection_list=cur.fetchall()
+                    conn.commit()
+        else:      
+            with conn:
+                with conn.cursor() as cur:
+                    select='''SELECT * from miovision.intersection_id;'''
+                    cur.execute(select)
+                    intersection_list=cur.fetchall()
+                    conn.commit()
 
         for intersection_list in intersection_list:
             intersection_id1=intersection_list[1]
@@ -229,8 +236,8 @@ def pull_data(start_date, end_date):
             logger.debug(intersection_name+'     '+str(start_date))
             for attempt in range(3):
                 try:
-                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
-                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng)
+                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key)
+                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key)
                     break
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
