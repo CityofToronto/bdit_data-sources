@@ -22,7 +22,10 @@ from time import sleep
 class MiovisionAPIException(Exception):
     """Base class for exceptions."""
     pass
-    
+  
+class TimeoutException(Exception):
+    """Exception if API gives a 504 error"""
+    pass
     
 def logger():
     
@@ -40,16 +43,18 @@ def logger():
     with open('logging.log', 'w'):
         pass
     return logger
+
 logger=logger()
 logger.debug('Start')
-
-class directory:
-    pass
-
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
-
+local_tz=pytz.timezone('US/Eastern')
+session = Session()
+session.proxies = {'https': 'https://137.15.73.132:8080'}
+url='https://api.miovision.com/intersections/'
+tmc_endpoint = '/tmc'
+ped_endpoint='/crosswalktmc'
 
 
 CONTEXT_SETTINGS = dict(
@@ -65,7 +70,8 @@ def cli():
 @click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--path' ,'--path', default='config.cfg', help='format is YYYY-MM-DD for end date')
 @click.option('--intersection' ,'--intersection', default=0, help='format is YYYY-MM-DD for end date')
-def run_api(start_date, end_date, path, intersection):
+@click.option('--pull' ,'--pull', default=None, help='format is YYYY-MM-DD for end date')
+def run_api(start_date, end_date, path, intersection, pull):
 
     
     start_date= dateutil.parser.parse(str(start_date))
@@ -73,16 +79,8 @@ def run_api(start_date, end_date, path, intersection):
     start_time=local_tz.localize(start_date)
     end_time=local_tz.localize(end_date)
     logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
-    pull_data(start_time, end_time, intersection, path)
-  
+    pull_data(start_time, end_time, intersection, path, pull)
 
-
-local_tz=pytz.timezone('US/Eastern')
-session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
-url='https://api.miovision.com/intersections/'
-tmc_endpoint = '/tmc'
-ped_endpoint='/crosswalktmc'
 
 
 def get_movement(item):
@@ -139,6 +137,8 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
     elif response.status_code==400:
         error=json.loads(response.content)
         logger.error(error['error'])
+    elif response.status_code==504:
+        raise TimeoutException('Error'+str(response.status_code))
     else:
         raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
@@ -171,6 +171,8 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
     elif response.status_code==400:
         error=json.loads(response.content)
         logger.error(error['error'])
+    elif response.status_code==504:
+        raise TimeoutException('Error'+str(response.status_code))
     else:
         raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
@@ -200,7 +202,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
 #         
 # 
 # =============================================================================
-def pull_data(start_date, end_date, intersection, path):
+def pull_data(start_date, end_date, intersection, path, pull):
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_date + time_delta        
     
@@ -246,6 +248,9 @@ def pull_data(start_date, end_date, intersection, path):
                 except exceptions.RequestException as err:
                     logger.error(err)
                     sleep(60)
+                except TimeoutException as exc_504:
+                    logger.error(exc_504)
+                    sleep(60)
                 except MiovisionAPIException as miovision_exc:
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
@@ -258,26 +263,36 @@ def pull_data(start_date, end_date, intersection, path):
                     execute_values(cur, 'INSERT INTO miovision_api.raw_data (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
                     conn.commit()
             logger.info('Inserted into raw data') 
-            with conn:
-                with conn.cursor() as cur: 
-                    insert='''
-        SELECT miovision_api.aggregate_15_min_tmc_new()'''
-                    cur.execute(insert)
-                    conn.commit()
-            logger.info('Aggregated to 15 minute bins')        
 
-            with conn:
-                with conn.cursor() as cur:             
-                    cur.execute('''SELECT miovision_api.aggregate_15_min();''')
-                    conn.commit()
-            logger.info('Completed data processing for {}'.format(start_date))
-           
         except psycopg2.Error as exc:
             
             logger.exception(exc)
             with conn:
                     conn.rollback()
             sys.exit()
+        if pull is None:
+            try:
+                with conn:
+                    with conn.cursor() as cur: 
+                        insert='''
+            SELECT miovision_api.aggregate_15_min_tmc_new()'''
+                        cur.execute(insert)
+                        conn.commit()
+                        logger.info('Aggregated to 15 minute bins')   
+                with conn:
+                    with conn.cursor() as cur:             
+                        cur.execute('''SELECT miovision_api.aggregate_15_min();''')
+                        conn.commit()
+                        logger.info('Completed data processing for {}'.format(start_date))
+               
+            except psycopg2.Error as exc:
+                
+                logger.exception(exc)
+                with conn:
+                        conn.rollback()
+                sys.exit()
+        else:
+            logger.info('Data Processing Skipped') 
         start_date+=time_delta
         end_iteration_time= start_date + time_delta
         if start_date>=end_date:
