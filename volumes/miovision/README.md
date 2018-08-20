@@ -11,7 +11,7 @@
 
 ## 1. Overview
 
-(to be filled in)
+Miovision currently provides volume counts. The information is gathered by cameras installed at specific intersections. Then miovision processes the video footage and provides volume counts aggregate into 1 minute bins, and classified into different classifications and movements. The data is currently being used to support the King Stree Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and analysisng violations of the pilot.
 
 ## 2. Table Structure
 
@@ -174,7 +174,7 @@ Ensure that `raw_data` has been updated with all new data (either from new colle
 
 This will transform 1-minute data from `raw_data` into a standard normalized structure stored in `volumes`.
 
-1. The trigger function [`trigger-populate-volumes.sql`](sql/trigger-populate-volumes.sql) automatically populates `volumes` with new data from `raw_data`.
+1. The trigger function [`trigger-populate-volumes.sql`](sql/trigger-populate-volumes.sql) automatically populates `volumes` with new data from `raw_data`. `volumes` is the same data, except most of the information is replaced by integers that are referenced in lookup tables.
 2. Ensure that the number of new records in `volumes` is identical to that in `raw_data`. If a discrepancy exists, investigate further.
 
 ### C. Populate `volumes_15min_tmc` and `volumes_15min`
