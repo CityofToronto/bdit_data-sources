@@ -146,6 +146,11 @@ The classification given in the api is different than the ones given in the csv 
 
 ### How the API works
 
+This flow chart provides a high level overview:
+
+
+![Flow Chart of the API](api_script1.png)
+
 ```python
 import sys
 import json
