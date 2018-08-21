@@ -106,14 +106,17 @@ BEGIN
 			RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid, volume
 		)
 		, zero_insert AS(
+			/*Link each 0-volume 15-min TMC record to any *one* 1-min volume record at that same intersection/time-bin so that deleting
+			a volume record there and then will CASCADE up to the 0-volume aggregated rows */
 		INSERT INTO volumes_tmc_zeroes 
 		SELECT DISTINCT ON(a.volume_15min_tmc_uid) volume_uid, a.volume_15min_tmc_uid
 		FROM aggregate_insert a
-			INNER JOIN volumes B USING (intersection_uid, classification_uid)
-			WHERE a.volume = 0 AND classification_uid IN (1,2,6,7)
+			INNER JOIN volumes B USING (intersection_uid)
+			WHERE a.volume = 0 
 			AND B.datetime_bin < A.datetime_bin +INTERVAL '15 minutes' AND B.datetime_bin>= A.datetime_bin
 			ORDER BY a.volume_15min_tmc_uid
 		)
+			/*For the non-zero 15-min volumes, link the 1-min disaggregate volumes via FOREIGN KEY relationship*/
 		UPDATE volumes a
 		SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
 		FROM aggregate_insert b
