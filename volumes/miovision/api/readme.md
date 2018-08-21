@@ -1,18 +1,32 @@
 # API Puller
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Input Parameters](#input-parameters)
+3. [Relevant calls and Outputs](#relevant-calls-and-outputs)
+4. [Error Responses](#error-responses)
+5. [Input Files](#input-files)
+6. [How to run the API](#how-to-run-the-api)
+7. [Classifications](#classifications)
+8. [How the API works](#how-the-api-works)
+9. [Future Work](#future-work)
+
 ### Overview
 
-The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision.
+The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision. This is a future alternative to the existing csv dumps and avoids having to continuously go through miovision to get the data. This will create a continuous stream of data that is populated at all time periods and all dates, similar to the bluetooth data.
 
-### API Key
+### Input Parameters
+
+#### API Key and URL
 
 Emailed from Miovision. Keep it secret. Keep it safe.
 
-### Relevant calls
+The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [http://beta.docs.api.miovision.com/](http://beta.docs.api.miovision.com/)
 
-Each of these returns a 1-minute aggregate, maximum 48-hrs of data, with a two-hour lag (the end time for the query cannot be more recent than two-hours before the query).
+### Relevant Calls and Outputs
 
-### Input Parameters
+Each of these returns a 1-minute aggregate, maximum 48-hrs of data, with a two-hour lag (the end time for the query cannot be more recent than two-hours before the query). If the volume is 0, the 1 minute bin will not be populated. 
 
 #### Turning Movement Count (TMC)
 
@@ -116,11 +130,11 @@ For example, to collect data from a custom date range, run `python intersection_
 
 `python intersection_tmc.py --start=2018-08-01 --end=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes` is an example with all the options specified.
 
-## Classifications
+### Classifications
 
 The classification given in the api is different than the ones given in the csv dumps, or the datalink. 
 
-### Exisiting Classification (csv dumps and datalink)
+#### Exisiting Classification (csv dumps and datalink)
 
 |classification_uid|classification|location_only|class_type|
 |-----|-----|-----|-----|
@@ -132,7 +146,7 @@ The classification given in the api is different than the ones given in the csv 
 6|Pedestrians|t|Pedestrians
 7|Bicycles|t|Cyclists
 
-### API Classifications
+#### API Classifications
 
 |classification_uid|classification|location_only|class_type|
 |-----|-----|-----|-----|
@@ -149,7 +163,7 @@ The classification given in the api is different than the ones given in the csv 
 This flow chart provides a high level overview:
 
 
-![Flow Chart of the API](api_script1.png)
+![Flow Chart of the API](img/api_script1.png)
 
 ```python
 import sys
@@ -212,8 +226,7 @@ ped_endpoint='/crosswalktmc'
 
 Defines the logger setting, default dates, timezone, and site to grab the data from.
 
-```
-python
+```python
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -358,22 +371,22 @@ def pull_data(start_date, end_date, intersection, path, pull):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     logger.debug('Connected to DB')
+    if intersection>0:
+        with conn:
+            with conn.cursor() as cur:
+                string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
+                cur.execute(str(string))
+                intersection_list=cur.fetchall()
+                conn.commit()
+    else:      
+        with conn:
+            with conn.cursor() as cur:
+                select='''SELECT * from miovision.intersection_id;'''
+                cur.execute(select)
+                intersection_list=cur.fetchall()
+                conn.commit()
     while True:
         table=[]
-        if intersection>0:
-            with conn:
-                with conn.cursor() as cur:
-                    string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
-                    cur.execute(str(string))
-                    intersection_list=cur.fetchall()
-                    conn.commit()
-        else:      
-            with conn:
-                with conn.cursor() as cur:
-                    select='''SELECT * from miovision.intersection_id;'''
-                    cur.execute(select)
-                    intersection_list=cur.fetchall()
-                    conn.commit()
 ```
 
 Grabs the intersection list and ids from `miovision.intersection_id`to send to the api. If a specific intersection is specified, it will only select that intersection to pull data for.
@@ -460,3 +473,9 @@ if __name__ == '__main__':
     cli()
     
 ```
+
+### Future Work
+
+* Run the API every day automatically
+* Add email notification in the event of an error
+* Use better practices to achieve the same results
