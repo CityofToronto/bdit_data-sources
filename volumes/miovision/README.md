@@ -94,6 +94,17 @@ day_type|text|Day type for date filter|[Weekday OR Weekend]|
 period_name|text|Textual description of period|14 Hour|
 period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
 
+#### `intersection_movements`
+
+This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#Filling-0s-in-Aggregation).
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+ intersection_uid| integer | ID for intersection | 1 |
+ classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
+ leg| text | Entry leg of movement|E|
+ movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
+
 ### Disaggregate Data
 
 #### `volumes`
@@ -129,6 +140,15 @@ leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 15-minute volume|78|
 volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
+
+#### `volumes_tmc_zeroes`
+
+This is a crossover table to link `volumes` to the `volumes_15min_tmc` table so that when data are deleted from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_uid|int|Identifier for `volumes` table|5100431|
+volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
 
 #### `volumes_15min`
 
@@ -202,7 +222,7 @@ Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view
 
 ### Refreshing Data
 
-It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `volumes` will trigger deleting the resulting rows in `volumes_15min_tmc` and `volumes_15min`.
+It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `raw_data` will trigger deleting the resulting rows in `volumes` and then `volumes_15min_tmc` and `volumes_15min`. 0 rows in `volumes_15min_tmc` are deleted through the intermediary lookup [`volumes_tmc_zeroes`](#volumes_tmc_zeroes).
 
 ## 5. Processing Data from API
 
@@ -210,4 +230,10 @@ It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from
 
 ## 6. Filtering and Interpolation
 
-(to be filled in)
+### Filtering
+
+### Interpolation
+
+### Filling 0s in Aggregation
+
+Because reporting from the [aggregate tables](#aggregate-data) frequently involves averaging, it is advantageous to fill these tables with 0 values at times and locations where data were being recorded but for movements and legs where no vehicles of that classification was observed. This begins at aggregating to 15-minutes for `
