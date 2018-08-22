@@ -234,7 +234,6 @@ Refer to the readme on the API for more detail
 
 ## 6. Filtering and Interpolation
 
-
 ### Filtering
 
 ### Interpolation
@@ -270,11 +269,9 @@ This query checks for duplicate records in the `raw_data` table. This can also b
 
 ## 8. Current Issues and Tasks
 
-* Create a crossover table for the UIDs
-    * Because of the many-to-many relationship between the ATR data and TMC data, a crossover table needs to be implemented to demonstrate the relationship between an ATR bin and TMC bin. This same structure should also be implemented between `volumes` and `volumes_15min_tmc`
-* Fix interpolation bug
-    * While optimizing the `funtion-aggregate-volumes_15min_tmc()`, one of the checks to see if missing data needs to be interpolated was changed. Reverting to the old process can easily double the query run-time, so an equivalent method will need to be found without prolonging the run time.
+* [Create a crossover table for the UIDs](https://github.com/CityofToronto/bdit_data-sources/issues/137)
+  * Because of the many-to-many relationship between the ATR data and TMC data, a crossover table needs to be implemented to demonstrate the relationship between an ATR bin and TMC bin.
+* [Fix interpolation bug](https://github.com/CityofToronto/bdit_data-sources/issues/140)
+  * While optimizing the `funtion-aggregate-volumes_15min_tmc()`, one of the checks to see if missing data needs to be interpolated was changed. Reverting to the old process can easily double the query run-time, so an equivalent method will need to be found without prolonging the run time.
 * Fix `COALESCE` statement in `report_volume_15min`
-    * If a bin does not have data, the current process is to either delete that time period, or use the average volume for that time bin. However, the seasonality of pedestrian and cycling volume may not make that process valid. A suggested approach is to limit the average volume for a time bin to only use data in the same month or week
-* Add Zeros/Gap fill to TMC table
-    * `funtion-aggregate-volumes_15min` currently populates `volumes_15min` table with zero-volume bins. This should be replicated in `volumes_15min_tmc`.
+  * If a bin does not have data, the current process is to either delete that time period, or use the average volume for that time bin. However, the seasonality of pedestrian and cycling volume may not make that process valid. A suggested approach is to limit the average volume for a time bin to only use data in the same month or week
