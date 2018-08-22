@@ -51,7 +51,7 @@ default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
 local_tz=pytz.timezone('US/Eastern')
 session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
+session.proxies = {}
 url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
@@ -213,23 +213,23 @@ def pull_data(start_date, end_date, intersection, path, pull):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     logger.debug('Connected to DB')
+    if intersection>0:
+        with conn:
+            with conn.cursor() as cur:
+                string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
+                cur.execute(str(string))
+                intersection_list=cur.fetchall()
+                conn.commit()
+    else:      
+        with conn:
+            with conn.cursor() as cur:
+                select='''SELECT * from miovision.intersection_id;'''
+                cur.execute(select)
+                intersection_list=cur.fetchall()
+                conn.commit()
     while True:
         table=[]
-        if intersection>0:
-            with conn:
-                with conn.cursor() as cur:
-                    string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
-                    cur.execute(str(string))
-                    intersection_list=cur.fetchall()
-                    conn.commit()
-        else:      
-            with conn:
-                with conn.cursor() as cur:
-                    select='''SELECT * from miovision.intersection_id;'''
-                    cur.execute(select)
-                    intersection_list=cur.fetchall()
-                    conn.commit()
-
+        
         for intersection_list in intersection_list:
             intersection_id1=intersection_list[1]
             intersection_name=intersection_list[2]
@@ -279,6 +279,12 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         cur.execute(insert)
                         conn.commit()
                         logger.info('Aggregated to 15 minute bins')   
+                with conn:
+                    with conn.cursor() as cur:
+                        update="SELECT miovision_api.update_tmc_index('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                        cur.execute(update)
+                        conn.commit()
+                        logger.info('Updated index')   
                 with conn:
                     with conn.cursor() as cur:             
                         cur.execute('''SELECT miovision_api.aggregate_15_min();''')
