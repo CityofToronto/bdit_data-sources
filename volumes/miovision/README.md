@@ -132,9 +132,6 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 #### `volumes_15min_tmc`
 
-Data table storing aggregated 15-minute turning movement data. Because of the format differences between TMC and ATR data, the `miovision.movement_map` is used to turn the TMC data to the ATR data. For example, TMC data has 4 possible movments for every ATR bin, and theres a total of 16 possible movements. ATR data has 2 possible movements for every TMC bin and a total of 8 possible movements. This image summarizes the changes between TMC and ATR data.
-
-![TMC and ATR movements](img/movements.png)
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -158,7 +155,9 @@ volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
 
 #### `volumes_15min`
 
-Data table storing aggregated 15-minute segment-level data. 
+Data table storing aggregated 15-minute turning movement data. Because of the format differences between TMC and ATR data, the `miovision.movement_map` is used to turn the TMC data to the ATR data. For example, TMC data has 4 possible movments for every ATR bin, and theres a total of 16 possible movements. This image summarizes the changes between TMC and ATR data.
+
+![TMC and ATR movements](img/movements.png)
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -239,6 +238,14 @@ Refer to the readme on the API for more detail
 ### Filtering
 
 ### Interpolation
+
+In the event there are less than 15 minutes of data, interpolation will occur to create the aggregated 15 minute bin in `volumes_15min_tmc`. The interpolation process will divide the total volume in that bin by the number of minutes with data and multiply it by 15. 
+
+```SQL
+B.interpolated = TRUE THEN SUM(A.volume)*15.0/((EXTRACT(minutes FROM B.end_time - B.start_time)+1)*1.0)
+```
+
+There is an exception to interpolation, which checks if there are populated time bins before and after the bin with missing data. Since miovision does not provide 1 minute bins with no volumes, there is a possibility that the missing data is because no volume passed through the intersection in that 1 minute span. If there are populated bins before and after the missing bin, than it can be assumed that the missing data was a result of no volume passing through the intersection at that minute.
 
 ### Filling 0s in Aggregation
 
