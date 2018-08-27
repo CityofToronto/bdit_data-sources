@@ -276,6 +276,8 @@ HAVING COUNT(1) > 1
 
 This query checks for duplicate records in the `raw_data` table. This can also be modified to be used in the `volumes` table.
 
+The data in `raw_data` also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`select-invalid_movements_tmc.sql`](sql/select-invalid_movements_tmc.sql) to look for invalid volumes that may need to be deleted. Alter the query as necessary to select the movements from `raw_data`. 
+
 ## 8. Current Issues and Tasks
 
 * [Create a crossover table for the UIDs](https://github.com/CityofToronto/bdit_data-sources/issues/137)
