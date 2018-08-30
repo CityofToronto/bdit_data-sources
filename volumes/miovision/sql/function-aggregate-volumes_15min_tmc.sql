@@ -13,70 +13,72 @@ AS $BODY$
 
 BEGIN
 	DROP TABLE IF EXISTS bins;
+
 	CREATE TEMPORARY TABLE bins (
-		intersection_uid integer,
-		datetime_bin timestamp without time zone,
-		avail_minutes integer,
-		start_time timestamp without time zone,
-		end_time timestamp without time zone,
-		span integer,
-		interpolated boolean,
-		a_volume_uid int);
-	
-	INSERT INTO bins
-	SELECT 	intersection_uid, 
-		TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin,
-		COUNT(DISTINCT A.datetime_bin) AS avail_minutes,
-		MIN(A.datetime_bin) AS start_time,
-		MAX(A.datetime_bin) AS end_time,
-		(EXTRACT(minutes FROM MAX(A.datetime_bin) - MIN(A.datetime_bin))::INT+1) AS span,
-		NULL as interpolated,
-		MIN(volume_uid) as a_volume_uid
-	FROM miovision.volumes A
-	WHERE volume_15min_tmc_uid IS NULL
-	GROUP BY intersection_uid, TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900)
-	HAVING COUNT(DISTINCT A.datetime_bin) > 5;
-	
--- IF one of two 1-minute time bins BEFORE and AFTER 15-minute bin are populated, assume no interpolation needed
-	UPDATE bins A 
-	SET interpolated = FALSE
-	FROM (SELECT DISTINCT intersection_uid, datetime_bin from miovision.volumes WHERE volume_15min_tmc_uid IS NULL) B
-	WHERE 	A.interpolated IS NULL 
-		AND A.avail_minutes < 15 
-		AND A.intersection_uid = B.intersection_uid 
-		AND (B.datetime_bin >= (A.datetime_bin + INTERVAL '15 minutes') AND B.datetime_bin <= (A.datetime_bin + INTERVAL '16 minutes')) 
-		AND (B.datetime_bin <= (A.datetime_bin - INTERVAL '1 minute') AND B.datetime_bin >= A.datetime_bin - (INTERVAL '2 minutes'));
+			intersection_uid integer,
+			datetime_bin timestamp without time zone,
+			avail_minutes integer,
+			start_time timestamp without time zone,
+			end_time timestamp without time zone,
+			interpolated boolean);
+			
+	WITH class_grouping AS (
 
-	-- IF # of populated 1-minute bins exceeds difference between start and end time, assume no interpolation needed	
-	UPDATE bins A
-	SET interpolated = CASE
-		WHEN 	(EXTRACT(minutes FROM A.end_time - A.start_time)+1) > A.avail_minutes AND A.avail_minutes < 15	THEN
-		 	FALSE
-		WHEN 	interpolated IS NULL AND A.avail_minutes < 15	THEN
-		-- ASSUME for all other 15-minute bins with missing data, interpolation needed due to missing video
-			TRUE
-		END;
+		SELECT 	intersection_uid, 
+			datetime_bin as one_minute_bins,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - interval '1 minute' AS previous_bin,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) + interval '15 minute' AS next_bin,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - interval '2 minute' AS previous_bin2,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) + interval '16 minute' AS next_bin2
+		FROM 	miovision.volumes A
+		GROUP BY intersection_uid, datetime_bin	
+	), bin_grouping AS(
+		SELECT 	intersection_uid, 
+			datetime_bin, 
+			COUNT(DISTINCT one_minute_bins) AS avail_minutes,
+			min(one_minute_bins) as start_time,
+			max(one_minute_bins) as end_time,
+			lag(max(one_minute_bins)) OVER w as previous_end,
+			lead(min(one_minute_bins)) OVER w as next_start,
+			previous_bin,
+			next_bin,
+			previous_bin2,
+			next_bin2,
+			CASE WHEN  COUNT(DISTINCT one_minute_bins)<15 
+				AND (NULLIF(next_bin, lead(min(one_minute_bins)) OVER w) IS NULL OR NULLIF(next_bin2, lead(min(one_minute_bins)) OVER w) IS NULL)
+				AND (NULLIF(previous_bin, lag(max(one_minute_bins)) OVER w ) IS NULL OR NULLIF(previous_bin2, lag(max(one_minute_bins)) OVER w ) IS NULL) 
+				THEN FALSE 
+				ELSE NULL 
+				END AS interpolated
+		FROM class_grouping a
+		GROUP BY intersection_uid, datetime_bin, previous_bin, next_bin, previous_bin2, next_bin2
+		WINDOW w AS (PARTITION BY intersection_uid)
+		ORDER BY intersection_uid, datetime_bin
+	)
 
-	-- FOR 15-minute bins with interpolation needed, IF missing data at start of 15-minute period, SET start_time = start_time + 1 minute to account for potential partial count
-	-- FOR 15-minute bins with interpolation needed, IF missing data at end of 15-minute period, SET end_time = end_time - 1 minute to account for potential partial count
-	UPDATE bins 
-		SET end_time = CASE
-			WHEN interpolated = TRUE AND datetime_bin = start_time THEN 
-				end_time - INTERVAL '1 minute' 
-			ELSE end_time END,
+	INSERT INTO 	bins
+	SELECT 		intersection_uid,
+			datetime_bin,
+			avail_minutes,
+			start_time,
+			end_time,
+			interpolated
+	FROM 		bin_grouping
+	WHERE avail_minutes>5
+	ORDER BY intersection_uid, datetime_bin;
+
+
+	UPDATE bins SET interpolated = FALSE WHERE (EXTRACT(minutes FROM end_time - start_time)+1) > avail_minutes AND avail_minutes < 15;
+	UPDATE bins SET interpolated = TRUE WHERE interpolated IS NULL AND avail_minutes < 15;
+
+	UPDATE bins
+	SET 	end_time = CASE
+		WHEN interpolated = TRUE AND datetime_bin = start_time THEN end_time - INTERVAL '1 minute' ELSE end_time
+		END,
 		start_time = CASE
-			WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN 
-				start_time + INTERVAL '1 minute' 
-			ELSE start_time	END,
-    	span =  CASE
-			WHEN interpolated = TRUE AND datetime_bin = start_time THEN 
-				span - 1
-			WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN 
-				span -1
-			WHEN interpolated = TRUE AND datetime_bin = start_time 
-				AND datetime_bin + INTERVAL '14 minutes' = end_time THEN
-				span - 2 
-			ELSE span END;
+		WHEN interpolated = TRUE AND datetime_bin + INTERVAL '14 minutes' = end_time THEN start_time + INTERVAL '1 minute' ELSE start_time
+		END;
 
 	BEGIN 
 		-- INSERT INTO volumes_15min_tmc, with interpolated volumes
