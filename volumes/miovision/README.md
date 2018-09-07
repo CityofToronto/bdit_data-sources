@@ -100,7 +100,7 @@ period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00
 
 #### `intersection_movements`
 
-This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#Filling-0s-in-Aggregation).
+This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#Filling-0s-in-Aggregation). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections iwth turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
