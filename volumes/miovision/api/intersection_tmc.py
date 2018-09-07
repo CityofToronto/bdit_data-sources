@@ -51,7 +51,7 @@ default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
 local_tz=pytz.timezone('US/Eastern')
 session = Session()
-session.proxies = {}
+session.proxies = {'https': 'https://137.15.73.132:8080'}
 url='https://api.miovision.com/intersections/'
 tmc_endpoint = '/tmc'
 ped_endpoint='/crosswalktmc'
@@ -85,33 +85,57 @@ def run_api(start_date, end_date, path, intersection, pull):
 
 def get_movement(item):
     if (item['entrance'] == 'N' and item['exit'] =='S'):
-        return 'thru'
+        return '1'
     elif item['entrance'] == 'S' and item['exit'] =='N':
-        return 'thru'
+        return '1'
     elif item['entrance'] == 'W' and item['exit'] =='E':
-        return 'thru'
+        return '1'
     elif item['entrance'] == 'E' and item['exit'] =='W':
-        return 'thru'
+        return '1'
     elif item['entrance'] == 'S' and item['exit'] =='W':
-        return 'left'
+        return '2'
     elif item['entrance'] == 'N' and item['exit'] =='E':
-        return 'left'
+        return '2'
     elif item['entrance'] == 'W' and item['exit'] =='N':
-        return 'left'
+        return '2'
     elif item['entrance'] == 'E' and item['exit'] =='S':
-        return 'left'
+        return '2'
     elif item['entrance'] == 'S' and item['exit'] =='E':
-        return 'right'
+        return '3'
     elif item['entrance'] == 'E' and item['exit'] =='N':
-        return 'right'
+        return '3'
     elif item['entrance'] == 'N' and item['exit'] =='W':
-        return 'right'
+        return '3'
     elif item['entrance'] == 'W' and item['exit'] =='S':
-        return 'right'
+        return '3'
     else:
-        return 'u_turn'
+        return '4'
 
-def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key):
+def get_crosswalk(item):
+    if (item['direction'] == 'CW'):
+        return '5'
+    else:
+        return '6'
+    
+def get_classification(item):
+    if (item['class'] == 'Pedestrian'):
+        return '6'
+    elif item['class'] == 'Light':
+        return '1'
+    elif item['class'] == 'Bicycle':
+        return '2'
+    elif item['class'] == 'Bus':
+        return '3'
+    elif item['class'] == 'SingleUnitTruck':
+        return '4'
+    elif item['class'] == 'WorkVan':
+        return '8'
+    elif item['class'] == 'ArticulatedTruck':
+        return '5'
+    else:
+        return '0'
+
+def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params, 
@@ -121,13 +145,13 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         for item in tmc:
             
         
-            item['classification']=item.pop('class')
+            item['classification']=get_classification(item)
             item['volume']=item.pop('qty')
             item['movement']=get_movement(item)
             
-            item['entry_dir_name']=item.pop('entrance')
-            item['exit_dir_name']=item.pop('exit')
-            temp=[intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume']]
+            item['leg']=item.pop('entrance')
+         
+            temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'], item['movement'], item['volume']]
             table.append(temp)
 
         return table
@@ -143,7 +167,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         raise MiovisionAPIException('Error'+str(response.status_code))
         sys.exit()
 
-def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key):
+def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_date}
     
@@ -153,14 +177,12 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
         ped=json.loads(response.content.decode('utf-8'))
         for item in ped:
             
-            item['classification']=item.pop('class')
+            item['classification']='6'
             item['volume']=item.pop('qty')
-            temp=str(item['direction'])
-            item.pop('direction', None)
-            item['movement']=temp.lower()
-            item['entry_dir_name']=item.pop('crosswalkSide')
+            item['movement']=get_crosswalk(item)
+            item['leg']=item.pop('crosswalkSide')
             item['exit_dir_name']=None
-            temp=[intersection_name, lat, lng, item['timestamp'], item['classification'], item['entry_dir_name'],  item['exit_dir_name'],  item['movement'], item['volume']]
+            temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'],  item['movement'], item['volume']]
             table.append(temp)
             
         return table
@@ -219,6 +241,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
                 string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
                 cur.execute(str(string))
                 intersection_list=cur.fetchall()
+                intersection_iterator=intersection_list
                 conn.commit()
     else:      
         with conn:
@@ -226,20 +249,20 @@ def pull_data(start_date, end_date, intersection, path, pull):
                 select='''SELECT * from miovision.intersection_id;'''
                 cur.execute(select)
                 intersection_list=cur.fetchall()
+                intersection_iterator=intersection_list
                 conn.commit()
     while True:
         table=[]
         
-        for intersection_list in intersection_list:
-            intersection_id1=intersection_list[1]
-            intersection_name=intersection_list[2]
-            lat=str(intersection_list[3])
-            lng=str(intersection_list[4])
+        for intersection_iterator in intersection_iterator:
+            intersection_uid=intersection_iterator[0]
+            intersection_id1=intersection_iterator[1]
+            intersection_name=intersection_iterator[2]
             logger.debug(intersection_name+'     '+str(start_date))
             for attempt in range(3):
                 try:
-                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key)
-                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_name, lat, lng, key)
+                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
+                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
                     break
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
@@ -260,9 +283,9 @@ def pull_data(start_date, end_date, intersection, path, pull):
         try:
             with conn:
                 with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO miovision_api.raw_data (study_name, lat, lng, datetime_bin, classification, entry_dir_name, exit_dir_name,  movement, volume) VALUES %s', table)
+                    execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
                     conn.commit()
-            logger.info('Inserted into raw data') 
+            logger.info('Inserted into volumes') 
 
         except psycopg2.Error as exc:
             
@@ -301,6 +324,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
             logger.info('Data Processing Skipped') 
         start_date+=time_delta
         end_iteration_time= start_date + time_delta
+        intersection_iterator=intersection_list
         if start_date>=end_date:
             break
     #views()
