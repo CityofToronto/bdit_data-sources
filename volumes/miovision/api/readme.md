@@ -9,8 +9,9 @@
 5. [Input Files](#input-files)
 6. [How to run the API](#how-to-run-the-api)
 7. [Classifications](#classifications)
-8. [How the API works](#how-the-api-works)
-9. [Future Work](#future-work)
+8. [Invalid Movements](#invalid-movements)
+9. [How the API works](#how-the-api-works)
+10. [Future Work](#future-work)
 
 ### Overview
 
@@ -158,6 +159,12 @@ The classification given in the api is different than the ones given in the csv 
 6|Pedestrian|t|Pedestrians"
 8|WorkVan|f|Vehicles"
 
+The API assigns a classification of 0 if the classification matches none of the above. This is possible if the classification given from the API does not exactly match any of the ones in the script. One example is if `Light` is pluralized as `Lights`, like in the CSV dumps.
+
+### Invalid Movements
+
+The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000.
+
 ### How the API works
 
 This flow chart provides a high level overview:
@@ -168,5 +175,4 @@ This flow chart provides a high level overview:
 
 ### Future Work
 
-* Run the API every day automatically
 * Add email notification in the event of an error
