@@ -286,7 +286,12 @@ def pull_data(start_date, end_date, intersection, path, pull):
                     execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
                     conn.commit()
             logger.info('Inserted into volumes') 
-
+            with conn:
+                    with conn.cursor() as cur: 
+                        invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                        cur.execute(invalid_movements)
+                        conn.commit()
+                        logger.info(conn.notices) 
         except psycopg2.Error as exc:
             
             logger.exception(exc)
