@@ -1,14 +1,14 @@
-﻿
-
-CREATE OR REPLACE FUNCTION find_invalid_movements()
+﻿CREATE OR REPLACE FUNCTION miovision_api.find_invalid_movements(
+    start_date timestamp without time zone,
+    end_date timestamp without time zone)
   RETURNS integer AS
 $BODY$
 DECLARE sum integer;
 BEGIN
 
 
-		SELECT sum(volume) INTO sum FROM miovision.volumes
-		WHERE datetime_bin::date BETWEEN now()::date- INTERVAL '30 days' AND now()::Date
+		SELECT sum(volume) INTO sum FROM miovision_api.volumes
+		WHERE datetime_bin BETWEEN start_date AND end_date
 
 		AND (
 
@@ -76,3 +76,5 @@ END
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+ALTER FUNCTION miovision_api.find_invalid_movements(timestamp without time zone, timestamp without time zone)
+  OWNER TO rliu;
