@@ -22,14 +22,15 @@ BEGIN
 		WHERE A.processed IS NULL
 		GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
 		ORDER BY A.datetime_bin, A.intersection_uid, A.classification_uid, B.leg_new, B.dir
-	)
-
+	),
+	insert_atr AS (
 	INSERT INTO miovision.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
-	SELECT A.intersection_uid, B.datetime_bin, A.classification_uid, A.leg, A.dir, COALESCE(C.volume,0) AS volume
+	SELECT A.intersection_uid, B.datetime_bin, A.classification_uid, A.leg, A.dir, C.volume
 	FROM (SELECT intersection_uid, classification_uid, leg, dir FROM transformed GROUP BY intersection_uid, classification_uid, leg, dir) AS A
 	INNER JOIN (SELECT intersection_uid, datetime_bin FROM transformed GROUP BY intersection_uid, datetime_bin) AS B USING (intersection_uid)
-	LEFT JOIN transformed C USING (intersection_uid, datetime_bin, classification_uid, leg, dir);
-
+	LEFT JOIN transformed C USING (intersection_uid, datetime_bin, classification_uid, leg, dir)
+	RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
+	
 	--Updates crossover table with new IDs
 	INSERT INTO atr_tmc_uid (volume_15min_tmc_uid, volume_15min_uid)
 	SELECT c.volume_15min_tmc_uid, a.volume_15min_uid
@@ -41,7 +42,6 @@ BEGIN
 	AND b.leg_old=c.leg
 	AND b.movement_uid=c.movement_uid
 	AND a.classification_uid=c.classification_uid
-	WHERE A.processed IS NULL
 	ORDER BY volume_15min_uid;
 
 	--Sets processed column to TRUE
@@ -50,22 +50,6 @@ BEGIN
 	FROM miovision.atr_tmc_uid b
 	WHERE processed IS NULL
 	AND a.volume_15min_tmc_uid=b.volume_15min_tmc_uid;
-
-	UPDATE miovision.volumes_15min a
-	SET processed = TRUE
-	FROM miovision.atr_tmc_uid b
-	WHERE processed IS NULL
-	AND a.volume_15min_uid=b.volume_15min_uid;
-
-
-	--Sets remaning records to FALSE if the record cannot be processed
-	UPDATE miovision.volumes_15min a
-	SET processed = FALSE
-	WHERE processed IS NULL;
-	
-	UPDATE miovision.volumes_15min_tmc a
-	SET processed = FALSE
-	WHERE processed IS NULL;
 	
 	RETURN NULL;
 END;
