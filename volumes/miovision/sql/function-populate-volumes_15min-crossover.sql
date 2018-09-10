@@ -11,8 +11,7 @@ BEGIN
 			A.classification_uid,
 			B.leg_new as leg,
 			B.dir,
-			SUM(A.volume) AS volume,
-			array_agg(volume_15min_tmc_uid) as uids
+			SUM(A.volume) AS volume
 
 		FROM miovision.volumes_15min_tmc A
 		INNER JOIN 
@@ -25,10 +24,8 @@ BEGIN
 	),
 	insert_atr AS (
 	INSERT INTO miovision.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
-	SELECT A.intersection_uid, B.datetime_bin, A.classification_uid, A.leg, A.dir, C.volume
-	FROM (SELECT intersection_uid, classification_uid, leg, dir FROM transformed GROUP BY intersection_uid, classification_uid, leg, dir) AS A
-	INNER JOIN (SELECT intersection_uid, datetime_bin FROM transformed GROUP BY intersection_uid, datetime_bin) AS B USING (intersection_uid)
-	LEFT JOIN transformed C USING (intersection_uid, datetime_bin, classification_uid, leg, dir)
+	SELECT A.intersection_uid, B.datetime_bin, A.classification_uid, A.leg, A.dir, A.volume
+	FROM transformed A
 	RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
 	
 	--Updates crossover table with new IDs
