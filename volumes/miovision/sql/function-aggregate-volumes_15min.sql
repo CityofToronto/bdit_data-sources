@@ -2,41 +2,53 @@
 
 -- DROP FUNCTION miovision.aggregate_15_min();
 
-CREATE OR REPLACE FUNCTION miovision.aggregate_15_min()
+SET SCHEMA miovision;
+
+CREATE OR REPLACE FUNCTION aggregate_15_min()
   RETURNS integer AS
 $BODY$
 BEGIN
+    WITH transformed AS (
+        SELECT     A.intersection_uid,
+            A.datetime_bin,
+            A.classification_uid,
+            B.leg_new as leg,
+            B.dir,
+            SUM(A.volume) AS volume,
+            array_agg(volume_15min_tmc_uid) as uids
 
-	WITH transformed AS (
-		SELECT 	A.intersection_uid,
-			A.datetime_bin,
-			A.classification_uid,
-			B.leg_new as leg,
-			B.dir,
-			SUM(A.volume) AS volume,
-			array_agg(volume_15min_tmc_uid) as uids
+        FROM volumes_15min_tmc A
+        INNER JOIN miovision.movement_map B -- TMC to ATR crossover table.
+        ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid AND B.intersection_uid=A.intersection_uid AND B.classification_uid=A.classification_uid
+        WHERE A.processed IS NULL
+        GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
+    ),
+    insert_atr AS (
+    INSERT INTO volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
+    SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, volume
+    FROM transformed
+    RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
+    
+    --Updates crossover table with new IDs
+    , insert_crossover AS(
+    INSERT INTO volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
+    SELECT volume_15min_tmc_uid, volume_15min_uid
+    FROM insert_atr A
+    INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) as volume_15min_tmc_uid FROM transformed) B
+        ON A.datetime_bin=B.datetime_bin
+        AND A.intersection_uid=B.intersection_uid
+        AND A.leg=B.leg
+        AND A.classification_uid=B.classification_uid
+    ORDER BY volume_15min_uid
 
-		FROM miovision.volumes_15min_tmc A
-		INNER JOIN miovision.movement_map B ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid
-		WHERE volumes_15min_uid IS NULL
-		GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
-		ORDER BY A.datetime_bin, A.intersection_uid, A.classification_uid, B.leg_new, B.dir
-	)
-	, aggregate_insert AS(
-		INSERT INTO miovision.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
-		SELECT A.intersection_uid, B.datetime_bin, A.classification_uid, A.leg, A.dir, COALESCE(C.volume,0) AS volume
-		FROM (SELECT intersection_uid, classification_uid, leg, dir FROM transformed GROUP BY intersection_uid, classification_uid, leg, dir) AS A
-		INNER JOIN (SELECT intersection_uid, datetime_bin FROM transformed GROUP BY intersection_uid, datetime_bin) AS B USING (intersection_uid)
-		LEFT JOIN transformed C USING (intersection_uid, datetime_bin, classification_uid, leg, dir)
-		RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir
-	)
-	UPDATE miovision.volumes_15min_tmc a
-	SET volume_15min_uid = b.volume_15min_uid
-	FROM (SELECT unnest(uids) AS volume_15min_tmc_uid, volumes_15min_uid 
-		FROM transformed 
-		INNER JOIN aggregate_insert USING (intersection_uid, datetime_bin, classification_uid, leg, dir)) b
-	WHERE a.volume_15min_tmc_uid = b.volume_15min_tmc_uid;
-	RETURN 1;
+    )
+    --Sets processed column to TRUE
+    UPDATE volumes_15min_tmc a
+    SET processed = TRUE
+    FROM (SELECT unnest(uids) as volume_15min_tmc_uid FROM transformed) b 
+    WHERE a.volume_15min_tmc_uid=b.volume_15min_tmc_uid;
+    
+    RETURN NULL;
 EXCEPTION
 	WHEN unique_violation THEN 
 		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
@@ -45,6 +57,6 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
-ALTER FUNCTION miovision.aggregate_15_min()
+ALTER FUNCTION aggregate_15_min()
   OWNER TO dbadmin;
 GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min() TO bdit_humans WITH GRANT OPTION;
