@@ -43,7 +43,7 @@ BEGIN
 
 	INSERT INTO 	bins
 	SELECT 		intersection_uid,
-			datetime_bin,
+			datetime_bin_15,
 			avail_minutes,
 			start_time,
 			end_time,
@@ -76,13 +76,13 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 	WITH zero_padding_movements AS (
 		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
 		SELECT m.*, datetime_bin 
-		FROM intersection_movements m
+		FROM miovision.intersection_movements m
 		INNER JOIN bins USING (intersection_uid)
 		WHERE classification_uid IN (1,2,6,7) 
 		)
 	,aggregate_insert AS(
 		/*Inner join volume data with bins on intersection/datetime_bin then add zero padding for select movements*/
-		INSERT INTO miovision.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+		INSERT INTO volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 		SELECT 	COALESCE(C.intersection_uid, A.intersection_uid) intersection_uid,
 			COALESCE(C.datetime_bin, B.datetime_bin) datetime_bin,
 			COALESCE(A.classification_uid, C.classification_uid) classification_uid,
@@ -93,6 +93,11 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 		INNER JOIN volumes A ON A.volume_15min_tmc_uid IS NULL
 									AND B.intersection_uid = A.intersection_uid 
 									AND B.start_time <= A.datetime_bin AND B.end_time >= A.datetime_bin
+		INNER JOIN miovision.intersection_movements	m ON --Make sure movement is valid.
+		 											m.intersection_uid = A.intersection_uid
+												AND m.classification_uid  = A.classification_uid 
+												AND m.leg = A.leg
+												AND m.movement_uid = A.movement_uid
 		/*Only join the zero padding movements to the left side when everything matches, including the bin's datetime_bin
 		Otherwise zero-pad*/
 		FULL OUTER JOIN zero_padding_movements C ON C.intersection_uid = A.intersection_uid

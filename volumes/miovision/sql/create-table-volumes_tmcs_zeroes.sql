@@ -1,4 +1,6 @@
-CREATE TABLE rdumas.volumes_tmc_zeroes (
+SET schema miovision;
+
+CREATE TABLE volumes_tmc_zeroes (
 	volume_uid INT ,
 	volume_15min_tmc_uid INT,
 	 FOREIGN KEY (volume_uid)
