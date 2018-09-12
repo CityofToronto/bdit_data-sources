@@ -15,7 +15,7 @@
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-![The map linked provides the current locations of miovision cameras.](geojson/miovision_intersections.geojson)
+![This map provides the current locations of miovision cameras.](geojson/miovision_intersections.geojson)
 
 ## 2. Table Structure
 
@@ -132,6 +132,7 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 #### `volumes_15min_tmc`
 
+`volumes_15min_tmc` contains data aggregated into 15 minute bins. As part of the process, the data is [interpolated](#interpolation) if needed, and missing 15 minute bins are filled. Missing bins are only filled for pedestrians, cyclists and lights (`classification_uid IN (1,2,6,7)`); trucks, buses and vans are not filled due to the large amount of gaps, and filling in lights would be sufficient to ensure there are no gaps for the `Vehicles` class used in `report_dates` and the views. Zeroes filling occurs by cross-joining a table containing all possible movments to create a table with all possible times and movements. Through a join with `volumes`, the query checks if there are no counts at that time, intersection, movement, and classification the is no volume, and fills the gap with a 0-volume bin. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -146,7 +147,7 @@ volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
 
 #### `volumes_tmc_zeroes`
 
-This is a crossover table to link `volumes` to the `volumes_15min_tmc` table so that when data are deleted from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values.
+This is a crossover table to link `volumes` to the `volumes_15min_tmc` table so that when data are [deleted](#deleting-data) from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values. The table contains `volume_15min_tmc_uid` and `volume_uid`. Since the data for the 0-volume 15 minute bins are not in the `volumes` table, this table exists so when the the last volume bin with data is deleted, the corresponding 0-volume 15 minute bins after that time is also deleted. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -169,6 +170,29 @@ leg|text|Segment leg of intersection|E|
 dir|text|Direction of traffic on specific leg|EB|
 volume|integer|Total 15-minute volume|107|
 
+### `atr_tmc_uid`
+
+As described above, the TMC to ATR relationship is a many to many relationship. The query that populates `volumes_15min` also populates this table so that a record of which `volume_15min_tmc` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_tmc_uid` can be found in the query.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_uid|serial|Unique identifier for table|12412|
+volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
+
+### Primary and Foreign Keys
+
+To create explicit relationships between tables, `volumes`, `volume_15min_tmc`, `volume_tmc_zeroes`, `atr_tmc_uid` and `volume_15min` have primary and foreign keys. Primary keys are unique identifiers for each entry in the table, while foreign keys refer to a primary key in another table and show how an entry is related to that entry.
+
+#### List of primary and foreign keys
+
+* `volumes` has the primary key `volume_uid` and foreign key `volume_15min_tmc_uid` which refers to `volume_15min_tmc`
+* `volumes_15min_tmc` has the primary key `volume_15min_tmc_uid`
+* `volumes_tmc_zeroes` has the foreign key `volume_uid` which refers to the most recent entry in `volume` before that 0-volume bin, and foreign key `volume_15min_tmc_uid` to refer to the 0-volume bin
+* `volume_15min` has the primary key `volume_15min_uid`
+* `atr_tmc_uid` has foreign keys `volume_15min_tmc_uid` and `volume_15min_uid`, referring to which TMC/ATR bin in `volume_15min_tmc_uid` and `volume_15min` each bin is referring to.
+
+The current primary purpose for the keys is so that on deletion, the delete cascades through all tables. The keys also indicate whether it is new data if the foreign key is null, and tells the function to aggregate the data if it is new data. The keys can also be used in selecting data.
+
 ### Important Views
 
 `(to be filled in)
@@ -181,51 +205,39 @@ volume|integer|Total 15-minute volume|107|
 
 ### A. Populate `raw_data`
 
-Ensure that `raw_data` has been updated with all new data (either from new collection periods, or replacing older data with corrected 1-minute observations).
-
-1. Make a backup copy of `raw_data` using the following:
-
-	```sql
-	CREATE TABLE miovision.raw_data_old AS SELECT * FROM miovision.raw_data
-	```
-
-	You can delete this copy after fully QCing the dataset.
-
-2. Delete any studies / data that is being replaced by new data (if data only covers a new set of dates, ignore this step).
-
-3. Import new dataset using PostgreSQL COPY functionality into `raw_data`.
+With [`trigger-populate-volumes.sql`](sql/trigger-populate-volumes.sql), it is no longer necessary that a copy of the csv dump is on the database. To upload the csv dump, insert the file to raw_data. The trigger will activate, process the data, and insert it to `volumes`. The trigger will return null, and no data will actually get inserted to `raw_data`.
 
 ### B. Populate `volumes`
 
 This will transform 1-minute data from `raw_data` into a standard normalized structure stored in `volumes`.
 
 1. The trigger function [`trigger-populate-volumes.sql`](sql/trigger-populate-volumes.sql) automatically populates `volumes` with new data from `raw_data`. `volumes` is the same data, except most of the information is replaced by integers that are referenced in lookup tables.
-2. Ensure that the number of new records in `volumes` is identical to that in `raw_data`. If a discrepancy exists, investigate further.
+2. Ensure that the number of new records in `volumes` is identical to that in the csv dump. If a discrepancy exists, investigate further.
 
 ### C. Populate `volumes_15min_tmc` and `volumes_15min`
 
 This will aggregate the 1-minute data from `volumes` into 15-minute turning movement counts (stored in `volumes_15min_tmc`) and segment-level counts (stored in `volumes_15min`). This process also filter potential partial 1-minute data and interpolates missing records where possible (see [Section 6](#6-filtering-and-interpolation))
 
-1. Run [`SELECT mioviosion.aggregate_15_min_tmc();`](sql/function-aggregate-volumes_15min_tmc.sql). This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling for rows which have not yet been aggregated (the `FOREIGN KEY volume_15min_tmc_uid` is NULL).
-2. Run [`SELECT mioviosion.aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql). This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging) for rows in the `miovision.volumes_15min_tmc` that have not yet been aggregated.
+1. Run [`SELECT mioviosion.aggregate_15_min_tmc();`](sql/function-aggregate-volumes_15min_tmc.sql). This produces 15-minute aggregated turning movement counts with filtering and interpolation with gap-filling for rows which have not yet been aggregated (the `FOREIGN KEY volume_15min_tmc_uid` is NULL).  Additionally, this query produces 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging) and considered a valid movement. See [`volumes_15min_tmc`](#volumes_15min_tmc) for more detail on gap filling and [QC Checks](#qc-checks) for more detail on what is a valid movement.
+2. Run [`SELECT mioviosion.aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql). This produces 15-minute aggregated segment-level (i.e. ATR) data. A crossover table [`atr_tmc_uid`](#atr_tmc_uid) also populated using this query. This query contains a list of every combination of `volume_15min_uid` and `volume_15min_tmc_uid` since the relationship between the two tables is a many to many relationship.
 
 ### D. Refresh reporting views
 
 This produces a lookup table of date-intersection combinations to be used for formal reporting (this filters into various views).
 
-1. If needed, modify [the `report_dates` VIEW query](sql/materialized-view-report_dates.sql) once the data has undergone QC if specific intersection-date combinations need to be removed.
-
-2. Refresh the `MATERIALIZED VIEW WITH DATA`s in the following order for reporting by running [`SELECT miovision.refresh_views()`](sql/function_refresh_materialized_views.sql). The following views are refreshed:
-   * [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. If only limited/peak period data is collected, exceptions should be added with a `WHERE` clause specifying the dates. There are exceptions which are explicitly removed at the end of the query.
-   * [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql): Contains segment level data in 15 minute bins, categorized by cyclists, pedestrians, and vehicles.
-   * [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql): Checks is a bin is missing for that day/time period, and replaces it with the average volume for that time bin.
-   * [`miovision.report_daily`](sql/create-view-report-daily.sql): Contains total volumes in AM peak, PM peak and 14 hours. The records are grouped by intersection, class, and date.
+Refresh the `MATERIALIZED VIEW WITH DATA`s in the following order for reporting by running [`SELECT miovision.refresh_views()`](sql/function_refresh_materialized_views.sql). The following views are refreshed:
+   * [`miovision.report_dates`](sql/materialized-view-report_dates.sql): This view contains a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. If only limited/peak period data is collected, exceptions should be added with a `WHERE` clause specifying the dates. There are also additional situations which are explicitly removed from the `report_dates` table at the end of the query.
+   * [`miovision.volumes_15min_by_class`](sql/create-view-volumes_15min_by_class.sql): Contains segment level data in 15 minute bins, categorized by cyclists, pedestrians, and vehicles. The data is similar to the `volumes_15min` table except the data is combined into the new classifications.
+   * [`miovision.report_volumes_15min`](sql/create-view-report_volumes_15min.sql): Checks if any 15 minute bins are missing from 7:00 and 20:00. If a 15 minute bin is missing and hasn't already been filled, the view will fill it with the monthly average for that intersection-leg-classification-time combination. Data outside those hours are not kept in the view.
+   * [`miovision.report_daily`](sql/create-view-report-daily.sql): Aggregates the data further into 3 periods: 14 hours, AM Peak, and PM Peak. The data is also aggregated into EB and WB directions and movements are not kept. Northbound and southbound directions do not appear in this view. 
 
 ### E. Produce summarized monthly reporting data
 
-Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql) and copy over to relevant reporting templates.
+Add the relevant months to the [`VIEW miovision.report_summary`](sql/create-view-report_summary.sql). This view averages the volumes in `report_daily` for each intersection-direction-month-period combination.  Copy over the new month in `report_summmary` to the excel template `Count Data Draft.xlsx`, and add it as a new month in the `tod` excel sheets. Then add the new month and references to the `tod` sheet to the other excel sheets. 
 
-### Refreshing Data
+The excel spreadsheet rearanges and rounds the data from `report_summary` so that the output is easily readable and compares the data against previous months and the baseline.
+
+### Deleting Data
 
 It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `raw_data` will trigger deleting the resulting rows in `volumes` and then `volumes_15min_tmc` and `volumes_15min`. 0 rows in `volumes_15min_tmc` are deleted through the intermediary lookup [`volumes_tmc_zeroes`](#volumes_tmc_zeroes).
 
@@ -245,11 +257,10 @@ In the event there are less than 15 minutes of data, interpolation will occur to
 B.interpolated = TRUE THEN SUM(A.volume)*15.0/((EXTRACT(minutes FROM B.end_time - B.start_time)+1)*1.0)
 ```
 
-There is an exception to interpolation, which checks if there are populated time bins before and after the bin with missing data. Since miovision does not provide 1 minute bins with no volumes, there is a possibility that the missing data is because no volume passed through the intersection in that 1 minute span. If there are populated bins before and after the missing bin, than it can be assumed that the missing data was a result of no volume passing through the intersection at that minute.
+There is are exceptions to interpolation. These exceptions are situation where the missing 1 minute bin is actually as a result of no volume being counted instead of the camera not being operational. 
 
-### Filling 0s in Aggregation
-
-Because reporting from the [aggregate tables](#aggregate-data) frequently involves averaging, it is advantageous to fill these tables with 0 values at times and locations where data were being recorded but for movements and legs where no vehicles of that classification was observed. This begins at aggregating to 15-minutes for `
+  * If the difference between the start and end time is greater than the number of populated minutes in the bin, then it can be assumed the missing bin/bins is due to no volume at that minute.
+  * If there are populated bins in the minute or 2 minute before AND after the 15 minute bin, then it can also be assumed that any missing bins are due to no volume at that minute.
 
 ## 7. QC Checks
 
@@ -274,9 +285,9 @@ GROUP BY study_name, classification, entry_dir_name, exit_dir_name, movement, da
 HAVING COUNT(1) > 1
 ```
 
-This query checks for duplicate records in the `raw_data` table. This can also be modified to be used in the `volumes` table.
+This query checks for duplicate records in the `raw_data` table. This can also be modified to be used in the `volumes` table. If there are duplicate records, and the problem is persistent and significant, check with the datalink portal and communicate with miovision about this issue.
 
-The data in `raw_data` also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`select-invalid_movements_tmc.sql`](sql/select-invalid_movements_tmc.sql) to look for invalid volumes that may need to be deleted. Alter the query as necessary to select the movements from `raw_data`. 
+The data in `raw_data` also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`find_invalid_movments.sql`](sql/function-find_invalid_movments.sql) to look for invalid volumes that may need to be deleted. This will create a warning if the number of invalid movements is higher than 1000, and that further QC is needed. 
 
 ## 8. Current Issues and Tasks
 
