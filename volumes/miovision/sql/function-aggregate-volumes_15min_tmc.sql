@@ -1,4 +1,4 @@
-﻿SET SCHEMA miovision;
+﻿SET SCHEMA 'miovision';
 
 CREATE OR REPLACE FUNCTION aggregate_15_min_tmc()
   RETURNS void AS
@@ -131,5 +131,9 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 END;
 
 $BODY$
-  LANGUAGE plpgsql VOLATILE
+  LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
+
+GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO dbadmin WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO bdit_humans WITH GRANT OPTION;
