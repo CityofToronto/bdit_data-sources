@@ -1,3 +1,4 @@
+
 CREATE OR REPLACE FUNCTION miovision.trgr_raw_volumes_delete()
     RETURNS trigger
     LANGUAGE 'plpgsql'
@@ -33,7 +34,7 @@ AFTER DELETE on miovision.volumes
 FOR EACH ROW
 EXECUTE PROCEDURE miovision.trgr_volumes_delete();
 
-CREATE FUNCTION miovision.trgr_volumes_tmc_zeroes_delete()
+CREATE OR REPLACE FUNCTION miovision.trgr_volumes_tmc_zeroes_delete()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
@@ -46,14 +47,14 @@ BEGIN
 	RETURN OLD;
 END 
 $BODY$;
-
+DROP TRIGGER IF EXISTS volumes_delete ON miovision.volumes_tmc_zeroes;
 CREATE TRIGGER volumes_delete
     AFTER DELETE
     ON miovision.volumes_tmc_zeroes
     FOR EACH ROW
     EXECUTE PROCEDURE miovision.trgr_volumes_tmc_zeroes_delete();
 
-CREATE FUNCTION miovision.trgr_volumes_tmc_atr_delete()
+CREATE OR REPLACE FUNCTION miovision.trgr_volumes_tmc_atr_delete()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
@@ -67,6 +68,7 @@ BEGIN
 END 
 $BODY$;
 
+DROP TRIGGER IF EXISTS atr_volumes_delete ON miovision.volumes_tmc_atr_xover;
 CREATE TRIGGER atr_volumes_delete
     AFTER DELETE
     ON miovision.volumes_tmc_atr_xover
