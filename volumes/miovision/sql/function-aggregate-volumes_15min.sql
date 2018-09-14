@@ -2,7 +2,7 @@
 
 -- DROP FUNCTION miovision.aggregate_15_min();
 
-SET SCHEMA miovision;
+SET SCHEMA 'miovision';
 
 CREATE OR REPLACE FUNCTION aggregate_15_min()
   RETURNS integer AS
@@ -19,7 +19,7 @@ BEGIN
 
         FROM volumes_15min_tmc A
         INNER JOIN miovision.movement_map B -- TMC to ATR crossover table.
-        ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid AND B.intersection_uid=A.intersection_uid AND B.classification_uid=A.classification_uid
+        ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid 
         WHERE A.processed IS NULL
         GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
     ),

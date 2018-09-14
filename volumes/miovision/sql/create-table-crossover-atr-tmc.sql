@@ -1,7 +1,7 @@
 ﻿-- Table: atr_tmc_uid
 
 -- DROP TABLE atr_tmc_uid;
-SET SCHEMA miovision;
+SET SCHEMA 'miovision';
 
 CREATE TABLE volumes_tmc_atr_xover
 (
@@ -17,7 +17,7 @@ CREATE TABLE volumes_tmc_atr_xover
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE atr_tmc_uid
+ALTER TABLE volumes_tmc_atr_xover
   OWNER TO dbadmin;
 
 CREATE INDEX ON volumes_tmc_atr_xover USING btree
@@ -26,6 +26,6 @@ CREATE INDEX ON volumes_tmc_atr_xover USING btree
 CREATE INDEX ON volumes_tmc_atr_xover USING btree
     (volume_15min_uid);
 
-GRANT ALL ON TABLE atr_tmc_uid TO rds_superuser WITH GRANT OPTION;
-GRANT ALL ON TABLE atr_tmc_uid TO dbadmin;
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE atr_tmc_uid TO bdit_humans WITH GRANT OPTION;
+GRANT ALL ON TABLE volumes_tmc_atr_xover TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE volumes_tmc_atr_xover TO dbadmin;
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE volumes_tmc_atr_xover TO bdit_humans WITH GRANT OPTION;
