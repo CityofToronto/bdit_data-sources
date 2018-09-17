@@ -1,6 +1,6 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc(
-    start_date timestamp without time zone,
-    end_date timestamp without time zone)
+    start_date date,
+    end_date date)
   RETURNS void AS
 $BODY$
 
@@ -106,9 +106,10 @@ BEGIN
 			COALESCE(A.movement_uid, C.movement_uid) movement_uid,
 			COALESCE(CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/(span*1.0) ELSE SUM(A.volume) END, 0) AS volume
 		FROM bins B
-		INNER JOIN volumes A ON A.datetime_bin BETWEEN start_date - interval '1 hour' AND end_date -  interval '1 hour'
+		INNER JOIN (SELECT * FROM miovision_api.volumes WHERE datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour') A 
+									ON A.volume_15min_tmc_uid IS NULL
 									AND B.intersection_uid = A.intersection_uid 
-									AND B.start_time <= A.datetime_bin AND B.end_time >= A.datetime_bin
+									AND A.datetime_bin BETWEEN B.start_time AND B.end_time
 		/*Only join the zero padding movements to the left side when everything matches, including the bin's datetime_bin
 		Otherwise zero-pad*/
 		FULL OUTER JOIN zero_padding_movements C ON C.intersection_uid = A.intersection_uid
@@ -131,7 +132,8 @@ BEGIN
 	UPDATE miovision_api.volumes a
 	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
 	FROM aggregate_insert b
-	WHERE a.volume_15min_tmc_uid IS NULL AND b.volume > 0 
+	WHERE a.datetime_bin BETWEEN start_date - interval '1 hour' AND end_date -  interval '1 hour'
+	AND b.volume > 0 
 	AND a.intersection_uid  = b.intersection_uid 
 	AND a.datetime_bin >= b.datetime_bin AND a.datetime_bin < b.datetime_bin + INTERVAL '15 minutes'
 	AND a.classification_uid  = b.classification_uid 
@@ -144,3 +146,5 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
+  OWNER TO rliu;
