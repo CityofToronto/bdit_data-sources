@@ -207,6 +207,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
     api_key=CONFIG['API']
+    email=CONFIG['EMAIL']
     key=api_key['key']
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
@@ -242,17 +243,21 @@ def pull_data(start_date, end_date, intersection, path, pull):
                     break
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
+                    send_mail(email['to'], email['from'], 'Proxy Error', str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date))
                     logger.warning('Retrying in 2 minutes')
                     sleep(120)
                 except exceptions.RequestException as err:
                     logger.error(err)
+                    send_mail(email['to'], email['from'], 'Request Error', str(intersection_name)+'       '+str(err)+'      {}'.format(start_date))
                     sleep(60)
                 except TimeoutException as exc_504:
                     logger.error(exc_504)
+                    send_mail(email['to'], email['from'], '504 Error', str(intersection_name)+'      {}'.format(start_date))
                     sleep(60)
                 except MiovisionAPIException as miovision_exc:
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
+                    send_mail(email['to'], email['from'], 'Cannot Pull Data', 'Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date))
                     #sleep(60)
                 
         logger.info('Completed data pulling for {}'.format(start_date))
@@ -261,20 +266,31 @@ def pull_data(start_date, end_date, intersection, path, pull):
                 with conn.cursor() as cur:
                     execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
                     conn.commit()
-            logger.info('Inserted into volumes') 
+            with conn:
+                with conn.cursor() as cur:
+                    api_log="SELECT miovision_api.api_log('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                    cur.execute(api_log)
+                    conn.commit()
+            logger.info('Inserted into volumes and updated log') 
             conn.notices=[]
             with conn:
                     with conn.cursor() as cur: 
                         invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
                         cur.execute(invalid_movements)
+                        invalid_flag=cur.fetchone()[0]
                         conn.commit()
+                        if invalid_flag == 1:
+                            send_mail(email['to'], email['from'], 'Invalid Movements Warning', 'Invalid Movements more than 1000 for {}'.format(start_date))
                         logger.info(conn.notices[0]) 
         except psycopg2.Error as exc:
-            
+           
+            send_mail(email['to'], email['from'], 'Insert Error', 'Cannot Insert to Volumes     '+str(exc)+'      {}'.format(start_date))
             logger.exception(exc)
             with conn:
                     conn.rollback()
             sys.exit()
+        print(str(start_date))
+        print(str(end_iteration_time))
         if pull is None:
             try:
                 with conn:
@@ -284,8 +300,9 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         conn.commit()
                         logger.info('Aggregated to 15 minute bins')  
                 with conn:
-                    with conn.cursor() as cur:             
-                        cur.execute('''SELECT miovision_api.aggregate_15_min();''')
+                    with conn.cursor() as cur: 
+                        atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
+                        cur.execute(atr_aggregation)
                         conn.commit()
                         logger.info('Completed data processing for {}'.format(start_date))
                
@@ -297,7 +314,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
                 sys.exit()
         else:
             logger.info('Data Processing Skipped') 
-        start_date+=time_delta
         intersection_iterator=intersection_list
         try:
             with conn:
@@ -318,8 +334,10 @@ def pull_data(start_date, end_date, intersection, path, pull):
 
         except:
             logger.exception('Cannot Refresh Views')
+            send_mail(email['to'], email['from'], 'Views Error', 'Cannot Refresh Views     '+str(exc)+'      {}'.format(start_date))
             sys.exit()
-        end_iteration_time= start_date + time_delta
+        end_iteration_time+=time_delta
+        start_date+=time_delta
         if start_date>=end_date:
             break
     #views()
