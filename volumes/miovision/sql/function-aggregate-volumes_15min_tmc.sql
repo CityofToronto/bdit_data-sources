@@ -35,7 +35,9 @@ BEGIN
 				THEN FALSE 
 				ELSE NULL 
 				END AS interpolated
-		FROM volumes
+		FROM volumes A
+		INNER JOIN miovision.intersection_movements	m  --Make sure movement is valid.
+		 											USING (intersection_uid, classification_uid,leg,movement_uid)
 		WHERE volume_15min_tmc_uid IS NULL
 		GROUP BY intersection_uid, datetime_bin_15
 		WINDOW w AS (PARTITION BY intersection_uid)
