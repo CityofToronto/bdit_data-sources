@@ -119,6 +119,8 @@ For example, to collect data from a custom date range, run `python intersection_
 
 `start` and `end` must be separated by at least 1 day, and `end` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
 
+If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled. 
+
 #### Command Line Options
 
 |Option|Format|Description|Example|Default|
@@ -163,7 +165,7 @@ The API assigns a classification of 0 if the classification matches none of the 
 
 ### Invalid Movements
 
-The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000.
+The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. This is also emailed to the user if the number of invalid movements is over 1000.
 
 ### How the API works
 
@@ -173,6 +175,4 @@ This flow chart provides a high level overview:
 ![Flow Chart of the API](img/api_script1.png)
 
 
-### Future Work
 
-* Add email notification in the event of an error

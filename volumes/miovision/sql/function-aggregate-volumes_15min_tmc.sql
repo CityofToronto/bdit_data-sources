@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc(
+﻿CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc_new(
     start_date date,
     end_date date)
   RETURNS void AS
@@ -106,9 +106,8 @@ BEGIN
 			COALESCE(A.movement_uid, C.movement_uid) movement_uid,
 			COALESCE(CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/(span*1.0) ELSE SUM(A.volume) END, 0) AS volume
 		FROM bins B
-		INNER JOIN (SELECT * FROM miovision_api.volumes WHERE datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour') A 
-									ON A.volume_15min_tmc_uid IS NULL
-									AND B.intersection_uid = A.intersection_uid 
+		INNER JOIN miovision_api.volumes A 
+									ON B.intersection_uid = A.intersection_uid 
 									AND A.datetime_bin BETWEEN B.start_time AND B.end_time
 		/*Only join the zero padding movements to the left side when everything matches, including the bin's datetime_bin
 		Otherwise zero-pad*/
@@ -117,6 +116,7 @@ BEGIN
 												AND C.leg = A.leg
 												AND C.movement_uid = A.movement_uid
 												AND C.datetime_bin = B.datetime_bin
+												WHERE A.datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour'
 		GROUP BY COALESCE(C.intersection_uid, A.intersection_uid), COALESCE(C.datetime_bin, B.datetime_bin), 
 				 COALESCE(A.classification_uid, C.classification_uid), COALESCE( A.leg, C.leg), 
 				 COALESCE(A.movement_uid, C.movement_uid), interpolated, span
@@ -146,5 +146,5 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
+ALTER FUNCTION miovision_api.aggregate_15_min_tmc_new(date, date)
   OWNER TO rliu;
