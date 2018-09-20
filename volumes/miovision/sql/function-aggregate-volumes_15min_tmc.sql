@@ -1,6 +1,4 @@
-﻿SET SCHEMA 'miovision';
-
-CREATE OR REPLACE FUNCTION aggregate_15_min_tmc()
+﻿CREATE OR REPLACE FUNCTION miovision.aggregate_15_min_tmc()
   RETURNS void AS
 $BODY$
 
@@ -35,7 +33,7 @@ BEGIN
 				THEN FALSE 
 				ELSE NULL 
 				END AS interpolated
-		FROM volumes A
+		FROM miovision.volumes A
 		INNER JOIN miovision.intersection_movements	m  --Make sure movement is valid.
 		 											USING (intersection_uid, classification_uid,leg,movement_uid)
 		WHERE volume_15min_tmc_uid IS NULL
@@ -84,7 +82,7 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 		)
 	,aggregate_insert AS(
 		/*Inner join volume data with bins on intersection/datetime_bin then add zero padding for select movements*/
-		INSERT INTO volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+		INSERT INTO miovision.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 		SELECT 	COALESCE(C.intersection_uid, A.intersection_uid) intersection_uid,
 			COALESCE(C.datetime_bin, B.datetime_bin) datetime_bin,
 			COALESCE(A.classification_uid, C.classification_uid) classification_uid,
@@ -92,7 +90,7 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 			COALESCE(A.movement_uid, C.movement_uid) movement_uid,
 			COALESCE(CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/(span*1.0) ELSE SUM(A.volume) END, 0) AS volume
 		FROM bins B
-		INNER JOIN volumes A ON A.volume_15min_tmc_uid IS NULL
+		INNER JOIN miovision.volumes A ON A.volume_15min_tmc_uid IS NULL
 									AND B.intersection_uid = A.intersection_uid 
 									AND B.start_time <= A.datetime_bin AND B.end_time >= A.datetime_bin
 		INNER JOIN miovision.intersection_movements	m ON --Make sure movement is valid.
@@ -113,13 +111,13 @@ RAISE NOTICE '% Interpolation finished', timeofday();
 		RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid, volume
 	)
     , zero_insert AS(
-	INSERT INTO volumes_tmc_zeroes 
+	INSERT INTO miovision.volumes_tmc_zeroes 
 	SELECT a_volume_uid, a.volume_15min_tmc_uid
 	FROM aggregate_insert a
 	INNER JOIN bins USING(intersection_uid, datetime_bin)
 		WHERE a.volume = 0
 	)
-	UPDATE volumes a
+	UPDATE miovision.volumes a
 	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
 	FROM aggregate_insert b
 	WHERE a.volume_15min_tmc_uid IS NULL AND b.volume > 0 
@@ -136,6 +134,6 @@ $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
 
-GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO dbadmin WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min_tmc() TO dbadmin WITH GRANT OPTION;
 
-GRANT EXECUTE ON FUNCTION aggregate_15_min_tmc() TO bdit_humans WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION miovision.aggregate_15_min_tmc() TO bdit_humans WITH GRANT OPTION;

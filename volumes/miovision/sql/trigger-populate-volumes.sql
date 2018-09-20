@@ -7,7 +7,7 @@ $BODY$
 BEGIN
 
 
-	INSERT INTO volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+	INSERT INTO miovision.volumes (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 	SELECT B.intersection_uid, (NEW.datetime_bin AT TIME ZONE 'America/Toronto') AS datetime_bin, C.classification_uid, NEW.entry_dir_name as leg, D.movement_uid, NEW.volume
 	FROM miovision.intersections B 
 	INNER JOIN miovision.movements D ON (D.movement = NEW.movement)
