@@ -8,5 +8,3 @@
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE miovision_api_test.api_log
-  OWNER TO rliu;
