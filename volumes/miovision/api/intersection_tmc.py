@@ -17,7 +17,9 @@ from psycopg2 import connect, Error
 import logging
 import configparser
 import click
+import traceback
 from time import sleep
+from notify_email import send_mail
 
 class MiovisionAPIException(Exception):
     """Base class for exceptions."""
@@ -236,6 +238,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
             intersection_id1=intersection_iterator[1]
             intersection_name=intersection_iterator[2]
             logger.debug(intersection_name+'     '+str(start_date))
+            error_array=[]
             for attempt in range(3):
                 try:
                     table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
@@ -243,22 +246,23 @@ def pull_data(start_date, end_date, intersection, path, pull):
                     break
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
-                    send_mail(email['to'], email['from'], 'Proxy Error', str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date))
+                    error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date))
                     logger.warning('Retrying in 2 minutes')
                     sleep(120)
                 except exceptions.RequestException as err:
                     logger.error(err)
-                    send_mail(email['to'], email['from'], 'Request Error', str(intersection_name)+'       '+str(err)+'      {}'.format(start_date))
-                    sleep(60)
+                    error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date))
+                    sleep(75)
                 except TimeoutException as exc_504:
                     logger.error(exc_504)
-                    send_mail(email['to'], email['from'], '504 Error', str(intersection_name)+'      {}'.format(start_date))
+                    error_array.append(str(intersection_name)+'      {}'.format(start_date))
                     sleep(60)
                 except MiovisionAPIException as miovision_exc:
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
-                    send_mail(email['to'], email['from'], 'Cannot Pull Data', 'Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date))
-                    #sleep(60)
+                    error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date))   
+            else:
+                send_mail(email['to'], email['from'], 'Miovision API Error','\n'.join(map(str, error_array)))   
                 
         logger.info('Completed data pulling for {}'.format(start_date))
         try:
@@ -289,8 +293,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
             with conn:
                     conn.rollback()
             sys.exit()
-        print(str(start_date))
-        print(str(end_iteration_time))
         if pull is None:
             try:
                 with conn:
@@ -332,7 +334,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
                     conn.commit()
                     logger.info('Updated Views')
 
-        except:
+        except psycopg2.Error as exc:
             logger.exception('Cannot Refresh Views')
             send_mail(email['to'], email['from'], 'Views Error', 'Cannot Refresh Views     '+str(exc)+'      {}'.format(start_date))
             sys.exit()
