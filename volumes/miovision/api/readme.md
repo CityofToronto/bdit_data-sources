@@ -98,12 +98,7 @@ All errors the API encounters are logged in the `logging.log` file, and emailed 
 
 ### Input Files
 
-|File|Description|
-|-----|-----|
-`intersection_id.csv`| Lists all intersection names, their intersection IDs to input into the puller, and the lat/lng.
-`config.cfg`|Configuration file that contains database credentials and the api key.
-
-`config.cfg` has the following format:
+`config.cfg` is required to access the API, the database, and perform email notification. It has the following format:
 
 ```
 [API]
@@ -113,6 +108,9 @@ host=10.160.12.47
 dbname=bigdata
 user=database username
 password=database password
+[EMAIL]
+from=from@email.com
+to=to@email.com
 ```
 
 ### How to run the api
