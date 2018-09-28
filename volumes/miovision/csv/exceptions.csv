@@ -1,3 +1,4 @@
+intersection_uid,date_range,classification_uid,reason
 1,"(2017-10-03 00:00, 2018-10-30 00:00)",2,Baseline volume issues for peds and bikes
 5,"(2017-10-03 00:00, 2018-10-30 00:00)",2,Baseline volume issues for peds and bikes
 10,"(2017-10-03 00:00, 2018-10-30 00:00)",2,Baseline volume issues for peds and bikes
