@@ -18,8 +18,8 @@ CREATE OR REPLACE VIEW open_data.miovision_2017 AS
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-   INNER JOIN miovision.report_dates USING (intersection_uid, class_type)
-   LEFT OUTER JOIN miovision.exceptions USING (intersection_uid, classification_uid)
+   INNER JOIN miovision.report_dates USING (intersection_uid, class_type_id)
+LEFT OUTER JOIN miovision.exceptions ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND a.datetime_bin <@ c.excluded_datetime
   WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
     AND exceptions_uid IS NULL --exclude excepted data
 GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
@@ -41,12 +41,12 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
     volumes_15min.leg,
     volumes_15min.dir,
     SUM(volumes_15min.volume)::INT as volume
-   FROM miovision.volumes_15min
+   FROM miovision.volumes_15min a
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-   INNER JOIN miovision.report_dates USING (intersection_uid, class_type)
-   LEFT OUTER JOIN miovision.exceptions USING (intersection_uid, classification_uid)
+   INNER JOIN miovision.report_dates USING (intersection_uid, class_type_id)
+   LEFT OUTER JOIN miovision.exceptions ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND a.datetime_bin <@ c.excluded_datetime
   WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2018::double precision
     AND exceptions_uid IS NULL --exclude excepted data
 GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
@@ -63,37 +63,35 @@ DROP VIEW open_data.ksp_miovision_summary;
 CREATE OR REPLACE VIEW open_data.ksp_miovision_summary AS 
 WITH valid_bins AS (
          SELECT a_1.intersection_uid,
-            a_1.class_type,
+            a_1.class_type_id,
             a_1.dt + b_1.b::time without time zone AS datetime_bin,
             a_1.period_type
            FROM miovision.report_dates a_1
              CROSS JOIN (SELECT generate_series('2017-01-01 00:00:00'::timestamp without time zone, '2017-01-01 23:45:00'::timestamp without time zone, '00:15:00'::interval)::TIME) b_1(b)
-          ORDER BY a_1.intersection_uid, a_1.class_type, (a_1.dt + b_1.b::time without time zone)
         ), int_avg AS (
          SELECT volumes_15min_by_class.intersection_uid,
-            volumes_15min_by_class.class_type,
+            volumes_15min_by_class.class_type_id,
             volumes_15min_by_class.dir,
             volumes_15min_by_class.leg,
             volumes_15min_by_class.period_type,
             volumes_15min_by_class.datetime_bin::time without time zone AS time_bin,
             avg(volumes_15min_by_class.total_volume) AS avg_volume
            FROM miovision.volumes_15min_by_class
-          GROUP BY volumes_15min_by_class.intersection_uid, volumes_15min_by_class.class_type, volumes_15min_by_class.period_type, volumes_15min_by_class.dir, volumes_15min_by_class.leg, (volumes_15min_by_class.datetime_bin::time without time zone)
+          GROUP BY volumes_15min_by_class.intersection_uid, volumes_15min_by_class.class_type_id, volumes_15min_by_class.period_type, volumes_15min_by_class.dir, volumes_15min_by_class.leg, (volumes_15min_by_class.datetime_bin::time without time zone)
         )
  , volumes_15 AS (
  
  SELECT a.intersection_uid,
     a.period_type,
     a.datetime_bin,
-    a.class_type,
+    a.class_type_id,
     b.dir,
     b.leg,
     COALESCE(c.total_volume, b.avg_volume) AS volume
   FROM valid_bins a
-     JOIN int_avg b USING (intersection_uid, class_type, period_type)
-     LEFT JOIN miovision.volumes_15min_by_class c USING (datetime_bin, intersection_uid, class_type, dir, leg, period_type)
+     JOIN int_avg b USING (intersection_uid, class_type_id, period_type)
+     LEFT JOIN miovision.volumes_15min_by_class c USING (datetime_bin, intersection_uid, class_type_id, dir, leg, period_type)
   WHERE b.time_bin = a.datetime_bin::time without time zone
-  ORDER BY a.intersection_uid, a.period_type, a.datetime_bin, a.class_type, b.dir, b.leg
 ),
  intersection_days AS (
 	SELECT intersection_uid, datetime_bin::date AS dt, COUNT(DISTINCT datetime_bin) AS num_daily_observations
@@ -105,7 +103,7 @@ WITH valid_bins AS (
     c.intersection_name,
     c.street_main,
     c.street_cross,
-    a.class_type,
+    class_type,
     a.dir,
     a.period_type,
     a.datetime_bin::date AS dt,
@@ -120,10 +118,14 @@ WITH valid_bins AS (
      CROSS JOIN miovision.periods b
      JOIN miovision.intersections c USING (intersection_uid)
      JOIN intersection_days d ON d.intersection_uid = a.intersection_uid AND a.datetime_bin::date = dt
+     INNER JOIN miovision.class_types USING (class_type_id)
   WHERE a.datetime_bin::time without time zone <@ b.period_range AND report_flag AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) 
-	AND (period_id != 7 OR num_daily_observations > 23 * 4) --Make sure 24hour counts have data for most of the 24-hour period
+	AND (CASE WHEN period_id = 8 THEN num_daily_observations > 23 * 4 --Make sure 24hour counts have data for most of the 24-hour period
+            WHEN period_id = 4 THEN num_daily_observations > 13 * 4 --Make sure 14hour counts have data for most of the 14-hour period
+            ELSE TRUE
+            END)
 	AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
-  GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, a.class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
+  GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
    
 )
 SELECT period_type as aggregation_period, intersections.int_id,
