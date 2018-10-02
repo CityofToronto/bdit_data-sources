@@ -102,6 +102,8 @@ WITH valid_bins AS (
  )
 , daily AS(
  SELECT a.intersection_uid,
+    c.int_id,
+    px,
     c.intersection_name,
     c.street_main,
     c.street_cross,
@@ -119,7 +121,7 @@ WITH valid_bins AS (
    FROM volumes_15 a
      CROSS JOIN miovision.periods b
      JOIN miovision.intersections c USING (intersection_uid)
-     JOIN intersection_days d ON d.intersection_uid = a.intersection_uid AND a.datetime_bin::date = dt
+     JOIN intersection_days d ON d.intersection_uid = a.intersection_uid AND a.datetime_bin >= dt AND a.datetime_bin < dt + INTERVAL '1 Day'
      INNER JOIN miovision.class_types USING (class_type_id)
   WHERE a.datetime_bin::time without time zone <@ b.period_range AND report_flag AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) 
 	AND (CASE WHEN period_id = 8 THEN num_daily_observations > 23 * 4 --Make sure 24hour counts have data for most of the 24-hour period
@@ -132,10 +134,10 @@ WITH valid_bins AS (
        OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) 
        OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text]))
        OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
-  GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
+  GROUP BY a.intersection_uid, c.int_id, px, c.intersection_name, c.street_main, c.street_cross, a.period_type, class_type, a.dir, dt, b.period_name, b.period_range, period_id
    
 )
-SELECT period_type as aggregation_period, intersections.int_id,
+SELECT period_type as aggregation_period, int_id,
     centreline_intersection.intersec5 AS intersection_name, px,
     CASE
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
@@ -143,7 +145,6 @@ SELECT period_type as aggregation_period, intersections.int_id,
         END AS classification,
         dir, period_name, AVG(total_volume)::int as volume
 FROM daily
-JOIN miovision.intersections USING (intersection_uid)
 JOIN gis.centreline_intersection USING (int_id)
 GROUP BY period_type, int_id, class_type, intersec5, px, dir, period_name;
 GRANT SELECT ON TABLE open_data.ksp_miovision_summary TO od_extract_svc;
