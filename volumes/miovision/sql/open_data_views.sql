@@ -68,6 +68,8 @@ WITH valid_bins AS (
             a_1.period_type
            FROM miovision.report_dates a_1
              CROSS JOIN (SELECT generate_series('2017-01-01 00:00:00'::timestamp without time zone, '2017-01-01 23:45:00'::timestamp without time zone, '00:15:00'::interval)::TIME) b_1(b)
+             LEFT JOIN miovision_new.exceptions c ON a_1.intersection_uid = c.intersection_uid AND a_1.class_type_id = c.class_type_id AND (a_1.dt + b_1.b::time without time zone) <@ c.excluded_datetime
+          WHERE c.exceptions_uid IS NULL
         ), int_avg AS (
          SELECT volumes_15min_by_class.intersection_uid,
             volumes_15min_by_class.class_type_id,
@@ -138,6 +140,5 @@ SELECT period_type as aggregation_period, intersections.int_id,
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
 JOIN gis.centreline_intersection USING (int_id)
-INNER JOIN gis.traffic_signals on node_id = int_id
 GROUP BY period_type, int_id, class_type, intersec5, px, dir, period_name;
 GRANT SELECT ON TABLE open_data.ksp_miovision_summary TO od_extract_svc;
