@@ -66,7 +66,7 @@ WITH valid_bins AS (
             a_1.class_type_id,
             a_1.dt + b_1.b::time without time zone AS datetime_bin,
             a_1.period_type
-           FROM miovision.report_dates a_1
+           FROM miovision.report_dates_view a_1
              CROSS JOIN (SELECT generate_series('2017-01-01 00:00:00'::timestamp without time zone, '2017-01-01 23:45:00'::timestamp without time zone, '00:15:00'::interval)::TIME) b_1(b)
              LEFT JOIN miovision_new.exceptions c ON a_1.intersection_uid = c.intersection_uid AND a_1.class_type_id = c.class_type_id AND (a_1.dt + b_1.b::time without time zone) <@ c.excluded_datetime
           WHERE c.exceptions_uid IS NULL
@@ -126,7 +126,12 @@ WITH valid_bins AS (
             WHEN period_id = 4 THEN num_daily_observations > 13 * 4 --Make sure 14hour counts have data for most of the 14-hour period
             ELSE TRUE
             END)
-	AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((a.class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text])) OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
+	AND (c.street_cross = ANY (ARRAY['Bathurst'::text, 'Spadina'::text, 'Bay'::text, 'Jarvis'::text])) 
+  AND (c.street_cross = 'Bathurst'::text AND (a.leg = ANY (ARRAY['E'::text, 'S'::text, 'N'::text])) 
+       OR c.street_cross = 'Jarvis'::text AND (a.leg = ANY (ARRAY['W'::text, 'S'::text, 'N'::text])) 
+       OR (c.street_cross <> ALL (ARRAY['Bathurst'::text, 'Jarvis'::text])) AND (a.dir = 'EB'::text AND (a.leg = ANY (ARRAY['W'::text, 'N'::text, 'S'::text])) 
+       OR a.dir = 'WB'::text AND (a.leg = ANY (ARRAY['E'::text, 'N'::text, 'S'::text])))) AND NOT ((class_type = ANY (ARRAY['Vehicles'::text, 'Cyclists'::text])) AND (a.dir = 'EB'::text AND (c.street_main = ANY (ARRAY['Wellington'::text, 'Richmond'::text]))
+       OR a.dir = 'WB'::text AND c.street_main = 'Adelaide'::text))
   GROUP BY a.intersection_uid, c.intersection_name, c.street_main, c.street_cross, a.period_type, class_type, a.dir, (a.datetime_bin::date), b.period_name, b.period_range, period_id
    
 )
@@ -136,7 +141,7 @@ SELECT period_type as aggregation_period, intersections.int_id,
             WHEN class_type = 'Buses'::text THEN 'Buses and streetcars'::text
             ELSE class_type
         END AS classification,
-        dir, period_name, round(AVG(total_volume), -1)::int as volume
+        dir, period_name, AVG(total_volume)::int as volume
 FROM daily
 JOIN miovision.intersections USING (intersection_uid)
 JOIN gis.centreline_intersection USING (int_id)
