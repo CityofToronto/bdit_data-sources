@@ -45,9 +45,4 @@ GROUP BY intersection_uid,
 	dir,
 	dt,
 	B.period_name
-ORDER BY	intersection_uid,
-		class_type,
-		dir,
-		period_name,
-		dt;
-	
+;

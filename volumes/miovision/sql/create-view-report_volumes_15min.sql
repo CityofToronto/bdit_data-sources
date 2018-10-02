@@ -6,8 +6,8 @@
             a_1.period_type
            FROM miovision.report_dates_view a_1
              CROSS JOIN generate_series('2017-01-01 06:00:00'::timestamp without time zone, '2017-01-01 19:45:00'::timestamp without time zone, '00:15:00'::interval) b_1(b)
-             LEFT JOIN miovision.exceptions c ON a_1.intersection_uid = c.intersection_uid AND a_1.class_type_id = c.class_type_id AND (a_1.dt + b_1.b) <@ c.excluded_datetime
-          WHERE c.excluded_datetime IS NULL
+             LEFT JOIN miovision.exceptions c ON a_1.intersection_uid = c.intersection_uid AND a_1.class_type_id = c.class_type_id AND (a_1.dt + b_1.b::time without time zone) <@ c.excluded_datetime
+          WHERE c.exceptions_uid IS NULL
         ), int_avg AS (
          SELECT volumes_15min_by_class.intersection_uid,
             volumes_15min_by_class.class_type_id,
