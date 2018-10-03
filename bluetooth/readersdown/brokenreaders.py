@@ -3,7 +3,7 @@ import configparser
 from psycopg2 import connect
 import psycopg2.sql as pg
 import pandas.io.sql as pandasql
-from email_notifications import send_mail
+from notify_email import send_mail
 
 class BlipScriptFailed(Exception):
     pass
