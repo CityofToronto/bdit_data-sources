@@ -96,7 +96,7 @@ This table contains the location information of each volume count.
 #### Table Structure
 Field Name|Type|Description
 ----------|----|-----------
-arterycode|bigint|ID number referred to by [countinformics](#countinfomics) and [countinfo](#countinfo)
+arterycode|bigint|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
 street1|text|first street name
 street2|text|second street name
 location|text|full description of count location
@@ -189,10 +189,10 @@ timecount|Date/Time|Effective time of counts (time displayed is the end time per
 
 ### countinfo
 #### Content
-Similar to [countinformics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
+Similar to [countinfomics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
 
 #### Table Structure
-See [countinformics](#countinfomics)
+See [countinfomics](#countinfomics)
 
 ### category
 #### Content
@@ -201,7 +201,7 @@ This is a reference table referencing the data source of each entry.
 #### Table Structure
 Field Name|Type|Description
 ----------|----|-----------
-category_id|int|ID number referred to by [countinformics](#countinfomics) and [countinfo](#countinfo)
+category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
 category_name|text|name of the data source
 
 
