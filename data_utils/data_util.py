@@ -120,6 +120,8 @@ def parse_args(args, prog = None, usage = None):
                               "to complete table partitioning")
     ACTIONS.add_argument("-a", "--aggregate", action="store_true",
                          help="Aggregate raw data")
+    ACTIONS.add_argument("-r", "--runfunction", action="store_true",
+                         help="Run the specified function")
     ACTIONS.add_argument("-m", "--movedata", action="store_true",
                          help="Remove data from TMCs outside Toronto")
     #Must have either a year range or pass a JSON file with years.
@@ -136,21 +138,23 @@ def parse_args(args, prog = None, usage = None):
                         help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
     PARSER.add_argument("-t", "--tablename",
-                        default='raw_data',
+                        default='ta_',
                         help="Base table on which to perform operation, like %(default)s")
     PARSER.add_argument("-s", "--schemaname",
-                        default='inrix',
+                        default='here',
                         help="Base schema on which to perform operation, like %(default)s")
     PARSER.add_argument("-tx", "--timecolumn",
                         default='tx',
                         help="Time column for partitioning, default: %(default)s")
+    PARSER.add_argument("--function",
+                        help="SQL function to run for the specified months, specify only the name of the function.")
     PARSER.add_argument("--alldata", action="store_true",
                         help="For aggregating, specify using all rows, regardless of score")
     PARSER.add_argument("--tmctable", default='gis.inrix_tmc_tor',
                         help="Specify subset of tmcs to use, default: %(default)s")
     PARSER.add_argument("--idx", action='append', 
                         help="Index functions to call, parameters are keys "
-                        "for index_functions.json") 
+                        "for index_functions.json")
     return PARSER.parse_args(args)
 
 if __name__ == "__main__":
@@ -219,6 +223,9 @@ if __name__ == "__main__":
         function=agg_table
     elif ARGS.movedata:
         from move_data import move_data
+    elif ARGS.runfunction:
+        from run_function import FunctionRunner
+        engine = FunctionRunner(LOGGER, dbset, schemaname=ARGS.schemaname, function=ARGS.function)
 
     if ARGS.aggregate or ARGS.movedata:
         con, cursor = try_connection(LOGGER, dbset, autocommit=True)
@@ -232,11 +239,11 @@ if __name__ == "__main__":
                                  autocommit=True,
                                  yyyymm=yyyymm,
                                  **kwargs)
-            elif ARGS.index or ARGS.partition: 
-                engine.run(year, month, table=ARGS.tablename)
             elif ARGS.movedata:
                 kwargs['startdate']=get_yyyymmdd(year, month)
                 move_data(yyyymm, LOGGER, cursor, dbset, **kwargs)
+            else:
+                engine.run(year, month, table=ARGS.tablename)
             
     #con.close()
     LOGGER.info('Processing complete, connection to %s database %s closed',
