@@ -87,7 +87,12 @@ WITH valid_bins AS (
     class_type,
     b.dir,
     b.leg,
-    COALESCE(c.total_volume, b.avg_volume) AS volume
+    COALESCE(c.total_volume, b.avg_volume) AS volume,
+    int_id,
+    px,
+    intersection_name,
+    street_main,
+    street_cross
   FROM valid_bins a
      JOIN miovision.int_time_bin_avg b USING (intersection_uid, class_type_id, period_type)
      INNER JOIN miovision.class_types USING (class_type_id)
@@ -104,9 +109,6 @@ WITH valid_bins AS (
  SELECT a.intersection_uid,
     int_id,
     px,
-    intersection_name,
-    street_main,
-    street_cross,
     class_type,
     a.dir,
     a.period_type,
@@ -120,7 +122,7 @@ WITH valid_bins AS (
     sum(a.volume) AS total_volume
    FROM volumes_15 a
      CROSS JOIN miovision.periods b
-     JOIN intersection_days d ON d.intersection_uid = a.intersection_uid AND a.datetime_bin >= dt AND a.datetime_bin < dt + INTERVAL '1 Day'
+     JOIN intersection_days d USING (intersection_uid, dt)
 
   WHERE a.datetime_bin::time without time zone <@ b.period_range 
     AND report_flag AND (a.dir = ANY (ARRAY['EB'::text, 'WB'::text])) 
@@ -129,12 +131,12 @@ WITH valid_bins AS (
         OR period_id = 4 AND num_daily_observations > 13 * 4 --Make sure 14hour counts have data for most of the 14-hour period
         )
      
-    AND (c.street_cross = 'Bathurst' AND (a.leg IN ('E', 'S', 'N')) 
-        OR c.street_cross = 'Jarvis' AND (a.leg IN ('W', 'S', 'N')) 
-        OR (c.street_cross NOT IN ('Bathurst', 'Jarvis')) AND (a.dir = 'EB' AND (a.leg IN ('W', 'N', 'S')) 
-        OR a.dir = 'WB' AND (a.leg IN ('E', 'N', 'S')))) AND NOT ((class_type IN ('Vehicles', 'Cyclists')) AND (a.dir = 'EB' AND (c.street_main IN ('Wellington', 'Richmond'))
-        OR a.dir = 'WB' AND c.street_main = 'Adelaide'))
-  GROUP BY a.intersection_uid, c.int_id, px, c.intersection_name, c.street_main, c.street_cross, a.period_type, class_type, a.dir, dt2, b.period_name, b.period_range, period_id
+    AND (street_cross = 'Bathurst' AND (a.leg IN ('E', 'S', 'N')) 
+        OR street_cross = 'Jarvis' AND (a.leg IN ('W', 'S', 'N')) 
+        OR (street_cross NOT IN ('Bathurst', 'Jarvis')) AND (a.dir = 'EB' AND (a.leg IN ('W', 'N', 'S')) 
+        OR a.dir = 'WB' AND (a.leg IN ('E', 'N', 'S')))) AND NOT ((class_type IN ('Vehicles', 'Cyclists')) AND (a.dir = 'EB' AND (street_main IN ('Wellington', 'Richmond'))
+        OR a.dir = 'WB' AND street_main = 'Adelaide'))
+  GROUP BY a.intersection_uid, int_id, px, a.period_type, class_type, a.dir, dt2, b.period_name, b.period_range, period_id
    
 )
 SELECT period_type as aggregation_period, int_id,
