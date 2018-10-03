@@ -1,0 +1,27 @@
+[[source]]
+verify_ssl = true
+url = "https://pypi.python.org/simple"
+name = "pypi"
+
+[dev-packages]
+pylint = "*"
+rope = "*"
+
+[requires]
+python_version = "3.6"
+
+[packages]
+zeep = "*"
+python-dateutil = "*"
+requests = "*"
+pygresql = "*"
+"psycopg2" = "*"
+matplotlib = "*"
+jupyter = "*"
+seaborn = "*"
+pandas = "*"
+click = "*"
+requests-oauthlib = "*"
+parsing_utlities = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "parsing_utilities"}
+"email_notifications-0.2" = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "email_notifications"}
+pysftp = "*"
