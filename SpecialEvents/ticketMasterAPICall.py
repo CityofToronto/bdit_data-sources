@@ -46,7 +46,6 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
-
 def process_venue(i, l, db, curId):
     inserted_venue = 0
     # Get Venue Information
@@ -55,7 +54,8 @@ def process_venue(i, l, db, curId):
     venue["venue_name"] = l["name"].replace("\'", "")
 
     if i % 50 == 0:
-        logger.info('Processing venue #%s', i + 1)
+
+        logger.info('Processing venue #%s', i+1)
         logger.info('Venue: %s, id: %s',
                     venue["venue_name"],
                     venue["tm_venue_id"])
@@ -133,17 +133,17 @@ def update_venues(db, proxies, curId):
     venues = []
     inserted_venues = 0
     venues_processed = 0
-    while True:
-
+    while True: 
+        
         if not r:
             logger.info('Requesting initial ticketmaster venues page')
             url = 'https://app.ticketmaster.com/discovery/v2/venues.json'
-            params = {'size': 200,
-                      'stateCode': 'ON',
-                      'countryCode': 'CA',
-                      'includeTest': 'no',
-                      'keyword': 'Toronto',
-                      'apikey': API_KEY}
+            params = {'size':200,
+                      'stateCode':'ON',
+                      'countryCode':'CA',
+                      'includeTest':'no',
+                      'keyword':'Toronto',
+                      'apikey':API_KEY}
         elif "next" in r["_links"].keys():
             logger.info('Requesting next ticketmaster venues page')
             url = 'https://app.ticketmaster.com'
@@ -160,7 +160,7 @@ def update_venues(db, proxies, curId):
 
         logger.info('Processing venues')
         logger.debug(r.keys())
-
+        
         for l in r["_embedded"]["venues"]:
             if l["city"]["name"] == 'Toronto':
                 venues_processed += 1
@@ -178,7 +178,7 @@ def update_venues(db, proxies, curId):
                     inserted_venue += 1
                     logger.error('Venue %s, inserted twice', venue['name'])
                 inserted_venues += inserted_venue
-
+        
     return venues, inserted_venues
 
 def update_events(db, proxies, venues):
