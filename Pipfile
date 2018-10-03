@@ -1,0 +1,15 @@
+[packages]
+zeep = "*"
+python-dateutil = "*"
+requests = "*"
+pygresql = "*"
+matplotlib = "*"
+jupyter = "*"
+seaborn = "*"
+pandas = "*"
+click = "*"
+requests-oauthlib = "*"
+parsing_utlities = {subdirectory = "parsing_utilities", editable = true, git = "https://github.com/CityofToronto/bdit_python_utilities.git"}
+email_notifications = {subdirectory = "email_notifications", editable = true, git = "https://github.com/CityofToronto/bdit_python_utilities.git"}
+pysftp = "*"
+"psycopg2-binary" = "*"
