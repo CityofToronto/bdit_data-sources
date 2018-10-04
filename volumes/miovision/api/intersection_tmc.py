@@ -353,6 +353,7 @@ def pull_data(start_date, end_date, intersection, path, pull):
         logger.info('Done')
     except Exception as e:
         logger.critical(traceback.format_exc())
+        send_mail(email['to'], email['from'], 'Uncaught Error', traceback.format_exc())
 
 if __name__ == '__main__':
     cli()
