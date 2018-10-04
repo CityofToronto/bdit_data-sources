@@ -70,9 +70,9 @@ def cli():
 @cli.command()
 @click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-@click.option('--path' ,'--path', default='config.cfg', help='format is YYYY-MM-DD for end date')
-@click.option('--intersection' ,'--intersection', default=0, help='format is YYYY-MM-DD for end date')
-@click.option('--pull' ,'--pull', default=None, help='format is YYYY-MM-DD for end date')
+@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--intersection' ,'--intersection', default=0, help='enter the intersection_uid of the intersection')
+@click.option('--pull' ,'--pull', default=None, help='enter 1 to not process the data')
 def run_api(start_date, end_date, path, intersection, pull):
 
     
@@ -203,155 +203,156 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
 
 
 def pull_data(start_date, end_date, intersection, path, pull):
-    time_delta = datetime.timedelta(days=1)
-    end_iteration_time= start_date + time_delta        
-    
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
-    api_key=CONFIG['API']
-    email=CONFIG['EMAIL']
-    key=api_key['key']
-    dbset = CONFIG['DBSETTINGS']
-    conn = connect(**dbset)
-    logger.debug('Connected to DB')
-    if intersection>0:
-        with conn:
-            with conn.cursor() as cur:
-                string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
-                cur.execute(str(string))
-                intersection_list=cur.fetchall()
-                intersection_iterator=intersection_list
-                conn.commit()
-    else:      
-        with conn:
-            with conn.cursor() as cur:
-                select='''SELECT * from miovision.intersection_id;'''
-                cur.execute(select)
-                intersection_list=cur.fetchall()
-                intersection_iterator=intersection_list
-                conn.commit()
-    while True:
-        table=[]
+    try:
+        time_delta = datetime.timedelta(days=1)
+        end_iteration_time= start_date + time_delta        
         
-        for intersection_iterator in intersection_iterator:
-            intersection_uid=intersection_iterator[0]
-            intersection_id1=intersection_iterator[1]
-            intersection_name=intersection_iterator[2]
-            logger.debug(intersection_name+'     '+str(start_date))
-            error_array=[]
-            for attempt in range(3):
-                try:
-                    table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
-                    table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
-                    break
-                except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date))
-                    logger.warning('Retrying in 2 minutes')
-                    sleep(120)
-                except exceptions.RequestException as err:
-                    logger.error(err)
-                    error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date))
-                    sleep(75)
-                except TimeoutException as exc_504:
-                    logger.error(exc_504)
-                    error_array.append(str(intersection_name)+'      {}'.format(start_date))
-                    sleep(60)
-                except MiovisionAPIException as miovision_exc:
-                    logger.error('Cannot pull data')
-                    logger.error(miovision_exc)
-                    error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date))   
-            else:
-                send_mail(email['to'], email['from'], 'Miovision API Error','\n'.join(map(str, error_array)))   
-                
-        logger.info('Completed data pulling for {}'.format(start_date))
-        try:
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read(path)
+        api_key=CONFIG['API']
+        email=CONFIG['EMAIL']
+        key=api_key['key']
+        dbset = CONFIG['DBSETTINGS']
+        conn = connect(**dbset)
+        logger.debug('Connected to DB')
+        if intersection>0:
             with conn:
                 with conn.cursor() as cur:
-                    execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
+                    string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
+                    cur.execute(str(string))
+                    intersection_list=cur.fetchall()
+                    intersection_iterator=intersection_list
                     conn.commit()
+        else:      
             with conn:
                 with conn.cursor() as cur:
-                    api_log="SELECT miovision_api.api_log('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                    cur.execute(api_log)
+                    select='''SELECT * from miovision.intersection_id;'''
+                    cur.execute(select)
+                    intersection_list=cur.fetchall()
+                    intersection_iterator=intersection_list
                     conn.commit()
-            logger.info('Inserted into volumes and updated log') 
-            conn.notices=[]
-            with conn:
-                    with conn.cursor() as cur: 
-                        invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                        cur.execute(invalid_movements)
-                        invalid_flag=cur.fetchone()[0]
-                        conn.commit()
-                        if invalid_flag == 1:
-                            send_mail(email['to'], email['from'], 'Invalid Movements Warning', 'Invalid Movements more than 1000 for {}'.format(start_date))
-                        logger.info(conn.notices[0]) 
-        except psycopg2.Error as exc:
-           
-            send_mail(email['to'], email['from'], 'Insert Error', 'Cannot Insert to Volumes     '+str(exc)+'      {}'.format(start_date))
-            logger.exception(exc)
-            with conn:
-                    conn.rollback()
-            sys.exit()
-        if pull is None:
+        while True:
+            table=[]
+            
+            for intersection_iterator in intersection_iterator:
+                intersection_uid=intersection_iterator[0]
+                intersection_id1=intersection_iterator[1]
+                intersection_name=intersection_iterator[2]
+                logger.debug(intersection_name+'     '+str(start_date))
+                error_array=[]
+                for attempt in range(3):
+                    try:
+                        table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
+                        table=get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
+                        break
+                    except exceptions.ProxyError as prox:
+                        logger.error(prox)
+                        error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date))
+                        logger.warning('Retrying in 2 minutes')
+                        sleep(120)
+                    except exceptions.RequestException as err:
+                        logger.error(err)
+                        error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date))
+                        sleep(75)
+                    except TimeoutException as exc_504:
+                        logger.error(exc_504)
+                        error_array.append(str(intersection_name)+'      {}'.format(start_date))
+                        sleep(60)
+                    except MiovisionAPIException as miovision_exc:
+                        logger.error('Cannot pull data')
+                        logger.error(miovision_exc)
+                        error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date))   
+                else:
+                    send_mail(email['to'], email['from'], 'Miovision API Error','\n'.join(map(str, error_array)))   
+                    
+            logger.info('Completed data pulling for {}'.format(start_date))
             try:
                 with conn:
                     with conn.cursor() as cur:
-                        update="SELECT miovision_api.aggregate_15_min_tmc('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                        cur.execute(update)
+                        execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
                         conn.commit()
-                        logger.info('Aggregated to 15 minute bins')  
-                with conn:
-                    with conn.cursor() as cur: 
-                        atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
-                        cur.execute(atr_aggregation)
-                        conn.commit()
-                        logger.info('Completed data processing for {}'.format(start_date))
-                        
                 with conn:
                     with conn.cursor() as cur:
-                        string="SELECT miovision_api.missing_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                        cur.execute(str(string))
-                        intersection_list=cur.fetchall()
+                        api_log="SELECT miovision_api.api_log('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                        cur.execute(api_log)
                         conn.commit()
-               
+                logger.info('Inserted into volumes and updated log') 
+                conn.notices=[]
+                with conn:
+                        with conn.cursor() as cur: 
+                            invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                            cur.execute(invalid_movements)
+                            invalid_flag=cur.fetchone()[0]
+                            conn.commit()
+                            if invalid_flag == 1:
+                                send_mail(email['to'], email['from'], 'Invalid Movements Warning', 'Invalid Movements more than 1000 for {}'.format(start_date))
+                            logger.info(conn.notices[0]) 
             except psycopg2.Error as exc:
-                
+               
+                send_mail(email['to'], email['from'], 'Insert Error', 'Cannot Insert to Volumes     '+str(exc)+'      {}'.format(start_date))
                 logger.exception(exc)
                 with conn:
                         conn.rollback()
                 sys.exit()
-        else:
-            logger.info('Data Processing Skipped') 
-        intersection_iterator=intersection_list
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
-                    cur.execute(report_dates)
-                    conn.commit()
-                    refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-                    cur.execute(refresh_volumes_class)
-                    conn.commit()
-                    refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-                    cur.execute(refresh_volumes)
-                    conn.commit()
-                    refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-                    cur.execute(refresh_report_daily)
-                    conn.commit()
-                    logger.info('Updated Views')
-
-        except psycopg2.Error as exc:
-            logger.exception('Cannot Refresh Views')
-            send_mail(email['to'], email['from'], 'Views Error', 'Cannot Refresh Views     '+str(exc)+'      {}'.format(start_date))
-            sys.exit()
-        end_iteration_time+=time_delta
-        start_date+=time_delta
-        if start_date>=end_date:
-            break
-    #views()
-    logger.info('Done')
+            if pull is None:
+                try:
+                    with conn:
+                        with conn.cursor() as cur:
+                            update="SELECT miovision_api.aggregate_15_min_tmc('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                            cur.execute(update)
+                            conn.commit()
+                            logger.info('Aggregated to 15 minute bins')  
+                    with conn:
+                        with conn.cursor() as cur: 
+                            atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
+                            cur.execute(atr_aggregation)
+                            conn.commit()
+                            logger.info('Completed data processing for {}'.format(start_date))
+                            
+                    with conn:
+                        with conn.cursor() as cur:
+                            string="SELECT miovision_api.missing_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                            cur.execute(str(string))
+                            intersection_list=cur.fetchall()
+                            conn.commit()
+                   
+                except psycopg2.Error as exc:
+                    
+                    logger.exception(exc)
+                    with conn:
+                            conn.rollback()
+                    sys.exit()
+            else:
+                logger.info('Data Processing Skipped') 
+            intersection_iterator=intersection_list
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
+                        cur.execute(report_dates)
+                        conn.commit()
+                        refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
+                        cur.execute(refresh_volumes_class)
+                        conn.commit()
+                        refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
+                        cur.execute(refresh_volumes)
+                        conn.commit()
+                        refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
+                        cur.execute(refresh_report_daily)
+                        conn.commit()
+                        logger.info('Updated Views')
     
+            except psycopg2.Error as exc:
+                logger.exception('Cannot Refresh Views')
+                send_mail(email['to'], email['from'], 'Views Error', 'Cannot Refresh Views     '+str(exc)+'      {}'.format(start_date))
+                sys.exit()
+            end_iteration_time+=time_delta
+            start_date+=time_delta
+            if start_date>=end_date:
+                break
+        logger.info('Done')
+    except Exception as e:
+        logger.critical(traceback.format_exc())
 
 if __name__ == '__main__':
     cli()
