@@ -313,7 +313,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         with conn.cursor() as cur:
                             string="SELECT miovision_api.missing_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
                             cur.execute(str(string))
-                            intersection_list=cur.fetchall()
                             conn.commit()
                    
                 except psycopg2.Error as exc:
