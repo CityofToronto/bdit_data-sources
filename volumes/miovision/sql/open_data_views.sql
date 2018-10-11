@@ -41,13 +41,14 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
     volumes_15min.leg,
     volumes_15min.dir,
     SUM(volumes_15min.volume)::INT as volume
-  FROM miovision.volumes_15min a
+  FROM miovision.volumes_15min 
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
    INNER JOIN miovision_new.report_dates_view a USING (intersection_uid, class_type_id)  
    LEFT OUTER JOIN miovision_new.exceptions e ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND datetime_bin <@ excluded_datetime
-  WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2018::double precision
+  WHERE dt = datetime_bin::DATE AND datetime_bin >= '2018-01-01'
+  AND datetime_bin < LEAST(date_trunc('month', current_date) - INTERVAL '1 Month', '2018-01-01'::DATE + INTERVAL '1 Year') 
     AND exceptions_uid IS NULL --exclude excepted data
   GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
@@ -77,6 +78,7 @@ WITH valid_bins AS (
             LEFT JOIN miovision_new.exceptions c ON a_1.intersection_uid = c.intersection_uid AND a_1.class_type_id = c.class_type_id AND (a_1.dt + b_1.b::time without time zone) <@ c.excluded_datetime
              
           WHERE c.exceptions_uid IS NULL AND street_cross IN ('Bathurst', 'Spadina', 'Bay', 'Jarvis')
+          AND a_1.dt < date_trunc('month', current_date) - INTERVAL '1 Month'
         )
  , volumes_15 AS (
  
