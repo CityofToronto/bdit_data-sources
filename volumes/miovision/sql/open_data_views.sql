@@ -1,7 +1,7 @@
 ﻿-- View: open_data.miovision_2017
 
-DROP VIEW open_data.miovision_2017;
-
+-- DROP VIEW open_data.miovision_2017;
+-- 
 CREATE OR REPLACE VIEW open_data.miovision_2017 AS 
  SELECT period_type as aggregation_period,
     int_id,
@@ -14,12 +14,12 @@ CREATE OR REPLACE VIEW open_data.miovision_2017 AS
     volumes_15min.dir,
     SUM(volumes_15min.volume)::INT as volume
 
-   FROM miovision.volumes_15min
+   FROM miovision.volumes_15min 
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-   INNER JOIN miovision.report_dates USING (intersection_uid, class_type_id)
-LEFT OUTER JOIN miovision.exceptions ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND a.datetime_bin <@ c.excluded_datetime
+   INNER JOIN miovision_new.report_dates_view a USING (intersection_uid, class_type_id)
+   LEFT OUTER JOIN miovision_new.exceptions e ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND datetime_bin <@ excluded_datetime
   WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2017::double precision
     AND exceptions_uid IS NULL --exclude excepted data
 GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
@@ -28,7 +28,7 @@ ALTER TABLE open_data.miovision_2017
 GRANT ALL ON TABLE open_data.miovision_2017 TO rdumas;
 GRANT SELECT ON TABLE open_data.miovision_2017 TO od_extract_svc;
 
-DROP VIEW open_data.miovision_2018;
+-- DROP VIEW open_data.miovision_2018;
 
 CREATE OR REPLACE VIEW open_data.miovision_2018 AS 
  SELECT period_type as aggregation_period,
@@ -41,15 +41,15 @@ CREATE OR REPLACE VIEW open_data.miovision_2018 AS
     volumes_15min.leg,
     volumes_15min.dir,
     SUM(volumes_15min.volume)::INT as volume
-   FROM miovision.volumes_15min a
+  FROM miovision.volumes_15min a
    INNER JOIN miovision.intersections USING (intersection_uid)
    INNER JOIN gis.centreline_intersection USING (int_id)
    INNER JOIN miovision.classifications USING(classification_uid)
-   INNER JOIN miovision.report_dates USING (intersection_uid, class_type_id)
-   LEFT OUTER JOIN miovision.exceptions ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND a.datetime_bin <@ c.excluded_datetime
+   INNER JOIN miovision_new.report_dates_view a USING (intersection_uid, class_type_id)  
+   LEFT OUTER JOIN miovision_new.exceptions e ON (a.intersection_uid, a.class_type_id) =(e.intersection_uid, e.class_type_id) AND datetime_bin <@ excluded_datetime
   WHERE dt = datetime_bin::DATE AND date_part('year'::text, volumes_15min.datetime_bin) = 2018::double precision
     AND exceptions_uid IS NULL --exclude excepted data
-GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
+  GROUP BY int_id, intersec5, px, datetime_bin, classification, leg, dir, period_type;
 ALTER TABLE open_data.miovision_2018
   OWNER TO rdumas;
 GRANT ALL ON TABLE open_data.miovision_2018 TO rdumas;
