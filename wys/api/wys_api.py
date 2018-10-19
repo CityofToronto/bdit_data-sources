@@ -44,10 +44,14 @@ signs_endpoint = '/signs'
 statistics_endpoint='/signs/statistics/location/'
 end='/period/1440/speed_units/0'
 settings_endpoint='/signs/settings/location/1845/speed_units/0'
+<<<<<<< HEAD
 CONFIG = configparser.ConfigParser()
 CONFIG.read('config.cfg')
 key=CONFIG['API']
 api_key=key['key']
+=======
+api_key=______
+>>>>>>> origin/wys_api
 signs=get_signs()
 table=[]
 #for item in signs:
