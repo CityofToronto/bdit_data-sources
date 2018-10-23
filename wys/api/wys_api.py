@@ -29,7 +29,7 @@ def get_signs():
     response=session.get(url+signs_endpoint,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
-        signs=json.loads(response.content)
+        signs=response.json()
         return signs
 
 
@@ -38,7 +38,7 @@ def get_statistics(location):
     response=session.get(url+statistics_endpoint+str(location)+end, 
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
-        statistics=json.loads(response.content)
+        statistics=response.json()
         return statistics
     else:
         return response.status_code
