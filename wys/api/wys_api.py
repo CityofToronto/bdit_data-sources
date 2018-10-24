@@ -20,6 +20,9 @@ import dateutil.parser
 import sys
 from time import sleep
 import traceback
+import time
+#from notify_email import send_mail
+import click
 
 class WYS_APIException(Exception):
     """Base class for exceptions."""
@@ -62,9 +65,9 @@ def get_signs():
         return signs
 
 
-def get_statistics(location):
+def get_statistics(location, minutes):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_endpoint+str(location)+end, 
+    response=session.get(url+statistics_endpoint+str(location)+period+minutes+units, 
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
         statistics=response.json()
@@ -82,6 +85,50 @@ def get_statistics(location):
     else:
         raise WYS_APIException('Error'+str(response.status_code))
         sys.exit()
+        
+
+def get_location(location):
+    headers={'Content-Type':'application/json','x-api-key':api_key}
+    response=session.get(url+statistics_endpoint+str(location)+end, 
+                         headers=headers, proxies=session.proxies)
+    if response.status_code==200:
+        statistics=str(response.content)
+        return statistics
+    else:
+        return response.status_code
+
+
+
+def location_id():
+    logger.debug('Pulling locations')
+    error_array=[]
+    try:
+        signs=get_signs()
+        location_id=[]
+        for item in signs:
+            location=item['location_id']
+            address=item['address']
+            statistics=str(get_location(location))
+            if statistics[4:11] == 'LocInfo':
+                temp=[location, address]
+                location_id.append(temp)
+        logger.debug(str(len(location_id))+' locations have data')
+        return location_id
+    except TimeoutException as exc_504:
+        error_array.append(str(address)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
+        sleep(180)
+    except exceptions.RequestException as err:
+        logger.error(err)
+        error_array.append(str(address)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
+        sleep(75)
+    except exceptions.ProxyError as prox:
+        logger.error(prox)
+        logger.warning('Retrying in 2 minutes')
+        error_array.append(str(address)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
+        sleep(120)
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        raise WYS_APIException(str(e))
 
 logger=logger()
 logger.debug('Start')
@@ -90,67 +137,102 @@ session.proxies = {'https': 'https://137.15.73.132:8080'}
 url='https://api.streetsoncloud.com/sv2'
 signs_endpoint = '/signs'
 statistics_endpoint='/signs/statistics/location/'
-end='/period/1443/speed_units/0'
+period='/period/'
+units='/speed_units/0'
+end='/period/5/speed_units/0'
 CONFIG = configparser.ConfigParser()
 CONFIG.read('config.cfg')
 key=CONFIG['API']
 api_key=key['key']
 dbset = CONFIG['DBSETTINGS']
 conn = connect(**dbset)
+#email=CONFIG['EMAIL']
 
-table=[]
+CONTEXT_SETTINGS = dict(
+    default_map={'run_api': {'flag': 0}}
+)
 
-with conn:
-    with conn.cursor() as cur:
-        string="SELECT * from wys.locations"
-        cur.execute(str(string))
-        signs_list=cur.fetchall()
-        signs_iterator=signs_list
-        conn.commit()
-for signs_iterator in signs_iterator:
-    location=signs_iterator[0]
-    logger.debug(signs_iterator[1])
-    #location=1000
-    for attempt in range(3):
-        try:
-            statistics=get_statistics(location)
-            raw_data=statistics['LocInfo']
-            raw_records=raw_data['raw_records']
-            for item in raw_records:
-                datetime_bin=item['datetime']
-                datetime_bin= dateutil.parser.parse(str(datetime_bin))
-                datetime_bin=roundTime(datetime_bin,roundTo=5*60)
-                counter=item['counter']
-                for item in counter:
-                    temp=[location, datetime_bin, item['speed'], item['count']]
-                    table.append(temp)   
-        except TimeoutException as exc_504:
-            sleep(180)
-        except exceptions.RequestException as err:
-            logger.error(err)
-            sleep(75)
-        except Exception as e:
-            logger.critical(traceback.format_exc())
-    signs_iterator=signs_list
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.command()
+@click.option('--minutes', '--minutes', default='1443', help='amount of minutes to request')
+@click.option('--pull_time' ,'--pull_time', default='2:01', help='time to start pulling data')
+#@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
+def run_api(minutes, pull_time, location_flag):
+
     
-try:    
-    with conn.cursor() as cur:
-        execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
-        conn.commit()
-except psycopg2.Error as exc:
-    logger.exception(exc)
-    with conn:
-            conn.rollback()
-    sys.exit()
-except Exception as e:
-    logger.critical(traceback.format_exc())
+    pull_time= dateutil.parser.parse(str(pull_time))
+    logger.info('Pulling '+minutes+' minutes of data')
+    api_main(minutes, pull_time, location_flag)
+
+def api_main(minutes, pull_time, location_flag):
+    table=[]
+    error_array=[]
+    signs_list=[]
+    if location_flag ==0:
+        signs_list=location_id()
+        signs_iterator=signs_list
+    else:
+        temp_list=[location_flag, None]
+        signs_list.append(temp_list)
+        signs_iterator=signs_list
+    while datetime.datetime.now()< pull_time:
+        time.sleep(10)
+    logger.debug('Pulling data')  
+    for signs_iterator in signs_iterator:
+        location=signs_iterator[0]
+        for attempt in range(3):
+            try:
+                statistics=get_statistics(location, minutes)
+                raw_data=statistics['LocInfo']
+                raw_records=raw_data['raw_records']
+                location_info=raw_data['Location']
+                name=location_info['name']
+                logger.debug(str(name))
+                for item in raw_records:
+                    datetime_bin=item['datetime']
+                    datetime_bin= dateutil.parser.parse(str(datetime_bin))
+                    datetime_bin=roundTime(datetime_bin,roundTo=5*60)
+                    counter=item['counter']
+                    for item in counter:
+                        temp=[location, datetime_bin, item['speed'], item['count']]
+                        table.append(temp)   
+                break
+            except TimeoutException as exc_504:
+                error_array.append(str(name)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
+                sleep(180)
+            except exceptions.RequestException as err:
+                logger.error(err)
+                error_array.append(str(name)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
+                sleep(75)
+            except exceptions.ProxyError as prox:
+                logger.error(prox)
+                error_array.append(str(name)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
+                logger.warning('Retrying in 2 minutes')
+                sleep(120)
+            except Exception as e:
+                logger.critical(traceback.format_exc())
+                
+        else:
+            #send_mail(email['to'], email['from'], 'WYS API Error','\n'.join(map(str, error_array)))  
+            pass
+        signs_iterator=signs_list
+        
+    try:    
+        with conn.cursor() as cur:
+            execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
+            conn.commit()
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        with conn:
+                conn.rollback()
+        sys.exit()
+    except Exception as e:
+        logger.critical(traceback.format_exc())
 
 
-
-#with open('wys_api_'+str(datetime.date.today())+'.csv','w', newline='') as csvfile:
-#    fieldnames=['location_id', 'datetime_bin', 'speed', 'count']
-#    writer=csv.writer(csvfile, delimiter=',')
-#    writer.writerow(fieldnames)
-#    for item in table:
-#        writer.writerow(item)
-#
+if __name__ == '__main__':
+    cli()
