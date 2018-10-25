@@ -5,9 +5,6 @@ Created on Wed Oct 17 15:26:52 2018
 @author: rliu4
 """
 
-
-import json
-import csv
 import logging
 from requests import Session
 from requests import exceptions
@@ -80,7 +77,7 @@ def get_statistics(location, minutes, api_key):
         logger.error('404 error    '+error['error_message']+' or request duration invalid')
     elif response.status_code==504:
         error=response.json()
-        logger.error('504 error    '+error['error_message'])
+        logger.error('504 error')
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise WYS_APIException('Error'+str(response.status_code))
@@ -107,10 +104,11 @@ def location_id(api_key):
         location_id=[]
         for item in signs:
             location=item['location_id']
+            sign_name=item['name']
             address=item['address']
             statistics=str(get_location(location, api_key))
             if statistics[4:11] == 'LocInfo':
-                temp=[location, address]
+                temp=[location, sign_name, address]
                 location_id.append(temp)
         logger.debug(str(len(location_id))+' locations have data')
         return location_id
@@ -140,9 +138,10 @@ statistics_endpoint='/signs/statistics/location/'
 period='/period/'
 units='/speed_units/0'
 end='/period/5/speed_units/0'
+time_delta = datetime.timedelta(days=1)
 
 CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'minutes':'1443','pulltime':'2:01', 'path':'config.cfg','location_flag': 0}}
+    default_map={'run_api': {'minutes':'1473','pulltime':'2:01', 'path':'config.cfg','location_flag': 0}}
 )
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -150,7 +149,7 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--minutes', '--minutes', default='1443', help='amount of minutes to request')
+@click.option('--minutes', '--minutes', default='1473', help='amount of minutes to request')
 @click.option('--pull_time' ,'--pull_time', default='2:01', help='time to start pulling data')
 @click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
@@ -181,25 +180,28 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
         signs_iterator=signs_list
     while datetime.datetime.now()< pull_time:
         time.sleep(10)
+    start=datetime.datetime.now()
     logger.debug('Pulling data')  
     for signs_iterator in signs_iterator:
         location=signs_iterator[0]
+        name=signs_iterator[1]
+        logger.debug(str(name))
         for attempt in range(3):
             try:
                 statistics=get_statistics(location, minutes, api_key)
                 raw_data=statistics['LocInfo']
                 raw_records=raw_data['raw_records']
-                location_info=raw_data['Location']
-                name=location_info['name']
-                logger.debug(str(name))
                 for item in raw_records:
                     datetime_bin=item['datetime']
                     datetime_bin= dateutil.parser.parse(str(datetime_bin))
                     datetime_bin=roundTime(datetime_bin,roundTo=5*60)
                     counter=item['counter']
                     for item in counter:
-                        temp=[location, datetime_bin, item['speed'], item['count']]
-                        table.append(temp)   
+                        if datetime_bin<start-time_delta:
+                            pass
+                        else:
+                            temp=[location, datetime_bin, item['speed'], item['count']]
+                            table.append(temp)   
                 break
             except TimeoutException as exc_504:
                 error_array.append(str(name)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
@@ -223,6 +225,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
         
     try:    
         with conn.cursor() as cur:
+            logger.debug('Inserting '+str(len(table))+' rows of data')
             execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
             conn.commit()
     except psycopg2.Error as exc:
