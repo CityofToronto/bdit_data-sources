@@ -150,7 +150,7 @@ def cli():
 
 @cli.command()
 @click.option('--minutes', '--minutes', default='1473', help='amount of minutes to request')
-@click.option('--pull_time' ,'--pull_time', default='2:01', help='time to start pulling data')
+@click.option('--pull_time' ,'--pull_time', default='0:01', help='time to start pulling data')
 @click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
 def run_api(minutes, pull_time, path, location_flag):
@@ -198,6 +198,8 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                     counter=item['counter']
                     for item in counter:
                         if datetime_bin<start-time_delta:
+                            pass
+                        elif datetime_bin>start:
                             pass
                         else:
                             temp=[location, datetime_bin, item['speed'], item['count']]
