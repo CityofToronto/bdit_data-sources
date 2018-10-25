@@ -217,7 +217,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                 sleep(120)
             except Exception as e:
                 logger.critical(traceback.format_exc())
-                
+                error_array.append(str(traceback.format_exc()))
         else:
             #send_mail(email['to'], email['from'], 'WYS API Error','\n'.join(map(str, error_array)))  
             pass
@@ -235,7 +235,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
         sys.exit()
     except Exception as e:
         logger.critical(traceback.format_exc())
-
+        #send_mail(email['to'], email['from'], 'Postgres Error', str(traceback.format_exc()))  
 
 if __name__ == '__main__':
     cli()
