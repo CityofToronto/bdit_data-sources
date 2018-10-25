@@ -55,7 +55,7 @@ def roundTime(dt=None, roundTo=60):
    rounding = (seconds+roundTo/2) // roundTo * roundTo
    return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
 
-def get_signs():
+def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     #params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+signs_endpoint,
@@ -65,7 +65,7 @@ def get_signs():
         return signs
 
 
-def get_statistics(location, minutes):
+def get_statistics(location, minutes, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_endpoint+str(location)+period+minutes+units, 
                          headers=headers, proxies=session.proxies)
@@ -87,7 +87,7 @@ def get_statistics(location, minutes):
         sys.exit()
         
 
-def get_location(location):
+def get_location(location, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_endpoint+str(location)+end, 
                          headers=headers, proxies=session.proxies)
@@ -99,16 +99,16 @@ def get_location(location):
 
 
 
-def location_id():
+def location_id(api_key):
     logger.debug('Pulling locations')
     error_array=[]
     try:
-        signs=get_signs()
+        signs=get_signs(api_key)
         location_id=[]
         for item in signs:
             location=item['location_id']
             address=item['address']
-            statistics=str(get_location(location))
+            statistics=str(get_location(location, api_key))
             if statistics[4:11] == 'LocInfo':
                 temp=[location, address]
                 location_id.append(temp)
@@ -140,16 +140,9 @@ statistics_endpoint='/signs/statistics/location/'
 period='/period/'
 units='/speed_units/0'
 end='/period/5/speed_units/0'
-CONFIG = configparser.ConfigParser()
-CONFIG.read('config.cfg')
-key=CONFIG['API']
-api_key=key['key']
-dbset = CONFIG['DBSETTINGS']
-conn = connect(**dbset)
-#email=CONFIG['EMAIL']
 
 CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'flag': 0}}
+    default_map={'run_api': {'minutes':'1443','pulltime':'2:01', 'path':'config.cfg','location_flag': 0}}
 )
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -159,21 +152,28 @@ def cli():
 @cli.command()
 @click.option('--minutes', '--minutes', default='1443', help='amount of minutes to request')
 @click.option('--pull_time' ,'--pull_time', default='2:01', help='time to start pulling data')
-#@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
-def run_api(minutes, pull_time, location_flag):
+def run_api(minutes, pull_time, path, location_flag):
 
     
     pull_time= dateutil.parser.parse(str(pull_time))
     logger.info('Pulling '+minutes+' minutes of data')
-    api_main(minutes, pull_time, location_flag)
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read(path)
+    api_main(minutes, pull_time, location_flag, CONFIG)
 
-def api_main(minutes, pull_time, location_flag):
+def api_main(minutes, pull_time, location_flag, CONFIG):
+    key=CONFIG['API']
+    api_key=key['key']
+    dbset = CONFIG['DBSETTINGS']
+    #email=CONFIG['EMAIL']
+    conn = connect(**dbset)
     table=[]
     error_array=[]
     signs_list=[]
     if location_flag ==0:
-        signs_list=location_id()
+        signs_list=location_id(api_key)
         signs_iterator=signs_list
     else:
         temp_list=[location_flag, None]
@@ -186,7 +186,7 @@ def api_main(minutes, pull_time, location_flag):
         location=signs_iterator[0]
         for attempt in range(3):
             try:
-                statistics=get_statistics(location, minutes)
+                statistics=get_statistics(location, minutes, api_key)
                 raw_data=statistics['LocInfo']
                 raw_records=raw_data['raw_records']
                 location_info=raw_data['Location']
