@@ -75,6 +75,12 @@ def get_statistics(location, minutes, api_key):
     elif response.status_code==404:
         error=response.json()
         logger.error('404 error    '+error['error_message']+' or request duration invalid')
+    elif response.status_code==401:
+        error=response.json()
+        logger.error('401 error    '+error['error_message'])
+    elif response.status_code==405:
+        error=response.json()
+        logger.error('405 error    '+error['error_message'])        
     elif response.status_code==504:
         error=response.json()
         logger.error('504 error')
@@ -139,6 +145,7 @@ period='/period/'
 units='/speed_units/0'
 end='/period/5/speed_units/0'
 time_delta = datetime.timedelta(days=1)
+date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'minutes':'1473','pulltime':'2:01', 'path':'config.cfg','location_flag': 0}}
@@ -154,8 +161,8 @@ def cli():
 @click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
 def run_api(minutes, pull_time, path, location_flag):
-
     
+    pull_time=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')+'T'+pull_time
     pull_time= dateutil.parser.parse(str(pull_time))
     logger.info('Pulling '+minutes+' minutes of data')
     CONFIG = configparser.ConfigParser()
@@ -180,7 +187,6 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
         signs_iterator=signs_list
     while datetime.datetime.now()< pull_time:
         time.sleep(10)
-    start=datetime.datetime.now()
     logger.debug('Pulling data')  
     for signs_iterator in signs_iterator:
         location=signs_iterator[0]
@@ -197,9 +203,9 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                     datetime_bin=roundTime(datetime_bin,roundTo=5*60)
                     counter=item['counter']
                     for item in counter:
-                        if datetime_bin<start-time_delta:
+                        if datetime_bin<pull_time-time_delta:
                             pass
-                        elif datetime_bin>start:
+                        elif datetime_bin>pull_time:
                             pass
                         else:
                             temp=[location, datetime_bin, item['speed'], item['count']]
