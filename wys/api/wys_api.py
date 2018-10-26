@@ -162,7 +162,8 @@ def cli():
 @click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
 def run_api(minutes, pull_time, path, location_flag):
     
-    pull_time=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')+'T'+pull_time
+    if dateutil.parser.parse(str(pull_time))<datetime.datetime.now():
+        pull_time=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')+'T'+pull_time
     pull_time= dateutil.parser.parse(str(pull_time))
     logger.info('Pulling '+minutes+' minutes of data')
     CONFIG = configparser.ConfigParser()
