@@ -1,4 +1,6 @@
-﻿CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_15min()
+﻿-- DROP FUNCTION wys.aggregate_speed_counts_15min();
+
+CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_15min()
   RETURNS integer AS
 $BODY$
 
