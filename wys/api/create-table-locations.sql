@@ -1,9 +1,8 @@
 ﻿CREATE TABLE wys.locations
 (
   api_id integer NOT NULL,
-  sign_name text,
   address text,
-  serial_num integer,
+  sign_name text,
   dir text,
   CONSTRAINT locations_api_id_pkey PRIMARY KEY (api_id)
 )
