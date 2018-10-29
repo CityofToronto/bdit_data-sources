@@ -148,7 +148,7 @@ time_delta = datetime.timedelta(days=1)
 date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
 
 CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'minutes':'1473','pulltime':'2:01', 'path':'config.cfg','location_flag': 0}}
+    default_map={'run_api': {'minutes':'1473','pulltime':'0:01', 'path':'config.cfg','location_flag': 0}}
 )
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -201,7 +201,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                 for item in raw_records:
                     datetime_bin=item['datetime']
                     datetime_bin= dateutil.parser.parse(str(datetime_bin))
-                    datetime_bin=roundTime(datetime_bin,roundTo=5*60)
+                    #datetime_bin=roundTime(datetime_bin,roundTo=5*60)
                     counter=item['counter']
                     for item in counter:
                         if datetime_bin<pull_time-time_delta:
@@ -240,11 +240,49 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
     except psycopg2.Error as exc:
         logger.exception(exc)
         with conn:
-                conn.rollback()
+            conn.rollback()
+        #send_mail(email['to'], email['from'], 'Postgres Error', str(traceback.format_exc()))  
         sys.exit()
     except Exception as e:
         logger.critical(traceback.format_exc())
         #send_mail(email['to'], email['from'], 'Postgres Error', str(traceback.format_exc()))  
-
+    
+   
+    loc_table=[]   
+    try:
+        with conn.cursor() as cur:
+            string="SELECT DISTINCT a.api_id FROM wys.raw_data a LEFT JOIN wys.locations b using (api_id) WHERE b.api_id IS NULL"
+            cur.execute(str(string))
+            intersection_list=cur.fetchall()
+            conn.commit()
+        for item in intersection_list:
+            statistics=get_statistics(str(item[0]),'5',api_key)
+            loc_info=statistics['LocInfo']
+            loc=loc_info['Location']
+            address=loc['address']
+            name=loc['name']
+            if 'SB' in name:
+                direction='SB'
+            elif 'NB' in name:
+                direction='NB'
+            elif 'WB' in name:
+                direction='WB'
+            elif 'EB' in name:
+                direction='EB'
+            else:
+                direction=None
+            temp=[str(item[0]), address, name, direction]
+            loc_table.append(temp)
+            
+        with conn.cursor() as cur:
+            logger.debug('Inserting '+str(len(loc_table))+' new locations')
+            execute_values(cur, 'INSERT INTO wys.locations (api_id, address, sign_name, dir) VALUES %s', loc_table)
+            conn.commit()
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        error_array.append(str(traceback.format_exc()))
+        #send_mail(email['to'], email['from'], 'Error', str(traceback.format_exc()))  
+    
+    
 if __name__ == '__main__':
     cli()

@@ -16,7 +16,7 @@ Similarly, the script can request a maximum of 24 hours of data. The API may be 
 
 Certain errors like a `requests` error or a `504` error will not cause the script to exit. The script will sleep a pre-determined amount of time, and then retry the API call. 
 
-The number of signs sending data is not a set number and changes every day. The script has a check that finds out the number of signs that are reporting valid data.
+The number of signs sending data is not a set number and changes every day. The script has a check that finds out the number of signs that are reporting valid data, and will enter any signs that started to report to the `locations` table.
 
 Since the aggregation bins reported by the API are not consistently 5 minutes long, and the start time of the bins is not consistently at an interval of 5 (ex 6:05, 6:10 etc), the API rounds each datetime to the nearest 5 minute interval.
 
@@ -29,7 +29,7 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 |Option|Format|Description|Example|Default|
 |-----|------|-------|-----|-----|
 `--minutes`|integer|The amount of minutes to pull data for|`30`|`1473`
-|`--pull_time`|`HH:mm`|The time when the script will pull data. Since the API does not support pulling data for specific datetimes at the moment, this should be coordinated with `--minutes` to ensure the right amount of data is pulled.|`15:25`|`0:01`
+|`--pull_time`|`HH:mm`|The time when the script will pull data. Since the API does not support pulling data for specific datetimes at the moment, this should be coordinated with `--minutes` to ensure the right amount of data is pulled. It is recommended this time be at least 3 minutes in the feature if this is specified.|`15:25`|`0:01`
 `--path`|directory|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\wys\api`|`config.cfg` (same directory as python script)
 `--location_flag`|integer|The location ID used by the API to pull data from a specific intersection|`1967`|`0` (Will pull all the data at all intersecitons available)
 
@@ -40,6 +40,7 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 3. The script will check all the signs if they have data by using the `statistics` call in `get_location()` and returning a string of the output. If theres no data, possible outputs may be a `403` error or an `HTML` code snippet. The script will create a table of all valid locations.
 4. The script will again call the `statistics` call in `get_statistics()` to grab the counts and speed.
 5. The script will insert the data to postgreSQL.
+6. The script will check to see if there are new `api_id` not in `wys.locations`. If so, it will retrieve information about these signs using `get_location`, parse the data into a suitable format, and insert it to `wys.locations`.
 
 ## PostgreSQL Processing
 
