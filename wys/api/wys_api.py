@@ -54,7 +54,6 @@ def roundTime(dt=None, roundTo=60):
 
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    #params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+signs_endpoint,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
@@ -179,13 +178,17 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
     table=[]
     error_array=[]
     signs_list=[]
-    if location_flag ==0:
-        signs_list=location_id(api_key)
-        signs_iterator=signs_list
-    else:
-        temp_list=[location_flag, None]
-        signs_list.append(temp_list)
-        signs_iterator=signs_list
+    try:
+        if location_flag ==0:
+            signs_list=location_id(api_key)
+            signs_iterator=signs_list
+        else:
+            temp_list=[location_flag, None]
+            signs_list.append(temp_list)
+            signs_iterator=signs_list
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        #send_mail(email['to'], email['from'], 'Error retrieving list of signs', str(traceback.format_exc()))  
     while datetime.datetime.now()< pull_time:
         time.sleep(10)
     logger.debug('Pulling data')  
@@ -201,7 +204,6 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                 for item in raw_records:
                     datetime_bin=item['datetime']
                     datetime_bin= dateutil.parser.parse(str(datetime_bin))
-                    #datetime_bin=roundTime(datetime_bin,roundTo=5*60)
                     counter=item['counter']
                     for item in counter:
                         if datetime_bin<pull_time-time_delta:
