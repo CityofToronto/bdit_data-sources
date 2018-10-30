@@ -44,6 +44,53 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 
 ## PostgreSQL Processing
 
-The data is inserted into `wys.raw_data`. `wys.counts_15min` has aggregated 15 minute time bins, and aggregated 5 km/h speed bins by using the `aggregate_speed_counts_15min()` function. `aggregate_volumes_15min()` aggregates all the speed bins together so that in `wys.volumes_15min()` only has volume, datetime and `api_id` data.
+### Data Tables
 
+The data is inserted into `wys.raw_data`. Data from the API is already pre-aggregated into roughly 5 minute bins. 
 
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`raw_data_uid`|integer|A unique identifier for the `raw_data` table|2655075
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`datetime_bin`|timestamp|Start time of the bin|2018-10-29 10:00:00
+`speed`|integer|Exact speed of the number of vehicles in `count`|47
+`count`|integer|Number of vehicles in datetime_bin/api_id/speed combination|2
+`counts_15min`|integer|A unique identifier for `counts_15min` table. Indicates if the data has already been processed or not.|150102
+
+`wys.counts_15min` has aggregated 15 minute time bins, and aggregated 5 km/h speed bins by using the `aggregate_speed_counts_15min()` function. Values for the speed bins are replaced by lookup table IDS.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`counts_15min`|integer|A unique identifier for the `counts_15min` table|2655075
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`datetime_bin`|timestamp|Start time of the 15 minute aggregated bin|2018-10-29 10:00:00
+`speed_id`|integer|A unique identifier for the 5 minute speed bin in the `speed_bins` table|5
+`count`|integer|Number of vehicles in datetime_bin/api_id/speed bin combination|7
+`volumes_15min_uid`|integer|A unique idenfier for the `volumes_15min` table. Indicates if the data has been processed.|8065
+
+`aggregate_volumes_15min()` aggregates all the speed bins together so that in `wys.volumes_15min()` only has volume, datetime and `api_id` data.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`volumes_15min_uid`|integer|A unique identifier for the `volumes_15min_uid` table|28065
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`datetime_bin`|timestamp|Start time of the 15 minute aggregated bin|2018-10-29 10:00:00
+`count`|integer|Number of vehicles in 15 minute bin and sign location|110
+
+### Lookup Tables
+
+`speed_bins` is a lookup table containing all the 5km/h speed bin. Bin number 25 contains any speed over 120km/h.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`speed_id`|integer|A unique identifier for the `speed_bins` table|5
+`speed_bin`|integer range|Range of speeds for each speed bin. The upper limit is not inclusive.|[10-25)
+
+`locations` contains each ID used for the API, direction of traffic the sign is gathering data for, address and name of the sign. Some signs may have information missing from any one of the fields.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`address`|text|Address of the sign|1577 Bloor Street West
+`sign_name`|text|Name of the sign. May include address + serial number, the ward name for the Mobile WYSP, or school name for Schools WYSP|Dundas St W SB 16101191
+`dir`|text|Direction of the flow of traffic|NB
