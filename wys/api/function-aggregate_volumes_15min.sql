@@ -1,4 +1,6 @@
-﻿CREATE OR REPLACE FUNCTION wys.aggregate_volumes_15min()
+﻿-- DROP FUNCTION wys.aggregate_volumes_15min();
+
+CREATE OR REPLACE FUNCTION wys.aggregate_volumes_15min()
   RETURNS integer AS
 $BODY$
 
@@ -7,7 +9,7 @@ BEGIN
 		SELECT 	A.api_id,
 			A.datetime_bin::date + B.time::time without time zone AS  datetime_bin
 		FROM	(SELECT DISTINCT api_id, datetime_bin::date FROM wys.counts_15min WHERE volumes_15min_uid IS NULL) A
-		CROSS JOIN generate_series('2017-01-01 06:00:00'::timestamp without time zone, '2017-01-01 19:45:00'::timestamp without time zone, '00:15:00'::interval) B
+		CROSS JOIN generate_series('2017-01-01 00:00:00'::timestamp without time zone, '2017-01-01 23:45:00'::timestamp without time zone, '00:15:00'::interval) B
 		ORDER BY A.api_id, (A.datetime_bin::date + B.time::time without time zone)
 	), insert_data AS (
 
