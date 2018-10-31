@@ -1,6 +1,62 @@
 # Traffic Analytics Data
 
-## Loading New Data
+## here_api.py
+
+### Setup
+
+You should be able to do `pip install --user -e . --process-dependency-links` from within the folder. 
+
+Alternatively you can install using `pipenv` with `pipenv install -e "git+https://github.com/CityofToronto/bdit_data-sources.git#egg=here_api&subdirectory=here/traffic/"`
+
+Note that because of the use of `psql` called from the Python, there is no way of specifying a password in the script. You must store your credential information in a [`.pgpass` file](https://www.postgresql.org/docs/current/static/libpq-pgpass.html)
+
+### Using the script
+
+```shell
+Usage: here_api [OPTIONS] COMMAND [ARGS]...
+
+  Pull data from the HERE Traffic Analytics API from --startdate to
+  --enddate
+
+  The default is to process the previous week of data, with a 1+ day delay
+  (running Monday-Sunday from the following Tuesday).
+
+Options:
+  -s, --startdate TEXT
+  -e, --enddate TEXT
+  -d, --config PATH
+  --help                Show this message and exit.
+
+Commands:
+  download  Download data from specified url to specified...
+  upload    Unzip the file and pipe the data to a...
+```
+
+Using the script without one of the subcommands will perform both the [downloading](#download) of the data and the [uploading](#upload) of the data. Don't forget to specify the location of the [configuration file](sample.cfg).
+
+#### download
+
+```shell
+Usage: here_api download [OPTIONS] DOWNLOAD_URL FILENAME
+
+  Download data from specified url to specified filename
+
+Options:
+  --help  Show this message and exit.
+```
+
+#### upload
+
+```shell
+Usage: here_api upload [OPTIONS] DBCONFIG DATAFILE
+
+  Unzip the file and pipe the data to a database COPY statement
+
+Options:
+  --help  Show this message and exit.
+```
+
+## Loading New Data (Old Method)
 
 Data prior to 2017 was downloaded from links provided by Here. After 2017 we use the trafficanalytics portal to query the data and receive a download link for a gzipped csv. These can be downloaded directly onto the EC2 with `curl` or `wget`. 
 
