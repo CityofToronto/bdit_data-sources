@@ -1,4 +1,4 @@
-﻿-- DROP MATERIALIZED VIEW wys.volume_average;
+﻿--DROP MATERIALIZED VIEW wys.volume_average;
 
 CREATE MATERIALIZED VIEW wys.volume_average AS 
  WITH valid_bins AS (
@@ -8,7 +8,7 @@ CREATE MATERIALIZED VIEW wys.volume_average AS
             c.dow
            FROM wys.report_dates a_1
              CROSS JOIN generate_series('2017-01-01 06:00:00'::timestamp without time zone, '2017-01-01 21:45:00'::timestamp without time zone, '00:15:00'::interval) b_1(tm)
-             CROSS JOIN generate_series(1, 7, 1) c(dow)
+             CROSS JOIN generate_series(0, 6, 1) c(dow)
         )
  SELECT b.api_id,
     b.period,
