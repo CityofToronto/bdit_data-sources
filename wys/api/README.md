@@ -41,6 +41,7 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 4. The script will again call the `statistics` call in `get_statistics()` to grab the counts and speed.
 5. The script will insert the data to postgreSQL.
 6. The script will check to see if there are new `api_id` not in `wys.locations`. If so, it will retrieve information about these signs using `get_location`, parse the data into a suitable format, and insert it to `wys.locations`.
+7. The script will call the 2 aggregation functions in postgreSQL and refresh the views.
 
 ## PostgreSQL Processing
 
@@ -94,3 +95,27 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 `address`|text|Address of the sign|1577 Bloor Street West
 `sign_name`|text|Name of the sign. May include address + serial number, the ward name for the Mobile WYSP, or school name for Schools WYSP|Dundas St W SB 16101191
 `dir`|text|Direction of the flow of traffic|NB
+
+### Views
+
+`report_dates` contains the list of days, for each sign, where there is more than 10 hours of data between 6:00 and 22:00.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`period`|text|Month the data is in|Nov 2018
+`dt`|date|Date where there is more than 10 hours of data|2018-11-03
+`dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
+
+`counts_average` and `volume_average` are both tables of average. For every api_id, period, time, speed_id, and day of the week, it gives the average volume of the data in `counts_15min`. `volume_average` does the same for `volumes_15min` but does not contain the `speed_id`. Both tables only compute averages for time bins between 6:00 and 22:00.
+
+|Field name|Data type|Description|Example|
+|------|------|-------|------|
+`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`period`|text|Month the data is in|Nov 2018
+`dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
+`time_bin`|time|15 minute time bin the average is computed at|16:15:00
+`speed_id`|integer|A unique identifier for the `speed_bins` table. Does not exist for `volume_average`|5
+`count`|numeric|Average count for that combination of api_id, period, dow, time_bin and speed_id|45.2
+
+`counts_15min_full` and `volumes_15min_full` are gap filled versions of `counts_15min_full` and `volumes_15min_full`. The views check if a populated 15 minute bin exists, and if the date/api_id combination is in `report_dates`. If the date/api_id combination is not in `report_dates`, then that date/api_id will not be added to the views. If the date/api_id is in `report_dates` and there is a missing 15 minute bin, then it will take the average volume for that time/day of week/month/api_id/speed_bin (for `counts_15min_full`) combination. The format of these two views is the same as `counts_15min` and `volumes_15min`, except without the uid fields `count_15min` and `volumes_15min_uid`.
