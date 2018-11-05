@@ -147,7 +147,7 @@ time_delta = datetime.timedelta(days=1)
 date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
 
 CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'minutes':'1473','pulltime':'0:01', 'path':'config.cfg','location_flag': 0}}
+    default_map={'run_api': {'minutes':'1473','pull_time':'0:01', 'path':'config.cfg','location_flag': 0}}
 )
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -280,6 +280,30 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
             logger.debug('Inserting '+str(len(loc_table))+' new locations')
             execute_values(cur, 'INSERT INTO wys.locations (api_id, address, sign_name, dir) VALUES %s', loc_table)
             conn.commit()
+            
+            counts_15min="SELECT wys.aggregate_speed_counts_15min();"
+            cur.execute(counts_15min)
+            conn.commit()
+            volumes_15min='''SELECT wys.aggregate_volumes_15min();'''
+            cur.execute(volumes_15min)
+            conn.commit()
+            logger.info('Aggregated Data')
+            refresh_report_dates='''REFRESH MATERIALIZED VIEW wys.report_dates WITH DATA;'''
+            cur.execute(refresh_report_dates)
+            conn.commit()
+            refresh_counts_average='''REFRESH MATERIALIZED VIEW wys.counts_average WITH DATA;'''
+            cur.execute(refresh_counts_average)
+            conn.commit()
+            refresh_counts_full='''REFRESH MATERIALIZED VIEW wys.counts_15min_full WITH DATA;'''
+            cur.execute(refresh_counts_full)
+            conn.commit()
+            refresh_volume_average='''REFRESH MATERIALIZED VIEW wys.volume_average WITH DATA;'''
+            cur.execute(refresh_volume_average)
+            conn.commit()
+            refresh_volume_full='''REFRESH MATERIALIZED VIEW wys.volumes_15min_full WITH DATA;'''
+            cur.execute(refresh_volume_full)
+            conn.commit()
+            logger.info('Updated Views')
     except Exception as e:
         logger.critical(traceback.format_exc())
         error_array.append(str(traceback.format_exc()))
