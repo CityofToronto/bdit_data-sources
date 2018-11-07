@@ -52,6 +52,42 @@ def roundTime(dt=None, roundTo=60):
    rounding = (seconds+roundTo/2) // roundTo * roundTo
    return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
 
+def speed_bin(speed):
+    if 0<=speed<5:
+        return 1
+    if 5<=speed<10:
+        return 2
+    if 10<=speed<15:
+        return 3
+    if 15<=speed<20:
+        return 4
+    if 20<=speed<25:
+        return 5
+    if 25<=speed<30:
+        return 6
+    if 30<=speed<35:
+        return 7
+    if 35<=speed<40:
+        return 8
+    if 40<=speed<45:
+        return 9
+    if 45<=speed<50:
+        return 10
+    if 50<=speed<55:
+        return 11
+    if 55<=speed<60:
+        return 12
+    if 60<=speed<65:
+        return 13
+    if 65<=speed<70:
+        return 14
+    if 70<=speed<75:
+        return 15
+    if 75<=speed<80:
+        return 16
+    if speed>=80:
+        return 17
+
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+signs_endpoint,
@@ -211,7 +247,10 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
                         elif datetime_bin>pull_time:
                             pass
                         else:
-                            temp=[location, datetime_bin, item['speed'], item['count']]
+                            speed=item['speed']
+                            speed=int(speed)
+                            speed=speed_bin(speed)
+                            temp=[location, datetime_bin, str(speed), item['count']]
                             table.append(temp)   
                 break
             except TimeoutException as exc_504:
@@ -237,7 +276,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
     try:    
         with conn.cursor() as cur:
             logger.debug('Inserting '+str(len(table))+' rows of data')
-            execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
+            execute_values(cur, 'INSERT INTO wys.speed_counts (api_id, datetime_bin, speed_id, count) VALUES %s', table)
             conn.commit()
     except psycopg2.Error as exc:
         logger.exception(exc)
@@ -253,7 +292,7 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
     loc_table=[]   
     try:
         with conn.cursor() as cur:
-            string="SELECT DISTINCT a.api_id FROM wys.raw_data a LEFT JOIN wys.locations b using (api_id) WHERE b.api_id IS NULL"
+            string="SELECT DISTINCT a.api_id FROM wys.speed_counts a LEFT JOIN wys.locations b using (api_id) WHERE b.api_id IS NULL"
             cur.execute(str(string))
             intersection_list=cur.fetchall()
             conn.commit()
@@ -280,14 +319,15 @@ def api_main(minutes, pull_time, location_flag, CONFIG):
             logger.debug('Inserting '+str(len(loc_table))+' new locations')
             execute_values(cur, 'INSERT INTO wys.locations (api_id, address, sign_name, dir) VALUES %s', loc_table)
             conn.commit()
-            
+            logger.info('Inserted Data')
             counts_15min="SELECT wys.aggregate_speed_counts_15min();"
             cur.execute(counts_15min)
             conn.commit()
+            logger.info('Aggregated Speed Count Data')
             volumes_15min='''SELECT wys.aggregate_volumes_15min();'''
             cur.execute(volumes_15min)
             conn.commit()
-            logger.info('Aggregated Data')
+            logger.info('Aggregated Volumes Data')
             refresh_report_dates='''REFRESH MATERIALIZED VIEW wys.report_dates WITH DATA;'''
             cur.execute(refresh_report_dates)
             conn.commit()
