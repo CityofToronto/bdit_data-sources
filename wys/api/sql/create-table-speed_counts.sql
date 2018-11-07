@@ -1,12 +1,14 @@
-﻿CREATE TABLE wys.raw_data
+﻿DROP TABLE wys.speed_counts;
+
+CREATE TABLE wys.speed_counts
 (
-  raw_data_uid serial NOT NULL,
+  speed_count_uid serial NOT NULL,
   api_id integer,
   datetime_bin timestamp without time zone,
-  speed integer,
+  speed_id integer,
   count integer,
   counts_15min integer,
-  CONSTRAINT wys_raw_data_uid_pkey PRIMARY KEY (raw_data_uid),
+  CONSTRAINT wys_speed_count_uid_pkey PRIMARY KEY (speed_count_uid),
   CONSTRAINT wys_counts_15min_fkey FOREIGN KEY (counts_15min)
       REFERENCES wys.counts_15min (counts_15min) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE SET NULL

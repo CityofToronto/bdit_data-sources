@@ -19,7 +19,7 @@ BEGIN
 			min(datetime_bin) AS start_time,
 			max(datetime_bin) AS end_time,
 			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin
-		FROM 	wys.raw_data A
+		FROM 	wys.speed_counts A
 		WHERE	counts_15min IS NULL
 		GROUP BY api_id, datetime_bin
 	)
@@ -34,10 +34,9 @@ BEGIN
 
 	WITH speed_bins AS (
 	SELECT api_id, datetime_bin, speed_id, sum(count) AS count
-	FROM wys.raw_data B
+	FROM wys.speed_counts B
 	CROSS JOIN wys.speed_bins A 
 	WHERE	counts_15min IS NULL
-	AND b.speed<@a.speed_bin
 	GROUP BY api_id, datetime_bin, speed_id
 
 	), insert_data AS(
@@ -55,14 +54,13 @@ BEGIN
 	ORDER BY B.api_id, B.datetime_bin, A.speed_id
 	RETURNING counts_15min, api_id, datetime_bin, speed_id)
 
-	UPDATE wys.raw_data A
+	UPDATE wys.speed_counts A
 	SET counts_15min=B.counts_15min
 	FROM insert_data B
-	INNER JOIN wys.speed_bins C USING (speed_id)
 	WHERE A.counts_15min IS NULL
 	AND A.api_id=B.api_id
 	AND A.datetime_bin >= B.datetime_bin AND A.datetime_bin < B.datetime_bin + INTERVAL '15 minutes' 
-	AND A.speed<@C.speed_bin;
+	AND A.speed_id=B.speed_id;
 	RETURN 1;
 END;
 
