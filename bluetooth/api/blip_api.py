@@ -26,7 +26,7 @@ from requests import RequestException, Session
 from zeep import Client
 from zeep.transports import Transport
 
-from parsing_utilities import validate_multiple_yyyymmdd_range
+from time_parsing import validate_multiple_yyyymmdd_range
 
 # Suppress HTTPS Warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
