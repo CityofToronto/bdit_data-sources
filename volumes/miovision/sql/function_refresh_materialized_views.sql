@@ -3,8 +3,8 @@
 $BODY$
 BEGIN
 	REFRESH MATERIALIZED VIEW miovision.report_dates_view WITH DATA;
-	REFRESH MATERIALIZED VIEW miovision.report_volumes_15min WITH DATA;
 	REFRESH MATERIALIZED VIEW miovision.volumes_15min_by_class WITH DATA;
+	REFRESH MATERIALIZED VIEW miovision.report_volumes_15min WITH DATA;
 
 RETURN 1;
 END;
