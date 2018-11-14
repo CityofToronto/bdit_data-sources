@@ -8,15 +8,21 @@ This API script can grab data from each watch your speed sign the city has. It c
 
 ## Functionality
 
-The script has email notification and will send 1-2 emails in the event of an error; 1 for a postgreSQL related error and 1 for any error during data pulling. Multiple errors will be concatenated into 1-2 emails.
+### Requesting recent data
 
-Due to the limited functionality of the API, we can only request `xx` number of minutes from when the call is made. After getting a list of valid locations, it will sleep until the specified `pull_time` before making the call for data. This is so the amount of data received is controlled. 
+Due to the limited functionality of the API, we can **only request `xx` number of minutes from when the call is made**. After getting a list of valid locations, it will sleep until the specified `pull_time` before making the call for data. This is so the amount of data received is controlled. 
 
 Similarly, the script can request a maximum of 24 hours of data. The API may be able handle requests larger than 24 hours, but the script has checks to only insert a maximum of 24 hours of data, ending at the specified `pull_time`. 
+
+### Error Handling
 
 Certain errors like a `requests` error or a `504` error will not cause the script to exit. The script will sleep a pre-determined amount of time, and then retry the API call. 
 
 The number of signs sending data is not a set number and changes every day. The script has a check that finds out the number of signs that are reporting valid data, and will enter any signs that started to report to the `locations` table.
+
+The script has email notification and will send 1-2 emails in the event of an error; 1 for a postgreSQL related error and 1 for any error during data pulling. Multiple errors will be concatenated into 1-2 emails.
+
+### Inconsistent time bins
 
 Since the aggregation bins reported by the API are not consistently 5 minutes long, and the start time of the bins is not consistently at an interval of 5 (ex 6:05, 6:10 etc), the API rounds each datetime to the nearest 5 minute interval.
 
@@ -29,7 +35,7 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 |Option|Format|Description|Example|Default|
 |-----|------|-------|-----|-----|
 `--minutes`|integer|The amount of minutes to pull data for|`30`|`1473`
-|`--pull_time`|`HH:mm`|The time when the script will pull data. Since the API does not support pulling data for specific datetimes at the moment, this should be coordinated with `--minutes` to ensure the right amount of data is pulled. It is recommended this time be at least 3 minutes in the feature if this is specified.|`15:25`|`0:01`
+|`--pull_time`|`HH:mm`|The time when the script will pull data. Since the API does not support pulling data for specific datetimes at the moment, this should be coordinated with `--minutes` to ensure the right amount of data is pulled. It is recommended this time be at least 3 minutes in the future if this is specified.|`15:25`|`0:01`
 `--path`|directory|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\wys\api`|`config.cfg` (same directory as python script)
 `--location_flag`|integer|The location ID used by the API to pull data from a specific intersection|`1967`|`0` (Will pull all the data at all intersecitons available)
 
