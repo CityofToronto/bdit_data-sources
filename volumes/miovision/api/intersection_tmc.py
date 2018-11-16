@@ -203,6 +203,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
 
 
 def pull_data(start_date, end_date, intersection, path, pull):
+    error_array=[]
     try:
         time_delta = datetime.timedelta(days=1)
         end_iteration_time= start_date + time_delta        
@@ -239,7 +240,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
                 intersection_id1=intersection_iterator[1]
                 intersection_name=intersection_iterator[2]
                 logger.debug(intersection_name+'     '+str(start_date))
-                error_array=[]
                 for attempt in range(3):
                     try:
                         table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
