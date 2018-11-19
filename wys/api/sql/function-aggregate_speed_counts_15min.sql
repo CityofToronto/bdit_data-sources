@@ -1,11 +1,14 @@
-﻿CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_15min()
+﻿-- DROP FUNCTION wys.aggregate_speed_counts_15min();
+
+CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_15min()
   RETURNS integer AS
 $BODY$
 
 BEGIN
 	DROP TABLE IF EXISTS bins;
 
-
+	--bins is a table with the valid 15 minute bins for each intersection
+	
 	CREATE TEMPORARY TABLE bins (
 			api_id integer,
 			datetime_bin timestamp without time zone,
@@ -32,14 +35,17 @@ BEGIN
 	FROM 		bin_grouping
 	ORDER BY api_id, datetime_bin;
 
+	--Aggregates data that are in the same speed bin together. Speed IDs found in python
+
 	WITH speed_bins AS (
 	SELECT api_id, datetime_bin, speed_id, sum(count) AS count
 	FROM wys.speed_counts B
-	CROSS JOIN wys.speed_bins A 
 	WHERE	counts_15min IS NULL
 	GROUP BY api_id, datetime_bin, speed_id
 
 	), insert_data AS(
+
+	--Joins aggregated speed bin data to the valid bins and inserts to counts_15min
 
 	INSERT INTO wys.counts_15min (api_id, datetime_bin, speed_id, count)
 	SELECT 	B.api_id,
@@ -53,6 +59,8 @@ BEGIN
 	GROUP BY B.api_id, B.datetime_bin, A.speed_id
 	ORDER BY B.api_id, B.datetime_bin, A.speed_id
 	RETURNING counts_15min, api_id, datetime_bin, speed_id)
+
+	--Sets IDs to speed_counts
 
 	UPDATE wys.speed_counts A
 	SET counts_15min=B.counts_15min
