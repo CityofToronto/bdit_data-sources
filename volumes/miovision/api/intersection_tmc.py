@@ -247,23 +247,23 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         break
                     except exceptions.ProxyError as prox:
                         logger.error(prox)
-                        error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date)+'\n'+intersection_name+' '+str(start_date))
+                        error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         logger.warning('Retrying in 2 minutes')
                         sleep(120)
                     except exceptions.RequestException as err:
                         logger.error(err)
-                        error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date)+'\n'+intersection_name+' '+str(start_date))
+                        error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         sleep(75)
                     except TimeoutException as exc_504:
                         logger.error(exc_504)
-                        error_array.append(str(intersection_name)+'      {}'.format(start_date)+'\n'+intersection_name+' '+str(start_date))
+                        error_array.append(str(intersection_name)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         sleep(60)
                     except MiovisionAPIException as miovision_exc:
                         logger.error('Cannot pull data')
                         logger.error(miovision_exc)
-                        error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date)+'\n'+intersection_name+' '+str(start_date))   
+                        error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))   
                 
-            send_mail(email['to'], email['from'], 'Miovision API Error','\n'.join(map(str, error_array)))   
+            send_mail(email['to'], email['from'], 'Miovision API Error',str(error_array))   
                     
             logger.info('Completed data pulling for {}'.format(start_date))
             try:
