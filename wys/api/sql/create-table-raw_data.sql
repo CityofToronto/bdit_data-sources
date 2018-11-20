@@ -28,7 +28,7 @@ CREATE TRIGGER insert_raw_data_trigger
   BEFORE INSERT
   ON wys.raw_data
   FOR EACH ROW
-  EXECUTE PROCEDURE wys.aggregate_speeds();
+  EXECUTE PROCEDURE wys.speed_bins();
 
 -- Trigger: raw_data_delete on wys.raw_data
 
