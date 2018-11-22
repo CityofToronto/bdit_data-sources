@@ -4,6 +4,14 @@
 
 Ocasionally, new segments need to be added to the `bluetooth` schema. This will go over the setps and the general process of what occurred during September 2018 to add the new routes. 
 
+## Table of Contents
+
+1. [Parsing Data](#parsing-data)
+2. [Adding Readers](#adding-readers)
+3. [Fuzzy String Matching](#fuzzy-string-matching)
+4. [Cleanup, Warnings, and Alternative Methods](#cleanup-warnings-and-alternative-methods)
+5. [Making Lines](#making-lines)
+
 ## Parsing Data
 
 In this update, there existed a kml/list of all the new reader names and locations and `bluetooth.all_analyses` already had the routes, `analysis_id` and names of the routes. The names followed whatever was in the bliptrack portal, but does not match the naming convention BDIT uses. The following query parses the `report_name` column into columns for `corridor`, `from_intersection`, and `to_intersection`.
@@ -80,7 +88,9 @@ WHERE  ST_LENGTH(ST_MakeLine(ST_MakePoint(from_long, from_lat), ST_MakePoint(to_
 ORDER BY from_intersection
 )
 ```
-Draws lines using the reader locations.
+Draws lines using the reader locations. This is the result.
+
+![bt_lines](#img/bt_lines.PNG)
 
 ```SQL
 , coflation AS (
@@ -110,8 +120,26 @@ FROM coflation
 ```
 Matches the centreline road segment to the drawn lines. Note the buffer is really large (1000 units) to account for segments that run accross multiple roads.
 
+After proper QC (see next section) is applied, it should something like this.
+
+![bt_segments](#img/bt_segments.PNG)
+
 ## Cleanup, Warnings, and Alternative Methods
 
 This method works really well for straight roads/segments. However, this is especially challenging for segments that are perpendicular, involves curves, or weird geometries/routes. 
 
-A lot of mannual cleanup was required to delete extraneous roads, or add roads to the route, mainly through the `UPDATE` and `DELETE` clauses and using the `geo_ids`.
+A lot of mannual cleanup was required to delete extraneous roads, or add roads to the route, mainly through the `UPDATE` and `DELETE` clauses and using the `geo_ids` from the centreline table.
+
+An alternative method is drawing routes in QGIS connecting the readers on the centreline layer. This may be faster for low number of segments (ex <500).
+
+## Making Lines
+
+At this point, the layer has multiple entries containing centreline segments for each analysis_id. Instead, we need a single line/entry for each analysis_id. This query concatenates the individual centreline segments into one line. The main function doing this work is ST_LineMerge()
+
+```SQL
+SELECT A.analysis_id, A.corridor, A.from_intersection,A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat,  A.geo_id,  A.lf_name, (ST_Dump(A.geom)).geom AS geom 
+INTO rliu.new_bt_segments
+from (SELECT ST_LineMerge(ST_Union(A.geom)) AS geom, A.analysis_id, A.corridor,A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat, array_agg(DISTINCT A.geo_id) AS geo_id, array_agg(DISTINCT A.lf_name) AS lf_name FROM new_bt_coflate300 A
+GROUP BY A.analysis_id, A.corridor, A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat ORDER BY analysis_id) A
+```
+After this, the only step is to format the table so it matches `bluetooth.segments`.
