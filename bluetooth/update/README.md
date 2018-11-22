@@ -90,7 +90,7 @@ ORDER BY from_intersection
 ```
 Draws lines using the reader locations. This is the result.
 
-![bt_lines](#img/bt_lines.PNG)
+![bt_lines](img/bt_lines.PNG)
 
 ```SQL
 , coflation AS (
@@ -122,7 +122,7 @@ Matches the centreline road segment to the drawn lines. Note the buffer is reall
 
 After proper QC (see next section) is applied, it should something like this.
 
-![bt_segments](#img/bt_segments.PNG)
+![bt_segments](img/bt_segments.PNG)
 
 ## Cleanup, Warnings, and Alternative Methods
 
