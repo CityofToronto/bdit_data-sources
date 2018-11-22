@@ -287,6 +287,6 @@ If the values of an Others `deviceClass` are calculated, sharing the same `UserI
 
 Looking at the `outliersLevel` of the Start-End Data is a quick way to check if a device only passed by one sensor. If the `deviceClass` has the `OneSensorOnly` value, the `outlierLevel` attribute will have a value of `3`. However, the `outlierLevel` of the Others Data of the same record (`userId` and timestamp) will be 0.
 
-# 7. Adding New Segments to the Database
+## 7. Adding New Segments to the Database
 
-Occasionally, new `analysis_id`s need to be added. The detailed process is described [here](update/readme.md)
+Occasionally, new `analysis_id`s need to be added. The detailed process is described [here](update/README.md)
