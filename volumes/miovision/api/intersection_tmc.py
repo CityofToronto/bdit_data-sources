@@ -262,8 +262,8 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         logger.error('Cannot pull data')
                         logger.error(miovision_exc)
                         error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))   
-                
-            send_mail(email['to'], email['from'], 'Miovision API Error',str(error_array))   
+            if len(error_array)>1:    
+                send_mail(email['to'], email['from'], 'Miovision API Error',str(error_array))   
                     
             logger.info('Completed data pulling for {}'.format(start_date))
             try:
