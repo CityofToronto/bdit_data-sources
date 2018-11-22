@@ -2,7 +2,7 @@
 
 ## Overview
 
-Ocasionally, new segments need to be added to the `bluetooth` schema. This will go over the setps and the general process of what occurred during September 2018 to add the new routes. 
+Ocasionally, new segments need to be added to the `bluetooth` schema. This will go over the steps and the general process of what occurred during September 2018 to add the new routes. 
 
 ## Table of Contents
 
