@@ -63,6 +63,11 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
 	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
 	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+
+### Open Data Releases
+
+* [Travel Times - Bluetooth](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#4c1f1f4d-4394-8b47-bf00-262b6800ba81) contains data for all the bluetooth segments collected by the city. The travel times are 5 minute average travel times. The real-time feed is currently not operational.
+*[King St. Transit Pilot - Detailed Bluetooth Travel Time](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#739f4e47-737c-1b32-3a0b-45f80e8c2951) contains travel times collected during the King Street Pilot in the same format as the above data set. Data is collected on segments found in the [King St. Transit Pilot – Bluetooth Travel Time Segments](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#54e5b29a-9171-1855-de16-59c7f4909eea) map layer. 
 	
 ## Turning Movement Counts
 
@@ -115,6 +120,13 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Strictly conforms to FLOW LOADER data file structure
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
+
+### Open Data Releases 
+
+BDIT has released ATR data on the open data portal, in the form of count data collected during the King Street Pilot. 
+* [King St. Transit Pilot - 2015 King Street Traffic Counts](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#23c0a4a8-12f6-5ca7-9710-a5cf29a0a3e7) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street
+* [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#55a44849-90eb-ed1e-fbca-a7ad6b1025e3) contains 15 minute aggregated ATR data collected from Miovision readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area. 
+* [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#dfd63698-5d0e-3d24-0732-9d1fea58523c) is a summarized version of the above data by grouping the data by month, and only including peak period and east-west data. The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
 
 ## Vehicle Detector Station (VDS)
 
