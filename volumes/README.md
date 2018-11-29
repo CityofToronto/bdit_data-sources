@@ -1,22 +1,43 @@
-
 # Traffic Volumes
+
 Traffic volume data (traffic counts and turning movements) from the FLOW database. Data tables currently stored in the `traffic` schema. 
 
 ## Table of Contents
-1. [Loading Data](#1-loading-data)
-2. [Schema Overview](#2-schema-overview)
-3. [Traffic Count Types](#3-traffic-count-types)
-	* [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
-	* [Automated Traffic Recorders (ATRs)](#permanent-count-stations-and-automated-traffic-recorders-atrs)
-4. [Relevant Tables](#4-relevant-tables) 
-	* [arterydata](#arterydata)
-	* [cnt_det](#cnt_det)
-	* [countinfomics](#countinfomics)
-	* [det](#det)
-	* [countinfo](#countinfo)	
-	* [category](#category)
+
+- [Table of Contents](#table-of-contents)
+- [1. Loading Data](#1-loading-data)
+- [2. Schema Overview](#2-schema-overview)
+- [3. Traffic Count Types](#3-traffic-count-types)
+	- [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
+		- [Data Elements](#data-elements)
+		- [Notes](#notes)
+	- [Automated Traffic Recorders (ATRs)](#automated-traffic-recorders-atrs)
+		- [Data Elements](#data-elements-1)
+		- [Notes](#notes-1)
+- [4. Relevant Tables](#4-relevant-tables)
+	- [arterydata](#arterydata)
+		- [Content](#content)
+		- [Table Structure](#table-structure)
+	- [det](#det)
+		- [Content](#content-1)
+		- [Table Structure](#table-structure-1)
+	- [countinfomics](#countinfomics)
+		- [Content](#content-2)
+		- [Table Structure](#table-structure-2)
+	- [cnt_det](#cnt_det)
+		- [Content](#content-3)
+		- [Table Stucture](#table-stucture)
+	- [countinfo](#countinfo)
+		- [Content](#content-4)
+		- [Table Structure](#table-structure-3)
+	- [category](#category)
+		- [Content](#content-5)
+		- [Table Structure](#table-structure-4)
+- [Open Data](#open-data)
+	- [King Street Pilot](#king-street-pilot)
 
 ## 1. Loading Data
+
 The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
 
 In a SQL window, create the `TRAFFIC` tablespace for import.
@@ -90,10 +111,13 @@ Table Name|Description
 ## 4. Relevant Tables
 
 ### arterydata
+
 #### Content
+
 This table contains the location information of each volume count. 
 
 #### Table Structure
+
 Field Name|Type|Description
 ----------|----|-----------
 arterycode|bigint|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
@@ -164,10 +188,13 @@ E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
 
 ### countinfomics
+
 #### Content
+
 This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
 
 #### Table Structure
+
 Field Name|Type|Description
 ----------|----|-----------
 count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
@@ -177,10 +204,13 @@ day_no|bigint|day of the week
 category_id|int|ID number linked to [category](#category) table containing the source of the count
 
 ### cnt_det
+
 #### Content
+
 This table contains individual data entries from all sources other than turning movement counts.
 
 #### Table Stucture
+
 Field Name|Type|Description
 ----------|----|-----------
 count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
@@ -188,21 +218,34 @@ count|bigint|vehicle count
 timecount|Date/Time|Effective time of counts (time displayed is the end time period)
 
 ### countinfo
+
 #### Content
+
 Similar to [countinfomics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
 
 #### Table Structure
+
 See [countinfomics](#countinfomics)
 
 ### category
+
 #### Content
+
 This is a reference table referencing the data source of each entry.
 
 #### Table Structure
+
 Field Name|Type|Description
 ----------|----|-----------
 category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
 category_name|text|name of the data source
 
+## Open Data
 
+### King Street Pilot
 
+For the King Street Transit Pilot, the below volume datasets were released. The first is [ATR counts](#automated-traffic-recorders-atrs) from before the start of the pilot, tagged to the City's Centreline layer, while the other two are from [Miovision](miovision) permanent count cameras and are georeferenced by intersection:
+
+- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#23c0a4a8-12f6-5ca7-9710-a5cf29a0a3e7) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. [Here](sql/open_data-ksp_atr_2015.sql) is the SQL that generated that table.
+- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#55a44849-90eb-ed1e-fbca-a7ad6b1025e3) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
+- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#dfd63698-5d0e-3d24-0732-9d1fea58523c) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)

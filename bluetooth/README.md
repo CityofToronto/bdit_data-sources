@@ -2,13 +2,39 @@
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
-2. [Table Structure](#2-table-structure)
-3. [Technology](#3-technology)
-4. [Bliptrack UI](#4-bliptrack-ui)
-5. [Bliptrack API](#5-bliptrack-api)
-6. [Bliptrack API OD Data](#6-bliptrack-api-od-data)
-7. [Adding New Segments to the Database](#7-adding-new-segments-to-the-database)
+- [Table of Contents](#table-of-contents)
+- [1. Overview](#1-overview)
+- [2. Table Structure](#2-table-structure)
+    - [Open Data Tables](#open-data-tables)
+        - [Live Feed](#live-feed)
+        - [Historical Data](#historical-data)
+        - [Geography](#geography)
+    - [Internal Tables](#internal-tables)
+        - [Observations](#observations)
+            - [Filtering devices](#filtering-devices)
+        - [all_analyses](#all_analyses)
+        - [ClassOfDevice](#classofdevice)
+- [3. Technology](#3-technology)
+- [4. Bliptrack UI](#4-bliptrack-ui)
+    - [Accessing Bliptrack](#accessing-bliptrack)
+        - [Terms](#terms)
+        - [Downloading travel time data](#downloading-travel-time-data)
+        - [Common Issues](#common-issues)
+- [5. Bliptrack API](#5-bliptrack-api)
+    - [Pulling travel time data](#pulling-travel-time-data)
+        - [Under the Hood](#under-the-hood)
+        - [The `analysisId`](#the-analysisid)
+- [6. Bliptrack API OD Data](#6-bliptrack-api-od-data)
+    - [Start-End Data](#start-end-data)
+        - [Some notes on `measuredTime` and records](#some-notes-on-measuredtime-and-records)
+        - [Dictionary Structure](#dictionary-structure)
+    - [Others Data](#others-data)
+    - [deviceClass and outlierLevel](#deviceclass-and-outlierlevel)
+        - [For the Start-End Data](#for-the-start-end-data)
+        - [For the Others Data](#for-the-others-data)
+        - [outliersLevel](#outlierslevel)
+- [7. Adding New Segments to the Database](#7-adding-new-segments-to-the-database)
+- [8. Open Data Releases](#8-open-data-releases)
 
 ## 1. Overview
 
@@ -290,3 +316,12 @@ Looking at the `outliersLevel` of the Start-End Data is a quick way to check if 
 ## 7. Adding New Segments to the Database
 
 Occasionally, new `analysis_id`s need to be added. The detailed process is described [here](update/README.md)
+
+## 8. Open Data Releases
+
+A full release of 5-min aggregate data is **pending**, the historic archive is available under [Travel Times - Bluetooth](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#4c1f1f4d-4394-8b47-bf00-262b6800ba81) (updated as of March 2017), the SQL code for these is available [here](C:\Users\rdumas\Documents\GitHub\data-sources\bluetooth\sql\move_data\aggr_5min_opendata_views.sql). The real-time feed is currently not operational. Follow [this milestone](https://github.com/CityofToronto/bdit_data-sources/milestone/3) for updates on this release.
+
+For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has released the following two datasets. These data are only for the segments found in the [King St. Transit Pilot – Bluetooth Travel Time Segments](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#54e5b29a-9171-1855-de16-59c7f4909eea) map layer, (code to generate [here](sql\analysis\open_data_ksp_segments_gis.sql)):
+
+- [King St. Transit Pilot - Detailed Bluetooth Travel Time](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#739f4e47-737c-1b32-3a0b-45f80e8c2951) contains travel times collected during the King Street Pilot in the same format as the 5-min data set. [Here](sql\analysis\open_data_ksp_travel_times.sql) is the SQL code producing these data.
+- [King St. Transit Pilot – Bluetooth Travel Time Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#a85f193a-4910-f155-6cb9-49f9dedd1392) contains monthly averages of corridor-level travel times by time periods. [Here](sql\analysis\open_data_ksp_agg_travel_times.sql) is the SQL code producing these summaries.
