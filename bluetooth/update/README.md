@@ -1,4 +1,4 @@
-# Updating Bluetooh Segments
+# Updating Bluetooth Segments
 
 ## Overview
 
@@ -93,7 +93,7 @@ Draws lines using the reader locations. This is the result.
 ![bt_lines](img/bt_lines.PNG)
 
 ```SQL
-, coflation AS (
+, conflation AS (
 SELECT analysis_id, 
 	corridor, 
 	from_intersection, 
@@ -116,8 +116,9 @@ ST_DWithin( ST_Transform(s.geom, 32190) ,  ST_BUFFER(ST_Transform(ST_SetSRID(lin
 
 SELECT * 
 INTO rliu.new_bt_coflate1000 
-FROM coflation
+FROM conflation
 ```
+
 Matches the centreline road segment to the drawn lines. Note the buffer is really large (1000 units) to account for segments that run accross multiple roads.
 
 After proper QC (see next section) is applied, it should something like this.
@@ -134,7 +135,7 @@ An alternative method is drawing routes in QGIS connecting the readers on the ce
 
 ## Making Lines
 
-At this point, the layer has multiple entries containing centreline segments for each analysis_id. Instead, we need a single line/entry for each analysis_id. This query concatenates the individual centreline segments into one line. The main function doing this work is ST_LineMerge()
+At this point, the layer has multiple entries containing centreline segments for each analysis_id. Instead, we need a single line/entry for each analysis_id. This query concatenates the individual centreline segments into one line. The main function doing this work is [`ST_LineMerge()`](https://postgis.net/docs/ST_LineMerge.html)
 
 ```SQL
 SELECT A.analysis_id, A.corridor, A.from_intersection,A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat,  A.geo_id,  A.lf_name, (ST_Dump(A.geom)).geom AS geom 
