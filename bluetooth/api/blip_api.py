@@ -208,8 +208,8 @@ def move_data(dbset):
         if query.getresult()[0][0] != 1:
             db.rollback()
             raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
-        query = db.query("TRUNCATE bluetooth.raw_data;")
         query = db.query("SELECT king_pilot.load_bt_data();")
+        query = db.query("TRUNCATE bluetooth.raw_data;")
         if query.getresult()[0][0] != 1:
             db.rollback()
             raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
