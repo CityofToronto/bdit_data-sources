@@ -25,9 +25,13 @@ BEGIN
 		percentile_cont(0.5) WITHIN GROUP (ORDER BY rs.measured_time) AS travel_time,
 		COUNT(rs.user_id) AS obs
 	FROM bluetooth.raw_data rs
+	JOIN bluetooth.class_of_device USING (cod)
 	LEFT OUTER JOIN bluetooth.segments USING (analysis_id)
-	WHERE rs.outlier_level = 0 AND (device_class = 1 OR ( street LIKE 'Gardiner%' OR street LIKE 'Lakeshore%' OR street LIKE 'DVP%'))
-	GROUP BY rs.analysis_id, (floor((extract('epoch' from rs.measured_timestamp)-1) / 300) * 300)
+	WHERE rs.outlier_level = 0 AND (
+					( street LIKE 'Gardiner%' OR street LIKE 'Lakeshore%' OR street LIKE 'DVP%') --Allow all device types on the highways
+		OR 		(--Restrict Arterial device types
+					device_class = 1 AND class_of_device.device_type = ANY (ARRAY['Hands-free Device', 'WiFi']) ))
+	GROUP BY rs.analysis_id, datetime_bin
 	ON CONFLICT DO NOTHING;
 	RETURN 1;
 END
