@@ -30,11 +30,11 @@ class IndexCreator( SqlAction ):
         if indexes is None:
             indexes = ['score','tmc','timestamp']
         
-        if set(indexes) <= self.SQL_FUNCTIONS.keys():
-            self.indexes = indexes
-        else:
-            raise ValueError('Invalid set of index keys {}'.format(indexes))
-        #raises ValueError
+        for index in indexes:
+            if index not in self.SQL_FUNCTIONS.keys():
+                raise ValueError('Index key {} not in index_functions.json'.format(index))
+                #raises ValueError
+        self.indexes = indexes
         self._test_schema(schemaname)
         self.schema = schemaname
         self.table = table
