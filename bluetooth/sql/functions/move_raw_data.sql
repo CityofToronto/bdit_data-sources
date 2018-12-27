@@ -30,7 +30,9 @@ BEGIN
 	WHERE rs.outlier_level = 0 AND (
 					( street LIKE 'Gardiner%' OR street LIKE 'Lakeshore%' OR street LIKE 'DVP%') --Allow all device types on the highways
 		OR 		(--Restrict Arterial device types
-					device_class = 1 AND class_of_device.device_type = ANY (ARRAY['Hands-free Device', 'WiFi']) ))
+					device_class = 1 AND (class_of_device.device_type = 'Hands-free Device'
+																OR class_of_device.cod = 520 --Bluetooth Car Kit
+																) ) ))
 	GROUP BY rs.analysis_id, datetime_bin
 	ON CONFLICT DO NOTHING;
 	RETURN 1;
