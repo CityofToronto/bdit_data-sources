@@ -223,6 +223,13 @@ def move_data(dbset):
     finally:
         db.close()
 
+def load_config(dbsetting):
+    config = configparser.ConfigParser()
+    config.read(dbsetting)
+    dbset = config['DBSETTINGS']
+    api_settings = config['API']
+    return dbset, api_settings
+
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
          direct: bool = None,
@@ -239,10 +246,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             Specify to ignore the HTTPS_PROXY environment variable.
     """
 
-    config = configparser.ConfigParser()
-    config.read(dbsetting)
-    dbset = config['DBSETTINGS']
-    api_settings = config['API']
+    dbset, api_settings = load_config(dbsetting)
 
     # Access the API using zeep
     LOGGER.info('Fetching config from blip server')
