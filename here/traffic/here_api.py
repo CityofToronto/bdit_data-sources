@@ -114,7 +114,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 @click.option('-d','--config', type=click.Path(exists=True))
 @click.pass_context
 def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
-    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate (inclusive)
 
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
     
