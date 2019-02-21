@@ -171,7 +171,7 @@ def pull_here_data(ctx, startdate, enddate, config, mapversion):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion)
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
