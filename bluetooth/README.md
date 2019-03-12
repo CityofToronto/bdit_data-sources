@@ -101,7 +101,7 @@ These tables are created based on data the team accesses from our vendor's API a
 |endpoint_number|smallint| |
 |endpoint_name|character varying(8)| |
 |measured_timestamp|timestamp without time zone| |
-|outlier_level|smallint| |
+|outlier_level|smallint|outliers are represented as >0 |
 |cod|bigint| integer representation of 24 bit Bluetooth class |
 |device_class|smallint| integer representation of a bitstring `outcome` defined for that particular route |
 
