@@ -174,6 +174,34 @@ BEGIN
         INSERT INTO bluetooth.observations_201811 VALUES (NEW.*) ON CONFLICT DO NOTHING;
     ELSIF ( NEW.measured_timestamp > DATE '2018-12-01' AND NEW.measured_timestamp <= DATE '2018-12-01' + INTERVAL '1 month' ) THEN
         INSERT INTO bluetooth.observations_201812 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+     ELSIF ( NEW.measured_timestamp > DATE '2019-01-01' AND
+         NEW.measured_timestamp <= DATE '2019-02-01' ) THEN
+        INSERT INTO bluetooth.observations_201901 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-02-01' AND
+         NEW.measured_timestamp <= DATE '2019-03-01' ) THEN
+        INSERT INTO bluetooth.observations_201902 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-03-01' AND NEW.measured_timestamp <= DATE '2019-03-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201903 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-04-01' AND NEW.measured_timestamp <= DATE '2019-04-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201904 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-04-01' AND NEW.measured_timestamp <= DATE '2019-04-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201904 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-05-01' AND NEW.measured_timestamp <= DATE '2019-05-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201905 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-06-01' AND NEW.measured_timestamp <= DATE '2019-06-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201906 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-07-01' AND NEW.measured_timestamp <= DATE '2019-07-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201907 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-08-01' AND NEW.measured_timestamp <= DATE '2019-08-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201908 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-09-01' AND NEW.measured_timestamp <= DATE '2019-09-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201909 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-10-01' AND NEW.measured_timestamp <= DATE '2019-10-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201910 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-11-01' AND NEW.measured_timestamp <= DATE '2019-11-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201911 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2019-12-01' AND NEW.measured_timestamp <= DATE '2019-12-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_201912 VALUES (NEW.*) ON CONFLICT DO NOTHING;
     ELSE
         RAISE EXCEPTION 'Date out of range.';
     END IF;

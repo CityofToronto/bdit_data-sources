@@ -21,8 +21,9 @@ from typing import List
 import urllib3
 import zeep
 from dateutil.relativedelta import relativedelta
-from pg import DB, DatabaseError, IntegrityError
+from pg import DB, InternalError, DatabaseError, IntegrityError
 from requests import RequestException, Session
+from tenacity import retry, before_sleep_log, wait_exponential, retry_if_exception_type, RetryError
 from zeep import Client
 from zeep.transports import Transport
 
@@ -86,6 +87,12 @@ def get_data_for_config(blip, un: str, pw: str, config):
         data = blip.service.exportPerUserData(un, pw, config)
     return data
 
+@retry(retry=retry_if_exception_type(InternalError),
+       wait=wait_exponential(multiplier=15, max=900), before_sleep=before_sleep_log(LOGGER, logging.ERROR))
+def _get_db(dbset):
+    '''Create a pygresql DB object and retry for up to 15 minutes if the connection is unsuccessful'''
+    return DB(**dbset)
+
 
 def insert_data(data: list, dbset: dict, live: bool):
     '''
@@ -112,8 +119,12 @@ def insert_data(data: list, dbset: dict, live: bool):
                dic["measuredTimeTimestamp"], dic["outlierLevel"], dic["cod"],
                dic["deviceClass"])
         to_insert.append(row)
-
-    db = DB(**dbset)
+    try:
+        db = _get_db(dbset)
+    except RetryError as retry_err:
+        LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
+        retry_err.reraise()
+        sys.exit(1)
     if live:
         db.inserttable('king_pilot.daily_raw_bt', to_insert)
     else:
@@ -165,7 +176,11 @@ def update_configs(all_analyses, dbset):
         Dictionary to connect to PostgreSQL database
     '''
 
-    db = DB(**dbset)
+    try:
+        db = _get_db(dbset)
+    except RetryError as retry_err:
+        LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
+        retry_err.reraise()
     db.begin()
     db.query('''TRUNCATE bluetooth.all_analyses_day_old;
     INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;''')
@@ -202,7 +217,11 @@ def update_configs(all_analyses, dbset):
 
 def move_data(dbset):
     try:
-        db = DB(**dbset)
+        try:
+            db = _get_db(dbset)
+        except RetryError as retry_err:
+            LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
+            retry_err.reraise()
         db.begin()
         query = db.query("SELECT bluetooth.move_raw_data();")
         if query.getresult()[0][0] != 1:
@@ -223,6 +242,13 @@ def move_data(dbset):
     finally:
         db.close()
 
+def load_config(dbsetting):
+    config = configparser.ConfigParser()
+    config.read(dbsetting)
+    dbset = config['DBSETTINGS']
+    api_settings = config['API']
+    return dbset, api_settings
+
 def main(dbsetting: 'path/to/config.cfg' = None,
          years: '[[YYYYMMDD, YYYYMMDD]]' = None,
          direct: bool = None,
@@ -239,17 +265,22 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             Specify to ignore the HTTPS_PROXY environment variable.
     """
 
-    config = configparser.ConfigParser()
-    config.read(dbsetting)
-    dbset = config['DBSETTINGS']
-    api_settings = config['API']
+    dbset, api_settings = load_config(dbsetting)
 
     # Access the API using zeep
     LOGGER.info('Fetching config from blip server')
     blip, config = get_wsdl_client(api_settings['WSDLfile'], direct, live)
 
-    if live:
+    try:
         db = DB(**dbset)
+    except InternalError as _:
+        LOGGER.error('Connection error to RDS, sleeping for ten minutes')
+        sleep(60 * 10)
+        db = DB(**dbset)
+
+    if live:
+        
+        
         query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
         routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
     else:
@@ -261,7 +292,6 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             LOGGER.info('Updating route configs')
             routes_to_pull = update_configs(all_analyses, dbset)
         else:
-            db = DB(**dbset)
             LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
             sql = '''WITH analyses AS (SELECT unnest(%(analysis)s::bigint[]) AS analysis_id)
                     SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
