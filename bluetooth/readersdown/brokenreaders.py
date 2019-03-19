@@ -60,9 +60,10 @@ def find_brokenreaders(con):
 def email_updates(subject: str, to: str, updates: list):
     '''Send email with a list of sensors stopped reporting yesterday'''
     message = ''
-    for broken_reader in updates:
-            message += 'Reader: {reader_name}, '.format(reader_name=broken_reader[0])
-            message += "\n" 
+    for i, broken_reader in enumerate(updates):
+            message += 'Reader: {reader_name} '.format(reader_name=broken_reader[0])
+            if i > 0:
+                message += ",\n" 
     sender = "Broken Readers Detection Script"
 
     send_mail(to, sender, subject, message)
@@ -84,7 +85,11 @@ def main ():
     try:
         broken_readers = find_brokenreaders(con)
     except BlipScriptFailed:
-        send_mail(email_settings['to'], "Broken Readers Detection Script", "Blip Script Failed this morning", '')
+        script = '''This email was generated because no data was received by the database this morning. 
+                    This may be because the script failed for an unknown reason, the blip server was offline 
+                    or there were connectivity issues between the Terminal Server and either the Blip server 
+                    or our RDS. Someone will have to log in to the Terminal Server to debug.'''
+        send_mail(email_settings['to'], "Broken Readers Detection Script", "Blip Script Failed this morning", script)
     else:
         if broken_readers != []:
             email_updates(email_settings['subject'], email_settings['to'], broken_readers)
