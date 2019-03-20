@@ -214,16 +214,6 @@ CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_day_hour_locati
                     flow_atr.volume_15min
                    FROM open_data.flow_atr
                   WHERE flow_atr.station_type = 'Permanent'::text AND flow_atr.volume_15min >= 0::numeric) flow
-        UNION ALL
-         SELECT a.centreline_id,
-            a.direction,
-            a.location_desc AS location,
-            'Cyclists'::text AS class_type,
-            b.datetime_bin,
-            b.volume_15min
-           FROM ecocounter.sites a
-             JOIN ecocounter.volumes b USING (site_id)
-          WHERE b.volume_15min >= 0
   ORDER BY 1, 5, 2) volumes_atr_permanent
   GROUP BY (volumes_atr_permanent.datetime_bin::date), (date_part('hour'::text, volumes_atr_permanent.datetime_bin)), volumes_atr_permanent.location, volumes_atr_permanent.class_type
 WITH DATA;
