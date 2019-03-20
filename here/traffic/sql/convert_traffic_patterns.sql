@@ -145,6 +145,7 @@ CREATE INDEX ON here.traffic_pattern_18_spd_15_narrow USING GIST(trange);
 /*Traffic pattern reference*/
 
 SELECT link_pvid || travel_direction AS link_dir,isodow, pattern_id
+INTO here.traffic_pattern_18_ref_narrow
 	FROM here.traffic_pattern_18_ref, 
     LATERAL json_to_recordset(json_build_array(
         json_build_object('isodow',0,'pattern_id', u),
@@ -155,3 +156,38 @@ SELECT link_pvid || travel_direction AS link_dir,isodow, pattern_id
         json_build_object('isodow',5,'pattern_id', f),
         json_build_object('isodow',6,'pattern_id', s)))
     AS smth(isodow int, pattern_id int);
+
+CREATE INDEX ON here.traffic_pattern_18_ref_narrow (link_dir);
+CREATE INDEX ON here.traffic_pattern_18_ref_narrow (isodow);
+ANALYZE here.traffic_pattern_18_ref_narrow;
+
+
+CREATE VIEW here.traffic_pattern_18_spd_15min AS
+
+SELECT link_dir, isodow, trange, pattern_speed  
+	FROM here.traffic_pattern_18_ref_narrow
+INNER JOIN here.traffic_pattern_18_spd_15_narrow USING (pattern_id);
+
+
+CREATE VIEW here.traffic_pattern_18_spd_60min AS
+
+SELECT link_dir, isodow, trange, pattern_speed  
+	FROM here.traffic_pattern_18_ref_narrow
+INNER JOIN here.traffic_pattern_18_spd_60_narrow USING (pattern_id);
+
+/* VIEW to fill in traffic analytics values*/
+CREATE OR REPLACE VIEW here.ta_filled AS
+
+SELECT master_lookup.link_dir, tx, COALESCE(pct_50, pattern_speed) as speed
+
+FROM (SELECT link_dir, 
+	  		 isodow, (dt + INTERVAL '1 day' * (isodow -1) + ref_time::TIME)::TIMESTAMP as tx, ref_time::TIME
+	  FROM generate_series('2012-01-01 00:00'::timestamp, '2012-01-01 23:55'::timestamp, INTERVAL '5 minutes') as ref_time
+	  CROSS JOIN generate_series(1,7) as isodow
+	  CROSS JOIN generate_series('2011-12-26'::DATE, '2019-12-31'::DATE, INTERVAL '1 week') as dt
+ 	  CROSS JOIN here.routing_streets_18_3
+	  ) as master_lookup
+LEFT OUTER JOIN here.ta USING (link_dir, tx)
+LEFT OUTER JOIN here.traffic_pattern_18_spd_15min ref_spds ON ref_spds.link_dir = master_lookup.link_dir
+													 AND  ref_time <@ trange
+													 AND ref_spds.isodow = master_lookup.isodow
