@@ -69,19 +69,8 @@ CREATE MATERIALIZED VIEW open_data.volumes_atr_vehicles_permanent AS
           WHERE flow_atr.station_type = 'Permanent'::text AND flow_atr.volume_15min >= 0::numeric AND NOT (EXISTS ( SELECT volumes_atr_permanent_exceptions.day,
                     volumes_atr_permanent_exceptions.location,
                     volumes_atr_permanent_exceptions.class_type
-                   FROM open_data.volumes_atr_permanent_exceptions
-                  WHERE flow_atr.location::text = volumes_atr_permanent_exceptions.location::text AND flow_atr.datetime_bin::date = volumes_atr_permanent_exceptions.day))) flow
-UNION ALL
- SELECT a.centreline_id,
-    a.direction,
-    a.location_desc AS location,
-    'Cyclists'::text AS class_type,
-    b.datetime_bin,
-    b.volume_15min
-   FROM ecocounter.sites a
-     JOIN ecocounter.volumes b USING (site_id)
-  WHERE b.volume_15min >= 0
-  ORDER BY 1, 5, 2;
+                   FROM open_data_staging.volumes_atr_permanent_exceptions
+                  WHERE flow_atr.location::text = volumes_atr_permanent_exceptions.location::text AND flow_atr.datetime_bin::date = volumes_atr_permanent_exceptions.day))) flow;
 
 
 
@@ -183,3 +172,140 @@ CREATE MATERIALIZED VIEW open_data.volumes_tmc_permanent_bikes AS
   WHERE b.movement_uid <> 4 AND d.classification_uid <> 3 AND d.class_type = 'Cyclists'::text
   GROUP BY c.px, c.intersection_name, d.class_type, a.leg, b.movement_alt, a.datetime_bin, g.node_id
   ORDER BY c.px, a.datetime_bin, d.class_type, a.leg, b.movement_alt;
+
+
+
+
+
+DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_bikes_exceptions;
+
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_bikes_exceptions AS 
+ SELECT volumes_atr_bikes.index,
+    volumes_atr_bikes.date,
+    volumes_atr_bikes.centreline_id,
+    volumes_atr_bikes.direction
+   FROM volumes_atr_bikes
+WITH DATA;
+
+
+
+DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_permanent_day_hour_location;
+
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_day_hour_location AS 
+ SELECT volumes_atr_permanent.datetime_bin::date AS day,
+    date_part('hour'::text, volumes_atr_permanent.datetime_bin) AS hour,
+    volumes_atr_permanent.location,
+    volumes_atr_permanent.class_type,
+    max(volumes_atr_permanent.volume_15min) AS max,
+    min(volumes_atr_permanent.volume_15min) AS min,
+    avg(volumes_atr_permanent.volume_15min) AS avg,
+    round(percentile_cont(0.50::double precision) WITHIN GROUP (ORDER BY (volumes_atr_permanent.volume_15min::double precision))::numeric, 2) AS median
+   FROM ( SELECT DISTINCT flow.centreline_id,
+            flow.direction,
+            flow.location,
+            flow.class_type,
+            flow.datetime_bin,
+            flow.volume_15min
+           FROM ( SELECT flow_atr.centreline_id,
+                    flow_atr.direction,
+                    flow_atr.location,
+                    flow_atr.class_type,
+                    flow_atr.datetime_bin,
+                    flow_atr.volume_15min
+                   FROM open_data.flow_atr
+                  WHERE flow_atr.station_type = 'Permanent'::text AND flow_atr.volume_15min >= 0::numeric) flow
+        UNION ALL
+         SELECT a.centreline_id,
+            a.direction,
+            a.location_desc AS location,
+            'Cyclists'::text AS class_type,
+            b.datetime_bin,
+            b.volume_15min
+           FROM ecocounter.sites a
+             JOIN ecocounter.volumes b USING (site_id)
+          WHERE b.volume_15min >= 0
+  ORDER BY 1, 5, 2) volumes_atr_permanent
+  GROUP BY (volumes_atr_permanent.datetime_bin::date), (date_part('hour'::text, volumes_atr_permanent.datetime_bin)), volumes_atr_permanent.location, volumes_atr_permanent.class_type
+WITH DATA;
+
+
+
+
+DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_permanent_exceptions_2;
+
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_exceptions_2 AS 
+ SELECT DISTINCT greater_5.direction,
+    greater_5.centreline_id,
+    greater_5.class_type,
+    greater_5.dt,
+    p.location
+   FROM ( SELECT greater_than_5.dt,
+            count(*) AS num_locations_with_at_least_5_outliers_this_day
+           FROM ( SELECT atr_permanent_outliers.centreline_id,
+                    atr_permanent_outliers.direction,
+                    atr_permanent_outliers.class_type,
+                    atr_permanent_outliers.datetime_bin::date AS dt,
+                    count(*) AS cnt
+                   FROM atr_permanent_outliers
+                  WHERE atr_permanent_outliers.centreline_id IS NOT NULL
+                  GROUP BY atr_permanent_outliers.centreline_id, atr_permanent_outliers.direction, atr_permanent_outliers.class_type, (atr_permanent_outliers.datetime_bin::date)
+                 HAVING count(*) > 5) greater_than_5
+          GROUP BY greater_than_5.dt
+         HAVING count(*) <= 3
+          ORDER BY (count(*))) dates
+     JOIN ( SELECT atr_permanent_outliers.centreline_id,
+            atr_permanent_outliers.direction,
+            atr_permanent_outliers.class_type,
+            atr_permanent_outliers.datetime_bin::date AS dt,
+            count(*) AS cnt
+           FROM atr_permanent_outliers
+          WHERE atr_permanent_outliers.centreline_id IS NOT NULL
+          GROUP BY atr_permanent_outliers.centreline_id, atr_permanent_outliers.direction, atr_permanent_outliers.class_type, (atr_permanent_outliers.datetime_bin::date)
+         HAVING count(*) > 5) greater_5 ON dates.dt = greater_5.dt
+     JOIN open_data.volumes_atr_vehicles_permanent p ON greater_5.dt = p.datetime_bin::date AND greater_5.centreline_id = p.centreline_id AND greater_5.direction::text = p.direction::text AND greater_5.class_type = p.class_type
+  ORDER BY greater_5.dt
+WITH DATA;
+
+
+
+DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_shortterm_exceptions;
+
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_shortterm_exceptions AS 
+ SELECT o1.datetime_bin::date AS datetime_bin,
+    o1.location
+   FROM open_data.volumes_atr_vehicles_shortterm o1
+     JOIN open_data.volumes_atr_vehicles_shortterm o2 ON o1.location::text = o2.location::text
+  WHERE
+        CASE
+            WHEN (o1.datetime_bin - o2.datetime_bin) < '00:00:00'::interval THEN - (o1.datetime_bin - o2.datetime_bin)
+            ELSE o1.datetime_bin - o2.datetime_bin
+        END <= '01:00:00'::interval AND (o1.volume_15min > 20::numeric AND o2.volume_15min = 0::numeric OR o1.volume_15min < 450::numeric AND o2.volume_15min > 1000::numeric)
+UNION
+ SELECT o2.datetime_bin::date AS datetime_bin,
+    o2.location
+   FROM open_data.volumes_atr_vehicles_shortterm o1
+     JOIN open_data.volumes_atr_vehicles_shortterm o2 ON o1.location::text = o2.location::text
+  WHERE
+        CASE
+            WHEN (o1.datetime_bin - o2.datetime_bin) < '00:00:00'::interval THEN - (o1.datetime_bin - o2.datetime_bin)
+            ELSE o1.datetime_bin - o2.datetime_bin
+        END <= '01:00:00'::interval AND (o1.volume_15min > 20::numeric AND o2.volume_15min = 0::numeric OR o1.volume_15min < 450::numeric AND o2.volume_15min > 1000::numeric)
+UNION
+ SELECT v.datetime_bin::date AS datetime_bin,
+    v.location
+   FROM open_data.volumes_atr_vehicles_shortterm v
+  GROUP BY (v.datetime_bin::date), v.location
+ HAVING count(*) <= 3 AND (max(v.volume_15min) > 1000::numeric OR min(v.volume_15min) <= 5::numeric) OR avg(v.volume_15min) = 0::numeric
+WITH DATA;
+
+
+
+DROP VIEW open_data_staging.volumes_atr_permanent_exceptions;
+
+CREATE OR REPLACE VIEW open_data_staging.volumes_atr_permanent_exceptions AS 
+ SELECT DISTINCT volumes_atr_permanent_day_hour_location.day,
+    volumes_atr_permanent_day_hour_location.location,
+    volumes_atr_permanent_day_hour_location.class_type
+   FROM open_data_staging.volumes_atr_permanent_day_hour_location
+  WHERE volumes_atr_permanent_day_hour_location.class_type = 'Vehicles'::text AND (volumes_atr_permanent_day_hour_location.max > (4::numeric * volumes_atr_permanent_day_hour_location.median) AND volumes_atr_permanent_day_hour_location.max > 1000::numeric OR volumes_atr_permanent_day_hour_location.max = volumes_atr_permanent_day_hour_location.min OR volumes_atr_permanent_day_hour_location.max > (10::numeric * volumes_atr_permanent_day_hour_location.min) AND volumes_atr_permanent_day_hour_location.max > 1000::numeric);
+
