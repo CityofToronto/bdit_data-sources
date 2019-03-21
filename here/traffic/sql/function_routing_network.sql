@@ -1,9 +1,10 @@
 /*Function to produce a network routable by pg_routing, of HERE traffic analytics data for a given 5-min bin.*/
+DROP FUNCTION here.get_network_for_tx(timestamp without time zone);
 
 CREATE OR REPLACE FUNCTION here.get_network_for_tx (_tx TIMESTAMP)
-RETURNS TABLE (link_dir TEXT, source numeric, target numeric, cost numeric)
+RETURNS TABLE (id bigint, source numeric, target numeric, cost numeric)
 AS $$
- SELECT routing_streets.link_dir,
+ SELECT routing_streets.id,
     routing_streets.source,
     routing_streets.target,
     3600.0 * ta.length::numeric / (1000 *     COALESCE(ta.pct_50, ref_spds.pattern_speed))::numeric AS cost
