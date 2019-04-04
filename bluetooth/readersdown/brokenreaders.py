@@ -61,9 +61,9 @@ def email_updates(subject: str, to: str, updates: list):
     '''Send email with a list of sensors stopped reporting yesterday'''
     message = ''
     for i, broken_reader in enumerate(updates):
-            message += 'Reader: {reader_name} '.format(reader_name=broken_reader[0])
-            if i > 0:
-                message += ",\n" 
+        if i > 0:
+            message += ",\n" 
+        message += 'Reader: {reader_name} '.format(reader_name=broken_reader[0])
     sender = "Broken Readers Detection Script"
 
     send_mail(to, sender, subject, message)
