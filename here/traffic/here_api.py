@@ -137,7 +137,7 @@ def download_data(ctx = None, download_url = None, filename = None):
 @cli.command('upload')
 @click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
+def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
     if dbconfig:
         configuration = configparser.ConfigParser()
