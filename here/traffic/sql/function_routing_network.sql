@@ -23,7 +23,7 @@ RETURNS TABLE (id bigint, source int, target int, cost int)
 AS $$ 
 BEGIN
 	IF shrunk_ids THEN
-		SELECT routing_streets.edge_id,
+		RETURN QUERY SELECT routing_streets.edge_id,
 		routing_streets.source_vertex::INT,
 		routing_streets.target_vertex::INT,
 		(3600.0 * routing_streets.length::numeric / (1000 *     COALESCE(ta.pct_50, ref_spds.pattern_speed))::numeric)::INT AS cost
@@ -32,7 +32,7 @@ BEGIN
 		INNER JOIN here.traffic_pattern_18_spd_15min ref_spds ON ref_spds.link_dir = routing_streets.link_dir 
 		WHERE _tx::TIME <@ ref_spds.trange AND EXTRACT(isodow FROM _tx)::INT = ref_spds.isodow;
 	ELSE 
-				SELECT routing_streets.id,
+		RETURN QUERY SELECT routing_streets.id,
 		routing_streets.source::INT,
 		routing_streets.target::INT,
 		(3600.0 * routing_streets.length::numeric / (1000 *     COALESCE(ta.pct_50, ref_spds.pattern_speed))::numeric)::INT AS cost
