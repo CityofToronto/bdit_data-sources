@@ -6,8 +6,9 @@ The cost will come from traffic analytics data which contains both speed.
 
 
 /*Filter to only include intersections and reset index*/
+DROP VIEW IF EXISTS here.routing_nodes CASCADE;
 CREATE VIEW here.routing_nodes AS
-SELECT node_id, row_number() OVER(order by node_id) as vertex_id, geom
+SELECT node_id, rank() OVER(order by node_id, z_level) as vertex_id, link_id, geom
 	FROM here_gis.zlevels_18_3
 	WHERE intrsect = 'Y';
 
@@ -30,9 +31,9 @@ FROM (	/*Links in the FROM direction of travel*/
 		streets_18_3.geom
 	   FROM here_gis.traffic_streets_18_3
 		 JOIN here_gis.streets_18_3 USING (link_id)
-		 JOIN here.routing_nodes sources ON nref_in_id = sources.node_id
-		 JOIN here.routing_nodes targets ON nref_in_id = targets.node_id
-	  WHERE traffic_streets_18_3.dir_travel::text = ANY (ARRAY['F'::character varying::text, 'B'::character varying::text])
+		 JOIN here.routing_nodes sources USING(link_id) 
+		 JOIN here.routing_nodes targets USING(link_id) 
+	  WHERE ref_in_id = sources.node_id AND nref_in_id = targets.node_id AND traffic_streets_18_3.dir_travel::text = ANY (ARRAY['F'::character varying::text, 'B'::character varying::text])
 	UNION ALL
 	/*Links in the TO direction of travel, need to duplicate because HERE links are unique to both directions of travel (`dir_travel`)*/
 	 SELECT traffic_streets_18_3.link_id || 'T'::text AS link_dir,
@@ -45,9 +46,9 @@ FROM (	/*Links in the FROM direction of travel*/
 		st_reverse(streets_18_3.geom) AS geom
 	   FROM here_gis.traffic_streets_18_3
 		 JOIN here_gis.streets_18_3 USING (link_id)
-		 JOIN here.routing_nodes sources ON nref_in_id = sources.node_id
-		 JOIN here.routing_nodes targets ON nref_in_id = targets.node_id
-	  WHERE traffic_streets_18_3.dir_travel::text = ANY (ARRAY['T'::character varying::text, 'B'::character varying::text])
+		 JOIN here.routing_nodes sources USING(link_id) 
+		 JOIN here.routing_nodes targets USING(link_id) 
+	  WHERE ref_in_id = sources.node_id AND nref_in_id = targets.node_id AND traffic_streets_18_3.dir_travel::text = ANY (ARRAY['T'::character varying::text, 'B'::character varying::text])
   ) streets
 WITH DATA;
 
