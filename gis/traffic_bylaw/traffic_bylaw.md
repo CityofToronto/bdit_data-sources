@@ -1,6 +1,8 @@
 # Traffic Bylaw 
 
 This dataset was acquired from GCCVIEW's REST API cot_geospatial2 MapServer. It includes digitalized data for the following chapters and schedules mainly around the downtown area, and east of downtown. For more information on each specific bylaw, click [here](https://www.toronto.ca/legdocs/bylaws/lawmcode.htm#III).
+
+
 | Chapter | Schedule | Schedule Name                                                                 |
 |---------|----------|-------------------------------------------------------------------------------|
 | 886     | D        | Designated Lanes for Bicycles                                                 |
