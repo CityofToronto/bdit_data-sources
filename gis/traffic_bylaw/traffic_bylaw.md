@@ -56,9 +56,9 @@ This dataset was acquired from GCCVIEW's REST API cot_geospatial2 MapServer. It 
 |-------------|------------------------------------------------------------------------|--------------------------------------------|
 | id          | Unique id for each geometry                                            | 124                                        |
 | objectid    | Unique id for each geometry                                            | 536892                                     |
-| city        | (to be filled in)                                                      | TO                                         |
+| city        | The city where the by-law originated from prior to consolidation                                                      | TO                                         |
 | deleted     | State of this feature                                                  | FALSE                                      |
-| bylawno_ol  | (to be filled in)                                                      |                                            |
+| bylawno_ol  | By-law number that existed before all the former Traffic and Parking Schedules were consolidated into Chapter 950                                                      |                                            |
 | bylawno     | Date of when this by-law was added                                     | [Added 2010-08-27 by By-law No. 1115-2010] |
 | chapter     | City of Toronto Municipal Code for by-laws, each chapter is a   by-law | 886                                        |
 | schedule    | Specific schedule under each by-law                                    | D                                          |
@@ -69,8 +69,8 @@ This dataset was acquired from GCCVIEW's REST API cot_geospatial2 MapServer. It 
 | col4c       | Additional information depends on schedule                             | Anytime                                    |
 | col5c       | Additional information depends on schedule                             | null                                       |
 | col6c       | N/A                                                                    | null                                       |
-| gis         | (gis layer created?)                                                   | 2015-07-09                                 |
-| anomalies   | (to be filled in)                                                      | P                                          |
+| gis         | Reserved column for linkages to other datasets                                                   | 2015-07-09                                 |
+| anomalies   | Identifier for potential problems with entry                                                   | P                                          |
 | symbol_id   | Unique identifier for each schedule in a chapter                       | 886_D                                      |
 | legend_id   | Unique identifier for each schedule in a chapter                       | 886_D                                      |
 | last_update | Date of when this feature is last updated                              | 2015-07-08                                 |
