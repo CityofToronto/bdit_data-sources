@@ -2,6 +2,14 @@
 
 This dataset was acquired from GCCVIEW's REST API cot_geospatial2 MapServer. It includes digitalized data for the following chapters and schedules mainly around the downtown area, and east of downtown. For more information on each specific bylaw, click [here](https://www.toronto.ca/legdocs/bylaws/lawmcode.htm#III).
 
+### Extent of digitalized data
+
+The current extent of the digitalized version is highlighted in blue, where the toronto centreline network is represented in grey.
+
+![bylaw_extent_dark](https://user-images.githubusercontent.com/46324452/56687273-e6d60980-66a3-11e9-9ac6-fffa8deb55d7.PNG)
+
+
+### Chapters and Schedules included in the Traffic Bylaw
 
 | Chapter | Schedule | Schedule Name                                                                 |
 |---------|----------|-------------------------------------------------------------------------------|
@@ -74,3 +82,36 @@ This dataset was acquired from GCCVIEW's REST API cot_geospatial2 MapServer. It 
 | symbol_id   | Unique identifier for each schedule in a chapter                       | 886_D                                      |
 | legend_id   | Unique identifier for each schedule in a chapter                       | 886_D                                      |
 | last_update | Date of when this feature is last updated                              | 2015-07-08                                 |
+
+
+## Processing
+
+For the vhf pick-up and drop-off analysis, we used this filter to extract certain schedules:
+
+| Schedule | Schedule Name                 | 
+|----------|-------------------------------|
+| 950_14   | No Stopping                   |
+| 886_D    | Designated Lanes for Bicycles | 
+| 886_E    | Cycle Tracks                  | 
+| 950_37   | School Bus Loading Zones      | 
+| 950_6    | Stands for Taxicabs           | 
+| 950_5    | Commerical Loading Zones      |
+| 950_7    | Passenger Loading Zones       |
+| 950_10   | Bus Loading Zones             |
+
+```sql 
+create table traffic_bylaw_filtered as 
+with tempa as (select id, objectid, city, deleted, bylawno_ol, bylawno, chapter, schedule, schedule_n, col1c, col2c, col3c, col4c, col5c, col6c, gis, anomalies, symbol_id, legend_id, last_update, 
+(ST_dump(geom)).geom as geom from gis.traffic_bylaw where symbol_id in ('886_D', '886_E', '950_10', '950_14', '950_37',  '950_5', '950_6', '950_7'))
+select legend_id, schedule_n, case when legend_id = '886_D' then "col4c" 
+								   when legend_id = '886_E' then "col4c"
+								   when legend_id = '950_5' then "col4c"
+						   		   when legend_id = '950_6' then "col4c"
+								   when legend_id = '950_7' then "col4c"
+								   when legend_id = '950_10' then "col4c"
+								   when legend_id = '950_14' then "col4c"
+								   when legend_id = '950_37' then "col4c"
+								   end as time_day
+								  , geom
+from tempa
+```
