@@ -1,3 +1,5 @@
+-- The following sql does *not* extract information out of all rows (only around 98% of them)
+
 select time_day as og_timeday, legend_id, 
 		  		 --public holidays as binary
 				 case when time_day ~~* '%except_public_holidays%' or time_day ~~* '%except_%_public_holidays' 
@@ -42,3 +44,4 @@ select time_day as og_timeday, legend_id,
 				 else null end as time_day_array 
 
 from natalie.traffic_bylaw_clean  
+														  
