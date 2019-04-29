@@ -41,5 +41,8 @@ where time_day = 'All times';
 update traffic_bylaw_clean set time_day = 'Anytime' where time_day = 'Anytime during T.T.C. labour disruption';
 
 update traffic_bylaw_clean set time_day = 'Anytime' where time_day = 'Anytime (TTC vehicles excepted)' ;
- 
+
+update traffic_bylaw_clen
+set time_day = '6:00 p.m. of one day to 1:00 a.m. of the next following day'
+	where time_day = '6:00 p.m. to 1:00 a.m.'
 
