@@ -92,15 +92,15 @@ These tables are created based on data the team accesses from our vendor's API a
 |Column|Type|Notes|
 |------|----|-----|
 |id|bigserial| Primary Key |
-|user_id|bigint| |
-|analysis_id|integer| |
-|measured_time|integer| |
-|measured_time_no_filter|integer| |
-|startpoint_number|smallint| |
-|startpoint_name|character varying(8)| |
-|endpoint_number|smallint| |
-|endpoint_name|character varying(8)| |
-|measured_timestamp|timestamp without time zone| |
+|user_id|bigint| Hashed unique userID derived from device MAC address |
+|analysis_id|integer| Unique ID for Bluetooth route |
+|measured_time|integer| Time to complete route, in seconds |
+|measured_time_no_filter|integer| Time to complete route, in seconds (no filter applied)|
+|startpoint_number|smallint| Unclear on significance, usually 1 |
+|startpoint_name|character varying(8)| Identifier for reader at start of segment, if available |
+|endpoint_number|smallint| Unclear on significance, usually 2 |
+|endpoint_name|character varying(8)| Identifier for reader at end of segment, if available |
+|measured_timestamp|timestamp without time zone| Timestamp for detection at start of segment |
 |outlier_level|smallint|outliers are represented as >0 |
 |cod|bigint| integer representation of 24 bit Bluetooth class |
 |device_class|smallint| integer representation of a bitstring `outcome` defined for that particular route |
