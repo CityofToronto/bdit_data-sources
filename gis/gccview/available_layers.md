@@ -1,32 +1,32 @@
 # Available MapServers from GCCView's Rest API
 | MapServers        | Related Divisions                                                            |
 |------------------|------------------------------------------------------------------------------|
-| cot_geospatial   | [GCC - core](#cot_geospatial---GCC---core)                                   |
-| cot_geospatial2  | [Transportation Services](#cot_geospatial2---Transportation-Services)        |
-| cot_geospatial3  | [GCC - topology](#cot_geospatial3---GCC---topology)                          |
-| cot_geospatial5  | [RIVA Application](#cot_geospatial5---RIVA-Application)                      |
-| cot_geospatial6  | [City Clerks](#cot_geospatial6---City-Clersk)                                |
-| cot_geospatial7  | [Toronto Transit Commision](#cot_geospatial7---Toronto-Transit-Commision)    |
-| cot_geospatial8  | [Municipal Licensing and Standards](#cot_geospatial8---Municipal-Licensing-and-Standards)|
-| cot_geospatial10 | [Public Health](#cot_geospatial10---Public-Health)                             |
-| cot_geospatial11 | [City Planning](#cot_geospatial11---City-Planning)                             |
-| cot_geospatial12 | [Major Capital Infrastructure Coordinat Office](#cot_geospatial12---Major-Capital-Infrastructure-Coordinat-Office)                                |
-| cot_geospatial13 | [Parks, Forestry and Recreation](#cot_geospatial13---Parks,-Forestry-and-Recreation)       |
-| cot_geospatial14 | [Toronto Water](#cot_geospatial14---Toronto-Water)                         |
-| cot_geospatial15 | [Toronto Water - Sewer](#cot_geospatial15---Toronto-Water---Sewer)                            |
-| cot_geospatial16 | [Toronto Water - Storm](#cot_geospatial16---Toronto-Water---Storm)                               |
-| cot_geospatial17 | [Energy Efficiency Division](#cot_geospatial17---Energy-Efficiency-Division)      |
-| cot_geospatial18 | [Toronto Building](#cot_geospatial18---Toronto-Building)                                |
-| cot_geospatial19 | [My Map Layers]((#cot_geospatial19---My-Map-Layers)                                      |
-| cot_geospatial20 | [Fleet Services](#cot_geospatial20---Fleet-Services)                          |
-| cot_geospatial21 | [Solid Waste Management Services](#cot_geospatial21---Solid-Waste-Management-Services)     |
-| cot_geospatial22 | [Children's Services](#cot_geospatial22---Children's-Services)                           |
-| cot_geospatial23 | [Economic Development &   Culture](#cot_geospatial23---Economic-Development-&-Culture)   |
-| cot_geospatial24 | [Engineering & Construction   Services](#cot_geospatial24---Engineering-&-Construction)     |
-| cot_geospatial25 | [City's Emergency Services](#cot_geospatial25---City-Emergency-Services)                                                    |
-| cot_geospatial26 | [City's social services](#cot_geospatial26---City's-social-services)                                                       |
-| cot_geospatial27 | [Cadstral Fabric layers](#cot_geospatial27---Cadstral-Fabric-Layers)                                                       |
-| cot_geospatial28 | [Other government organizations (Canada Post, TPL, TPA, School Board, TCHC)](#cot_geospatial28---Other-government-organizations-(Canada-Post,-TPL,-TPA,-School-Board,-TCHC) |
+| cot_geospatial   | [GCC - core](#cot_geospatial---gcc---core)                                   |
+| cot_geospatial2  | [Transportation Services](#cot_geospatial2---transportation-services)        |
+| cot_geospatial3  | [GCC - topology](#cot_geospatial3---gcc---topology)                          |
+| cot_geospatial5  | [RIVA Application](#cot_geospatial5---riva-application)                      |
+| cot_geospatial6  | [City Clerks](#cot_geospatial6---city-clerks)                                |
+| cot_geospatial7  | [Toronto Transit Commision](#cot_geospatial7---toronto-transit-commision)    |
+| cot_geospatial8  | [Municipal Licensing and Standards](#cot_geospatial8---municipal-licensing-and-standards)|
+| cot_geospatial10 | [Public Health](#cot_geospatial10---public-health)                             |
+| cot_geospatial11 | [City Planning](#cot_geospatial11---city-planning)                             |
+| cot_geospatial12 | [Major Capital Infrastructure Coordinat Office](#cot_geospatial12---major-capital-infrastructure-coordinat-office)|
+| cot_geospatial13 | [Parks, Forestry and Recreation](#cot_geospatial13---parks,-forestry-and-recreation)       |
+| cot_geospatial14 | [Toronto Water](#cot_geospatial14---toronto-water)                         |
+| cot_geospatial15 | [Toronto Water - Sewer](#cot_geospatial15---toronto-water---sewer)                            |
+| cot_geospatial16 | [Toronto Water - Storm](#cot_geospatial16---toronto-water---storm)                               |
+| cot_geospatial17 | [Energy Efficiency Division](#cot_geospatial17---energy-efficiency-division)      |
+| cot_geospatial18 | [Toronto Building](#cot_geospatial18---toronto-building)                                |
+| cot_geospatial19 | [My Map Layers](#cot_geospatial19---my-map-layers)                                      |
+| cot_geospatial20 | [Fleet Services](#cot_geospatial20---fleet-services)                          |
+| cot_geospatial21 | [Solid Waste Management Services](#cot_geospatial21---solid-waste-management-services)     |
+| cot_geospatial22 | [Children's Services](#cot_geospatial22---children's-services)                           |
+| cot_geospatial23 | [Economic Development &   Culture](#cot_geospatial23---economic-development-&-culture)   |
+| cot_geospatial24 | [Engineering & Construction   Services](#cot_geospatial24---engineering-&-construction)     |
+| cot_geospatial25 | [City's Emergency Services](#cot_geospatial25---city-emergency-services)    |
+| cot_geospatial26 | [City's social services](#cot_geospatial26---city's-social-services)              |
+| cot_geospatial27 | [Cadstral Fabric layers](#cot_geospatial27---cadstral-fabric-layers)   |
+| cot_geospatial28 | [Other government organizations (Canada Post, TPL, TPA, School Board, TCHC)](#cot_geospatial28---other-government-organizations) |
 
 
 
@@ -706,7 +706,7 @@
 - Site Area 
 - Site Area Label 
 
-## cot_geospatial28 - Other government organizations (Canada Post, TPL, TPA, School Board, TCHC)
+## cot_geospatial28 - Other government organizations
 
 - Admin Area 
     - Dissemination Area 
