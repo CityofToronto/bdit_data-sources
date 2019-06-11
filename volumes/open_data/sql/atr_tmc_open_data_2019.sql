@@ -1,19 +1,46 @@
 ﻿CREATE OR REPLACE VIEW open_data.volumes_atr_cyclists_permanent AS 
- SELECT flow.centreline_id,
-    flow.direction,
-    flow.location,
-    flow.class_type,
-    flow.datetime_bin,
-    flow.volume AS volume_15min
-   FROM ( SELECT flow_atr.centreline_id,
-            flow_atr.direction,
-            flow_atr.location,
-            flow_atr.class_type,
-            flow_atr.datetime_bin,
-            flow_atr.volume_15min AS volume
-           FROM open_data.flow_atr
-          WHERE flow_atr.station_type = 'Permanent'::text AND flow_atr.volume_15min >= 0::numeric AND flow_atr.class_type = 'Cyclists'::text) flow
-  ORDER BY flow.datetime_bin DESC, flow.centreline_id, flow.direction;
+SELECT	centreline_id,
+	direction,
+	location::character varying(65) AS location,
+	class_type,
+	datetime_bin,
+	volume_15min
+FROM
+(	SELECT 	centreline_id,
+		direction,
+		location,
+		class_type,
+		datetime_bin,
+		volume_15min,
+		dt
+	FROM 
+	(SELECT flow.centreline_id,
+	    flow.direction,
+	    flow.location,
+	    flow.class_type,
+	    flow.datetime_bin,
+	    flow.volume AS volume_15min,
+	    flow.datetime_bin::date AS dt
+	   FROM ( SELECT flow_atr.centreline_id,
+		    flow_atr.direction,
+		    flow_atr.location,
+		    flow_atr.class_type,
+		    flow_atr.datetime_bin,
+		    flow_atr.volume_15min AS volume
+		   FROM open_data.flow_atr
+		  WHERE flow_atr.station_type = 'Permanent'::text AND flow_atr.volume_15min >= 0::numeric AND flow_atr.class_type = 'Cyclists'::text) flow
+	) A
+	UNION ALL
+	(SELECT centreline_id::bigint,
+		direction::text,
+		location::text,
+		class_type::text,
+		datetime_bin::timestamp without time zone,
+		volume_15min::int, 
+		datetime_bin::date AS dt 
+	FROM 	cycling.cycling_perm_old)
+) main
+ORDER BY dt DESC, centreline_id, direction;
 
 
 
