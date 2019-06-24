@@ -29,638 +29,612 @@
 | cot_geospatial28 | [Other government organizations (Canada Post, TPL, TPA, School Board, TCHC)](#cot_geospatial28---other-government-organizations) |
 
 
-
 # Layers hosted on each MapServer 
 
 ## cot_geospatial - GCC - core
-
-- City Ward 
-- City Ward Label 
-- Centreline 
-- Major Centreline 
-- Provincial Expressway 
-- City Expressway 
-- Major Arterial 
-- Minor Arterial 
-- Collector 
-- Local 
-- Laneway 
-- Other 
-- Pending 
-- Railway 
-- Shoreline 
-- Geostatistical Line 
-- Trail 
-- Hydro Line 
-- River 
+- City Ward (0)
+- City Ward Label (1)
+- Centreline (2)
+- Major Centreline (3)
+- Provincial Expressway (4)
+- City Expressway (5)
+- Major Arterial (6)
+- Minor Arterial (7)
+- Collector (8)
+- Local (9)
+- Laneway (10)
+- Other (11)
+- Pending (12)
+- Railway (13)
+- Shoreline (14)
+- Geostatistical Line (15)
+- Trail (16)
+- Hydro Line (17)
+- River (18)
 
 ## cot_geospatial2 - Transportation Services
-
-- City Ward Label 
-- Bikeway 
-- Traffic Camera 
-- Accessible Signal 
-- Current Road Restriction 
-- Planned Road Restriction 
-- Pedestrian Crossover 
-- Traffic Beacon 
-- Traffic Signal 
-- Traffic Fatality 
-- Permit Parking Area 
-- Permit Parking Area Label 
-- Road Operation Maintenance Area 
-- Road Operation Maintenance Area Label 
-- Street Markings Area 
-- Street Markings Area Label 
-- TMMS Investigator Area 
-- TMMS Investigator Area Label 
-- TMMS Operation Area 
-- TMMS Operation Area Label 
-- TMMS Service Request 
-- Indoor Bicycle Station 
-- Outdoor High Capacity Bicycle Parking 
-- Bicycle Shop 
-- Bicycle Trail Entrance 
-- Red Light Camera 
-- PRAI Bench 
-- PRAI Bike Parking 
-- PRAI Info Pillar 
-- PRAI Litter Receptacle 
-- PRAI Poster Structure 
-- PRAI Poster Board 
-- PRAI Publication Structure 
-- PRAI Public Washroom 
-- PRAI Transit Shelter 
-- Pavement Asset 
-- Traffic Bylaw Point 
-- Traffic Bylaw Line 
+- City Ward Label (1)
+- Bikeway (2)
+- Traffic Camera (3)
+- Accessible Signal (4)
+- Current Road Restriction (5)
+- Planned Road Restriction (6)
+- Pedestrian Crossover (7)
+- Traffic Beacon (8)
+- Traffic Signal (9)
+- Traffic Fatality (10)
+- Permit Parking Area (11)
+- Permit Parking Area Label (12)
+- Road Operation Maintenance Area (13)
+- Road Operation Maintenance Area Label (14)
+- Street Markings Area (15)
+- Street Markings Area Label (16)
+- TMMS Investigator Area (17)
+- TMMS Investigator Area Label (18)
+- TMMS Operation Area (19)
+- TMMS Operation Area Label (20)
+- TMMS Service Request (37)
+- Indoor Bicycle Station (21)
+- Outdoor High Capacity Bicycle Parking (22)
+- Bicycle Shop (23)
+- Bicycle Trail Entrance (24)
+- Red Light Camera (25)
+- PRAI Bench (26)
+- PRAI Bike Parking (27)
+- PRAI Info Pillar (28)
+- PRAI Litter Receptacle (29)
+- PRAI Poster Structure (31)
+- PRAI Poster Board (32)
+- PRAI Publication Structure (33)
+- PRAI Public Washroom (34)
+- PRAI Transit Shelter (35)
+- Pavement Asset (36)
+- Traffic Bylaw Point (38)
+- Traffic Bylaw Line (39)
 
 ## cot_geospatial3 - GCC - topology
-
-- Property Data Map Block Index 
-- Property Data Map Block Label 
-- Topo Feature Maintenance Metadata 
-- Building Outline Polygon 
-- Road Line 
-- Topo Sidewalk 
-- Contour Label 
-- Contour 
-- Treed Area 
-- Tree 
-- Pole 
-- Catchbasin 
-- Parking Lot 
-- Railway 
-- Watercourse 
+- Property Data Map Block Index (0)
+- Property Data Map Block Label (1)
+- Topo Feature Maintenance Metadata (4)
+- Building Outline Polygon (2)
+- Road Line (3)
+- Topo Sidewalk (6)
+- Contour Label (7)
+- Contour (8)
+- Treed Area (9)
+- Tree (10)
+- Pole (11)
+- Catchbasin (12)
+- Parking Lot (13)
+- Railway (14)
+- Watercourse (15)
 
 ## cot_geospatial5 - RIVA Application
-
-- Capital Project 
-    - Capital Project - Point 
-    - Capital Project - Line 
-    - Capital Project - Polygon 
-- Not Operational Ready (NOR) 
-    - Park Amenity NOR 
-    - Infrastructure NOR 
-    - Asset NOR 
-    - Building and Structure NOR 
-    - Park Land NOR 
-- Park Amenity 
-- Tree 
-- Park Building and Structure 
-- Parking Lot 
-- Infrastructure 
-    - Infrastructure - OUT 
-    - Infrastructure - IN 
-- Horticultural Bed 
-- Sport Field 
-- Playing Court 
-- Outdoor Recreation Area 
-- Off Leash Area 
-- Street Network 
-    - StreetNetwork 1000000 
-    - StreetNetwork 50000 
-    - StreetNetwork 25000 
-    - StreetNetwork 18000 
-    - StreetNetwork 10000 
-    - StreetNetwork 7500 
-    - StreetNetwork 5000 
-    - StreetNetwork 2500 
-    - StreetNetwork 1000 
-- Natural Area 
-- Land Formation 
-- Park Land 
-    - Park Land L 
-    - Park Land M 
-    - Park Land S 
-- Lake 
-- Metropolitan Region 
+- Capital Project (0)
+    - Capital Project - Point (1)
+    - Capital Project - Line (2)
+    - Capital Project - Polygon (3)
+- Not Operational Ready (NOR) (4)
+    - Park Amenity NOR (5)
+    - Infrastructure NOR (6)
+    - Asset NOR (7)
+    - Building and Structure NOR (8)
+    - Park Land NOR (9)
+- Park Amenity (10)
+- Tree (11)
+- Park Building and Structure (12)
+- Parking Lot (13)
+- Infrastructure (14)
+    - Infrastructure - OUT (15)
+    - Infrastructure - IN (16)
+- Horticultural Bed (17)
+- Sport Field (18)
+- Playing Court (19)
+- Outdoor Recreation Area (20)
+- Off Leash Area (21)
+- Street Network (22)
+    - StreetNetwork 1000000 (23)
+    - StreetNetwork 50000 (24)
+    - StreetNetwork 25000 (25)
+    - StreetNetwork 18000 (26)
+    - StreetNetwork 10000 (27)
+    - StreetNetwork 7500 (28)
+    - StreetNetwork 5000 (29)
+    - StreetNetwork 2500 (30)
+    - StreetNetwork 1000 (31)
+- Natural Area (32)
+- Land Formation (33)
+- Park Land (34)
+    - Park Land L (35)
+    - Park Land M (36)
+    - Park Land S (37)
+- Lake (38)
+- Metropolitan Region (39)
 
 ## cot_geospatial6 - City Clerks
-
-- City Ward Councillor 
-- Voting Location 
-- Voting Subdivision 
-- ePolling Address Green 
-- ePolling Address Orange 
-- ePolling Address Blue 
-- Voting Subdivision 2003 
-- Voting Subdivision 2003 Label 
-- Voting Location 2006 
-- Voting Subdivision 2006 
-- Voting Subdivision 2006 Label 
-- Voting Location 2010 
-- Voting Subdivision 2010 
-- Voting Subdivision 2010 Label 
-- Voting Location 2014 
-- Voting Subdivision 2014 
-- Voting Subdivision 2014 Label 
-- Voter Address Point 
-- City Ward 2018 
-- City Ward 2018 Label 
-- City Ward 2018x 
-- City Ward 2018x Label 
-- Voting Subdivision 2018 
-- Voting Subdivision 2018 Label 
-- Voting Location 2018 
-- Voting Location Advance 2018 
-- Community Council Area 
-- Community Council Area Label 
-- Toronto District 
-- Toronto District Label 
-- City Ward 2003 
-- City Ward 2003 Label 
+- City Ward Councillor (0)
+- Voting Location (1)
+- Voting Subdivision (10)
+- ePolling Address Green (15)
+- ePolling Address Orange (16)
+- ePolling Address Blue (17)
+- Voting Subdivision 2003 (18)
+- Voting Subdivision 2003 Label (19)
+- Voting Location 2006 (20)
+- Voting Subdivision 2006 (21)
+- Voting Subdivision 2006 Label (22)
+- Voting Location 2010 (23)
+- Voting Subdivision 2010 (24)
+- Voting Subdivision 2010 Label (25)
+- Voting Location 2014 (26)
+- Voting Subdivision 2014 (27)
+- Voting Subdivision 2014 Label (28)
+- Voter Address Point (29)
+- City Ward 2018 (30)
+- City Ward 2018 Label (31)
+- City Ward 2018x (32)
+- City Ward 2018x Label (33)
+- Voting Subdivision 2018 (34)
+- Voting Subdivision 2018 Label (35)
+- Voting Location 2018 (36)
+- Voting Location Advance 2018 (37)
+- Community Council Area (2)
+- Community Council Area Label (3)
+- Toronto District (4)
+- Toronto District Label (5)
+- City Ward 2003 (38)
+- City Ward 2003 Label (39)
 
 ## cot_geospatial7 - Toronto Transit Commision
-
-- TTC Stop 
-- TTC Bus Route 
-- TTC Bus Route Label 
-- TTC Subway Route 
-- TTC Subway Route Label 
-- TTC Streetcar Track 
-- GO Train Stop 
-- Public Transit 
+- TTC Stop (1)
+- TTC Bus Route (2)
+- TTC Bus Route Label (3)
+- TTC Subway Route (4)
+- TTC Subway Route Label (5)
+- TTC Streetcar Track (6)
+- GO Train Stop (7)
+- Public Transit (8)
 
 ## cot_geospatial8 - Municipal Licensing and Standards
-
-- Taxi Cab Stand 
+- Taxi Cab Stand (1)
 
 ## cot_geospatial10 - Public Health
-
-- City Ward 
-- Automatic External Defibrillator 
-- Chemical Track 
-- Cooling Centre 
-- Hospital 
-- Health Client Relations Region 
-- Health Client Relations Region Label 
-- Health Client Relations Team 
-- Health Client Relations Team Label 
-- Health Client Relations Office 
-- Health Client Relations Office Label 
-- Healthy Environment Zone 
-- Healthy Environment Zone Label 
-- Public Health 
-- TPH Heat Vulnerability Index 
-- West Nile Virus Zone 
-- West Nile Virus Zone Label 
-- LHIN Location 
-- Local Health Integration Network Boundary 
-- Local Health Integration Network Boundary Label 
-- Local Health Integration Network Sub Region 
-- Local Health Integration Network Sub Region Label 
+- City Ward (0)
+- Automatic External Defibrillator (1)
+- Chemical Track (2)
+- Cooling Centre (3)
+- Hospital (21)
+- Health Client Relations Region (4)
+- Health Client Relations Region Label (5)
+- Health Client Relations Team (6)
+- Health Client Relations Team Label (7)
+- Health Client Relations Office (8)
+- Health Client Relations Office Label (9)
+- Healthy Environment Zone (10)
+- Healthy Environment Zone Label (11)
+- Public Health (12)
+- TPH Heat Vulnerability Index (13)
+- West Nile Virus Zone (14)
+- West Nile Virus Zone Label (15)
+- LHIN Location (16)
+- Local Health Integration Network Boundary (17)
+- Local Health Integration Network Boundary Label (18)
+- Local Health Integration Network Sub Region (19)
+- Local Health Integration Network Sub Region Label (20)
 
 ## cot_geospatial11 - City Planning
-
-- Streetscape Manual 
-- Zoning Area Label 
-- Zoning Area 
-- Zoning Boundary1000 
-- Zoning Boundary5000 
-- Zoning Boundary10000 
-- Zoning Boundary50000 
-- Zoning Former Municipality Bylaws 
-- Zoning Height Overlay 
-- Zoning Lot Coverage Overlay 
-- Zoning Map Tile 
-- Zoning Not Part of This Bylaw 
-- Zoning Policy Area Overlay 
-- Zoning Policy Road Overlay 
-- Zoning Policy Road Overlay5000 
-- Zoning Policy Road Overlay10000 
-- Zoning Policy Road Overlay50000 
-- Zoning Property Summary 
-- Zoning Rooming House Overlay 
-- Archaeological Potential 
-- Urban Planning and Development District 
-- Urban Planning and Development District Label 
-- IBMS District 
-- IBMS District Label 
-- IBMS Grid 
-- IBMS Grid Label 
-- Housing Value Threshold 
-- Housing Value Threshold Label 
-- Housing Zone 
-- Housing Zone Label 
-- Provincially Significant Wetland 
-- Provincially Significant Wetland Label 
-- Natural Heritage System (line) 
-- Natural Heritage System (polygon) 
-- Provincially Significant ANSI 
-- Provincially Significant ANSI Label 
-- Provincial Greenbelt 
-- Heritage Shoreline (line) 
-- Heritage Shoreline (polygon) 
-- Heritage District 
-- Heritage District Label 
-- Archaeologically Sensitive Area 
-- Archaeologically Sensitive Area Label 
-- Secondary Plan 
-- Secondary Plan Label 
-- Site and Area Specific Policy 
-- Community Planning Boundary 
-- Community Planning Boundary Label 
-- Natural Heritage Line 
-- Environmentally Significant Area 
-- Environmentally Significant Area Label 
+- Streetscape Manual (1)
+- Zoning Area Label (2)
+- Zoning Area (3)
+- Zoning Boundary1000 (4)
+- Zoning Boundary5000 (5)
+- Zoning Boundary10000 (6)
+- Zoning Boundary50000 (7)
+- Zoning Former Municipality Bylaws (8)
+- Zoning Height Overlay (9)
+- Zoning Lot Coverage Overlay (10)
+- Zoning Map Tile (11)
+- Zoning Not Part of This Bylaw (12)
+- Zoning Policy Area Overlay (13)
+- Zoning Policy Road Overlay (14)
+- Zoning Policy Road Overlay5000 (15)
+- Zoning Policy Road Overlay10000 (16)
+- Zoning Policy Road Overlay50000 (17)
+- Zoning Property Summary (18)
+- Zoning Rooming House Overlay (19)
+- Archaeological Potential (20)
+- Urban Planning and Development District (21)
+- Urban Planning and Development District Label (22)
+- IBMS District (23)
+- IBMS District Label (24)
+- IBMS Grid (25)
+- IBMS Grid Label (26)
+- Housing Value Threshold (27)
+- Housing Value Threshold Label (28)
+- Housing Zone (29)
+- Housing Zone Label (30)
+- Provincially Significant Wetland (31)
+- Provincially Significant Wetland Label (32)
+- Natural Heritage System (line) (33)
+- Natural Heritage System (polygon) (34)
+- Provincially Significant ANSI (35)
+- Provincially Significant ANSI Label (36)
+- Provincial Greenbelt (37)
+- Heritage Shoreline (line) (38)
+- Heritage Shoreline (polygon) (39)
+- Heritage District (40)
+- Heritage District Label (41)
+- Archaeologically Sensitive Area (42)
+- Archaeologically Sensitive Area Label (43)
+- Secondary Plan (44)
+- Secondary Plan Label (45)
+- Site and Area Specific Policy (46)
+- Community Planning Boundary (47)
+- Community Planning Boundary Label (48)
+- Natural Heritage Line (49)
+- Environmentally Significant Area (50)
+- Environmentally Significant Area Label (51)
 
 ## cot_geospatial12 - Major Capital Infrastructure Coordinat Office
-
-- Intersection 
-- MCIC Point Program 
-- MCIC Linear Program 
-- MCIC Polygon Program 
-- MCIC Reference Point 
-- MCIC Reference Linear 
-- MCIC Reference Area 
-- MCIC PAN AM Venue 
-- MCIC Environmental Assessment Area 
-- MCIC Streetscape 
-- MCIC TW Basement Flooding 
-- MCIC Coordination 
-- MCIC CP Development 
-- MCIC Coordination Point 
-- MCIC Coordination Line 
-- MCIC Coordination Polygon 
-- PTP Project 
-- PTP Facility 
-- PTP Capital Works Project Submitted Point 
-- PTP Capital Works Project Submitted Line 
-- PTP Capital Works Project Submitted Polygon 
-- TOINVIEW Program Point 
-- TOINVIEW Program Line 
-- TOINVIEW Program Polygon 
+- Intersection (42)
+- MCIC Point Program (1)
+- MCIC Linear Program (10)
+- MCIC Polygon Program (19)
+- MCIC Reference Point (28)
+- MCIC Reference Linear (29)
+- MCIC Reference Area (30)
+- MCIC PAN AM Venue (31)
+- MCIC Environmental Assessment Area (32)
+- MCIC Streetscape (33)
+- MCIC TW Basement Flooding (34)
+- MCIC Coordination (36)
+- MCIC CP Development (37)
+- MCIC Coordination Point (38)
+- MCIC Coordination Line (39)
+- MCIC Coordination Polygon (40)
+- PTP Project (35)
+- PTP Facility (41)
+- PTP Capital Works Project Submitted Point (43)
+- PTP Capital Works Project Submitted Line (44)
+- PTP Capital Works Project Submitted Polygon (45)
+- TOINVIEW Program Point (46)
+- TOINVIEW Program Line (47)
+- TOINVIEW Program Polygon (48)
 
 ## cot_geospatial13 - Parks, Forestry and Recreation
-
-- Building Point 
-- Aquatic Centre 
-- Arena 
-- Changeroom 
-- Civic Centre 
-- Community Recreation Centre 
-- Conservatory / Greenhouse 
-- Cultural Arts / Museum 
-- Field House / Clubhouse 
-- Maintenance / Storage Shed 
-- Office / Service Building 
-- School 
-- Shade Structure 
-- Ski Chalet 
-- Sports Complex 
-- Stadium 
-- Utility Building 
-- Washroom Building 
-- Yard Building 
-- Park Amenity Point 
-- Not Operational Ready 
-- Park Amenity 
-- Feature 
-- Building 
-- Infrastructure 
-- PFR Land 
-- PFR Infrastructure 
-- Infrastructure - 
-- Infrastructure + 
-- Parking Lot 
-- Building and Structure 
-- Playing Court 
-- Sport Field 
-- Outdoor Recreation Area 
-- Horticultural Bed 
-- Land Formation 
-- PFR Natural Area 
-- PFR Land 
-- PFR Land - 
-- PFR Land + 
-- PFR Asset Data 
-- PFR Asset (NOR) 
-- PFR Building and Structure (NOR) 
-- PFR Building and Structure 
-- PFR Hardscape 
-- PFR Horticultural Bed 
-- PFR Land 
-- PFR Land Formation 
-- PFR Land (NOR) 
-- PFR Natural Area (point) 
-- PFR Outdoor Recreation Area (point) 
-- PFR Park Amenity 
-- PFR Playing Court 
-- PFR Sport Field 
-- PFR Capital Project (point) 
-- PFR Capital Project (line) 
-- PFR Capital Project (Area) 
-- PFR Outdoor Recreation Area Centroid 
-- Street Tree 18000 
-- Street Tree 1100 
-- Street Tree Inventory 2014 
-- Forestry District 
-- Forestry District Label 
-- Forestry Operational Work District 
-- Forestry Operational Work District Label 
-- Forestry Ravine District 
-- Forestry Ravine District Label 
-- Forestry Region 
-- Forestry Region Label 
-- Ravine and Natural Feature Protection By-law 
+- Building Point (1)
+- Aquatic Centre (2)
+- Arena (3)
+- Changeroom (4)
+- Civic Centre (5)
+- Community Recreation Centre (6)
+- Conservatory / Greenhouse (7)
+- Cultural Arts / Museum (8)
+- Field House / Clubhouse (9)
+- Maintenance / Storage Shed (10)
+- Office / Service Building (11)
+- School (12)
+- Shade Structure (13)
+- Ski Chalet (14)
+- Sports Complex (15)
+- Stadium (16)
+- Utility Building (17)
+- Washroom Building (18)
+- Yard Building (19)
+- Park Amenity Point (20)
+- Not Operational Ready (21)
+- Park Amenity (22)
+- Feature (23)
+- Building (24)
+- Infrastructure (25)
+- PFR Land (26)
+- PFR Infrastructure (27)
+- Infrastructure - (28)
+- Infrastructure + (29)
+- Parking Lot (30)
+- Building and Structure (31)
+- Playing Court (32)
+- Sport Field (33)
+- Outdoor Recreation Area (34)
+- Horticultural Bed (35)
+- Land Formation (36)
+- PFR Natural Area (37)
+- PFR Land (38)
+- PFR Land - (39)
+- PFR Land + (40)
+- PFR Asset Data (41)
+- PFR Asset (NOR) (42)
+- PFR Building and Structure (NOR) (43)
+- PFR Building and Structure (44)
+- PFR Hardscape (45)
+- PFR Horticultural Bed (46)
+- PFR Land (47)
+- PFR Land Formation (48)
+- PFR Land (NOR) (49)
+- PFR Natural Area (point) (50)
+- PFR Outdoor Recreation Area (point) (51)
+- PFR Park Amenity (52)
+- PFR Playing Court (53)
+- PFR Sport Field (54)
+- PFR Capital Project (point) (55)
+- PFR Capital Project (line) (56)
+- PFR Capital Project (Area) (57)
+- PFR Outdoor Recreation Area Centroid (69)
+- Street Tree 18000 (58)
+- Street Tree 1100 (59)
+- Street Tree Inventory 2014 (60)
+- Forestry District (61)
+- Forestry District Label (62)
+- Forestry Operational Work District (63)
+- Forestry Operational Work District Label (64)
+- Forestry Ravine District (65)
+- Forestry Ravine District Label (66)
+- Forestry Region (67)
+- Forestry Region Label (68)
+- Ravine and Natural Feature Protection By-law (70)
 
 ## cot_geospatial14 - Toronto Water
-
-- TWAG Distribution Valve 
-- TWAG Drain Valve 
-- TWAG Hydrant 
-- TWAG Hydrant Label 
-- TWAG Metro Connection Valve 
-- TWAG Other Valve 
-- TWAG Pressure District 
-- TWAG Pressure District Label 
-- TWAG Pressure District Valve 
-- TWAG Reservoir 
-- TWAG System Pressure Monitor Point 
-- TWAG Tapping Service Valve 
-- TWAG Transmission Valve 
-- TWAG Valve Label 
-- TWAG Valve MetroID 
-- TWAG Water Chamber 
-- TWAG Water Chamber Label 
-- TWAG Water Chamber MetroID 
-- TWAG Water Filtration Plant 
-- TWAG Water Hydrant Lead 
-- TWAG Water Junction 
-- TWAG Water Junction Label 
-- TWAG Water Main Abandoned 
-- TWAG Water Main Active 
-- TWAG Water Main Active Label 
-- TWAG Water Main OutOfService 
-- TWAG Water Main Private 
-- TWAG Water Meter 
-- TWAG Water Pipe Encasement 
-- TWAG Water Pump 
-- TWAG Water Pumping Station 
-- TWAG Water Service Line 
-- Toronto Water - Street Name 
-- Toronto Water - Address Label 
+- TWAG Distribution Valve (1)
+- TWAG Drain Valve (2)
+- TWAG Hydrant (3)
+- TWAG Hydrant Label (4)
+- TWAG Metro Connection Valve (5)
+- TWAG Other Valve (6)
+- TWAG Pressure District (7)
+- TWAG Pressure District Label (8)
+- TWAG Pressure District Valve (9)
+- TWAG Reservoir (10)
+- TWAG System Pressure Monitor Point (11)
+- TWAG Tapping Service Valve (12)
+- TWAG Transmission Valve (13)
+- TWAG Valve Label (14)
+- TWAG Valve MetroID (15)
+- TWAG Water Chamber (16)
+- TWAG Water Chamber Label (17)
+- TWAG Water Chamber MetroID (18)
+- TWAG Water Filtration Plant (19)
+- TWAG Water Hydrant Lead (20)
+- TWAG Water Junction (21)
+- TWAG Water Junction Label (22)
+- TWAG Water Main Abandoned (23)
+- TWAG Water Main Active (24)
+- TWAG Water Main Active Label (25)
+- TWAG Water Main OutOfService (26)
+- TWAG Water Main Private (27)
+- TWAG Water Meter (28)
+- TWAG Water Pipe Encasement (29)
+- TWAG Water Pump (30)
+- TWAG Water Pumping Station (31)
+- TWAG Water Service Line (32)
+- Toronto Water - Street Name (33)
+- Toronto Water - Address Label (34)
 
 ## cot_geospatial15 - Toronto Water - Sewer
-
-- TWAG Catchbasin Label 
-- TWAG City Catchbasin 
-- TWAG Connection Node 
-- TWAG Manhole 
-- TWAG Manhole Label 
-- TWAG Outfall 
-- TWAG Outfall Label 
-- TWAG Private Catchbasin 
-- TWAG Septic Tank 
-- TWAG Septic Tank Label 
-- TWAG Sewer Catchbasin Lead 
-- TWAG Sewer Collection 
-- TWAG Sewer Collection Label 
-- TWAG Sewer Junction 
-- TWAG Sewer Junction Label 
-- TWAG Sewer Large Chamber 
-- TWAG Sewer Large Chamber Label 
-- TWAG Sewer Link Orifice Point 
-- TWAG Sewer Link Pump Point - 
-- TWAG Sewer Link Valve Point 
-- TWAG Sewer Link Weir Point 
-- TWAG Sewer Pump Station 
-- TWAG Sewer Trunk 
-- TWAG Sewer Trunk Label 
-- TWAG Sewer Forcemain 
-- TWAG Sewer Forcemain Label 
-- TWAG Sewer Main Abandoned 
-- TWAG Sewer Sanitary Service 
-- TWAG Sewer Storm Service 
-- TWAG Treatment Plant 
-- TWAG Treatment Plant Label 
-- TWAG Basement Flooding Study Area 
-- TWAG Basement Flooding Study Area Label 
-- TWAG SWM Oil Grit 
-- TWAG SWM Pond 
-- TWAG STS Manhol- e Label 
-- TWAG STS Manhole 
-- TWAG STS Manhole Access Label 
-- TWAG STS Manhole Access 
-- TWAG STS Manhole Access Trail Label 
-- TWAG STS Trail Footpath Only 
-- TWAG STS Trail All X Footpath 
-- TWAG STS Sewer 
+- TWAG Catchbasin Label (1)
+- TWAG City Catchbasin (2)
+- TWAG Connection Node (3)
+- TWAG Manhole (4)
+- TWAG Manhole Label (5)
+- TWAG Outfall (6)
+- TWAG Outfall Label (7)
+- TWAG Private Catchbasin (8)
+- TWAG Septic Tank (9)
+- TWAG Septic Tank Label (10)
+- TWAG Sewer Catchbasin Lead (11)
+- TWAG Sewer Collection (12)
+- TWAG Sewer Collection Label (13)
+- TWAG Sewer Junction (14)
+- TWAG Sewer Junction Label (15)
+- TWAG Sewer Large Chamber (16)
+- TWAG Sewer Large Chamber Label (17)
+- TWAG Sewer Link Orifice Point (18)
+- TWAG Sewer Link Pump Point (19)
+- TWAG Sewer Link Valve Point (20)
+- TWAG Sewer Link Weir Point (21)
+- TWAG Sewer Pump Station (22)
+- TWAG Sewer Trunk (23)
+- TWAG Sewer Trunk Label (24)
+- TWAG Sewer Forcemain (25)
+- TWAG Sewer Forcemain Label (26)
+- TWAG Sewer Main Abandoned (27)
+- TWAG Sewer Sanitary Service (28)
+- TWAG Sewer Storm Service (29)
+- TWAG Treatment Plant (30)
+- TWAG Treatment Plant Label (31)
+- TWAG Basement Flooding Study Area (32)
+- TWAG Basement Flooding Study Area Label (33)
+- TWAG SWM Oil Grit (34)
+- TWAG SWM Pond (35)
+- TWAG STS Manhole Label (36)
+- TWAG STS Manhole (37)
+- TWAG STS Manhole Access Label (38)
+- TWAG STS Manhole Access (39)
+- TWAG STS Manhole Access Trail Label (40)
+- TWAG STS Trail Footpath Only (41)
+- TWAG STS Trail All X Footpath (42)
+- TWAG STS Sewer (43)
 
 ## cot_geospatial16 - Toronto Water - Storm
-
-- TWAG Fire Flow Test 
-- TWAG MOE Form1A Tracking 
-- TWAG Sanitary Services 
-- TWAG Sanitary Services Label 
-- TWAG Sewer ROA 
-- TWAG Sewer Tracking 
-- TWAG Storm Services 
-- TWAG Storm Services Label 
-- TWAG TRCA Floodline 
-- TWAG TRCA Land 
-- TWAG TRCA Watercourse 
-- TWAG TRCA Watershed 
-- TWAG TTC Hydro Chamber 
-- TWAG TTC Power Substation 
-- TWAG TTC Track 
-- TWAG TTC Water Drain Cable 
-- TWAG Water ROA 
-- TWAG Water Services 
-- TWAG Water Services Label 
-- TWAG Water Tracking 
-- Toronto Water Altas Index 
-- Toronto Water Project Point 
-- Toronto Water Project Line 
-- Toronto Water Project Polygon 
-- Downspout Disconnect 
-- Water Pressure Zone 
-- Water Pressure Zone Label
-- TWAG Storm Valley Infra Inspection 
+- TWAG Fire Flow Test (1)
+- TWAG MOE Form1A Tracking (2)
+- TWAG Sanitary Services (3)
+- TWAG Sanitary Services Label (4)
+- TWAG Sewer ROA (5)
+- TWAG Sewer Tracking (6)
+- TWAG Storm Services (7)
+- TWAG Storm Services Label (8)
+- TWAG TRCA Floodline (9)
+- TWAG TRCA Land (10)
+- TWAG TRCA Watercourse (11)
+- TWAG TRCA Watershed (12)
+- TWAG TTC Hydro Chamber (13)
+- TWAG TTC Power Substation (14)
+- TWAG TTC Track (15)
+- TWAG TTC Water Drain Cable (16)
+- TWAG Water ROA (17)
+- TWAG Water Services (18)
+- TWAG Water Services Label (19)
+- TWAG Water Tracking (20)
+- Toronto Water Altas Index (21)
+- Toronto Water Project Point (22)
+- Toronto Water Project Line (23)
+- Toronto Water Project Polygon (24)
+- Downspout Disconnect (25)
+- Water Pressure Zone (26)
+- Water Pressure Zone Label (27)
+- TWAG Storm Valley Infra Inspection (28)
 
 ## cot_geospatial17 - Energy Efficiency Division
-
-- Demand Response 
-- District Energy System and CHP 
-- High Performance New Construction 
-- Municipal Academic Social Services Healthcare 
-- Sustainable Energy Fund 
-- Conservation and Demand Management 
-- Energy Use 
-- Renewable Energy Project 
-- Environmental Sustainability 
-- Renewable Energy 
+- Demand Response (1)
+- District Energy System and CHP (2)
+- High Performance New Construction (3)
+- Municipal Academic Social Services Healthcare (4)
+- Sustainable Energy Fund (5)
+- Conservation and Demand Management (6)
+- Energy Use (7)
+- Renewable Energy Project (8)
+- Environmental Sustainability (11)
+- Renewable Energy (12)
 
 ## cot_geospatial18 - Toronto Building
-
-- Sign By-law Billboard 
-- Sign By-law District 
-- Sign By-law Special Area 
-- Air Ambulance Corridor 
+- Sign By-law Billboard (1)
+- Sign By-law District (2)
+- Sign By-law Special Area (3)
+- Air Ambulance Corridor (4)
 
 ## cot_geospatial19 - My Map Layers
-
-- My Map Line 
-- My Map Point Label 
-- My Map Point 
-- My Map Polygon Label 
-- My Map Polygon 
+- My Map Line (1)
+- My Map Point Label (2)
+- My Map Point (3)
+- My Map Polygon Label (4)
+- My Map Polygon (5)
 
 ## cot_geospatial20 - Fleet Services
-
-- Electrical Vehicle Charging Station 
-- Fuel Site 
+- Electrical Vehicle Charging Station (1)
+- Fuel Site (2)
 
 ## cot_geospatial21 - Solid Waste Management Services
-
-- Household Hazardous Waste Area 
-- Household Hazardous Waste Area Label 
-- Residential Waste Collection Schedule 
-- Residential Waste Collection Schedule Label 
-- Solid Waste Litter Area 
-- Solid Waste Litter Area Label 
-- Solid Waste Management District 
-- Solid Waste Management District Label 
-- Solid Waste Transfer Station 
-- Solid Waste White Goods 
-- Solid Waste White Goods Label 
+- Household Hazardous Waste Area (1)
+- Household Hazardous Waste Area Label (2)
+- Residential Waste Collection Schedule (3)
+- Residential Waste Collection Schedule Label (4)
+- Solid Waste Litter Area (5)
+- Solid Waste Litter Area Label (6)
+- Solid Waste Management District (7)
+- Solid Waste Management District Label (8)
+- Solid Waste Transfer Station (9)
+- Solid Waste White Goods (10)
+- Solid Waste White Goods Label (11)
 
 ## cot_geospatial22 - Children’s Services
-
-- Day Care Centre 
-- Middle Childcare Centre 
-- Residential Region 
+- Day Care Centre (1)
+- Middle Childcare Centre (2)
+- Residential Region (3)
 
 ## cot_geospatial23 - Economic Development & Culture
-
-- Business Improvement Area 
-- Business Improvement Area Label 
-- Proposed Business Improvement Area 
-- Proposed Business Improvement Area Label 
-- Commercial Facade Improvement Area 
-- Commercial Facade Improvement Area Label 
-- Doors Open Toronto 
-- Film Permit 
-- Film Permit Parking 
-- Film Permit All 
-- Film Permit Parking All 
-- Make Space For Culture 
-- Hotel 
+- Business Improvement Area (1)
+- Business Improvement Area Label (2)
+- Proposed Business Improvement Area (13)
+- Proposed Business Improvement Area Label (14)
+- Commercial Facade Improvement Area (4)
+- Commercial Facade Improvement Area Label (5)
+- Doors Open Toronto (6)
+- Film Permit (7)
+- Film Permit Parking (8)
+- Film Permit All (9)
+- Film Permit Parking All (10)
+- Make Space For Culture (11)
+- Hotel (12)
 
 ## cot_geospatial24 - Engineering & Construction Services
-
-- Bridge/Culvert 
-- Dmog Grid Index 
+- Bridge/Culvert (1)
+- Dmog Grid Index (2)
 
 ## cot_geospatial25 - City’s Emergency Services
-
-- Ambulance Service Facility 
-- EMS 
-- Fire Service Facility 
-- Police District 
-- Police District Label 
-- Police Division 
-- Police Division Label 
-- Police Service Facility 
-- Police Zone 
-- Police Zone Label 
-- OEM Facility 
-- Toronto Fire Services Run Area 
-- Toronto Fire Services Run Area Label 
-- Toronto Fire Service Command 
-- Toronto Fire Service Command Label 
-- Toronto Fire Service Fire Prevention Command 
-- Toronto Fire Service Fire Prevention Command Label 
+- Ambulance Service Facility (1)
+- EMS (2)
+- Fire Service Facility (3)
+- Police District (4)
+- Police District Label (5)
+- Police Division (6)
+- Police Division Label (7)
+- Police Service Facility (8)
+- Police Zone (9)
+- Police Zone Label (10)
+- OEM Facility (11)
+- Toronto Fire Services Run Area (12)
+- Toronto Fire Services Run Area Label (13)
+- Toronto Fire Service Command (14)
+- Toronto Fire Service Command Label (15)
+- Toronto Fire Service Fire Prevention Command (16)
+- Toronto Fire Service Fire Prevention Command Label (17)
 
 ## cot_geospatial26 - City’s social services
-
-- Convenience Store 
-- Faith Organization - Non-profit 
-- Find Help 211 
-- Supermarket 
-- Place of Worship 
-- YMCA 
-- Census Tract 
-- Census Tract Label 
-- Neighbourhood 
-- Neighbourhood Label 
-- Neighbourhood Improvement Area 
-- Neighbourhood Improvement Area Label 
-- Priority Neighbourhood for Investment 
-- Priority Neighbourhood for Investment Label 
-- Neighbourhood Demography 
-- Community Living Toronto 
-- OEM Community Partner 
-- Youth 
-    - Aboriginal Services 
-    - Affordable Housing Access 
-    - Concurrent Disorder Programs 
-    - Disability Supports Services 
-    - Adult Education Upgrading 
-    - Educational Support 
-    - Alternative Adult Education 
-    - Employment Resources 
-    - Financial Services 
-    - Food Clothing 
-    - Health Services 
-    - Housing Eviction Help 
-    - Legal Justice Support 
-    - Legal Support Advocacy 
-    - LGBTQ Resources 
-    - Life Skills Training 
-    - Mental Health 
-    - Parenting Programs 
-    - Recreation 
-    - Refugee Housing 
-    - Newcomer Settlement Services 
-    - Sexual Health Services 
-    - Substance Use Treatment 
-    - Transitional Housing 
-- Aboriginal Organization 
-- Attraction 
-- Dropin 
-- Early Years Centre 
-- Family Resource Centre 
-- Food Bank 
-- Housing Connection 
-- Landlord Connect 
-- Longterm Care 
-- Parenting Family Literacy 
-- Parking Lot 
-- Penal Institution 
-- Rate Payer 
-- Retirement Home 
-- Senior Housing 
-- Settlement Agency 
-- Shelter 
-- Social Housing 
-- Social Office 
-- Rent Bank Access Centre 
+- Convenience Store (1)
+- Faith Organization - Non-profit (2)
+- Find Help 211 (3)
+- Supermarket (4)
+- Place of Worship (5)
+- YMCA (6)
+- Census Tract (7)
+- Census Tract Label (8)
+- Neighbourhood (9)
+- Neighbourhood Label (10)
+- Neighbourhood Improvement Area (11)
+- Neighbourhood Improvement Area Label (12)
+- Priority Neighbourhood for Investment (13)
+- Priority Neighbourhood for Investment Label (14)
+- Neighbourhood Demography (16)
+- Community Living Toronto (18)
+- OEM Community Partner (19)
+- Youth (20)
+    - Aboriginal Services (21)
+    - Affordable Housing Access (22)
+    - Concurrent Disorder Programs (23)
+    - Disability Supports Services (24)
+    - Adult Education Upgrading (25)
+    - Educational Support (26)
+    - Alternative Adult Education (27)
+    - Employment Resources (28)
+    - Financial Services (29)
+    - Food Clothing (30)
+    - Health Services (31)
+    - Housing Eviction Help (32)
+    - Legal Justice Support (33)
+    - Legal Support Advocacy (34)
+    - LGBTQ Resources (35)
+    - Life Skills Training (36)
+    - Mental Health (37)
+    - Parenting Programs (38)
+    - Recreation (39)
+    - Refugee Housing (40)
+    - Newcomer Settlement Services (41)
+    - Sexual Health Services (42)
+    - Substance Use Treatment (43)
+    - Transitional Housing (44)
+- Aboriginal Organization (45)
+- Attraction (46)
+- Dropin (47)
+- Early Years Centre (48)
+- Family Resource Centre (49)
+- Food Bank (50)
+- Housing Connection (51)
+- Landlord Connect (52)
+- Longterm Care (53)
+- Parenting Family Literacy (54)
+- Parking Lot (55)
+- Penal Institution (56)
+- Rate Payer (57)
+- Retirement Home (58)
+- Senior Housing (59)
+- Settlement Agency (60)
+- Shelter (61)
+- Social Housing (62)
+- Social Office (63)
+- Rent Bank Access Centre (64)
 
 ## cot_geospatial27 - Cadstral Fabric layers
-
-- Address 
+- Address (0)
 - Address Point (101)
 - Address Label (102)
 - Address Label Scale Based (103)
@@ -668,76 +642,75 @@
 - Address Point 5000 (105)
 - Address Label Alternate (106)
 - Address Point Alternate (107)
-- Admin Areas 
-- City Park 
-- City Park Alternate 
-- Property Data Map SubBlock 
-- City Ward 
-- Former Municipality 
-- Former Municipality Label 
-- Polaris Block 
-- Concession Block 
-- Concession Block Label 
-- Toronto Land And Water Area 
-- Cadastral Fabric 
-- ARoll Number 
-- Condominium 
-- Corridor 
-- Corridor Outline 
-- Municipal Parcel 
-- Private Road 
-- Reserve 
-- Reference Plan 
-- Reference Plan Detail 
-- Reference Plan Name/Part 
-- Registered Plan 
-- Registered Plan Detail 
-- Registered Plan Name/Part 
-- Other Plan 
-- Other Plan Detail 
-- Other Plan Name/Part 
-- Subdivision 
-- Subdivision Label 
-- Highways, Lanes and Walkways 
-- OR Highways - Street Name 
-- Property Boundary 5000 
-- Property Boundary Alternate 
-- Property Boundary 
-- Site Area 
-- Site Area Label 
+- Admin Areas (2)
+- City Park (3)
+- City Park Alternate (16)
+- Property Data Map SubBlock (4)
+- City Ward (5)
+- Former Municipality (6)
+- Former Municipality Label (37)
+- Polaris Block (33)
+- Concession Block (38)
+- Concession Block Label (39)
+- Toronto Land And Water Area (40)
+- Cadastral Fabric (7)
+- ARoll Number (8)
+- Condominium (9)
+- Corridor (10)
+- Corridor Outline (11)
+- Municipal Parcel (12)
+- Private Road (13)
+- Reserve (14)
+- Reference Plan (15)
+- Reference Plan Detail (17)
+- Reference Plan Name/Part (18)
+- Registered Plan (19)
+- Registered Plan Detail (21)
+- Registered Plan Name/Part (22)
+- Other Plan (23)
+- Other Plan Detail (25)
+- Other Plan Name/Part (26)
+- Subdivision (27)
+- Subdivision Label (28)
+- Highways, Lanes and Walkways (29)
+- OR Highways - Street Name (30)
+- Property Boundary 5000 (34)
+- Property Boundary Alternate (35)
+- Property Boundary (36)
+- Site Area (31)
+- Site Area Label (32)
 
-## cot_geospatial28 - Other government organizations
-
-- Admin Area 
-    - Dissemination Area 
-    - Dissemination Area Label 
-    - Enumeration Area 
-    - Enumeration Area Label 
-    - Federal Electoral District 
-    - Federal Electoral District Label 
-    - Metropolitan Region 
-    - Provincial Riding 
-    - Provincial Riding Label 
-    - Regional Ward 
-    - Regional Ward Label 
-- Canada Post 
-    - Forward Sortation Area 
-    - Forward Sortation Area Label 
-- School Board 
-    - School 
-    - TDSB 
-    - English Public School District 
-    - English Public School District Label 
-    - English Separate School District 
-    - English Separate School District Label 
-    - French Separate School District 
-    - French Separate School District Label 
-    - French Public School 
-    - French Public School Label 
-- Toronto Public Library 
-    - Library 
-- Toronto and Region Conservation Authority 
-    - Regional Conservation Property 
-    - Regional Conservation Property Label 
-    - TRCA Regulation Limit 
-    - TRCA Regulation Limit Label 
+## cot_geospatial28 - Other government organizations (Canada Post, TPL, TPA, School Board, TCHC)
+- Admin Area (1)
+    - Dissemination Area (2)
+    - Dissemination Area Label (3)
+    - Enumeration Area (4)
+    - Enumeration Area Label (5)
+    - Federal Electoral District (6)
+    - Federal Electoral District Label (7)
+    - Metropolitan Region (8)
+    - Provincial Riding (9)
+    - Provincial Riding Label (10)
+    - Regional Ward (11)
+    - Regional Ward Label (12)
+- Canada Post (13)
+    - Forward Sortation Area (14)
+    - Forward Sortation Area Label (15)
+- School Board (16)
+    - School (17)
+    - TDSB (18)
+    - English Public School District (19)
+    - English Public School District Label (20)
+    - English Separate School District (21)
+    - English Separate School District Label (22)
+    - French Separate School District (23)
+    - French Separate School District Label (24)
+    - French Public School (25)
+    - French Public School Label (26)
+- Toronto Public Library (27)
+    - Library (28)
+- Toronto and Region Conservation Authority (29)
+    - Regional Conservation Property (30)
+    - Regional Conservation Property Label (31)
+    - TRCA Regulation Limit (32)
+    - TRCA Regulation Limit Label (33)
