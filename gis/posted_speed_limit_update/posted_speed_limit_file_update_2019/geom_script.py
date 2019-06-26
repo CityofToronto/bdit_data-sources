@@ -24,7 +24,7 @@ con = psycopg2.connect(**dbset)
 
 from sqlalchemy import create_engine
 
-engine = create_engine('postgresql://crosic:jAcoevpFfP28TonGsk0e@10.160.12.47:5432/bigdata')
+engine = create_engine('postgresql://' + dbset['user'] + ':' + dbset['password'] + '@' + dbset['host'] + '/' + dbset['database'])
 
 def text_to_centreline(highway, fr, to): 
     if to != None:
