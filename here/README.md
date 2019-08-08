@@ -46,7 +46,63 @@ A lot of map layers provided by HERE, see the [README](gis/README.md) in the [gi
 
 Just like the sun doesn't always shine, the streets of Toronto don't always produce vehicle probe speeds. In those cases, HERE provides us with "traffic patterns," a model for each street link by time of week. This dataset comes in a big honking `tar.gz`. Here are some handy notes for navigating and uploading this data.
 
-`tar -lv traffic_patterns_18.tar.gz`
+`tar -tf traffic_patterns_18.tar.gz` lists the contents of the archive, revealing a `.zip` file and a PDF of documentation. `unzip -l RELATIONAL_NTP_NA_LINK_181H0.zip` lists the contents of the `.zip` file, which are more `.zip` files:
+
+```bash
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     2536  2019-01-24 09:17   NTP_NA_HOLIDAYAPPENDIX_181H0.zip
+235350311  2019-01-24 09:18   NTP_REF_NA_LINK_FC1-4_181H0.zip
+761010921  2019-01-24 09:22   NTP_REF_NA_LINK_FC5_181H0.zip
+  1995095  2019-01-24 09:23   NTP_SPD_NA_181H0.zip
+```
+
+The two main large files are the reference tables which list the relationship
+between each link and travel direction, and the model for that speed
+(`NTP_REF_NA_LINK_*.zip`), the models themselves are orders of magnitude
+smaller. You will also notice that these files are for all of North America, so
+quite a bit of filtering is required not to bloat the data sent to the
+database. You can specify which files to unzip from an archive. For example,
+the below command unzips only the `.zip` file for functional classes 1-4:
+
+```bash
+unzip RELATIONAL_NTP_NA_LINK_181H0.zip NTP_REF_NA_LINK_FC1-4_181H0.zip
+```
+
+You must use the `-p` flag to unzip to a pipe, otherwise `unzip` will print
+some information about the file being uncompressed to stdout. The below command
+uses `csvgrep` & `csvcut` to filter the country code lookup table to only
+canadian links and stores only the link column to be used to filter the link
+ref data in the next command. This uses `grep` and the `-f FILE` flag to use a
+a file as input for the filter list. Note that `-F` must also be used [since the
+filter strings are literal strings](https://unix.stackexchange.com/questions/83260/reading-grep-patterns-from-a-file).
+
+```bash
+unzip -p NTP_REF_NA_LINK_FC1-4_181H0.zip NTP_COUNTRYLUT_NA_LINK_FC1-4_181H0.csv | csvgrep -c COUNTRY_CODE -m CAN | csvcut -c LINK_PVID > canadian_links.csv
+unzip -p NTP_REF_NA_LINK_FC1-4_181H0.zip NTP_REF_NA_LINK_FC1-4_181H0.csv | grep -F -f canadian_links.csv - | csvcut -c LINK_PVID,TRAVEL_DIRECTION,U,M,T,W,R,F,S|  psql -h 10.160.12.47 -d bigdata -c "\COPY here.traffic_pattern_18_ref FROM STDIN WITH (FORMAT csv, HEADER TRUE);"
+```
+
+The same two steps can be repeated with the functional code 5 data.
+
+The speed models are in `NTP_SPD_NA_181H0.zip`, the contents of which are
+pretty straightforward and can be sent to `traffic_pattern_spd_15` & `traffic_pattern_spd_60`.
+
+```bash
+$ unzip RELATIONAL_NTP_NA_LINK_181H0.zip NTP_SPD_NA_181H0.zip
+Archive:  NTP_SPD_NA_181H0.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+  4522703  2019-01-24 09:17   NTP_SPD_NA_15MIN_KPH_181H0.csv
+  4305198  2019-01-24 09:17   NTP_SPD_NA_15MIN_MPH_181H0.csv
+  1199868  2019-01-24 09:17   NTP_SPD_NA_60MIN_KPH_181H0.csv
+  1147077  2019-01-24 09:17   NTP_SPD_NA_60MIN_MPH_181H0.csv
+---------                     -------
+
+$ unzip -p NTP_SPD_NA_181H0.zip NTP_SPD_NA_15MIN_KPH_181H0.csv | psql -h 10.160.12.47 -d bigdata -c "\COPY here.traffic_pattern_spd_15 FROM STDIN WITH (FORMAT csv, HEADER TRUE);"
+```
+
+After these files are uploaded, the tables need to be converted to long format
+using the [SQL below](#converting-traffic-patterns).
 
 ### Traffic Patterns: Data Model
 
