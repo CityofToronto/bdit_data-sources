@@ -1,4 +1,6 @@
-﻿-- DROP TABLE wys.raw_data;
+﻿-- Table: wys.raw_data
+
+-- DROP TABLE wys.raw_data;
 
 CREATE TABLE wys.raw_data
 (
@@ -39,3 +41,4 @@ CREATE TRIGGER raw_data_delete
   ON wys.raw_data
   FOR EACH ROW
   EXECUTE PROCEDURE wys.trgr_raw_data_delete();
+
