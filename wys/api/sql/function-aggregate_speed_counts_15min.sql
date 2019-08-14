@@ -1,4 +1,6 @@
-﻿-- DROP FUNCTION wys.aggregate_speed_counts_15min();
+﻿-- Function: wys.aggregate_speed_counts_15min()
+
+-- DROP FUNCTION wys.aggregate_speed_counts_15min();
 
 CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_15min()
   RETURNS integer AS
@@ -18,12 +20,13 @@ BEGIN
 			
 	WITH bin_grouping AS (
 
-		SELECT 	api_id, 
-			min(datetime_bin) AS start_time,
-			max(datetime_bin) AS end_time,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin
+		SELECT DISTINCT	api_id, 
+
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - INTERVAL '1 minute' AS datetime_bin,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - INTERVAL '1 minute' AS start_time,
+			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) + INTERVAL '14 minute' AS end_time
 		FROM 	wys.speed_counts A
-		WHERE	counts_15min IS NULL
+		--WHERE	counts_15min IS NULL
 		GROUP BY api_id, datetime_bin
 	)
 	
@@ -55,7 +58,8 @@ BEGIN
 	FROM bins B
 	INNER JOIN speed_bins A 
 							ON A.api_id=B.api_id
-							AND A.datetime_bin BETWEEN B.start_time AND B.end_time
+							WHERE A.datetime_bin >= B.start_time 
+							AND A.datetime_bin < B.end_time
 	GROUP BY B.api_id, B.datetime_bin, A.speed_id
 	ORDER BY B.api_id, B.datetime_bin, A.speed_id
 	RETURNING counts_15min, api_id, datetime_bin, speed_id)
@@ -75,3 +79,9 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
+ALTER FUNCTION wys.aggregate_speed_counts_15min()
+  OWNER TO rliu;
+GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_15min() TO public;
+GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_15min() TO dbadmin WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_15min() TO bdit_humans WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_15min() TO rliu;

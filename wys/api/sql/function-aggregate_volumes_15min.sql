@@ -1,4 +1,6 @@
-﻿-- DROP FUNCTION wys.aggregate_volumes_15min();
+﻿-- Function: wys.aggregate_volumes_15min()
+
+-- DROP FUNCTION wys.aggregate_volumes_15min();
 
 CREATE OR REPLACE FUNCTION wys.aggregate_volumes_15min()
   RETURNS integer AS
@@ -30,3 +32,9 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
+ALTER FUNCTION wys.aggregate_volumes_15min()
+  OWNER TO rliu;
+GRANT EXECUTE ON FUNCTION wys.aggregate_volumes_15min() TO public;
+GRANT EXECUTE ON FUNCTION wys.aggregate_volumes_15min() TO dbadmin WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION wys.aggregate_volumes_15min() TO bdit_humans WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION wys.aggregate_volumes_15min() TO rliu;
