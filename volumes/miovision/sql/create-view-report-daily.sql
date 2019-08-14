@@ -13,6 +13,7 @@ SELECT 	intersection_uid,
 
 FROM miovision.report_volumes_15min A
 CROSS JOIN miovision.periods B
+INNER JOIN miovision.class_types USING (class_type_id)
 INNER JOIN miovision.intersections C USING (intersection_uid)
 
 WHERE 	A.datetime_bin::time <@ B.period_range AND
@@ -42,11 +43,6 @@ GROUP BY intersection_uid,
 	period_type,
 	class_type,
 	dir,
-	A.datetime_bin::date,
+	dt,
 	B.period_name
-ORDER BY	intersection_uid,
-		class_type,
-		dir,
-		period_name,
-		A.datetime_bin::date
-	
+;
