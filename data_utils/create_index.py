@@ -30,11 +30,11 @@ class IndexCreator( SqlAction ):
         if indexes is None:
             indexes = ['score','tmc','timestamp']
         
-        if set(indexes) <= self.SQL_FUNCTIONS.keys():
-            self.indexes = indexes
-        else:
-            raise ValueError('Invalid set of index keys {}'.format(indexes))
-        #raises ValueError
+        for index in indexes:
+            if index not in self.SQL_FUNCTIONS.keys():
+                raise ValueError('Index key {} not in index_functions.json'.format(index))
+                #raises ValueError
+        self.indexes = indexes
         self._test_schema(schemaname)
         self.schema = schemaname
         self.table = table
@@ -88,8 +88,11 @@ if __name__ == "__main__":
     FORMAT = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     LOGGER = logging.getLogger(__name__)
-    from dbsettings import dbsetting
-    indexor = IndexCreator(LOGGER, dbsettings)
+    import configparser
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read('db.cfg')
+    dbset = CONFIG['DBSETTINGS']
+    indexor = IndexCreator(LOGGER, dbset)
     for year in YEARS:
         for month in YEARS[year]:
             indexor.run(year, month)
