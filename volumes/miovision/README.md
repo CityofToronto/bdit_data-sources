@@ -2,14 +2,34 @@
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
-2. [Table Structure](#2-table-structure)
-3. [Technology](#3-technology)
-4. [Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
-5. [Processing Data from API](#5-processing-data-from-api)
-6. [Filtering and Interpolation](#6-filtering-and-interpolation)
-7. [QC Checks](#7-qc-checks)
-8. [Current Issues and Tasks](#8-current-issues-and-tasks)
+- [Table of Contents](#table-of-contents)
+- [1. Overview](#1-overview)
+- [2. Table Structure](#2-table-structure)
+	- [Original Data](#original-data)
+		- [`raw_data`](#raw_data)
+	- [Reference Tables](#reference-tables)
+		- [`classifications`](#classifications)
+		- [`intersections`](#intersections)
+		- [`movement_map`](#movement_map)
+		- [`movements`](#movements)
+		- [`periods`](#periods)
+	- [Disaggregate Data](#disaggregate-data)
+		- [`volumes`](#volumes)
+	- [Aggregated Data](#aggregated-data)
+		- [`volumes_15min_tmc`](#volumes_15min_tmc)
+		- [`volumes_15min`](#volumes_15min)
+	- [Important Views](#important-views)
+- [3. Technology](#3-technology)
+- [4. Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
+	- [A. Populate `raw_data`](#a-populate-raw_data)
+	- [b. Populate `volumes`](#b-populate-volumes)
+	- [c. Populate `volumes_15min_tmc` and `volumes_15min`](#c-populate-volumes_15min_tmc-and-volumes_15min)
+	- [d. Populate `report_dates`](#d-populate-report_dates)
+	- [e. Refresh reporting views](#e-refresh-reporting-views)
+	- [f. Produce summarized monthly reporting data](#f-produce-summarized-monthly-reporting-data)
+- [5. Processing Data from API](#5-processing-data-from-api)
+- [6. Filtering and Interpolation](#6-filtering-and-interpolation)
+- [7. Open Data](#7-open-data)
 
 ## 1. Overview
 
@@ -299,3 +319,18 @@ This query checks the relative variance of the volumes over the day to make sure
 The data in `raw_data` also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`find_invalid_movments.sql`](sql/function-find_invalid_movements.sql) to look for invalid volumes that may need to be deleted. This will create a warning if the number of invalid movements is higher than 1000, and that further QC is needed.
 
 ## 8. Future Work
+
+* [Create a crossover table for the UIDs](https://github.com/CityofToronto/bdit_data-sources/issues/137)
+  * Because of the many-to-many relationship between the ATR data and TMC data, a crossover table needs to be implemented to demonstrate the relationship between an ATR bin and TMC bin.
+* [Fix interpolation bug](https://github.com/CityofToronto/bdit_data-sources/issues/140)
+  * While optimizing the `funtion-aggregate-volumes_15min_tmc()`, one of the checks to see if missing data needs to be interpolated was changed. Reverting to the old process can easily double the query run-time, so an equivalent method will need to be found without prolonging the run time.
+* Fix `COALESCE` statement in `report_volume_15min`
+  * If a bin does not have data, the current process is to either delete that time period, or use the average volume for that time bin. However, the seasonality of pedestrian and cycling volume may not make that process valid. A suggested approach is to limit the average volume for a time bin to only use data in the same month or week
+
+
+## 9. Open Data
+
+For the King Street Transit Pilot, the below volume datasets were released. These two datassets are georeferenced by intersection id:
+
+- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#55a44849-90eb-ed1e-fbca-a7ad6b1025e3) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from Miovision readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
+- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#dfd63698-5d0e-3d24-0732-9d1fea58523c) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
