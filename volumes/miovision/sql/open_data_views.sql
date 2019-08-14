@@ -54,6 +54,41 @@ GRANT ALL ON TABLE open_data.miovision_2018 TO rdumas;
 GRANT SELECT ON TABLE open_data.miovision_2018 TO od_extract_svc;
 
 
+CREATE OR REPLACE VIEW open_data.miovision_2019 AS
+ SELECT a.period_type AS aggregation_period,
+    intersections.int_id,
+    centreline_intersection.intersec5 AS intersection_name,
+    intersections.px,
+    volumes_15min.datetime_bin,
+        CASE
+            WHEN classifications.classification = 'Buses'::text THEN 'Buses and streetcars'::text
+            ELSE classifications.classification
+        END AS classification,
+    volumes_15min.leg,
+    volumes_15min.dir,
+    sum(volumes_15min.volume)::integer AS volume
+   FROM miovision_new.volumes_15min
+     JOIN miovision_new.intersections USING (intersection_uid)
+     JOIN gis.centreline_intersection USING (int_id)
+     JOIN miovision_new.classifications USING (classification_uid)
+     JOIN miovision_new.report_dates_view a USING (intersection_uid, class_type_id)
+     LEFT JOIN miovision_new.exceptions e ON a.intersection_uid = e.intersection_uid AND a.class_type_id = e.class_type_id AND volumes_15min.datetime_bin <@ e.excluded_datetime
+  WHERE date_part('year'::text, volumes_15min.datetime_bin) = 2019::double precision 
+  AND volumes_15min.datetime_bin < LEAST(date_trunc('month'::text, now) - '1 mon'::interval,
+                                         ('2019-01-01'::date + '1 year'::interval)::timestamp with time zone) 
+  AND a.dt = volumes_15min.datetime_bin::date AND e.exceptions_uid IS NULL
+  GROUP BY intersections.int_id, centreline_intersection.intersec5, intersections.px, volumes_15min.datetime_bin, classifications.classification, volumes_15min.leg, volumes_15min.dir, a.period_type;
+
+ALTER TABLE open_data.miovision_2019
+    OWNER TO rdumas;
+
+GRANT SELECT ON TABLE open_data.miovision_2019 TO od_extract_svc;
+GRANT ALL ON TABLE open_data.miovision_2019 TO rdumas;
+GRANT SELECT ON TABLE open_data.miovision_2019 TO bdit_humans;
+
+
+
+
 -- View: open_data.ksp_miovision_summary
 
 DROP VIEW open_data.ksp_miovision_summary;
