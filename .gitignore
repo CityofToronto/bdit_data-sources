@@ -185,4 +185,6 @@ bluetooth/api/se_deviceclass.py
 
 .vscode
 bluetooth/api/psyconfig.cfg
+*.lock
+bluetooth/api/config.cfg
 volumes/miovision/api/config.cfg

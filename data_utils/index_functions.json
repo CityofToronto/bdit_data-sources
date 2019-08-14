@@ -1,3 +1,7 @@
 {"link_dir": "SELECT here.create_link_dir_idx(%(tablename)s)",
  "timestamp": "SELECT here.create_tx_idx(%(tablename)s)",
- "observations_unique": "SELECT bluetooth.create_obs_unique(%(tablename)s)"}
+ "observations_unique": "SELECT bluetooth.create_obs_unique(%(tablename)s)",
+ "cod_idx": "SELECT bluetooth.create_cod_idx(%(tablename)s)",
+ "obs_analysis_id_idx": "SELECT bluetooth.create_obs_analysis_id_idx(%(tablename)s)",
+ "time_idx": "SELECT bluetooth.create_time_idx(%(tablename)s)"
+}
