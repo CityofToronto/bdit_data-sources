@@ -1,5 +1,5 @@
 
-# Posted Speed Limit Update
+# Posted Speed Limit Update (Original Documentation - Summer 2018)
 
 The `tcl_speed_limit` table contained a version of the 2013 Toronto centreline with the posted speed limits. However, there were updates to the speed limit in certain areas of the city that were not reflected in this table. The table `speed_update` had all of the speed limit updates in the form of text. Every row described the street that the change took place on the intersections between which the change occurred. They did not have any geographic component. 
 
