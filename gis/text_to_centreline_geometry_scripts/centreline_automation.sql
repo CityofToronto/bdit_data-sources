@@ -55,10 +55,8 @@ WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 AND i
 
 
 GROUP BY intersections.objectid, intersections.int_id, elevatio10
--- HAVING COUNT(DISTINCT TRIM(intersections.street)) >= 1 
 ORDER BY AVG(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1))), 
 (CASE WHEN elevatio10='Cul de sac' THEN 1 WHEN elevatio10='Pseudo' THEN 2 WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
--- (CASE WHEN classifi6='CDSSL' THEN 1 WHEN classifi6='LSRSL' THEN 2 WHEN classifi6='SEUSL' THEN 3 WHEN classifi6='SEUML' THEN 4 END), 
 (SELECT COUNT(*) FROM gis.centreline_intersection_streets WHERE objectid = intersections.objectid) 
 
 LIMIT 1;
@@ -862,6 +860,7 @@ DECLARE
 
 	text_arr_oid1 TEXT[]:= crosic.get_intersection_geom(highway2, btwn1, direction_btwn1::TEXT, metres_btwn1::FLOAT, 0);
 
+	-- used to keep track of the ID of the first intersection so we don't assign the same intersection twice
 	int_id1 INT := (text_arr_oid1[2])::INT;
 	
 	oid1_geom GEOMETRY := ST_GeomFromText(text_arr_oid1[1], 26917);
