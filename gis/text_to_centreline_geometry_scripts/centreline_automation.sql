@@ -172,7 +172,7 @@ highway2 TEXT := CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESS%
 street_name_arr TEXT[] := (SELECT ARRAY_AGG(lf_name) 
 					 FROM 
 					 (
-						SELECT DISTINCT lf_name,  levenshtein(LOWER(highway2), LOWER(s.lf_name), 1, 1, 2) as lev_dist
+						SELECT DISTINCT lf_name, levenshtein(LOWER(highway2), LOWER(s.lf_name), 1, 1, 2) as lev_dist
 						FROM gis.centreline s
 						WHERE levenshtein(LOWER(highway2), LOWER(s.lf_name), 1, 1, 2) < 3
 						AND 
@@ -183,7 +183,8 @@ street_name_arr TEXT[] := (SELECT ARRAY_AGG(lf_name)
 								COALESCE(metres_btwn1, metres_btwn2) IS NULL AND 
 								-- 10* used to be 3
 								ST_DWithin( ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
-								AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9 -- used to be 0.9
+								-- over 90% of centreline segment must be in the buffer
+								AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9 
 							)
 							OR 
 							(
@@ -208,9 +209,9 @@ geom geometry := (
 		-- "normal" case ... i.e. one intersection to another
 		-- metres_btwn and metres_btwn2 are null 
 		COALESCE(metres_btwn1, metres_btwn2) IS NULL AND 
-		-- 10* used to be 3
+		-- 3* could be changed to 10* if you would like 
 		ST_DWithin( ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
-		AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9 -- used to be 0.9
+		AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9 
 	)
 	OR 
 	(
@@ -221,6 +222,8 @@ geom geometry := (
 	)
 );
 
+-- variable created to help with QC process
+-- ratio for len of line_geom to the length of the matched geom
 -- should always be less than 1
 -- i.e. line_geom is shorter than geom
 ratio NUMERIC := ST_Length(line_geom)/ST_Length(ST_LineMerge(geom));
@@ -854,8 +857,6 @@ DECLARE
 
 
 
-
-
 	-- get intersection geoms
 
 	text_arr_oid1 TEXT[]:= crosic.get_intersection_geom(highway2, btwn1, direction_btwn1::TEXT, metres_btwn1::FLOAT, 0);
@@ -886,7 +887,7 @@ DECLARE
 
 	-- match the lines to centreline segments
 	centreline_segments geometry := (
-				CASE WHEN (TRIM(btwn1) = 'Entire length' OR TRIM(btwn1) ='Entire Length' OR TRIM(btwn1) = 'entire length' OR TRIM(btwn1) = 'The entire length') AND btwn2 IS NULL 
+				CASE WHEN (TRIM(btwn1) IN ('Entire length', 'Entire Length', 'entire length' , 'The entire length')) AND btwn2 IS NULL 
 				THEN (SELECT * FROM get_entire_length_centreline_segements(highway2) LIMIT 1)
 		
 				WHEN line_geom IS NULL THEN NULL  
@@ -920,7 +921,7 @@ DECLARE
 
 
 	-- sum of the levenshtein distance of both of the intersections matched
-	lev_sum INT := text_arr_oid1[3]::INT + text_arr_oid2[3]::INT; -- (crosic.get_intersection_id(highway2, btwn1))[2] + (crosic.get_intersection_id(highway2, btwn2))[2];
+	lev_sum INT := text_arr_oid1[3]::INT + text_arr_oid2[3]::INT; 
 
 	-- confidence value
 	con TEXT := (
