@@ -10,9 +10,7 @@ This API script can grab data from each watch your speed sign the city has. It c
 
 ### Requesting recent data
 
-Due to the limited functionality of the API, we can **only request `xx` number of minutes from when the call is made**. After getting a list of valid locations, it will sleep until the specified `pull_time` before making the call for data. This is so the amount of data received is controlled. 
-
-Similarly, the script can request a maximum of 24 hours of data. The API may be able handle requests larger than 24 hours, but the script has checks to only insert a maximum of 24 hours of data, ending at the specified `pull_time`. 
+The script can request data on any day specified by the API call.
 
 ### Error Handling
 
@@ -20,11 +18,9 @@ Certain errors like a `requests` error or a `504` error will not cause the scrip
 
 The number of signs sending data is not a set number and changes every day. The script has a check that finds out the number of signs that are reporting valid data, and will enter any signs that started to report to the `locations` table.
 
-The script has email notification and will send 1-2 emails in the event of an error; 1 for a postgreSQL related error and 1 for any error during data pulling. Multiple errors will be concatenated into 1-2 emails.
-
 ### Inconsistent time bins
 
-Since the aggregation bins reported by the API are not consistently 5 minutes long, and the start time of the bins is not consistently at an interval of 5 (ex 6:05, 6:10 etc), the API rounds each datetime to the nearest 5 minute interval.
+The API only gives data on non-regular (but uniform) 5 minute bins, meaning data is given at 3:44, 3:49 etc. This change has been accomodated in the tables, and for the 15 minute aggregation tables.
 
 ## Calls and Input Parameters
 
@@ -73,16 +69,7 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 `datetime_bin`|timestamp|Start time of the 15 minute aggregated bin|2018-10-29 10:00:00
 `speed_id`|integer|A unique identifier for the 5 minute speed bin in the `speed_bins` table|5
 `count`|integer|Number of vehicles in datetime_bin/api_id/speed bin combination|7
-`volumes_15min_uid`|integer|A unique idenfier for the `volumes_15min` table. Indicates if the data has been processed.|8065
 
-`aggregate_volumes_15min()` aggregates all the speed bins together so that in `wys.volumes_15min()` only has volume, datetime and `api_id` data.
-
-|Field name|Data type|Description|Example|
-|------|------|-------|------|
-`volumes_15min_uid`|integer|A unique identifier for the `volumes_15min_uid` table|28065
-`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
-`datetime_bin`|timestamp|Start time of the 15 minute aggregated bin|2018-10-29 10:00:00
-`count`|integer|Number of vehicles in 15 minute bin and sign location|110
 
 ### Lookup Tables
 
@@ -112,18 +99,3 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 `period`|text|Month the data is in|Nov 2018
 `dt`|date|Date where there is more than 10 hours of data|2018-11-03
 `dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
-
-`counts_average` and `volume_average` are both tables of average. For every api_id, period, time, speed_id, and day of the week, it gives the average volume of the data in `counts_15min`. `volume_average` does the same for `volumes_15min` but does not contain the `speed_id`. Both tables only compute averages for time bins between 6:00 and 22:00.
-
-|Field name|Data type|Description|Example|
-|------|------|-------|------|
-`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
-`period`|text|Month the data is in|Nov 2018
-`dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
-`time_bin`|time|15 minute time bin the average is computed at|16:15:00
-`speed_id`|integer|A unique identifier for the `speed_bins` table. Does not exist for `volume_average`|5
-`count`|numeric|Average count for that combination of api_id, period, dow, time_bin and speed_id|45.2
-
-`counts_15min_full` and `volumes_15min_full` are gap filled versions of `counts_15min_full` and `volumes_15min_full`. The views check if a populated 15 minute bin exists, and if the date/api_id combination is in `report_dates`. If the date/api_id combination is not in `report_dates`, then that date/api_id will not be added to the views. 
-
-If the date/api_id is in `report_dates` and there is a missing 15 minute bin, then it will take the average volume for that time/day of week/month/api_id/speed_bin (for `counts_15min_full`) combination. The format of these two views is the same as `counts_15min` and `volumes_15min`, except without the uid fields `count_15min` and `volumes_15min_uid`.
