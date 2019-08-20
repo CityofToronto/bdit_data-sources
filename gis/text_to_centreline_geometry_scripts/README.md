@@ -39,6 +39,8 @@ The main steps for every type of input (complex or not so complex) are:
 2. Match location text data to intersections
 3. Create lines from matched intersections and match lines to centreline segments
 
+The process will be explained in futher detail below. The functions called/variables assinged by these functions can be visualized with the following flow chart ![](jpg/flow_chart_text_to_centreline.jpg)
+
 ## Step 1: Clean the data
 
 The first step is to clean the location description data so it can easily be matched to ID's in the `gis.centreline_intersection` table.
