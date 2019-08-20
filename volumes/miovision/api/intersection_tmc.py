@@ -19,7 +19,6 @@ import configparser
 import click
 import traceback
 from time import sleep
-from notify_email import send_mail
 
 class MiovisionAPIException(Exception):
     """Base class for exceptions."""
@@ -203,7 +202,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
 
 
 def pull_data(start_date, end_date, intersection, path, pull):
-    error_array=[]
+
     try:
         time_delta = datetime.timedelta(days=1)
         end_iteration_time= start_date + time_delta        
@@ -211,7 +210,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
         CONFIG = configparser.ConfigParser()
         CONFIG.read(path)
         api_key=CONFIG['API']
-        email=CONFIG['EMAIL']
         key=api_key['key']
         dbset = CONFIG['DBSETTINGS']
         conn = connect(**dbset)
@@ -247,23 +245,18 @@ def pull_data(start_date, end_date, intersection, path, pull):
                         break
                     except exceptions.ProxyError as prox:
                         logger.error(prox)
-                        error_array.append(str(intersection_name)+'       '+str(prox)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         logger.warning('Retrying in 2 minutes')
                         sleep(120)
                     except exceptions.RequestException as err:
                         logger.error(err)
-                        error_array.append(str(intersection_name)+'       '+str(err)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         sleep(75)
                     except TimeoutException as exc_504:
                         logger.error(exc_504)
-                        error_array.append(str(intersection_name)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))
                         sleep(60)
                     except MiovisionAPIException as miovision_exc:
                         logger.error('Cannot pull data')
                         logger.error(miovision_exc)
-                        error_array.append('Invalid input or other reason     '+str(miovision_exc)+'      {}'.format(start_date)+'      '+intersection_name+' '+str(start_date))   
-            if len(error_array)>1:    
-                send_mail(email['to'], email['from'], 'Miovision API Error',str(error_array))   
+
                     
             logger.info('Completed data pulling for {}'.format(start_date))
             try:
@@ -284,12 +277,9 @@ def pull_data(start_date, end_date, intersection, path, pull):
                             cur.execute(invalid_movements)
                             invalid_flag=cur.fetchone()[0]
                             conn.commit()
-                            if invalid_flag == 1:
-                                send_mail(email['to'], email['from'], 'Invalid Movements Warning', 'Invalid Movements more than 1000 for {}'.format(start_date))
                             logger.info(conn.notices[0]) 
             except psycopg2.Error as exc:
                
-                send_mail(email['to'], email['from'], 'Insert Error', 'Cannot Insert to Volumes     '+str(exc)+'      {}'.format(start_date))
                 logger.exception(exc)
                 with conn:
                         conn.rollback()
@@ -343,7 +333,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
     
             except psycopg2.Error as exc:
                 logger.exception('Cannot Refresh Views')
-                send_mail(email['to'], email['from'], 'Views Error', 'Cannot Refresh Views     '+str(exc)+'      {}'.format(start_date))
                 sys.exit()
             end_iteration_time+=time_delta
             start_date+=time_delta
@@ -352,7 +341,6 @@ def pull_data(start_date, end_date, intersection, path, pull):
         logger.info('Done')
     except Exception as e:
         logger.critical(traceback.format_exc())
-        send_mail(email['to'], email['from'], 'Uncaught Error', traceback.format_exc())
 
 if __name__ == '__main__':
     cli()
