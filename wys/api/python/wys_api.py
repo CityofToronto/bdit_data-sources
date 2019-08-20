@@ -18,7 +18,6 @@ import sys
 from time import sleep
 import traceback
 import time
-#from notify_email import send_mail
 import click
 
 class WYS_APIException(Exception):
@@ -193,7 +192,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
     key=CONFIG['API']
     api_key=key['key']
     dbset = CONFIG['DBSETTINGS']
-    #email=CONFIG['EMAIL']
     conn = connect(**dbset)
     table=[]
     error_array=[]
@@ -208,7 +206,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
             signs_iterator=signs_list
     except Exception as e:
         logger.critical(traceback.format_exc())
-        #send_mail(email['to'], email['from'], 'Error retrieving list of signs', str(traceback.format_exc()))  
 
     logger.debug('Pulling data')  
     while start_date<=end_date:
@@ -247,7 +244,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                     logger.critical(traceback.format_exc())
                     error_array.append(str(traceback.format_exc()))
             else:
-                #send_mail(email['to'], email['from'], 'WYS API Error','\n'.join(map(str, error_array)))  
+                logger.critical(traceback.format_exc())
                 pass
             signs_iterator=signs_list
         start_date+=time_delta
@@ -261,12 +258,19 @@ def api_main(start_date, end_date, location_flag, CONFIG):
             logger.exception(exc)
             with conn:
                 conn.rollback()
-            #send_mail(email['to'], email['from'], 'Postgres Error', str(traceback.format_exc()))  
             sys.exit()
         except Exception as e:
             logger.critical(traceback.format_exc())
-            #send_mail(email['to'], email['from'], 'Postgres Error', str(traceback.format_exc()))  
-    
+        try:
+            with conn.cursor() as cur:
+                    counts_15min="SELECT wys.aggregate_speed_counts_15min();"
+                    cur.execute(counts_15min)
+                    conn.commit()
+                    logger.info('Aggregated Speed Count Data')
+
+
+        except Exception as e:
+            logger.critical(traceback.format_exc())
    
     loc_table=[]   
     try:
@@ -337,26 +341,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
     except Exception as e:
         logger.critical(traceback.format_exc())
         error_array.append(str(traceback.format_exc()))
-        #send_mail(email['to'], email['from'], 'Error', str(traceback.format_exc()))  
-    try:
-        with conn.cursor() as cur:
-                logger.debug('Inserting '+str(len(loc_table))+' new locations')
-                execute_values(cur, 'INSERT INTO wys.locations (api_id, address, sign_name, dir) VALUES %s', loc_table)
-                conn.commit()
-                logger.info('Inserted Data')
-                counts_15min="SELECT wys.aggregate_speed_counts_15min();"
-                cur.execute(counts_15min)
-                conn.commit()
-                logger.info('Aggregated Speed Count Data')
-                volumes_15min='''SELECT wys.aggregate_volumes_15min();'''
-                cur.execute(volumes_15min)
-                conn.commit()
-                logger.info('Aggregated Volumes Data')
 
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-#        error_array.append(str(traceback.format_exc()))
-#        #send_mail(email['to'], email['from'], 'Error', str(traceback.format_exc()))  
     
     
 if __name__ == '__main__':
