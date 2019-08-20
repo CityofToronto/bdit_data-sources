@@ -121,7 +121,6 @@ def get_location(location, api_key):
 
 def location_id(api_key):
     logger.debug('Pulling locations')
-    error_array=[]
     try:
         signs=get_signs(api_key)
         location_id=[]
@@ -136,16 +135,13 @@ def location_id(api_key):
         logger.debug(str(len(location_id))+' locations have data')
         return location_id
     except TimeoutException as exc_504:
-        error_array.append(str(address)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
         sleep(180)
     except exceptions.RequestException as err:
         logger.error(err)
-        error_array.append(str(address)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
         sleep(75)
     except exceptions.ProxyError as prox:
         logger.error(prox)
         logger.warning('Retrying in 2 minutes')
-        error_array.append(str(address)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
         sleep(120)
     except Exception as e:
         logger.critical(traceback.format_exc())
@@ -194,7 +190,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     table=[]
-    error_array=[]
     signs_list=[]
     try:
         if location_flag ==0:
@@ -229,20 +224,16 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                             table.append(temp)   
                             
                 except TimeoutException as exc_504:
-                    error_array.append(str(name)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
                     sleep(180)
                 except exceptions.RequestException as err:
                     logger.error(err)
-                    error_array.append(str(name)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
                     sleep(75)
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
-                    error_array.append(str(name)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
                     logger.warning('Retrying in 2 minutes')
                     sleep(120)
                 except Exception as e:
                     logger.critical(traceback.format_exc())
-                    error_array.append(str(traceback.format_exc()))
             else:
                 logger.critical(traceback.format_exc())
                 pass
@@ -340,8 +331,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
 
     except Exception as e:
         logger.critical(traceback.format_exc())
-        error_array.append(str(traceback.format_exc()))
-
     
     
 if __name__ == '__main__':
