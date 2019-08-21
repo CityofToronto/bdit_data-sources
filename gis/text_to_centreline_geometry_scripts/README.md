@@ -166,8 +166,4 @@ After the closest lines are found in the `cut_closest_line` function, the next s
 
 ## Quality Control (QC)
 
-It is important to find efficient ways to conduct QC so we can verify that the streets that were matched to the large number of bylaw locations are correct. The QC can involve a lot of manual checks to the final dataset. The checks that do include:
-- manually checked all the bylaw locations with final geoms over 2 km that occured between unfamiliar intersections (or intersections between which I was uncertain that the distance was over 2 km)
-- looked at the centreline segments matched to bylaws that have a low confidence value
-- looked at final lines that were of type `ST_MultiLineString` (this means that the lines were not continuous, or the line was a circular shape, or that there was a fork in the line)
-- looked at final bylaw lines that overlapped with a different bylaw's line
+See the README in the [QC](QC/README.md) folder.
