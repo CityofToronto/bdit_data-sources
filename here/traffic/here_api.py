@@ -50,7 +50,7 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5):
+                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
@@ -61,7 +61,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "timeIntervals":[],
                             "locationFilter":{"tmcs":[]},
                             "daysOfWeek":{"U":True,"M":True,"T":True,"W":True,"R":True,"F":True,"S":True},
-                            "mapVersion":"2017Q3"},
+                            "mapVersion": mapversion},
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
@@ -112,15 +112,16 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', type=click.Path(exists=True))
+@click.option('-m','--mapversion', default='2018Q3')
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
-    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', mapversion=''):
+    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate (inclusive)
 
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
     
     '''
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, config)
+        pull_here_data(ctx, startdate, enddate, config, mapversion)
 
 @cli.command('download')
 @click.argument('download_url')
@@ -136,7 +137,7 @@ def download_data(ctx = None, download_url = None, filename = None):
 @cli.command('upload')
 @click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
+def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
     if dbconfig:
         configuration = configparser.ConfigParser()
@@ -157,7 +158,7 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, config):
+def pull_here_data(ctx, startdate, enddate, config, mapversion):
 
     configuration = configparser.ConfigParser()
     configuration.read(config)
@@ -170,7 +171,7 @@ def pull_here_data(ctx, startdate, enddate, config):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)

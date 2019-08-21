@@ -2,12 +2,34 @@
 
 ## Table of Contents
 
-1. [Overview](#1-overview)
-2. [Table Structure](#2-table-structure)
-3. [Technology](#3-technology)
-4. [Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
-5. [Processing Data from API](#5-processing-data-from-api)
-6. [Filtering and Interpolation](#6-filtering-and-interpolation)
+- [Table of Contents](#table-of-contents)
+- [1. Overview](#1-overview)
+- [2. Table Structure](#2-table-structure)
+	- [Original Data](#original-data)
+		- [`raw_data`](#raw_data)
+	- [Reference Tables](#reference-tables)
+		- [`classifications`](#classifications)
+		- [`intersections`](#intersections)
+		- [`movement_map`](#movement_map)
+		- [`movements`](#movements)
+		- [`periods`](#periods)
+	- [Disaggregate Data](#disaggregate-data)
+		- [`volumes`](#volumes)
+	- [Aggregated Data](#aggregated-data)
+		- [`volumes_15min_tmc`](#volumes_15min_tmc)
+		- [`volumes_15min`](#volumes_15min)
+	- [Important Views](#important-views)
+- [3. Technology](#3-technology)
+- [4. Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
+	- [A. Populate `raw_data`](#a-populate-raw_data)
+	- [b. Populate `volumes`](#b-populate-volumes)
+	- [c. Populate `volumes_15min_tmc` and `volumes_15min`](#c-populate-volumes_15min_tmc-and-volumes_15min)
+	- [d. Populate `report_dates`](#d-populate-report_dates)
+	- [e. Refresh reporting views](#e-refresh-reporting-views)
+	- [f. Produce summarized monthly reporting data](#f-produce-summarized-monthly-reporting-data)
+- [5. Processing Data from API](#5-processing-data-from-api)
+- [6. Filtering and Interpolation](#6-filtering-and-interpolation)
+- [7. Open Data](#7-open-data)
 
 ## 1. Overview
 
@@ -173,6 +195,7 @@ This will aggregate the 1-minute data from `volumes` into 15-minute turning move
 2. Run `populate-table-volumes_15_min.sql`. This produces 15-minute aggregated segment-level (i.e. ATR) data, while also producing 0-volume records for intersection-leg-dir combinations that don't have volumes (to allow for easy averaging).
 
 ### d. Populate `report_dates`
+
 This produces a lookup table of date-intersection combinations to be used for formal reporting (this filters into various views).
 
 1. Run `populate-table-report_dates.sql`. This creates a record for each intersection-date combination in which at least **forty** 15-minute time bins exist. There are exceptions which are explicitly removed at the end of the query.
@@ -195,3 +218,10 @@ Refresh the relevant materialized views for monthly reporting:
 ## 6. Filtering and Interpolation
 
 (to be filled in)
+
+## 7. Open Data
+
+For the King Street Transit Pilot, the below volume datasets were released. These two datassets are georeferenced by intersection id:
+
+- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#55a44849-90eb-ed1e-fbca-a7ad6b1025e3) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from Miovision readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
+- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#dfd63698-5d0e-3d24-0732-9d1fea58523c) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
