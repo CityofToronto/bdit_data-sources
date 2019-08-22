@@ -30,7 +30,7 @@ BEGIN
     
     --Updates crossover table with new IDs
     , insert_crossover AS(
-    INSERT INTO miovision_api.atr_tmc_uid (volume_15min_tmc_uid, volume_15min_uid)
+    INSERT INTO miovision_api.volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
     SELECT volume_15min_tmc_uid, volume_15min_uid
     FROM insert_atr A
     INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) as volume_15min_tmc_uid FROM transformed) B
