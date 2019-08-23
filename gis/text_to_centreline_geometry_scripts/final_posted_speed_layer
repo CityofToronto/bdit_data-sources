@@ -1,0 +1,100 @@
+-- trying to figure out how to split by points
+WITH 
+ pts AS (
+	 SELECT * 
+	 FROM 
+	 (
+		SELECT o."ID" bylaw_id, street_name, extents, ST_SetSRID(geom::geometry, 26917) bylaw_geom, 
+		ST_StartPoint(ST_SetSRID(geom::geometry, 26917)) pt, 
+		o."Speed_Limit_km_per_hr" speed_lim
+		FROM crosic."posted_speed_limit_xml_open_data_withQC" p JOIN posted_speed_limit_xml_open_data_original o 
+		ON p.street_name = o."Highway" AND p.extents = o."Between"
+	   -- where o."ID"::int = 1789 
+	 ) x1
+	
+	 UNION 
+	 
+	 SELECT o."ID" bylaw_id, street_name, extents, ST_SetSRID(geom::geometry, 26917) bylaw_geom, 
+			ST_EndPoint(ST_SetSRID(geom::geometry, 26917)) pt, 
+			o."Speed_Limit_km_per_hr" speed_lim
+		FROM crosic."posted_speed_limit_xml_open_data_withQC" p JOIN posted_speed_limit_xml_open_data_original o 
+	    ON p.street_name = o."Highway" AND p.extents = o."Between"
+	-- where o."ID"::int = 1789
+ 	),
+ gis AS (
+	SELECT lf_name, objectid, ST_Transform(ST_LineMerge(geom), 26917) geom, ST_StartPoint(geom) centreline_start, ST_EndPoint(geom) centreline_end  
+	 FROM gis.centreline 
+	-- WHERE lf_name = 'Harding Ave' 
+	 ),
+	
+  intersects_startpoint_endpoint AS (
+	SELECT ST_Transform(ST_ClosestPoint(pt, geom), 26917) pt, speed_lim, bylaw_geom, bylaw_id
+	FROM pts JOIN gis
+	ON ST_DWithin(pt, geom, 1)
+	),
+
+  broken_centreline_segments AS (
+  SELECT lf_name, objectid, ST_Transform(geom, 4326) geom, ST_Transform(bylaw_geom, 4326) bylaw_geom, substr, bylaw_id, 
+	  (CASE WHEN len_int > 0 THEN speed_lim::int ELSE 50 END) AS speed_limit
+		 FROM 
+		(
+		SELECT * 
+		FROM 
+			(
+			SELECT 
+			pt, geom, lf_name, objectid,  bylaw_id, speed_lim, ST_Transform(ST_Line_Substring(geom, 0, ST_LineLocatePoint(geom, pt)), 4326) substr, bylaw_geom, 
+				ST_Length(ST_Intersection(ST_LineSubstring(geom, 0, ST_LineLocatePoint(geom, pt)), ST_Buffer(bylaw_geom, 1, 'endcap=flat'))) len_int
+			FROM gis JOIN intersects_startpoint_endpoint
+			ON ST_Distance(pt, geom) = 0
+			) x1
+
+		UNION
+
+			SELECT 
+			pt, geom, lf_name,  objectid, bylaw_id, speed_lim, ST_Transform(ST_Line_Substring(geom, ST_LineLocatePoint(geom, pt), 1), 4326) substr, bylaw_geom,
+				ST_Length(ST_Intersection(ST_LineSubstring(geom, ST_LineLocatePoint(geom, pt), 1) , ST_Buffer(bylaw_geom, 1, 'endcap=flat'))) len_int
+			FROM gis JOIN intersects_startpoint_endpoint
+			ON ST_Distance(pt, geom) = 0
+		) x
+
+	WHERE ST_Length(substr) > 0
+  ),
+  
+  -- get streets with speed limit changes from segments that were not broken 
+  whole_segments_not50 AS (
+  	SELECT * 
+	  FROM gis, pts
+	  WHERE objectid NOT IN (SELECT DISTINCT objectid FROM broken_centreline_segments)
+  	  AND ST_Length(ST_Intersection(bylaw_geom, geom)) > 0
+  ),
+
+
+    -- get centreline segments that were not broken apart and are not a
+	whole_segments AS (
+	SELECT * 
+		 FROM gis 
+		 WHERE objectid NOT IN 
+		(SELECT DISTINCT objectid FROM broken_centreline_segments UNION SELECT DISTINCT objectid FROM whole_segments_not50)
+	 )
+
+	 -- put broken and non-broken centreline segments together
+	 SELECT * INTO crosic.tcl_speed_limit_aug232019
+	 FROM 	 
+	 (			
+			SELECT lf_name, objectid, substr geom, speed_limit, bylaw_id
+			FROM broken_centreline_segments
+			 
+			UNION
+
+			SELECT lf_name, objectid, ST_Transform(geom, 4326), 50, NULL 
+			FROM whole_segments
+		 
+		 	UNION 
+		 
+		 	SELECT lf_name, objectid,  ST_Transform(geom, 4326), speed_lim::int speed_limit, NULL
+		 	FROM whole_segments_not50
+	 ) x
+
+WHERE speed_limit <> 50
+
+

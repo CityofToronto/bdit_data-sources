@@ -52,9 +52,9 @@ repealed = df_xml[df_xml.Between.isnull()]
 print(repealed.shape[0])
 
 
-bylaws = df_xml[df_xml.Between.notnull()]
+active_bylaws = df_xml[df_xml.Between.notnull()]
 # 5033
-print(bylaws.shape[0])
+print(active_bylaws.shape[0])
 
 
 # Part 2
@@ -101,18 +101,19 @@ def call_text_to_centreline_on_every_row(bylaws):
         # call text_to_centreline function
         try: 
           row_with_wkt = text_to_centreline(row[4], row[5])
-          rows.append([row[0]] +  row_with_wkt)
+          # add ID and speed limit value to each row
+          rows.append([row[0]] +  row_with_wkt + row[6])
         except Exception as e:
-          rows.append([row[0], row[1], row[2], "No Match - ERROR", None, str(e), None, None, None])
+          rows.append([row[0], row[1], row[2], "No Match - ERROR", None, str(e), None, None, None, None, None, row[6]])
           continue 
         
-    return pd.DataFrame(data=rows, columns=['id','street_name', 'extents',  'confidence', 'geom', 'notice', 'line_geom', 'oid1_geom', 'oid2_geom', 'street_name_arr', 'ratio'])  #gpd.GeoDataFrame(data=rows)
+    return pd.DataFrame(data=rows, columns=['id','street_name', 'extents',  'confidence', 'geom', 'notice', 'line_geom', 'oid1_geom', 'oid2_geom', 'street_name_arr', 'ratio', 'speed_limit_km_per_hr'])  #gpd.GeoDataFrame(data=rows)
 
     
     
 # convert list of rows to sql table 
-geom_data = call_text_to_centreline_on_every_row(bylaws)
-geom_data.to_sql('posted_speed_limit_xml_open_data_withQC', engine)
+geom_data = call_text_to_centreline_on_every_row(active_bylaws)
+geom_data.to_sql('posted_speed_limit_xml_open_data', engine)
 
 
 con.close()
