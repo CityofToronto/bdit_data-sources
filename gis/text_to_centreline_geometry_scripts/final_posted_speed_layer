@@ -9,7 +9,7 @@ WITH
 		o."Speed_Limit_km_per_hr" speed_lim
 		FROM crosic."posted_speed_limit_xml_open_data_withQC" p JOIN posted_speed_limit_xml_open_data_original o 
 		ON p.street_name = o."Highway" AND p.extents = o."Between"
-	   -- where o."ID"::int = 1789 
+	    --where o."ID"::int = 1789 
 	 ) x1
 	
 	 UNION 
@@ -19,12 +19,12 @@ WITH
 			o."Speed_Limit_km_per_hr" speed_lim
 		FROM crosic."posted_speed_limit_xml_open_data_withQC" p JOIN posted_speed_limit_xml_open_data_original o 
 	    ON p.street_name = o."Highway" AND p.extents = o."Between"
-	-- where o."ID"::int = 1789
+	--where o."ID"::int = 1789
  	),
  gis AS (
 	SELECT lf_name, objectid, ST_Transform(ST_LineMerge(geom), 26917) geom, ST_StartPoint(geom) centreline_start, ST_EndPoint(geom) centreline_end  
 	 FROM gis.centreline 
-	-- WHERE lf_name = 'Harding Ave' 
+	--WHERE lf_name = 'Harding Ave' 
 	 ),
 	
   intersects_startpoint_endpoint AS (
@@ -33,7 +33,7 @@ WITH
 	ON ST_DWithin(pt, geom, 1)
 	),
 
-  broken_centreline_segments AS (
+ broken_centreline_segments AS (
   SELECT lf_name, objectid, ST_Transform(geom, 4326) geom, ST_Transform(bylaw_geom, 4326) bylaw_geom, substr, bylaw_id, 
 	  (CASE WHEN len_int > 0 THEN speed_lim::int ELSE 50 END) AS speed_limit
 		 FROM 
@@ -61,16 +61,16 @@ WITH
   ),
   
   -- get streets with speed limit changes from segments that were not broken 
-  whole_segments_not50 AS (
-  	SELECT * 
+ whole_segments_not50 AS (
+  	SELECT DISTINCT ON (objectid) *
 	  FROM gis, pts
 	  WHERE objectid NOT IN (SELECT DISTINCT objectid FROM broken_centreline_segments)
   	  AND ST_Length(ST_Intersection(bylaw_geom, geom)) > 0
   ),
 
 
-    -- get centreline segments that were not broken apart and are not a
-	whole_segments AS (
+    -- get centreline segments that were not broken apart or get the other half of the segements that were (i.e. the 50km/hr half)
+  whole_segments AS (
 	SELECT * 
 		 FROM gis 
 		 WHERE objectid NOT IN 
@@ -78,7 +78,7 @@ WITH
 	 )
 
 	 -- put broken and non-broken centreline segments together
-	 SELECT * INTO crosic.tcl_speed_limit_aug232019
+	 SELECT * INTO crosic.tcl_speed_limit_aug262019
 	 FROM 	 
 	 (			
 			SELECT lf_name, objectid, substr geom, speed_limit, bylaw_id
@@ -91,10 +91,20 @@ WITH
 		 
 		 	UNION 
 		 
-		 	SELECT lf_name, objectid,  ST_Transform(geom, 4326), speed_lim::int speed_limit, NULL
+		 	SELECT lf_name, objectid,  ST_Transform(geom, 4326), speed_lim::int speed_limit, 
+		    (CASE WHEN speed_lim::int = 50 THEN NULL ELSE bylaw_id END) bylaw_id
 		 	FROM whole_segments_not50
 	 ) x
 
-WHERE speed_limit <> 50
 
 
+
+
+
+DROP TABLE crosic.tcl_speed_limit_aug262019_with_desc;
+SELECT t.lf_name, t.objectid, t.geom, 
+(CASE WHEN fcode_desc = 'Expressway' AND bylaw_id IS NULL THEN 80 ELSE speed_limit END) speed_limit, 
+t.bylaw_id, 
+fcode, fcode_desc 
+INTO crosic.tcl_speed_limit_aug262019_with_desc
+FROM crosic.tcl_speed_limit_aug262019 t LEFT JOIN gis.centreline g ON t.objectid = g.objectid; 
