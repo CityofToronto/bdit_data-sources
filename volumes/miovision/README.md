@@ -5,31 +5,40 @@
 - [Table of Contents](#table-of-contents)
 - [1. Overview](#1-overview)
 - [2. Table Structure](#2-table-structure)
-	- [Original Data](#original-data)
-		- [`raw_data`](#raw_data)
 	- [Reference Tables](#reference-tables)
 		- [`classifications`](#classifications)
 		- [`intersections`](#intersections)
 		- [`movement_map`](#movement_map)
 		- [`movements`](#movements)
 		- [`periods`](#periods)
+		- [`intersection_movements`](#intersection_movements)
 	- [Disaggregate Data](#disaggregate-data)
 		- [`volumes`](#volumes)
 	- [Aggregated Data](#aggregated-data)
 		- [`volumes_15min_tmc`](#volumes_15min_tmc)
+		- [`volumes_tmc_zeroes`](#volumes_tmc_zeroes)
 		- [`volumes_15min`](#volumes_15min)
+	- [`atr_tmc_uid`](#atr_tmc_uid)
+	- [Primary and Foreign Keys](#primary-and-foreign-keys)
+		- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
 	- [Important Views](#important-views)
 - [3. Technology](#3-technology)
-- [4. Processing Data from CSV Dumps](#4-processing-data-from-csv-dumps)
-	- [A. Populate `raw_data`](#a-populate-raw_data)
-	- [b. Populate `volumes`](#b-populate-volumes)
-	- [c. Populate `volumes_15min_tmc` and `volumes_15min`](#c-populate-volumes_15min_tmc-and-volumes_15min)
-	- [d. Populate `report_dates`](#d-populate-report_dates)
-	- [e. Refresh reporting views](#e-refresh-reporting-views)
-	- [f. Produce summarized monthly reporting data](#f-produce-summarized-monthly-reporting-data)
-- [5. Processing Data from API](#5-processing-data-from-api)
+- [4. Processing Data from API](#4-processing-data-from-api)
+- [5. Processing Data from CSV Dumps](#5-processing-data-from-csv-dumps)
+	- [`raw_data`](#raw_data)
+	- [A. Populate `volumes`](#a-populate-volumes)
+	- [B. Populate `volumes_15min_tmc` and `volumes_15min`](#b-populate-volumes_15min_tmc-and-volumes_15min)
+	- [C. Refresh reporting views](#c-refresh-reporting-views)
+	- [D. Produce summarized monthly reporting data](#d-produce-summarized-monthly-reporting-data)
+	- [Deleting Data](#deleting-data)
 - [6. Filtering and Interpolation](#6-filtering-and-interpolation)
-- [7. Open Data](#7-open-data)
+	- [Filtering](#filtering)
+	- [Interpolation](#interpolation)
+- [7. QC Checks](#7-qc-checks)
+	- [Variance check](#variance-check)
+	- [Invalid Movements](#invalid-movements)
+- [8. Future Work](#8-future-work)
+- [9. Open Data](#9-open-data)
 
 ## 1. Overview
 
@@ -38,27 +47,6 @@ Miovision currently provides volume counts gathered by cameras installed at spec
 You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections.geojson)
 
 ## 2. Table Structure
-
-### Original Data
-
-#### `raw_data`
-
-Representation of 1-minute observations in their **original** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination. New csv data shoudl be inserted into this table, but [a trigger](sql/trigger-populate-volumes.sql) will transform it into the [`volumes`](#volumes) format and leave this table empty.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-study_id|bigint|Unique identifier representing a specific intersection-date combination|474678|
-study_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-lat|numeric|Latitude of intersection location|43.643945|
-lng|numeric|Longitude of intersection location|-79.402667|
-datetime_bin|timestamp with time zone|Start of 1-minute time bin|2017-10-13 14:07:00+00|
-classification|text|Specific mode class (see `classifications` below)|Lights|
-entry_dir_name|text|Entry leg of movement|E|
-entry_name|text|(not currently populated)||
-exit_dir_name|text|Exit leg of movement|W|
-exit_name|text|(not currently populated)||
-movement|text|Specific turning movement (see `movements` below)|thru|
-volume|integer|Total 1-minute volume|12|
 
 ### Reference Tables
 
@@ -223,7 +211,34 @@ The current primary purpose for the keys is so that on deletion, the delete casc
 
 (to be filled in)
 
-## 4. Processing Data from CSV Dumps
+## 4. Processing Data from API
+
+Refer to the [API README](api/README.md) for more detail.
+
+## 5. Processing Data from CSV Dumps
+
+Prior to the API pipeline being set up, we received data from Miovision in CSV
+files for individual months of data collection, this is the procedure for
+processing that data, relevant sql can be found in [`sql/csv_data`](sql/csv_data/).
+
+### `raw_data`
+
+Representation of 1-minute observations in their **original** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination. New csv data shoudl be inserted into this table, but [a trigger](sql/trigger-populate-volumes.sql) will transform it into the [`volumes`](#volumes) format and leave this table empty.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+study_id|bigint|Unique identifier representing a specific intersection-date combination|474678|
+study_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+lat|numeric|Latitude of intersection location|43.643945|
+lng|numeric|Longitude of intersection location|-79.402667|
+datetime_bin|timestamp with time zone|Start of 1-minute time bin|2017-10-13 14:07:00+00|
+classification|text|Specific mode class (see `classifications` below)|Lights|
+entry_dir_name|text|Entry leg of movement|E|
+entry_name|text|(not currently populated)||
+exit_dir_name|text|Exit leg of movement|W|
+exit_name|text|(not currently populated)||
+movement|text|Specific turning movement (see `movements` below)|thru|
+volume|integer|Total 1-minute volume|12|
 
 ### A. Populate `volumes`
 
@@ -258,10 +273,6 @@ The excel spreadsheet rearranges and rounds the data from `report_summary` so th
 ### Deleting Data
 
 It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `raw_data` will trigger deleting the resulting rows in `volumes` and then `volumes_15min_tmc` and `volumes_15min`. 0 rows in `volumes_15min_tmc` are deleted through the intermediary lookup [`volumes_tmc_zeroes`](#volumes_tmc_zeroes).
-
-## 5. Processing Data from API
-
-Refer to the [API README](api/README.md) for more detail
 
 ## 6. Filtering and Interpolation
 
