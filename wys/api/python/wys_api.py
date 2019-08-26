@@ -282,6 +282,8 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                 statistics=get_statistics(location,start_date,api_key)
                 loc_info=statistics['LocInfo']
                 loc=loc_info['Location']
+                lat=loc['geocode'][0]
+                long=loc['geocode'][1]
                 address=loc['address']
                 name=loc['name']
                 if 'SB' in name:
@@ -294,22 +296,22 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                     direction='EB'
                 else:
                     direction=None
-                temp=[location, address, name, direction, start_date]
+                temp=[location, address, name, direction, start_date, lat, long]
                 loc_table.append(temp)
                 signs_iterator=signs_list
                 
-            execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date) VALUES %s', loc_table)
+            execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, lat, lng) VALUES %s', loc_table)
             string="""
                         WITH locations AS (
-                        SELECT api_id, address, sign_name, dir, max(start_date)
+                        SELECT api_id, address, sign_name, dir, lat, lng, max(start_date)
                         FROM wys.locations 
-                        GROUP BY api_id, address, sign_name, dir),
+                        GROUP BY api_id, address, sign_name, lat, lng, dir),
                         
                         
                         
                         differences AS (
             
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date FROM daily_intersections A
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
                         LEFT JOIN locations B ON A.api_id = B.api_id
                         AND A.sign_name = B.sign_name 
                         WHERE B.sign_name IS NULL 
@@ -317,10 +319,22 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                         UNION
                         
                         
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date FROM daily_intersections A
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
                         LEFT JOIN locations B ON A.api_id = B.api_id
                         AND B.address = A.address
                         WHERE B.address IS NULL
+                        
+                        UNION 
+                        
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
+                        LEFT JOIN locations B ON A.api_id = B.api_id
+                        AND B.lat = A.lat
+                        WHERE B.lat IS NULL
+                        
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
+                        LEFT JOIN locations B ON A.api_id = B.api_id
+                        AND B.lng = A.lng
+                        WHERE B.lng IS NULL
                         )
                         
                         INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date) 
