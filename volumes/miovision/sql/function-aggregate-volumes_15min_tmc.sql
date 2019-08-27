@@ -107,7 +107,7 @@ BEGIN
 												AND C.leg = A.leg
 												AND C.movement_uid = A.movement_uid
 												AND C.datetime_bin = B.datetime_bin
-		WHERE A.datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour'
+		WHERE B.datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour'
 		GROUP BY COALESCE(C.intersection_uid, A.intersection_uid), COALESCE(C.datetime_bin, B.datetime_bin), 
 				 COALESCE(A.classification_uid, C.classification_uid), COALESCE( A.leg, C.leg), 
 				 COALESCE(A.movement_uid, C.movement_uid), interpolated, span
