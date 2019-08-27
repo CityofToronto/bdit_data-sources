@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc_new(
+CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc(
     start_date date,
     end_date date)
   RETURNS void AS
@@ -17,48 +17,35 @@ BEGIN
 			interpolated boolean,
 			a_volume_uid int);
 			
-	WITH class_grouping AS (
-
+	WITH  bin_grouping AS(
 		SELECT 	intersection_uid, 
-			datetime_bin as one_minute_bins,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) AS datetime_bin,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - interval '1 minute' AS previous_bin,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) + interval '15 minute' AS next_bin,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) - interval '2 minute' AS previous_bin2,
-			TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from A.datetime_bin)) / 900) * 900) + interval '16 minute' AS next_bin2, 
-			volume_uid
-		FROM 	miovision_api.volumes A
-		WHERE datetime_bin BETWEEN start_date - INTERVAL '2 hours' AND end_date
-		GROUP BY intersection_uid, datetime_bin, volume_uid	
-	), bin_grouping AS(
-		SELECT 	intersection_uid, 
-			datetime_bin, 
-			COUNT(DISTINCT one_minute_bins) AS avail_minutes,
-			min(one_minute_bins) as start_time,
-			max(one_minute_bins) as end_time,
-			lag(max(one_minute_bins)) OVER w as previous_end,
-			lead(min(one_minute_bins)) OVER w as next_start,
-			(EXTRACT(minutes FROM MAX(A.one_minute_bins) - MIN(A.one_minute_bins))::INT+1) AS span,
+			datetime_bin_15(datetime_bin) AS datetime_bin_15, 
+			COUNT(DISTINCT datetime_bin) AS avail_minutes,
+			min(datetime_bin) as start_time,
+			max(datetime_bin) as end_time,
+			lag(max(datetime_bin)) OVER w as previous_end,
+			lead(min(datetime_bin)) OVER w as next_start,
+			(EXTRACT(minutes FROM MAX(datetime_bin) - MIN(datetime_bin))::INT+1) AS span,
 			MIN(volume_uid) as a_volume_uid,
-			previous_bin,
-			next_bin,
-			previous_bin2,
-			next_bin2,
-			CASE WHEN  COUNT(DISTINCT one_minute_bins)<15 
-				AND (NULLIF(next_bin, lead(min(one_minute_bins)) OVER w) IS NULL OR NULLIF(next_bin2, lead(min(one_minute_bins)) OVER w) IS NULL)
-				AND (NULLIF(previous_bin, lag(max(one_minute_bins)) OVER w ) IS NULL OR NULLIF(previous_bin2, lag(max(one_minute_bins)) OVER w ) IS NULL) 
+			CASE WHEN  COUNT(DISTINCT datetime_bin) < 15 --If there is at least 1 missing one-minute bin in the current 15-min bin
+				/*and at least one one-minute bin in the following 2 minute*/
+				AND lead(min(datetime_bin)) OVER w <= datetime_bin_15(datetime_bin) + interval '16 minutes'
+				/*and at least one one-minute bin in the preceding 2 minute*/
+				AND lag(max(datetime_bin)) OVER w  >= datetime_bin_15(datetime_bin) - interval '2 minutes' 
 				THEN FALSE 
 				ELSE NULL 
 				END AS interpolated
-		FROM class_grouping a
-		GROUP BY intersection_uid, datetime_bin, previous_bin, next_bin, previous_bin2, next_bin2
+		FROM miovision_api.volumes A
+		INNER JOIN miovision_api.intersection_movements	m  --Make sure movement is valid.
+		 											USING (intersection_uid, classification_uid,leg,movement_uid)
+		WHERE datetime_bin BETWEEN start_date - INTERVAL '2 hours' AND end_date AND volume_15min_tmc_uid IS NULL
+		GROUP BY intersection_uid, datetime_bin_15
 		WINDOW w AS (PARTITION BY intersection_uid)
-		ORDER BY intersection_uid, datetime_bin
 	)
 
 	INSERT INTO 	bins
 	SELECT 		intersection_uid,
-			datetime_bin,
+			datetime_bin_15,
 			avail_minutes,
 			start_time,
 			end_time,
@@ -66,8 +53,7 @@ BEGIN
 			interpolated,
 			a_volume_uid
 	FROM 		bin_grouping
-	WHERE avail_minutes>5
-	ORDER BY intersection_uid, datetime_bin;
+	WHERE avail_minutes>5;
 
 
 	UPDATE bins SET interpolated = FALSE WHERE (EXTRACT(minutes FROM end_time - start_time)+1) > avail_minutes AND avail_minutes < 15;
@@ -92,7 +78,7 @@ BEGIN
 	WITH zero_padding_movements AS (
 		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
 		SELECT m.*, datetime_bin 
-		FROM miovision.intersection_movements m
+		FROM miovision_api.intersection_movements m
 		INNER JOIN bins USING (intersection_uid)
 		WHERE classification_uid IN (1,2,6,7) 
 		)
@@ -106,9 +92,14 @@ BEGIN
 			COALESCE(A.movement_uid, C.movement_uid) movement_uid,
 			COALESCE(CASE WHEN B.interpolated = TRUE THEN SUM(A.volume)*15.0/(span*1.0) ELSE SUM(A.volume) END, 0) AS volume
 		FROM bins B
-		INNER JOIN miovision_api.volumes A 
-									ON B.intersection_uid = A.intersection_uid 
-									AND A.datetime_bin BETWEEN B.start_time AND B.end_time
+		INNER JOIN miovision_api.volumes A ON A.volume_15min_tmc_uid IS NULL
+									AND B.intersection_uid = A.intersection_uid 
+									AND B.start_time <= A.datetime_bin AND B.end_time >= A.datetime_bin
+		INNER JOIN miovision_api.intersection_movements	m ON --Make sure movement is valid.
+		 											m.intersection_uid = A.intersection_uid
+												AND m.classification_uid  = A.classification_uid 
+												AND m.leg = A.leg
+												AND m.movement_uid = A.movement_uid
 		/*Only join the zero padding movements to the left side when everything matches, including the bin's datetime_bin
 		Otherwise zero-pad*/
 		FULL OUTER JOIN zero_padding_movements C ON C.intersection_uid = A.intersection_uid
@@ -116,7 +107,7 @@ BEGIN
 												AND C.leg = A.leg
 												AND C.movement_uid = A.movement_uid
 												AND C.datetime_bin = B.datetime_bin
-												WHERE A.datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour'
+		WHERE A.datetime_bin BETWEEN start_date - INTERVAL '1 hour' AND end_date - INTERVAL '1 hour'
 		GROUP BY COALESCE(C.intersection_uid, A.intersection_uid), COALESCE(C.datetime_bin, B.datetime_bin), 
 				 COALESCE(A.classification_uid, C.classification_uid), COALESCE( A.leg, C.leg), 
 				 COALESCE(A.movement_uid, C.movement_uid), interpolated, span
@@ -133,7 +124,7 @@ BEGIN
 	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
 	FROM aggregate_insert b
 	WHERE a.datetime_bin BETWEEN start_date - interval '1 hour' AND end_date -  interval '1 hour'
-	AND b.volume > 0 
+	AND a.volume_15min_tmc_uid IS NULL AND b.volume > 0 
 	AND a.intersection_uid  = b.intersection_uid 
 	AND a.datetime_bin >= b.datetime_bin AND a.datetime_bin < b.datetime_bin + INTERVAL '15 minutes'
 	AND a.classification_uid  = b.classification_uid 
@@ -146,5 +137,9 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION miovision_api.aggregate_15_min_tmc_new(date, date)
-  OWNER TO rliu;
+ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
+  OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO dbadmin WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO bdit_humans;
