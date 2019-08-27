@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
+CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
     start_date date,
     end_date date)
   RETURNS integer AS
@@ -18,7 +18,7 @@ BEGIN
         INNER JOIN miovision.movement_map B -- TMC to ATR crossover table.
         ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid 
         WHERE A.processed IS NULL
-        --AND datetime_bin BETWEEN start_date and end_date
+        AND datetime_bin BETWEEN start_date and end_date
         GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
     ),
     --Inserts the ATR bins to the ATR table
@@ -48,8 +48,14 @@ BEGIN
     WHERE a.volume_15min_tmc_uid=b.volume_15min_tmc_uid;
     
     RETURN NULL;
-
+EXCEPTION
+	WHEN unique_violation THEN 
+		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
+		RETURN 0;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
+ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
+  OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min() TO bdit_humans WITH GRANT OPTION;

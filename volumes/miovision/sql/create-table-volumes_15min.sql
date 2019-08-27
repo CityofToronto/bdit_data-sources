@@ -1,4 +1,7 @@
-﻿CREATE TABLE miovision_api.volumes_15min
+-- Table: miovision_api.volumes_15min
+
+-- DROP TABLE miovision_api.volumes_15min;
+CREATE TABLE miovision_api.volumes_15min
 (
   volume_15min_uid serial NOT NULL,
   intersection_uid integer,
@@ -7,13 +10,14 @@
   leg text,
   dir text,
   volume numeric,
-  CONSTRAINT volume_15min_pkey PRIMARY KEY (volume_15min_uid)
+  CONSTRAINT volumes_15min_pkey PRIMARY KEY (volume_15min_uid),
+  CONSTRAINT volumes_15min_intersection_uid_datetime_bin_classification__key UNIQUE (intersection_uid, datetime_bin, classification_uid, leg, dir)
 )
 WITH (
   OIDS=FALSE
 );
 ALTER TABLE miovision_api.volumes_15min
-  OWNER TO rliu;
+  OWNER TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
