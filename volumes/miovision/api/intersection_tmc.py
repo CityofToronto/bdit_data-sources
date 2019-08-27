@@ -292,24 +292,17 @@ def pull_data(start_date, end_date, intersection, path, pull):
                             cur.execute(update)
                             conn.commit()
                             logger.info('Aggregated to 15 minute bins')  
-                    with conn:
-                        with conn.cursor() as cur: 
                             atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
                             cur.execute(atr_aggregation)
                             conn.commit()
                             logger.info('Completed data processing for {}'.format(start_date))
-                            
-                    with conn:
-                        with conn.cursor() as cur:
-                            string="SELECT miovision_api.missing_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                            cur.execute(str(string))
+                            missing_dates_query="SELECT miovision_api.missing_dates(%s)"
+                            cur.execute(missing_dates_query, start_date)
                             conn.commit()
                    
                 except psycopg2.Error as exc:
                     
                     logger.exception(exc)
-                    with conn:
-                            conn.rollback()
                     sys.exit()
             else:
                 logger.info('Data Processing Skipped') 
