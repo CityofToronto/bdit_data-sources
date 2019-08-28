@@ -67,8 +67,8 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
+@click.option('--start_date', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end_date' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' ,'--intersection', default=0, help='enter the intersection_uid of the intersection')
 @click.option('--pull' ,'--pull', default=None, help='enter 1 to not process the data')
