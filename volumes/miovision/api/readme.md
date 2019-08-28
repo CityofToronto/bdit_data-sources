@@ -2,34 +2,42 @@
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Input Parameters](#input-parameters)
-3. [Relevant calls and Outputs](#relevant-calls-and-outputs)
-4. [Error Responses](#error-responses)
-5. [Input Files](#input-files)
-6. [How to run the API](#how-to-run-the-api)
-7. [Classifications](#classifications)
-8. [PostgreSQL Functions](#postgresql-functions)
-9. [Invalid Movements](#invalid-movements)
-10. [How the API works](#how-the-api-works)
+- [Table of Contents](#table-of-contents)
+- [Overview](#overview)
+- [Input Parameters](#input-parameters)
+  - [API Key and URL](#api-key-and-url)
+- [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+  - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+  - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+  - [Error responses](#error-responses)
+- [Input Files](#input-files)
+- [How to run the api](#how-to-run-the-api)
+  - [Virtual Environment](#virtual-environment)
+  - [Command Line Options](#command-line-options)
+- [Classifications](#classifications)
+  - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
+  - [API Classifications](#api-classifications)
+- [PostgreSQL Functions](#postgresql-functions)
+- [Invalid Movements](#invalid-movements)
+- [How the API works](#how-the-api-works)
 
-### Overview
+## Overview
 
 The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision. This is a future alternative to the existing csv dumps and avoids having to continuously go through miovision to get the data. This will create a continuous stream of data that is populated at all time periods and all dates, similar to the bluetooth data.
 
-### Input Parameters
+## Input Parameters
 
-#### API Key and URL
+### API Key and URL
 
 Emailed from Miovision. Keep it secret. Keep it safe.
 
 The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [http://beta.docs.api.miovision.com/](http://beta.docs.api.miovision.com/)
 
-### Relevant Calls and Outputs
+## Relevant Calls and Outputs
 
 Each of these returns a 1-minute aggregate, maximum 48-hrs of data, with a two-hour lag (the end time for the query cannot be more recent than two-hours before the query). If the volume is 0, the 1 minute bin will not be populated. 
 
-#### Turning Movement Count (TMC)
+### Turning Movement Count (TMC)
 
 Every movement through the intersection except for pedestrians.
 
@@ -46,7 +54,7 @@ Response:
 ]
 ```
 
-#### Turning Movement Count (TMC) Crosswalks
+### Turning Movement Count (TMC) Crosswalks
 
 Crosswalk Counts
 
@@ -76,7 +84,6 @@ Through the API, the script converts it to a table like this:
 1|2018-07-03 23:16:00|1|N|1|3
 1|2018-07-03 23:08:00|1|N|1|8
 
-
 which is the same format as the `miovision.volumes` table, and directly inserts it to `miovision_api.volumes`. The script converts the movements, classifications and intersections given by the API to uids using the same lookup table structure that exists in the `miovision` schema.
 
 ### Error responses
@@ -96,11 +103,11 @@ There are other errors relating to inserting/processing the data on PostgreSQL a
 
 All errors the API encounters are logged in the `logging.log` file, and emailed to the user. The log also logs the time each intersection is pulled, and the time when each task in PostgreSQL is completed. This makes it useful to check if any single processes is causing delays. 
 
-### Input Files
+## Input Files
 
 `config.cfg` is required to access the API, the database, and perform email notification. It has the following format:
 
-```
+```ini
 [API]
 key=your api key
 [DBSETTINGS]
@@ -113,7 +120,7 @@ from=from@email.com
 to=to@email.com
 ```
 
-### How to run the api
+## How to run the api
 
 In command prompt, navigate to the folder where the python file is located and run `python intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
 
@@ -125,7 +132,7 @@ For example, to collect data from a custom date range, run `python intersection_
 
 If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled. 
 
-#### Virtual Environment
+### Virtual Environment
 
 If the script is running on the EC2, then a virtual environment is required to run the script. In addition, it is no longer necessary to specify the proxy since the script is being run outside the firewall. 
 
@@ -135,7 +142,7 @@ To run the python script, or any python commands, replace `python` at the start 
 
 More information can be found [here](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html).
 
-#### Command Line Options
+### Command Line Options
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
@@ -147,11 +154,11 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 
 `python intersection_tmc.py --start=2018-08-01 --end=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes` is an example with all the options specified.
 
-### Classifications
+## Classifications
 
 The classification given in the api is different than the ones given in the csv dumps, or the datalink. 
 
-#### Exisiting Classification (csv dumps and datalink)
+### Exisiting Classification (csv dumps and datalink)
 
 |classification_uid|classification|location_only|class_type|
 |-----|-----|-----|-----|
@@ -163,7 +170,7 @@ The classification given in the api is different than the ones given in the csv 
 6|Pedestrians|t|Pedestrians
 7|Bicycles|t|Cyclists
 
-#### API Classifications
+### API Classifications
 
 |classification_uid|classification|location_only|class_type|
 |-----|-----|-----|-----|
@@ -177,7 +184,7 @@ The classification given in the api is different than the ones given in the csv 
 
 The API assigns a classification of 0 if the classification matches none of the above. This is possible if the classification given from the API does not exactly match any of the ones in the script. One example is if `Light` is pluralized as `Lights`, like in the CSV dumps.
 
-### PostgreSQL Functions
+## PostgreSQL Functions
 
 To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the csv dumps. More information can be found in the [miovision readme](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/README.md)
 
@@ -185,22 +192,17 @@ To perform the data processing, the API script calls several postgres functions 
 |-----|-----|
 |[`aggregate_15_min_tmc`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min_tmc.sql)|Aggregates data with valid movementsto 15 minutes turning movement count (TMC) bins and fills in gaps with 0-volume bins. |
 |[`aggregate_15_min`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
-['find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
+[`find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
 [`api_log`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-api_log.sql)|Populates when the data is pulled
 [`delete_volumes`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-delete_volumes.sql)|Deletes the volumes with the specified dates.
 [`report_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-report_dates.sql)|Populates `report_dates`.
 
-
-### Invalid Movements
+## Invalid Movements
 
 The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. A warning is also emailed to the user if the number of invalid movements is over 1000.
 
-### How the API works
+## How the API works
 
 This flow chart provides a high level overview of the script:
 
-
 ![Flow Chart of the API](img/api_script1.png)
-
-
-
