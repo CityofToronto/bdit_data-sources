@@ -5,7 +5,7 @@
 
 This is a `README` for the `text_to_centreline(highway, fr, t)` function, which is written in `postgresql` (currently living in the `crosic` schema). The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. The input descriptions typically state the street that the bylaw is in effect on and the two intersections between which the bylaw. For example, you could use the function to get the centreline segments of Bloor Street between Royal York Road and St George Street.
 
-The function is mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be listed in the [QC folder README](QC/README.md) of the document. It also should be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot coreectly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return and error.
+The function is mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be discussed in the [QC](#Quality-Control) area of the document. It also should be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot coreectly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return and error.
 
 ## Function Inputs
 
@@ -46,13 +46,13 @@ The process will be explained in further detail below. The functions called/vari
 
 The first step is to clean the location description data so it can easily be matched to intersections in the `gis.centreline_intersection` table.
 
-We clean the data mainly using the `gis.abbr_street2` function. The intersection table writes roads with appreviations. For example the word street is written as `St` and road is `Rd`, etc. 
+We clean the data mainly using the `gis.abbr_street2` function. The intersection table writes roads with appreviations. For example the word street is written as `St` and road is `Rd`, etc.
 
 We want to be able to extract:
 
 1. `highway2` (`TEXT`): the street name where the bylaw occurs (that was cleaned using `gis.abbr_street2`)
 2. `btwn1` and `btwn2` (`TEXT`): the name of both the streets between which the bylaw occurs (i.e the two intersections). In the case from the [function inputs](#Function-Inputs) section, btwn1 would be `Royal York Rd` and `btwn2` would be `St George St`
-3. `metres_btwn1` and `metres_btwn2` (`NUMERIC`): will be null for everything except for [special case 1 and 2](#Special-Cases). These are the number of metres away from the intersections (intersections meaning intersection of `highway2` and `btwn1` and/or `highway2` and `btwn2`) that the bylaws occur. For example if the bylaw is in effect on `Bloor Street` between `100` metres east of `Royal York Road` and `300` metres west of `St George Street`, then `metres_btwn1` would be `100` and `metres_btwn2` would be `300`. 
+3. `metres_btwn1` and `metres_btwn2` (`NUMERIC`): will be null for everything except for [special case 1 and 2](#Special-Cases). These are the number of metres away from the intersections (intersections meaning intersection of `highway2` and `btwn1` and/or `highway2` and `btwn2`) that the bylaws occur. For example if the bylaw is in effect on `Bloor Street` between `100` metres east of `Royal York Road` and `300` metres west of `St George Street`, then `metres_btwn1` would be `100` and `metres_btwn2` would be `300`.
 4. `direction_btwn1` and `direction_btwn2` (`TEXT`): will be null for everything except for [special case 1 and 2](#Special-Cases). These are directions away from the intersections (intersections meaning intersection of `highway2` and `btwn1` and/or `highway2` and `btwn2`) that the bylaws occur. For example if the bylaw is in effect on `Bloor Street` between `100` metres east of `Royal York Road` and `300` metres west of `St George Street`, then `direction_btwn1` would be `east` and `direction_btwn2` would be `west`.
 
 There are different cases for how the data is input ([see above](#Function-Inputs)), so both of those cases should have to be cleaned differently, hence there is a lot of code like: `CASE WHEN t IS NULL THEN ` .... `ELSE`. An idea to make this cleaner in the future could be to make 2 different functions for cleaning inputs.
@@ -85,11 +85,11 @@ Sometimes the name of the street in the `gis.centreline` table is not the same a
 
 The `match_line_to_centreline` function matches `line_geom` to centreline segments. If both `metres_btwn1` and `metres_btwn2` are `NULL`, it does this by creating a buffer that is 3 times the length of `line_geom` around `line_geom`. It then catches all of the segments in that buffer that have the same name as `street_name` where more than 90% of the segment is within the buffer.
 
-If `metres_btwn2` and/or `metres_btwn1` is not `NULL` than the buffer length is `10` times the value of `COALESCE(metres_btwn1, metres_btwn2)` and the centreline segment can be within `30` metres of the end of the buffer. Also, this case does not require the 90% of the centreline segments to intersect with the buffer. 
+If `metres_btwn2` and/or `metres_btwn1` is not `NULL` than the buffer length is `10` times the value of `COALESCE(metres_btwn1, metres_btwn2)` and the centreline segment can be within `30` metres of the end of the buffer. Also, this case does not require the 90% of the centreline segments to intersect with the buffer.
 
 The reason why there is a 30 metre extension at the end of the buffer/`line_geom` and there is no `90%` rule in the case where `metres_btwn1` or `metres_btwn2` are not `NULL` is because we want to include the street segments that intersect with the intersections (to account for [Special cases 1 and 2](#Special-Cases)). In the case where `metres_btwn1` and/or `metres_btwn2` are not `NULL`, the final geometry might extend beyond the intersection (see documentation on [special case 1 and 2](#Special-Cases) for more information). So we would like to select all segments along the street that are between the two intersections, and also segments that intersect with the ends of the buffer (i.e. `oid1_geom` and `oid2_geom`). The `30` metres buffer ensures that segments that are near the intersections but just slightly out of the buffer are also selected.
 
-The type of buffer we are using in both cases has a flat endcap. This means that that the buffer does not go farther than the end of `line_geom`. This type of buffer is especially useful in the case where `metres_btwn1` and `metres_btwn2` are `NULL` because it prevents additional centreline segments that are part of the same street and are beside each intersection (but not inside the buffer) from being included in the selected centreline segments. It is also useful in the case where `metres_btwn1` and/or `metres_btwn2` are not `NULL` (where we effectively add 30 metres to the end of each buffer), because if the endcap was not flat then the length from the intersection to the end of the buffer would be a function on the length of the buffer, and we would not easily know this value/it could be too long if the buffer is long. 
+The type of buffer we are using in both cases has a flat endcap. This means that that the buffer does not go farther than the end of `line_geom`. This type of buffer is especially useful in the case where `metres_btwn1` and `metres_btwn2` are `NULL` because it prevents additional centreline segments that are part of the same street and are beside each intersection (but not inside the buffer) from being included in the selected centreline segments. It is also useful in the case where `metres_btwn1` and/or `metres_btwn2` are not `NULL` (where we effectively add 30 metres to the end of each buffer), because if the endcap was not flat then the length from the intersection to the end of the buffer would be a function on the length of the buffer, and we would not easily know this value/it could be too long if the buffer is long.
 
 ### centreline_segments variable:
 
@@ -145,25 +145,21 @@ For this case, we need to find the intersections St. Marks and Watson Avenue, an
 4. dissolve the centreline segments for each bylaw into one geom
 5. cut the dissolved segments to be from the intersection described in `btwn1` column to x metres away from that intersection in the direction specified in `direction_btwn2`.
 
+
+
 ### Workflow for Special Case 2:
 1. make a point that is x metres away from intersection in the cardinal direction indicated
 2. make a line from the intersection to that point
 3. make a buffer around the line and catch centreline segments in the buffer with the correct street name
-4. dissolve the centreline segments for each community safety zone into one geom
-5.
- - **High level:** cut the dissolved segment to either be 
-    1. Intersection 1 (`btwn1` intersection) to  translated intersection 2 (`btwn2` intersection)
-    
-    ![](jpg/case1_num1.jpg)
- 
-    2. Translated intersection 1 (`btwn1` intersection) to intersection 2 (`btwn2` intersection)
-    
-    ![](jpg/case1_num2.jpg)
+4. dissolve the centreline segments for each bylaw into one geom
+5. **High level:** cut the dissolved segment to either be:
+    <ol type="a">
+    <li> Intersection 1 (`btwn1` intersection) to  translated intersection 2 (`btwn2` intersection)  ![](jpg/case1_num1.jpg)</li>
+    <li>Translated intersection 1 (`btwn1` intersection) to intersection 2 (`btwn2` intersection) ![](jpg/case1_num2.jpg)</li>
+    <li>Translated intersection 1 (`btwn1` intersection)  to translated intersection 2 (`btwn2` intersection) ![](jpg/case1_num3.jpg)</li>
+    </ol>
 
-    3. Translated intersection 1 (`btwn1` intersection)  to translated intersection 2 (`btwn2` intersection)
-    
-    ![](jpg/case1_num3.jpg)
-
+Notes on Case 2 Workflow (and more details):
 - The [ST_LineLocatePoint function](https://postgis.net/docs/ST_LineLocatePoint.html) was used to find the location of points as a fraction of the length of the dissolved centreline geom.
  - I used the [ST_LineSubstring function](ST_LineSubstring), which takes a geom and two numbers between 0 and 1 inclusive, and returns a substring of that line geom from the first fraction to the second fraction (i.e. if the fractions were 0 and 0.20 `ST_LineSubstring` would return the first 20% of the inputted line geom). To find the fraction that the point x metres away from the original intersection was located, I calculated the fraction of the line that the location the specified intersection represented. I then added or subtracted (depending on direction and location of the intersection on the dissolved centreline geom). One of my concerns was: **how do I know if I should add or subtract the percentage of x metres of the line?**
  - In order to figure out if I should add or subtract the fraction of the line that is x metres away from the intersection, I used the line from step 1 (step 1 of special case 2 workflow). I found the closest point on the dissolved centreline to the end of the line created in step 1.
@@ -184,6 +180,8 @@ The function that finds the closest line to the translated intersection geometry
 
 After the closest lines are found (this happens when the `cut_closest_line` function calls the `get_closest_line` function), the next step is to cut the line closest to intersection 1 appropriately (create `new_line1 variable`). This process currently does not work. After that, we find the cut version of the line that is closest to intersection 2 (create `new_line2` variable). In this process, special consideration is taken to consider if the line that is closest to the first intersection is the same as the second. This process also does not work right now. The final line (line that is returned) is created by selecting both `new_line1` and `new_line2`. I think this process might not work as well but I'm not too sure.
 
-## Quality Control (QC)
+## Quality Control
 
-See the README in the [QC](QC/README.md) folder.
+See the posted speed limit automated layer documentation [QC](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update/automated/QC) folder.
+
+There is also a [Github Issue](https://github.com/CityofToronto/bdit_data-sources/issues/188) on weird bylaws that haven't been matched.
