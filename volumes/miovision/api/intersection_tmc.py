@@ -166,7 +166,7 @@ def get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise MiovisionAPIException('Error'+str(response.status_code))
-        sys.exit()
+
 
 def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
@@ -198,8 +198,77 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise MiovisionAPIException('Error'+str(response.status_code))
+
+def process_data(pull):
+    if pull is None:
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    update="SELECT miovision_api.aggregate_15_min_tmc('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                    cur.execute(update)
+                    conn.commit()
+                    logger.info('Aggregated to 15 minute bins')  
+                    atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
+                    cur.execute(atr_aggregation)
+                    conn.commit()
+                    logger.info('Completed data processing for {}'.format(start_date))
+                    missing_dates_query="SELECT miovision_api.missing_dates(%s)"
+                    cur.execute(missing_dates_query, start_date)
+                    conn.commit()
+            
+        except psycopg2.Error as exc:
+            
+            logger.exception(exc)
+            sys.exit()
+    else:
+        logger.info('Data Processing Skipped') 
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
+                cur.execute(report_dates)
+                conn.commit()
+                refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
+                cur.execute(refresh_volumes_class)
+                conn.commit()
+                refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
+                cur.execute(refresh_volumes)
+                conn.commit()
+                refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
+                cur.execute(refresh_report_daily)
+                conn.commit()
+                logger.info('Updated Views')
+
+    except psycopg2.Error as exc:
+        logger.exception('Cannot Refresh Views')
         sys.exit()
 
+def insert_data(start_date, end_iteration_time):
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
+                conn.commit()
+        with conn:
+            with conn.cursor() as cur:
+                api_log="SELECT miovision_api.api_log('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                cur.execute(api_log)
+                conn.commit()
+        logger.info('Inserted into volumes and updated log') 
+        conn.notices=[]
+        with conn:
+                with conn.cursor() as cur: 
+                    invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
+                    cur.execute(invalid_movements)
+                    invalid_flag=cur.fetchone()[0]
+                    conn.commit()
+                    logger.info(conn.notices[0]) 
+    except psycopg2.Error as exc:
+        
+        logger.exception(exc)
+        with conn:
+                conn.rollback()
+        sys.exit()
 
 def pull_data(start_date, end_date, intersection, path, pull):
 
@@ -215,21 +284,17 @@ def pull_data(start_date, end_date, intersection, path, pull):
         conn = connect(**dbset)
         logger.debug('Connected to DB')
         if intersection>0:
-            with conn:
-                with conn.cursor() as cur:
-                    string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
-                    cur.execute(str(string))
-                    intersection_list=cur.fetchall()
-                    intersection_iterator=intersection_list
-                    conn.commit()
-        else:      
-            with conn:
-                with conn.cursor() as cur:
-                    select='''SELECT * from miovision.intersection_id;'''
-                    cur.execute(select)
-                    intersection_list=cur.fetchall()
-                    intersection_iterator=intersection_list
-                    conn.commit()
+            cur = conn.cursor()
+            string="SELECT * from miovision.intersection_id WHERE intersection_uid ="+str(intersection)
+            cur.execute(str(string))
+            intersection_list=cur.fetchall()
+            intersection_iterator=intersection_list
+        else: 
+            cur = conn.cursor()
+            cur.execute(str(string))
+            intersection_list=cur.fetchall()
+            intersection_iterator=intersection_list     
+
         while True:
             table=[]
             
@@ -259,74 +324,9 @@ def pull_data(start_date, end_date, intersection, path, pull):
 
                     
             logger.info('Completed data pulling for {}'.format(start_date))
-            try:
-                with conn:
-                    with conn.cursor() as cur:
-                        execute_values(cur, 'INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, leg,  movement_uid, volume) VALUES %s', table)
-                        conn.commit()
-                with conn:
-                    with conn.cursor() as cur:
-                        api_log="SELECT miovision_api.api_log('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                        cur.execute(api_log)
-                        conn.commit()
-                logger.info('Inserted into volumes and updated log') 
-                conn.notices=[]
-                with conn:
-                        with conn.cursor() as cur: 
-                            invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                            cur.execute(invalid_movements)
-                            invalid_flag=cur.fetchone()[0]
-                            conn.commit()
-                            logger.info(conn.notices[0]) 
-            except psycopg2.Error as exc:
-               
-                logger.exception(exc)
-                with conn:
-                        conn.rollback()
-                sys.exit()
-            if pull is None:
-                try:
-                    with conn:
-                        with conn.cursor() as cur:
-                            update="SELECT miovision_api.aggregate_15_min_tmc('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                            cur.execute(update)
-                            conn.commit()
-                            logger.info('Aggregated to 15 minute bins')  
-                            atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
-                            cur.execute(atr_aggregation)
-                            conn.commit()
-                            logger.info('Completed data processing for {}'.format(start_date))
-                            missing_dates_query="SELECT miovision_api.missing_dates(%s)"
-                            cur.execute(missing_dates_query, start_date)
-                            conn.commit()
-                   
-                except psycopg2.Error as exc:
-                    
-                    logger.exception(exc)
-                    sys.exit()
-            else:
-                logger.info('Data Processing Skipped') 
+            insert_data(start_date, end_iteration_time)
+            process_data(pull)
             intersection_iterator=intersection_list
-            try:
-                with conn:
-                    with conn.cursor() as cur:
-                        report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
-                        cur.execute(report_dates)
-                        conn.commit()
-                        refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-                        cur.execute(refresh_volumes_class)
-                        conn.commit()
-                        refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-                        cur.execute(refresh_volumes)
-                        conn.commit()
-                        refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-                        cur.execute(refresh_report_daily)
-                        conn.commit()
-                        logger.info('Updated Views')
-    
-            except psycopg2.Error as exc:
-                logger.exception('Cannot Refresh Views')
-                sys.exit()
             end_iteration_time+=time_delta
             start_date+=time_delta
             if start_date>=end_date:
