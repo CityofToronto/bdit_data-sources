@@ -17,7 +17,6 @@ import dateutil.parser
 import sys
 from time import sleep
 import traceback
-import time
 import click
 
 class WYS_APIException(Exception):
@@ -121,6 +120,7 @@ def get_location(location, api_key):
 
 def location_id(api_key):
     logger.debug('Pulling locations')
+    error_array=[]
     try:
         signs=get_signs(api_key)
         location_id=[]
@@ -135,13 +135,16 @@ def location_id(api_key):
         logger.debug(str(len(location_id))+' locations have data')
         return location_id
     except TimeoutException as exc_504:
+        error_array.append(str(address)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
         sleep(180)
     except exceptions.RequestException as err:
         logger.error(err)
+        error_array.append(str(address)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
         sleep(75)
     except exceptions.ProxyError as prox:
         logger.error(prox)
         logger.warning('Retrying in 2 minutes')
+        error_array.append(str(address)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
         sleep(120)
     except Exception as e:
         logger.critical(traceback.format_exc())
@@ -189,7 +192,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
     api_key=key['key']
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
-    table=[]
+
     signs_list=[]
     try:
         if location_flag ==0:
@@ -204,6 +207,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
 
     logger.debug('Pulling data')  
     while start_date<=end_date:
+        table=[]
         logger.info('Pulling '+str(start_date))
         for signs_iterator in signs_iterator:
             location=signs_iterator[0]
@@ -234,9 +238,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                     sleep(120)
                 except Exception as e:
                     logger.critical(traceback.format_exc())
-            else:
-                logger.critical(traceback.format_exc())
-                pass
             signs_iterator=signs_list
         start_date+=time_delta
         
@@ -252,6 +253,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
             sys.exit()
         except Exception as e:
             logger.critical(traceback.format_exc())
+    
         try:
             with conn.cursor() as cur:
                     counts_15min="SELECT wys.aggregate_speed_counts_15min();"
@@ -262,7 +264,6 @@ def api_main(start_date, end_date, location_flag, CONFIG):
 
         except Exception as e:
             logger.critical(traceback.format_exc())
-   
     loc_table=[]   
     try:
         with conn.cursor() as cur:
@@ -274,7 +275,8 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                   address text,
                   sign_name text,
                   dir text,
-                  start_date date);
+                  start_date date,
+                  loc text);
             """
             cur.execute(str(string))
             for signs_iterator in signs_iterator:
@@ -282,8 +284,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                 statistics=get_statistics(location,start_date,api_key)
                 loc_info=statistics['LocInfo']
                 loc=loc_info['Location']
-                lat=loc['geocode'][0]
-                long=loc['geocode'][1]
+                geocode=loc['geocode']
                 address=loc['address']
                 name=loc['name']
                 if 'SB' in name:
@@ -296,22 +297,22 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                     direction='EB'
                 else:
                     direction=None
-                temp=[location, address, name, direction, start_date, lat, long]
+                temp=[location, address, name, direction, start_date, geocode]
                 loc_table.append(temp)
                 signs_iterator=signs_list
                 
-            execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, lat, lng) VALUES %s', loc_table)
+            execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
             string="""
                         WITH locations AS (
-                        SELECT api_id, address, sign_name, dir, lat, lng, max(start_date)
+                        SELECT api_id, address, sign_name, dir, loc, max(start_date)
                         FROM wys.locations 
-                        GROUP BY api_id, address, sign_name, lat, lng, dir),
+                        GROUP BY api_id, address, sign_name, loc, dir),
                         
                         
                         
                         differences AS (
             
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
                         LEFT JOIN locations B ON A.api_id = B.api_id
                         AND A.sign_name = B.sign_name 
                         WHERE B.sign_name IS NULL 
@@ -319,25 +320,21 @@ def api_main(start_date, end_date, location_flag, CONFIG):
                         UNION
                         
                         
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
                         LEFT JOIN locations B ON A.api_id = B.api_id
                         AND B.address = A.address
                         WHERE B.address IS NULL
                         
                         UNION 
                         
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
+                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
                         LEFT JOIN locations B ON A.api_id = B.api_id
-                        AND B.lat = A.lat
-                        WHERE B.lat IS NULL
+                        AND B.loc = A.loc
+                        WHERE B.loc IS NULL
                         
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, lat, lng FROM daily_intersections A
-                        LEFT JOIN locations B ON A.api_id = B.api_id
-                        AND B.lng = A.lng
-                        WHERE B.lng IS NULL
                         )
                         
-                        INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date) 
+                        INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc) 
                         SELECT * FROM differences
             """
             cur.execute(str(string))
@@ -345,6 +342,7 @@ def api_main(start_date, end_date, location_flag, CONFIG):
 
     except Exception as e:
         logger.critical(traceback.format_exc())
+
     
     
 if __name__ == '__main__':
