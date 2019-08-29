@@ -106,8 +106,8 @@ broken_centreline_segments AS (
 
 
  SELECT DISTINCT ON(geom, lf_name)
-	 x.* , ST_Length(ST_Transform(geom, 26917)) len
-	INTO crosic.tcl_speed_limit_aug292019_with_length
+	 x.*
+	INTO crosic.tcl_speed_limit_aug292019
 	 FROM 	 
 	 (			
 			SELECT lf_name, objectid, substr geom, fcode, fcode_desc, speed_limit, confidence, 
