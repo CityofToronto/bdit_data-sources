@@ -23,7 +23,7 @@
 
 ## Overview
 
-The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 48 hours. The output is the same format as existing csv dumps sent by miovision. This is a future alternative to the existing csv dumps and avoids having to continuously go through miovision to get the data. This will create a continuous stream of data that is populated at all time periods and all dates, similar to the bluetooth data.
+The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 24 hours. The output is the same format as existing csv dumps sent by miovision. This script creates a continuous stream of volume data from Miovision.
 
 ## Input Parameters
 
@@ -146,8 +146,8 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
-|start|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
-|end|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
+|start_date|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
+|end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
 |path|path|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
 |pull|string|Specifies if the script should only pull data and not process the data|Yes|Processes data in PostgreSQL
@@ -194,7 +194,6 @@ To perform the data processing, the API script calls several postgres functions 
 |[`aggregate_15_min`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
 [`find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
 [`api_log`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-api_log.sql)|Populates when the data is pulled
-[`delete_volumes`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-delete_volumes.sql)|Deletes the volumes with the specified dates.
 [`report_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-report_dates.sql)|Populates `report_dates`.
 
 ## Invalid Movements
