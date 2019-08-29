@@ -1,12 +1,12 @@
 # Text to Centreline QC
 
 It is important to find efficient ways to conduct QC so we can verify that the streets that were matched to the large number of bylaw locations are correct. The QC can involve a lot of manual checks to the final dataset. The checks that do include:
-- manually checked all the bylaw locations with final geoms over 2 km that occured between unfamiliar intersections (or intersections between which I was uncertain that the distance was over 2 km)
+- manually checked all the bylaw locations with final geoms over 2 km that occurred between unfamiliar intersections (intersections that I personally have never heard of), or intersections between which I was uncertain that the distance was over 2 km
 - looked at the centreline segments matched to bylaws that have a low confidence value
 - looked at final lines that were of type `ST_MultiLineString` (this means that the lines were not continuous, or the line was a circular shape, or that there was a fork in the line)
 - looked at final bylaw lines that overlapped with a different bylaw's line
 - look at bylaws with more than one value in the `street_name_arr` output arry
-- look at outputs with a ratio that is greater than 1
+- look at outputs with a ratio that is greater than 1 (ratio is the length of the line between the two intersections compared to the length of the centreline segments that were output)
 
 I investigated some of these checks. I included the queries that I used in `QC_script.sql`. One of the tables I used were called `crosic."posted_speed_limit_xml_open_data_withQC"`. This table was the output of the script that takes an Open Data XML file of the speed limit bylaws in the city as input and matches its contents to geometries that represent the locations where these bylaws are in effect. Find it [here](../text_to_centreline_script_xml_opendata.py). `posted_speed_limit_xml_open_data_original` is a table with the original `XML` file from Open Data.
 
@@ -28,6 +28,10 @@ and st_geometrytype(p1.geom::geometry) <> 'ST_MultiLineString' and st_geometryty
 
 `csv` file to look at: `overlapping_geometry.csv`
 
+One reason that two bylaw geometries could overlap because there are two bylaws in effect that occur in the same location. These bylaws should be reported to the person who is in charge of maintaining the bylaw dataset (Aakash knows who this person is).
+
+Another reason could be that one (or potentially both) of the bylaws are matched incorrectly.
+
 ## Outputs with at least one street with a similar name close to it
 
 See the documentation on the [street_name_arr](../README.md) variable (assigned in Step 3 section) to understand it.
@@ -39,15 +43,15 @@ from crosic."posted_speed_limit_xml_open_data_withQC"
 where street_name_arr LIKE '%,%'
 ```
 
-`csv` file to look at: `more_than_one_street_with_small_lev_dist.csv`
+`csv` file to look at to find examples: `more_than_one_street_with_small_lev_dist.csv`
 
 ### Interesting Cases
 
-There were a lot of cases of streets that are totally spearate from each other having similar names. i.e. `The East Mall` and `The West Mall`, I'm not including those here.
+There were a lot of cases of streets that are totally separate from each other having similar names. i.e. `The East Mall` and `The West Mall`, I'm not including those here.
 
 #### William R Allen Road and Highway 27
 
-`William R Allen Road` and `Highway 27` are the few streets in the `gis.centreline` table that have different line segments for their northbound direction and their southbound direction. This is an issue because the algorithm will only match the bylaw to a street with one name (see information on the [street_name](../README.md) variable assigned in Step 3 in the process). So when given a bylaw where the street name that the bylaw occurs on is `William R Allen Rd`, it chooses to macth either `William R Allen Rd N` or `William R Allen Rd S` at random.
+`William R Allen Road` and `Highway 27` are the few streets in the `gis.centreline` table that have different line segments for their northbound direction and their southbound direction. This is an issue because the algorithm will only match the bylaw to a street with one name (see information on the [street_name](../README.md) variable assigned in Step 3 in the process). So when given a bylaw where the street name that the bylaw occurs on is `William R Allen Rd`, it chooses to match either `William R Allen Rd N` or `William R Allen Rd S` at random.
 
 Right now, the algorithm disregards any text between brackets, so the description `William R. Allen Road (northbound)` would be changed to `William R Allen Rd`.
 
@@ -57,7 +61,7 @@ Some cases need to be added to the function to make these specific streets match
 
 This case is not a result of the fact that two streets were in the `street_arr` array, its just something I noticed that could be fixed in the future.
 
-Its hard to descibe this case, so I'll show an example:
+Its hard to describe this case, so I'll show an example:
 
 `George Street South`	from `Henry Lane Terrace (south intersection) and Front Street East`
 
