@@ -9,6 +9,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.oracle_operator import OracleOperator
+from airflow.operators.postgres_operator import PostgresOperator
 
 # # since `pull_traffic_signal_functions.py` does not exist in this dir
 # # we need to put a try block around it so the linter wont think its an error
@@ -50,3 +51,22 @@ RUN_ORACLE_SQL = OracleOperator(
 
 # Run DAG 1 on command line:
 # airflow test oracle_sql oracle_sql 29/08/2019
+
+# ------------------------------------------------------------------------------
+# DAG 2 - PostgresOperator
+# Insert data into local postgres database (selon this example: https://hackersandslackers.com/managing-data-pipelines-with-apache-airflow/)
+
+SAVE_TO_POSTGRES = PostgresOperator(
+    task_id='my_postgres_task',
+    sql="INSERT INTO test_table VALUES (42);",
+    postgres_conn_id='local_postgres',
+    autocommit=True,
+    database="airflow",
+    dag=ORACLE_DAG
+)
+# Run DAG 2 on command line:
+# airflow test oracle_sql my_postgres_task 29/08/2019
+
+# ------------------------------------------------------------------------------
+# Define task order
+SAVE_TO_POSTGRES.set_upstream(RUN_ORACLE_SQL)
