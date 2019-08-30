@@ -1,6 +1,24 @@
 
 # <center>Text Description to Centreline Geometry Automation</center>
 
+- [<center>Text Description to Centreline Geometry Automation</center>](#centerText-Description-to-Centreline-Geometry-Automationcenter)
+  - [Intro](#Intro)
+  - [Function Inputs](#Function-Inputs)
+- [How the Function Works](#How-the-Function-Works)
+  - [Step 1: Clean the data](#Step-1-Clean-the-data)
+  - [Step 2: Match the location text data to intersections](#Step-2-Match-the-location-text-data-to-intersections)
+  - [Step 3: Create lines from matched intersections and match lines to centreline segments](#Step-3-Create-lines-from-matched-intersections-and-match-lines-to-centreline-segments)
+    - [Create line_geom:](#Create-linegeom)
+    - [Match line to centreline:](#Match-line-to-centreline)
+    - [centreline_segments variable:](#centrelinesegments-variable)
+    - [Confidence output](#Confidence-output)
+- [Special Cases](#Special-Cases)
+    - [Explore the data/cases](#Explore-the-datacases)
+    - [Workflow for Special Case 1 (One Intersection + offset):](#Workflow-for-Special-Case-1-One-Intersection--offset)
+    - [Workflow for Special Case 2 (Two Intersections and at least one offset):](#Workflow-for-Special-Case-2-Two-Intersections-and-at-least-one-offset)
+  - [Offest Streets - MultiLineString Geometry Issue](#Offest-Streets---MultiLineString-Geometry-Issue)
+- [Quality Control](#Quality-Control)
+
 ## Intro
 
 This is a `README` for the `text_to_centreline(highway, fr, t)` function, which is written in `postgresql` (currently living in the `crosic` schema). The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. The input descriptions typically state the street that the bylaw is in effect on and the two intersections between which the bylaw. For example, you could use the function to get the centreline segments of Bloor Street between Royal York Road and St George Street.
@@ -112,17 +130,21 @@ There are some records that start and/or end at locations that are a certain amo
 
 ### Explore the data/cases
 
-**Case 1**
+**Case 1 - One Intersection + offset**
 
 btwn2 is formatted like: "a point (insert number here) metres (direction - north/south/east/west)"
 
 The point is located on the street in the highway column a certain number of metres away from the intersection identified in btwn1.
 
+Example:
+street = "Billingham Rd"
+btwn = "Dundas St and a point 100 metres north"
+
 These records can be filtered with the WHERE clause: `btwn2 LIKE '%point%'`
 
 There are 23 records with this case.
 
-**Case 2**
+**Case 2 - Two Intersections and at least one offset**
 
 btwn1 or btwn2 formatted like: "(number) metres (direction) of (insert street name that is not btwn1 or highway)"
 
@@ -138,7 +160,7 @@ There are 57 records with this case.
 
 For this case, we need to find the intersections St. Marks and Watson Avenue, and St. Johns Road and Watson Avenue. Then find a point that is 100 metres north of the intersection of St. Johns Road and Watson Avenue.
 
-### Workflow for Special Case 1:
+### Workflow for Special Case 1 (One Intersection + offset):
 1. make a point that is x metres away from intersection in the cardinal direction indicated (in other words: translate the intersection)
 2. make a line from the intersection to that point (translated point)
 3. make a buffer around the line and catch centreline segments in the buffer with the correct street name
@@ -147,7 +169,7 @@ For this case, we need to find the intersections St. Marks and Watson Avenue, an
 
 
 
-### Workflow for Special Case 2:
+### Workflow for Special Case 2 (Two Intersections and at least one offset):
 1. make a point that is x metres away from intersection in the cardinal direction indicated
 2. make a line from the intersection to that point
 3. make a buffer around the line and catch centreline segments in the buffer with the correct street name
@@ -169,10 +191,10 @@ Notes on Case 2 Workflow (and more details):
  ![](jpg/figure2_case2.jpg)
  - In the situation in the above image (assuming the line is drwan from left to right so that the fractions from St_LineLocatePoint of the points on the left are smaller), to get the fraction of the point x metres away from the original intersection, you would subtract the `x metres/total length of dissolved centreline` to the fraction returned by LineLocatePoint of the original intersection.
 
-# MultiLineString Geometries that are Case 2
+## Offest Streets - MultiLineString Geometry Issue
 
-Sometimes a geometry in case 2 is a multilinestring (i.e the street is not continuous). An example of this occurs near Annette Street and Durie Street. As you can see Durie street is not continuous: ![](jpg/multiline_example_highlighted.jpg)
-If you wanted to get all of the segments in between two intersections and the street was not continuous between those intersections, then the algorithm that we've looked at so far would work because processes do not rely on the geometry being a `Linestring` as opposed to a `MultiLineString`. For example, you can draw a buffer around both a `Linestring` and a `MultiLineString`. However, when a bylaw is a special case 2, the geometry needs to be put into the functions `ST_LineLocatePoint()` and `ST_LineSubstring()`. These functions require geometry input to be a `LineString` as opposed to a `MultiLineString`. Since `MultiLineString`s are just an array of `LineString`s, you can select the strings that its made up of individually. The current general idea behind dealing with special case 2 bylaw locations where the street segments are a `MultiLineString` has been to find the centreline segment that is closest to the translated intersection point and to cut that line appropriately. For example if we were trying to get the geometry from Durie Street and MacGregor Avenue to 100 metres north of Annette Street, the first step would be to take the returned set of centreline segments from the `match_line_to_centreline` function and find the street centreline segment that is on Durie street, just north of Annette Street. After I would cut that selected segment appropriately (i.e from Annette and Durie to `30 metres` north of that point along Durie). After I would combine this new segment with all of the other segments from the `match_line_to_centreline` function output, replacing the segment that is just north Annette Street.
+Sometimes a geometry that occurs between two intersections where one or more intersection is offset is a multilinestring geoetry type (i.e the street is not continuous). An example of this occurs near Annette Street and Durie Street. As you can see Durie street is not continuous: ![](jpg/multiline_example_highlighted.jpg)
+If you wanted to get all of the segments in between two intersections and the street was not continuous between those intersections, then the algorithm that we've looked at so far would work because processes do not rely on the geometry being a `Linestring` as opposed to a `MultiLineString`. For example, you can draw a buffer around both a `Linestring` and a `MultiLineString`. However, when a bylaw is a is in effect between and intersection and an/(one or two) offset intersections, the functions `ST_LineLocatePoint()` and `ST_LineSubstring()` need to be called on the geometry. These functions require geometry input to be a `LineString` as opposed to a `MultiLineString`. Since `MultiLineString`s are just an array of `LineString`s, you can select the linestrings that its made up of individually. The current general idea behind dealing with thses special case 2 bylaw locations where the street segments are a `MultiLineString` has been to find the centreline segment that is closest to the translated intersection point and to cut that line appropriately. For example if we were trying to get the geometry from Durie Street and MacGregor Avenue to 100 metres north of Annette Street, the first step would be to take the returned set of centreline segments from the `match_line_to_centreline` function and find the street centreline segment that is on Durie street, just north of Annette Street. After I would cut that selected segment appropriately (i.e from Annette and Durie to `30 metres` north of that point along Durie). After I would combine this new segment with all of the other segments from the `match_line_to_centreline` function output, replacing the segment that is just north Annette Street.
 
 If the geometry passed to the `centreline_case2` function is a `MultiLineString`, then the `cut_closest_line` function gets called. The first thing this function does is find the line that is closest to the translated intersection.
 
@@ -180,7 +202,7 @@ The function that finds the closest line to the translated intersection geometry
 
 After the closest lines are found (this happens when the `cut_closest_line` function calls the `get_closest_line` function), the next step is to cut the line closest to intersection 1 appropriately (create `new_line1 variable`). This process currently does not work. After that, we find the cut version of the line that is closest to intersection 2 (create `new_line2` variable). In this process, special consideration is taken to consider if the line that is closest to the first intersection is the same as the second. This process also does not work right now. The final line (line that is returned) is created by selecting both `new_line1` and `new_line2`. I think this process might not work as well but I'm not too sure.
 
-## Quality Control
+# Quality Control
 
 See the posted speed limit automated layer documentation [QC](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update/automated/QC) folder.
 
