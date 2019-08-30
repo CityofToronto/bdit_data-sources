@@ -10,8 +10,6 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.oracle_operator import OracleOperator
 
-import cx_Oracle
-
 # # since `pull_traffic_signal_functions.py` does not exist in this dir
 # # we need to put a try block around it so the linter wont think its an error
 # try:
@@ -34,26 +32,7 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-# DAG 1 - BashOperator
-TRAFFIC_SIGNAL_DAG = DAG(
-    'traffic_signals',
-    default_args=DEFAULT_ARGS,
-    max_active_runs=1,
-    schedule_interval='10 6-22 * * 1-5')
-
-
-CREATE_SIGNAL_QUERY_TABLES_SH = os.path.join(AIRFLOW_TASKS, 'traffic_signals.sh')
-CREATE_SIGNAL_QUERY_TABLES = BashOperator(
-    task_id='traffic_signals',
-    bash_command='{0} '.format(CREATE_SIGNAL_QUERY_TABLES_SH),
-    dag=TRAFFIC_SIGNAL_DAG
-)
-
-# Run DAG 1 on command line:
-# airflow test traffic_signals traffic_signals 29/08/2019
-
-# ------------------------------------------------------------------------------
-# DAG 2 - OracleOperator
+# DAG 1 - OracleOperator
 # https://stackoverflow.com/questions/53084753/how-to-execute-multiple-oracle-statements-from-sql-script-in-airflow-oracleoper
 ORACLE_DAG = DAG(
     'oracle_sql',
@@ -69,5 +48,5 @@ RUN_ORACLE_SQL = OracleOperator(
     dag=ORACLE_DAG
 )
 
-# Run DAG 2 on command line:
+# Run DAG 1 on command line:
 # airflow test oracle_sql oracle_sql 29/08/2019
