@@ -32,6 +32,7 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-6)
+- [Traffic Signals](#Traffic-Signals)
 
 ## Open Data Releases
 
@@ -60,7 +61,7 @@ score|Quality Indicator|10/20/30
 
 ### Notes
 
-* INRIX vehicles disproportionately include heavy vehicles. 
+* INRIX vehicles disproportionately include heavy vehicles.
 * There's additional sampling bias in that the heavy vehicles do not reflect the general travel patterns.
 * Two sections of freeway(the southernmost sections of 427 and 404) have no available data. These approaches may be imssing due to the idiosyncratic geometries of TMCs near the major freeway-to-freeway interchanges.
 * In any given 15 minute interval between 5am and 10pm, 88.7% of freeway links and 48% of arterial links have observations.
@@ -100,7 +101,7 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- exportDwelltimeReport() – used to export Measured Time data;
 	- exportLiveDwelltimeReport() – used to export Live Measured Time data;
 	- exportKPIReport() – used to export KPI data;
-	- exportQuarterlyReport() – used to export Quarterly KPI data;	
+	- exportQuarterlyReport() – used to export Quarterly KPI data;
 	- exportCounterReport() – used to export Counter Reports;
 	- getCurrentDwellTime() – used to get current dwell time for a live analysis;
 	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
@@ -125,7 +126,7 @@ SampleCount|the number of devices completing the route from start to end in the 
 
 #### Notes
 
-* No regular data load schedule. 
+* No regular data load schedule.
 * Data files collected by 2-3 staff members.
 * Manually geo-reference volume data to an SLSN node during data import process
 * Data is manually updated into FLOW.
@@ -168,7 +169,7 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Location Identifier (SLSN Link ID)
 * Count Type
 * Roadway Names
-* Lane Number 
+* Lane Number
 * 15 min aggregated interval times
 * 15 min aggregated volume, occupancy, and speed
 
@@ -247,3 +248,22 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 ### Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
+
+## Traffic Signals
+Traffic Signals are obtained from the SignalView Oracle database and are used to populate the Vision Zero map and dashboard. We have developed a process using Airflow to automatically connect to the database, extract the data needed, and store to our RDS postgres database.  
+
+For Aifrlow to connect to the SignalView Oracle database, a connection must be defined in the Airflow admin panel under Admin -> Connections. The id of this connection is defined as `ts_cartpd`, since the name of the traffic signal schema that we read from is called `cartpd`. Here is how the `ts_cartpd` connection is defined:  
+
+```
+Conn Id:  ts_cartpd  
+Conn Type: Oracle  
+Host: zodiac.corp.toronto.ca  
+schema: cartpd  
+Login: <see Aakash>  
+Password: <see Aakash>  
+Port: 1521  
+Extra: {
+	"dsn":"zodiac.corp.toronto.ca",  
+   "service_name":"CARTPD"
+}
+```
