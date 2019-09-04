@@ -44,7 +44,7 @@ ORACLE_DAG = DAG(
 
 RUN_ORACLE_SQL = OracleOperator(
     task_id='oracle_sql',
-    oracle_conn_id='gcc_gpa2',
+    oracle_conn_id='ts_cartpd',
     sql='/oracle_query.sql',
     dag=ORACLE_DAG
 )
@@ -58,7 +58,7 @@ RUN_ORACLE_SQL = OracleOperator(
 
 SAVE_TO_POSTGRES = PostgresOperator(
     task_id='my_postgres_task',
-    sql="INSERT INTO test_table VALUES (42);",
+    sql="INSERT INTO test_table VALUES (43);",
     postgres_conn_id='local_postgres',
     autocommit=True,
     database="airflow",
