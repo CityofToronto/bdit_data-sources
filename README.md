@@ -32,7 +32,8 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-6)
-- [Traffic Signals](#Traffic-Signals)
+- [Assets](#Assets)
+  - [Traffic Signals](#Traffic-Signals)
 
 ## Open Data Releases
 
@@ -249,7 +250,10 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
 
-## Traffic Signals
+## Assets
+The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
+
+### Traffic Signals
 Traffic Signals are obtained from the SignalView Oracle database and are used to populate the Vision Zero map and dashboard. We have developed a process using Airflow to automatically connect to the database, extract the data needed, and store to our RDS postgres database.  
 
 For Aifrlow to connect to the SignalView Oracle database, a connection must be defined in the Airflow admin panel under Admin -> Connections. The id of this connection is defined as `ts_cartpd`, since the name of the traffic signal schema that we read from is called `cartpd`. Here is how the `ts_cartpd` connection is defined:  
@@ -258,12 +262,12 @@ For Aifrlow to connect to the SignalView Oracle database, a connection must be d
 Conn Id:  ts_cartpd  
 Conn Type: Oracle  
 Host: zodiac.corp.toronto.ca  
-schema: cartpd  
+Schema: cartpd  
 Login: <see Aakash>  
 Password: <see Aakash>  
 Port: 1521  
 Extra: {
-	"dsn":"zodiac.corp.toronto.ca",  
-   "service_name":"CARTPD"
+  "dsn":"zodiac.corp.toronto.ca",  
+  "service_name":"CARTPD"  
 }
 ```
