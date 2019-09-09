@@ -35,38 +35,38 @@ DEFAULT_ARGS = {
 # ------------------------------------------------------------------------------
 # DAG 1 - OracleOperator
 # https://stackoverflow.com/questions/53084753/how-to-execute-multiple-oracle-statements-from-sql-script-in-airflow-oracleoper
-ORACLE_DAG = DAG(
-    'oracle_sql',
+TEST_DAG = DAG(
+    'pg_bash',
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
     schedule_interval='10 6-22 * * 1-5')
 
-RUN_ORACLE_SQL = OracleOperator(
-    task_id='oracle_sql',
-    oracle_conn_id='ts_cartpd',
-    sql='/oracle_query.sql',
-    dag=ORACLE_DAG
+RUN_BASH_SQL = BashOperator(
+    task_id='pg_bash',
+    bash_command="/test.sh",
+    # bash_command='echo "run_id={{ run_id }} | dag_run={{ dag_run }}"',
+    dag=TEST_DAG
 )
 
 # Run DAG 1 on command line:
-# airflow test oracle_sql oracle_sql 29/08/2019
+# airflow test pg_bash pg_bash 29/08/2019
 
 # ------------------------------------------------------------------------------
 # DAG 2 - PostgresOperator
 # Insert data into local postgres database (selon this example: https://hackersandslackers.com/managing-data-pipelines-with-apache-airflow/)
 
-SAVE_TO_POSTGRES = PostgresOperator(
-    task_id='my_postgres_task',
-    sql="INSERT INTO test_table VALUES (43);",
-    postgres_conn_id='local_postgres',
-    autocommit=True,
-    database="airflow",
-    dag=ORACLE_DAG
-)
+# SAVE_TO_POSTGRES = PostgresOperator(
+#     task_id='my_postgres_task',
+#     sql="INSERT INTO test_table VALUES (43);",
+#     postgres_conn_id='local_postgres',
+#     autocommit=True,
+#     database="traffic_signals",
+#     dag=TEST_DAG
+# )
 # Run DAG 2 on command line:
-# airflow test oracle_sql my_postgres_task 29/08/2019
+# airflow test pg_bash my_postgres_task 29/08/2019
 
 # ------------------------------------------------------------------------------
 # Define task order
-SAVE_TO_POSTGRES.set_upstream(RUN_ORACLE_SQL)
+# SAVE_TO_POSTGRES.set_upstream(RUN_BASH_SQL)
