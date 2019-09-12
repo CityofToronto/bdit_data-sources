@@ -11,6 +11,7 @@ import sys
 import psycopg2
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.oracle_operator import OracleOperator
 from airflow.operators.postgres_operator import PostgresOperator
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -39,3 +40,24 @@ RUN_BASH_SQL = BashOperator(
     bash_command="/test.sh",
     dag=TEST_DAG
 )
+
+# To run:
+# airflow test pg_bash call_signalscart 29/08/2019
+
+# ------------------------------------------------------------------------------
+GPA2_DAG = DAG(
+    'gpa2_dag',
+    default_args=DEFAULT_ARGS,
+    max_active_runs=1,
+    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
+    schedule_interval='10 6-22 * * 1-5')
+
+SELECT_VZ_SMP = OracleOperator(
+    task_id='gpa2_sql',
+    oracle_conn_id='gcc_gpa2',
+    sql='/vz_safetymeasurepoint.sql',
+    dag=GPA2_DAG
+)
+
+# To run:
+# airflow test gpa2_dag gpa2_sql 29/08/2019
