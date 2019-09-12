@@ -61,3 +61,21 @@ SELECT_VZ_SMP = OracleOperator(
 
 # To run:
 # airflow test gpa2_dag gpa2_sql 29/08/2019
+
+# ------------------------------------------------------------------------------
+GPATEST_DAG = DAG(
+    'gpatest_dag',
+    default_args=DEFAULT_ARGS,
+    max_active_runs=1,
+    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
+    schedule_interval='10 6-22 * * 1-5')
+
+SELECT_VZ_SMP = OracleOperator(
+    task_id='gpatest_sql',
+    oracle_conn_id='gcc_vztest',
+    sql='/vztest_safetymeasurepoint.sql',
+    dag=GPATEST_DAG
+)
+
+# To run:
+# airflow test gpatest_dag gpatest_sql 29/08/2019
