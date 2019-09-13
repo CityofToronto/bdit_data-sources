@@ -21,7 +21,7 @@ DEFAULT_ARGS = {
     'email_on_failure': True,
     'email_on_retry': True,
     'owner': 'airflow',
-    'start_date': datetime(2019, 7, 9),
+    'start_date': datetime(2019, 7, 9), # YYYY, MM, DD
     'task_concurrency': 1
 }
 
@@ -31,7 +31,8 @@ TRAFFIC_DAG = DAG(
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
-    schedule_interval='10 6-22 * * 1-5')
+    schedule_interval='0 4 * * 1-5')    
+    # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
 COPY_VIEW = BashOperator(
     task_id='copy_signalscart',
