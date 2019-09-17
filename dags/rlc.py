@@ -17,7 +17,7 @@ from airflow.operators.python_operator import PythonOperator
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
 AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
-AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')
+AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')
 
 DEFAULT_ARGS = {
     'email': ['Cathy.Nangini@toronto.ca'],
@@ -58,13 +58,13 @@ RLC_DAG = DAG(
     'rlc_dag',
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
-    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
+    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
     schedule_interval='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
 TRUNCATE_TABLE = BashOperator(
     task_id='truncate_rlc',
-    bash_command='psql -v ON_ERROR_STOP=1 -U vzairflow -h 10.160.12.47 -p 5432 bigdata -c "TRUNCATE vz_safety_programs_staging.rlc_test;"',
+    bash_command="/truncate_rlc.sh",
     dag=RLC_DAG
 )
 
