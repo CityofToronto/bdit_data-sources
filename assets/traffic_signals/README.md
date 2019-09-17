@@ -5,7 +5,7 @@ This is one of the datasets managed by the Traffic Control group (https://github
 Data is updated by automatic feed in Traffic Control and stored in their Oracle database. Here, we set up an airflow process to automatically extract Traffic Signal data from the Oracle database using Foreign Data Wrappers and update the table in the bigdata RDS. The pipeline consists of the following steps:  
 
 ## 1. Create a View in Local RDS  
-This is a one-off task done in pgAdmin. First, create 5 foreign tables in `traffic_signals.public.Foreign Tables` using the [Foreign Data Wrapper](#https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#Foreign-Data-Wrapper-for-Oracle-tables-in-Linux): `lbomaingeneral`, `sgmaingeneral`, `sgpxgenmaingeneral`, `sgsimaingeneral`, `upsmaingeneral`, which wrap tables of the same name in the Signal View Oracle database `cartpd` under schema `CARTEDBA`.    
+This is a one-off task done in pgAdmin. First, create a database called `traffic_signals` in the Local RDS and in it create 5 foreign tables in `public` schema under `Foreign Tables` using the [Foreign Data Wrapper](#https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#Foreign-Data-Wrapper-for-Oracle-tables-in-Linux): `lbomaingeneral`, `sgmaingeneral`, `sgpxgenmaingeneral`, `sgsimaingeneral`, `upsmaingeneral`, which wrap tables of the same name in the Signal View Oracle database `cartpd` under schema `CARTEDBA`.    
 
 Next, created a View called `signals_cart` in `traffic_signals.public.Views` using the following PostgreSQL query on the foreign tables:  
 
