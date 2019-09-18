@@ -12,7 +12,7 @@ This is a one-off task done in pgAdmin. Create a database called `rlc` in the Lo
 The airflow process `rlc.py` defines a task that executes two tasks: the first runs the following `psql` command to truncate the Table `vz_safety_programs_staging.rlc` in the bigdata RDS:  
 
 ```
-psql -v ON_ERROR_STOP=1 -U vzairflow -h 10.160.12.47 -p 5432 bigdata -c "TRUNCATE vz_safety_programs_staging.rlc_test;"
+psql -v ON_ERROR_STOP=1 -U vzairflow -h 10.160.12.47 -p 5432 bigdata -c "TRUNCATE vz_safety_programs_staging.rlc;"
 ```
 The second task pulls the Red Light Camera data from the Open Data API and stores it directly into `vz_safety_programs_staging.rlc` in the bigdata RDS:  
 
@@ -20,7 +20,7 @@ The second task pulls the Red Light Camera data from the Open Data API and store
 db_name='bigdata'
 username='vzairflow'
 host='10.160.12.47'
-local_table='vz_safety_programs_staging.rlc_test'
+local_table='vz_safety_programs_staging.rlc'
 # Connect to bigdata RDS
 conn = psycopg2.connect(database=db_name, user=username, host=host, port=5432)
 
