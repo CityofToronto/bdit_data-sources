@@ -37,7 +37,7 @@ def pull_rlc():
   db_name='bigdata'
   username='vzairflow'
   host='10.160.12.47'
-  local_table='vz_safety_programs_staging.rlc_test'
+  local_table='vz_safety_programs_staging.rlc'
   # Connect to bigdata RDS
   conn = psycopg2.connect(database=db_name, user=username, host=host, port=5432)
 
