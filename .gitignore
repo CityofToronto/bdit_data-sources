@@ -188,3 +188,7 @@ bluetooth/api/psyconfig.cfg
 *.lock
 bluetooth/api/config.cfg
 volumes/miovision/api/config.cfg
+
+# Google Sheets API keys.
+credentials.json
+token.pickle
