@@ -12,6 +12,11 @@ import psycopg2
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 
+# Credentials
+from airflow.hooks.postgres_hook import PostgresHook
+vz_cred = PostgresHook("vzbigdata") # name of Conn Id defined in UI
+vz_pg_uri = vz_cred.get_uri()
+
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
 AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
 AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')
@@ -31,12 +36,14 @@ TRAFFIC_DAG = DAG(
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
-    schedule_interval='0 4 * * 1-5')    
+    schedule_interval='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
 COPY_VIEW = BashOperator(
     task_id='copy_signalscart',
     bash_command="/copy_signalscart.sh",
+    env={'vz_pg_uri':vz_pg_uri},
+    retries=0,
     dag=TRAFFIC_DAG
 )
 

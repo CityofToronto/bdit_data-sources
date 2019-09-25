@@ -15,6 +15,12 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 
+# Credentials
+from airflow.hooks.postgres_hook import PostgresHook
+vz_cred = PostgresHook("vzbigdata") # name of Conn Id defined in UI
+vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
+conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
+
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
 AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
 AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')
@@ -29,17 +35,13 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-def pull_rlc():
+def pull_rlc(conn):
   '''
   Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
   and overwrite existing rlc table in the vz_safety_programs_staging schema.
   '''
-  db_name='bigdata'
-  username='vzairflow'
-  host='10.160.12.47'
+
   local_table='vz_safety_programs_staging.rlc'
-  # Connect to bigdata RDS
-  conn = psycopg2.connect(database=db_name, user=username, host=host, port=5432)
 
   url = "https://secure.toronto.ca/opendata/cart/red_light_cameras.json"
   return_json = requests.get(url).json()
@@ -49,8 +51,6 @@ def pull_rlc():
     with conn.cursor() as cur:
       execute_values(cur, insert, rows)
       print(rows)
-
-  conn.close()
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
@@ -65,18 +65,20 @@ RLC_DAG = DAG(
 TRUNCATE_TABLE = BashOperator(
     task_id='truncate_rlc',
     bash_command="/truncate_rlc.sh",
+    env={'vz_pg_uri':vz_pg_uri},
+    retries=0,
     dag=RLC_DAG
 )
 
 PULL_RLC = PythonOperator(
     task_id='pull_rlc',
     python_callable=pull_rlc,
-    dag=RLC_DAG
+    dag=RLC_DAG,
+    op_args=[conn]
 )
 
 # To run ONE DAG only:
 # airflow test rlc_dag pull_rlc 29/08/2019
-#
 
 # https://airflow.apache.org/concepts.html?highlight=what%20dag#bitshift-composition
 TRUNCATE_TABLE >> PULL_RLC
