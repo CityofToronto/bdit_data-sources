@@ -99,5 +99,6 @@ SELECT 'LED Blankout Signs'::text AS asset_type,
 The airflow process `traffic_signals.py` defines a task that executes the following `psql` command to copy the View created in Step 1 on `localhost` to Table `vz_safety_programs_staging.signals_cart` in the bigdata RDS. Table `signals_cart` gets truncated each time the script is called.  
 
 ```
-psql -U airflow -h localhost -p 5432 traffic_signals -c "COPY (SELECT * FROM public.signals_cart) TO STDOUT (FORMAT text, ENCODING 'UTF-8')" | psql -v ON_ERROR_STOP=1 -U vzairflow -h 10.160.12.47 -p 5432 bigdata -c "TRUNCATE vz_safety_programs_staging.signals_cart; COPY vz_safety_programs_staging.signals_cart FROM STDIN;"
+SET -o pipefail;
+psql -U airflow -h localhost -p 5432 traffic_signals -c "COPY (SELECT * FROM public.signals_cart) TO STDOUT (FORMAT text, ENCODING 'UTF-8')" | psql $vz_pg_uri -v "ON_ERROR_STOP=1" -c "TRUNCATE vz_safety_programs_staging.signals_cart; COPY vz_safety_programs_staging.signals_cart FROM STDIN;"
 ```
