@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE VIEW open_data.volumes_atr_cyclists_permanent AS 
+﻿CREATE OR REPLACE VIEW open_data.volumes_atr_cyclists_permanent AS
 SELECT	centreline_id,
 	direction,
 	location::character varying(65) AS location,
@@ -36,16 +36,16 @@ FROM
 		location::text,
 		class_type::text,
 		datetime_bin::timestamp without time zone,
-		volume_15min::int, 
-		datetime_bin::date AS dt 
-	FROM 	cycling.cycling_perm_old)
+		volume_15min::int,
+        datetime_bin::date AS dt
+    FROM 	cycling.cycling_perm_old)
 ) main
 ORDER BY dt DESC, centreline_id, direction;
 
 
 
-  CREATE OR REPLACE VIEW open_data.volumes_atr_cyclists_shortterm AS 
- SELECT i.centreline_id,
+CREATE OR REPLACE VIEW open_data.volumes_atr_cyclists_shortterm AS
+SELECT i.centreline_id,
         CASE
             WHEN i.dir::text = 'EB'::text THEN 'Eastbound'::text
             WHEN i.dir::text = 'WB'::text THEN 'Westbound'::text
@@ -79,8 +79,8 @@ ORDER BY dt DESC, centreline_id, direction;
 DROP MATERIALIZED VIEW IF EXISTS open_data.volumes_atr_vehicles_permanent;
 
 
-CREATE MATERIALIZED VIEW open_data.volumes_atr_vehicles_permanent AS 
- SELECT DISTINCT flow.centreline_id,
+CREATE MATERIALIZED VIEW open_data.volumes_atr_vehicles_permanent AS
+SELECT DISTINCT flow.centreline_id,
     flow.direction,
     flow.location,
     flow.class_type,
@@ -101,8 +101,8 @@ CREATE MATERIALIZED VIEW open_data.volumes_atr_vehicles_permanent AS
 
 
 
-CREATE OR REPLACE VIEW open_data.volumes_atr_vehicles_shortterm AS 
- SELECT flow_atr.centreline_id,
+CREATE OR REPLACE VIEW open_data.volumes_atr_vehicles_shortterm AS
+SELECT flow_atr.centreline_id,
     flow_atr.direction,
     flow_atr.location,
     flow_atr.class_type,
@@ -119,8 +119,8 @@ CREATE OR REPLACE VIEW open_data.volumes_atr_vehicles_shortterm AS
 
 DROP MATERIALIZED VIEW IF EXISTS open_data.volumes_tmc_all_permanent;
 
-CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_permanent AS 
- SELECT g.node_id AS int_id,
+CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_permanent AS
+SELECT g.node_id AS int_id,
     c.px,
     c.display_name AS location,
     d.class_type,
@@ -150,8 +150,8 @@ CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_permanent AS
 
  DROP MATERIALIZED VIEW IF EXISTS open_data.volumes_tmc_all_shortterm;
 
-CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_shortterm AS 
- SELECT g.node_id AS int_id,
+CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_shortterm AS
+SELECT g.node_id AS int_id,
     "substring"("substring"(a.location::text, 'PX \d{1,5}'::text), '\d{1,5}'::text)::integer AS px,
     a.location,
     d.class_type,
@@ -182,7 +182,7 @@ CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_shortterm AS
 
  DROP MATERIALIZED VIEW IF EXISTS open_data.volumes_tmc_permanent_bikes;
 
-CREATE MATERIALIZED VIEW open_data.volumes_tmc_permanent_bikes AS 
+CREATE MATERIALIZED VIEW open_data.volumes_tmc_permanent_bikes AS
  SELECT g.node_id AS int_id,
     c.px,
     c.intersection_name AS location,
@@ -206,7 +206,7 @@ CREATE MATERIALIZED VIEW open_data.volumes_tmc_permanent_bikes AS
 
 DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_bikes_exceptions;
 
-CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_bikes_exceptions AS 
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_bikes_exceptions AS
  SELECT volumes_atr_bikes.index,
     volumes_atr_bikes.date,
     volumes_atr_bikes.centreline_id,
@@ -218,7 +218,7 @@ WITH DATA;
 
 DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_permanent_day_hour_location;
 
-CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_day_hour_location AS 
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_day_hour_location AS
  SELECT volumes_atr_permanent.datetime_bin::date AS day,
     date_part('hour'::text, volumes_atr_permanent.datetime_bin) AS hour,
     volumes_atr_permanent.location,
@@ -250,7 +250,7 @@ WITH DATA;
 
 DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_permanent_exceptions_2;
 
-CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_exceptions_2 AS 
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_permanent_exceptions_2 AS
  SELECT DISTINCT greater_5.direction,
     greater_5.centreline_id,
     greater_5.class_type,
@@ -287,7 +287,7 @@ WITH DATA;
 
 DROP MATERIALIZED VIEW IF EXISTS open_data_staging.volumes_atr_shortterm_exceptions;
 
-CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_shortterm_exceptions AS 
+CREATE MATERIALIZED VIEW open_data_staging.volumes_atr_shortterm_exceptions AS
  SELECT o1.datetime_bin::date AS datetime_bin,
     o1.location
    FROM open_data.volumes_atr_vehicles_shortterm o1
@@ -319,7 +319,7 @@ WITH DATA;
 
 DROP VIEW open_data_staging.volumes_atr_permanent_exceptions;
 
-CREATE OR REPLACE VIEW open_data_staging.volumes_atr_permanent_exceptions AS 
+CREATE OR REPLACE VIEW open_data_staging.volumes_atr_permanent_exceptions AS
  SELECT DISTINCT volumes_atr_permanent_day_hour_location.day,
     volumes_atr_permanent_day_hour_location.location,
     volumes_atr_permanent_day_hour_location.class_type

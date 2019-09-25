@@ -6,10 +6,10 @@ The `centreline_wh` layer avaliable in GCCVIEW stores all historical centreline 
 
 |Attribute name|Description|
 |-----------------|-------------------------------------------------------------------------|
-| date_effective  | Effective date from   trans_id_create                                 |  
-| date_expiry     | Expiry date from trans_id_expiry                                     |
+| date_effective  | Effective date from   trans_id_create                                   |
+| date_expiry     | Expiry date from trans_id_expiry                                        |
 | trans_id_create | Transaction created the   centreline segment                            |
-| trans_id_expire | Transaction expired the centreline segment; -1 for current   centreline |  
+| trans_id_expire | Transaction expired the centreline segment; -1 for current   centreline |
 
 Relationship between old and new versions of centreline:
 
