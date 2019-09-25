@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 import configparser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
+import logging 
 
 # If modifying these scopes, delete the file token.pickle. (readonly or remove that?)
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -17,6 +18,9 @@ SAMPLE_SPREADSHEET_ID_FIRST = '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A'
 SAMPLE_RANGE_NAME_FIRST = 'Master List!A4:AB91'
 SAMPLE_SPREADSHEET_ID_SECOND = '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ'
 SAMPLE_RANGE_NAME_SECOND = '2019 Master List!A3:AC95'
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def first(con, *args):
     """Shows basic usage of the Sheets API.
@@ -51,20 +55,26 @@ def first(con, *args):
 
     rows = []
     if not values:
-        print('No data found.')
+        LOGGER.warning('No data found.')
     else:
         for row in values:
             # Print columns A, B, E, F, X, Y, Z, AA which correspond to indices 0, 1, 4, 5, 23, 24, 25, 26.
             i = (row[0], row[1], row[4], row[5], row[23], row[24], row[25], row[26])
             rows.append(i)
+            LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+            LOGGER.debug(row)
 
     sql='INSERT INTO vz_safety_programs_staging.school_safety_zone_2018_raw (school_name, address, work_order_fb, work_order_wyss,\
     locations_zone, final_sign_installation, locations_fb, locations_wyss) VALUES %s'
 
-    print(rows)
+    LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
+    LOGGER.debug(rows)
+
     with con:
         with con.cursor() as cur:
             execute_values(cur, sql, rows)  
+    
+    LOGGER.info('2018 School Safety Zone is done')
 
 def second(con, *args):
     """Shows basic usage of the Sheets API.
@@ -100,20 +110,25 @@ def second(con, *args):
     rows = []
 
     if not values:
-        print('No data found.')
+        LOGGER.warning('No data found.')
     else:
         for row in values:
             # Print columns A, B, E, F, Y, Z, AA, AB which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27.
             i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
             rows.append(i)
+            LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+            LOGGER.debug(row)
 
     sql='INSERT INTO vz_safety_programs_staging.school_safety_zone_2019_raw (school_name, address, work_order_fb, work_order_wyss,\
     locations_zone, final_sign_installation, locations_fb, locations_wyss) VALUES %s'
 
-    print(rows)
+    LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
+    LOGGER.debug(rows)
     with con:
         with con.cursor() as cur:
             execute_values(cur, sql, rows)  
+
+    LOGGER.info('2019 School Safety Zone is done')
 
 if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()
