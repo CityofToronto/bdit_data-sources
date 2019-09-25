@@ -325,4 +325,3 @@ CREATE OR REPLACE VIEW open_data_staging.volumes_atr_permanent_exceptions AS
     volumes_atr_permanent_day_hour_location.class_type
    FROM open_data_staging.volumes_atr_permanent_day_hour_location
   WHERE volumes_atr_permanent_day_hour_location.class_type = 'Vehicles'::text AND (volumes_atr_permanent_day_hour_location.max > (4::numeric * volumes_atr_permanent_day_hour_location.median) AND volumes_atr_permanent_day_hour_location.max > 1000::numeric OR volumes_atr_permanent_day_hour_location.max = volumes_atr_permanent_day_hour_location.min OR volumes_atr_permanent_day_hour_location.max > (10::numeric * volumes_atr_permanent_day_hour_location.min) AND volumes_atr_permanent_day_hour_location.max > 1000::numeric);
-
