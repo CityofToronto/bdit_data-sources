@@ -177,11 +177,3 @@ con.close()
 
 
 # Chapman -> too far 
-
-
-
-
-
-
-
-
