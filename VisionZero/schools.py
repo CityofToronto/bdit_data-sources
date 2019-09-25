@@ -9,12 +9,6 @@ import configparser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 
-CONFIG = configparser.ConfigParser()
-CONFIG.read(r'/home/jchew/google_api/db.cfg')
-dbset = CONFIG['DBSETTINGS']
-
-con = connect(**dbset)
-
 # If modifying these scopes, delete the file token.pickle. (readonly or remove that?)
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
@@ -24,7 +18,7 @@ SAMPLE_RANGE_NAME_FIRST = 'Master List!A4:AB91'
 SAMPLE_SPREADSHEET_ID_SECOND = '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ'
 SAMPLE_RANGE_NAME_SECOND = '2019 Master List!A3:AC95'
 
-def first():
+def first(con, *args):
     """Shows basic usage of the Sheets API.
     Prints values from a sample spreadsheet.
     """
@@ -42,7 +36,7 @@ def first():
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
@@ -64,7 +58,7 @@ def first():
             i = (row[0], row[1], row[4], row[5], row[23], row[24], row[25], row[26])
             rows.append(i)
 
-    sql='INSERT INTO jchew.school_safety_zone_2018_raw (school_name, address, work_order_fb, work_order_wyss,\
+    sql='INSERT INTO vz_safety_programs_staging.school_safety_zone_2018_raw (school_name, address, work_order_fb, work_order_wyss,\
     locations_zone, final_sign_installation, locations_fb, locations_wyss) VALUES %s'
 
     print(rows)
@@ -72,7 +66,7 @@ def first():
         with con.cursor() as cur:
             execute_values(cur, sql, rows)  
 
-def second():
+def second(con, *args):
     """Shows basic usage of the Sheets API.
     Prints values from a sample spreadsheet.
     """
@@ -90,7 +84,7 @@ def second():
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
@@ -113,7 +107,7 @@ def second():
             i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
             rows.append(i)
 
-    sql='INSERT INTO jchew.school_safety_zone_2019_raw (school_name, address, work_order_fb, work_order_wyss,\
+    sql='INSERT INTO vz_safety_programs_staging.school_safety_zone_2019_raw (school_name, address, work_order_fb, work_order_wyss,\
     locations_zone, final_sign_installation, locations_fb, locations_wyss) VALUES %s'
 
     print(rows)
@@ -122,5 +116,9 @@ def second():
             execute_values(cur, sql, rows)  
 
 if __name__ == '__main__':
-    first()
-    second()
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read(r'/home/jchew/google_api/db.cfg')
+    dbset = CONFIG['DBSETTINGS']
+    con = connect(**dbset)
+    first(con)
+    second(con)
