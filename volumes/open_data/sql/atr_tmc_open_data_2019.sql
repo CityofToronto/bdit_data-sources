@@ -13,7 +13,7 @@ FROM
 		datetime_bin,
 		volume_15min,
 		dt
-	FROM 
+	FROM
 	(SELECT flow.centreline_id,
 	    flow.direction,
 	    flow.location,
@@ -144,7 +144,7 @@ SELECT g.node_id AS int_id,
   WHERE b.movement_uid <> 4 AND d.classification_uid <> 3
   GROUP BY c.px, c.display_name, d.class_type, a.leg, b.movement_alt, a.datetime_bin, g.node_id
   ORDER BY c.px, a.datetime_bin, d.class_type, a.leg, b.movement_alt;
- 
+
 
 
 
