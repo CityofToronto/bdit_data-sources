@@ -1,6 +1,7 @@
 from __future__ import print_function
 import pickle
 import os.path
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -14,6 +15,11 @@ import logging
 # If modifying these scopes, delete the file token.pickle. (readonly or remove that?)
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
+SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
+
+credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
+
 # The ID, range and table name of the spreadsheet.
 sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
                  'range_name' : 'Master List!A4:AC91',
@@ -26,28 +32,6 @@ sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-def get_credentials():
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_console()
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-
-    return build('sheets', 'v4', credentials=creds)
 
 def pull_from_sheet(con, service, year, *args):
     """Shows basic usage of the Sheets API.
@@ -90,7 +74,7 @@ if __name__ == '__main__':
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
 
-    service = get_credentials()
+    service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
 
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
