@@ -192,3 +192,4 @@ volumes/miovision/api/config.cfg
 # Google Sheets API keys.
 credentials.json
 token.pickle
+key.json
