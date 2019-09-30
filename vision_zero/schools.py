@@ -18,7 +18,7 @@ credentials = service_account.Credentials.from_service_account_file(
 
 # The ID, range and table name of the spreadsheet.
 sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
-                 'range_name' : 'Master List!A4:AC91',
+                 'range_name' : 'Master List!A4:AC112',
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2018_raw'},
           2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
@@ -35,7 +35,7 @@ def pull_from_sheet(con, service, year, *args):
     """
     # Call the Sheets API
     sheet = service.spreadsheets()
-    # .batchGet instead of .get to read multiple ranges
+    # .batchGet instead of .get to read multiple ranges, range= to ranges= instead, values to valueRanges instead
     result = sheet.values().get(spreadsheetId=sheets[year]['spreadsheet_id'],
                                 range=sheets[year]['range_name']).execute()
     values = result.get('values', [])
@@ -46,17 +46,22 @@ def pull_from_sheet(con, service, year, *args):
     else:
         for row in values:
             #Only append schools with School Coordinate
-            if row[24] != '':
-                # Print columns A, B, E, F, Y, Z, AA, AB which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27.
-                i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
-                rows.append(i)
-                LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
-                LOGGER.debug(row)
-            else:
-                LOGGER.info('School coordinate is not given')
+            try:
+                if row[24] != '':
+                    # Print columns A, B, E, F, Y, Z, AA, AB which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27.
+                    i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
+                    rows.append(i)
+                    LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                    LOGGER.debug(row)
+                else:
+                    LOGGER.info('School coordinate is not given')
+            except (IndexError, KeyError) as err:
+                LOGGER.error('An error occurs at %s', row)
+                LOGGER.error(err)
     
     schema = sheets[year]['schema_name']
     table = sheets[year]['table_name']
+
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
     LOGGER.info('Truncating existing table %s', table)
 
