@@ -1,5 +1,15 @@
 # HERE Data
 
+- [Traffic Data](#traffic-data)
+  - [Data Schema](#data-schema)
+    - [Getting link attributes](#getting-link-attributes)
+    - [Functional Class 5](#functional-class-5)
+- [GIS Data](#gis-data)
+- [Traffic Patterns: Traffic Models](#traffic-patterns-traffic-models)
+  - [Traffic Patterns: Data Model](#traffic-patterns-data-model)
+  - [Converting Traffic Patterns](#converting-traffic-patterns)
+- [Routing with Traffic Data](#routing-with-traffic-data)
+
 ## Traffic Data
 
 Historical data acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data is stored in partitioned tables under `here.ta`. Have a look at the [procedure for loading new data](traffic#loading-new-data) for that including using [`data_utils`](../data_utils/), which has been extended to partition (add check constraints) and index this data.
@@ -153,4 +163,45 @@ LATERAL json_to_recordset(json_build_array(
 --      ...
     json_build_object('isodow',6,'pattern_id', s)))
 AS smth(isodow int, pattern_id int);
+```
+
+## Routing with Traffic Data
+
+One use of historical traffic data is the ability to route a vehicle from an
+arbitrary point to another arbitrary point using traffic data **at that point
+in time**. Since our data is already in a database, this can be accomplished
+using the [`pgRouting`](http://pgrouting.org/) PostgreSQL extension. It is
+necessary to have [traffic patterns](#traffic-patterns-traffic-models) loaded
+to fill in gaps in traffic data in time.
+
+The following views prepare the HERE data for routing (code found
+[here](traffic/sql/create_here_routing.sql)):
+
+- `here.routing_nodes`: a view of all intersections derived from the `z_levels`
+  gis layer.
+- `here.routing_streets_18_3`: The geography of streets is provided as
+  centerlines, but traffic is provided directionally. This view creates
+  directional links for each permitted travel direction on a navigable street
+  with a `geom` drawn in the direction of travel.
+
+The function
+[`here.get_network_for_tx()`](traffic/sql/function_routing_network.sql)
+generates a network routeable in pgrouting by pulling traffic data for the
+5-minute timestamp starting at `tx` and merging that with traffic patterns for
+that weekday and time of day to
+fill in missing data. It returns the following columns:
+
+|column | type | desc|
+|-------|------|-----|
+id     | int | unique numeric id for the `link_dir`
+source     | int | id of the source node
+target     | int | id of the target node
+cost     | int | "cost" for this link, in travel time seconds based on the traffic speed
+
+It can be used in the
+[`pgr_dijkstra`](http://docs.pgrouting.org/latest/en/pgr_dijkstra.html) family
+of functions using SQL like the following, replaced `TX` with the appropriate timestamp:
+
+```sql
+SELECT * FROM pgr_dijkstra('SELECT * FROM here.get_network_for_tx(TX)', start_vertex_id, end_vertex_id)
 ```
