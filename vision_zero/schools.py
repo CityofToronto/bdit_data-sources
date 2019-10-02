@@ -33,11 +33,11 @@ credentials = service_account.Credentials.from_service_account_file(
 They are put into a dict based on the year.
 The details of the spreadsheets are ID and range whereas the details of the table are name of schema and table."""
 sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
-                 'range_name' : 'Master List!A4:AC112',
+                 'range_name' : 'Master List!A4:AC180',
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2018_raw'},
           2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
-                 'range_name' : '2019 Master List!A3:AC94', 
+                 'range_name' : '2019 Master List!A3:AC180', 
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2019_raw'}}
 
@@ -84,14 +84,11 @@ def pull_from_sheet(con, service, year, *args):
         LOGGER.warning('No data found.')
     else:
         for row in values:           
-            try:
-                if row[24] != '':                    
-                    i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
-                    rows.append(i)
-                    LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
-                    LOGGER.debug(row)
-                else:
-                    LOGGER.info('School coordinate is not given')
+            try:                   
+                i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
+                rows.append(i)
+                LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                LOGGER.debug(row)
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
