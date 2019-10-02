@@ -121,6 +121,7 @@ using the [SQL below](#converting-traffic-patterns).
 These wide-format tables are converted to the more relational narrow format with the [sql referenced below](#converting-traffic-patterns) :point_down:.
 
 `here.traffic_pattern_YY_ref_narrow`
+
 |column | type | definition |
 |-------|------|------------|
 |link_dir |text | link direction |
@@ -128,6 +129,7 @@ These wide-format tables are converted to the more relational narrow format with
 |pattern_id |integer | id referring to the pattern for that link_dir, day of week combination|
 
 `here.traffic_pattern_YY_spd_MM_narrow` (15 & 60 minute patterns have the same structure)
+
 |column | type | definition |
 |-------|------|------------|
 |pattern_id| integer| ID for this pattern|
