@@ -4,7 +4,7 @@ using Google Sheet API.
 
 Note
 ----
-This script is auotamated on Airflow and is run daily."""
+This script is automated on Airflow and is run daily."""
 
 from __future__ import print_function
 from google.oauth2 import service_account
@@ -16,7 +16,7 @@ from psycopg2.extras import execute_values
 from psycopg2 import sql
 import logging 
 
-"""The following access credentials from key.json (a file created from the google account used to read the sheets) 
+"""The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
 Note
@@ -29,9 +29,9 @@ SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json'
 credentials = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
 
-"""The following defines the details of the spreadsheets read and details of the table used to store the data.
-They are put into a dict based on the year.
-The details of the spreadsheets are ID and range whereas the details of the table are name of schema and table."""
+"""The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
+The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
+Details of the spreadsheets are ID and range whereas details of the table are name of schema and table."""
 sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
                  'range_name' : 'Master List!A4:AC180',
                  'schema_name': 'vz_safety_programs_staging',
@@ -41,15 +41,15 @@ sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2019_raw'}}
 
-"""The following provides information about the code when it is running and will print out the log messages 
+"""The following provides information about the code when it is running and prints out the log messages 
 if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def pull_from_sheet(con, service, year, *args):
-    """This function is to call the Sheets API, pull values from the Sheet using service and push them into the postgres table using con.
-    Only include schools with School Coordinate (column Y in Sheet) in the table. Only information from columns A, B, E, F, Y, Z, AA, AB 
-    (which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27) are transposed to the table.
+    """This function is to call the Google Sheets API, pull values from the Sheet using service and push them into the postgres table using con.
+    Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27) are transposed to the table.
+    Rows with empty cells at the beginning or end of the row or just an entire row of empty cells are not included in the postgres table.
     The existing table on postgres will be truncated first prior to inserting data into it.
 
     Note
@@ -70,9 +70,7 @@ def pull_from_sheet(con, service, year, *args):
     Raises
     ------
     IndexError
-        If list out of index range which happens due to empty cells at the end of a row.
-    KeyError
-        If there are totally/mostly empty row of cells in the sheet.
+        If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
     """
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=sheets[year]['spreadsheet_id'],
@@ -111,9 +109,9 @@ def pull_from_sheet(con, service, year, *args):
     LOGGER.info('Table %s is done', table)
 
 if __name__ == '__main__':
-    """The following connects to the database, establish connection to the sheets and execute function based on the year of data required."""
+    """The following connects to the database, establishes connection to the sheets and executes function based on the year of data required."""
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'/home/jchew/local/google_api/db.cfg')
+    CONFIG.read(r'/home/jchew/local/db.cfg')
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
 
