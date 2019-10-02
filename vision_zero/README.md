@@ -2,8 +2,8 @@
 This repository contains scripts to read Vision Zero google spreadsheets and put them into two postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
 
 **Note:** 
-Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts)
-A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python)
+Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
+A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
 
 ## 1. Data source
 The Google Sheets read are 2018 and 2019 School Safety Zones which are maintained by Mateen. The data are important as a dashboard indicator on VZ Dashboard. The Sheets are named `2018 School Safety Zone` and `2019 School Safety Zone`. Link to the Sheets can be found below:
@@ -115,4 +115,4 @@ task2 = PythonOperator(
 task1 >> task2
 `
 
-**Note:** An empty __init__.py file then has to be created to run Airflow. 
+**Note:** An empty `__init__.py` file then has to be created to run Airflow. 
