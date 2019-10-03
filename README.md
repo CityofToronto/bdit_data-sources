@@ -32,6 +32,9 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-6)
+- [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
+	- [Data Elements](#data-elements-8)
+	- [Notes](#notes-7)
 
 ## Open Data Releases
 
@@ -247,3 +250,24 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 ### Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
+
+## Vision Zero - Google Sheets API
+Data Available in `vz_safety_programs_staging.school_safety_zone_2018_raw` and `vz_safety_programs_staging.school_safety_zone_2019_raw`
+
+### Data Elements
+
+Field Name|Description|Type
+----------|-----------|----
+school_name|name of school|text
+address|address of school|text
+work_order_fb|work order of flashing beacon|text
+work_order_wyss|work order of watch your speed sign|text
+locations_zone|coordinate of school|text
+final_sign_installation|final sign installation date|text
+locations_fb|location of flashing beacon|text
+locations_wyss|location of watch your speed sign|text
+
+### Notes
+* A Google account credentials is required to perform the API.
+* The Google Sheets API do not read any row with empty cells at the beginning or end of the row or just an entire row of empty cells. It will log an error when that happens. 
+* The script being used reads up to line 180 although the actual data is less than that. This is to anticipate extra schools which might be added into the sheets in the future.
