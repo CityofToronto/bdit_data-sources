@@ -18,11 +18,11 @@ SELECT 'Traffic Signals'::text AS asset_type,
    a.side2route AS side2_street,
    b.latitude,
    b.longitude,
-   b.activationdate AS activation_date,
+   b.activation_date AS activation_date,
    NULL::text AS details
   FROM sgmaingeneral a
     JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
- WHERE a.id::integer < 5000 AND b.activationdate IS NOT NULL AND b.removaldate IS NULL
+ WHERE a.id::integer < 5000 AND b.activation_date IS NOT NULL AND b.removaldate IS NULL
 UNION ALL
 SELECT 'Pedestrian Crossovers'::text AS asset_type,
    a.id::integer AS px,
@@ -32,11 +32,11 @@ SELECT 'Pedestrian Crossovers'::text AS asset_type,
    a.side2route AS side2_street,
    b.latitude,
    b.longitude,
-   b.activationdate AS activation_date,
+   b.activation_date AS activation_date,
    NULL::text AS details
   FROM sgmaingeneral a
     JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
- WHERE a.id::integer >= 5000 AND a.id::integer < 7000 AND b.activationdate IS NOT NULL AND b.removaldate IS NULL
+ WHERE a.id::integer >= 5000 AND a.id::integer < 7000 AND b.activation_date IS NOT NULL AND b.removaldate IS NULL
 UNION ALL
 SELECT 'Audible Pedestrian Signals'::text AS asset_type,
    a.id::integer AS px,
@@ -46,12 +46,12 @@ SELECT 'Audible Pedestrian Signals'::text AS asset_type,
    a.side2route AS side2_street,
    b.latitude,
    b.longitude,
-   c.apsactivationdate AS activation_date,
+   c.apsactivation_date AS activation_date,
    NULL::text AS details
   FROM sgmaingeneral a
     JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
     JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
- WHERE c.apsactivationdate IS NOT NULL
+ WHERE c.apsactivation_date IS NOT NULL
 UNION ALL
 SELECT 'Uninterruptable Power Supply'::text AS asset_type,
    a.id::integer AS px,
@@ -61,10 +61,10 @@ SELECT 'Uninterruptable Power Supply'::text AS asset_type,
    a.side2route AS side2_street,
    a.latitude::numeric AS latitude,
    a.longitude::numeric AS longitude,
-   a.activationdate AS activation_date,
+   a.activation_date AS activation_date,
    NULL::text AS details
   FROM upsmaingeneral a
- WHERE a.activationdate IS NOT NULL
+ WHERE a.activation_date IS NOT NULL
 UNION ALL
 SELECT 'Leading Pedestrian Intervals'::text AS asset_type,
    a.id::integer AS px,
@@ -74,12 +74,12 @@ SELECT 'Leading Pedestrian Intervals'::text AS asset_type,
    a.side2route AS side2_street,
    b.latitude,
    b.longitude,
-   c.lpiactivationdate AS activation_date,
+   c.lpiactivation_date AS activation_date,
    NULL::text AS details
   FROM sgmaingeneral a
     JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
     JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
- WHERE c.lpiactivationdate IS NOT NULL
+ WHERE c.lpiactivation_date IS NOT NULL
 UNION ALL
 SELECT 'LED Blankout Signs'::text AS asset_type,
    a.id::integer AS px,
@@ -89,7 +89,7 @@ SELECT 'LED Blankout Signs'::text AS asset_type,
    a.side2route AS side2_street,
    a.latitude::numeric AS latitude,
    a.longitude::numeric AS longitude,
-   a.activationdate AS activation_date,
+   a.activation_date AS activation_date,
    (a.lboapproach::text || ' '::text) || a.lborestrictioin::text AS details
   FROM lbomaingeneral a
  ORDER BY 1, 9;
