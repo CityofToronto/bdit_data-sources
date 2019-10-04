@@ -254,20 +254,63 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
 
 ### Traffic Signals
-Traffic Signals are obtained from the SignalView Oracle database and are used to populate the Vision Zero map and dashboard. We have developed a process using Airflow to automatically connect to the database, extract the data needed, and store to our RDS postgres database.  
+Traffic-related indicators (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals, and LED Blankout Signs) are obtained from several different tables in the SignalView Oracle database. These indicators are used to populate the Vision Zero map and dashboard. We have developed a process using Airflow to automatically connect to the database, extract the data needed, and store to our RDS Postgres database. See the README file in `assets/traffic_signals` for details about the source datasets and how they are combined into a final table made up of the following data elements.   
 
-For Aifrlow to connect to the SignalView Oracle database, a connection must be defined in the Airflow admin panel under Admin -> Connections. The id of this connection is defined as `ts_cartpd`, since the name of the traffic signal schema that we read from is called `cartpd`. Here is how the `ts_cartpd` connection is defined:  
+#### Data Elements
+Field Name|Description|Type
+----------|-----------|----
+asset_type|type of indicator|text
+px|?? | integer
+main_street|name of main street|text
+midblock_route|location details e.g. "26m SOUTH OF" |text
+side1_street|name of intersecting street |text
+side2_street|name of intersecting street if it e.g. changes after intersection |text
+latitude|latitude|numeric
+longitude|longitude|numeric
+activation_date|date installed |date
+details|currently NULL |text  
+
+#### Notes  
+For the final layer `vz_safety_programs.points_traffic_signals`, the `asset_type` column is populated with text `Traffic Signals`, and the other columns are renamed:  
 
 ```
-Conn Id:  ts_cartpd  
-Conn Type: Oracle  
-Host: zodiac.corp.toronto.ca  
-Schema: cartpd  
-Login: <see Aakash>  
-Password: <see Aakash>  
-Port: 1521  
-Extra: {
-  "dsn":"zodiac.corp.toronto.ca",  
-  "service_name":"CARTPD"  
-}
+'Traffic Signals'::text AS asset_type,
+   a.id::integer AS px,
+   a.streetname AS main_street,
+   a.midblockroute AS midblock_route,
+   a.side1routef AS side1_street,
+   a.side2route AS side2_street,
+   b.latitude,
+   b.longitude,
+   b.activation_date AS activation_date,
+   NULL::text AS details
 ```
+
+### Red Light Cameras
+Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the Vision Zero map and dashboard. We have developed a process using Airflow to automatically connect to Open Data and store the data to our RDS Postgres database. See the README file in `assets/rlc` for details about this process.  The final table is made up of the following elements:  
+
+#### Data Elements
+Field Name|Description|Type
+----------|-----------|----
+rlc|ID number of camera |integer
+tcs|?|integer
+loc|name of intersection|text
+additional_info| notes |text
+main|name of main street in intersection|text
+side1|name of intersecting street|text
+side2|name of intersecting street if it e.g. changes after intersection |text
+mid_block|currently all NULL|text
+privateAccess|name of private access street|text
+latitude|latitude|numeric
+longitude|longitude|numeric
+x|?|numeric
+y|?|numeric
+district|name of district|text
+ward1|?|text
+ward2|?|text
+ward3|?|text
+ward4|?|text
+policeDivision1|?|text
+policeDivision2|?|text
+policeDivision3	|?|text
+date_installed|date installed|date  
