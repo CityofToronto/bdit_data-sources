@@ -286,6 +286,8 @@ def bike():
     return['objectid', 'trans_id_create']
 def traffic_camera():
     return['rec_id', 'geom']
+def traffic_signal():
+    return['px', 'geom']
 def permit_parking():
     return['area_long_code', 'geom']
 def tmms_service_request():
@@ -370,6 +372,7 @@ def info(server_info):
             '0_2': centreline,
             '2_2': bike,
             '2_3': traffic_camera,
+            '2_9': traffic_signal,
             '2_11': permit_parking,
             '2_35': prai_transit_shelter, 
             '2_37': tmms_service_request,
