@@ -52,6 +52,3 @@ task2 = PythonOperator(
     dag=dag,
     op_args=[con, service, 2019]
     )
-
-#run task1 and then task2 (task2 is dependent on task1 though)
-task1 >> task2
