@@ -6,9 +6,7 @@ This repository contains scripts to read Vision Zero google spreadsheets and put
 - A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
 
 ## 1. Data source
-The Google Sheets read are 2018 and 2019 School Safety Zones which are maintained by Mateen. The data are important as a dashboard indicator on VZ Dashboard. The Sheets are named `2018 School Safety Zone` and `2019 School Safety Zone`. Link to the Sheets can be found below:
-- **2018:** [2018 School Safety Zone](https://docs.google.com/spreadsheets/d/16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A/edit#gid=1848006623)
-- **2019:** [2019 School Safety Zone](https://docs.google.com/spreadsheets/d/19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ/edit#gid=923156418)
+The Google Sheets read are 2018 and 2019 School Safety Zones which are maintained internally.
 
 ## 2. Get started
 In order to get started, a few things have to be done first.
