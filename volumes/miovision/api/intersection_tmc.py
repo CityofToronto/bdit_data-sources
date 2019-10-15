@@ -260,11 +260,11 @@ def process_data(conn, pull, start_date, end_iteration_time):
     #     sys.exit()
 
 def insert_data(conn, start_date, end_iteration_time, table):
-    logger.info(table)
     with conn:
         with conn.cursor() as cur:
-            execute_values(cur, '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
-                                   leg,  movement_uid, volume) VALUES %s''', table)
+            insert_data = '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
+                             leg,  movement_uid, volume) VALUES %s'''
+            execute_values(cur, insert_data, table)
 
     with conn:
         with conn.cursor() as cur:
@@ -327,13 +327,13 @@ def pull_data(conn, start_date, end_date, intersection, path, pull, key):
                     logger.error(miovision_exc)
       
         logger.info('Completed data pulling for {}'.format(start_date))
-        # try: 
-        #     insert_data(conn, start_date, end_iteration_time, table)
-        # except psycopg2.Error as exc:
-        #     logger.exception(exc)
-        #     sys.exit()
+        try: 
+            insert_data(conn, start_date, end_iteration_time, table)
+        except psycopg2.Error as exc:
+            logger.exception(exc)
+            sys.exit()
         
-        # process_data(conn, pull, start_date, end_iteration_time)
+        process_data(conn, pull, start_date, end_iteration_time)
         end_iteration_time+=time_delta
         start_date+=time_delta
         if start_date>=end_date:
