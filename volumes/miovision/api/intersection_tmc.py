@@ -92,7 +92,7 @@ def run_api(start_date, end_date, path, intersection, pull):
     logger.info('Pulling from %s to %s' %(str(start_date),str(end_date)))
     
     try:
-        pull_data(conn, start_time, end_time, intersection, path, pull)
+        pull_data(conn, start_time, end_time, intersection, path, pull, key)
     except Exception as e:
         logger.critical(traceback.format_exc())
 
@@ -194,6 +194,7 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
             item['movement']=get_crosswalk(item)
             item['leg']=item.pop('crosswalkSide')
             item['exit_dir_name']=None
+
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'],  item['movement'], item['volume']]
             table.append(temp)
             
@@ -201,7 +202,6 @@ def get_pedestrian(table, start_date, end_iteration_time, intersection_id1, inte
     elif response.status_code==404:
         error=json.loads(response.content)
         logger.error(error['error'])
-        
     elif response.status_code==400:
         error=json.loads(response.content)
         logger.error(error['error'])
@@ -223,36 +223,44 @@ def process_data(conn, pull, start_date, end_iteration_time):
                     cur.execute(atr_aggregation)
                     logger.info('Completed data processing for {}'.format(start_date))
 
-                    missing_dates_query="SELECT miovision_api.missing_dates(%s)"    #there are two functions for missing_dates
-                    cur.execute(missing_dates_query, start_date)
+                    missing_dates_query="SELECT jchew.missing_dates('{}'::date)".format(start_date.strftime('%Y-%m-%d'))
+                    cur.execute(missing_dates_query)
+                    #need to switch back to miovision_api function once permission is no longer denied
+                    logger.info('missing_dates_query done')
             
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit()
     else:
-        logger.info('Data Processing Skipped') 
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
-                cur.execute(report_dates)
+        logger.info('Data Processing Skipped')
 
-                refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-                cur.execute(refresh_volumes_class)
+    # try:
+    #     with conn:
+    #         with conn.cursor() as cur:
+    #             report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
+    #             cur.execute(report_dates)
+    #             logger.info('report_dates done')
 
-                refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-                cur.execute(refresh_volumes)
+    #             refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
+    #             cur.execute(refresh_volumes_class)
+    #             logger.info('Refreshed m.view for volumes_15min_by_class')
 
-                refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-                cur.execute(refresh_report_daily)
+    #             refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
+    #             cur.execute(refresh_volumes)
+    #             logger.info('Refreshed m.view for report_volumes_15min')
 
-                logger.info('Updated Views')
+    #             refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
+    #             cur.execute(refresh_report_daily)
+    #             logger.info('Refreshed m.view for report_daily')
 
-    except psycopg2.Error as exc:
-        logger.exception('Cannot Refresh Views')
-        sys.exit()
+    #             logger.info('Updated All 3 Materialized Views')
+
+    # except psycopg2.Error as exc:
+    #     logger.exception('Cannot Refresh Views')
+    #     sys.exit()
 
 def insert_data(conn, start_date, end_iteration_time, table):
+    logger.info(table)
     with conn:
         with conn.cursor() as cur:
             execute_values(cur, '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
@@ -273,22 +281,23 @@ def insert_data(conn, start_date, end_iteration_time, table):
 
             logger.info(conn.notices[0]) 
 
-def pull_data(conn, start_date, end_date, intersection, path, pull):
+def pull_data(conn, start_date, end_date, intersection, path, pull, key):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_date + time_delta    
 
-    if intersection is not None:
+    if int(intersection) > 0:
         with conn.cursor() as cur: 
-            string="SELECT * from miovision_api.intersections WHERE intersection_uid ="+str(intersection)
-            cur.execute(str(string))
+            string="SELECT * from miovision_api.intersections WHERE intersection_uid = %s"
+            cur.execute(string, str(intersection))
             intersection_list=cur.fetchall()
-
+            logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
             string2="SELECT * from miovision_api.intersections"
-            cur.execute(str(string2))
+            cur.execute(string2)
             intersection_list=cur.fetchall()
+            logger.debug(intersection_list)
 
     while True:
         table=[]
@@ -297,7 +306,7 @@ def pull_data(conn, start_date, end_date, intersection, path, pull):
             intersection_uid=intersection[0]
             intersection_id1=intersection[1]
             intersection_name=intersection[2]
-            logger.debug(intersection_name+'     '+str(start_date))
+            logger.info(intersection_name+'     '+str(start_date))
             for attempt in range(3):
                 try:
                     table=get_intersection_tmc(table, start_date, end_iteration_time, intersection_id1, intersection_uid, key)
@@ -316,16 +325,15 @@ def pull_data(conn, start_date, end_date, intersection, path, pull):
                 except MiovisionAPIException as miovision_exc:
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
-
-                
+      
         logger.info('Completed data pulling for {}'.format(start_date))
-        try: 
-            insert_data(conn, start_date, end_iteration_time, table)
-        except psycopg2.Error as exc:
-            logger.exception(exc)
-            sys.exit()
+        # try: 
+        #     insert_data(conn, start_date, end_iteration_time, table)
+        # except psycopg2.Error as exc:
+        #     logger.exception(exc)
+        #     sys.exit()
         
-        process_data(conn, pull, start_date, end_iteration_time)
+        # process_data(conn, pull, start_date, end_iteration_time)
         end_iteration_time+=time_delta
         start_date+=time_delta
         if start_date>=end_date:
