@@ -142,10 +142,10 @@ def get_classification(item):
         return '3'
     elif item['class'] == 'SingleUnitTruck':
         return '4'
-    elif item['class'] == 'WorkVan':
-        return '8'
     elif item['class'] == 'ArticulatedTruck':
         return '5'
+    elif item['class'] == 'WorkVan':
+        return '8'
     else:
         return '0'
 
@@ -234,12 +234,12 @@ def process_data(conn, pull, start_date, end_iteration_time):
     else:
         logger.info('Data Processing Skipped')
 
-    # try:
-    #     with conn:
-    #         with conn.cursor() as cur:
-    #             report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
-    #             cur.execute(report_dates)
-    #             logger.info('report_dates done')
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                report_dates="SELECT miovision_api.report_dates('"+str(start_date.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
+                cur.execute(report_dates)
+                logger.info('report_dates done')
 
     #             refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
     #             cur.execute(refresh_volumes_class)
@@ -255,9 +255,9 @@ def process_data(conn, pull, start_date, end_iteration_time):
 
     #             logger.info('Updated All 3 Materialized Views')
 
-    # except psycopg2.Error as exc:
-    #     logger.exception('Cannot Refresh Views')
-    #     sys.exit()
+    except psycopg2.Error as exc:
+        logger.exception('Cannot Refresh Views')
+        sys.exit()
 
 def insert_data(conn, start_date, end_iteration_time, table):
     with conn:
@@ -334,6 +334,7 @@ def pull_data(conn, start_date, end_date, intersection, path, pull, key):
             sys.exit()
         
         process_data(conn, pull, start_date, end_iteration_time)
+
         end_iteration_time+=time_delta
         start_date+=time_delta
         if start_date>=end_date:
