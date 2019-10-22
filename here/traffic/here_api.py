@@ -151,7 +151,7 @@ def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
         LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
-                                        '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
+                                        '-c',r'TRUNCATE here.ta_staging; COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging ON CONFLICT DO NOTHING; TRUNCATE here.ta_staging;'],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
