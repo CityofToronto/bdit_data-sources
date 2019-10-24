@@ -225,7 +225,7 @@ def process_data(conn, pull, start_time, end_iteration_time):
                     logger.info('Completed data processing for %s', start_time)
 
                     missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
-                    cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argumet
+                    cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argument
                     logger.info('missing_dates_query done')
             
         except psycopg2.Error as exc:
