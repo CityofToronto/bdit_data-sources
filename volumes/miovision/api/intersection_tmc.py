@@ -89,7 +89,7 @@ def run_api(start_date, end_date, path, intersection, pull):
     end_date= dateutil.parser.parse(str(end_date))
     start_time=local_tz.localize(start_date)
     end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(str(start_time),str(end_time)))
+    logger.info('Pulling from %s to %s' %(start_time,end_time))
     
     try:
         pull_data(conn, start_time, end_time, intersection, path, pull, key)
@@ -211,21 +211,21 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
         raise MiovisionAPIException('Error'+str(response.status_code))
 
 def process_data(conn, pull, start_time, end_iteration_time):
+    time_period = (start_time, end_iteration_time)
     if pull is None:
         try:
             with conn:
                 with conn.cursor() as cur:
-                    update="SELECT miovision_api.aggregate_15_min_tmc('"+str(start_time.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-                    cur.execute(update)
+                    update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
+                    cur.execute(update, time_period)
                     logger.info('Aggregated to 15 minute bins')
 
-                    atr_aggregation="SELECT miovision_api.aggregate_15_min('"+str(start_time.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"            
-                    cur.execute(atr_aggregation)
-                    logger.info('Completed data processing for {}'.format(start_time))
+                    atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
+                    cur.execute(atr_aggregation, time_period)
+                    logger.info('Completed data processing for %s', start_time)
 
-                    missing_dates_query="SELECT jchew.missing_dates('{}'::date)".format(start_time.strftime('%Y-%m-%d'))
-                    cur.execute(missing_dates_query)
-                    #need to switch back to miovision_api function once permission is no longer denied
+                    missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
+                    cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argumet
                     logger.info('missing_dates_query done')
             
         except psycopg2.Error as exc:
@@ -236,8 +236,8 @@ def process_data(conn, pull, start_time, end_iteration_time):
 
     with conn:
         with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.report_dates('"+str(start_time.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"');"
-            cur.execute(report_dates)
+            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
+            cur.execute(report_dates, time_period)
             logger.info('report_dates done')
 
 def refresh_views(conn):
@@ -261,6 +261,7 @@ def refresh_views(conn):
         sys.exit()
 
 def insert_data(conn, start_time, end_iteration_time, table):
+    time_period = (start_time, end_iteration_time)
     with conn:
         with conn.cursor() as cur:
             insert_data = '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
@@ -269,18 +270,17 @@ def insert_data(conn, start_time, end_iteration_time, table):
 
     with conn:
         with conn.cursor() as cur:
-            api_log="SELECT miovision_api.api_log('"+str(start_time.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-            cur.execute(api_log)
+            api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
+            cur.execute(api_log, time_period)
 
     logger.info('Inserted into volumes and updated log') 
     
     conn.notices=[]
     with conn:
         with conn.cursor() as cur: 
-            invalid_movements="SELECT miovision_api.find_invalid_movements('"+str(start_time.strftime('%Y-%m-%d'))+"','"+str(end_iteration_time.strftime('%Y-%m-%d'))+"')"
-            cur.execute(invalid_movements)
+            invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
+            cur.execute(invalid_movements, time_period)
             invalid_flag=cur.fetchone()[0]
-
             logger.info(conn.notices[0]) 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key):
@@ -328,7 +328,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key):
                     logger.error('Cannot pull data')
                     logger.error(miovision_exc)
       
-        logger.info('Completed data pulling for {}'.format(start_time))
+        logger.info('Completed data pulling for %s', start_time)
         try: 
             insert_data(conn, start_time, end_iteration_time, table)
         except psycopg2.Error as exc:
