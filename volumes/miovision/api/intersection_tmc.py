@@ -168,10 +168,10 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
 
         return table
     elif response.status_code==404:
-        error=json.loads(response.content)
+        error=json.loads(response.content.decode('utf-8'))
         logger.error(error['error'])
     elif response.status_code==400:
-        error=json.loads(response.content)
+        error=json.loads(response.content.decode('utf-8'))
         logger.error(error['error'])
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
@@ -200,10 +200,10 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
             
         return table
     elif response.status_code==404:
-        error=json.loads(response.content)
+        error=json.loads(response.content.decode('utf-8'))
         logger.error(error['error'])
     elif response.status_code==400:
-        error=json.loads(response.content)
+        error=json.loads(response.content.decode('utf-8'))
         logger.error(error['error'])
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
@@ -288,10 +288,10 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key):
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
 
-    if int(intersection) > 0:
+    if intersection > 0:
         with conn.cursor() as cur: 
             string="SELECT * from miovision_api.intersections WHERE intersection_uid = %s"
-            cur.execute(string, str(intersection))
+            cur.execute(string, (intersection,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
     else: 
