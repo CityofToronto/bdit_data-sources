@@ -14,7 +14,7 @@ BEGIN
 
 WITH find_dates AS(
 SELECT intersection_uid 
-FROM (SELECT A.intersection_uid, B.datetime_bin 
+FROM (SELECT intersection_uid, datetime_bin 
 	  FROM miovision_api.intersections 
 	  LEFT OUTER JOIN miovision_api.volumes_15min USING(intersection_uid)
 	  WHERE datetime_bin BETWEEN _date AND _date + INTERVAL '1 Day' OR datetime_bin IS NULL ) a WHERE datetime_bin IS NULL
