@@ -12,6 +12,12 @@ Install the necessary packages using `pip` or `pipenv`: `pip install -r requirem
 
 Make sure [`parsing_utilities`](https://github.com/CityofToronto/bdit_python_utilities) is available to your python environment.
 
+In order to use the package `time_parsing`, you will have to install it with this command:
+```shell
+pipenv install -e 'git+https://github.com/CityofToronto/bdit_python_utilities.git#egg=parsing_utilities&subdirectory=parsing_utilities'
+```
+
+
 #### Usage
 
 ```shell
