@@ -96,7 +96,7 @@ BEGIN
 				(CHECK (datetime_bin >= DATE '$$||startdate ||$$'AND datetime_bin < DATE '$$||startdate ||$$'+ INTERVAL '1 year')
         ,FOREIGN KEY (volume_15min_tmc_uid) REFERENCES miovision_api.volumes_15min_tmc (volume_15min_tmc_uid) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE SET NULL
-				 --, UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+				 , UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 				) INHERITS (miovision_api.volumes)$$
 				, tablename, tablename);
 			EXECUTE format($$ALTER TABLE miovision_api.%I OWNER TO miovision_admins$$, tablename);
