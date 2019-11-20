@@ -68,7 +68,7 @@ def cli():
 
 @cli.command()
 @click.option('--start_date', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end_date' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
+@click.option('--end_date' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
 @click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' ,'--intersection', default=0, help='enter the intersection_uid of the intersection')
 @click.option('--pull' ,'--pull', default=None, help='enter 1 to not process the data')
@@ -230,7 +230,7 @@ def process_data(conn, pull, start_time, end_iteration_time):
             
         except psycopg2.Error as exc:
             logger.exception(exc)
-            sys.exit()
+            sys.exit(1)
     else:
         logger.info('Data Processing Skipped')
 
@@ -258,7 +258,7 @@ def refresh_views(conn):
 
     except psycopg2.Error as exc:
         logger.exception('Cannot Refresh Views')
-        sys.exit()
+        sys.exit(1)
 
 def insert_data(conn, start_time, end_iteration_time, table):
     time_period = (start_time, end_iteration_time)
@@ -333,9 +333,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key):
             insert_data(conn, start_time, end_iteration_time, table)
         except psycopg2.Error as exc:
             logger.exception(exc)
-            sys.exit()
+            sys.exit(1)
         
-        process_data(conn, pull, start_time, end_iteration_time)
+        #process_data(conn, pull, start_time, end_iteration_time)
 
         end_iteration_time+=time_delta
         start_time+=time_delta
