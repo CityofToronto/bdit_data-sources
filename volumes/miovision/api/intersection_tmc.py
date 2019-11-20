@@ -335,7 +335,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key):
             logger.exception(exc)
             sys.exit(1)
         
-        #process_data(conn, pull, start_time, end_iteration_time)
+        process_data(conn, pull, start_time, end_iteration_time)
 
         end_iteration_time+=time_delta
         start_time+=time_delta
