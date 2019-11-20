@@ -1,8 +1,12 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc(
     start_date date,
     end_date date)
-  RETURNS void AS
-$BODY$
+  RETURNS void 
+  LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
 
 BEGIN
 	DROP TABLE IF EXISTS bins;
@@ -20,6 +24,8 @@ BEGIN
 	WITH  bin_grouping AS(
 		SELECT 	intersection_uid, 
 			datetime_bin_15(datetime_bin) AS datetime_bin_15, 
+			--Above function does this 
+			-- `SELECT TIMESTAMP WITHOUT TIME ZONE 'epoch' + INTERVAL '1 second' * (floor((extract('epoch' from timestamp_val)) / 900) * 900);`
 			COUNT(DISTINCT datetime_bin) AS avail_minutes,
 			min(datetime_bin) as start_time,
 			max(datetime_bin) as end_time,
@@ -74,13 +80,14 @@ BEGIN
  		ELSE span END
 		WHERE interpolated = TRUE ;
 	RAISE NOTICE '% Interpolation finished', timeofday();
+	
 	-- INSERT INTO volumes_15min_tmc, with interpolated volumes
 	WITH zero_padding_movements AS (
 		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
 		SELECT m.*, datetime_bin 
 		FROM miovision_api.intersection_movements m
 		INNER JOIN bins USING (intersection_uid)
-		WHERE classification_uid IN (1,2,6,7) 
+		WHERE classification_uid IN (1,2,6) 
 		)
 	,aggregate_insert AS(
 		/*Inner join volume data with bins on intersection/datetime_bin then add zero padding for select movements*/
@@ -140,6 +147,16 @@ $BODY$
 ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
   OWNER TO miovision_admins;
 
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO bdit_humans WITH GRANT OPTION;
+
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO dbadmin WITH GRANT OPTION;
 
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_api_bot;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO PUBLIC;
+
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO bdit_humans;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO dbadmin;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_admins;

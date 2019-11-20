@@ -15,10 +15,11 @@ BEGIN
             array_agg(volume_15min_tmc_uid) as uids
 
         FROM miovision_api.volumes_15min_tmc A
-        INNER JOIN miovision.movement_map B -- TMC to ATR crossover table.
+        INNER JOIN miovision_api.movement_map B -- TMC to ATR crossover table.
         ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid 
         WHERE A.processed IS NULL
-        AND datetime_bin BETWEEN start_date and end_date
+        AND datetime_bin BETWEEN start_date - INTERVAL '1 hour' and end_date - INTERVAL '1 hour' 
+        -- each day is aggregated from 23:00 the day before to 23:00 of that day
         GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
     ),
     --Inserts the ATR bins to the ATR table
@@ -34,10 +35,11 @@ BEGIN
     SELECT volume_15min_tmc_uid, volume_15min_uid
     FROM insert_atr A
     INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) as volume_15min_tmc_uid FROM transformed) B
-        ON A.datetime_bin=B.datetime_bin
-        AND A.intersection_uid=B.intersection_uid
+        ON A.intersection_uid=B.intersection_uid 
+        AND A.datetime_bin=B.datetime_bin
+        AND A.classification_uid=B.classification_uid 
         AND A.leg=B.leg
-        AND A.classification_uid=B.classification_uid
+        AND A.dir=B.dir
     ORDER BY volume_15min_uid
 	RETURNING volume_15min_tmc_uid
     )
@@ -59,3 +61,13 @@ $BODY$
 ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
   OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min() TO bdit_humans WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO dbadmin WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_bots;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans;
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_admins;
