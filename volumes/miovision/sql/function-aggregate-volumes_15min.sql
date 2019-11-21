@@ -1,24 +1,28 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
     start_date date,
     end_date date)
-  RETURNS integer AS
-$BODY$
+    RETURNS integer 
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
 BEGIN
 --Creates the ATR bins
     WITH transformed AS (
         SELECT     A.intersection_uid,
             A.datetime_bin,
             A.classification_uid,
-            B.leg_new as leg,
+            B.leg_new AS leg,
             B.dir,
             SUM(A.volume) AS volume,
-            array_agg(volume_15min_tmc_uid) as uids
+            array_agg(volume_15min_tmc_uid) AS uids
 
         FROM miovision_api.volumes_15min_tmc A
         INNER JOIN miovision_api.movement_map B -- TMC to ATR crossover table.
         ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid 
         WHERE A.processed IS NULL
-        AND datetime_bin BETWEEN start_date - INTERVAL '1 hour' and end_date - INTERVAL '1 hour' 
+        AND datetime_bin >= start_date - INTERVAL '1 hour' AND datetime_bin < end_date - INTERVAL '1 hour' 
         -- each day is aggregated from 23:00 the day before to 23:00 of that day
         GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
     ),
@@ -34,7 +38,7 @@ BEGIN
     INSERT INTO miovision_api.volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
     SELECT volume_15min_tmc_uid, volume_15min_uid
     FROM insert_atr A
-    INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) as volume_15min_tmc_uid FROM transformed) B
+    INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) AS volume_15min_tmc_uid FROM transformed) B
         ON A.intersection_uid=B.intersection_uid 
         AND A.datetime_bin=B.datetime_bin
         AND A.classification_uid=B.classification_uid 
@@ -55,11 +59,11 @@ EXCEPTION
 		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
 		RETURN 0;
 END;
-$BODY$
-  LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-  COST 100;
+$BODY$;
+
 ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
   OWNER TO miovision_admins;
+
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min() TO bdit_humans WITH GRANT OPTION;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO dbadmin WITH GRANT OPTION;
