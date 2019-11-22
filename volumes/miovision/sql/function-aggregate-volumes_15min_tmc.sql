@@ -87,7 +87,7 @@ BEGIN
 		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
 		SELECT m.*, datetime_bin 
 		FROM miovision_api.intersection_movements m
-		INNER JOIN bins USING (intersection_uid)
+		CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin)
 		WHERE classification_uid IN (1,2,6) 
 		)
 	,aggregate_insert AS(
@@ -103,6 +103,8 @@ BEGIN
 		INNER JOIN miovision_api.volumes A ON A.volume_15min_tmc_uid IS NULL
 									AND B.intersection_uid = A.intersection_uid 
 									AND B.start_time <= A.datetime_bin AND B.end_time >= A.datetime_bin
+									AND A.datetime_bin >= start_date - INTERVAL '1 hour' 
+									AND A.datetime_bin < end_date - INTERVAL '1 hour'
 		INNER JOIN miovision_api.intersection_movements	m ON --Make sure movement is valid.
 		 											m.intersection_uid = A.intersection_uid
 												AND m.classification_uid  = A.classification_uid 
@@ -115,7 +117,6 @@ BEGIN
 												AND C.leg = A.leg
 												AND C.movement_uid = A.movement_uid
 												AND C.datetime_bin = B.datetime_bin
-		WHERE B.datetime_bin >= start_date - INTERVAL '1 hour' AND B.datetime_bin < end_date - INTERVAL '1 hour'
 		GROUP BY COALESCE(C.intersection_uid, A.intersection_uid), COALESCE(C.datetime_bin, B.datetime_bin), 
 				 COALESCE(A.classification_uid, C.classification_uid), COALESCE( A.leg, C.leg), 
 				 COALESCE(A.movement_uid, C.movement_uid), interpolated, span
