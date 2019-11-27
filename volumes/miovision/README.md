@@ -134,13 +134,19 @@ movement_uid|integer|Identifier linking to specific turning movement stored in `
 volume|integer|Total 1-minute volume|12|
 volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_tmc)|14524|
 
+- *Unique constraint* was added to `miovision_api.volumes` table using 
+```
+ALTER TABLE miovision_api.volumes_2019 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+```
+- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
+
 ### Aggregated Data
 
 The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-dumps) aggregates up the 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents. Starting with `volumes` each table has a FOREIGN KEY relationship to the next step of aggregation so that an aggregated record can be traced back to its source data. For example: a row in `volumes_15min` has a unique ID `volumes_15min_uid`, and the foreign key `volumes_15min_tmc.volumes_15min_uid` identifies the row(s) that produced that `volumes_15min` row.
 
 #### `volumes_15min_tmc`
 
-`volumes_15min_tmc` contains data aggregated into 15 minute bins. As part of the process, the data is [interpolated](#interpolation) if there are gaps in 1-minute bins. 15 minute bins where there are no data are filled with 0s for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,7)`); trucks, buses and vans are not filled because they are rarely observed, and filling in light vehicles would be sufficient to ensure there are no gaps for the `Vehicles` class used in [`report_dates`](#refresh-reporting-views) and subsequent views. 
+`volumes_15min_tmc` contains data aggregated into 15 minute bins. As part of the process, the data is [interpolated](#interpolation) if there are gaps in 1-minute bins. 15 minute bins where there are no data are filled with 0s for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6)`); trucks, buses and vans are not filled because they are rarely observed, and filling in light vehicles would be sufficient to ensure there are no gaps for the `Vehicles` class used in [`report_dates`](#refresh-reporting-views) and subsequent views. 
 
 The [`aggregate_15_min_tmc()`](sql/function-aggregate-volumes_15min_tmc.sql) function performs zero-filling by cross-joining a table containing all possible movements ([`intersection_movements`](#intersection_movements)) to create a table with all possible times and movements. Through a join with `volumes`, the query checks if there are no counts at that time, intersection, movement, and classification the is no volume, and fills the gap with a 0-volume bin.
 
@@ -155,6 +161,14 @@ movement_uid|integer|Identifier linking to specific turning movement stored in `
 volume|integer|Total 15-minute volume|78|
 volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
 
+- *Unique constraint* was added to `miovision_api.volumes_15min_tmc` table using 
+```
+ALTER TABLE miovision_api.volumes_15min_tmc ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+```
+- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:45 current day. \
+(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
+22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
+
 #### `volumes_tmc_zeroes`
 
 This is a crossover table to link `volumes` to the `volumes_15min_tmc` table so that when data are [deleted](#deleting-data) from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values. The table contains `volume_15min_tmc_uid` and `volume_uid`. Since the data for the 0-volume 15 minute bins are not in the `volumes` table, this table exists so when the the last volume bin with data is deleted, the corresponding 0-volume 15 minute bins after that time is also deleted.
@@ -166,9 +180,62 @@ volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
 
 #### `volumes_15min`
 
-Data table storing ATR versions of the 15-minute turning movement data. Because of the format differences between TMC and ATR data, the `miovision.movement_map` is used to convert the TMC data to the ATR data. For example, TMC data has 4 possible movments for every ATR bin, and theres a total of 16 possible movements. This image summarizes the changes between TMC and ATR data.
+Data table storing ATR versions of the 15-minute turning movement data. Because of the format differences between TMC and ATR data, the `miovision.movement_map` is used to convert the TMC data to the ATR data. 
 
-![TMC and ATR movements](img/movements.png)
+An example of `miovision_api.movement_map`:
+
+|leg_new|dir|leg_old|movement_uid|
+|-------|---|-------|------------|
+|"N"|	"NB"|	"N"|	4|
+|"N"|	"NB"|	"E"|	3|
+|"N"|	"NB"|	"S"|	1|
+|"N"|	"NB"|	"W"|	2|
+|"N"|	"SB"|	"N"|	4|
+|"N"|	"SB"|	"N"|	3|
+|"N"|	"SB"|	"N"|	1|
+|"N"|	"SB"|	"N"|	2|
+
+- `leg_old` (leg for TMC) = direction the vehicles approach into intersection
+- `leg_new` (leg for ATR) = anything that crosses that intersectio
+
+![TMC movements](img/intersection_tmc.png)
+
+**Blue line represents `leg_old` whereas yellow arrows represent `movement_uid`**
+Figure above shows that for each `leg_old` (leg for TMC) , there are four possible `movement_uid`. The `leg_old` is E whereas the `movement_uid` are 1, 2, 3, 4 for the above example. For a fully working intersection, there will be 16 possible TMC since there are 4 directions and 4 legs in each direction for TMC. \
+(4 possible legs * 4 legs each = 16 TMCs)
+
+![ATR movements](img/intersection_atr.png)
+
+**Blue line represents `leg_new` whereas yellow arrows represent `dir`**
+Figure above shows that for each `leg_new` (leg for ATR) , there are two possible `dir`. The `leg_new` is E whereas the `dir` are EB & WB for the above example. For a fully working intersection, there will be 8 possible ATR since there are 4 directions and 2 legs in each direction for ATR. \
+(4 possible legs * 2 legs each = 8 TMCs)
+
+For a certain classification_uid at a certain datetime_bin, TMC table shown as the top table whereas ATR table shown as the bottom table.
+
+|leg(tmc)|movement_uid|volume|					
+|--------|------------|------|					
+|N|1|87|						
+|N|2|26|							
+|S|3|29|						
+|S|1|79|							
+| | |total volume = 221|								
+
+|leg(atr)|dir|volume|
+|--------|---|------|
+|E|EB|55|
+|N|NB|79|
+|S|NB|108|
+|S|SB|87|
+|N|SB|113|
+| |  |total volume = 442|
+
+Therefore in general, \
+total number of rows in TMC should be greater than total number of rows in ATR \
+(ATR might have more rows for less busy intersection) whereas\
+total volume of TMC should be less than total volume of ATR \
+(ATR volume should double that of TMC).
+
+> However, the above is not applicable to pedestrain count which are `classification_uid` = 6 and `movement_uid` = 5,6. Pedestrian count in both TMC and ATR tables has equal number of rows and eauql total volume.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -179,6 +246,14 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Segment leg of intersection|E|
 dir|text|Direction of traffic on specific leg|EB|
 volume|integer|Total 15-minute volume|107|
+
+- *Unique constraint* was added to `miovision_api.volumes_15min` table using 
+```
+ALTER TABLE miovision_api.volumes_15min ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, dir)
+```
+- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:45 current day. \
+(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
+22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
 
 ### `atr_tmc_uid`
 
