@@ -83,6 +83,8 @@ def run_api(start_date, end_date, path, intersection, pull):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     conn.autocommit = True
+    # with conn.cursor() as cur:
+    #     cur.execute('SET client_min_messages = warning')
     logger.debug('Connected to DB')
 
     start_date= dateutil.parser.parse(str(start_date))
@@ -262,11 +264,14 @@ def refresh_views(conn):
 
 def insert_data(conn, start_time, end_iteration_time, table):
     time_period = (start_time, end_iteration_time)
+    conn.notices=[]
     with conn:
         with conn.cursor() as cur:
             insert_data = '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
+            if conn.notices != []:
+                logger.warning(conn.notices[-1])
 
     with conn:
         with conn.cursor() as cur:
@@ -275,13 +280,12 @@ def insert_data(conn, start_time, end_iteration_time, table):
 
     logger.info('Inserted into volumes and updated log') 
     
-    conn.notices=[]
     with conn:
         with conn.cursor() as cur: 
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
             cur.execute(invalid_movements, time_period)
             invalid_flag=cur.fetchone()[0]
-            logger.info(conn.notices[0]) 
+            logger.info(conn.notices[-1]) 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key):
 
