@@ -67,14 +67,14 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--start_date', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end_date' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
-@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
-@click.option('--intersection' ,'--intersection', default=0, help='enter the intersection_uid of the intersection')
-@click.option('--pull' ,'--pull', default=None, help='enter 1 to not process the data')
+@click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
+@click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--intersection' , default=0, help='enter the intersection_uid of the intersection')
+@click.option('--pull' , default=None, help='enter 1 to not process the data')
+@click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
-
-def run_api(start_date, end_date, path, intersection, pull):
+def run_api(start_date, end_date, path, intersection, pull, dupes):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
@@ -94,7 +94,7 @@ def run_api(start_date, end_date, path, intersection, pull):
     logger.info('Pulling from %s to %s' %(start_time,end_time))
     
     try:
-        pull_data(conn, start_time, end_time, intersection, path, pull, key)
+        pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
     except Exception as e:
         logger.critical(traceback.format_exc())
 
@@ -262,7 +262,7 @@ def refresh_views(conn):
         logger.exception('Cannot Refresh Views')
         sys.exit(1)
 
-def insert_data(conn, start_time, end_iteration_time, table):
+def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
     conn.notices=[]
     with conn:
@@ -272,6 +272,8 @@ def insert_data(conn, start_time, end_iteration_time, table):
             execute_values(cur, insert_data, table)
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
+                if dupes:
+                    sys.exit(2)
 
     with conn:
         with conn.cursor() as cur:
@@ -287,7 +289,7 @@ def insert_data(conn, start_time, end_iteration_time, table):
             invalid_flag=cur.fetchone()[0]
             logger.info(conn.notices[-1]) 
 
-def pull_data(conn, start_time, end_time, intersection, path, pull, key):
+def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
@@ -334,12 +336,12 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key):
       
         logger.info('Completed data pulling for %s', start_time)
         try: 
-            insert_data(conn, start_time, end_iteration_time, table)
+            insert_data(conn, start_time, end_iteration_time, table, dupes)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)
         
-        process_data(conn, pull, start_time, end_iteration_time)
+        # process_data(conn, pull, start_time, end_iteration_time)
 
         end_iteration_time+=time_delta
         start_time+=time_delta
