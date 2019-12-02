@@ -20,6 +20,7 @@
 - [PostgreSQL Functions](#postgresql-functions)
 - [Invalid Movements](#invalid-movements)
 - [How the API works](#how-the-api-works)
+- [Airflow](#airflow)
 
 ## Overview
 
@@ -126,9 +127,9 @@ In command prompt, navigate to the folder where the python file is located and r
 
 The script can also customize the data it pulls and processes with various command line options.
 
-For example, to collect data from a custom date range, run `python intersection_tmc.py run_api --start=YYYY-MM-DD --end=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
+For example, to collect data from a custom date range, run `python intersection_tmc.py run_api --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
-`start` and `end` must be separated by at least 1 day, and `end` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
+`start_date` and `end_date` must be separated by at least 1 day, and `end_date` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
 
 If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled. 
 
@@ -150,9 +151,13 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
 |path|path|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
-|pull|string|Specifies if the script should only pull data and not process the data|Yes|Processes data in PostgreSQL
+|pull|string|Specifies if the script should only pull data and not process the data|Yes|Processes data in PostgreSQL|
+|dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
 
-`python intersection_tmc.py --start=2018-08-01 --end=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes` is an example with all the options specified.
+`python intersection_tmc.py --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes --dupes` is an example with all the options specified.
+
+If `--dupes` is specified in the command line (which is equivalent to setting it to True), the script will fail if duplicates are detected and exit with an exit code of 2. This is set up particularly for Airflow to fail if duplicates are detected so that we would be notified of the issue via Slack message. More can be found in the [Airflow](#airflow) section.\
+If `--dupes` is false, we would only get a warning message but the script will continue to run.
 
 ## Classifications
 
@@ -205,3 +210,11 @@ The API also checks for invalid movements by calling the [`miovision_api.find_in
 This flow chart provides a high level overview of the script:
 
 ![Flow Chart of the API](img/api_script1.png)
+
+## Airflow
+
+The Airflow is set up to run every day at 8am. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
+
+Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
+
+The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and to fail the script when that happen.
