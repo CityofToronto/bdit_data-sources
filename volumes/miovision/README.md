@@ -204,7 +204,7 @@ An example of `miovision_api.movement_map`:
 Figure above shows that for each `leg_old` (leg for TMC) , there are four possible `movement_uid`. The `leg_old` is E whereas the `movement_uid` are 1, 2, 3, 4 for the above example. For a fully working intersection, there will be 16 possible TMC since there are 4 directions and 4 legs in each direction for TMC. \
 (4 possible legs * 4 legs each = 16 TMCs)
 
-![ATR movements](img/intersection_atr.png)
+![ATR movements](img/intersection_atr2.png)
 
 **Blue line represents `leg_new` whereas yellow arrows represent `dir`**
 Figure above shows that for each `leg_new` (leg for ATR) , there are two possible `dir`. The `leg_new` is E whereas the `dir` are EB & WB for the above example. For a fully working intersection, there will be 8 possible ATR since there are 4 directions and 2 legs in each direction for ATR. \
