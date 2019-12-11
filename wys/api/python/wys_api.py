@@ -37,6 +37,26 @@ def logger():
     logger.addHandler(stream_handler)
     return logger
 
+logger=logger()
+logger.debug('Start')
+session = Session()
+url='https://api.streetsoncloud.com/sv2'
+signs_endpoint = '/signs'
+statistics_url='/signs/statistics/location/'
+statistics_endpoint = '/from/00:00/to/23:59/speed_units/0'
+intersection_endpoint = '/from/12:00/to/12:10/speed_units/0'
+period='/period/'
+date_url = '/date/'
+units='/speed_units/0'
+end='/period/5/speed_units/0'
+time_delta = datetime.timedelta(days=1)
+date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
+default_start=str(datetime.date.today()-time_delta)
+default_end=str(datetime.date.today()-time_delta)
+CONTEXT_SETTINGS = dict(
+    default_map={'run_api': {'minutes':'1473','pull_time':'0:01', 'path':'config.cfg','location_flag': 0}}
+)
+
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+signs_endpoint,
@@ -44,7 +64,6 @@ def get_signs(api_key):
     if response.status_code==200:
         signs=response.json()
         return signs
-
 
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
@@ -108,59 +127,35 @@ def get_location(location, api_key):
     else:
         return response.status_code
 
-
-
 def location_id(api_key):
-    logger.debug('Pulling locations')
-    error_array=[]
-    try:
-        signs=get_signs(api_key)
-        location_id=[]
-        for item in signs:
-            location=item['location_id']
-            sign_name=item['name']
-            address=item['address']
-            statistics=str(get_location(location, api_key))
-            if statistics[4:11] == 'LocInfo':
-                temp=[location, sign_name, address]
-                location_id.append(temp)
-        logger.debug(str(len(location_id))+' locations have data')
-        return location_id
-    except TimeoutException as exc_504:
-        error_array.append(str(address)+'      '+str(exc_504)+'       {}'.format(datetime.datetime.now()))
-        sleep(180)
-    except exceptions.RequestException as err:
-        logger.error(err)
-        error_array.append(str(address)+'       '+str(err)+'      {}'.format(datetime.datetime.now()))
-        sleep(75)
-    except exceptions.ProxyError as prox:
-        logger.error(prox)
-        logger.warning('Retrying in 2 minutes')
-        error_array.append(str(address)+'       '+str(prox)+'      {}'.format(datetime.datetime.now()))
-        sleep(120)
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        raise WYS_APIException(str(e))
-
-logger=logger()
-logger.debug('Start')
-session = Session()
-url='https://api.streetsoncloud.com/sv2'
-signs_endpoint = '/signs'
-statistics_url='/signs/statistics/location/'
-statistics_endpoint = '/from/00:00/to/23:59/speed_units/0'
-intersection_endpoint = '/from/12:00/to/12:10/speed_units/0'
-period='/period/'
-date_url = '/date/'
-units='/speed_units/0'
-end='/period/5/speed_units/0'
-time_delta = datetime.timedelta(days=1)
-date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
-default_start=str(datetime.date.today()-time_delta)
-default_end=str(datetime.date.today()-time_delta)
-CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'minutes':'1473','pull_time':'0:01', 'path':'config.cfg','location_flag': 0}}
-)
+    logger.info('Pulling locations')
+    for _ in range(3):
+        try:
+            signs=get_signs(api_key)
+            location_id=[]
+            for item in signs:
+                location=item['location_id']
+                sign_name=item['name']
+                address=item['address']
+                statistics=str(get_location(location, api_key))
+                if statistics[4:11] == 'LocInfo':
+                    temp=[location, sign_name, address]
+                    location_id.append(temp)
+            logger.debug(str(len(location_id))+' locations have data')
+            return location_id
+        except TimeoutException as exc_504:
+            logger.exception(exc_504)
+            sleep(180)
+        except exceptions.RequestException as err:
+            logger.error(err)
+            sleep(75)
+        except exceptions.ProxyError as prox:
+            logger.error(prox)
+            logger.warning('Retrying in 2 minutes')
+            sleep(120)
+        except Exception as e:
+            logger.critical(traceback.format_exc())
+            raise WYS_APIException(str(e))
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -188,11 +183,8 @@ def api_main(start_date, end_date, location_flag, CONFIG):
     try:
         if location_flag ==0:
             signs_list=location_id(api_key)
-            signs_iterator=signs_list
         else:
-            temp_list=[location_flag, None]
-            signs_list.append(temp_list)
-            signs_iterator=signs_list
+            signs_list=[location_flag]
     except Exception as e:
         logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
@@ -222,8 +214,14 @@ def api_main(start_date, end_date, location_flag, CONFIG):
             logger.critical('Error aggregating data to 15-min bins')
             logger.critical(exc)
             sys.exit()
-
-        update_locations(conn, loc_table)
+        try:
+            update_locations(conn, loc_table)
+        except psycopg2.Error as exc:
+            logger.critical('Error updating locations')
+            logger.critical(exc)
+            sys.exit()
+    conn.commit()
+    conn.close()
 
 def update_locations(conn, loc_table):
     '''Update the wys.locations table for the date of data collection
