@@ -5,19 +5,20 @@ Created on Wed Oct 17 15:26:52 2018
 @author: rliu4
 """
 
-import logging
-from requests import Session
-from requests import exceptions
-import datetime
 import configparser
-from psycopg2 import connect
-import psycopg2
-from psycopg2.extras import execute_values
-import dateutil.parser
+import datetime
+import logging
 import sys
-from time import sleep
 import traceback
+from time import sleep
+
 import click
+import dateutil.parser
+import psycopg2
+from psycopg2 import connect
+from psycopg2.extras import execute_values
+from requests import Session, exceptions
+
 
 class WYS_APIException(Exception):
     """Base class for exceptions."""
@@ -178,8 +179,8 @@ def cli():
 @cli.command()
 @click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-@click.option('--path' ,'--path', default='config.cfg', help='enter the path/directory of the config.cfg file')
-@click.option('--location_flag' ,'--location_flag', default=0, help='enter the location_id of the sign')
+@click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--location_flag' , default=0, help='enter the location_id of the sign')
 def run_api(start_date, end_date, path, location_flag):
     start_date= dateutil.parser.parse(str(start_date)).date()
     end_date= dateutil.parser.parse(str(end_date)).date()
@@ -203,147 +204,201 @@ def api_main(start_date, end_date, location_flag, CONFIG):
             signs_list.append(temp_list)
             signs_iterator=signs_list
     except Exception as e:
+        logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
+        sys.exit(2)
 
     logger.debug('Pulling data')  
     while start_date<=end_date:
-        table=[]
         logger.info('Pulling '+str(start_date))
-        for signs_iterator in signs_iterator:
-            location=signs_iterator[0]
-            name=signs_iterator[1]
-            logger.debug(str(name))
-           
-            for attempt in range(3):
-                try:
-                    statistics=get_statistics(location, start_date, api_key)
-                    raw_data=statistics['LocInfo']
-                    raw_records=raw_data['raw_records']
-                    for item in raw_records:
-                        datetime_bin=item['datetime']
-                        datetime_bin= dateutil.parser.parse(str(datetime_bin))
-                        counter=item['counter']
-                        for item in counter:
-                            temp=[location, datetime_bin, item['speed'], item['count']]
-                            table.append(temp)   
-                            
-                except TimeoutException as exc_504:
-                    sleep(180)
-                except exceptions.RequestException as err:
-                    logger.error(err)
-                    sleep(75)
-                except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    logger.warning('Retrying in 2 minutes')
-                    sleep(120)
-                except Exception as e:
-                    logger.critical(traceback.format_exc())
-            signs_iterator=signs_list
+        table, loc_table = get_data_for_date(start_date, signs_list, api_key)
+
         start_date+=time_delta
         
         try:    
             with conn.cursor() as cur:
                 logger.debug('Inserting '+str(len(table))+' rows of data')
                 execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
-                conn.commit()
         except psycopg2.Error as exc:
-            logger.exception(exc)
-            with conn:
-                conn.rollback()
+            logger.critical('Error inserting speed count data')
+            logger.critical(exc)
             sys.exit()
-        except Exception as e:
-            logger.critical(traceback.format_exc())
     
         try:
             with conn.cursor() as cur:
-                    counts_15min="SELECT wys.aggregate_speed_counts_15min();"
-                    cur.execute(counts_15min)
-                    conn.commit()
-                    logger.info('Aggregated Speed Count Data')
+                cur.execute("SELECT wys.aggregate_speed_counts_15min();")
+                logger.info('Aggregated Speed Count Data')
+        except psycopg2.Error as exc:
+            logger.critical('Error aggregating data to 15-min bins')
+            logger.critical(exc)
+            sys.exit()
 
+        update_locations(conn, loc_table)
 
-        except Exception as e:
-            logger.critical(traceback.format_exc())
-    loc_table=[]   
-    try:
-        with conn.cursor() as cur:
-            string="""
-                DROP TABLE IF EXISTS daily_intersections;
-            
-                CREATE TEMPORARY TABLE daily_intersections (
-                  api_id integer NOT NULL,
-                  address text,
-                  sign_name text,
-                  dir text,
-                  start_date date,
-                  loc text);
-            """
-            cur.execute(str(string))
-            for signs_iterator in signs_iterator:
-                location=signs_iterator[0]
-                statistics=get_statistics(location,start_date,api_key)
-                loc_info=statistics['LocInfo']
-                loc=loc_info['Location']
-                geocode=loc['geocode']
-                address=loc['address']
-                name=loc['name']
-                if 'SB' in name:
-                    direction='SB'
-                elif 'NB' in name:
-                    direction='NB'
-                elif 'WB' in name:
-                    direction='WB'
-                elif 'EB' in name:
-                    direction='EB'
-                else:
-                    direction=None
-                temp=[location, address, name, direction, start_date, geocode]
-                loc_table.append(temp)
-                signs_iterator=signs_list
+def update_locations(conn, loc_table):
+    '''Update the wys.locations table for the date of data collection
+
+    Parameters
+    ------------
+    con : SQL connection object
+        Connection object needed to connect to the RDS
+    loc_table: list
+        List of rows representing each active sign to be inserted or updated
+    '''
+    with conn.cursor() as cur:
+        create_temp_table="""
+            DROP TABLE IF EXISTS daily_intersections;
+        
+            CREATE TEMPORARY TABLE daily_intersections (
+                api_id integer NOT NULL,
+                address text,
+                sign_name text,
+                dir text,
+                start_date date,
+                loc text);
+        """
+        cur.execute(create_temp_table)
+        execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
+        update_locations_sql="""
+            WITH locations AS (
+                SELECT api_id, address, sign_name, dir, loc, max(start_date)
+                FROM wys.locations 
+                GROUP BY api_id, address, sign_name, loc, dir
+            ),
+            differences AS (
+                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
+                       a.loc 
+                FROM daily_intersections A
+                LEFT JOIN locations B ON A.api_id = B.api_id
+                                      AND A.sign_name = B.sign_name 
+                WHERE B.sign_name IS NULL 
                 
-            execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
-            string="""
-                        WITH locations AS (
-                        SELECT api_id, address, sign_name, dir, loc, max(start_date)
-                        FROM wys.locations 
-                        GROUP BY api_id, address, sign_name, loc, dir),
-                        
-                        
-                        
-                        differences AS (
+                UNION
+                
+                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date,     
+                       a.loc 
+                FROM daily_intersections A
+                LEFT JOIN locations B ON A.api_id = B.api_id
+                                      AND B.address = A.address
+                WHERE B.address IS NULL
+                
+                UNION 
+                
+                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
+                       a.loc
+                FROM daily_intersections A
+                LEFT JOIN locations B ON A.api_id = B.api_id
+                                      AND B.loc = A.loc
+                WHERE B.loc IS NULL
             
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
-                        LEFT JOIN locations B ON A.api_id = B.api_id
-                        AND A.sign_name = B.sign_name 
-                        WHERE B.sign_name IS NULL 
-                        
-                        UNION
-                        
-                        
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
-                        LEFT JOIN locations B ON A.api_id = B.api_id
-                        AND B.address = A.address
-                        WHERE B.address IS NULL
-                        
-                        UNION 
-                        
-                        SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, a.loc FROM daily_intersections A
-                        LEFT JOIN locations B ON A.api_id = B.api_id
-                        AND B.loc = A.loc
-                        WHERE B.loc IS NULL
-                        
-                        )
-                        
-                        INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc) 
-                        SELECT * FROM differences
-            """
-            cur.execute(str(string))
-            conn.commit()
+            )
+            
+            INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc) 
+            SELECT * FROM differences
+        """
+        cur.execute(update_locations_sql)
 
-    except Exception as e:
-        logger.critical(traceback.format_exc())
+def get_data_for_date(start_date, signs_iterator, api_key):
+    '''Pull data for the provided date and list of signs to pull
 
+    Parameters
+    -----------
+    start_date : date
+        Date to pull data for
+    signs_iterator : list
+        List of api_id's (signs) to pull data from
+    api_key : str
+        Key to pull data from the api
+    Returns
+    --------
+    speed_counts: list
+        List of speed count rows to be inserted into wys.raw_data
+    sign_locations: list
+        List of active sign locations to be inserted into wys.locations
+    '''
+    speed_counts, sign_locations = [], []
+    for sign in signs_iterator:
+        api_id=sign[0]
+        name=sign[1]
+        logger.debug(str(name))
+        
+        for attempt in range(3):
+            try:
+                statistics=get_statistics(api_id, start_date, api_key)
+                raw_data=statistics['LocInfo']
+                raw_records=raw_data['raw_records']
+                spd_cnts = parse_counts_for_location(raw_records, api_id)
+                speed_counts.extend(spd_cnts)
+                sign_location = parse_location(api_id, start_date, raw_data['Location'])
+                sign_locations.append(sign_location)
+                
+            except TimeoutException as exc_504:
+                sleep(180)
+            except exceptions.RequestException as err:
+                logger.error(err)
+                sleep(75)
+            except exceptions.ProxyError as prox:
+                logger.error(prox)
+                logger.warning('Retrying in 2 minutes')
+                sleep(120)
+            else:
+                break
+    return speed_counts, sign_locations
     
+def parse_counts_for_location(api_id, raw_records):
+    '''Parse the response for a given location and set of records
+
+    Parameters
+    ------------
+    api_id : Unique identifier for the sign
+    raw_records : List of records returned for location and time
+
+    Returns 
+    --------
+    speed_counts
+        List of speed count records to insert into database
+    '''
+    speed_counts = []
+    for record in raw_records:
+        datetime_bin=record['datetime']
+        datetime_bin= dateutil.parser.parse(str(datetime_bin))
+        counter=record['counter']
+        for item in counter:
+            speed_row=[api_id, datetime_bin, item['speed'], item['count']]
+            speed_counts.append(speed_row)
+    return speed_counts
+
+def parse_location(api_id, start_date, loc):
+    '''Parse the location data for a given sign
+
+    Parameters
+    ------------
+    api_id : Integer
+        Unique identifier for the sign
+    start_date : Datetime object
+        Date being processed
+    loc : dict
+        Dictionary of location information for the sign
     
+    Returns
+    --------
+    row
+        Tuple representing a row of the wys.locations table
+    '''
+    geocode=loc['geocode']
+    address=loc['address']
+    name=loc['name']
+    if 'SB' in name:
+        direction='SB'
+    elif 'NB' in name:
+        direction='NB'
+    elif 'WB' in name:
+        direction='WB'
+    elif 'EB' in name:
+        direction='EB'
+    else:
+        direction=None
+    return (api_id, address, name, direction, start_date, geocode)
+
 if __name__ == '__main__':
     cli()
