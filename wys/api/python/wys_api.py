@@ -317,7 +317,7 @@ def get_data_for_date(start_date, signs_iterator, api_key):
                 statistics=get_statistics(api_id, start_date, api_key)
                 raw_data=statistics['LocInfo']
                 raw_records=raw_data['raw_records']
-                spd_cnts = parse_counts_for_location(raw_records, api_id)
+                spd_cnts = parse_counts_for_location(api_id, raw_records)
                 speed_counts.extend(spd_cnts)
                 sign_location = parse_location(api_id, start_date, raw_data['Location'])
                 sign_locations.append(sign_location)
@@ -340,8 +340,10 @@ def parse_counts_for_location(api_id, raw_records):
 
     Parameters
     ------------
-    api_id : Unique identifier for the sign
-    raw_records : List of records returned for location and time
+    api_id : int
+        Unique identifier for the sign.
+    raw_records : list
+        List of records returned for location and time.
 
     Returns 
     --------
@@ -363,17 +365,18 @@ def parse_location(api_id, start_date, loc):
 
     Parameters
     ------------
-    api_id : Integer
-        Unique identifier for the sign
-    start_date : Datetime object
-        Date being processed
-    loc : dict
-        Dictionary of location information for the sign
-    
+    api_id : int 
+        Unique identifier for the sign.
+    start_date : date 
+        Date being processed.
+    loc : dict 
+        Dictionary of location information for the sign.
+
     Returns
     --------
     row
         Tuple representing a row of the wys.locations table
+
     '''
     geocode=loc['geocode']
     address=loc['address']
