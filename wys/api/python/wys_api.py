@@ -200,7 +200,12 @@ def api_main(start_date, end_date, location_flag, CONFIG):
         try:    
             with conn.cursor() as cur:
                 logger.debug('Inserting '+str(len(table))+' rows of data')
-                execute_values(cur, 'INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) VALUES %s', table)
+                insert_sql = '''
+                    INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) 
+                    VALUES %s
+                    ON CONFLICT DO NOTHING
+                '''
+                execute_values(cur, insert_sql, table)
         except psycopg2.Error as exc:
             logger.critical('Error inserting speed count data')
             logger.critical(exc)
