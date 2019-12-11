@@ -32,21 +32,15 @@ def logger():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
-    file_handler = logging.FileHandler('logging.log')
-    file_handler.setFormatter(formatter)
-    logger.handlers.clear()
     stream_handler=logging.StreamHandler()
     stream_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
-    with open('logging.log', 'w'):
-        pass
     return logger
 
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+signs_endpoint,
-                         headers=headers, proxies=session.proxies)
+                         headers=headers)
     if response.status_code==200:
         signs=response.json()
         return signs
@@ -55,7 +49,7 @@ def get_signs(api_key):
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_url+str(location)+date_url+str(start_date)+statistics_endpoint, 
-                         headers=headers, proxies=session.proxies)
+                         headers=headers)
     if response.status_code==200:
         statistics=response.json()
         return statistics
@@ -77,12 +71,11 @@ def get_statistics(location, start_date, api_key):
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise WYS_APIException('Error'+str(response.status_code))
-        sys.exit()
-        
+
 def get_intersection(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_url+str(location)+date_url+str(start_date)+intersection_endpoint, 
-                         headers=headers, proxies=session.proxies)
+                         headers=headers)
     if response.status_code==200:
         statistics=response.json()
         return statistics
@@ -104,13 +97,11 @@ def get_intersection(location, start_date, api_key):
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise WYS_APIException('Error'+str(response.status_code))
-        sys.exit()
-        
 
 def get_location(location, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_url+str(location)+end, 
-                         headers=headers, proxies=session.proxies)
+                         headers=headers)
     if response.status_code==200:
         statistics=str(response.content)
         return statistics
@@ -154,7 +145,6 @@ def location_id(api_key):
 logger=logger()
 logger.debug('Start')
 session = Session()
-session.proxies = {'https': 'https://137.15.73.132:8080'}
 url='https://api.streetsoncloud.com/sv2'
 signs_endpoint = '/signs'
 statistics_url='/signs/statistics/location/'
