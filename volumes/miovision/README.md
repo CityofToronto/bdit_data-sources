@@ -9,7 +9,6 @@
 		- [`classifications`](#classifications)
 		- [`intersections`](#intersections)
 		- [`movement_map`](#movement_map)
-		- [`movements`](#movements)
 		- [`periods`](#periods)
 		- [`intersection_movements`](#intersection_movements)
 	- [Disaggregate Data](#disaggregate-data)
@@ -18,13 +17,13 @@
 		- [`volumes_15min_tmc`](#volumes_15min_tmc)
 		- [`volumes_tmc_zeroes`](#volumes_tmc_zeroes)
 		- [`volumes_15min`](#volumes_15min)
-	- [`atr_tmc_uid`](#atr_tmc_uid)
+		- [`volumes_tmc_atr_xover`](#volumes_tmc_atr_xover)
 	- [Primary and Foreign Keys](#primary-and-foreign-keys)
 		- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
 	- [Important Views](#important-views)
 - [3. Technology](#3-technology)
 - [4. Processing Data from API](#4-processing-data-from-api)
-- [5. Processing Data from CSV Dumps](#5-processing-data-from-csv-dumps)
+- [5. Processing Data from CSV Dumps (NO LONGER IN USE)](#5-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
 	- [A. Populate `volumes`](#a-populate-volumes)
 	- [B. Populate `volumes_15min_tmc` and `volumes_15min`](#b-populate-volumes_15min_tmc-and-volumes_15min)
@@ -37,8 +36,7 @@
 - [7. QC Checks](#7-qc-checks)
 	- [Variance check](#variance-check)
 	- [Invalid Movements](#invalid-movements)
-- [8. Future Work](#8-future-work)
-- [9. Open Data](#9-open-data)
+- [8. Open Data](#8-open-data)
 
 ## 1. Overview
 
@@ -85,16 +83,6 @@ dir|text|Direction on which 15-minute volume will be assigned|EB|
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
 movement_uid|integer|Identifier representing current turning movement|1|
 
-#### `movements`
-
-Reference table for all unique movements: through, left turn, right turn, u-turn, clockwise movement on crosswalk, and counter-clockwise movement on crosswalk.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-movement_uid|serial|Unique identifier for table|3|
-movement|text|Textual description of specific turning movement|right|
-location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
-
 #### `periods`
 
 Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes.
@@ -134,6 +122,8 @@ movement_uid|integer|Identifier linking to specific turning movement stored in `
 volume|integer|Total 1-minute volume|12|
 volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_tmc)|14524|
 
+Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018` or `volumes_2019` or `volumes_2020` depending on the year of data.
+
 - *Unique constraint* was added to `miovision_api.volumes` table using 
 ```
 ALTER TABLE miovision_api.volumes_2019 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
@@ -171,7 +161,7 @@ ALTER TABLE miovision_api.volumes_15min_tmc ADD UNIQUE(intersection_uid, datetim
 
 #### `volumes_tmc_zeroes`
 
-This is a crossover table to link `volumes` to the `volumes_15min_tmc` table so that when data are [deleted](#deleting-data) from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values. The table contains `volume_15min_tmc_uid` and `volume_uid`. Since the data for the 0-volume 15 minute bins are not in the `volumes` table, this table exists so when the the last volume bin with data is deleted, the corresponding 0-volume 15 minute bins after that time is also deleted.
+**This is a crossover table to link `volumes` to the `volumes_15min_tmc` table** so that when data are [deleted](#deleting-data) from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values. The table contains `volume_15min_tmc_uid` and `volume_uid`. Since the data for the 0-volume 15 minute bins are not in the `volumes` table, this table exists so when the the last volume bin with data is deleted, the corresponding 0-volume 15 minute bins after that time is also deleted.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -255,9 +245,9 @@ ALTER TABLE miovision_api.volumes_15min ADD UNIQUE(intersection_uid, datetime_bi
 (23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
 22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
 
-### `atr_tmc_uid`
+#### `volumes_tmc_atr_xover`
 
-As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_tmc` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_tmc_uid` can be found in the query.
+**This is a crossover table to link `volumes_15min_tmc` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_tmc` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_tmc_uid` can be found in the query.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -280,7 +270,13 @@ The current primary purpose for the keys is so that on deletion, the delete casc
 
 ### Important Views
 
-`(to be filled in)`
+The tables below are produced using functions explained in the [API Puller](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision/api#postgresql-functions). They produce a lookup table of date-intersction combinations to be used for checking purposes or even for formal reporting.
+
+|Table|Purpose|
+|------|-------|
+|`api_log`|Contains a record of the `start_date` and `end_date` for an `intersection_uid` and when the data was pulled as `date_added`|
+|`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
+|`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
 ## 3. Technology
 
@@ -288,9 +284,9 @@ The current primary purpose for the keys is so that on deletion, the delete casc
 
 ## 4. Processing Data from API
 
-Refer to the [API README](api/README.md) for more detail.
+Refer to the [API README](api/README.md) for more details.
 
-## 5. Processing Data from CSV Dumps
+## 5. Processing Data from CSV Dumps (NO LONGER IN USE)
 
 Prior to the API pipeline being set up, we received data from Miovision in CSV
 files for individual months of data collection, this is the procedure for
@@ -402,19 +398,9 @@ This query checks the relative variance of the volumes over the day to make sure
 
 ### Invalid Movements
 
-The data in `raw_data` also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`find_invalid_movments.sql`](sql/function-find_invalid_movements.sql) to look for invalid volumes that may need to be deleted. This will create a warning if the number of invalid movements is higher than 1000, and that further QC is needed.
+The data also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`find_invalid_movments.sql`](sql/function-find_invalid_movements.sql) to look for invalid volumes that may need to be deleted. This will create a warning if the number of invalid movements is higher than 1000, and that further QC is needed.
 
-## 8. Future Work
-
-* [Create a crossover table for the UIDs](https://github.com/CityofToronto/bdit_data-sources/issues/137)
-  * Because of the many-to-many relationship between the ATR data and TMC data, a crossover table needs to be implemented to demonstrate the relationship between an ATR bin and TMC bin.
-* [Fix interpolation bug](https://github.com/CityofToronto/bdit_data-sources/issues/140)
-  * While optimizing the `funtion-aggregate-volumes_15min_tmc()`, one of the checks to see if missing data needs to be interpolated was changed. Reverting to the old process can easily double the query run-time, so an equivalent method will need to be found without prolonging the run time.
-* Fix `COALESCE` statement in `report_volume_15min`
-  * If a bin does not have data, the current process is to either delete that time period, or use the average volume for that time bin. However, the seasonality of pedestrian and cycling volume may not make that process valid. A suggested approach is to limit the average volume for a time bin to only use data in the same month or week
-
-
-## 9. Open Data
+## 8. Open Data
 
 For the King Street Transit Pilot, the below volume datasets were released. These two datassets are georeferenced by intersection id:
 
