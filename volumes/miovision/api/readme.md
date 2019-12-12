@@ -154,7 +154,7 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 |pull|string|Specifies if the script should only pull data and not process the data|Yes|Processes data in PostgreSQL|
 |dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
 
-`python intersection_tmc.py --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes --dupes` is an example with all the options specified.
+`python intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes --dupes` is an example with all the options specified.
 
 If `--dupes` is specified in the command line (which is equivalent to setting it to True), the script will fail if duplicates are detected and exit with an exit code of 2. This is set up particularly for Airflow to fail if duplicates are detected so that we would be notified of the issue via Slack message. More can be found in the [Airflow](#airflow) section.\
 If `--dupes` is false, we would only get a warning message but the script will continue to run.
