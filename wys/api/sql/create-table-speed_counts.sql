@@ -19,19 +19,6 @@ WITH (
   OIDS=FALSE
 );
 ALTER TABLE wys.speed_counts
-  OWNER TO rliu;
-GRANT ALL ON TABLE wys.speed_counts TO rds_superuser WITH GRANT OPTION;
-GRANT ALL ON TABLE wys.speed_counts TO dbadmin;
+  OWNER TO rdumas;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.speed_counts TO bdit_humans WITH GRANT OPTION;
-GRANT ALL ON TABLE wys.speed_counts TO rliu;
-
--- Trigger: speed_counts_delete on wys.speed_counts
-
--- DROP TRIGGER speed_counts_delete ON wys.speed_counts;
-
-CREATE TRIGGER speed_counts_delete
-  AFTER DELETE
-  ON wys.speed_counts
-  FOR EACH ROW
-  EXECUTE PROCEDURE wys.trgr_raw_data_delete();
 
