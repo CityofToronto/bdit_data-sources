@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 13 10:15:56 2018
-
-@author: rliu4
-"""
 import sys
 import json
 from requests import Session
@@ -83,8 +77,6 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     conn.autocommit = True
-    # with conn.cursor() as cur:
-    #     cur.execute('SET client_min_messages = warning')
     logger.debug('Connected to DB')
 
     start_date= dateutil.parser.parse(str(start_date))
@@ -241,26 +233,6 @@ def process_data(conn, pull, start_time, end_iteration_time):
             report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
             cur.execute(report_dates, time_period)
             logger.info('report_dates done')
-
-def refresh_views(conn):
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                refresh_volumes_class='''REFRESH MATERIALIZED VIEW miovision_api.volumes_15min_by_class WITH DATA;'''
-                cur.execute(refresh_volumes_class)
-                logger.info('Refreshed m.view for volumes_15min_by_class')
-
-                refresh_volumes='''REFRESH MATERIALIZED VIEW miovision_api.report_volumes_15min WITH DATA;'''
-                cur.execute(refresh_volumes)
-                logger.info('Refreshed m.view for report_volumes_15min')
-
-                refresh_report_daily='''REFRESH MATERIALIZED VIEW miovision_api.report_daily WITH DATA;'''
-                cur.execute(refresh_report_daily)
-                logger.info('Refreshed m.view for report_daily')
-
-    except psycopg2.Error as exc:
-        logger.exception('Cannot Refresh Views')
-        sys.exit(1)
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
