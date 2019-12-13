@@ -21,6 +21,7 @@
 - [Invalid Movements](#invalid-movements)
 - [How the API works](#how-the-api-works)
 - [Airflow](#airflow)
+- [Notes](#notes)
 
 ## Overview
 
@@ -219,3 +220,9 @@ The Airflow is set up to run every day at 8am. This is to ensure that the data a
 Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
 
 The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and to fail the script when that happen.
+
+## Notes
+
+- `miovision_api.volume` table was truncated and re-run after the script was fixed and unique constraint was added to the table. Data from July 1st - Nov 21st, 2019 was inserted into the `miovision_api` schema on Nov 22nd, 2019 whereas the dates followed will be inserted into the table via airflow. 
+
+- In order to incorporate Miovision data into the volume model, miovision data prior to July 2019 was inserted as well. May 1st - June 30th, 2019 data was inserted into the schema on Dec 12th, 2019 whereas that of Jan 1st - Apr 30th, 2019 was inserted on Dec 13th, 2019. Therefore, **the `volume_uid` in the table might not be in the right sequence** based on the `datetime_bin`.
