@@ -30,7 +30,7 @@ SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
-            :red_circle: Task Failed / Tâche échouée.
+            :red_circle: Task Failed / Tâche échouée. LOCALHOST AIFRLOW
             *Task*: {task}
             *Dag*: {dag}
             *Execution Time*: {exec_date}
