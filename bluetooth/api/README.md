@@ -26,7 +26,8 @@ optional arguments:
                         Range of dates (YYYYMMDD) to operate over from
                         startdate to enddate, else defaults to previous day.
   -a ANALYSIS, --analysis ANALYSIS
-                        Analysis ID to pull. Add more flags for multiple IDs
+                        Analysis ID to pull. Add more flags for multiple IDs, 
+                        else defaults to all pullable routes
   -d DBSETTING, --dbsetting DBSETTING
                         Filename with connection settings to the database
                         (default: opens config.cfg)
