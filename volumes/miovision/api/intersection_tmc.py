@@ -16,12 +16,13 @@ from time import sleep
 
 class MiovisionAPIException(Exception):
     """Base class for exceptions."""
-    pass
   
 class TimeoutException(Exception):
     """Exception if API gives a 504 error"""
-    pass
     
+class NotFoundError(Exception):
+    """Exception for a 404 error."""
+
 def logger():
     
     logger = logging.getLogger(__name__)
@@ -91,33 +92,32 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
         logger.critical(traceback.format_exc())
 
 
-def get_movement(item):
-    if (item['entrance'] == 'N' and item['exit'] =='S'):
+def get_movement(entrance, exit_dir):
+    if (entrance == 'N' and exit_dir =='S'):
         return '1'
-    elif item['entrance'] == 'S' and item['exit'] =='N':
+    elif entrance == 'S' and exit_dir =='N':
         return '1'
-    elif item['entrance'] == 'W' and item['exit'] =='E':
+    elif entrance == 'W' and exit_dir =='E':
         return '1'
-    elif item['entrance'] == 'E' and item['exit'] =='W':
+    elif entrance == 'E' and exit_dir =='W':
         return '1'
-    elif item['entrance'] == 'S' and item['exit'] =='W':
+    elif entrance == 'S' and exit_dir =='W':
         return '2'
-    elif item['entrance'] == 'N' and item['exit'] =='E':
+    elif entrance == 'N' and exit_dir =='E':
         return '2'
-    elif item['entrance'] == 'W' and item['exit'] =='N':
+    elif entrance == 'W' and exit_dir =='N':
         return '2'
-    elif item['entrance'] == 'E' and item['exit'] =='S':
+    elif entrance == 'E' and exit_dir =='S':
         return '2'
-    elif item['entrance'] == 'S' and item['exit'] =='E':
+    elif entrance == 'S' and exit_dir =='E':
         return '3'
-    elif item['entrance'] == 'E' and item['exit'] =='N':
+    elif entrance == 'E' and exit_dir =='N':
         return '3'
-    elif item['entrance'] == 'N' and item['exit'] =='W':
+    elif entrance == 'N' and exit_dir =='W':
         return '3'
-    elif item['entrance'] == 'W' and item['exit'] =='S':
+    elif entrance == 'W' and exit_dir =='S':
         return '3'
-    else:
-        return '4'
+    return '4'
 
 def get_crosswalk(item):
     if (item['direction'] == 'CW'):
@@ -125,23 +125,22 @@ def get_crosswalk(item):
     else:
         return '6'
     
-def get_classification(item):
-    if (item['class'] == 'Pedestrian'):
+def get_classification(veh_class):
+    if (veh_class == 'Pedestrian'):
         return '6'
-    elif item['class'] == 'Light':
+    elif veh_class == 'Light':
         return '1'
-    elif item['class'] == 'Bicycle':
+    elif veh_class == 'Bicycle':
         return '2'
-    elif item['class'] == 'Bus':
+    elif veh_class == 'Bus':
         return '3'
-    elif item['class'] == 'SingleUnitTruck':
+    elif veh_class == 'SingleUnitTruck':
         return '4'
-    elif item['class'] == 'ArticulatedTruck':
+    elif veh_class == 'ArticulatedTruck':
         return '5'
-    elif item['class'] == 'WorkVan':
+    elif veh_class == 'WorkVan':
         return '8'
-    else:
-        return '0'
+    return '0'
 
 def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
@@ -152,9 +151,9 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
         tmc=json.loads(response.content.decode('utf-8'))
         for item in tmc:
             
-            item['classification']=get_classification(item)
+            item['classification']=get_classification(item['class'])
             item['volume']=item.pop('qty')
-            item['movement']=get_movement(item)
+            item['movement']=get_movement(item['entrance'], item['exit'])
             item['leg']=item.pop('entrance')
          
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'], item['movement'], item['volume']]
@@ -163,14 +162,19 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
         return table
     elif response.status_code==404:
         error=json.loads(response.content.decode('utf-8'))
+        logger.error('Problem with tmc call for intersection %s', intersection_id1)
         logger.error(error['error'])
+        raise NotFoundError
     elif response.status_code==400:
+        logger.critical('Bad request error when pulling TMC data for intersection %s', intersection_id1)
+        logger.critical('From %s until %s', start_time, end_iteration_time)
         error=json.loads(response.content.decode('utf-8'))
-        logger.error(error['error'])
+        logger.critical(error['error'])
+        sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
-    else:
-        raise MiovisionAPIException('Error'+str(response.status_code))
+    logger.critical('Unknown error pulling tmcs for intersection %s', intersection_id1)
+    raise MiovisionAPIException('Error'+str(response.status_code))
 
 
 def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key):
@@ -188,21 +192,25 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
             item['movement']=get_crosswalk(item)
             item['leg']=item.pop('crosswalkSide')
             item['exit_dir_name']=None
-
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'],  item['movement'], item['volume']]
             table.append(temp)
             
         return table
     elif response.status_code==404:
         error=json.loads(response.content.decode('utf-8'))
+        logger.error('Problem with ped call for intersection %s', intersection_id1)
         logger.error(error['error'])
+        raise NotFoundError
     elif response.status_code==400:
+        logger.critical('Bad request error when pulling ped data for intersection %s', intersection_id1)
+        logger.critical('From %s until %s', start_time, end_iteration_time)
         error=json.loads(response.content.decode('utf-8'))
-        logger.error(error['error'])
+        logger.critical(error['error'])
+        sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
-    else:
-        raise MiovisionAPIException('Error'+str(response.status_code))
+    logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
+    raise MiovisionAPIException('Error'+str(response.status_code))
 
 def process_data(conn, pull, start_time, end_iteration_time):
     time_period = (start_time, end_iteration_time)
@@ -261,15 +269,15 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             invalid_flag=cur.fetchone()[0]
             logger.info(conn.notices[-1]) 
 
-def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
+def pull_data(conn, start_time, end_time, intersection_id, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
 
-    if intersection > 0:
+    if intersection_id > 0:
         with conn.cursor() as cur: 
             string="SELECT * from miovision_api.intersections WHERE intersection_uid = %s"
-            cur.execute(string, (intersection,))
+            cur.execute(string, (intersection_id,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
     else: 
@@ -299,13 +307,17 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                 except exceptions.RequestException as err:
                     logger.error(err)
                     sleep(75)
+                except NotFoundError:
+                    break
                 except TimeoutException as exc_504:
                     logger.error(exc_504)
                     sleep(60)
                 except MiovisionAPIException as miovision_exc:
-                    logger.error('Cannot pull data')
                     logger.error(miovision_exc)
-      
+                    break
+            else:
+                logger.error('Could not successfully pull data for this intersection')
+
         logger.info('Completed data pulling for %s', start_time)
         try: 
             insert_data(conn, start_time, end_iteration_time, table, dupes)
