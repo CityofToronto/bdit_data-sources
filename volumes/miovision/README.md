@@ -186,7 +186,7 @@ An example of `miovision_api.movement_map`:
 |"N"|	"SB"|	"N"|	2|
 
 - `leg_old` (leg for TMC) = direction the vehicles approach into intersection
-- `leg_new` (leg for ATR) = anything that crosses that intersectio
+- `leg_new` (leg for ATR) = anything that crosses that side of the intersection
 
 ![TMC movements](img/intersection_tmc.png)
 
@@ -200,7 +200,7 @@ Figure above shows that for each `leg_old` (leg for TMC) , there are four possib
 Figure above shows that for each `leg_new` (leg for ATR) , there are two possible `dir`. The `leg_new` is E whereas the `dir` are EB & WB for the above example. For a fully working intersection, there will be 8 possible ATR since there are 4 directions and 2 legs in each direction for ATR. \
 (4 possible legs * 2 legs each = 8 TMCs)
 
-For a certain classification_uid at a certain datetime_bin, TMC table shown as the top table whereas ATR table shown as the bottom table.
+For a certain `classification_uid` at a certain `datetime_bin`, TMC table shown as the top table whereas ATR table shown as the bottom table.
 
 |leg(tmc)|movement_uid|volume|					
 |--------|------------|------|					
@@ -225,7 +225,7 @@ total number of rows in TMC should be greater than total number of rows in ATR \
 total volume of TMC should be less than total volume of ATR \
 (ATR volume should double that of TMC).
 
-> However, the above is not applicable to pedestrain count which are `classification_uid` = 6 and `movement_uid` = 5,6. Pedestrian count in both TMC and ATR tables has equal number of rows and eauql total volume.
+> However, the above is not applicable to pedestrian count which are `classification_uid` = 6 and `movement_uid` = 5,6. Pedestrian count in both TMC and ATR tables has equal number of rows and equal total volume.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
