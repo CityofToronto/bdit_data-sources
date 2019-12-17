@@ -323,4 +323,3 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         
 if __name__ == '__main__':
     cli()
-    run_api(start_date, end_date, path, intersection, pull)
