@@ -1,5 +1,5 @@
 # Vision Zero Google Sheets API 
-This repository contains scripts to read Vision Zero google spreadsheets and put them into two postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
+This folder contains scripts to read Vision Zero google spreadsheets and put them into two postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
 
 **Notes:** 
 - Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
@@ -28,17 +28,14 @@ A credential file (named `key.json` in the script) is required to connect to the
     "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
     "client_x509_cert_url": 
-  
-
-**Note:** A file `token.pickle` will be created if not found from the same directory. If the `SCOPES` is modified from readonly, the existing file `token.pickle` has to be deleted first.
 
 ### 2.3 Prepare connection file
 A configuration file named `db.cfg` is required to connect to pgAdmin to push data aka to create postgres table. The `db.cfg` file should look like this:
 
 ```
 [DBSETTINGS]
-host=10.160.12.47
-database=bigdata
+host=xx.xxx.xx.xx
+database=databasename
 user=database username
 password=database password
 ```
@@ -56,7 +53,9 @@ from the Google Sheets and put them into postgres tables with the following fiel
 |-----------|-------|-------------|---------------|--------------|-----------------------|------------|--------------|
 |AGINCOURT JUNIOR PUBLIC SCHOOL|29 Lockie Ave|9239020|9239021|43.788456, -79.281118|January 9, 2019|43.786566, -79.279023|43.787530, -79.279456|
 
-**Notes:** The script reads up to line 180 on the spreadsheet in order to anticipate extra schools which might be added into the sheet in the future. The script works in a way that rows with empty cells at the beginning or end of the row or just an entire row of empty cells are not included in the postgres table.
+**Notes:** 
+* The Google Sheets API do not read any row with empty cells at the beginning or end of the row or just an entire row of empty cells. It will log an error when that happens.
+* The script being used reads up to line 180 although the actual data is less than that. This is to anticipate extra schools which might be added into the sheets in the future.
 
 ## 4. Airflow
 The Airflow is set up to run daily. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. More information on that can be found on [Credential management](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#credential-management). The Airflow uses PythonOperator and run two tasks, one for 2018 and the other for 2019 School Safety Zone Sheets.
