@@ -4,7 +4,7 @@
 
 CREATE TABLE wys.counts_15min
 (
-  counts_15min serial NOT NULL,
+  counts_15min bigserial NOT NULL,
   api_id integer,
   datetime_bin timestamp without time zone,
   speed_id integer,
