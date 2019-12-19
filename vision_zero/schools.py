@@ -119,3 +119,4 @@ if __name__ == '__main__':
 
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
+    
