@@ -120,6 +120,8 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
     
     '''
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
     if ctx.invoked_subcommand is None:
         pull_here_data(ctx, startdate, enddate, config, mapversion)
 
@@ -151,7 +153,7 @@ def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
         LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
-                                        '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
+                                        '-c',r'\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER TRUE);'],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
@@ -165,8 +167,6 @@ def pull_here_data(ctx, startdate, enddate, config, mapversion):
     dbsettings = configuration['DBSETTINGS']
     apis = configuration['API']
     email = configuration['EMAIL']
-    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
