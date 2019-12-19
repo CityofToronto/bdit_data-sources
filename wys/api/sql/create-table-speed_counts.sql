@@ -4,7 +4,7 @@
 
 CREATE TABLE wys.speed_counts
 (
-  speed_count_uid serial NOT NULL,
+  speed_count_uid bigserial NOT NULL,
   api_id integer,
   datetime_bin timestamp without time zone,
   speed_id integer,

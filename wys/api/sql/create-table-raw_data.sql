@@ -4,7 +4,7 @@
 
 CREATE TABLE wys.raw_data
 (
-  raw_data_uid serial NOT NULL,
+  raw_data_uid bigserial NOT NULL,
   api_id integer,
   datetime_bin timestamp without time zone,
   speed integer,
