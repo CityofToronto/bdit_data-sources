@@ -10,6 +10,35 @@ import sys
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from googleapiclient.discovery import build
 
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+
+SLACK_CONN_ID = 'slack'
+def task_fail_slack_alert(context):
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+    slack_msg = """
+            :red_circle: Task Failed. 
+            *Task*: {task}  
+            *Dag*: {dag} 
+            *Execution Time*: {exec_date}  
+            *Log Url*: {log_url} 
+            """.format(
+            task=context.get('task_instance').task_id,
+            dag=context.get('task_instance').dag_id,
+            ti=context.get('task_instance'),
+            exec_date=context.get('execution_date'),
+            log_url=context.get('task_instance').log_url,
+        )
+    failed_alert = SlackWebhookOperator(
+        task_id='slack_test',
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username='airflow',
+        # proxy='http://137.15.73.132:8080'
+        )
+    return failed_alert.execute(context=context)
+
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
   sys.path.append('/home/jchew/bdit_data-sources/vision_zero/')
@@ -34,7 +63,8 @@ DEFAULT_ARGS = {
     'email_on_retry': True,
     'start_date': datetime(2019, 9, 30),
     'retries': 0,
-    'retry_delay': timedelta(minutes=5)
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': task_fail_slack_alert
 }
 
 dag = DAG('vz_google_sheets', default_args=DEFAULT_ARGS, schedule_interval='@daily')
@@ -52,3 +82,4 @@ task2 = PythonOperator(
     dag=dag,
     op_args=[con, service, 2019]
     )
+    
