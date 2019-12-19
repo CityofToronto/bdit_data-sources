@@ -3,7 +3,12 @@
 CREATE TABLE miovision.classifications (
 	classification_uid serial,
 	classification text,
-	location_only boolean -- for peds and bikes, where movement isn't available, only which leg they were observed on
+	location_only boolean, -- for peds and bikes, where movement isn't available, only which leg they were observed on
+	class_type_id smallint,
+    CONSTRAINT classifications_class_type_id_fkey FOREIGN KEY (class_type_id)
+        REFERENCES miovision.class_types (class_type_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
 	);
 ALTER TABLE miovision.classifications
   OWNER TO aharpal;

@@ -65,7 +65,8 @@ BEGIN
 			END IF;
 			tablename:= basetablename||yyyymm;
 			EXECUTE format($$CREATE TABLE here.%I 
-				(--CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month')
+				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
+				UNIQUE(link_dir, tx)
 				) INHERITS (here.ta)$$
 				, tablename);
 			EXECUTE format($$ALTER TABLE here.%I OWNER TO here_admins$$, tablename);
