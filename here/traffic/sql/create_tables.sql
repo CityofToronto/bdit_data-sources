@@ -50,8 +50,6 @@ DECLARE
 	startdate DATE;
 	yyyymm TEXT;
 	basetablename TEXT := 'ta_';
-	baserulename TEXT := 'here_ta_insert_';
-	rulename TEXT;
 	tablename TEXT;
 BEGIN
 
@@ -67,16 +65,12 @@ BEGIN
 			EXECUTE format($$CREATE TABLE here.%I 
 				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
 				UNIQUE(link_dir, tx)
-				) INHERITS (here.ta)$$
-				, tablename);
-			EXECUTE format($$ALTER TABLE here.%I OWNER TO here_admins$$, tablename);
-			rulename := baserulename||yyyymm;
-			EXECUTE format($$CREATE OR REPLACE RULE %I AS
-				    ON INSERT TO here.ta
-				   WHERE new.tx >= %L::date AND new.tx < (%L::date + '1 mon'::interval) 
-				   DO INSTEAD  INSERT INTO here.%I 
-				  VALUES (new.*)
-				  $$, rulename, startdate, startdate, tablename);
+				) INHERITS (here.ta);
+				ALTER TABLE here.%I OWNER TO here_admins;
+				$$
+				, tablename, tablename);
+			SELECT here.create_link_dir_idx(tablename);
+			SELECT here.create_tx_idx(tablename);
 		END LOOP;
 	END LOOP;
 END;
