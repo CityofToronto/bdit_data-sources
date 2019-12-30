@@ -9,6 +9,7 @@ import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import sleep
+from json import JSONDecodeError
 
 import click
 import requests
@@ -84,9 +85,15 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
     query_response = requests.post(query_url, headers=query_header, json=query)
     try:
         query_response.raise_for_status()
-    except requests.exceptions.HTTPError:
+    except requests.exceptions.HTTPError as err:
         LOGGER.error('Error in requesting query')
-        raise HereAPIException(query_response.json()['message'])
+        LOGGER.error(err)
+        try:
+            err_msg = query_response.json()['message']
+        except JSONDecodeError:
+            err_msg = query_response.text
+        finally:
+            raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
 
 def get_download_url(request_id, status_base_url, access_token, user_id):
