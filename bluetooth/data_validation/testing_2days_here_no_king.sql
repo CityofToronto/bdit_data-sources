@@ -52,7 +52,7 @@ WHEN X.eb_nb = 'NB' THEN CASE
 FROM X
 ORDER BY analysis_id_1
 
---comparing both bt and here ratio
+--comparing both bt and here ratio for obs
 SELECT b.analysis_id_1, b.analysis_id_2, b.street_name, 
 b.eb_nb, b.wb_sb, b.intersection_1, b.intersection_2, 
 a.eb_nb_obs AS bt_eb_nb_obs, a.wb_sb_obs AS bt_wb_sb_obs,
