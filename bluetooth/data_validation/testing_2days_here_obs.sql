@@ -4,14 +4,14 @@ NOTE: No data found for 1455243 , 1455400  for bt\
 Period: 2 days (From '2019-10-09 00:00:00' to '2019-10-10 23:59:00')*/
 
 --Create view for that of here (after re-routing is done, AGAIN)
-CREATE MATERIALIZED VIEW jchew.here_top10_2days_again AS
+CREATE MATERIALIZED VIEW jchew.here_top10_2days AS
 SELECT a.analysis_id, a.street_name, a.direction, 
 a.from_intersection_name AS from_intersection, a.to_intersection_name AS to_intersection,
 SUM(b.total) AS sum_here_obs, SUM(b.length) AS sum_length
 FROM
 (SELECT analysis_id, street_name, direction, 
  from_intersection_name, to_intersection_name, pp_link_dir AS link_dir, reference_length
-FROM jchew.validation_bt_here_again
+FROM jchew.validation_bt_here
 WHERE analysis_id IN (1453262, 1453284, 1453305, 1453367, 1453395, 1453445, 1453464, 1453483, 1454196, 1454209, 
 1454352, 1454366, 1454523, 1454549, 1454670, 1454683, 1455243, 1455256, 1455385, 1455400)
 ) a
@@ -23,15 +23,15 @@ USING (link_dir)
 GROUP BY analysis_id, street_name, direction, from_intersection_name, to_intersection_name
 
 --ratio for here
-CREATE OR REPLACE VIEW jchew.ratio_here_top10_2days_again AS
+CREATE OR REPLACE VIEW jchew.ratio_here_top10_2days AS
 WITH X AS (
 SELECT a.analysis_id AS analysis_id_1, 
 	b.analysis_id AS analysis_id_2, a.street_name,
 	a.direction AS eb_nb, b.direction AS wb_sb, 
 	a.from_intersection AS intersection_1, a.to_intersection AS intersection_2,
 	a.sum_here_obs AS eb_nb_obs, b.sum_here_obs AS wb_sb_obs
-	FROM jchew.here_top10_2days_again a
-JOIN jchew.here_top10_2days_again b
+	FROM jchew.here_top10_2days a
+JOIN jchew.here_top10_2days b
 ON a.street_name = b .street_name AND a.from_intersection = b.to_intersection 
 AND a.to_intersection=b.from_intersection 
 WHERE a.direction IN ('EB', 'NB')
@@ -63,5 +63,5 @@ a."Bias Towards" AS bt_bias,
 b."EB/WB or NB/SB Ratio" AS here_ratio,
 b."Bias Towards" AS here_bias
 FROM jchew.ratio_bt_top10_2days a
-RIGHT JOIN jchew.ratio_here_top10_2days_again b
+RIGHT JOIN jchew.ratio_here_top10_2days b
 USING (analysis_id_1)
