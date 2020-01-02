@@ -39,9 +39,9 @@ AND a.to_intersection=b.from_intersection
 WHERE a.direction IN ('EB', 'NB')
 )
 SELECT *,
-CASE WHEN X.eb_nb_spd > X.wb_sb_spd THEN (X.eb_nb_spd * 1.0) / (X.eb_nb_spd + X.wb_sb_spd)
-WHEN X.eb_nb_spd < X.wb_sb_spd THEN (X.wb_sb_spd * 1.0) / (X.eb_nb_spd + X.wb_sb_spd)
-END AS "EB/WB or NB/SB Ratio",
+CASE WHEN X.eb_nb_spd > X.wb_sb_spd THEN (X.eb_nb_spd - X.wb_sb_spd)
+WHEN X.eb_nb_spd < X.wb_sb_spd THEN (X.eb_nb_spd - X.wb_sb_spd)
+END AS "Speed Difference",
  CASE
 WHEN X.eb_nb = 'EB' THEN CASE
 	WHEN X.eb_nb_spd < X.wb_sb_spd THEN 'WB'
