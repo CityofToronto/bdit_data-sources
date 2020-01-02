@@ -7,11 +7,11 @@ Period: 2 days (From '2019-10-09 00:00:00' to '2019-10-10 23:59:00')*/
 CREATE MATERIALIZED VIEW jchew.here_top10_2days_again AS
 SELECT a.analysis_id, a.street_name, a.direction, 
 a.from_intersection_name AS from_intersection, a.to_intersection_name AS to_intersection,
-SUM(b.total) AS sum_here_obs, SUM(b.length)/2 AS sum_length
+SUM(b.total) AS sum_here_obs, SUM(b.length) AS sum_length
 FROM
 (SELECT analysis_id, street_name, direction, 
  from_intersection_name, to_intersection_name, pp_link_dir AS link_dir, reference_length
-FROM jchew.validation_bt_here_again bt
+FROM jchew.validation_bt_here_again
 WHERE analysis_id IN (1453262, 1453284, 1453305, 1453367, 1453395, 1453445, 1453464, 1453483, 1454196, 1454209, 
 1454352, 1454366, 1454523, 1454549, 1454670, 1454683, 1455243, 1455256, 1455385, 1455400)
 ) a
