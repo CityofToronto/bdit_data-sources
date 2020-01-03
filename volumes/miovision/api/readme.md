@@ -210,8 +210,20 @@ The API also checks for invalid movements by calling the [`miovision_api.find_in
 ## How the API works
 
 This flow chart provides a high level overview of the script:
-
 ![Flow Chart of the API](img/api_script1.png)
+
+Below shows an overview of functions used in the script:
+![Python Functions](img/python_functions.png)
+
+Below shows a list of tables used (separated by source table and results table):
+![Source Tables](img/tables_1.png)
+![Results Tables](img/tables_2.png)
+
+Below shows a list of SQL functions used:
+![SQL Functions](img/functions.png)
+
+Below shows a list of SQL trigger functions and sequences used:
+![Trigger Functions and Sequences](img/others.png)
 
 ## Airflow
 
