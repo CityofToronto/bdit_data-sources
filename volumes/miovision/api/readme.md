@@ -213,17 +213,17 @@ This flow chart provides a high level overview of the script:
 ![Flow Chart of the API](img/api_script1.png)
 
 Below shows an overview of functions used in the script:
-![Python Functions](img/python_functions.png)
+![Python Functions](img/python_functions.PNG)
 
 Below shows a list of tables used (separated by source table and results table):
-![Source Tables](img/tables_1.png)
-![Results Tables](img/tables_2.png)
+![Source Tables](img/tables_1.PNG)
+![Results Tables](img/tables_2.PNG)
 
 Below shows a list of SQL functions used:
-![SQL Functions](img/functions.png)
+![SQL Functions](img/functions.PNG)
 
 Below shows a list of SQL trigger functions and sequences used:
-![Trigger Functions and Sequences](img/others.png)
+![Trigger Functions and Sequences](img/others.PNG)
 
 ## Airflow
 
