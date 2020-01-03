@@ -1,8 +1,3 @@
-/*Data Validation of the top 10 imbalanced route: \
-(analysis_id = 1453262, 1453284, 1453305, 1453367, 1453395, 1453445, 1453464, 1453483, 1454196, 1454209, 1454352, 1454366, 1454523, 1454549, 1454670, 1454683, 1455243, 1455256, 1455385, 1455400) \
-NOTE: No data found for 1455243 , 1455400  for bt\
-Period: 2 days (From '2019-10-09 00:00:00' to '2019-10-10 23:59:00')*/
-
 --Create view for that of bt
 CREATE OR REPLACE VIEW jchew.bt_top10_2days AS
 SELECT bt.analysis_id, seg.bt_id, 
