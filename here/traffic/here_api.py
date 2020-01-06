@@ -112,6 +112,10 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         except KeyError as _:
             LOGGER.error('Missing "status" in response')
             raise HereAPIException(query_status.text)
+        except JSONDecodeError as json_err:
+            LOGGER.warning("JSON error in query status response.")
+            LOGGER.warning(query_status.text)
+            continue
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
@@ -129,12 +133,14 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     '''
     FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
+    ctx.obj['config'] = config
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, config, mapversion)
+        pull_here_data(ctx, startdate, enddate, mapversion)
 
 @cli.command('download')
 @click.argument('download_url')
 @click.argument('filename')
+@click.pass_context
 def download_data(ctx = None, download_url = None, filename = None):
     '''Download data from specified url to specified filename'''
     LOGGER.info('Downloading data')
@@ -144,13 +150,13 @@ def download_data(ctx = None, download_url = None, filename = None):
         shutil.copyfileobj(download.raw, f)
 
 @cli.command('upload')
-@click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
+@click.pass_context
+def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    if dbconfig:
+    if not dbsetting:
         configuration = configparser.ConfigParser()
-        configuration.read(dbconfig)
+        configuration.read(ctx.obj['config'])
         dbsetting = configuration['DBSETTINGS']
 
     LOGGER.info('Sending data to database')
@@ -167,10 +173,10 @@ def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, config, mapversion):
+def pull_here_data(ctx, startdate, enddate, mapversion):
 
     configuration = configparser.ConfigParser()
-    configuration.read(config)
+    configuration.read(ctx.obj['config'])
     dbsettings = configuration['DBSETTINGS']
     apis = configuration['API']
     email = configuration['EMAIL']
