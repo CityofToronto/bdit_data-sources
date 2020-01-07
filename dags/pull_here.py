@@ -9,6 +9,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.hooks.postgres_hook import PostgresHook
+
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
@@ -48,7 +50,9 @@ default_args = {'owner':'rdumas',
                  'retries': 0,
                  'retry_delay': timedelta(minutes=5),
                  'on_failure_callback': task_fail_slack_alert,
-                 'env':{'here_bot':rds_con
+                 'env':{'here_bot':rds_con,
+                        'LC_ALL':'C.UTF-8', #Necessary for Click
+                        'LANG':'C.UTF-8'}
                 }
 
 dag = DAG('pull_here',default_args=default_args, schedule_interval='0 13 * * 1')
