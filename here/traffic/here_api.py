@@ -10,12 +10,12 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from time import sleep
 from json import JSONDecodeError
+import os 
+import sys
 
 import click
 import requests
 from requests_oauthlib import OAuth1
-
-from notify_email import send_mail
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -165,7 +165,14 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
+        if os.getenv('here_bot'):
+            LOGGER.info(subprocess.check_output(['psql','$here_bot','-v',
+            'ON_ERROR_STOP=1', '-c',
+            r'\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER TRUE);'],
+            stdin=unzip.stdout))
+        else:
+            LOGGER.warning('No here_bot environment variable detected, assuming .pgpass value exists')
+            LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
                                         '-c',r'\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER TRUE);'],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
@@ -194,11 +201,10 @@ def pull_here_data(ctx, startdate, enddate, mapversion):
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
-        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
+        sys.exit(1)
     except Exception:
         LOGGER.critical(traceback.format_exc())
-        # Only send email if critical error
-        send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+        sys.exit(2)
 
 def main():
     #https://github.com/pallets/click/issues/456#issuecomment-159543498
