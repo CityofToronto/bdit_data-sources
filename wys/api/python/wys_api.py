@@ -173,11 +173,14 @@ def run_api(start_date, end_date, path, location_flag):
     CONFIG.read(path)
     api_main(start_date, end_date, location_flag, CONFIG)
 
-def api_main(start_date, end_date, location_flag, CONFIG):
-    key=CONFIG['API']
-    api_key=key['key']
-    dbset = CONFIG['DBSETTINGS']
-    conn = connect(**dbset)
+def api_main(start_date=dateutil.parser.parse(default_start).date(), 
+             end_date=dateutil.parser.parse(default_end).date(),
+             location_flag=0, CONFIG=None, conn=None, api_key=None):
+    if CONFIG:
+        key=CONFIG['API']
+        api_key=key['key']
+        dbset = CONFIG['DBSETTINGS']
+        conn = connect(**dbset)
 
     signs_list=[]
     try:
