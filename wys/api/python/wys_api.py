@@ -30,11 +30,7 @@ class TimeoutException(Exception):
 
 def logger():
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
-    stream_handler=logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    logger.setLevel(logging.INFO)
     return logger
 
 logger=logger()
@@ -222,13 +218,15 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
             logger.critical('Error aggregating data to 15-min bins')
             logger.critical(exc)
             sys.exit()
+        
+        conn.commit()
+
         try:
             update_locations(conn, loc_table)
         except psycopg2.Error as exc:
             logger.critical('Error updating locations')
             logger.critical(exc)
             sys.exit()
-    conn.commit()
     conn.close()
 
 def update_locations(conn, loc_table):
