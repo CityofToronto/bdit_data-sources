@@ -34,17 +34,17 @@ def read_masterlist(con, service):
 
     for i in range(2):
         dict_table.update({i+1:ward_list[i]})
-    LOGGER.debug(dict_table)
-    LOGGER.info('Selected %s wards', len(dict_table))
+        LOGGER.info('Working on ward %s', i+1)
+        pull_from_sheet(con, service, dict_table, dict_table[i+1])
+    
+    LOGGER.info('Completed')
 
-    for i in range(2):
-        pull_from_sheet(con, service, dict_table, dict_table[i+1], i)
-
-def pull_from_sheet(con, service, dict_table, ward, i, *args):
+def pull_from_sheet(con, service, dict_table, ward, *args):
     spreadsheet_id = str(ward[0])
     range_name = str(ward[1])
     schema_name = str(ward[2])
     table_name = str(ward[3])
+    ward_no = (str(ward[3])).split('_',1)[1]
     
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
@@ -58,7 +58,7 @@ def pull_from_sheet(con, service, dict_table, ward, i, *args):
             try:                   
                 i = (row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
                 rows.append(i)
-                LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                #LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
                 LOGGER.debug(row)
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
@@ -67,16 +67,22 @@ def pull_from_sheet(con, service, dict_table, ward, i, *args):
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema_name),sql.Identifier(table_name))
     LOGGER.info('Truncating existing table %s', table_name)
 
-    query = sql.SQL('''INSERT INTO {}.{} (location, from_street, to_street, direction, installation_date, removal_date,
+    insert = sql.SQL('''INSERT INTO {}.{} (location, from_street, to_street, direction, installation_date, removal_date,
                        new_sign_number, comments, confirmed) VALUES %s''').format(sql.Identifier(schema_name), sql.Identifier(table_name))                                                                                             
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
 
+    combine = sql.SQL('''INSERT INTO wys.all_wards 
+                SELECT {}::text AS ward_no, location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments 
+                FROM {}.{}''').format(sql.Literal(ward_no), sql.Identifier(schema_name), sql.Identifier(table_name)) 
+
     with con:
         with con.cursor() as cur:
             cur.execute(truncate)
-            execute_values(cur, query, rows)
+            execute_values(cur, insert, rows)
+            cur.execute(combine)
     LOGGER.info('Table %s is done', table_name)
+    LOGGER.info('Inserted %s into wys.all_wards', table_name)
 
 if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()
