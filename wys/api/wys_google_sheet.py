@@ -32,7 +32,7 @@ def read_masterlist(con, service):
             cur.execute(truncate_master)
             LOGGER.info('Truncated wys.all_wards')
 
-    for i in range(2):
+    for i in range(10):
         dict_table.update({i+1:ward_list[i]})
         LOGGER.info('Working on ward %s', i+1)
         pull_from_sheet(con, service, dict_table, dict_table[i+1])
@@ -56,10 +56,13 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     else:
         for row in values:           
             try:                   
-                i = (row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
-                rows.append(i)
-                #LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
-                LOGGER.debug(row)
+                if row[6] != '' and row[8] != '':
+                    i = (row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
+                    rows.append(i)
+                    #LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                    LOGGER.debug(row)
+                else:
+                    LOGGER.info('This row is not included: %s', row)
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
@@ -73,7 +76,7 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     LOGGER.debug(rows)
 
     combine = sql.SQL('''INSERT INTO wys.all_wards 
-                SELECT {}::text AS ward_no, location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments 
+                SELECT {}::int AS ward_no, location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments 
                 FROM {}.{}''').format(sql.Literal(ward_no), sql.Identifier(schema_name), sql.Identifier(table_name)) 
 
     with con:
