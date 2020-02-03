@@ -172,7 +172,7 @@ def run_api(start_date, end_date, path, location_flag):
 def api_main(start_date=dateutil.parser.parse(default_start).date(), 
              end_date=dateutil.parser.parse(default_end).date(),
              location_flag=0, CONFIG=None, conn=None, api_key=None):
-    if CONFIG:
+    if CONFIG and not conn:
         key=CONFIG['API']
         api_key=key['key']
         dbset = CONFIG['DBSETTINGS']
@@ -208,7 +208,7 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         except psycopg2.Error as exc:
             logger.critical('Error inserting speed count data')
             logger.critical(exc)
-            sys.exit()
+            sys.exit(1)
     
         try:
             with conn.cursor() as cur:
@@ -217,7 +217,8 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         except psycopg2.Error as exc:
             logger.critical('Error aggregating data to 15-min bins')
             logger.critical(exc)
-            sys.exit()
+            conn.close()
+            sys.exit(1)
         
         conn.commit()
 
@@ -226,7 +227,8 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         except psycopg2.Error as exc:
             logger.critical('Error updating locations')
             logger.critical(exc)
-            sys.exit()
+            conn.close()
+            sys.exit(1)
     conn.close()
 
 def update_locations(conn, loc_table):

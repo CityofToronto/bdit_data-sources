@@ -12,11 +12,11 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from airflow.hooks.postgres_hook import PostgresHook
 
 
-# try:
-sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
-from wys_api import api_main
-# except:
-#   raise ImportError("Cannot import functions to pull watch your speed data")
+try:
+    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
+    from wys_api import api_main
+except:
+    raise ImportError("Cannot import functions to pull watch your speed data")
 
 
 SLACK_CONN_ID = 'slack'
@@ -46,7 +46,6 @@ def task_fail_slack_alert(context):
 
 
 wys_postgres = PostgresHook("wys_bot")
-conn = wys_postgres.get_conn()
 
 connection = BaseHook.get_connection('wys_api_key')
 api_key = connection.password
@@ -64,9 +63,11 @@ default_args = {'owner':'rdumas',
 
 dag = DAG('pull_wys',default_args=default_args, schedule_interval='0 11 * * *')
 # Run at 8 AM local time every monday
-t1 = PythonOperator(
-        task_id = 'pull_wys',
-        python_callable=api_main, 
-        dag=dag,
-        op_kwargs={'conn':conn, 'api_key':api_key}
-        )
+
+with wys_postgres.get_conn() as conn:
+    t1 = PythonOperator(
+            task_id = 'pull_wys',
+            python_callable=api_main, 
+            dag=dag,
+            op_kwargs={'conn':conn, 'api_key':api_key}
+            )
