@@ -28,11 +28,7 @@ def read_masterlist(con, service):
             ward_list=cur.fetchall()
             LOGGER.debug(ward_list)
 
-            truncate_master = '''TRUNCATE TABLE wys.all_wards'''
-            cur.execute(truncate_master)
-            LOGGER.info('Truncated wys.all_wards')
-
-    for i in range(10):
+    for i in range(25):
         dict_table.update({i+1:ward_list[i]})
         LOGGER.info('Working on ward %s', i+1)
         pull_from_sheet(con, service, dict_table, dict_table[i+1])
@@ -56,8 +52,8 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     else:
         for row in values:           
             try:                   
-                if row[6] != '' and row[8] != '':
-                    i = (row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
+                if row[6] and row[8] and row[10] :
+                    i = (ward_no, row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
                     rows.append(i)
                     #LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
                     LOGGER.debug(row)
@@ -66,26 +62,19 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
-    
-    truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema_name),sql.Identifier(table_name))
-    LOGGER.info('Truncating existing table %s', table_name)
 
-    insert = sql.SQL('''INSERT INTO {}.{} (location, from_street, to_street, direction, installation_date, removal_date,
-                       new_sign_number, comments, confirmed) VALUES %s''').format(sql.Identifier(schema_name), sql.Identifier(table_name))                                                                                             
+    insert = sql.SQL('''INSERT INTO {}.{} (ward_no, location, from_street, to_street, direction, installation_date, removal_date,
+                       new_sign_number, comments, confirmed) VALUES %s 
+                       ON CONFLICT (installation_date, new_sign_number) DO UPDATE SET 
+                       removal_date=EXCLUDED.removal_date, new_sign_number=EXCLUDED.new_sign_number, comments=EXCLUDED.comments
+                       ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
 
-    combine = sql.SQL('''INSERT INTO wys.all_wards 
-                SELECT {}::int AS ward_no, location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments 
-                FROM {}.{}''').format(sql.Literal(ward_no), sql.Identifier(schema_name), sql.Identifier(table_name)) 
-
     with con:
         with con.cursor() as cur:
-            cur.execute(truncate)
             execute_values(cur, insert, rows)
-            cur.execute(combine)
     LOGGER.info('Table %s is done', table_name)
-    LOGGER.info('Inserted %s into wys.all_wards', table_name)
 
 if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()
