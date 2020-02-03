@@ -154,7 +154,7 @@ def download_data(ctx = None, download_url = None, filename = None):
 @click.pass_context
 def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    if not dbsetting:
+    if not dbsetting and not os.getenv('here_bot'):
         configuration = configparser.ConfigParser()
         configuration.read(ctx.obj['config'])
         dbsetting = configuration['DBSETTINGS']
