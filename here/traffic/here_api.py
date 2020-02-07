@@ -9,6 +9,7 @@ import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import sleep
+from json import JSONDecodeError
 
 import click
 import requests
@@ -50,7 +51,7 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5):
+                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
@@ -61,7 +62,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "timeIntervals":[],
                             "locationFilter":{"tmcs":[]},
                             "daysOfWeek":{"U":True,"M":True,"T":True,"W":True,"R":True,"F":True,"S":True},
-                            "mapVersion":"2017Q3"},
+                            "mapVersion": mapversion},
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
@@ -84,9 +85,15 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
     query_response = requests.post(query_url, headers=query_header, json=query)
     try:
         query_response.raise_for_status()
-    except requests.exceptions.HTTPError:
+    except requests.exceptions.HTTPError as err:
         LOGGER.error('Error in requesting query')
-        raise HereAPIException(query_response.json()['message'])
+        LOGGER.error(err)
+        try:
+            err_msg = query_response.json()['message']
+        except JSONDecodeError:
+            err_msg = query_response.text
+        finally:
+            raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
 
 def get_download_url(request_id, status_base_url, access_token, user_id):
@@ -105,6 +112,10 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         except KeyError as _:
             LOGGER.error('Missing "status" in response')
             raise HereAPIException(query_status.text)
+        except JSONDecodeError as json_err:
+            LOGGER.warning("JSON error in query status response.")
+            LOGGER.warning(query_status.text)
+            continue
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
@@ -112,19 +123,24 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', type=click.Path(exists=True))
+@click.option('-m','--mapversion', default='2018Q3')
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
-    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', mapversion=''):
+    '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate (inclusive)
 
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
     
     '''
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    ctx.obj['config'] = config
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, config)
+        pull_here_data(ctx, startdate, enddate, mapversion)
 
 @cli.command('download')
 @click.argument('download_url')
 @click.argument('filename')
+@click.pass_context
 def download_data(ctx = None, download_url = None, filename = None):
     '''Download data from specified url to specified filename'''
     LOGGER.info('Downloading data')
@@ -134,13 +150,13 @@ def download_data(ctx = None, download_url = None, filename = None):
         shutil.copyfileobj(download.raw, f)
 
 @cli.command('upload')
-@click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
+@click.pass_context
+def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    if dbconfig:
+    if not dbsetting:
         configuration = configparser.ConfigParser()
-        configuration.read(dbconfig)
+        configuration.read(ctx.obj['config'])
         dbsetting = configuration['DBSETTINGS']
 
     LOGGER.info('Sending data to database')
@@ -150,27 +166,25 @@ def send_data_to_database(datafile = None, dbsetting=None, dbconfig=None):
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
         LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
-                                        '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
+                                        '-c',r'\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER TRUE);'],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, config):
+def pull_here_data(ctx, startdate, enddate, mapversion):
 
     configuration = configparser.ConfigParser()
-    configuration.read(config)
+    configuration.read(ctx.obj['config'])
     dbsettings = configuration['DBSETTINGS']
     apis = configuration['API']
     email = configuration['EMAIL']
-    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)

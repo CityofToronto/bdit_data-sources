@@ -20,5 +20,5 @@ Table structures for the Blip data.
 
 Various aggregation scripts. The OpenData scripts generate a format of data similar to the Public API.
 
-- [aggr_5min_opendata_views][move_data/aggr_5min_opendata_views.sql] creates annual views of the 5-minute aggregate data to be extracted by OpenData.
-- [aggr_5min_opendata_export][move_data/aggr_5min_opendata_export.sql] mimics the above for when BigData generated the OpenData files ourselves.
+- [aggr_5min_opendata_views](move_data/aggr_5min_opendata_views.sql) creates annual views of the 5-minute aggregate data to be extracted by OpenData.
+- [aggr_5min_opendata_export](move_data/aggr_5min_opendata_export.sql) mimics the above for when BigData generated the OpenData files ourselves.

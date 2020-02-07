@@ -23,6 +23,6 @@ pandas = "*"
 click = "*"
 requests-oauthlib = "*"
 "psycopg2-binary" = "*"
-parsing_utlities = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "parsing_utilities"}
-"email_notifications-0.2" = {git = "https://github.com/CityofToronto/bdit_python_utilities.git", editable = true, subdirectory = "email_notifications"}
 pysftp = "*"
+email-notifications = {editable = true, subdirectory = "email_notifications", git = "https://github.com/CityofToronto/bdit_python_utilities.git"}
+parsing-utilities = {editable = true, subdirectory = "parsing_utilities", git = "https://github.com/CityofToronto/bdit_python_utilities.git"}
