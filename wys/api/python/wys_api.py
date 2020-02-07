@@ -29,6 +29,7 @@ class TimeoutException(Exception):
     pass
 
 def logger():
+    logging.basicConfig(format='%(lineno)d %(levelname)s: %(message)s')
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     return logger
@@ -73,33 +74,7 @@ def get_statistics(location, start_date, api_key):
         logger.error('204 error    '+error['error_message'])
     elif response.status_code==404:
         error=response.json()
-        logger.error('404 error    '+error['error_message']+' or request duration invalid')
-    elif response.status_code==401:
-        error=response.json()
-        logger.error('401 error    '+error['error_message'])
-    elif response.status_code==405:
-        error=response.json()
-        logger.error('405 error    '+error['error_message'])        
-    elif response.status_code==504:
-        error=response.json()
-        logger.error('504 error')
-        raise TimeoutException('Error'+str(response.status_code))
-    else:
-        raise WYS_APIException('Error'+str(response.status_code))
-
-def get_intersection(location, start_date, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+date_url+str(start_date)+intersection_endpoint, 
-                         headers=headers)
-    if response.status_code==200:
-        statistics=response.json()
-        return statistics
-    elif response.status_code==204:
-        error=response.json()
-        logger.error('204 error    '+error['error_message'])
-    elif response.status_code==404:
-        error=response.json()
-        logger.error('404 error    '+error['error_message']+' or request duration invalid')
+        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid')
     elif response.status_code==401:
         error=response.json()
         logger.error('401 error    '+error['error_message'])
@@ -212,7 +187,7 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
     
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_15min();")
+                cur.execute("SELECT wys.aggregate_speed_counts_one_hour();")
                 logger.info('Aggregated Speed Count Data')
         except psycopg2.Error as exc:
             logger.critical('Error aggregating data to 15-min bins')
