@@ -120,3 +120,5 @@ shape_id INT NOT NULL,
 wheelchair_accessible SMALLINT,
 feed_id int
 );
+
+ALTER TABLE gtfs_raph.trips ADD COLUMN bikes_allowed INTEGER;
