@@ -29,7 +29,7 @@ class TimeoutException(Exception):
     pass
 
 def logger():
-    logging.basicConfig(format='%(lineno)d %(levelname)s: %(message)s')
+    logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     return logger
@@ -133,8 +133,8 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--start', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
+@click.option('-s', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' , default=0, help='enter the location_id of the sign')
 def run_api(start_date, end_date, path, location_flag):
