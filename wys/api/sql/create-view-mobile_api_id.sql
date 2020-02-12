@@ -1,5 +1,4 @@
-
-CREATE TABLE wys.mobile_api_id AS
+CREATE VIEW wys.mobile_api_id AS
 
 SELECT a.ward_no, a.location, a.from_street, a.to_street, a.direction, 
 a.installation_date, a.removal_date, a.comments, a.combined,
