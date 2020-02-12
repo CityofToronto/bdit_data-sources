@@ -9,7 +9,7 @@ SELECT *,
  WHEN new_sign_number LIKE 'W%' AND new_sign_number LIKE '% - S%' THEN 'Ward ' || SUBSTRING(new_sign_number, 2, 10)
  WHEN new_sign_number LIKE 'W%' AND new_sign_number NOT LIKE '% - S%' THEN 'Ward ' || SUBSTRING(new_sign_number, 2, POSITION(' - ' IN new_sign_number) + 1 ) || 'S' || RIGHT(new_sign_number, 1)
  END AS combined
-FROM wys.all_wards
+FROM wys.mobile_sign_installations
 ) a 
 LEFT JOIN 
 (SELECT DISTINCT(api_id), sign_name
