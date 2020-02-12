@@ -39,9 +39,9 @@ INTO wys.locations_20200207
 FROM wys.locations_api_vz_today
 
 
---to find duplicates of api_id
+--to find duplicates of api_id from those that actually work the day before
 SELECT api_id 
-FROM wys.locations_api_vz
+FROM wys.locations_api_vz_today
 GROUP BY api_id
 HAVING COUNT(api_id) >1
 ORDER BY api_id
