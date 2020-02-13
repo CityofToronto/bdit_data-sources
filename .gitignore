@@ -188,6 +188,8 @@ bluetooth/api/psyconfig.cfg
 *.lock
 bluetooth/api/config.cfg
 volumes/miovision/api/config.cfg
+config.cfg
+
 <<<<<<< HEAD
 =======
 
