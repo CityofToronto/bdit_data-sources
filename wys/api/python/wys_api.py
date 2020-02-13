@@ -57,6 +57,7 @@ def get_signs(api_key):
     if response.status_code==200:
         signs=response.json()
         return signs
+    #logger.debug('get_signs done')
 
 def get_location(location, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
@@ -67,11 +68,12 @@ def get_location(location, api_key):
         return statistics
     else:
         return response.status_code
+    #logger.debug('get_location done')
 
 def location_id(api_key):
     ''' Using get_signs and get_location function'''
     logger.info('Pulling locations')
-    for _ in range(3):
+    for attempt in range(3):
         try:
             signs=get_signs(api_key)
             location_id=[]
@@ -80,6 +82,7 @@ def location_id(api_key):
                 sign_name=item['name']
                 address=item['address']
                 statistics=str(get_location(location, api_key))
+                #logger.debug('DONE one item')
                 if statistics[4:11] == 'LocInfo':
                     temp=[location, sign_name, address]
                     location_id.append(temp)
@@ -98,6 +101,7 @@ def location_id(api_key):
         except Exception as e:
             logger.critical(traceback.format_exc())
             raise WYS_APIException(str(e))
+    logger.info('location_id done')
 
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
@@ -208,7 +212,7 @@ def get_data_for_date(start_date, signs_iterator, api_key):
         name=sign[1]
         logger.debug(str(name))
         
-        for _ in range(3):
+        for attempt in range(3):
             try:
                 statistics=get_statistics(api_id, start_date, api_key)
                 raw_data=statistics['LocInfo']
@@ -246,7 +250,7 @@ def run_api(start_date, end_date, path, location_flag):
     start_date= dateutil.parser.parse(str(start_date)).date()
     end_date= dateutil.parser.parse(str(end_date)).date()
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'/home/jchew/config.cfg')
+    CONFIG.read(path)
     api_main(start_date, end_date, location_flag, CONFIG)
 
 def api_main(start_date=dateutil.parser.parse(default_start).date(), 
@@ -304,16 +308,24 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
 
         try:
             update_locations(conn, loc_table)
+            logger.info('Updated wys.locations')
         except psycopg2.Error as exc:
             logger.critical('Error updating locations')
             logger.critical(exc)
             conn.close()
             sys.exit(1)
 
-
-
+        try:
+            get_schedules(conn, api_key)
+            logger.info('Updated wys.sign_schedules_list')
+        except psycopg2.Error as exc:
+            logger.critical('Error updating schedules')
+            logger.critical(exc)
+            conn.close()
+            sys.exit(1)
 
     conn.close()
+    logger.info('Done')
 
 def update_locations(conn, loc_table):
     '''Update the wys.locations table for the date of data collection
