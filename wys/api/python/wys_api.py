@@ -39,13 +39,9 @@ logger.debug('Start')
 session = Session()
 url='https://api.streetsoncloud.com/sv2'
 signs_endpoint = '/signs'
+schedule_endpoint = '/schedules'
 statistics_url='/signs/statistics/location/'
-statistics_endpoint = '/from/00:00/to/23:59/speed_units/0'
-intersection_endpoint = '/from/12:00/to/12:10/speed_units/0'
-period='/period/'
-date_url = '/date/'
-units='/speed_units/0'
-end='/period/5/speed_units/0'
+
 time_delta = datetime.timedelta(days=1)
 date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
 default_start=str(datetime.date.today()-time_delta)
@@ -62,9 +58,50 @@ def get_signs(api_key):
         signs=response.json()
         return signs
 
+def get_location(location, api_key):
+    headers={'Content-Type':'application/json','x-api-key':api_key}
+    response=session.get(url+statistics_url+str(location)+'/period/5/speed_units/0', 
+                         headers=headers)
+    if response.status_code==200:
+        statistics=str(response.content)
+        return statistics
+    else:
+        return response.status_code
+
+def location_id(api_key):
+    ''' Using get_signs and get_location function'''
+    logger.info('Pulling locations')
+    for _ in range(3):
+        try:
+            signs=get_signs(api_key)
+            location_id=[]
+            for item in signs:
+                location=item['location_id']
+                sign_name=item['name']
+                address=item['address']
+                statistics=str(get_location(location, api_key))
+                if statistics[4:11] == 'LocInfo':
+                    temp=[location, sign_name, address]
+                    location_id.append(temp)
+            logger.debug(str(len(location_id))+' locations have data')
+            return location_id
+        except TimeoutException as exc_504:
+            logger.exception(exc_504)
+            sleep(180)
+        except exceptions.ProxyError as prox:
+            logger.error(prox)
+            logger.warning('Retrying in 2 minutes')
+            sleep(120)
+        except exceptions.RequestException as err:
+            logger.error(err)
+            sleep(75)
+        except Exception as e:
+            logger.critical(traceback.format_exc())
+            raise WYS_APIException(str(e))
+
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+date_url+str(start_date)+statistics_endpoint, 
+    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
                          headers=headers)
     if response.status_code==200:
         statistics=response.json()
@@ -88,45 +125,112 @@ def get_statistics(location, start_date, api_key):
     else:
         raise WYS_APIException('Error'+str(response.status_code))
 
-def get_location(location, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+end, 
-                         headers=headers)
-    if response.status_code==200:
-        statistics=str(response.content)
-        return statistics
-    else:
-        return response.status_code
+def parse_counts_for_location(api_id, raw_records):
+    '''Parse the response for a given location and set of records
 
-def location_id(api_key):
-    logger.info('Pulling locations')
-    for _ in range(3):
-        try:
-            signs=get_signs(api_key)
-            location_id=[]
-            for item in signs:
-                location=item['location_id']
-                sign_name=item['name']
-                address=item['address']
-                statistics=str(get_location(location, api_key))
-                if statistics[4:11] == 'LocInfo':
-                    temp=[location, sign_name, address]
-                    location_id.append(temp)
-            logger.debug(str(len(location_id))+' locations have data')
-            return location_id
-        except TimeoutException as exc_504:
-            logger.exception(exc_504)
-            sleep(180)
-        except exceptions.RequestException as err:
-            logger.error(err)
-            sleep(75)
-        except exceptions.ProxyError as prox:
-            logger.error(prox)
-            logger.warning('Retrying in 2 minutes')
-            sleep(120)
-        except Exception as e:
-            logger.critical(traceback.format_exc())
-            raise WYS_APIException(str(e))
+    Parameters
+    ------------
+    api_id : int
+        Unique identifier for the sign.
+    raw_records : list
+        List of records returned for location and time.
+
+    Returns 
+    --------
+    speed_counts
+        List of speed count records to insert into database
+    '''
+    speed_counts = []
+    for record in raw_records:
+        datetime_bin=record['datetime']
+        datetime_bin= dateutil.parser.parse(str(datetime_bin))
+        counter=record['counter']
+        for item in counter:
+            speed_row=[api_id, datetime_bin, item['speed'], item['count']]
+            speed_counts.append(speed_row)
+    return speed_counts
+
+def parse_location(api_id, start_date, loc):
+    '''Parse the location data for a given sign
+
+    Parameters
+    ------------
+    api_id : int 
+        Unique identifier for the sign.
+    start_date : date 
+        Date being processed.
+    loc : dict 
+        Dictionary of location information for the sign.
+
+    Returns
+    --------
+    row
+        Tuple representing a row of the wys.locations table
+
+    '''
+    geocode=loc['geocode']
+    address=loc['address']
+    name=loc['name']
+    if 'SB' in name:
+        direction='SB'
+    elif 'NB' in name:
+        direction='NB'
+    elif 'WB' in name:
+        direction='WB'
+    elif 'EB' in name:
+        direction='EB'
+    else:
+        direction=None
+    return (api_id, address, name, direction, start_date, geocode)
+
+def get_data_for_date(start_date, signs_iterator, api_key):
+    ''' Using get_statistics, parse_count_for_locations, parse_locations functions.
+    Pull data for the provided date and list of signs to pull
+
+    Parameters
+    -----------
+    start_date : date
+        Date to pull data for
+    signs_iterator : list
+        List of api_id's (signs) to pull data from
+    api_key : str
+        Key to pull data from the api
+    Returns
+    --------
+    speed_counts: list
+        List of speed count rows to be inserted into wys.raw_data
+    sign_locations: list
+        List of active sign locations to be inserted into wys.locations
+    '''
+    speed_counts, sign_locations = [], []
+    for sign in signs_iterator:
+        api_id=sign[0]
+        name=sign[1]
+        logger.debug(str(name))
+        
+        for _ in range(3):
+            try:
+                statistics=get_statistics(api_id, start_date, api_key)
+                raw_data=statistics['LocInfo']
+                raw_records=raw_data['raw_records']
+                spd_cnts = parse_counts_for_location(api_id, raw_records)
+                speed_counts.extend(spd_cnts)
+                sign_location = parse_location(api_id, start_date, raw_data['Location'])
+                sign_locations.append(sign_location)
+                
+            except TimeoutException:
+                sleep(180)
+            except exceptions.ProxyError as prox:
+                logger.error(prox)
+                logger.warning('Retrying in 2 minutes')
+                sleep(120)
+            except exceptions.RequestException as err:
+                logger.error(err)
+                sleep(75)
+
+            else:
+                break
+    return speed_counts, sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -137,11 +241,12 @@ def cli():
 @click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' , default=0, help='enter the location_id of the sign')
+
 def run_api(start_date, end_date, path, location_flag):
     start_date= dateutil.parser.parse(str(start_date)).date()
     end_date= dateutil.parser.parse(str(end_date)).date()
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
+    CONFIG.read(r'/home/jchew/config.cfg')
     api_main(start_date, end_date, location_flag, CONFIG)
 
 def api_main(start_date=dateutil.parser.parse(default_start).date(), 
@@ -159,7 +264,7 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
             signs_list=location_id(api_key)
         else:
             signs_list=[location_flag]
-    except Exception as e:
+    except Exception:
         logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
         sys.exit(2)
@@ -204,6 +309,10 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
             logger.critical(exc)
             conn.close()
             sys.exit(1)
+
+
+
+
     conn.close()
 
 def update_locations(conn, loc_table):
@@ -269,110 +378,24 @@ def update_locations(conn, loc_table):
         """
         cur.execute(update_locations_sql)
 
-def get_data_for_date(start_date, signs_iterator, api_key):
-    '''Pull data for the provided date and list of signs to pull
-
-    Parameters
-    -----------
-    start_date : date
-        Date to pull data for
-    signs_iterator : list
-        List of api_id's (signs) to pull data from
-    api_key : str
-        Key to pull data from the api
-    Returns
-    --------
-    speed_counts: list
-        List of speed count rows to be inserted into wys.raw_data
-    sign_locations: list
-        List of active sign locations to be inserted into wys.locations
-    '''
-    speed_counts, sign_locations = [], []
-    for sign in signs_iterator:
-        api_id=sign[0]
-        name=sign[1]
-        logger.debug(str(name))
-        
-        for attempt in range(3):
-            try:
-                statistics=get_statistics(api_id, start_date, api_key)
-                raw_data=statistics['LocInfo']
-                raw_records=raw_data['raw_records']
-                spd_cnts = parse_counts_for_location(api_id, raw_records)
-                speed_counts.extend(spd_cnts)
-                sign_location = parse_location(api_id, start_date, raw_data['Location'])
-                sign_locations.append(sign_location)
-                
-            except TimeoutException as exc_504:
-                sleep(180)
-            except exceptions.RequestException as err:
-                logger.error(err)
-                sleep(75)
-            except exceptions.ProxyError as prox:
-                logger.error(prox)
-                logger.warning('Retrying in 2 minutes')
-                sleep(120)
-            else:
-                break
-    return speed_counts, sign_locations
+def get_schedules(conn, api_key):
+    headers={'Content-Type':'application/json','x-api-key':api_key}
+    response=session.get(url+signs_endpoint+schedule_endpoint,
+                         headers=headers)
+    schedule_list = response.json()
     
-def parse_counts_for_location(api_id, raw_records):
-    '''Parse the response for a given location and set of records
+    rows = [(schedule['name'], api_id) for schedule in schedule_list if schedule['assigned_on_locations'] 
+            for api_id in schedule['assigned_on_locations'] if api_id]
+       
+    with conn.cursor() as cur:
+        logger.debug('Inserting '+str(len(rows))+' rows of schedules')
+        schedule_sql = '''
+            INSERT INTO wys.sign_schedules_list (schedule_name, api_id) VALUES %s
+            ON CONFLICT (api_id) DO UPDATE SET
+            schedule_name = EXCLUDED.schedule_name
+            '''
+        execute_values(cur, schedule_sql, rows)
 
-    Parameters
-    ------------
-    api_id : int
-        Unique identifier for the sign.
-    raw_records : list
-        List of records returned for location and time.
-
-    Returns 
-    --------
-    speed_counts
-        List of speed count records to insert into database
-    '''
-    speed_counts = []
-    for record in raw_records:
-        datetime_bin=record['datetime']
-        datetime_bin= dateutil.parser.parse(str(datetime_bin))
-        counter=record['counter']
-        for item in counter:
-            speed_row=[api_id, datetime_bin, item['speed'], item['count']]
-            speed_counts.append(speed_row)
-    return speed_counts
-
-def parse_location(api_id, start_date, loc):
-    '''Parse the location data for a given sign
-
-    Parameters
-    ------------
-    api_id : int 
-        Unique identifier for the sign.
-    start_date : date 
-        Date being processed.
-    loc : dict 
-        Dictionary of location information for the sign.
-
-    Returns
-    --------
-    row
-        Tuple representing a row of the wys.locations table
-
-    '''
-    geocode=loc['geocode']
-    address=loc['address']
-    name=loc['name']
-    if 'SB' in name:
-        direction='SB'
-    elif 'NB' in name:
-        direction='NB'
-    elif 'WB' in name:
-        direction='WB'
-    elif 'EB' in name:
-        direction='EB'
-    else:
-        direction=None
-    return (api_id, address, name, direction, start_date, geocode)
 
 if __name__ == '__main__':
     cli()
