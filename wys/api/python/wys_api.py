@@ -57,7 +57,7 @@ def get_signs(api_key):
     if response.status_code==200:
         signs=response.json()
         return signs
-    #logger.debug('get_signs done')
+    logger.debug('get_signs done')
 
 def get_location(location, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
@@ -68,7 +68,7 @@ def get_location(location, api_key):
         return statistics
     else:
         return response.status_code
-    #logger.debug('get_location done')
+    logger.debug('get_location done')
 
 def location_id(api_key):
     ''' Using get_signs and get_location function'''
