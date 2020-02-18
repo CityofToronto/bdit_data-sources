@@ -184,14 +184,14 @@ DECLARE
 	-- used to keep track of the ID of the first intersection so we don't assign the same intersection twice
 	int_id1 INT := (text_arr_oid1[2])::INT;
 
-	oid1_geom GEOMETRY := ST_GeomFromText(text_arr_oid1[1], 26917);
+	oid1_geom GEOMETRY := ST_GeomFromText(text_arr_oid1[1], 2952);
 
 	text_arr_oid2 TEXT[] := (CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
 				THEN gis._get_intersection_geom(highway2, btwn2, direction_btwn2::TEXT, metres_btwn2::FLOAT, 0)
 				ELSE gis._get_intersection_geom(highway2, btwn2, direction_btwn2::TEXT, metres_btwn2::FLOAT, int_id1)
 				END);
 
-	oid2_geom  GEOMETRY := ST_GeomFromText(text_arr_oid2[1], 26917);
+	oid2_geom  GEOMETRY := ST_GeomFromText(text_arr_oid2[1], 2952);
 
 
 	-- create a line between the two intersection geoms
@@ -208,7 +208,7 @@ DECLARE
 	-- match the lines to centreline segments
 	centreline_segments geometry := (
 				CASE WHEN (TRIM(btwn1) IN ('Entire length', 'Entire Length', 'entire length' , 'The entire length')) AND btwn2 IS NULL
-				THEN (SELECT * FROM get_entire_length_centreline_segements(highway2) LIMIT 1)
+				THEN (SELECT * FROM gis._get_entire_length_centreline_segments(highway2) LIMIT 1)
 
 				WHEN line_geom IS NULL THEN NULL
 
@@ -223,7 +223,7 @@ DECLARE
 				THEN
 				(
 					gis._centreline_case1(direction_btwn2, metres_btwn2, ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom,
-					ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 26917) )
+					ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952) )
 				)
 
 				-- special case 2
@@ -231,9 +231,9 @@ DECLARE
 				(
 					gis._centreline_case2(direction_btwn1, direction_btwn2, metres_btwn1, metres_btwn2, match_line_to_centreline_geom, line_geom,
 					-- get the original intersection geoms (not the translated ones)
-					ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 26917),(CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
-					THEN ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, 0))[1], 26917)
-					ELSE ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, int_id1))[1], 26917)
+					ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952),(CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
+					THEN ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, 0))[1], 2952)
+					ELSE ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, int_id1))[1], 2952)
 					END))
 				)
 				END

@@ -126,7 +126,7 @@ oid INT := int_arr[1];
 int_id_found INT := int_arr[3];
 lev_sum INT := int_arr[2];
 oid_geom geometry := (
-		SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 26917)
+		SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
 		FROM gis.centreline_intersection gis
 		WHERE objectid = oid
 		);
@@ -170,7 +170,7 @@ len INT := ST_LENGTH(ST_MakeLine(oid1_geom, oid2_geom));
 geom GEOMETRY :=
 	(
 	CASE WHEN len > 11
-	THEN ST_Transform(ST_MakeLine(oid1_geom, oid2_geom), 26917)
+	THEN ST_Transform(ST_MakeLine(oid1_geom, oid2_geom), 2952)
 	END
 	);
 BEGIN
@@ -215,15 +215,15 @@ street_name_arr TEXT[] := (SELECT ARRAY_AGG(lf_name)
 								-- metres_btwn and metres_btwn2 are null
 								COALESCE(metres_btwn1, metres_btwn2) IS NULL AND
 								-- 10* used to be 3
-								ST_DWithin( ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
+								ST_DWithin( ST_Transform(s.geom, 2952), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
 								-- over 90% of centreline segment must be in the buffer
-								AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9
+								AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 2952))) /ST_Length(ST_Transform(s.geom, 2952)) > 0.9
 							)
 							OR
 							(
 								-- 10 TIMES LENGTH WORKS .... LOOK INTO POTENTIALLY CHANGING LATER
 								COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL AND
-								ST_DWithin(ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 10*GREATEST(metres_btwn1, metres_btwn2), 'endcap=flat join=round'), 30)
+								ST_DWithin(ST_Transform(s.geom, 2952), ST_BUFFER(line_geom, 10*GREATEST(metres_btwn1, metres_btwn2), 'endcap=flat join=round'), 30)
 							)
 							)
 						ORDER BY levenshtein(LOWER(highway2), LOWER(s.lf_name), 1, 1, 2)
@@ -233,7 +233,7 @@ street_name_arr TEXT[] := (SELECT ARRAY_AGG(lf_name)
 street_name TEXT = street_name_arr[1];
 
 geom geometry := (
-	SELECT ST_Transform(ST_UNION(s.geom), 26917) -- ST_LineMerge(ST_Transform(ST_UNION(s.geom), 26917))
+	SELECT ST_Transform(ST_UNION(s.geom), 2952) -- ST_LineMerge(ST_Transform(ST_UNION(s.geom), 2952))
 	FROM gis.centreline s
 	WHERE lf_name = street_name
 	AND
@@ -243,14 +243,14 @@ geom geometry := (
 		-- metres_btwn and metres_btwn2 are null
 		COALESCE(metres_btwn1, metres_btwn2) IS NULL AND
 		-- 3* could be changed to 10* if you would like
-		ST_DWithin( ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
-		AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 26917))) /ST_Length(ST_Transform(s.geom, 26917)) > 0.9
+		ST_DWithin( ST_Transform(s.geom, 2952), ST_BUFFER(line_geom, 3*ST_LENGTH(line_geom), 'endcap=flat join=round') , 10)
+		AND ST_Length(st_intersection(ST_BUFFER(line_geom, 3*(ST_LENGTH(line_geom)), 'endcap=flat join=round') , ST_Transform(s.geom, 2952))) /ST_Length(ST_Transform(s.geom, 2952)) > 0.9
 	)
 	OR
 	(
 		-- 10 TIMES LENGTH WORKS .... LOOK INTO POTENTIALLY CHANGING LATER
 		COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL AND
-		ST_DWithin(ST_Transform(s.geom, 26917), ST_BUFFER(line_geom, 10*GREATEST(metres_btwn1, metres_btwn2), 'endcap=flat join=round'), 30)
+		ST_DWithin(ST_Transform(s.geom, 2952), ST_BUFFER(line_geom, 10*GREATEST(metres_btwn1, metres_btwn2), 'endcap=flat join=round'), 30)
 	)
 	)
 );
@@ -399,11 +399,11 @@ endpoint_line1 GEOMETRY := CASE WHEN closest_line_geom1 IS NULL THEN NULL
 -- especially the creation of new_line1 and new_line2
 new_line1 GEOMETRY := (
 			CASE WHEN direction_btwn1 IS NOT NULL AND direction_btwn2 IS NULL
-			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1), -- ST_MakeLine(oid1_geom, oid2_geom),
+			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 2952)), -- ST_MakeLine(oid1_geom, endpoint_line1), -- ST_MakeLine(oid1_geom, oid2_geom),
 			oid1_geom, endpoint_line1)
 			-- ??????????????? change this part below ???????
 			WHEN direction_btwn1 IS NOT NULL AND direction_btwn2 IS NOT NULL
-			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, oid2_geom), --ST_MakeLine(oid1_geom, endpoint_line1),
+			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 2952)), -- ST_MakeLine(oid1_geom, oid2_geom), --ST_MakeLine(oid1_geom, endpoint_line1),
 			oid1_geom, endpoint_line1)
 			-- from the point that oid1 intersects the merged centreline segment to the point where the merged centreline segments starts/ends
 			ELSE gis._line_substring_lower_value_first(closest_line_geom1, St_LineLocatePoint(closest_line_geom1, oid1_geom), ST_LineLocatePoint(closest_line_geom1, endpoint_line1))
@@ -423,7 +423,7 @@ new_line2 GEOMETRY := (
 			CASE WHEN direction_btwn2 IS NOT NULL AND closest_line_path2 <> closest_line_path1
 			THEN
 			gis._centreline_case2(direction_btwn2, NULL, metres_btwn2, NULL, closest_line_geom2,
-									ST_MakeLine(oid2_geom, ST_SetSRID(gis._translate_intersection_point(oid2_geom, metres_btwn2, direction_btwn2), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1),
+									ST_MakeLine(oid2_geom, ST_SetSRID(gis._translate_intersection_point(oid2_geom, metres_btwn2, direction_btwn2), 2952)), -- ST_MakeLine(oid1_geom, endpoint_line1),
 									endpoint_line2, oid2_geom)
 
 
@@ -699,7 +699,7 @@ Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/mast
 
 
 
-CREATE OR REPLACE FUNCTION gis._get_entire_length_centreline_segements(highway2_before_editing text)
+CREATE OR REPLACE FUNCTION gis._get_entire_length_centreline_segments(highway2_before_editing text)
 RETURNS GEOMETRY AS $geom$
 
 -- i.e. "Hemlock Avenue" and "Entire length"
@@ -718,7 +718,7 @@ highway2 TEXT :=
 
 segments GEOMETRY := (SELECT ST_UNION(geom) FROM gis.centreline WHERE lf_name = highway2);
 
-geom GEOMETRY := CASE WHEN segments IS NOT NULL THEN ST_Transform(ST_LineMerge(segments),26917)
+geom GEOMETRY := CASE WHEN segments IS NOT NULL THEN ST_Transform(ST_LineMerge(segments),2952)
 		ELSE NULL END;
 
 
@@ -730,7 +730,7 @@ END;
 $geom$ LANGUAGE plpgSQL;
 
 
-COMMENT ON FUNCTION gis._get_entire_length_centreline_segements(text) IS '
+COMMENT ON FUNCTION gis._get_entire_length_centreline_segments(text) IS '
 Union and line merge all of the centreline segments in the City with the exact street name of the street name inputted.
-Returns geometry projected into the UTM Zone 17N (SRID = 26917) projection
+Returns geometry projected into the  MTM Zone 10 (SRID = 2952) projection
 ';
