@@ -135,7 +135,7 @@ arr1 TEXT[] :=  ARRAY(SELECT (
 	CASE WHEN direction IS NULL OR metres IS NULL
 	THEN ST_AsText(oid_geom)
 	-- special case
-	ELSE ST_AsText(translate_intersection_point(oid_geom, metres, direction))
+	ELSE ST_AsText(gis._translate_intersection_point(oid_geom, metres, direction))
 	END
 ));
 
@@ -399,11 +399,11 @@ endpoint_line1 GEOMETRY := CASE WHEN closest_line_geom1 IS NULL THEN NULL
 -- especially the creation of new_line1 and new_line2
 new_line1 GEOMETRY := (
 			CASE WHEN direction_btwn1 IS NOT NULL AND direction_btwn2 IS NULL
-			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1), -- ST_MakeLine(oid1_geom, oid2_geom),
+			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1), -- ST_MakeLine(oid1_geom, oid2_geom),
 			oid1_geom, endpoint_line1)
 			-- ??????????????? change this part below ???????
 			WHEN direction_btwn1 IS NOT NULL AND direction_btwn2 IS NOT NULL
-			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, oid2_geom), --ST_MakeLine(oid1_geom, endpoint_line1),
+			THEN gis._centreline_case2(NULL, direction_btwn1, NULL, metres_btwn1, closest_line_geom1, ST_MakeLine(oid1_geom, ST_SetSRID(gis._translate_intersection_point(oid1_geom, metres_btwn1, direction_btwn1), 26917)), -- ST_MakeLine(oid1_geom, oid2_geom), --ST_MakeLine(oid1_geom, endpoint_line1),
 			oid1_geom, endpoint_line1)
 			-- from the point that oid1 intersects the merged centreline segment to the point where the merged centreline segments starts/ends
 			ELSE gis._line_substring_lower_value_first(closest_line_geom1, St_LineLocatePoint(closest_line_geom1, oid1_geom), ST_LineLocatePoint(closest_line_geom1, endpoint_line1))
@@ -423,7 +423,7 @@ new_line2 GEOMETRY := (
 			CASE WHEN direction_btwn2 IS NOT NULL AND closest_line_path2 <> closest_line_path1
 			THEN
 			gis._centreline_case2(direction_btwn2, NULL, metres_btwn2, NULL, closest_line_geom2,
-									ST_MakeLine(oid2_geom, ST_SetSRID(translate_intersection_point(oid2_geom, metres_btwn2, direction_btwn2), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1),
+									ST_MakeLine(oid2_geom, ST_SetSRID(gis._translate_intersection_point(oid2_geom, metres_btwn2, direction_btwn2), 26917)), -- ST_MakeLine(oid1_geom, endpoint_line1),
 									endpoint_line2, oid2_geom)
 
 
