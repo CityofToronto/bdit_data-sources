@@ -1,4 +1,4 @@
-DROP MATERIALIZED VIEW wys.stationary_signs;
+DROP MATERIALIZED VIEW wys.stationary_signs CASCADE;
 
 CREATE MATERIALIZED VIEW wys.stationary_signs AS
 	WITH distinctish_signs AS(
@@ -10,7 +10,17 @@ CREATE MATERIALIZED VIEW wys.stationary_signs AS
 	ORDER BY api_id, regexp_replace(sign_name, '([0-9]{5,8})',''))
 	
 	SELECT 
-	api_id, address, sign_name, dir, start_date, lead(start_date) OVER w as next_start, lag(start_date) OVER w as prev_start, geom
+	api_id, 
+	row_number() OVER (ORDER BY api_id, start_date) AS sign_id,
+	address,
+	sign_name,
+	dir,
+	start_date,
+	lead(start_date) OVER w as next_start,
+	lag(start_date) OVER w as prev_start,
+	geom
 	FROM distinctish_signs
-	WINDOW w as (PARTITION BY api_id order by start_date)
+	WINDOW w as (PARTITION BY api_id order by start_date);
 
+CREATE INDEX ON wys.stationary_signs USING gist(geom);
+ANALYZE wys.stationary_signs;
