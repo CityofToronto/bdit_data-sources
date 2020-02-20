@@ -1,8 +1,8 @@
 -- View: open_data.wys_mobile_detailed_2019
 
--- DROP VIEW open_data.wys_mobile_detailed_2019;
+-- DROP VIEW open_data.wys_mobile_detailed;
 
-CREATE OR REPLACE VIEW open_data.wys_mobile_detailed_2019
+CREATE OR REPLACE VIEW open_data.wys_mobile_detailed
  AS
  SELECT loc.ward_no,
     loc.location,
@@ -15,7 +15,7 @@ CREATE OR REPLACE VIEW open_data.wys_mobile_detailed_2019
    FROM wys.mobile_api_id loc
      JOIN wys.speed_counts_agg agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= loc.installation_date AND agg.datetime_bin < loc.removal_date
      JOIN wys.speed_bins USING (speed_id)
-  WHERE agg.datetime_bin >= '2019-01-01 00:00:00'::timestamp without time zone AND agg.datetime_bin < ('2019-01-01'::date + '1 year'::interval);
+  WHERE agg.datetime_bin >= '2019-01-01 00:00:00'::timestamp without time zone AND agg.datetime_bin < date_trunc('month', now());
 
 ALTER TABLE open_data.wys_mobile_detailed_2019
     OWNER TO rdumas;
