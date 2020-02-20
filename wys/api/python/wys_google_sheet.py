@@ -45,6 +45,7 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     table_name = str(ward[3])
     ward_no = (str(ward[3])).split('_',1)[1]
     
+    # add in try except block
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
     values = result.get('values', [])
@@ -72,7 +73,10 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
-        LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
+        if len(badrows) > 0:
+            LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
+        else:
+            LOGGER.info('%s does not have any row with different date format', table_name)
 
     insert = sql.SQL('''INSERT INTO {}.{} (ward_no, location, from_street, to_street, direction, installation_date, removal_date,
                        new_sign_number, comments, confirmed) VALUES %s 
