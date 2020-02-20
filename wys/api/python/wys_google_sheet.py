@@ -23,10 +23,6 @@ credentials = service_account.Credentials.from_service_account_file(
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-class TimeoutException(Exception):
-    """Exception if API gives a 504 error"""
-    pass
-
 def read_masterlist(con, service):
     dict_table = {}
     ward_list = []
