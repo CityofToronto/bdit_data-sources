@@ -10,6 +10,8 @@ from psycopg2 import Error
 
 from datetime import datetime
 import logging 
+from time import sleep
+import socket
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
@@ -20,6 +22,10 @@ credentials = service_account.Credentials.from_service_account_file(
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+class TimeoutException(Exception):
+    """Exception if API gives a 504 error"""
+    pass
 
 def read_masterlist(con, service):
     dict_table = {}
@@ -45,10 +51,15 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     table_name = str(ward[3])
     ward_no = (str(ward[3])).split('_',1)[1]
     
-    # add in try except block
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
-    values = result.get('values', [])
+    for attempt in range(3):
+        try:
+            sheet = service.spreadsheets()
+            result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
+            values = result.get('values', [])
+        except socket.timeout:
+            sleep(120)
+        else:
+            break
 
     rows = []
     badrows = []
