@@ -1,6 +1,6 @@
 CREATE MATERIALIZED VIEW open_data.wys_stationary_locations AS
 
-SELECT sign_id, address, sign_name, dir, schedule, 
+SELECT area_short::INT as ward_no, sign_id, address, sign_name, dir, schedule, 
     min_speed, 
     speed_limit, 
     flash_speed, 
@@ -12,8 +12,9 @@ SELECT sign_id, address, sign_name, dir, schedule,
 	JOIN wys.sign_schedules_list USING (api_id)
      JOIN wys.sign_schedules_clean USING (schedule_name)
 	 JOIN wys.speed_counts_agg USING (api_id) 
-	 GROUP BY sign_id, address, sign_name, dir, schedule, 
-    min_speed, 
-    speed_limit, prev_start,next_start, start_date,
-    flash_speed, 
-    strobe_speed, geom
+     LEFT JOIN gis.wards2018 ON ST_Contains(wkb_geometry, geom)
+	 GROUP BY ward, sign_id, address, sign_name, dir, schedule, 
+            min_speed, 
+            speed_limit, prev_start,next_start, start_date,
+            flash_speed, 
+            strobe_speed, geom
