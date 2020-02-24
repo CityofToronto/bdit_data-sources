@@ -6,13 +6,16 @@ SELECT
   ST_Distance(ST_Transform(api.geom_api,2952), ST_Transform(vz.geom_vz,2952)) AS diff
 FROM
 (SELECT 
-api_id, address, sign_name, 
- REVERSE(SUBSTRING(reverse(locations.sign_name), '([0-9]{1,8})')) AS serial_number, 
+DISTINCT (api_id), address, sign_name, 
+ REVERSE(SUBSTRING(reverse(sign_name), '([0-9]{1,8})')) AS serial_number, 
  dir, start_date AS dt_api, loc,
 st_setsrid(st_makepoint(split_part(regexp_replace(loc, '[()]', '', 'g'), ','::text, 2)::float, 
 						split_part(regexp_replace(loc, '[()]', '', 'g'), ','::text, 1)::float), 4326) AS geom_api 
-FROM wys.locations
-WHERE Length(SUBSTRING(reverse(locations.sign_name), '([0-9]{1,8})')) > '3') api
+FROM 
+ (SELECT DISTINCT ON (api_id,  TRIM(regexp_replace(sign_name, '([0-9]{5,8})',''))) api_id, 
+  address, sign_name, dir, start_date, loc  FROM wys.locations
+ ORDER BY api_id, TRIM(regexp_replace(sign_name, '([0-9]{5,8})','')), start_date DESC) dist
+WHERE Length(SUBSTRING(reverse(sign_name), '([0-9]{1,8})')) > '3') api
 
 CROSS JOIN LATERAL
 
@@ -30,7 +33,7 @@ SELECT *
 FROM wys.locations_api_vz_updated
 WHERE api_id IN (SELECT DISTINCT(api_id)
 FROM wys.speed_counts_agg
-WHERE datetime_bin > NOW()::date - interval '2 day'
+WHERE datetime_bin > NOW()::date - interval '2 day' --because today is Monday
 ORDER BY api_id)
 
 --just so that can plot on QGIS
