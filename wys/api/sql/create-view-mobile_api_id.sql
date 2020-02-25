@@ -1,6 +1,9 @@
-CREATE VIEW wys.mobile_api_id AS
+DROP VIEW wys.mobile_api_id CASCADE;
 
-SELECT a.ward_no, a.location, a.from_street, a.to_street, a.direction, 
+CREATE MATERIALIZED VIEW wys.mobile_api_id AS
+
+SELECT row_number() OVER (ORDER BY installation_date, ward_no) AS location_id,
+a.ward_no, a.location, a.from_street, a.to_street, a.direction, 
 a.installation_date, a.removal_date, a.comments, a.combined,
 b.api_id
 FROM (
