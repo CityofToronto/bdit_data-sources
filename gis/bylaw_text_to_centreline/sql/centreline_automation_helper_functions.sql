@@ -6,13 +6,21 @@ lev_sum INT;
 int_id_found INT;
 
 BEGIN
-SELECT intersections.objectid, SUM(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1))), intersections.int_id
+SELECT intersections.objectid, SUM
+(LEAST
+(levenshtein
+(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
+, levenshtein(TRIM(intersections.street)
+, TRIM(btwn), 1, 1, 1)))
+, intersections.int_id
 INTO oid, lev_sum, int_id_found
 FROM
 (gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid)) AS intersections
 
 
-WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) AND intersections.int_id  <> not_int_id
+WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
+OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) 
+AND intersections.int_id  <> not_int_id
 
 
 GROUP BY intersections.objectid, intersections.int_id
@@ -56,12 +64,19 @@ FROM
 (gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid, classifi6, elevatio10)) AS intersections
 
 
-WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 AND intersections.int_id  <> not_int_id AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
+WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
+AND intersections.int_id  <> not_int_id 
+AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
 
 
 GROUP BY intersections.objectid, intersections.int_id, elevatio10
-ORDER BY AVG(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1))),
-(CASE WHEN elevatio10='Cul de sac' THEN 1 WHEN elevatio10='Pseudo' THEN 2 WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
+ORDER BY AVG(LEAST(levenshtein
+(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
+, levenshtein(TRIM(intersections.street)
+,  TRIM(btwn), 1, 1, 1))),
+(CASE WHEN elevatio10='Cul de sac' THEN 1 
+WHEN elevatio10='Pseudo' THEN 2 
+WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
 (SELECT COUNT(*) FROM gis.centreline_intersection_streets WHERE objectid = intersections.objectid)
 
 LIMIT 1;
@@ -77,7 +92,7 @@ COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(TEXT, TEXT, INT
 Get intersection id from a text street name when intersection is a cul de sac or a dead end or a pseudo intersection.
 In these cases the intersection name (intersec5 of gis.centreline_intersection) would just be the name of the street.
 
-Input two street names of streets that intersect each other, and 0or an intersection id that you do not want the function to return
+Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the
 first returned intersection id into the function on the second time the function is called).
 This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.' ;
@@ -118,7 +133,8 @@ CREATE OR REPLACE FUNCTION gis._get_intersection_geom(highway2 TEXT, btwn TEXT, 
 RETURNS TEXT[] AS $arr$
 DECLARE
 geom TEXT;
-int_arr INT[] := (CASE WHEN TRIM(highway2) = TRIM(btwn) THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
+int_arr INT[] := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
+	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
 	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
 	END);
 
@@ -138,6 +154,7 @@ arr1 TEXT[] :=  ARRAY(SELECT (
 	ELSE ST_AsText(gis._translate_intersection_point(oid_geom, metres, direction))
 	END
 ));
+--add another case when
 
 
 arr2 TEXT[] := ARRAY_APPEND(arr1, int_id_found::TEXT);
@@ -162,7 +179,7 @@ translated by x metres in the inputted direction. It also returns (in the array)
 Additionally, the levenshein distance between the text inputs described and the output intersection name is in the output array.
 ';
 
-
+******************
 CREATE OR REPLACE FUNCTION gis._get_line_geom(oid1_geom geometry, oid2_geom geometry)
 RETURNS GEOMETRY AS $geom$
 DECLARE
