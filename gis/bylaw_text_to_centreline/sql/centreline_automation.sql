@@ -288,9 +288,7 @@ DECLARE
 
 	oid2_geom  GEOMETRY := ST_GeomFromText(text_arr_oid2[1], 2952);
 
-
-
-**************
+************** BELOW ARE REPLACED BY PG_ROUTING
 	-- create a line between the two intersection geoms
 	line_geom geometry := (CASE WHEN oid1_geom IS NOT NULL AND oid2_geom IS NOT NULL
 						  THEN gis._get_line_geom(oid1_geom, oid2_geom)

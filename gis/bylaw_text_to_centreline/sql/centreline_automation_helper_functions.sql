@@ -154,8 +154,6 @@ arr1 TEXT[] :=  ARRAY(SELECT (
 	ELSE ST_AsText(gis._translate_intersection_point(oid_geom, metres, direction))
 	END
 ));
---add another case when
-
 
 arr2 TEXT[] := ARRAY_APPEND(arr1, int_id_found::TEXT);
 arr TEXT[] := ARRAY_APPEND(arr2, lev_sum::TEXT);
