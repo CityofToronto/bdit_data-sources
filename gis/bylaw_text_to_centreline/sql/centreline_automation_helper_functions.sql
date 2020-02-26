@@ -6,21 +6,13 @@ lev_sum INT;
 int_id_found INT;
 
 BEGIN
-SELECT intersections.objectid, SUM
-(LEAST
-(levenshtein
-(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street)
-, TRIM(btwn), 1, 1, 1)))
-, intersections.int_id
+SELECT intersections.objectid, SUM(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1))), intersections.int_id
 INTO oid, lev_sum, int_id_found
 FROM
 (gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid)) AS intersections
 
 
-WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
-OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) 
-AND intersections.int_id  <> not_int_id
+WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) AND intersections.int_id  <> not_int_id
 
 
 GROUP BY intersections.objectid, intersections.int_id
@@ -64,19 +56,12 @@ FROM
 (gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid, classifi6, elevatio10)) AS intersections
 
 
-WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
-AND intersections.int_id  <> not_int_id 
-AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
+WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 AND intersections.int_id  <> not_int_id AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
 
 
 GROUP BY intersections.objectid, intersections.int_id, elevatio10
-ORDER BY AVG(LEAST(levenshtein
-(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street)
-,  TRIM(btwn), 1, 1, 1))),
-(CASE WHEN elevatio10='Cul de sac' THEN 1 
-WHEN elevatio10='Pseudo' THEN 2 
-WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
+ORDER BY AVG(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1))),
+(CASE WHEN elevatio10='Cul de sac' THEN 1 WHEN elevatio10='Pseudo' THEN 2 WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
 (SELECT COUNT(*) FROM gis.centreline_intersection_streets WHERE objectid = intersections.objectid)
 
 LIMIT 1;
@@ -91,8 +76,7 @@ $$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(TEXT, TEXT, INT) IS '
 Get intersection id from a text street name when intersection is a cul de sac or a dead end or a pseudo intersection.
 In these cases the intersection name (intersec5 of gis.centreline_intersection) would just be the name of the street.
-
-Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
+Input two street names of streets that intersect each other, and 0or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the
 first returned intersection id into the function on the second time the function is called).
 This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.' ;
@@ -133,8 +117,7 @@ CREATE OR REPLACE FUNCTION gis._get_intersection_geom(highway2 TEXT, btwn TEXT, 
 RETURNS TEXT[] AS $arr$
 DECLARE
 geom TEXT;
-int_arr INT[] := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
-	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
+int_arr INT[] := (CASE WHEN TRIM(highway2) = TRIM(btwn) THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
 	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
 	END);
 
@@ -155,6 +138,7 @@ arr1 TEXT[] :=  ARRAY(SELECT (
 	END
 ));
 
+
 arr2 TEXT[] := ARRAY_APPEND(arr1, int_id_found::TEXT);
 arr TEXT[] := ARRAY_APPEND(arr2, lev_sum::TEXT);
 BEGIN
@@ -171,13 +155,12 @@ $arr$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION gis._get_intersection_geom(TEXT, TEXT, TEXT, FLOAT, INT) IS '
 Input values of the names of two intersections, direction (may be NULL), number of units the intersection should be translated,
 and the intersection id of an intersection that you do not want the function to return (or 0).
-
 Outputs an array of the geometry of the intersection described. If the direction and metres are not null, it will return the point geometry,
 translated by x metres in the inputted direction. It also returns (in the array) the intersection id and the objectid of the output intersection.
 Additionally, the levenshein distance between the text inputs described and the output intersection name is in the output array.
 ';
 
-******************
+
 CREATE OR REPLACE FUNCTION gis._get_line_geom(oid1_geom geometry, oid2_geom geometry)
 RETURNS GEOMETRY AS $geom$
 DECLARE
@@ -290,9 +273,7 @@ $$ LANGUAGE plpgSQL;
 COMMENT ON FUNCTION gis._match_line_to_centreline(geometry, text, FLOAT, FLOAT) IS '
 Main Steps:
 1. Create a large buffer around the line_geom
-
 2. Select centreline segments from gis.centreline that have the right name that are inside of the buffer
-
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information';
 
 
@@ -380,7 +361,6 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION gis._get_closest_line(pnt GEOMETRY, multi_line GEOMETRY, line_geom GEOMETRY) IS '
 Get the closest line (when the line is a multi-linestring) to an intersection point.
-
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information
 ';
 
@@ -504,7 +484,6 @@ $geom$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION gis._cut_closest_line(TEXT, TEXT, FLOAT, FLOAT, geometry, geometry, GEOMETRY, GEOMETRY) IS '
 Function that is used when a bylaw is in effect between two intersections and (one or two) offset(s),
 and the street is not continuous (i.e .geometry is a multi-linestring). It cuts line segments for when the input is a multi-linestring.
-
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information
 ';
 
