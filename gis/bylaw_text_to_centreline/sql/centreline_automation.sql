@@ -2,32 +2,15 @@ CREATE OR REPLACE FUNCTION gis.text_to_centreline(highway TEXT, frm TEXT, t TEXT
 RETURNS TABLE(centreline_segments geometry, con TEXT, street_name_arr TEXT[], ratio NUMERIC, notice TEXT, line_geom geometry, oid1_geom geometry, oid2_geom geometry) AS $$
 DECLARE
 
---STEP 1
+
 	-- clean data
 
 
 	-- when the input was btwn instead of from and to
 
 	btwn1_v1 TEXT := CASE WHEN t IS NULL THEN
-	gis.abbr_street2(regexp_REPLACE
-	(regexp_REPLACE
-	(regexp_REPLACE
-	(split_part
-	(split_part
-	(regexp_REPLACE
-	(regexp_REPLACE(frm, '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g')
-	, '\(.*?\)', '', 'g')
-	, ' to ', 1)
-	, ' and ', 1)
-	, '\(.*\)', '', 'g')
-	, '[Bb]etween ', '', 'g')
-	, 'A point', '', 'g'))
-	
-	ELSE gis.abbr_street2(regexp_REPLACE
-	(regexp_REPLACE
-	(regexp_REPLACE(frm, '\(.*?\)', '', 'g')
-	, '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g')
-	, 'A point', '', 'g'))
+	gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(split_part(regexp_REPLACE(regexp_REPLACE(frm, '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g'), '\(.*?\)', '', 'g'), ' to ', 1), ' and ', 1), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
+	ELSE gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(frm, '\(.*?\)', '', 'g'), '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g'), 'A point', '', 'g'))
 	END;
 
 	-- cases when three roads intersect at once (i.e. btwn1_v1 = Terry Dr/Woolner Ave) ... just take first street
@@ -40,42 +23,13 @@ DECLARE
 
 	btwn2_orig_v1 TEXT := CASE WHEN t IS NULL THEN
 			(CASE WHEN split_part(regexp_REPLACE(frm,  '\(.*?\)', '', 'g'), ' and ', 2) <> ''
-			THEN gis.abbr_street2(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE
-			(split_part
-			(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE(frm, '\(.*?\)', '', 'g')
-			, '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
-			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
-			, ' and ', 2)
-			, '[Bb]etween ', '', 'g')
-			, 'A point', '', 'g')
-			, 'the northeast of', '', 'g'))
-
+			THEN gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(frm, '\(.*?\)', '', 'g'), '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g'), 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g'), ' and ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'), 'the northeast of', '', 'g'))
 			WHEN split_part(frm, ' to ', 2) <> ''
-			THEN gis.abbr_street2(regexp_REPLACE
-			(regexp_REPLACE
-			(split_part
-			(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE(frm, '\(.*?\)', '', 'g')
-			, '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
-			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
-			, ' to ', 2)
-			, '[Bb]etween ', '', 'g')
-			, 'A point', '', 'g'))
+			THEN gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(split_part(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(frm, '\(.*?\)', '', 'g'), '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g'), 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g'), ' to ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
 			END)
 
 			ELSE
-			gis.abbr_street2(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE(t, '\(.*?\)', '', 'g')
-			, '[0123456789.]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
-			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
-			, 'the northeast of', '', 'g'))
+			gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(t, '\(.*?\)', '', 'g'), '[0123456789.]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast|south west) of ', '', 'g'), 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g'), 'the northeast of', '', 'g'))
 			END ;
 
 	-- cases when three roads intersect at once (i.e. btwn2_orig_v1 = Terry Dr/Woolner Ave)
@@ -91,40 +45,15 @@ DECLARE
 	direction_btwn1 TEXT := CASE WHEN t IS NULL THEN
 				(
 				CASE WHEN btwn1 LIKE '% m %'
-				OR gis.abbr_street2( regexp_REPLACE
-				(split_part
-				(split_part
-				(frm, ' to ', 1)
-				, ' and ', 1)
-				, '[Bb]etween ', '', 'g')) LIKE '% m %'
-				THEN split_part
-				(split_part
-				(gis.abbr_street2
-				(regexp_REPLACE
-				(regexp_REPLACE
-				(regexp_REPLACE
-				(split_part
-				(split_part
-				(frm, ' to ', 1)
-				, ' and ', 1)
-				, '[Bb]etween ', '', 'g')
-				, 'further ', '', 'g')
-				, 'east/north', 'northeast', 'g'))
-				, ' m ', 2)
-				, ' of ', 1)
+				OR gis.abbr_street2( regexp_REPLACE(split_part(split_part(frm, ' to ', 1), ' and ', 1), '[Bb]etween ', '', 'g')) LIKE '% m %'
+				THEN split_part(split_part(gis.abbr_street2(regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(split_part(frm, ' to ', 1), ' and ', 1), '[Bb]etween ', '', 'g'), 'further ', '', 'g'), 'east/north', 'northeast', 'g')), ' m ', 2), ' of ', 1)
 				ELSE NULL
 				END )
 				ELSE
 				(
 				CASE WHEN btwn1 LIKE '% m %'
 				OR gis.abbr_street2(frm) LIKE '% m %'
-				THEN regexp_replace(regexp_replace
-				(split_part
-				(split_part
-				(gis.abbr_street2(frm), ' m ', 2)
-				, ' of ', 1)
-				, 'further ', '', 'g')
-				, 'east/north', 'northeast', 'g')
+				THEN regexp_replace(regexp_replace(split_part(split_part(gis.abbr_street2(frm), ' m ', 2), ' of ', 1), 'further ', '', 'g'), 'east/north', 'northeast', 'g')
 				ELSE NULL
 				END )
 				END;
@@ -165,25 +94,8 @@ DECLARE
 	metres_btwn1 FLOAT :=	(CASE WHEN t IS NULL THEN
 				(
 				CASE WHEN btwn1 LIKE '% m %'
-				OR gis.abbr_street2(regexp_REPLACE
-				(split_part
-				(split_part(frm, ' to ', 1)
-				, ' and ', 1)
-				, 'Between ', '', 'g')) LIKE '% m %'
-				THEN regexp_REPLACE
-				(regexp_REPLACE
-				(regexp_REPLACE
-				(split_part
-				(gis.abbr_street2
-				(regexp_REPLACE
-				(split_part
-				(split_part(frm, ' to ', 1)
-				, ' and ', 1)
-				, '[Bb]etween ', '', 'g'))
-				, ' m ' ,1)
-				, 'a point ', '', 'g')
-				, 'A point', '', 'g')
-				, ',', '', 'g')::FLOAT
+				OR gis.abbr_street2(regexp_REPLACE(split_part(split_part(frm, ' to ', 1), ' and ', 1), 'Between ', '', 'g')) LIKE '% m %'
+				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street2(regexp_REPLACE(split_part(split_part(frm, ' to ', 1), ' and ', 1), '[Bb]etween ', '', 'g')), ' m ' ,1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::FLOAT
 				ELSE NULL
 				END
 				)
@@ -191,14 +103,7 @@ DECLARE
 				(
 				CASE WHEN btwn1 LIKE '% m %'
 				OR gis.abbr_street2(frm) LIKE '% m %'
-				THEN regexp_REPLACE
-				(regexp_REPLACE
-				(regexp_REPLACE
-				(split_part
-				(gis.abbr_street2(frm), ' m ' ,1)
-				, 'a point ', '', 'g')
-				, 'A point', '', 'g')
-				, ',', 'g')::FLOAT
+				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street2(frm), ' m ' ,1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', 'g')::FLOAT
 				ELSE NULL
 				END
 				)
@@ -271,7 +176,7 @@ DECLARE
 
 
 
---STEP 2
+
 	-- get intersection geoms
 
 	text_arr_oid1 TEXT[]:= gis._get_intersection_geom(highway2, btwn1, direction_btwn1::TEXT, metres_btwn1::FLOAT, 0);
@@ -288,7 +193,7 @@ DECLARE
 
 	oid2_geom  GEOMETRY := ST_GeomFromText(text_arr_oid2[1], 2952);
 
-************** BELOW ARE REPLACED BY PG_ROUTING
+
 	-- create a line between the two intersection geoms
 	line_geom geometry := (CASE WHEN oid1_geom IS NOT NULL AND oid2_geom IS NOT NULL
 						  THEN gis._get_line_geom(oid1_geom, oid2_geom)
@@ -377,7 +282,6 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION gis.text_to_centreline(highway TEXT, frm TEXT, t TEXT) IS '
 The main function for converting text descriptions of locations where bylaws are in effect to centreline segment geomtry
-
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information
 ';
 
@@ -385,8 +289,6 @@ Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/mast
 -- tables/functions that I used to test the function
 
 /*
-
-
 -- assumes highway_arr and btwn_arr are the same size
 CREATE OR REPLACE FUNCTION crosic.make_geom_table(highway_arr TEXT[], frm_arr TEXT[], to_arr TEXT[])
 RETURNS TABLE (
@@ -398,25 +300,16 @@ geom TEXT
 )
 AS $$
 BEGIN
-
 DROP TABLE IF EXISTS inputs;
 CREATE TEMP TABLE inputs AS (
 SELECT UNNEST(highway_arr) AS highway, UNNEST(frm_arr) AS frm, UNNEST(to_arr) AS t
 );
-
-
 RETURN QUERY
 SELECT i.highway, i.frm AS from, i.t AS to, (SELECT con FROM gis.text_to_centreline(i.highway, i.frm, i.t)) AS confidence,
 (SELECT centreline_segments FROM gis.text_to_centreline(i.highway, i.frm, i.t)) AS geom
-
 FROM inputs i;
-
-
 END;
 $$ LANGUAGE plpgsql;
-
-
-
 -- old version with btwn instead of from and to
 DROP TABLE IF EXISTS crosic.centreline_geoms_test;
 SELECT *
@@ -424,8 +317,6 @@ INTO crosic.centreline_geoms_test
 FROM crosic.make_geom_table(ARRAY['Watson Avenue', 'Watson Avenue', 'Watson Avenue', 'North Queen Street'],
 ARRAY['Between St Marks Road and St Johns Road', 'Between St Marks Road and a point 100 metres north', 'Between St Marks Road and 100 metres north of St Johns Road', 'Between Shorncliffe Road and Kipling Ave'],
 ARRAY[NULL, NULL, NULL, NULL]);
-
-
 /*
 DROP TABLE IF EXISTS crosic.centreline_geoms_test;
 SELECT *
