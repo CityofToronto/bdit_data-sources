@@ -1,4 +1,5 @@
---EXAMPLE: FOR HERE NETWORK AND NODES AS px_start and px_end
+--EXAMPLE: USING HERE network
+--FOR HERE NETWORK AND NODES AS px_start and px_end
 --Function to get link_dir from px_start and px_end
 CREATE or REPLACE FUNCTION here_gis.get_links_btwn_px(px_start int, px_end int)
 RETURNS TABLE (px_start int, px_end int, seq int, link_dir text)
@@ -21,27 +22,26 @@ order by px_start, px_end, seq
 $$
 LANGUAGE SQL STRICT STABLE;
 
---USING centreline (gis.centreline_routing_undirected)
+--USING centrelines aka GIS network
 --DROP FUNCTION jchew.get_lines_btwn_interxn(integer, integer);
-CREATE or REPLACE FUNCTION jchew.get_lines_btwn_interxn(int_start int, int_end int)
-RETURNS TABLE (int_start int, int_end int, seq int, geo_id bigint, lf_name varchar, geom geometry)
+CREATE or REPLACE FUNCTION jchew.get_lines_btwn_interxn(_int_start int, _int_end int)
+RETURNS TABLE (int_start int, int_end int, seq int, geo_id numeric, lf_name varchar, geom geometry)
+LANGUAGE 'plpgsql' STRICT STABLE
 AS $BODY$
 
+BEGIN
+RETURN QUERY
 WITH 
-input AS (SELECT int_start, int_end)
-, results AS (SELECT * FROM
-    input CROSS JOIN LATERAL 
-    pgr_dijkstra('SELECT id, source::int, target::int, cost from gis.centreline_routing_undirected', int_start::int, int_end::int)
+results AS (SELECT _int_start, _int_end, * FROM
+    pgr_dijkstra('SELECT id, source::int, target::int, cost from gis.centreline_routing_undirected', _int_start::int, _int_end::int)
 )
-SELECT int_start, int_end, seq, geo_id, lf_name, geom
+SELECT results._int_start, results._int_end, results.seq, centre.geo_id, centre.lf_name, centre.geom
 FROM results
-INNER JOIN gis.centreline ON edge=geo_id
-ORDER BY int_start, int_end, seq
+INNER JOIN gis.centreline centre ON edge=centre.geo_id
+ORDER BY int_start, int_end, seq;
 
-/*
---I don't know how to add this 
-RAISE NOTICE 'pg_routing done: int_start: % int_end: % number of centrelines found: % geom: %', 
-int_start, int_end, Length(id), ST_AsText(ST_Transform(ST_SetSRID(oid_geom_translated, 2952),4326));*/
+RAISE NOTICE 'pg_routing done for int_start: % and int_end: %', 
+_int_start, _int_end;
 
+END;
 $BODY$;
-LANGUAGE SQL STRICT STABLE;
