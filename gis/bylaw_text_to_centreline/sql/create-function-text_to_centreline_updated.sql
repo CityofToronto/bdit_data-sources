@@ -1,6 +1,8 @@
 DROP FUNCTION jchew.text_to_centreline_updated(TEXT, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(highway TEXT, frm TEXT, t TEXT)
-RETURNS TABLE(geo_id NUMERIC, centreline_name VARCHAR, con TEXT, notice TEXT, line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY) AS $$
+RETURNS TABLE(int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, notice TEXT, 
+line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
+objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR) AS $$
 DECLARE
 
 
@@ -324,6 +326,8 @@ DECLARE
 -- 	--normal case 
 -- 	centreline_segments geometry := (
 -- 		CASE 
+		-- CASE WHEN (TRIM(btwn1) IN ('Entire length', 'Entire Length', 'entire length' , 'The entire length')) AND btwn2 IS NULL
+		-- 		THEN (SELECT * FROM gis._get_entire_length_centreline_segments(highway2) LIMIT 1)
 -- 		--empty ones
 -- 		WHEN line_geom IS NULL THEN NULL
 -- 		--normal cases
@@ -356,7 +360,7 @@ DECLARE
 BEGIN 
 
 CREATE TEMP TABLE IF NOT EXISTS temp_table AS
-        SELECT int_start, int_end, seq, rout.geo_id, lf_name, geom AS line_geom 
+        SELECT int_start, int_end, seq, rout.geo_id, rout.lf_name, rout.objectid, geom AS line_geom, rout.fcode, rout.fcode_desc
 		FROM jchew.get_lines_btwn_interxn(oid1_int, oid2_int) rout;
 
 
@@ -364,7 +368,15 @@ RAISE NOTICE 'btwn1: % btwn2: % btwn2_check: %  highway2: % metres_btwn1: %  met
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 
-RETURN QUERY (SELECT temp_table.geo_id, temp_table.lf_name, con, notice, temp_table.line_geom, oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated FROM temp_table);
+RETURN QUERY (SELECT oid1_int AS int1, oid2_int AS int2, 
+temp_table.geo_id, temp_table.lf_name, 
+con, notice, temp_table.line_geom, 
+oid1_geom, oid1_geom_translated, 
+oid2_geom, oid2_geom_translated,
+temp_table.objectid, temp_table.fcode, temp_table.fcode_desc
+FROM temp_table);
+
+DROP TABLE temp_table;
 
 END;
 $$ LANGUAGE plpgsql;
