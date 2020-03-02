@@ -1,6 +1,7 @@
 from __future__ import print_function
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 import configparser
 from psycopg2 import connect
@@ -54,8 +55,12 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             values = result.get('values', [])
         except socket.timeout:
             sleep(120)
+        except HttpError as err3:
+            sleep(120)
         else:
             break
+    else: 
+        LOGGER.warning('Attempts exceeded.')
 
     rows = []
     badrows = []
@@ -77,9 +82,9 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
                         LOGGER.warning('Date format is not MM/DD/YYYY')
                 else:
                     LOGGER.debug('This row is not included: %s', row)
-            except (IndexError, KeyError) as err:
+            except (IndexError, KeyError) as err1:
                 LOGGER.error('An error occurs at %s', row)
-                LOGGER.error(err)
+                LOGGER.error(err1)
         if len(badrows) > 0:
             LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
         else:
