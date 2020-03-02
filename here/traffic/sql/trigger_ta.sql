@@ -1,6 +1,13 @@
 CREATE OR REPLACE FUNCTION here.ta_insert_trigger()
 RETURNS TRIGGER AS $$
 BEGIN 
+    NEW.pct_50_corr := CASE WHEN NEW.mean >= 30 AND NEW.mean < 110 THEN NEW.pct_50 * (1 - 0.051 * sqrt(least(1.0*(NEW.tx::DATE - '2018-03-01'::DATE)/('2019-01-01'::DATE - '2018-03-01'::DATE), 1.0)))
+				          ELSE NEW.pct_50
+				          END;
+    NEW.mean_corr := CASE WHEN NEW.mean >= 30 AND NEW.mean < 110 THEN NEW.mean * (1 - 0.051 * sqrt(least(1.0*(NEW.tx::DATE - '2018-03-01'::DATE)/('2019-01-01'::DATE - '2018-03-01'::DATE), 1.0)))
+				          ELSE NEW.mean
+				          END;
+
 	IF (NEW.tx >= DATE '2020-12-01' AND NEW.tx < DATE '2020-12-01' +INTERVAL '1 month') THEN
  INSERT INTO here.ta_202012 VALUES (NEW.*)ON CONFLICT DO NOTHING;
 ELSIF (NEW.tx >= DATE '2020-11-01' AND NEW.tx < DATE '2020-11-01' +INTERVAL '1 month') THEN
