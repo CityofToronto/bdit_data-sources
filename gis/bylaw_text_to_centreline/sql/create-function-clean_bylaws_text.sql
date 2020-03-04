@@ -1,12 +1,14 @@
 --DROP FUNCTION jchew.clean_bylaws_text(highway TEXT, frm TEXT, t TEXT);
 CREATE OR REPLACE FUNCTION jchew.clean_bylaws_text(highway TEXT, frm TEXT, t TEXT)
 RETURNS TEXT[]
+
+/*ROW(highway2 TEXT, btwn1 TEXT, direction_btwn1 TEXT, metres_btwn1 FLOAT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT,
+btwn2_orig TEXT, btwn2_check TEXT)*/
 AS $$
 DECLARE
 
 --STEP 1
 	-- clean data
-
 
 	-- when the input was btwn instead of from and to
 
@@ -272,7 +274,8 @@ BEGIN
 RAISE NOTICE 'btwn1: % btwn2: % btwn2_check: %  highway2: % metres_btwn1: %  metres_btwn2: % direction_btwn1: % direction_btwn2: %', 
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
-RETURN ARRAY[highway2, btwn1, direction_btwn1, metres_btwn1::TEXT, btwn2, direction_btwn2, metres_btwn2::TEXT,
+RETURN QUERY
+SELECT ARRAY[highway2, btwn1, direction_btwn1, metres_btwn1::TEXT, btwn2, direction_btwn2, metres_btwn2::TEXT,
 btwn2_orig, btwn2_check];
 
 END;
