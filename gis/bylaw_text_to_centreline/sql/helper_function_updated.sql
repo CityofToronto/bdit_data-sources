@@ -6,16 +6,18 @@ lev_sum INT;
 int_id_found INT;
 
 BEGIN
-SELECT intersections.objectid, SUM
-(LEAST
-(levenshtein
-(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street)
-, TRIM(btwn), 1, 1, 1)))
+SELECT intersections.objectid, 
+
+SUM(LEAST
+(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
+, levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)))
+
 , intersections.int_id
 INTO oid, lev_sum, int_id_found
 FROM
-(gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid)) AS intersections
+(gis.centreline_intersection_streets --to get street name
+LEFT JOIN gis.centreline_intersection --to get int_id 
+USING(objectid)) AS intersections
 
 
 WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
@@ -70,10 +72,8 @@ AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
 
 
 GROUP BY intersections.objectid, intersections.int_id, elevatio10
-ORDER BY AVG(LEAST(levenshtein
-(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street)
-,  TRIM(btwn), 1, 1, 1))),
+ORDER BY AVG (LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
+, levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1))),
 (CASE WHEN elevatio10='Cul de sac' THEN 1 
 WHEN elevatio10='Pseudo' THEN 2 
 WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
@@ -725,14 +725,16 @@ Meant to split line geometries of bylaw in effect locations where the bylaw occu
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information';
 
 
+-- CHANGED
+DROP FUNCTION jchew._get_entire_length_centreline_segments_updated(text);
+CREATE OR REPLACE FUNCTION jchew._get_entire_length_centreline_segments_updated(highway2_before_editing text)
+RETURNS TABLE(geo_id NUMERIC, lf_name VARCHAR, objectid NUMERIC, line_geom GEOMETRY, fcode INT, fcode_desc VARCHAR)
+LANGUAGE 'plpgsql' STRICT STABLE
+AS $BODY$
 
-CREATE OR REPLACE FUNCTION gis._get_entire_length_centreline_segments(highway2_before_editing text)
-RETURNS GEOMETRY AS $geom$
-
--- i.e. "Hemlock Avenue" and "Entire length"
+-- i.e. "Ridley Blvd" and "Entire length"
 
 DECLARE
-
 
 highway2 TEXT :=
 	CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
@@ -742,22 +744,19 @@ highway2 TEXT :=
 	ELSE highway2_before_editing
 	END;
 
-
-segments GEOMETRY := (SELECT ST_UNION(geom) FROM gis.centreline WHERE lf_name = highway2);
-
-geom GEOMETRY := CASE WHEN segments IS NOT NULL THEN ST_Transform(ST_LineMerge(segments),2952)
-		ELSE NULL END;
-
-
 BEGIN
 
-RETURN geom;
+RETURN QUERY
+SELECT centre.geo_id, centre.lf_name, centre.objectid, centre.geom AS line_geom,
+centre.fcode, centre.fcode_desc
+FROM gis.centreline centre
+WHERE centre.lf_name = highway2;
+
+RAISE NOTICE 'Entire segment found for %', highway2_before_editing;
 
 END;
-$geom$ LANGUAGE plpgSQL;
+$BODY$; 
 
-
-COMMENT ON FUNCTION gis._get_entire_length_centreline_segments(text) IS '
-Union and line merge all of the centreline segments in the City with the exact street name of the street name inputted.
-Returns geometry projected into the  MTM Zone 10 (SRID = 2952) projection
-';
+COMMENT ON FUNCTION jchew._get_entire_length_centreline_segments_updated(text) IS '
+For bylaws with ''Entire Length'', 
+get all the individual line_geom that constitute the whole road segment from gis.centreline table.';
