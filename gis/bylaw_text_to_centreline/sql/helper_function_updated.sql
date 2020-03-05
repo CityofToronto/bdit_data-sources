@@ -131,48 +131,49 @@ If the input geometry is unprojected (i.e. SRID = 4326) then the function return
 
 --CHANGED
 DROP FUNCTION jchew._get_intersection_geom_updated(text, text, text, double precision, integer);
-CREATE OR REPLACE FUNCTION jchew._get_intersection_geom_updated(highway2 TEXT, btwn TEXT, direction TEXT, metres FLOAT, not_int_id INT)
-RETURNS TEXT[] 
+CREATE OR REPLACE FUNCTION jchew._get_intersection_geom_updated(highway2 TEXT, btwn TEXT, direction TEXT, metres FLOAT, not_int_id INT,
+OUT oid_geom GEOMETRY, OUT oid_geom_translated GEOMETRY, OUT int_id_found INT, OUT lev_sum INT)
+
 LANGUAGE 'plpgsql'
 AS $BODY$
+
 DECLARE
 geom TEXT;
-int_arr INT[] := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
+int_arr INT[];
+oid_int INT;
+oid_geom_test GEOMETRY;
+
+BEGIN
+int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
 	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
 	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
 	END);
 
-oid INT := int_arr[1];
-int_id_found INT := int_arr[3];
-lev_sum INT := int_arr[2];
-oid_geom geometry := (
+oid_int := int_arr[1];
+int_id_found := int_arr[3];
+lev_sum := int_arr[2];
+
+--needed geom to be in SRID = 2952 for the translation
+oid_geom_test := (
 		SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
 		FROM gis.centreline_intersection gis
-		WHERE objectid = oid
+		WHERE objectid = oid_int
 		);
-oid_geom_translated geometry := (
+oid_geom_translated := (
 		CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
-	   	THEN gis._translate_intersection_point(oid_geom, metres, direction) 
+	   	THEN (SELECT ST_Transform(ST_SetSRID(translated_geom, 2952),4326) 
+           FROM gis._translate_intersection_point(oid_geom_test, metres, direction) translated_geom)
 		ELSE NULL
 		END
 		);
--- normal case
-arr1 TEXT[] :=  ARRAY(SELECT (
-	ST_AsText(ST_Transform(oid_geom,4326))
-));
--- special case (create a new column for that)
-arr2 TEXT[] :=  ARRAY(SELECT (
-	ST_AsText(ST_Transform(ST_SetSRID(oid_geom_translated, 2952),4326))
-));
-arr3 TEXT[] := arr1 || arr2;
-arr4 TEXT[] := ARRAY_APPEND(arr3, int_id_found::TEXT);
-arr TEXT[] := ARRAY_APPEND(arr4, lev_sum::TEXT);
-BEGIN
+oid_geom := (
+		SELECT gis.geom 
+		FROM gis.centreline_intersection gis
+		WHERE objectid = oid_int
+		);
 
-raise notice 'get_intersection_geom stuff: oid: % geom: % geom_translated: % direction % metres % not_int_id: %', 
-oid, arr1, arr2, direction, metres::TEXT, not_int_id;
-
-RETURN arr;
+RAISE NOTICE 'get_intersection_geom stuff: oid: % geom: % geom_translated: % direction % metres % not_int_id: %', 
+oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres::TEXT, not_int_id;
 
 END;
 $BODY$;
@@ -181,7 +182,7 @@ COMMENT ON FUNCTION jchew._get_intersection_geom_updated(TEXT, TEXT, TEXT, FLOAT
 Input values of the names of two intersections, direction (may be NULL), number of units the intersection should be translated,
 and the intersection id of an intersection that you do not want the function to return (or 0).
 
-Return an array of ST_AsText(oid_geom), ST_AsText(oid_geom_translated) if applicable, int_id_found and lev_sum. 
+Returns a record of oid_geom, oid_geom_translated (if applicable lese null), int_id_found and lev_sum. 
 Outputs an array of the geometry of the intersection described. 
 If the direction and metres are not null, it will return the point geometry (known as oid_geom_translated),
 translated by x metres in the inputted direction. It also returns (in the array) the intersection id and the objectid of the output intersection.
