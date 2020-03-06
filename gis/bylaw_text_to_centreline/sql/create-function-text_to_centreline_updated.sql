@@ -55,7 +55,7 @@ BEGIN
 		int1_result.oid_geom AS oid1_geom, int1_result.oid_geom_translated AS oid1_geom_translated,
 		int2_result.oid_geom AS oid2_geom, int2_result.oid_geom_translated AS oid2_geom_translated,
 		rout.objectid, rout.fcode, rout.fcode_desc
-		FROM jchew.get_lines_btwn_interxn(int1_result.int_id_found, int2_result.int_id_found) rout;
+		FROM jchew.get_lines_btwn_interxn(clean_bylaws.highway2, int1_result.int_id_found, int2_result.int_id_found) rout;
 
 		-- sum of the levenshtein distance of both of the intersections matched
 		lev_total := int1_result.lev_sum + int2_result.lev_sum;
@@ -131,7 +131,8 @@ Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/mast
 -- 		(
 -- 			gis._centreline_case2(direction_btwn1, direction_btwn2, metres_btwn1, metres_btwn2, match_line_to_centreline_geom, line_geom,
 -- 			-- get the original intersection geoms (not the translated ones)
--- 			ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952),(CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
+-- 			ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952),
+--			(CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
 -- 			THEN ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, 0))[1], 2952)
 -- 			ELSE ST_GeomFromText((gis._get_intersection_geom(highway2, btwn2, NULL::TEXT, NULL::FLOAT, int_id1))[1], 2952)
 -- 			END))
