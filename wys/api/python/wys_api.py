@@ -296,33 +296,33 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
     
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_one_hour();")
+                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph();")
                 logger.info('Aggregated Speed Count Data')
         except psycopg2.Error as exc:
-            logger.critical('Error aggregating data to 15-min bins')
+            logger.critical('Error aggregating data to 1-hour bins')
             logger.critical(exc)
             conn.close()
             sys.exit(1)
         
         conn.commit()
 
-        try:
-            update_locations(conn, loc_table)
-            logger.info('Updated wys.locations')
-        except psycopg2.Error as exc:
-            logger.critical('Error updating locations')
-            logger.critical(exc)
-            conn.close()
-            sys.exit(1)
+    try:
+        update_locations(conn, loc_table)
+        logger.info('Updated wys.locations')
+    except psycopg2.Error as exc:
+        logger.critical('Error updating locations')
+        logger.critical(exc)
+        conn.close()
+        sys.exit(1)
 
-        try:
-            get_schedules(conn, api_key)
-            logger.info('Updated wys.sign_schedules_list')
-        except psycopg2.Error as exc:
-            logger.critical('Error updating schedules')
-            logger.critical(exc)
-            conn.close()
-            sys.exit(1)
+    try:
+        get_schedules(conn, api_key)
+        logger.info('Updated wys.sign_schedules_list')
+    except psycopg2.Error as exc:
+        logger.critical('Error updating schedules')
+        logger.critical(exc)
+        conn.close()
+        sys.exit(1)
 
     conn.close()
     logger.info('Done')
