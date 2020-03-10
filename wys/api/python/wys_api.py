@@ -315,6 +315,8 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         conn.close()
         sys.exit(1)
 
+    conn.commit()
+
     try:
         get_schedules(conn, api_key)
         logger.info('Updated wys.sign_schedules_list')
@@ -323,6 +325,8 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         logger.critical(exc)
         conn.close()
         sys.exit(1)
+
+    conn.commit()
 
     conn.close()
     logger.info('Done')
