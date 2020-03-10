@@ -42,7 +42,7 @@ BEGIN
 		SELECT *
 		FROM jchew._get_entire_length_centreline_segments_updated(clean_bylaws.highway2) ;
 		--lev_total := NULL
-	--special case 1
+	--interxn_and_offset
 	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
 		THEN
 		INSERT INTO _results(int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
@@ -53,6 +53,8 @@ BEGIN
 -- 			gis._centreline_case1(direction_btwn2, metres_btwn2, ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom,
 -- 			ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952) )
 -- 		) 
+
+	--interxns_and_offsets
 
 	ELSE
 		int1_result := jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
