@@ -59,8 +59,6 @@ DECLARE
 	btwn2_orig_v1 TEXT := CASE WHEN t IS NULL THEN
 			(CASE WHEN split_part(regexp_REPLACE(frm,  '\(.*?\)', '', 'g'), ' and ', 2) <> ''
 			THEN gis.abbr_street2(regexp_REPLACE
-			(regexp_REPLACE
-			(regexp_REPLACE
 			(split_part
 			(regexp_REPLACE
 			(regexp_REPLACE
@@ -68,9 +66,8 @@ DECLARE
 			, '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
 			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
 			, ' and ', 2)
-			, '[Bb]etween ', '', 'g')
-			, 'A point', '', 'g')
-			, 'the northeast of', '', 'g'))
+			--Delete 'thereof' and some other words
+			, '[Bb]etween |(A point)|(thereof)|(the northeast of)', '', 'g'))
 
 			WHEN split_part(frm, ' to ', 2) <> ''
 			THEN gis.abbr_street2(regexp_REPLACE
@@ -161,9 +158,9 @@ DECLARE
 				THEN
 				(
 					CASE WHEN split_part(frm, ' and ', 2) <> ''
-					THEN regexp_REPLACE(regexp_replace(split_part(split_part( gis.abbr_street2(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further ', '', 'g'), 'east/north', 'northeast', 'g')
+					THEN regexp_REPLACE(regexp_replace(split_part(split_part( gis.abbr_street2(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
 					WHEN split_part(frm, ' to ', 2) <> ''
-					THEN regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street2(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further ', '', 'g'), 'east/north', 'northeast', 'g')
+					THEN regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street2(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
 					END
 				)
 				ELSE NULL
