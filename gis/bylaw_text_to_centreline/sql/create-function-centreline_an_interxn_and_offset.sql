@@ -1,5 +1,5 @@
-DROP FUNCTION jchew._centreline_case1_updated(text, text, text, double precision);
-CREATE OR REPLACE FUNCTION jchew._centreline_case1_updated(highway2 TEXT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT)
+DROP FUNCTION jchew._centreline_an_interxn_and_offset(text, text, text, double precision);
+CREATE OR REPLACE FUNCTION jchew._centreline_an_interxn_and_offset(highway2 TEXT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT)
 RETURNS TABLE(int1 INTEGER, geo_id NUMERIC, lf_name VARCHAR, line_geom GEOMETRY,
 oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER,dist_from_pt FLOAT, dist_from_translated_pt FLOAT)
 /*MAIN FUNCTION RETURNS (int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
