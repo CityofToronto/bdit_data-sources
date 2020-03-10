@@ -42,6 +42,18 @@ BEGIN
 		SELECT *
 		FROM jchew._get_entire_length_centreline_segments_updated(clean_bylaws.highway2) ;
 		--lev_total := NULL
+	--special case 1
+	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
+		THEN
+		INSERT INTO _results(int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
+		SELECT int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc 
+		FROM jchew._centreline_case1_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
+		lev_total := SELECT lev_sum FROM jchew._centreline_case1_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2)
+-- 		(
+-- 			gis._centreline_case1(direction_btwn2, metres_btwn2, ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom,
+-- 			ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952) )
+-- 		) 
+
 	ELSE
 		int1_result := jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
