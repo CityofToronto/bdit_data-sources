@@ -1,6 +1,7 @@
+DROP FUNCTION jchew._centreline_case1_updated(text, text, text, double precision);
 CREATE OR REPLACE FUNCTION jchew._centreline_case1_updated(highway2 TEXT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT)
 RETURNS TABLE(int1 INTEGER, geo_id NUMERIC, lf_name VARCHAR, line_geom GEOMETRY,
-oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER)
+oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER,dist_from_pt FLOAT, dist_from_translated_pt FLOAT)
 /*MAIN FUNCTION RETURNS (int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
 line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
 objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR)*/
@@ -25,14 +26,17 @@ ST_DWithin(ST_Transform(cl.geom, 2952),
 FROM gis.centreline cl, X
 WHERE ST_DWithin(ST_Transform(cl.geom, 2952), 
 		   ST_BUFFER(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)), metres_btwn2, 'endcap=flat join=round'),
-		   1) = TRUE ) a
+		   1) = TRUE 
+AND ST_Length(st_intersection(ST_BUFFER(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)), 3*(ST_LENGTH(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)))), 'endcap=flat join=round') , ST_Transform(cl.geom, 2952))) /ST_Length(ST_Transform(cl.geom, 2952)) > 0.9
+) a
 WHERE a.lf_name = highway2 
-AND ST_Distance(ST_Transform(a.oid1_geom,2952), ST_Transform(a.geom,2952)) != 0 
+--AND ST_Distance(ST_Transform(a.oid1_geom,2952), ST_Transform(a.geom,2952)) != 0 
 --ORDER BY dist
---LIMIT 1;
+--LIMIT 1; OR USE MIN (dist)
 )
 
-SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, X.lev_sum
+SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, 
+X.lev_sum, Y.dist_from_pt, Y.dist_from_translated_pt
 FROM X, Y;
 
 END;
@@ -55,7 +59,9 @@ ST_DWithin(ST_Transform(cl.geom, 2952),
 FROM gis.centreline cl, X
 WHERE ST_DWithin(ST_Transform(cl.geom, 2952), 
 		   ST_BUFFER(ST_MakeLine(ST_Transform('0101000020E6100000F511CD4333D453C09E415F54F4D94540'::geometry,2952), ST_Transform('0101000020E61000006197236A76D453C025D8358BF4D94540'::geometry,2952)), 330.33, 'endcap=flat join=round'),
-		   1) = TRUE ) a
+		   1) = TRUE 
+           AND ST_Length(st_intersection(ST_BUFFER(ST_MakeLine(ST_Transform('0101000020E6100000F511CD4333D453C09E415F54F4D94540'::geometry,2952), ST_Transform('0101000020E61000006197236A76D453C025D8358BF4D94540'::geometry,2952)), 3*(ST_LENGTH(ST_MakeLine(ST_Transform('0101000020E6100000F511CD4333D453C09E415F54F4D94540'::geometry,2952), ST_Transform('0101000020E61000006197236A76D453C025D8358BF4D94540'::geometry,2952)))), 'endcap=flat join=round') , ST_Transform(cl.geom, 2952))) /ST_Length(ST_Transform(cl.geom, 2952)) > 0.9
+           ) a
 WHERE a.lf_name = 'Glenwood Cres' 
 AND ST_Distance(ST_Transform('0101000020E6100000F511CD4333D453C09E415F54F4D94540'::geometry,2952), ST_Transform(a.geom,2952)) != 0 
 --ORDER BY dist
