@@ -12,7 +12,9 @@ $BODY$
 BEGIN
 RETURN QUERY
 WITH X AS
-(SELECT oid_geom AS oid1_geom, oid_geom_translated AS oid1_geom_translated, int_id_found AS int1, get_geom.lev_sum
+(SELECT oid_geom AS oid1_geom, oid_geom_translated AS oid1_geom_translated, 
+ST_MakeLine(oid_geom, oid_geom_translated) AS new_line,
+int_id_found AS int1, get_geom.lev_sum
 FROM jchew._get_intersection_geom_updated(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom)
 , Y AS (
 SELECT *, 
@@ -21,14 +23,17 @@ ST_Distance(ST_Transform(a.oid1_geom_translated,2952), ST_Transform(a.geom,2952)
 FROM 
 (SELECT cl.geo_id, cl.lf_name, cl.objectid, cl.fcode, cl.fcode_desc, cl.geom, X.oid1_geom, X.oid1_geom_translated,
 ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)), metres_btwn2, 'endcap=flat join=round'),
-		   1) AS dwithin
+		   ST_BUFFER(ST_Transform(X.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+		   10) AS dwithin
 FROM gis.centreline cl, X
 WHERE ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)), metres_btwn2, 'endcap=flat join=round'),
-		   1) = TRUE 
-AND ST_Length(st_intersection(ST_BUFFER(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)), 3*(ST_LENGTH(ST_MakeLine(ST_Transform(X.oid1_geom,2952), ST_Transform(X.oid1_geom_translated,2952)))), 'endcap=flat join=round') , ST_Transform(cl.geom, 2952))) /ST_Length(ST_Transform(cl.geom, 2952)) > 0.9
-) a
+		   ST_BUFFER(ST_Transform(X.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+		   10) = TRUE 
+--as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
+AND ST_Length(ST_Intersection(
+	ST_Buffer(ST_Transform(X.new_line, 2952), 3*(ST_Length(ST_Transform(X.new_line, 2952))), 'endcap=flat join=round') , 
+	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 ) a 
+	
 WHERE a.lf_name = highway2 
 --AND ST_Distance(ST_Transform(a.oid1_geom,2952), ST_Transform(a.geom,2952)) != 0 
 --ORDER BY dist
