@@ -1,4 +1,4 @@
-CREATE TABLE open_data.wys_mobile_summary (
+CREATE TABLE wys.mobile_summary (
     location_id INT,
     ward_no INT,
     location TEXT ,
