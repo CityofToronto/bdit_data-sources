@@ -6,7 +6,7 @@ RETURNS void
     VOLATILE SECURITY DEFINER 
 AS $BODY$
 
-INSERT INTO open_data.wys_mobile_summary
+INSERT INTO wys.mobile_summary
 SELECT 
     location_id,
     loc.ward_no,
