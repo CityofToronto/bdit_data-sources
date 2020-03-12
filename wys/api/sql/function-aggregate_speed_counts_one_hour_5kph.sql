@@ -63,7 +63,8 @@ BEGIN
 		FROM wys.raw_data
 		INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
 		WHERE	datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
-		GROUP BY api_id, dt,  speed_id;
+		GROUP BY api_id, dt,  speed_id
+		ON CONFLICT DO NOTHING;
 		
  
 END;
