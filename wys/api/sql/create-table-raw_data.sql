@@ -23,9 +23,3 @@ GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.raw_data TO bdit_humans WITH GRAN
 -- Trigger: insert_raw_data_trigger on wys.raw_data
 
 -- DROP TRIGGER insert_raw_data_trigger ON wys.raw_data;
-
-CREATE TRIGGER insert_raw_data_trigger
-  BEFORE INSERT
-  ON wys.raw_data
-  FOR EACH ROW
-  EXECUTE PROCEDURE wys.speed_bins();
