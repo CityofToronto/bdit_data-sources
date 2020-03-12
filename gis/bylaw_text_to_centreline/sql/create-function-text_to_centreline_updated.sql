@@ -6,6 +6,8 @@ objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR) AS $$
 
 DECLARE
 	clean_bylaws RECORD;
+	an_int_offset RECORD;
+	line_geom_cut GEOMETRY;
 	int1_result RECORD;
 	int2_result RECORD;
 	lev_total INT;
@@ -42,17 +44,20 @@ BEGIN
 		SELECT *
 		FROM jchew._get_entire_length_centreline_segments_updated(clean_bylaws.highway2) ;
 		--lev_total := NULL
+
 	--interxn_and_offset
 	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
 		THEN
+		an_int_offset := jchew._centreline_an_interxn_and_offset(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2)
+		line_geom_cut := jchew._centreline_cut_an_interxn_and_offset(clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 
+		ST_LineMerge(ST_Union(an_int_offset.line_geom)), an_int_offset.new_line, an_int_offset.oid1_geom)
+		
 		INSERT INTO _results(int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
-		SELECT int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc 
-		FROM jchew._centreline_case1_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
-		lev_total := SELECT lev_sum FROM jchew._centreline_case1_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2)
--- 		(
--- 			gis._centreline_case1(direction_btwn2, metres_btwn2, ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom,
--- 			ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952) )
--- 		) 
+		SELECT an_int_offset.int1, an_int_offset.geo_id, an_int_offset.lf_name, line_geom_cut, 
+		an_int_offset.oid1_geom, an_int_offset.oid1_geom_translated, an_int_offset.objectid, an_int_offset.fcode, an_int_offset.fcode_desc 
+
+		lev_total := an_int_offset.lev_sum
+
 
 	--interxns_and_offsets
 

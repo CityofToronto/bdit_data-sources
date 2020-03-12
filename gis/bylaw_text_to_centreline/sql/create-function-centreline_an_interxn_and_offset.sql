@@ -1,7 +1,7 @@
 DROP FUNCTION jchew._centreline_an_interxn_and_offset(text, text, text, double precision);
 CREATE OR REPLACE FUNCTION jchew._centreline_an_interxn_and_offset(highway2 TEXT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT)
-RETURNS TABLE(int1 INTEGER, geo_id NUMERIC, lf_name VARCHAR, line_geom GEOMETRY,
-oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER,dist_from_pt FLOAT, dist_from_translated_pt FLOAT)
+RETURNS TABLE(int1 INTEGER, geo_id NUMERIC, lf_name VARCHAR, line_geom GEOMETRY, new_line GEOMETRY,
+oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER, dist_from_pt FLOAT, dist_from_translated_pt FLOAT)
 /*MAIN FUNCTION RETURNS (int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
 line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
 objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR)*/
@@ -13,14 +13,16 @@ BEGIN
 RETURN QUERY
 WITH X AS
 (SELECT oid_geom AS oid1_geom, oid_geom_translated AS oid1_geom_translated, 
-ST_MakeLine(oid_geom, oid_geom_translated) AS new_line,
+ST_MakeLine(oid_geom, oid_geom_translated) AS new_line, -- line from the intersection point to the translated point
 int_id_found AS int1, get_geom.lev_sum
 FROM jchew._get_intersection_geom_updated(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom)
+
 , Y AS (
 SELECT *, 
 ST_Distance(ST_Transform(a.oid1_geom,2952), ST_Transform(a.geom,2952)) AS dist_from_pt,
 ST_Distance(ST_Transform(a.oid1_geom_translated,2952), ST_Transform(a.geom,2952)) AS dist_from_translated_pt
 FROM 
+
 (SELECT cl.geo_id, cl.lf_name, cl.objectid, cl.fcode, cl.fcode_desc, cl.geom, X.oid1_geom, X.oid1_geom_translated,
 ST_DWithin(ST_Transform(cl.geom, 2952), 
 		   ST_BUFFER(ST_Transform(X.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
@@ -35,12 +37,10 @@ AND ST_Length(ST_Intersection(
 	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 ) a 
 	
 WHERE a.lf_name = highway2 
---AND ST_Distance(ST_Transform(a.oid1_geom,2952), ST_Transform(a.geom,2952)) != 0 
---ORDER BY dist
---LIMIT 1; OR USE MIN (dist)
+
 )
 
-SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, 
+SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.new_line, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, 
 X.lev_sum, Y.dist_from_pt, Y.dist_from_translated_pt
 FROM X, Y;
 
@@ -76,7 +76,14 @@ AND ST_Distance(ST_Transform('0101000020E6100000F511CD4333D453C09E415F54F4D94540
 SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, X.lev_sum
 FROM X, Y;
 
-
+**********TO SHOW BUFFER THGY
+SELECT ST_Transform(ST_BUFFER(ST_Transform(
+	ST_MakeLine('0101000020E6100000789FC74E16E153C00EEA253D81D04540'::geometry,'0101000020E6100000A342256B31E153C0831A80D474D04540'::geometry), 2952)
+				 , 3*140, 'endcap=flat join=round'), 4326)
+				 
+SELECT ST_Transform(ST_BUFFER(ST_Transform(
+	ST_MakeLine('0101000020E6100000683B97C3FDD453C078A4136C50E44540'::geometry,'0101000020E6100000263F070D05D553C0A5C6593472E44540'::geometry), 2952)
+				 , 3*120, 'endcap=flat join=round'), 4326)
 
 
 *******OLD ONE
