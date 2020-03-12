@@ -115,7 +115,7 @@ def get_statistics(location, start_date, api_key):
         logger.error('204 error    '+error['error_message'])
     elif response.status_code==404:
         error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid')
+        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
     elif response.status_code==401:
         error=response.json()
         logger.error('401 error    '+error['error_message'])
@@ -278,13 +278,14 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
         logger.info('Pulling '+str(start_date))
         table, loc_table = get_data_for_date(start_date, signs_list, api_key)
 
-        start_date+=time_delta
+        
         
         try:    
             with conn.cursor() as cur:
                 logger.debug('Inserting '+str(len(table))+' rows of data')
+                yr = start_date.year
                 insert_sql = '''
-                    INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count) 
+                    INSERT INTO wys.raw_data_'''+str(yr)+''' (api_id, datetime_bin, speed, count) 
                     VALUES %s
                     ON CONFLICT DO NOTHING
                 '''
@@ -304,6 +305,7 @@ def api_main(start_date=dateutil.parser.parse(default_start).date(),
             conn.close()
             sys.exit(1)
         
+        start_date+=time_delta
         conn.commit()
 
     try:
