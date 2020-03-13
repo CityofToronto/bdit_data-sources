@@ -311,7 +311,7 @@ Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/mast
 CREATE OR REPLACE FUNCTION gis._centreline_case1(direction_btwn2 text, metres_btwn2 FLOAT, centreline_geom geometry, line_geom geometry, oid1_geom geometry)
 RETURNS geometry AS $geom$
 --from main function: 
---gis._centreline_case1(direction_btwn2, metres_btwn2, centreline_geom= ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom,
+--gis._centreline_case1(direction_btwn2, metres_btwn2, centreline_geom= ST_MakeLine(ST_LineMerge(match_line_to_centreline_geom)), line_geom = new_line,
 --					oid1_geom= ST_GeomFromText((gis._get_intersection_geom(highway2, btwn1, NULL::TEXT, NULL::FLOAT, 0))[1], 2952) )
 
 -- i.e. St Mark's Ave and a point 100 m north

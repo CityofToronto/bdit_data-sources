@@ -1,14 +1,15 @@
+DROP FUNCTION jchew._centreline_cut_an_interxn_and_offset(text, double precision, geometry, geometry, geometry);
 CREATE OR REPLACE FUNCTION jchew._centreline_cut_an_interxn_and_offset
-(direction_btwn2 text, metres_btwn2 FLOAT, centrelines geometry, new_line geometry, oid1_geom geometry)
-RETURNS GEOMETRY
+(direction_btwn2 text, metres_btwn2 FLOAT, centrelines geometry, new_line geometry, oid1_geom geometry,
+OUT line_geom_cut GEOMETRY, OUT combined_section NUMRANGE)
+--RETURNS GEOMETRY
 
 LANGUAGE 'plpgsql'
 AS $BODY$
 
 DECLARE
+--******** centrelines or whole_centreline
 whole_centreline GEOMETRY := ST_LineMerge(ST_Union(centrelines));
-line_geom_cut GEOMETRY;
-
 
 BEGIN
 line_geom_cut := (
@@ -21,15 +22,16 @@ THEN whole_centreline
 -- cut off the first fraction of the dissolved line, and the second and check to see which one is closer to the original interseciton
 -- aka to get the starting point of how the line is drawn and then cut accordingly
 
+--when the from_intersection is at the end point of the original centreline
 WHEN ST_LineLocatePoint(whole_centreline, oid1_geom)
-> ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_LineSubstring(new_line, 0.99999, 1)))
+> ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_EndPoint(new_line)))
 THEN ST_LineSubstring(whole_centreline, 
 ST_LineLocatePoint(whole_centreline, oid1_geom) - (metres_btwn2/ST_Length(ST_Transform(whole_centreline, 2952))),
 ST_LineLocatePoint(whole_centreline, oid1_geom) )
 
-
-WHEN ST_LineLocatePoint(whole_centreline, oid1_geom) <
-ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_LineSubstring(new_line, 0.99999, 1)))
+--when the from_intersection is at the start point of the original centreline 
+WHEN ST_LineLocatePoint(whole_centreline, oid1_geom)
+< ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_EndPoint(new_line)))
 -- take the substring from the intersection to the point x metres ahead of it
 THEN ST_LineSubstring(whole_centreline, 
 ST_LineLocatePoint(whole_centreline, oid1_geom),
@@ -38,10 +40,33 @@ ST_LineLocatePoint(whole_centreline, oid1_geom) + (metres_btwn2/ST_Length(ST_Tra
 END
 );
 
+combined_section := (
+-- case where the section of street from the intersection in the specified direction is shorter than x metres
+--take the whole centreline, range is [0,1]
+CASE WHEN metres_btwn2 > ST_Length(ST_Transform(whole_centreline, 2952)) 
+AND metres_btwn2 - ST_Length(ST_Transform(whole_centreline, 2952)) < 15
+THEN numrange(0, 1, '[]')
+
+--when the from_intersection is at the end point of the original centreline
+--range is [xxx, 1]
+WHEN ST_LineLocatePoint(whole_centreline, oid1_geom)
+> ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_EndPoint(new_line)))
+THEN numrange ((ST_LineLocatePoint(whole_centreline, oid1_geom) - (metres_btwn2/ST_Length(ST_Transform(whole_centreline, 2952))))::numeric , 1::numeric, '[]')
+
+--when the from_intersection is at the start point of the original centreline 
+--range is [0, xxx]
+WHEN ST_LineLocatePoint(whole_centreline, oid1_geom)
+< ST_LineLocatePoint(whole_centreline, ST_ClosestPoint(whole_centreline, ST_EndPoint(new_line)))
+-- take the substring from the intersection to the point x metres ahead of it
+THEN numrange(0::numeric, (ST_LineLocatePoint(whole_centreline, oid1_geom) + (metres_btwn2/ST_Length(ST_Transform(whole_centreline, 2952))))::numeric, '[]')
+
+END
+);
+
+
 RAISE NOTICE 'direction_btwn2: %, metres_btwn2: %  whole_centreline: %  new_line: %  oid1_geom: % line_geom_cut: %',
 direction_btwn2, metres_btwn2, ST_ASText(whole_centreline), ST_ASText(new_line), ST_ASText(oid1_geom), ST_ASText(line_geom_cut);
 
-RETURN line_geom_cut;
 
 END;
 $BODY$;
