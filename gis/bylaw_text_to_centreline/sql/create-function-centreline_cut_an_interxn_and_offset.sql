@@ -64,7 +64,7 @@ END
 );
 
 
-RAISE NOTICE 'direction_btwn2: %, metres_btwn2: %  whole_centreline: %  new_line: %  oid1_geom: % line_geom_cut: %',
+RAISE NOTICE 'Centrelines are now combined and cut as specified on the bylaws. direction_btwn2: %, metres_btwn2: %  whole_centreline: %  new_line: %  oid1_geom: % line_geom_cut: %',
 direction_btwn2, metres_btwn2, ST_ASText(whole_centreline), ST_ASText(new_line), ST_ASText(oid1_geom), ST_ASText(line_geom_cut);
 
 
