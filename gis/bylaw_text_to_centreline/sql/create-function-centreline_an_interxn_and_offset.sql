@@ -2,9 +2,7 @@ DROP FUNCTION jchew._centreline_an_interxn_and_offset(text, text, text, double p
 CREATE OR REPLACE FUNCTION jchew._centreline_an_interxn_and_offset(highway2 TEXT, btwn2 TEXT, direction_btwn2 TEXT, metres_btwn2 FLOAT)
 RETURNS TABLE(int1 INTEGER, geo_id NUMERIC, lf_name VARCHAR, line_geom GEOMETRY, new_line GEOMETRY,
 oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR, lev_sum INTEGER, dist_from_pt FLOAT, dist_from_translated_pt FLOAT)
-/*MAIN FUNCTION RETURNS (int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
-line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
-objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR)*/
+
 LANGUAGE 'plpgsql'
 AS 
 $BODY$
@@ -43,6 +41,8 @@ WHERE a.lf_name = highway2
 SELECT X.int1, Y.geo_id, Y.lf_name, Y.geom AS line_geom, X.new_line, X.oid1_geom, X.oid1_geom_translated, Y.objectid, Y.fcode, Y.fcode_desc, 
 X.lev_sum, Y.dist_from_pt, Y.dist_from_translated_pt
 FROM X, Y;
+
+RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name is found.'; 
 
 END;
 $BODY$;
