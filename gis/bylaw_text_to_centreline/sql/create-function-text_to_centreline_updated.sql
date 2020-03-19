@@ -1,13 +1,14 @@
 DROP FUNCTION jchew.text_to_centreline_updated(INT, TEXT, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
 RETURNS TABLE(int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
-line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
+line_geom GEOMETRY, section NUMRANGE, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
 objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR) AS $$
 
 DECLARE
 	clean_bylaws RECORD;
 	an_int_offset RECORD;
-	line_geom_cut GEOMETRY;
+	line_cut RECORD;
+    line_separate RECORD;
 	int1_result RECORD;
 	int2_result RECORD;
 	lev_total INT;
@@ -28,6 +29,7 @@ BEGIN
 		geo_id NUMERIC,
 		lf_name VARCHAR,
 		line_geom GEOMETRY,
+        section NUMRANGE,
 		oid1_geom GEOMETRY,
 		oid1_geom_translated GEOMETRY,
 		oid2_geom GEOMETRY,
@@ -35,7 +37,6 @@ BEGIN
 		objectid NUMERIC,
 		fcode INT,
 		fcode_desc VARCHAR
-
 	);
 
 	IF TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL
@@ -48,15 +49,18 @@ BEGIN
 	--interxn_and_offset
 	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
 		THEN
-		an_int_offset := jchew._centreline_an_interxn_and_offset(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2)
-		line_geom_cut := jchew._centreline_cut_an_interxn_and_offset(clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 
-		ST_LineMerge(ST_Union(an_int_offset.line_geom)), an_int_offset.new_line, an_int_offset.oid1_geom)
-		
-		INSERT INTO _results(int1, geo_id, lf_name, line_geom, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
-		SELECT an_int_offset.int1, an_int_offset.geo_id, an_int_offset.lf_name, line_geom_cut, 
-		an_int_offset.oid1_geom, an_int_offset.oid1_geom_translated, an_int_offset.objectid, an_int_offset.fcode, an_int_offset.fcode_desc 
+		an_int_offset := jchew._centreline_an_interxn_and_offset(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2);
+		line_cut := jchew._centreline_cut_an_interxn_and_offset(clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 
+		            ST_LineMerge(ST_Union(an_int_offset.line_geom)), an_int_offset.new_line, an_int_offset.oid1_geom);
+		line_separate := jchew._centreline_separate_an_interxn_and_offset(line_cut.line_geom_cut, 
+                        an_int_offset.line_geom, an_int_offset.oid1_geom, line_cut.combined_section);
 
-		lev_total := an_int_offset.lev_sum
+		INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
+		SELECT an_int_offset.int1, an_int_offset.geo_id, an_int_offset.lf_name, line_separate.line_geom_separated, 
+		line_separate.section, an_int_offset.oid1_geom, an_int_offset.oid1_geom_translated, 
+        an_int_offset.objectid, an_int_offset.fcode, an_int_offset.fcode_desc ;
+
+		lev_total := an_int_offset.lev_sum ;
 
 
 	--interxns_and_offsets
@@ -69,7 +73,8 @@ BEGIN
 					ELSE jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
 					END);
 					
-		INSERT INTO _results
+		INSERT INTO _results (int_start, int_end, seq, geo_id, lf_name, line_geom,
+        oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid,	fcode, fcode_desc)
 		SELECT int_start, int_end, seq, rout.geo_id, rout.lf_name, geom AS line_geom, 
 		int1_result.oid_geom AS oid1_geom, int1_result.oid_geom_translated AS oid1_geom_translated,
 		int2_result.oid_geom AS oid2_geom, int2_result.oid_geom_translated AS oid2_geom_translated,
@@ -107,7 +112,7 @@ clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2, clean_bylaws.direction_btw
 
 RETURN QUERY 
 SELECT int_start, int_end, r.geo_id, r.lf_name, con, note, 
-r.line_geom, r.oid1_geom, r.oid1_geom_translated, 
+r.line_geom, r.section, r.oid1_geom, r.oid1_geom_translated, 
 r.oid2_geom, r.oid2_geom_translated, 
 r.objectid, r.fcode, r.fcode_desc 
 FROM _results r;
