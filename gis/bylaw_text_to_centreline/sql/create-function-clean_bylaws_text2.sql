@@ -15,7 +15,7 @@ CREATE TABLE jchew.cleaned_bylaws_text (
 --Then, create a function 
 DROP FUNCTION jchew.clean_bylaws_text2(integer, text, text, text);
 CREATE OR REPLACE FUNCTION jchew.clean_bylaws_text2(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
-RETURNS cleaned_bylaws_text 
+RETURNS jchew.cleaned_bylaws_text 
 LANGUAGE 'plpgsql'
 AS $$
 
