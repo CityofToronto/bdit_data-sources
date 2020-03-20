@@ -46,21 +46,14 @@ BEGIN
 		FROM jchew._get_entire_length_centreline_segments_updated(clean_bylaws.highway2) ;
 		--lev_total := NULL
 
-	--interxn_and_offset
+	--an_interxn_and_offset
 	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
 		THEN
-		an_int_offset := jchew._centreline_an_interxn_and_offset(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2);
-		line_cut := jchew._centreline_cut_an_interxn_and_offset(clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 
-		            ST_LineMerge(ST_Union(an_int_offset.line_geom)), an_int_offset.new_line, an_int_offset.oid1_geom);
-		line_separate := jchew._centreline_separate_an_interxn_and_offset(line_cut.line_geom_cut, 
-                        an_int_offset.line_geom, an_int_offset.oid1_geom, line_cut.combined_section);
-
 		INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
-		SELECT an_int_offset.int1, an_int_offset.geo_id, an_int_offset.lf_name, line_separate.line_geom_separated, 
-		line_separate.section, an_int_offset.oid1_geom, an_int_offset.oid1_geom_translated, 
-        an_int_offset.objectid, an_int_offset.fcode, an_int_offset.fcode_desc ;
+		SELECT int1, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc
+		FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2)
 
-		lev_total := an_int_offset.lev_sum ;
+		lev_total := SELECT AVG(lev_sum)::integer FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) ;
 
 
 	--interxns_and_offsets
