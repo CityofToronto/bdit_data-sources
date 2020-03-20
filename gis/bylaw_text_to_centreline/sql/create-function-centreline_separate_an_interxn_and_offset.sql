@@ -46,6 +46,7 @@ THEN ind_line_geom
 WHEN ST_Within(ST_Transform(ind_line_geom, 2952), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN ind_line_geom
 
+/*
 --where part of the centreline is within the buffer, and then find out the startpoint of the individual centreline
 --and startpoint of the line_geom_cut to know which part of the centreline needs to be cut
 WHEN ST_Within(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
@@ -53,8 +54,8 @@ THEN ST_LineSubstring(ind_line_geom, 0 , ST_LineLocatePoint(ind_line_geom, ST_En
 
 WHEN ST_Within(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN ST_LineSubstring(ind_line_geom, ST_LineLocatePoint(ind_line_geom, ST_StartPoint(line_geom_cut)), 1)  
-
-ELSE NULL
+*/
+ELSE ST_Intersection(ST_Buffer(line_geom_cut, 0.00001), ind_line_geom)
 
 END);
 
