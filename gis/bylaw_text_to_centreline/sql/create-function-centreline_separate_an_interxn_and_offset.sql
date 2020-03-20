@@ -7,6 +7,13 @@ AS $BODY$
 
 BEGIN
 
+IF ABS(DEGREES(ST_azimuth(ST_StartPoint(ind_line_geom), ST_EndPoint(ind_line_geom))) 
+       - DEGREES(ST_azimuth(ST_StartPoint(line_geom_cut), ST_EndPoint(line_geom_cut)))
+       ) > 180 THEN
+--The lines are two different orientations
+line_geom_cut := ST_Reverse(line_geom_cut);
+END IF;
+
 section :=
 --combined_section = '[0,1]'
 (CASE WHEN lower(combined_section) = 0 AND upper(combined_section) = 1
@@ -19,29 +26,14 @@ THEN numrange(0, 1, '[]')
 
 --where part of the centreline is within the buffer, and then find out the startpoint of the individual centreline to know which part of the centreline needs to be cut
 WHEN ST_Within(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) < 
-    ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
-THEN numrange(0, (ST_LineLocatePoint(ind_line_geom, ST_StartPoint(line_geom_cut)))::numeric, '[]')
-
-WHEN ST_Within(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) > 
-    ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
 THEN numrange(0, (ST_LineLocatePoint(ind_line_geom, ST_EndPoint(line_geom_cut)))::numeric, '[]')
 
 WHEN ST_Within(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) > 
-    ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
-THEN numrange((ST_LineLocatePoint(ind_line_geom, ST_EndPoint(line_geom_cut)))::numeric, 1, '[]')   
-
-WHEN ST_Within(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) < 
-    ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
 THEN numrange((ST_LineLocatePoint(ind_line_geom, ST_StartPoint(line_geom_cut)))::numeric, 1, '[]')    
 
 ELSE NULL
 
 END);
-
 
 
 line_geom_separated :=
@@ -57,29 +49,14 @@ THEN ind_line_geom
 --where part of the centreline is within the buffer, and then find out the startpoint of the individual centreline
 --and startpoint of the line_geom_cut to know which part of the centreline needs to be cut
 WHEN ST_Within(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) < 
-    ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
-THEN ST_LineSubstring(ind_line_geom, 0 , ST_LineLocatePoint(ind_line_geom, ST_StartPoint(line_geom_cut)))
-
-WHEN ST_Within(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) > 
-    ST_Distance(ST_StartPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
 THEN ST_LineSubstring(ind_line_geom, 0 , ST_LineLocatePoint(ind_line_geom, ST_EndPoint(line_geom_cut)))
 
 WHEN ST_Within(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) > 
-    ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
-THEN ST_LineSubstring(ind_line_geom, ST_LineLocatePoint(ind_line_geom, ST_EndPoint(line_geom_cut)), 1)  
-
-WHEN ST_Within(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
-AND ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_EndPoint(ST_Transform(line_geom_cut, 2952))) < 
-    ST_Distance(ST_EndPoint(ST_Transform(ind_line_geom, 2952)), ST_StartPoint(ST_Transform(line_geom_cut, 2952)))
 THEN ST_LineSubstring(ind_line_geom, ST_LineLocatePoint(ind_line_geom, ST_StartPoint(line_geom_cut)), 1)  
 
 ELSE NULL
 
 END);
-
 
 RAISE NOTICE 'Centrelines are now separated into their respective geo_id row. combined_section: %, section: %',
 combined_section, section;
