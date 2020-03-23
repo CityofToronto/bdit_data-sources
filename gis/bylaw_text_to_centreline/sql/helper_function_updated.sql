@@ -129,6 +129,7 @@ If the input geometry is unprojected (i.e. SRID = 4326) then the function return
 ';
 
 --CHANGED
+--CHANGED
 DROP FUNCTION jchew._get_intersection_geom_updated(text, text, text, double precision, integer);
 CREATE OR REPLACE FUNCTION jchew._get_intersection_geom_updated(highway2 TEXT, btwn TEXT, direction TEXT, metres FLOAT, not_int_id INT,
 OUT oid_geom GEOMETRY, OUT oid_geom_translated GEOMETRY, OUT int_id_found INT, OUT lev_sum INT)
@@ -160,7 +161,7 @@ oid_geom_test := (
 		);
 oid_geom_translated := (
 		CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
-	   	THEN (SELECT ST_Transform(ST_SetSRID(translated_geom, 2952),4326) 
+	   	THEN (SELECT *
            FROM jchew._translate_intersection_point_updated(oid_geom_test, metres, direction) translated_geom)
 		ELSE NULL
 		END
