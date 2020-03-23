@@ -33,7 +33,7 @@ BEGIN
 RETURN QUERY
 WITH 
 results AS (SELECT _int_start, _int_end, * FROM
-    pgr_dijkstra('SELECT id, source::int, target::int, cost from gis.centreline_routing_undirected', _int_start::int, _int_end::int, FALSE)
+    pgr_dijkstra('SELECT id, source::int, target::int, cost from gis.centreline_routing_undirected'::TEXT, _int_start::bigint, _int_end::bigint, FALSE)
 )
 SELECT results._int_start, results._int_end, results.seq, 
 centre.geo_id, centre.lf_name, centre.objectid, centre.geom, centre.fcode, centre.fcode_desc 
