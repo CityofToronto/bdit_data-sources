@@ -52,7 +52,7 @@ BEGIN
 		case1.oid1_geom, case1.oid1_geom_translated, case1.objectid, case1.fcode, case1.fcode_desc
 		FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
 
-		lev_total := (SELECT lev_sum FROM jchew._get_intersection_geom_updated(highway2, btwn2, direction_btwn2, metres_btwn2, 0) );
+		lev_total := (SELECT lev_sum FROM jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0) );
 		--FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) ;
   
 
