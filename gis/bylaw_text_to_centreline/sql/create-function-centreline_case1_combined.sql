@@ -35,6 +35,8 @@ CREATE TEMP TABLE IF NOT EXISTS _wip(
     whole_centreline GEOMETRY
 );
 
+TRUNCATE TABLE _wip;
+
 INSERT INTO _wip (int1, geo_id, lf_name, ind_line_geom, new_line, oid1_geom, oid1_geom_translated, 
 objectid, fcode, fcode_desc, lev_sum)
 WITH get_int AS
