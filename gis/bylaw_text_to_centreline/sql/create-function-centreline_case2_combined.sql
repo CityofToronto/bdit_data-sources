@@ -75,21 +75,25 @@ oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated,
 objectid, fcode, fcode_desc)
 
 WITH get_int AS
-(SELECT _wip2.lf_name, _wip2.geo_id, _wip2.oid1_geom, _wip2.oid1_geom_translated, 
+(SELECT _wip2.lf_name, _wip2.oid1_geom, _wip2.oid1_geom_translated, 
 _wip2.oid2_geom, _wip2.oid2_geom_translated, 
 ST_MakeLine(_wip2.oid1_geom, _wip2.oid1_geom_translated) AS new_line1,
 ST_MakeLine(_wip2.oid2_geom, _wip2.oid2_geom_translated) AS new_line2
-FROM _wip2)
+FROM _wip2 
+--The columns I want are all the same for each row anyway besides the centreline information ie geo_id
+LIMIT 1) 
 SELECT cl.geo_id, cl.lf_name, cl.geom, 
 	get_int.new_line1, get_int.new_line2,
 	get_int.oid1_geom, get_int.oid1_geom_translated, 
 	get_int.oid2_geom, get_int.oid2_geom_translated, 
 	cl.objectid, cl.fcode, cl.fcode_desc
-FROM gis.centreline cl, get_int
-WHERE (ST_DWithin(ST_Transform(cl.geom, 2952), 
+FROM gis.centreline cl
+INNER JOIN get_int USING (lf_name) --only get those with desired street names
+WHERE cl.geo_id NOT IN (SELECT _wip2.geo_id FROM _wip2)  --not repeating those found from pgrouting
+AND (ST_DWithin(ST_Transform(cl.geom, 2952), 
 		   ST_BUFFER(ST_Transform(get_int.new_line1, 2952), 3*metres_btwn1, 'endcap=flat join=round'),
 		   10) = TRUE 
-	   OR
+	  OR
 	   ST_DWithin(ST_Transform(cl.geom, 2952), 
 		   ST_BUFFER(ST_Transform(get_int.new_line2, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
 		   10) = TRUE 
@@ -102,11 +106,10 @@ AND (ST_Length(ST_Intersection(
 	ST_Length(ST_Intersection(
 	ST_Buffer(ST_Transform(get_int.new_line2, 2952), 3*(ST_Length(ST_Transform(get_int.new_line2, 2952))), 'endcap=flat join=round') , 
 	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1
-	 )
-AND cl.geo_id NOT IN (SELECT get_int.geo_id FROM get_int)
-AND cl.lf_name IN (SELECT get_int.lf_name FROM get_int LIMIT 1);
+	 ) ;
 
 RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name is found.'; 
+
 
 /*
 RETURN QUERY
