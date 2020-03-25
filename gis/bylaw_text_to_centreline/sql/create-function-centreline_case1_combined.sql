@@ -66,7 +66,7 @@ get_int.lev_sum
 FROM get_int, get_lines
 WHERE get_lines.lf_name = highway2 ;
 
-RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name is found.'; 
+RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name are found.'; 
 
 --TO CUT combined ind_line_geom and put into line_geom
 UPDATE _wip SET whole_centreline =
