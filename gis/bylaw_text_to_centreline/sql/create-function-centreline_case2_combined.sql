@@ -87,11 +87,11 @@ SELECT cl.geo_id, cl.lf_name, cl.geom,
 	cl.objectid, cl.fcode, cl.fcode_desc
 FROM gis.centreline cl, get_int
 WHERE (ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line1, 2952), 3*385, 'endcap=flat join=round'),
+		   ST_BUFFER(ST_Transform(get_int.new_line1, 2952), 3*metres_btwn1, 'endcap=flat join=round'),
 		   10) = TRUE 
 	   OR
 	   ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line2, 2952), 3*0, 'endcap=flat join=round'),
+		   ST_BUFFER(ST_Transform(get_int.new_line2, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
 		   10) = TRUE 
 	   )
 --as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
@@ -100,7 +100,7 @@ AND (ST_Length(ST_Intersection(
 	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
 	OR
 	ST_Length(ST_Intersection(
-	ST_Buffer(ST_Transform(get_int.new_line1, 2952), 3*(ST_Length(ST_Transform(get_int.new_line2, 2952))), 'endcap=flat join=round') , 
+	ST_Buffer(ST_Transform(get_int.new_line2, 2952), 3*(ST_Length(ST_Transform(get_int.new_line2, 2952))), 'endcap=flat join=round') , 
 	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1
 	 )
 AND cl.geo_id NOT IN (SELECT get_int.geo_id FROM get_int)
