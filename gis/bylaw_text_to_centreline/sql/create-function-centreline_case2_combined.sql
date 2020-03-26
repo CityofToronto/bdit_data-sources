@@ -82,7 +82,7 @@ ST_MakeLine(_wip2.oid2_geom, _wip2.oid2_geom_translated) AS new_line2
 FROM _wip2 
 --The columns I want are all the same for each row anyway besides the centreline information ie geo_id
 LIMIT 1) 
-SELECT cl.geo_id, cl.lf_name, ST_LineMerge(cl.geom), 
+SELECT cl.geo_id, cl.lf_name, cl.geom, 
 	get_int.new_line1, get_int.new_line2,
 	get_int.oid1_geom, get_int.oid1_geom_translated, 
 	get_int.oid2_geom, get_int.oid2_geom_translated, 
@@ -249,6 +249,9 @@ THEN ST_LineMerge(ST_Reverse(_wip2.line_geom_cut))
 ELSE ST_LineMerge(_wip2.line_geom_cut)
 END
 );
+
+--ST_LineMerge to make sure that the section part is working right
+UPDATE _wip2 SET ind_line_geom = ST_LineMerge(_wip2.ind_line_geom);
 
 UPDATE _wip2 SET section = (
 --where the whole centreline is within the buffer
