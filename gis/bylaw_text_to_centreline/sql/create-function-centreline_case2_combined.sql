@@ -82,7 +82,7 @@ ST_MakeLine(_wip2.oid2_geom, _wip2.oid2_geom_translated) AS new_line2
 FROM _wip2 
 --The columns I want are all the same for each row anyway besides the centreline information ie geo_id
 LIMIT 1) 
-SELECT cl.geo_id, cl.lf_name, cl.geom, 
+SELECT cl.geo_id, cl.lf_name, ST_LineMerge(cl.geom), 
 	get_int.new_line1, get_int.new_line2,
 	get_int.oid1_geom, get_int.oid1_geom_translated, 
 	get_int.oid2_geom, get_int.oid2_geom_translated, 
@@ -239,30 +239,14 @@ direction_btwn2: %, metres_btwn2: %  whole_centreline: %  line_geom: %',
 direction_btwn2, metres_btwn2, ST_ASText(ST_Union(_wip2.whole_centreline)) FROM _wip2, 
 ST_ASText(ST_Union(_wip2.line_geom_cut)) FROM _wip2;
 
-/*
-RETURN QUERY
-SELECT int1, int2, _wip2.seq, _wip2.geo_id, _wip2.lf_name, 
-_wip2.ind_line_geom, _wip2.line_geom, _wip2.line_geom_cut,
-_wip2.section,
-_wip2.oid1_geom, _wip2.oid1_geom_translated, _wip2.oid2_geom, _wip2.oid2_geom_translated, 
-_wip2.objectid, _wip2.fcode, _wip2.fcode_desc, _wip2.lev_sum
-FROM _wip2;
-
-DROP TABLE _wip2;
-
-END;
-$BODY$;
-*/
-
-
 --TO SEPARATE line_geom that got cut into individual rows with section stated
 UPDATE _wip2 SET line_geom_reversed = (
 CASE WHEN ABS(DEGREES(ST_Azimuth(ST_StartPoint(_wip2.ind_line_geom), ST_EndPoint(_wip2.ind_line_geom))) 
        - DEGREES(ST_Azimuth(ST_StartPoint(_wip2.line_geom_cut), ST_EndPoint(_wip2.line_geom_cut)))
        ) > 180 
 --The lines are in two different orientations
-THEN ST_Reverse(_wip2.line_geom_cut)
-ELSE _wip2.line_geom_cut
+THEN ST_LineMerge(ST_Reverse(_wip2.line_geom_cut))
+ELSE ST_LineMerge(_wip2.line_geom_cut)
 END
 );
 
@@ -292,21 +276,17 @@ ELSE ST_Intersection(ST_Buffer(_wip2.line_geom_reversed, 0.00001), _wip2.ind_lin
 
 END);
 
-RAISE NOTICE 'Centrelines are now separated into their respective geo_id row.';
+RAISE NOTICE 'Centrelines are now separated into their respective geo_id rows.';
+
 
 RETURN QUERY
-SELECT _wip.int1, _wip.geo_id, _wip.lf_name, 
-_wip.ind_line_geom, _wip.line_geom, _wip.line_geom_cut, 
-_wip.section, _wip.combined_section,
-_wip.oid1_geom, _wip.oid1_geom_translated, 
-_wip.objectid, _wip.fcode, _wip.fcode_desc, _wip.lev_sum 
-FROM _wip;
+SELECT int1, int2, _wip2.seq, _wip2.geo_id, _wip2.lf_name, 
+_wip2.ind_line_geom, _wip2.line_geom, _wip2.line_geom_cut, _wip2.section,
+_wip2.oid1_geom, _wip2.oid1_geom_translated, _wip2.oid2_geom, _wip2.oid2_geom_translated, 
+_wip2.objectid, _wip2.fcode, _wip2.fcode_desc, _wip2.lev_sum
+FROM _wip2;
 
-DROP TABLE _wip;
+DROP TABLE _wip2;
 
 END;
 $BODY$;
-
-ALTER FUNCTION jchew._centreline_case1_combined(text, text, text, double precision)
-    OWNER TO jchew;
-
