@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION jchew._centreline_case2_combined(
     btwn2_check text)
     RETURNS TABLE(int_start integer, int_end integer, seq integer, geo_id numeric, lf_name character varying, 
     ind_line_geom geometry, line_geom geometry, line_geom_cut geometry, 
-    section numrange, combined_section numrange, 
+    section numrange, 
     oid1_geom geometry, oid1_geom_translated geometry, oid2_geom geometry, oid2_geom_translated geometry, 
     objectid numeric, fcode integer, fcode_desc character varying, lev_sum integer)
     LANGUAGE 'plpgsql'
@@ -48,8 +48,8 @@ CREATE TEMP TABLE IF NOT EXISTS _wip2 (
     lev_sum INTEGER, 
     line_geom_cut GEOMETRY,
     line_geom_reversed GEOMETRY,
-    combined_section NUMRANGE,
-    whole_centreline GEOMETRY
+    whole_centreline GEOMETRY,
+    pgrout_centreline GEOMETRY
 );
 
 TRUNCATE TABLE _wip2; 
@@ -116,36 +116,80 @@ UPDATE _wip2 SET whole_centreline =
 FROM _wip2
 GROUP BY _wip2.lf_name );
 
-***testing (doesnt work when we are cutting short the geom)
+--TO COMBINE THOSE FOUND FROM PGROUTING (WHERE SEQ IS NOT NULL)
+UPDATE _wip2 SET pgrout_centreline =
+(SELECT ST_LineMerge(ST_Union(_wip2.ind_line_geom)) 
+FROM _wip2
+WHERE _wip2.seq IS NOT NULL
+GROUP BY _wip2.lf_name );
 
---DEAL WITH new_line1 (FIRST INTERSECTION POINT)
+--DEAL WITH oid1_geom_translated (FIRST INTERSECTION POINT)
 UPDATE _wip2 SET line_geom_cut = (
-CASE WHEN metres_btwn1 > ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) 
-AND metres_btwn1 - ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) < 15
-THEN _wip2.whole_centreline
+CASE WHEN metres_btwn1 > ST_Length(ST_Transform(_wip2.pgrout_centreline, 2952)) 
+AND metres_btwn1 - ST_Length(ST_Transform(_wip2.pgrout_centreline, 2952)) < 15
+THEN _wip2.pgrout_centreline
 
--- cut off the first fraction of the dissolved line, and the second and check to see which one is closer to the original interseciton
--- to get the starting point of how the line is drawn and then cut accordingly
+--To check if the oid1_geom_translated point is within pgrout_centreline to determine if we should add or subtract
+--routed centreline + additional centreline xx metres from that intersection
+WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated) , 0.00001), _wip2.pgrout_centreline) = FALSE
+THEN (
+    CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
+    > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
+    THEN ST_Union(_wip2.pgrout_centreline ,
+    ST_LineSubstring(_wip2.whole_centreline, 
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) - (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))),
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) )  
+        )
+ 
+    WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
+    < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
+    THEN ST_Union(_wip2.pgrout_centreline ,
+    ST_LineSubstring(_wip2.whole_centreline, 
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom),
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) + (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952)))  )
+        )
+    
+    END )
 
---when the from_intersection is at the end point of the original centreline
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
-> ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(_wip2.new_line1)))
-THEN ST_LineSubstring(_wip2.whole_centreline, 
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) - (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))),
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) )
+--routed centreline - part of centreline xx metres from that intersection that got trimmed
+WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated) , 0.00001), _wip2.pgrout_centreline) = TRUE
+THEN (
+    CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
+    < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
+    THEN ST_Difference(_wip2.pgrout_centreline ,
+    ST_LineSubstring(_wip2.pgrout_centreline, 
+    ST_LineLocatePoint(_wip2.pgrout_centreline, _wip2.oid1_geom),
+    ST_LineLocatePoint(_wip2.pgrout_centreline, _wip2.oid1_geom) + (metres_btwn1/ST_Length(ST_Transform(_wip2.pgrout_centreline, 2952)))  )
+        )
 
---when the from_intersection is at the start point of the original centreline 
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
-< ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(_wip2.new_line1)))
-THEN ST_LineSubstring(_wip2.whole_centreline, 
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom),
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) + (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952)))  )
+    WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
+    > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
+    THEN ST_Difference(_wip2.pgrout_centreline ,
+    ST_LineSubstring(_wip2.pgrout_centreline, 
+    ST_LineLocatePoint(_wip2.pgrout_centreline, _wip2.oid1_geom) - (metres_btwn1/ST_Length(ST_Transform(_wip2.pgrout_centreline, 2952))),
+    ST_LineLocatePoint(_wip2.pgrout_centreline, _wip2.oid1_geom) )  
+        )
 
-END
-);
+    END )
 
---UPDATE whole_centreline after the first intersection part is cut
-UPDATE _wip2 SET whole_centreline = _wip2.line_geom_cut FROM _wip2;
+ELSE _wip2.pgrout_centreline
+
+END);
+
+/*
+RETURN QUERY
+SELECT int1, int2, _wip2.seq, _wip2.geo_id, _wip2.lf_name, 
+_wip2.ind_line_geom, _wip2.line_geom, _wip2.line_geom_cut,
+_wip2.section,
+_wip2.oid1_geom, _wip2.oid1_geom_translated, _wip2.oid2_geom, _wip2.oid2_geom_translated, 
+_wip2.objectid, _wip2.fcode, _wip2.fcode_desc, _wip2.lev_sum
+FROM _wip2;
+
+DROP TABLE _wip2;
+
+END;
+$BODY$;
+*/
 
 --DEAL WITH new_line2 (SECOND INTERSECTION POINT)
 UPDATE _wip2 SET line_geom_cut = (
@@ -172,21 +216,6 @@ ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) + (metres_btwn1/ST_L
 
 END
 );
-
-/*
-RETURN QUERY
-SELECT int1, int2, _wip2.seq, _wip2.geo_id, _wip2.lf_name, 
-_wip2.ind_line_geom, _wip2.line_geom, _wip2.line_geom_cut,
-_wip2.section, _wip2.combined_section, 
-_wip2.oid1_geom, _wip2.oid1_geom_translated, _wip2.oid2_geom, _wip2.oid2_geom_translated, 
-_wip2.objectid, _wip2.fcode, _wip2.fcode_desc, _wip2.lev_sum
-FROM _wip2;
-
-DROP TABLE _wip2;
-
-END;
-$BODY$;
-*/
 
 UPDATE _wip2 SET combined_section = (
 -- case where the section of street from the intersection in the specified direction is shorter than x metres
