@@ -192,3 +192,6 @@ volumes/miovision/api/config.cfg
 # Google Sheets API keys.
 token.pickle
 key.json
+rescu/connect/*
+rescu/data/*
+rescu/detector_inventory.csv
