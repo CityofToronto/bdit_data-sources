@@ -176,6 +176,69 @@ ELSE _wip2.pgrout_centreline
 
 END);
 
+RAISE NOTICE 'First intersection has been dealt with. Centrelines are now combined and cut (add/trim) as specified on the bylaws. 
+direction_btwn2: %, metres_btwn2: %  whole_centreline: %  line_geom: %',
+direction_btwn2, metres_btwn2, ST_ASText(ST_Union(_wip2.whole_centreline)) FROM _wip2, 
+ST_ASText(ST_Union(_wip2.line_geom_cut)) FROM _wip2;
+
+--DEAL WITH oid2_geom_translated (SECOND INTERSECTION POINT)
+UPDATE _wip2 SET line_geom_cut = (
+CASE WHEN metres_btwn2 > ST_Length(ST_Transform(_wip2.line_geom_cut, 2952)) 
+AND metres_btwn2 - ST_Length(ST_Transform(_wip2.line_geom_cut, 2952)) < 15
+THEN _wip2.line_geom_cut
+
+--To check if the oid2_geom_translated point is within pgrout_centreline to determine if we should add or subtract
+--routed centreline + additional centreline xx metres from that intersection
+WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated) , 0.00001), _wip2.line_geom_cut) = FALSE
+THEN (
+    CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
+    > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
+    THEN ST_Union(_wip2.line_geom_cut ,
+    ST_LineSubstring(_wip2.whole_centreline, 
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) - (metres_btwn2/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))),
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) )  
+        )
+ 
+    WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
+    < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
+    THEN ST_Union(_wip2.line_geom_cut ,
+    ST_LineSubstring(_wip2.whole_centreline, 
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom),
+    ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) + (metres_btwn2/ST_Length(ST_Transform(_wip2.whole_centreline, 2952)))  )
+        )
+    
+    END )
+
+--routed centreline - part of centreline xx metres from that intersection that got trimmed
+WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated) , 0.00001), _wip2.line_geom_cut) = TRUE
+THEN (
+    CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
+    < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
+    THEN ST_Difference(_wip2.line_geom_cut ,
+    ST_LineSubstring(_wip2.line_geom_cut, 
+    ST_LineLocatePoint(_wip2.line_geom_cut, _wip2.oid2_geom),
+    ST_LineLocatePoint(_wip2.line_geom_cut, _wip2.oid2_geom) + (metres_btwn2/ST_Length(ST_Transform(_wip2.line_geom_cut, 2952)))  )
+        )
+
+    WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
+    > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
+    THEN ST_Difference(_wip2.line_geom_cut ,
+    ST_LineSubstring(_wip2.line_geom_cut, 
+    ST_LineLocatePoint(_wip2.line_geom_cut, _wip2.oid2_geom) - (metres_btwn2/ST_Length(ST_Transform(_wip2.line_geom_cut, 2952))),
+    ST_LineLocatePoint(_wip2.line_geom_cut, _wip2.oid2_geom) )  
+        )
+
+    END )
+
+ELSE _wip2.line_geom_cut
+
+END);
+
+RAISE NOTICE 'Second intersection has been dealt with. Centrelines are now combined and cut (add/trim) as specified on the bylaws. 
+direction_btwn2: %, metres_btwn2: %  whole_centreline: %  line_geom: %',
+direction_btwn2, metres_btwn2, ST_ASText(ST_Union(_wip2.whole_centreline)) FROM _wip2, 
+ST_ASText(ST_Union(_wip2.line_geom_cut)) FROM _wip2;
+
 /*
 RETURN QUERY
 SELECT int1, int2, _wip2.seq, _wip2.geo_id, _wip2.lf_name, 
@@ -191,36 +254,6 @@ END;
 $BODY$;
 */
 
---DEAL WITH new_line2 (SECOND INTERSECTION POINT)
-UPDATE _wip2 SET line_geom_cut = (
-CASE WHEN metres_btwn2 > ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) 
-AND metres_btwn2 - ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) < 15
-THEN _wip2.whole_centreline
-
--- cut off the first fraction of the dissolved line, and the second and check to see which one is closer to the original interseciton
--- to get the starting point of how the line is drawn and then cut accordingly
-
---when the from_intersection is at the end point of the original centreline
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
-> ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(_wip2.new_line2)))
-THEN ST_LineSubstring(_wip2.whole_centreline, 
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) - (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))),
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) )
-
---when the from_intersection is at the start point of the original centreline 
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
-< ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(_wip2.new_line2)))
-THEN ST_LineSubstring(_wip2.whole_centreline, 
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom),
-ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) + (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952)))  )
-
-END
-);
-
-RAISE NOTICE 'Centrelines are now combined and cut (add/trim) as specified on the bylaws. 
-direction_btwn2: %, metres_btwn1: %  whole_centreline: %  line_geom: %',
-direction_btwn2, metres_btwn1, ST_ASText(ST_Union(_wip2.whole_centreline)) FROM _wip2, 
-ST_ASText(ST_Union(_wip2.line_geom_cut)) FROM _wip2;
 
 --TO SEPARATE line_geom that got cut into individual rows with section stated
 UPDATE _wip SET line_geom_reversed = (
