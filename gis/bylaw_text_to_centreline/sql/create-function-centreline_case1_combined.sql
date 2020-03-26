@@ -148,15 +148,15 @@ THEN numrange(0, 1,'[]')
 
 --for combined_section = '[%,1]' or '[0,%]'
 --where the whole centreline is within the buffer
-WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(_wip.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN numrange(0, 1, '[]')
 
 --where part of the centreline is within the buffer, and then find out the startpoint of the individual centreline to know which part of the centreline needs to be cut
-WHEN ST_Within(ST_StartPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
-THEN numrange(0, (ST_LineLocatePoint(_wip.ind_line_geom, ST_EndPoint(line_geom_reversed)))::numeric, '[]')
+WHEN ST_Within(ST_StartPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(_wip.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+THEN numrange(0, (ST_LineLocatePoint(_wip.ind_line_geom, ST_EndPoint(_wip.line_geom_reversed)))::numeric, '[]')
 
-WHEN ST_Within(ST_EndPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
-THEN numrange((ST_LineLocatePoint(_wip.ind_line_geom, ST_StartPoint(line_geom_reversed)))::numeric, 1, '[]')    
+WHEN ST_Within(ST_EndPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(_wip.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+THEN numrange((ST_LineLocatePoint(_wip.ind_line_geom, ST_StartPoint(_wip.line_geom_reversed)))::numeric, 1, '[]')    
 
 ELSE NULL
 
@@ -169,15 +169,15 @@ THEN _wip.ind_line_geom
 
 --for combined_section = '[%,1]' or '[0,%]'
 --where the whole centreline is within the buffer
-WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(_wip.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN _wip.ind_line_geom
 
 --where part of the centreline is within the buffer
-ELSE ST_Intersection(ST_Buffer(line_geom_reversed, 0.00001), _wip.ind_line_geom)
+ELSE ST_Intersection(ST_Buffer(_wip.line_geom_reversed, 0.00001), _wip.ind_line_geom)
 
 END);
 
-RAISE NOTICE 'Centrelines are now separated into their respective geo_id row.';
+RAISE NOTICE 'Centrelines are now separated into their respective geo_id rows.';
 
 RETURN QUERY
 SELECT _wip.int1, _wip.geo_id, _wip.lf_name, 
@@ -194,4 +194,3 @@ $BODY$;
 
 ALTER FUNCTION jchew._centreline_case1_combined(text, text, text, double precision)
     OWNER TO jchew;
-
