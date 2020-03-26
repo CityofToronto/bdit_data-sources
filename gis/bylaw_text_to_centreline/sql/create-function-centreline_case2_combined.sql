@@ -131,7 +131,7 @@ THEN _wip2.pgrout_centreline
 
 --To check if the oid1_geom_translated point is within pgrout_centreline to determine if we should add or subtract
 --routed centreline + additional centreline xx metres from that intersection
-WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated) , 0.00001), _wip2.pgrout_centreline) = FALSE
+WHEN ST_Within(ST_Transform(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated), 2952), ST_BUFFER(ST_Transform(_wip2.pgrout_centreline, 2952), 2, 'endcap=square join=round')) = FALSE
 THEN (
     CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
     > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
@@ -152,7 +152,7 @@ THEN (
     END )
 
 --routed centreline - part of centreline xx metres from that intersection that got trimmed
-WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated) , 0.00001), _wip2.pgrout_centreline) = TRUE
+WHEN ST_Within(ST_Transform(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid1_geom_translated), 2952), ST_BUFFER(ST_Transform(_wip2.pgrout_centreline, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN (
     CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
     < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom_translated)
@@ -189,7 +189,7 @@ THEN _wip2.line_geom_cut
 
 --To check if the oid2_geom_translated point is within pgrout_centreline to determine if we should add or subtract
 --routed centreline + additional centreline xx metres from that intersection
-WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated) , 0.00001), _wip2.line_geom_cut) = FALSE
+WHEN ST_Within(ST_Transform(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated), 2952), ST_BUFFER(ST_Transform(_wip2.line_geom_cut, 2952), 2, 'endcap=square join=round')) = FALSE
 THEN (
     CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
     > ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
@@ -210,7 +210,7 @@ THEN (
     END )
 
 --routed centreline - part of centreline xx metres from that intersection that got trimmed
-WHEN ST_Intersects(ST_Buffer(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated) , 0.00001), _wip2.line_geom_cut) = TRUE
+WHEN ST_Within(ST_Transform(ST_ClosestPoint(_wip2.whole_centreline, _wip2.oid2_geom_translated), 2952), ST_BUFFER(ST_Transform(_wip2.line_geom_cut, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN (
     CASE WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom)
     < ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom_translated)
@@ -256,50 +256,39 @@ $BODY$;
 
 
 --TO SEPARATE line_geom that got cut into individual rows with section stated
-UPDATE _wip SET line_geom_reversed = (
---TO SEPARATE line_geom that got cut into individual rows with section stated
-CASE WHEN ABS(DEGREES(ST_Azimuth(ST_StartPoint(_wip.ind_line_geom), ST_EndPoint(_wip.ind_line_geom))) 
-       - DEGREES(ST_Azimuth(ST_StartPoint(_wip.line_geom_cut), ST_EndPoint(_wip.line_geom_cut)))
+UPDATE _wip2 SET line_geom_reversed = (
+CASE WHEN ABS(DEGREES(ST_Azimuth(ST_StartPoint(_wip2.ind_line_geom), ST_EndPoint(_wip2.ind_line_geom))) 
+       - DEGREES(ST_Azimuth(ST_StartPoint(_wip2.line_geom_cut), ST_EndPoint(_wip2.line_geom_cut)))
        ) > 180 
---The lines are two different orientations
-THEN ST_Reverse(_wip.line_geom_cut)
-ELSE _wip.line_geom_cut
+--The lines are in two different orientations
+THEN ST_Reverse(_wip2.line_geom_cut)
+ELSE _wip2.line_geom_cut
 END
 );
 
-UPDATE _wip SET section = (
---combined_section = '[0,1]'
-CASE WHEN lower(_wip.combined_section) = 0 AND upper(_wip.combined_section) = 1
-THEN numrange(0, 1,'[]')
-
---for combined_section = '[%,1]' or '[0,%]'
+UPDATE _wip2 SET section = (
 --where the whole centreline is within the buffer
-WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+CASE WHEN ST_Within(ST_Transform(_wip2.ind_line_geom, 2952), ST_BUFFER(ST_Transform(_wip2.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
 THEN numrange(0, 1, '[]')
 
 --where part of the centreline is within the buffer, and then find out the startpoint of the individual centreline to know which part of the centreline needs to be cut
-WHEN ST_Within(ST_StartPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
-THEN numrange(0, (ST_LineLocatePoint(_wip.ind_line_geom, ST_EndPoint(line_geom_reversed)))::numeric, '[]')
+WHEN ST_Within(ST_StartPoint(ST_Transform(_wip2.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(_wip2.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+THEN numrange(0, (ST_LineLocatePoint(_wip2.ind_line_geom, ST_EndPoint(_wip2.line_geom_reversed)))::numeric, '[]')
 
-WHEN ST_Within(ST_EndPoint(ST_Transform(_wip.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
-THEN numrange((ST_LineLocatePoint(_wip.ind_line_geom, ST_StartPoint(line_geom_reversed)))::numeric, 1, '[]')    
+WHEN ST_Within(ST_EndPoint(ST_Transform(_wip2.ind_line_geom, 2952)), ST_BUFFER(ST_Transform(_wip2.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+THEN numrange((ST_LineLocatePoint(_wip2.ind_line_geom, ST_StartPoint(_wip2.line_geom_reversed)))::numeric, 1, '[]')    
 
 ELSE NULL
 
 END);
 
-UPDATE _wip SET line_geom = (
---combined_section = '[0,1]'
-CASE WHEN lower(_wip.combined_section) = 0 AND upper(_wip.combined_section) = 1
-THEN _wip.ind_line_geom
-
---for combined_section = '[%,1]' or '[0,%]'
+UPDATE _wip2 SET line_geom = (
 --where the whole centreline is within the buffer
-WHEN ST_Within(ST_Transform(_wip.ind_line_geom, 2952), ST_BUFFER(ST_Transform(line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
-THEN _wip.ind_line_geom
+CASE WHEN ST_Within(ST_Transform(_wip2.ind_line_geom, 2952), ST_BUFFER(ST_Transform(_wip2.line_geom_reversed, 2952), 2, 'endcap=square join=round')) = TRUE
+THEN _wip2.ind_line_geom
 
 --where part of the centreline is within the buffer
-ELSE ST_Intersection(ST_Buffer(line_geom_reversed, 0.00001), _wip.ind_line_geom)
+ELSE ST_Intersection(ST_Buffer(_wip2.line_geom_reversed, 0.00001), _wip2.ind_line_geom)
 
 END);
 
