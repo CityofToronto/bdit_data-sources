@@ -217,30 +217,7 @@ ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid2_geom) + (metres_btwn1/ST_L
 END
 );
 
-UPDATE _wip2 SET combined_section = (
--- case where the section of street from the intersection in the specified direction is shorter than x metres
---take the whole centreline, range is [0,1]
-CASE WHEN metres_btwn1 > ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) 
-AND metres_btwn1 - ST_Length(ST_Transform(_wip2.whole_centreline, 2952)) < 15
-THEN numrange(0, 1, '[]')
-
---when the from_intersection is at the end point of the original centreline
---range is [xxx, 1]
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
-> ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(new_line1)))
-THEN numrange ((ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) - (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))))::numeric , 1::numeric, '[]')
-
---when the from_intersection is at the start point of the original centreline 
---range is [0, xxx]
-WHEN ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom)
-< ST_LineLocatePoint(_wip2.whole_centreline, ST_ClosestPoint(_wip2.whole_centreline, ST_EndPoint(new_line1)))
--- take the substring from the intersection to the point x metres ahead of it
-THEN numrange(0::numeric, (ST_LineLocatePoint(_wip2.whole_centreline, _wip2.oid1_geom) + (metres_btwn1/ST_Length(ST_Transform(_wip2.whole_centreline, 2952))))::numeric, '[]')
-
-END
-);
-
-RAISE NOTICE 'Centrelines are now combined and cut as specified on the bylaws. 
+RAISE NOTICE 'Centrelines are now combined and cut (add/trim) as specified on the bylaws. 
 direction_btwn2: %, metres_btwn1: %  whole_centreline: %  line_geom: %',
 direction_btwn2, metres_btwn1, ST_ASText(ST_Union(_wip2.whole_centreline)) FROM _wip2, 
 ST_ASText(ST_Union(_wip2.line_geom_cut)) FROM _wip2;
