@@ -1,7 +1,7 @@
 DROP FUNCTION jchew.text_to_centreline_updated(INT, TEXT, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
 RETURNS TABLE(int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
-line_geom GEOMETRY, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
+line_geom GEOMETRY, section NUMRANGE, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
 objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR) AS $$
 
 DECLARE
@@ -9,7 +9,7 @@ DECLARE
 	an_int_offset RECORD;
 	int1_result RECORD;
 	int2_result RECORD;
-	lev_total INT;
+	lev_total INTEGER;
 	con TEXT;
 	note TEXT;
 
@@ -34,9 +34,11 @@ BEGIN
 		oid2_geom_translated GEOMETRY,
 		objectid NUMERIC,
 		fcode INT,
-		fcode_desc VARCHAR
+		fcode_desc VARCHAR,
+		lev_sum INTEGER
 	);
 
+	--entire length cases
 	IF TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL
 		THEN
 		INSERT INTO _results(geo_id, lf_name, objectid, line_geom, fcode, fcode_desc)
@@ -44,21 +46,9 @@ BEGIN
 		FROM jchew._get_entire_length_centreline_segments_updated(clean_bylaws.highway2) ;
 		--lev_total := NULL
 
-	--interxn_and_offset
-	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
+	--normal cases
+	ELSIF COALESCE(clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2) IS NULL
 		THEN
-		INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc)
-		SELECT case1.int1, case1.geo_id, case1.lf_name, case1.line_geom, case1.section, 
-		case1.oid1_geom, case1.oid1_geom_translated, case1.objectid, case1.fcode, case1.fcode_desc
-		FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
-
-		lev_total := (SELECT lev_sum FROM jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0) );
-		--FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) ;
-  
-
-	--interxns_and_offsets
-
-	ELSE
 		int1_result := jchew._get_intersection_geom_updated(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
 		int2_result := (CASE WHEN clean_bylaws.btwn2_orig LIKE '%point%' AND (clean_bylaws.btwn2_check NOT LIKE '% of %' OR clean_bylaws.btwn2_check LIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
@@ -75,8 +65,29 @@ BEGIN
 		FROM jchew.get_lines_btwn_interxn(clean_bylaws.highway2, int1_result.int_id_found, int2_result.int_id_found) rout;
 
 		-- sum of the levenshtein distance of both of the intersections matched
-		lev_total := int1_result.lev_sum + int2_result.lev_sum;
+		UPDATE _results SET lev_sum = int1_result.lev_sum + int2_result.lev_sum;
+	
+	--interxn_and_offset
+	ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
+		THEN
+		INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc, lev_sum)
+		SELECT case1.int1, case1.geo_id, case1.lf_name, case1.line_geom, case1.section, 
+		case1.oid1_geom, case1.oid1_geom_translated, case1.objectid, case1.fcode, case1.fcode_desc, case1.lev_sum
+		FROM jchew._centreline_case1_combined(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
+	
+	--interxns_and_offsets
+	ELSE 
+		INSERT INTO _results(int_start, int_end, seq, geo_id, lf_name, line_geom, section,
+		oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid, fcode, fcode_desc, lev_sum)
+		SELECT case2.int_start, case2.int_end, case2.seq, case2.geo_id, case2.lf_name, case2.line_geom, case2.section, 
+		case2.oid1_geom, case2.oid1_geom_translated, case2.oid2_geom, case2.oid2_geom_translated, 
+		case2.objectid, case2.fcode, case2.fcode_desc, case2.lev_sum
+		FROM jchew._centreline_case2_combined(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1,
+		clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, clean_bylaws.btwn2_orig, clean_bylaws.btwn2_check) case2 ;
+
 	END IF;
+
+	lev_total := AVG(_results.lev_sum) FROM _results GROUP BY _results.lf_name;
 
 	-- confidence value
 	con := (
@@ -95,17 +106,17 @@ BEGIN
 	);
 
 
-	note := format('btwn1: %s btwn2: %s highway2: %s metres_btwn1: %s metres_btwn2: %s direction_btwn1: %s direction_btwn2: %s', 
-	clean_bylaws.btwn1, clean_bylaws.btwn2, clean_bylaws.highway2, clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2, 
+	note := format('highway2: %s btwn1: %s btwn2: %s metres_btwn1: %s metres_btwn2: %s direction_btwn1: %s direction_btwn2: %s', 
+	clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.btwn2, clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2, 
 	clean_bylaws.direction_btwn1, clean_bylaws.direction_btwn2);    
 
-RAISE NOTICE 'btwn1: % btwn2: % btwn2_check: %  highway2: % metres_btwn1: %  metres_btwn2: % direction_btwn1: % direction_btwn2: %', 
-clean_bylaws.btwn1, clean_bylaws.btwn2, clean_bylaws.btwn2_check, clean_bylaws.highway2, 
+RAISE NOTICE 'highway2: % btwn1: % btwn2: % btwn2_check: % metres_btwn1: %  metres_btwn2: % direction_btwn1: % direction_btwn2: %', 
+clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.btwn2, clean_bylaws.btwn2_check, 
 clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2, clean_bylaws.direction_btwn1, clean_bylaws.direction_btwn2;
 
 RETURN QUERY 
 SELECT int_start, int_end, r.geo_id, r.lf_name, con, note, 
-r.line_geom, r.oid1_geom, r.oid1_geom_translated, 
+r.line_geom, r.section, r.oid1_geom, r.oid1_geom_translated, 
 r.oid2_geom, r.oid2_geom_translated, 
 r.objectid, r.fcode, r.fcode_desc 
 FROM _results r;
