@@ -25,7 +25,7 @@ Subsequently [`split_streets_att.sql`](split_streets_att.sql) can be run to spli
 Run the shell script in the background with nohup with the following command. The `tail -f` piece will continually display the tail of the log in the terminal. To cancel the command do `CTRL-C` to stop `tail` and then `fg` to return the job to the foreground and then `CTRL-C` again.
 
 ```shell
-nohup ./batch_upload.sh > batch_upload.log& tail -f batch_upload.log
+nohup bash batch_upload.sh > batch_upload.log& tail -f batch_upload.log
 ```
 
 **Note:** Please add a [`COMMENT`](https://devdocs.io/postgresql~9.6/sql-comment) to the `streets_YY_R` layer explaining which years of traffic data should use that layer.
