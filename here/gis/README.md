@@ -30,6 +30,13 @@ nohup bash batch_upload.sh > batch_upload.log& tail -f batch_upload.log
 
 **Note:** Please add a [`COMMENT`](https://devdocs.io/postgresql~9.6/sql-comment) to the `streets_YY_R` layer explaining which years of traffic data should use that layer.
 
+### Derivative gis layers to update
+
+There are a few additional things to create based on the new map layer:
+
+- [`create_here_routing.sql`](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/traffic/sql/create_here_routing.sql): two layers for routing with HERE data.
+- `here_gis.traffic_streets`
+
 ## Reference Node
 
 Links are defined by a reference node, and a non-reference node. The reference
