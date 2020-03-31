@@ -8,9 +8,9 @@
   - [Step 1: Clean the data](#Step-1-Clean-the-data)
   - [Step 2: Separate into different cases](#Step-2-Separate-into-different-cases)
     - [2a) Entire Length](#2a-Entire-Length)
-    - [2b) Normal Cases - Two Intersections](#2b-Normal-Cases-Two-Intersections)
-    - [2c) Special Case 1 - An Intersection and An Offset](#2c-Special-Case-1-An-Intersection-and-An-Offset) 
-    - [2d) Special Case 2 - Two Intersections and At Least One Offset](#2d-Special-Case-2-Two-Intersections-and-At-Least-One-Offset)
+    - [2b) Normal Cases - Two Intersections](#2b-Normal-Cases---Two-Intersections)
+    - [2c) Special Case 1 - An Intersection and An Offset](#2c-Special-Case-1---An-Intersection-and-An-Offset) 
+    - [2d) Special Case 2 - Two Intersections and At Least One Offset](#2d-Special-Case-2---Two-Intersections-and-At-Least-One-Offset)
   - [Confidence output](#Confidence-output)
  - [Quality Control](#Quality-Control) 
 
@@ -245,7 +245,9 @@ TBC
 There is also a [Github Issue](https://github.com/CityofToronto/bdit_data-sources/issues/188) on weird bylaws that haven't been matched.
 
 
-*************Chelsea's work. keep first
+*************
+Chelsea's work. keep first
+
 The function `get_intersection_geom` is the main function that is called to get the geometry of the intersections between which the bylaw is in effect. The function returns an array with the geometry of the intersection and the `objectid` (unique `ID`) of the intersection. If the `direction` and `metres` values that are inputted to the function are not `NULL`, then the function returns a translated intersection geometry (translated in the direction specified by the number of metres specified). The function takes a value `not_int_id` as an input. This is an intersection `int_id` (intersection `ID`) that we do not want the function to return. We use `int_id` instead of `objectid` since sometimes there are intersection points that are in the exact same location but have different `objectid` values. This is a parameter to this function because sometimes streets can intersect more than once, and we do not want the algorithm to match to the same intersection twice.
 
 In  most cases, the function `get_intersection_geom` calls on another function called `get_intersection_id`. This function returns the `objectid` and `intersection id` of the intersection, as well as how close the match was (where closeness is measured by levenshtein distance). The query in this function works by gathering all of the streets from the City of Toronto intersection streets table that have the same/very similar names to the streets that are described in the bylaw description provided as input to the `text_to_centreline` function (i.e. `btwn1`, `btwn2`, `highway2`). If there is more than one street with the same unique intersection ID in this subset, then this means that both streets at one of the intersections between which the bylaw is in effect have been matched. We can use a `HAVING` clause (i.e. `HAVING COUNT(intersections.street) > 1`) to ensure that only the intersections that have been matched to both street names are chosen. The `gis.centreline_intersection_streets` view (that is called in this function) assigns a unique ID to each intersection in the City of Toronto (`gis.centreline_intersection`). Each row contains one street name from an intersection and the ID associated with the intersection.
