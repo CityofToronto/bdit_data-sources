@@ -282,7 +282,8 @@ I also found that when there are three street names in the intersec5 column and 
 
 ## Include former municipality element of the "highway" field
 
-This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched.
+This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched. Examples of the municipality is shown below.
+![image](https://user-images.githubusercontent.com/54872846/78183571-21106500-7436-11ea-8b34-017c73736b48.png)
 
 ## Tackle Cases with "an intersection and two offsets"
 
@@ -291,7 +292,8 @@ This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sou
 
 ## Bylaws mega function does not return readable `geom`
 
-Which is also somehow related to the problem (iii) above. This can be found at [issue #290](https://github.com/CityofToronto/bdit_data-sources/issues/290). I suspect that there are the presence of multiline strings that are causing this to happen. 
+Which is also somehow related to the problem (iii) above. This can be found at [issue #290](https://github.com/CityofToronto/bdit_data-sources/issues/290). I suspect that there are the presence of multiline strings that are causing this to happen. The highlighted ones are the ones where the `geom` is not viewable and hence `section` columns return NULL. There are also two weird ones where `section` is "[0,)" or "(,1]".
+![image](https://user-images.githubusercontent.com/54872846/77963154-dd3d2480-72aa-11ea-971f-f1cd4165b6d1.png)
 
 ## Modify `con` (confidence level) definition to better reflect actual situation
 
