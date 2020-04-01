@@ -12,9 +12,9 @@ CREATE OR REPLACE VIEW open_data.wys_stationary_detailed
     agg.volume
    FROM open_data.wys_stationary_locations od
      JOIN wys.stationary_signs loc USING (sign_id)
-     JOIN wys.speed_counts_agg agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= od.start_date AND agg.datetime_bin < od.end_date
+     JOIN wys.speed_counts_agg_5kph agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= od.start_date AND (od.end_date IS NULL OR agg.datetime_bin < od.end_date)
      JOIN wys.speed_bins USING (speed_id)
-  WHERE agg.datetime_bin >= '2019-01-01'::date AND agg.datetime_bin < date_trunc('month'::text, now());
+  WHERE agg.datetime_bin < date_trunc('month'::text, now());
 
 ALTER TABLE open_data.wys_stationary_detailed
     OWNER TO rdumas;
