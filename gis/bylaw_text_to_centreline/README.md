@@ -246,6 +246,46 @@ The function outputs a confidence level (`con`), which is defined after the `cen
 
 # Quality Control
 
-TBC
+There is a [Github Issue](https://github.com/CityofToronto/bdit_data-sources/issues/188) on weird bylaws that haven't been matched from Chelsea's work. \
+For example: \
+i) The streets stated in bylaws are slightly off i.e. they do not intersect or are rather far apart. \
+ii) Directionality matters. Northbound and Southbound route between two intersection are of different centrelines such as the Allen Rd. \
+iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49 distinct id's. This mostly occurs when trying to slice a multilinestring. 
 
-There is also a [Github Issue](https://github.com/CityofToronto/bdit_data-sources/issues/188) on weird bylaws that haven't been matched.
+Majority of them are also some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below and some idea on how we can tackle them.
+
+## pgRouting returns the shortest path but not the path I want
+
+This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
+This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw.
+
+![image](https://user-images.githubusercontent.com/54872846/76124099-f7475800-5fc7-11ea-865e-963edefa43be.png)
+
+## Direction stated on bylaws is not taken into account
+
+Which is also somehow related to problem (ii) stated above. This can be found at [issue #276](https://github.com/CityofToronto/bdit_data-sources/issues/276). For example: `highway` = 'Black Creek Drive (southbound)' and `between` = 'Eglinton Avenue West and a point 200 metres north of Weston Road'
+
+We might be able to solve it by separating that direction during the cleaning the data process and taking that into account when finding the right centrelines.
+
+## Levenshtein distance can fail for streets that have E / W
+
+This can be found at [issue #279](https://github.com/CityofToronto/bdit_data-sources/issues/279). For example, bylaw_id = 6667, highway = 'Welland Ave' and between = 'Lawrence Ave W and Douglas Avenue'. Since changing 'Lawrence Ave W' to 'Lawrence Ave E' only takes 1 step whereas changing 'Welland Ave' to 'Welland Rd' takes 3 steps, the intersection point with the less levenshtein distance is chosen instead, resulting in the segments of road that does not reflect the bylaws text.
+
+I also found that when there are three street names in the intersec5 column and two of the street names are almost the same with the slight change of E to W or vice versa (which happen particularly frequently for Yonge St like Adelaide St E / Yonge St / Adelaide St W, King St E / Yonge St / King St W, Bloor St E / Yonge St / Bloor St W etc), the intersection points found is weird because of the reason above.
+
+## Include former municipality element of the "highway" field
+
+This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched.
+
+## Tackle Cases with "an intersection and two offsets"
+
+This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sources/issues/289). There are about 9 cases of bylaws where there's only one intersection (btwn1 = btwn2) but two offsets (metres_btwn1 IS NOT NULL & metres_btwn2 IS NOT NULL). Examples as shown below.
+![image](https://user-images.githubusercontent.com/54872846/77802945-60177280-7052-11ea-85de-aae1132d5786.png)
+
+## Bylaws mega function does not return readable `geom`
+
+Which is also somehow related to the problem (iii) above. This can be found at [issue #290](https://github.com/CityofToronto/bdit_data-sources/issues/290). I suspect that there are the presence of multiline strings that are causing this to happen. 
+
+## Modify `con` (confidence level) definition to better reflect actual situation
+
+This can be found as a part of [issue #270](https://github.com/CityofToronto/bdit_data-sources/issues/270). The `con` output may need to be modified in order to reflect the actual situation as they currently showing high confidence level for those where the street has E/W or streets that are in other former municipality. It might also be a good idea to indicate if the centrelines are found from the pgRouting process or from the bufferring and locating process.
