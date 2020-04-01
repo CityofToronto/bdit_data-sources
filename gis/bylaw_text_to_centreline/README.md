@@ -12,7 +12,14 @@
     - [2c) Special Case 1 - An Intersection and An Offset](#2c-Special-Case-1---An-Intersection-and-An-Offset) 
     - [2d) Special Case 2 - Two Intersections and At Least One Offset](#2d-Special-Case-2---Two-Intersections-and-At-Least-One-Offset)
   - [Confidence output](#Confidence-output)
- - [Quality Control](#Quality-Control) 
+- [Quality Control](#Quality-Control) 
+  - [pgRouting returns the shortest path but street name different from `highway`](#pgRouting-returns-the-shortest-path-but-street-name-different-from-`highway`)
+  - [Direction stated on bylaws is not taken into account](#Direction-stated-on-bylaws-is-not-taken-into-account)
+  - [Levenshtein distance can fail for streets that have E / W](#Levenshtein-distance-can-fail-for-streets-that-have-E-/-W)
+  - [Include former municipality element of the "highway" field](#Include-former-municipality-element-of-the-"highway"-field)
+  - [Tackle Cases with "an intersection and two offsets"](#Tackle-Cases-with-"an-intersection-and-two-offsets")
+  - [Bylaws mega function does not return readable `geom`](#Bylaws-mega-function-does-not-return-readable-`geom`)
+  - [Modify `con` (confidence level) definition to better reflect actual situation](#Modify-`con`-(confidence-level)-definition-to-better-reflect-actual-situation)
 
 ## Intro
 
@@ -74,7 +81,7 @@ The `gis.abbr_street2` function is called a lot in the cleaning process. It is a
 
 The cleaning bylaws text function currently in the main function is [jchew.clean_bylaws_text2()](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/bylaw_text_to_centreline/sql/create-function-clean_bylaws_text2.sql). The big chunk of cleaning bylaws function is now separated and since the function returns composite types and there are many columns involved, it's easier to return them as a table type. More explanation [here at 36.4.7. SQL Functions as Table Sources](https://www.postgresql.org/docs/9.6/xfunc-sql.html).
 
-It is also possible to return multiple variable types without the involvement of a table which is using the `OUT` word when creating the function as shown in [jchew.clean_bylaws_text2()](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/bylaw_text_to_centreline/sql/create-function-clean_bylaws_text.sql)
+It is also possible to return multiple variable types without the involvement of a table which is using the `OUT` word when creating the function as shown in [jchew.clean_bylaws_text2()](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/bylaw_text_to_centreline/sql/create-function-clean_bylaws_text.sql). 
 More explanation [here at 41.3.1. Declaring Function Parameters](https://www.postgresql.org/docs/9.6/plpgsql-declarations.html)
 
 ## Step 2: Separate into different cases
@@ -254,7 +261,7 @@ iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49
 
 Majority of them are also some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below and some idea on how we can tackle them.
 
-## pgRouting returns the shortest path but not the path I want
+## pgRouting returns the shortest path but street name different from `highway`
 
 This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
 This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw.
