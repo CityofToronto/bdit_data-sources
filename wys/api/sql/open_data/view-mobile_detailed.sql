@@ -14,9 +14,9 @@ CREATE OR REPLACE VIEW open_data.wys_mobile_detailed
     speed_bins.speed_bin::text AS speed_bin,
     agg.volume
    FROM wys.mobile_api_id loc
-     JOIN wys.speed_counts_agg agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= loc.installation_date AND agg.datetime_bin < loc.removal_date
+     JOIN wys.speed_counts_agg_5kph agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= loc.installation_date AND agg.datetime_bin < loc.removal_date
      JOIN wys.speed_bins USING (speed_id)
-  WHERE agg.datetime_bin >= '2019-01-01 00:00:00'::timestamp without time zone AND removal_date < date_trunc('month', now());
+  WHERE removal_date < date_trunc('month', now());
 
 ALTER TABLE open_data.wys_mobile_detailed
     OWNER TO rdumas;
