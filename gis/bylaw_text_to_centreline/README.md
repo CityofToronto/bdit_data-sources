@@ -13,13 +13,13 @@
     - [2d) Special Case 2 - Two Intersections and At Least One Offset](#2d-Special-Case-2---Two-Intersections-and-At-Least-One-Offset)
   - [Confidence output](#Confidence-output)
 - [Quality Control](#Quality-Control) 
-  - [pgRouting returns the shortest path but street name different from `highway`](#pgRouting-returns-the-shortest-path-but-street-name-different-from-`highway`)
-  - [Direction stated on bylaws is not taken into account](#Direction-stated-on-bylaws-is-not-taken-into-account)
-  - [Levenshtein distance can fail for streets that have E / W](#Levenshtein-distance-can-fail-for-streets-that-have-E-/-W)
-  - [Include former municipality element of the "highway" field](#Include-former-municipality-element-of-the-"highway"-field)
-  - [Tackle Cases with "an intersection and two offsets"](#Tackle-Cases-with-"an-intersection-and-two-offsets")
-  - [Bylaws mega function does not return readable `geom`](#Bylaws-mega-function-does-not-return-readable-`geom`)
-  - [Modify `con` (confidence level) definition to better reflect actual situation](#Modify-`con`-(confidence-level)-definition-to-better-reflect-actual-situation)
+  - [pgRouting returns the shortest path but street name different from `highway`](#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway)
+  - [Direction stated on bylaws is not taken into account](#direction-stated-on-bylaws-is-not-taken-into-account)
+  - [Levenshtein distance can fail for streets that have E / W](#levenshtein-distance-can-fail-for-streets-that-have-e--w)
+  - [Include former municipality element of the "highway" field](#include-former-municipality-element-of-the-highway-field)
+  - [Tackle Cases with "an intersection and two offsets"](#tackle-cases-with-an-intersection-and-two-offsets)
+  - [Bylaws mega function does not return readable `geom`](#bylaws-mega-function-does-not-return-readable-geom)
+  - [Modify `con` (confidence level) definition to better reflect actual situation](#modify-con-confidence-level-definition-to-better-reflect-actual-situation)
 
 ## Intro
 
