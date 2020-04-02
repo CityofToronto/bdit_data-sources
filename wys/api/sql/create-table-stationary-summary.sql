@@ -46,3 +46,5 @@ CREATE TABLE wys.stationary_summary (
 
 GRANT SELECT, INSERT ON TABLE wys.stationary_summary TO wys_bot;
 GRANT SELECT ON TABLE wys.stationary_summary TO bdit_humans;
+
+ALTER TABLE wys.stationary_summary ADD UNIQUE(sign_id, mon);
