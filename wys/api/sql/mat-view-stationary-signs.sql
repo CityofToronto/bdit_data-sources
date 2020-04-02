@@ -32,3 +32,4 @@ AS
 
 CREATE INDEX ON wys.stationary_signs USING gist(geom);
 ANALYZE wys.stationary_signs;
+CREATE UNIQUE INDEX ON wys.stationary_signs (sign_id);
