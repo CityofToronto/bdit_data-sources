@@ -1,8 +1,15 @@
-DROP FUNCTION jchew.text_to_centreline_updated(INT, TEXT, TEXT, TEXT);
-CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
-RETURNS TABLE(int1 INTEGER, int2 INTEGER, geo_id NUMERIC, lf_name VARCHAR, con TEXT, note TEXT, 
-line_geom GEOMETRY, section NUMRANGE, oid1_geom GEOMETRY, oid1_geom_translated GEOMETRY, oid2_geom geometry, oid2_geom_translated GEOMETRY, 
-objectid NUMERIC, fcode INTEGER, fcode_desc VARCHAR) AS $$
+CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(
+	_bylaw_id integer,
+	highway text,
+	frm text,
+	t text)
+    RETURNS TABLE(int1 integer, int2 integer, geo_id numeric, lf_name character varying, con text, note text, line_geom geometry, section numrange, oid1_geom geometry, oid1_geom_translated geometry, oid2_geom geometry, oid2_geom_translated geometry, objectid numeric, fcode integer, fcode_desc character varying) 
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+    ROWS 1000
+AS $BODY$
 
 DECLARE
 	clean_bylaws RECORD;
@@ -12,6 +19,9 @@ DECLARE
 	lev_total INTEGER;
 	con TEXT;
 	note TEXT;
+	text_var1 TEXT;
+  	text_var2 TEXT;
+  	text_var3 TEXT;
 
 BEGIN 
 --STEP 1 
@@ -105,7 +115,6 @@ BEGIN
 		END
 	);
 
-
 	note := format('highway2: %s btwn1: %s btwn2: %s metres_btwn1: %s metres_btwn2: %s direction_btwn1: %s direction_btwn2: %s', 
 	clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.btwn2, clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2, 
 	clean_bylaws.direction_btwn1, clean_bylaws.direction_btwn2);    
@@ -123,11 +132,21 @@ FROM _results r;
 
 DROP TABLE _results;
 
+EXCEPTION WHEN SQLSTATE 'XX000' THEN
+	RAISE NOTICE 'Internal error: %', SQLERRM ;
+	-- not sure where to retrieve the below
+  	GET STACKED DIAGNOSTICS text_var1 = MESSAGE_TEXT,
+                          text_var2 = PG_EXCEPTION_DETAIL,
+                          text_var3 = PG_EXCEPTION_HINT;
+
 END;
-$$ LANGUAGE plpgsql;
+$BODY$;
 
+ALTER FUNCTION jchew.text_to_centreline_updated(integer, text, text, text)
+    OWNER TO jchew;
 
-COMMENT ON FUNCTION jchew.text_to_centreline_updated(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT) IS '
+COMMENT ON FUNCTION jchew.text_to_centreline_updated(integer, text, text, text)
+    IS '
 The main function for converting text descriptions of locations where bylaws are in effect to centreline segment geometry
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information
 ';
