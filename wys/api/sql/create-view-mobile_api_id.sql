@@ -19,4 +19,6 @@ LEFT JOIN
 FROM wys.locations
 WHERE sign_name LIKE 'Ward%'
 ORDER BY sign_name) b
-ON a.combined = b.sign_name
+ON a.combined = b.sign_name;
+
+CREATE UNIQUE INDEX ON  wys.mobile_api_id (location_id);
