@@ -51,3 +51,11 @@ CREATE TABLE wys.mobile_summary (
     spd_100_and_above INT,
     count INT
 );
+
+ALTER TABLE wys.mobile_summary ADD UNIQUE(    ward_no ,
+    location ,
+    from_street ,
+    to_street ,
+    direction ,
+    installation_date,
+    removal_date);
