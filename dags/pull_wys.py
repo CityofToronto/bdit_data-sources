@@ -6,6 +6,7 @@ import sys
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
@@ -13,9 +14,10 @@ from airflow.hooks.postgres_hook import PostgresHook
 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from googleapiclient.discovery import build
+from dateutil.relativedelta import relativedelta
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
+    sys.path.append('/etc/airflow/dev_scripts/wys/api/python/')
     from wys_api import api_main
     from wys_google_sheet import read_masterlist
 except:
@@ -59,7 +61,7 @@ api_key = connection.password
 
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
-                'start_date': datetime(2020, 1, 7),
+                'start_date': datetime(2020, 4, 1),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
@@ -85,3 +87,35 @@ with wys_postgres.get_conn() as con:
             dag = dag,
             op_args = [con, service]
             )
+
+mon = datetime.today().date() - relativedelta(months=1)
+mon = mon.replace(day=1)
+
+with DAG('wys_monthly_summary',default_args=default_args, schedule_interval='0 1 1 * *') as monthly_summary:
+    wys_views = PostgresOperator(sql='SELECT wys.refresh_mat_views()',
+                            task_id='wys_views',
+                            postgres_conn_id='wys_bot',
+                            autocommit=True,
+                            retries = 0,
+                            dag=monthly_summary)
+    od_wys_view = PostgresOperator(sql='SELECT wys.refresh_od_mat_view()',
+                            task_id='od_wys_view',
+                            postgres_conn_id='wys_bot',
+                            autocommit=True,
+                            retries = 0,
+                            dag=monthly_summary)
+    wys_mobile_summary = PostgresOperator(sql='SELECT wys.mobile_summary_for_month(%s)',
+                            task_id='wys_mobile_summary',
+                            postgres_conn_id='wys_bot',
+                            parameters=(mon,),
+                            autocommit=True,
+                            retries = 0,
+                            dag=monthly_summary)
+    wys_stat_summary = PostgresOperator(sql='SELECT wys.stationary_summary_for_month(%s)',
+                            task_id='wys_stat_summary',
+                            postgres_conn_id='wys_bot',
+                            parameters=(mon,),
+                            autocommit=True,
+                            retries = 0,
+                            dag=monthly_summary)
+    wys_views >> [wys_mobile_summary, wys_stat_summary, od_wys_view]
