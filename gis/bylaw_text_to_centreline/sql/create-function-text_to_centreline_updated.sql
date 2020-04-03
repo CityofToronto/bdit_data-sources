@@ -137,7 +137,7 @@ FROM _results r;
 DROP TABLE _results;
 
 EXCEPTION WHEN SQLSTATE 'XX000' THEN
-	RAISE EXCEPTION 'Internal error for bylaw_id = % : ''%'' ', _bylaw_id, SQLERRM ;
+	RAISE WARNING 'Internal error for bylaw_id = % : ''%'' ', _bylaw_id, SQLERRM ;
 
 END;
 $BODY$;
