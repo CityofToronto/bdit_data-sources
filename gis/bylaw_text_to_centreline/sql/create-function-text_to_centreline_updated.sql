@@ -1,3 +1,7 @@
+-- FUNCTION: jchew.text_to_centreline_updated(integer, text, text, text)
+
+-- DROP FUNCTION jchew.text_to_centreline_updated(integer, text, text, text);
+
 CREATE OR REPLACE FUNCTION jchew.text_to_centreline_updated(
 	_bylaw_id integer,
 	highway text,
@@ -133,11 +137,7 @@ FROM _results r;
 DROP TABLE _results;
 
 EXCEPTION WHEN SQLSTATE 'XX000' THEN
-	RAISE NOTICE 'Internal error: %', SQLERRM ;
-	-- not sure where to retrieve the below
-  	GET STACKED DIAGNOSTICS text_var1 = MESSAGE_TEXT,
-                          text_var2 = PG_EXCEPTION_DETAIL,
-                          text_var3 = PG_EXCEPTION_HINT;
+	RAISE EXCEPTION 'Internal error for bylaw_id = % : ''%'' ', _bylaw_id, SQLERRM ;
 
 END;
 $BODY$;
