@@ -101,7 +101,7 @@ BEGIN
 
 	END IF;
 
-	lev_total := AVG(_results.lev_sum) FROM _results GROUP BY _results.lf_name;
+	lev_total := AVG(_results.lev_sum) FROM _results GROUP BY _results.lf_name ORDER BY _results.lev_sum DESC LIMIT 1;
 
 	-- confidence value
 	con := (
