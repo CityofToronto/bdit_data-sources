@@ -24,16 +24,30 @@ LANGUAGE SQL STRICT STABLE;
 
 --USING centrelines aka GIS network
 -- DROP FUNCTION jchew.get_lines_btwn_interxn(text, integer, integer);
-CREATE or REPLACE FUNCTION jchew.get_lines_btwn_interxn(_highway2 text, _int_start int, _int_end int)
-RETURNS TABLE (int_start int, int_end int, seq int, geo_id numeric, lf_name varchar, objectid numeric, geom geometry, fcode integer, fcode_desc varchar)
-LANGUAGE 'plpgsql' STRICT STABLE
+-- FUNCTION: jchew.get_lines_btwn_interxn(text, integer, integer)
+CREATE OR REPLACE FUNCTION jchew.get_lines_btwn_interxn(
+	_highway2 text,
+	_int_start integer,
+	_int_end integer)
+    RETURNS TABLE(int_start integer, int_end integer, seq integer, geo_id numeric, lf_name character varying, objectid numeric, geom geometry, fcode integer, fcode_desc character varying) 
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    STABLE STRICT 
+    ROWS 1000
 AS $BODY$
 
 BEGIN
 RETURN QUERY
+
 WITH 
 results AS (SELECT _int_start, _int_end, * FROM
-    pgr_dijkstra('SELECT id, source::int, target::int, cost from gis.centreline_routing_undirected'::TEXT, _int_start::int, _int_end::int, FALSE)
+    pgr_dijkstra(format('SELECT id, source::int, target::int,
+				 CASE lf_name WHEN %L THEN (0.7*cost)::float ELSE cost END AS cost 
+				 from gis.centreline_routing_undirected_lfname'::TEXT, _highway2),
+				 _int_start::bigint, _int_end::bigint, FALSE)
+--or do pgr_dijkstra('SELECT id, source::int, target::int, 
+	--CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.7*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::TEXT, ... )
 )
 SELECT results._int_start, results._int_end, results.seq, 
 centre.geo_id, centre.lf_name, centre.objectid, centre.geom, centre.fcode, centre.fcode_desc 
