@@ -61,12 +61,12 @@ SELECT
     SUM("count") AS COUNT
 FROM wys.mobile_api_id loc
 JOIN wys.raw_data raw ON loc.api_id = raw.api_id 
-                      AND raw.datetime_bin >= loc.installation_date 
+                      AND raw.datetime_bin > loc.installation_date 
                       AND raw.datetime_bin < loc.removal_date
 INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
 LEFT OUTER JOIN wys.sign_schedules_list lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean USING (schedule_name)
-WHERE datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
+WHERE removal_date >= _mon AND removal_date < _mon + INTERVAL '1 month'
 GROUP BY location_id, loc.ward_no, loc.location, loc.from_street, 
          loc.to_street, loc.direction, loc.installation_date, 
          loc.removal_date,schedule, min_speed
