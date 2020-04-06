@@ -1,5 +1,5 @@
 DROP TABLE open_data.wys_mobile_summary;
-CREATE VIEW open_data.wys_mobile_summary AS
+CREATE OR REPLACE VIEW open_data.wys_mobile_summary AS
 
 SELECT
     location_id ,
@@ -54,5 +54,5 @@ SELECT
     spd_100_and_above ,
     count 
     FROM wys.mobile_summary
-	WHERE removal_date - installation_date <= 60 OR removal_date - installation_date > 1 
+	WHERE removal_date - installation_date > 1 
     ;
