@@ -1,50 +1,53 @@
-CREATE OR REPLACE FUNCTION gis._get_intersection_id(highway2 TEXT, btwn TEXT, not_int_id INT)
-RETURNS INT[] AS $$
+CREATE OR REPLACE FUNCTION jchew._get_intersection_id_updated(
+	highway2 text,
+	btwn text,
+	not_int_id integer)
+    RETURNS integer[]
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+
 DECLARE
 oid INT;
 lev_sum INT;
 int_id_found INT;
 
 BEGIN
+
 SELECT intersections.objectid, 
-
-SUM(LEAST
-(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)))
-
-, intersections.int_id
+--sum up the least levenshtein distance for each interxn & highway2 and interxn & btwn
+SUM(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1))), 
+intersections.int_id
 INTO oid, lev_sum, int_id_found
 FROM
-(gis.centreline_intersection_streets --to get street name
-LEFT JOIN gis.centreline_intersection --to get int_id 
-USING(objectid)) AS intersections
+(gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid)) AS intersections
 
-
+--To filter intersections that are matched to `highway2` or `btwn` streetnames										 
 WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
 OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) 
 AND intersections.int_id  <> not_int_id
 
-
 GROUP BY intersections.objectid, intersections.int_id
-HAVING COUNT(DISTINCT TRIM(intersections.street)) > 1
+--to ensure that the intersection is matched to both `highway2` and `btwn` streetnames as some intersections might have three streets like Lawrence Ave W/Yonge St/Lawrence Ave E
+HAVING COUNT(DISTINCT (CASE WHEN levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) <  levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) THEN highway2 ELSE btwn END) ) > 1
 ORDER BY AVG(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1)))
 
 LIMIT 1;
 
-raise notice 'highway2 being matched: % btwn being matched: % not_int_id: % intersection arr: %', highway2, btwn, not_int_id, ARRAY[oid, lev_sum];
+RAISE NOTICE 'highway2 being matched: % btwn being matched: % not_int_id: % intersection arr: %', highway2, btwn, not_int_id, ARRAY[oid, lev_sum];
 
 RETURN ARRAY[oid, lev_sum, int_id_found];
 
 END;
-$$ LANGUAGE plpgsql;
+$BODY$;
 
-
-COMMENT ON FUNCTION gis._get_intersection_id(TEXT, TEXT, INT) IS '
+COMMENT ON FUNCTION jchew._get_intersection_id_updated(text, text, integer) IS '
 Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the first returned intersection id
 into the function on the second time the function is called).
-This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.' ;
-
+This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.';
 
 
 -- get intersection id when intersection is a cul de sac or a dead end or a pseudo intersection
@@ -145,7 +148,7 @@ oid_geom_test GEOMETRY;
 BEGIN
 int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
 	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
-	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
+	ELSE (jchew._get_intersection_id_updated(highway2, btwn, not_int_id))
 	END);
 
 oid_int := int_arr[1];
