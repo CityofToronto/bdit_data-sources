@@ -14,7 +14,7 @@ CREATE OR REPLACE VIEW open_data.wys_mobile_detailed
     speed_bins.speed_bin::text AS speed_bin,
     agg.volume
    FROM wys.mobile_api_id loc
-     JOIN wys.speed_counts_agg_5kph agg ON loc.api_id = agg.api_id AND agg.datetime_bin >= loc.installation_date AND agg.datetime_bin < loc.removal_date
+     JOIN wys.speed_counts_agg_5kph agg ON loc.api_id = agg.api_id AND agg.datetime_bin > loc.installation_date AND agg.datetime_bin < loc.removal_date
      JOIN wys.speed_bins USING (speed_id)
   WHERE removal_date < date_trunc('month', now());
 
