@@ -50,7 +50,8 @@ SELECT
     SUM(CASE speed_id WHEN 19 THEN "count" ELSE 0 END) AS   spd_90,
     SUM(CASE speed_id WHEN 20 THEN "count" ELSE 0 END) AS   spd_95,
     SUM(CASE speed_id WHEN 21 THEN "count" ELSE 0 END) AS   spd_100_and_above,
-    SUM("count") AS volume
+    SUM("count") AS volume,
+    raw.api_id
 FROM wys.raw_data raw
 INNER JOIN wys.stationary_signs sign ON raw.api_id = sign.api_id
                                      AND (prev_start IS NULL OR datetime_bin >= start_date) 
@@ -58,7 +59,7 @@ INNER JOIN wys.stationary_signs sign ON raw.api_id = sign.api_id
                                           datetime_bin < next_start)
 INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
 WHERE datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
-GROUP BY sign_id, mon;
+GROUP BY sign_id, mon, raw.api_id;
 $BODY$;
 
 REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE)FROM public;
