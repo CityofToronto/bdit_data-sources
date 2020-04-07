@@ -113,15 +113,13 @@ RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway nam
 --TO CUT combined ind_line_geom and put into line_geom
 UPDATE _wip2 SET whole_centreline =
 (SELECT ST_LineMerge(ST_Union(_wip2.ind_line_geom)) 
-FROM _wip2
-GROUP BY _wip2.lf_name );
+FROM _wip2);
 
 --TO COMBINE THOSE FOUND FROM PGROUTING (WHERE SEQ IS NOT NULL)
 UPDATE _wip2 SET pgrout_centreline =
 (SELECT ST_LineMerge(ST_Union(_wip2.ind_line_geom)) 
 FROM _wip2
-WHERE _wip2.seq IS NOT NULL
-GROUP BY _wip2.lf_name );
+WHERE _wip2.seq IS NOT NULL);
 
 --DEAL WITH oid1_geom_translated (FIRST INTERSECTION POINT)
 UPDATE _wip2 SET line_geom_cut = (
