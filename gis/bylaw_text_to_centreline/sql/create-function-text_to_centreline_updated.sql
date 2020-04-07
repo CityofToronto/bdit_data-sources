@@ -17,7 +17,6 @@ AS $BODY$
 
 DECLARE
 	clean_bylaws RECORD;
-	an_int_offset RECORD;
 	int1_result RECORD;
 	int2_result RECORD;
 	lev_total INTEGER;
