@@ -49,7 +49,7 @@ CREATE TABLE wys.mobile_summary (
     spd_90 INT,
     spd_95 INT,
     spd_100_and_above INT,
-    count INT
+    volume INT
 );
 
 ALTER TABLE wys.mobile_summary ADD UNIQUE(    ward_no ,

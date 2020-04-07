@@ -1,4 +1,4 @@
-DROP TABLE open_data.wys_mobile_summary;
+DROP VIEW open_data.wys_mobile_summary;
 CREATE OR REPLACE VIEW open_data.wys_mobile_summary AS
 
 SELECT
@@ -52,7 +52,7 @@ SELECT
     spd_90 ,
     spd_95 ,
     spd_100_and_above ,
-    count 
+    volume 
     FROM wys.mobile_summary
 	WHERE removal_date - installation_date > 1 
     ;
