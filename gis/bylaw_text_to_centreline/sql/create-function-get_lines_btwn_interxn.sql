@@ -53,7 +53,7 @@ SELECT results._int_start, results._int_end, results.seq,
 centre.geo_id, centre.lf_name, centre.objectid, centre.geom, centre.fcode, centre.fcode_desc 
 FROM results
 INNER JOIN gis.centreline centre ON edge=centre.geo_id
-WHERE levenshtein(TRIM(centre.lf_name), TRIM(_highway2), 1, 1, 1) < 4
+WHERE levenshtein(TRIM(centre.lf_name), TRIM(_highway2), 1, 1, 1) < 3
 --instead of `WHERE centre.lf_name = _highway2` because the street name might not be EXACTLY the same 
 --(or we can get the output of get_intersection_id for lf_name and input it here but lf_name is not an output for that function currently)
 ORDER BY int_start, int_end, seq;
