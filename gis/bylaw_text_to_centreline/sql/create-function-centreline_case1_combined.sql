@@ -189,6 +189,10 @@ FROM _wip;
 
 DROP TABLE _wip;
 
+EXCEPTION WHEN SQLSTATE 'XX000' THEN
+	RAISE WARNING 'Internal error at case2 for highway2 = % , btwn2 = % : ''%'' ', 
+    highway2, btwn2, SQLERRM ;
+
 END;
 $BODY$;
 
