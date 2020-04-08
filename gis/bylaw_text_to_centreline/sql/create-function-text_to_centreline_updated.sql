@@ -51,6 +51,8 @@ BEGIN
 		lev_sum INTEGER
 	);
 
+	TRUNCATE TABLE _results;
+
 	--entire length cases
 	IF TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL
 		THEN
@@ -100,7 +102,7 @@ BEGIN
 
 	END IF;
 
-	lev_total := AVG(_results.lev_sum) FROM _results GROUP BY _results.lf_name LIMIT 1; --revise later on
+	lev_total := AVG(_results.lev_sum) FROM _results GROUP BY _results.lf_name;
 
 	-- confidence value
 	con := (
