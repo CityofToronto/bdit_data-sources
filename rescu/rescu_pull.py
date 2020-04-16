@@ -75,7 +75,7 @@ def read(start_date, end_date, path):
         logger.debug(lst[0:5])
 
         try:
-            insert(start_date, path, lst)
+            insert(start_str, path, lst)
         except Exception:
             logger.critical(traceback.format_exc())
 
@@ -84,7 +84,7 @@ def read(start_date, end_date, path):
             break
 
 # INSERT INTO THE TABLE
-def insert(start_date, path, lst):
+def insert(start_str, path, lst):
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
     dbset = CONFIG['DBSETTINGS']
@@ -100,7 +100,7 @@ def insert(start_date, path, lst):
 
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
-    logger.info('Added raw data for dt = %s', start_date)
+    logger.info('Added raw data for dt = %s', start_str)
 
 if __name__ == '__main__':
     cli()
