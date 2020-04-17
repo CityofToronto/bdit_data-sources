@@ -11,7 +11,7 @@ INSERT INTO jchew.rescu_volumes_15min (detector_id, datetime_bin, volume_15min, 
 
 WITH raw_data AS (	
 	SELECT 	TRIM(SUBSTRING(NEW.raw_info, 15, 12)) AS detector_id,
-			dt + LEFT(NEW.raw_info,6)::time AS datetime_bin,
+			NEW.dt + LEFT(NEW.raw_info,6)::time AS datetime_bin,
 			nullif(TRIM(SUBSTRING(NEW.raw_info, 27, 10)),'')::int AS volume_15min
 )
 
@@ -28,11 +28,10 @@ RETURN NULL; -- result is ignored since this is an AFTER trigger
 END;
 $BODY$;
 
-ALTER FUNCTION jchew.insert_rescu_volumes()
-    OWNER TO jchew;
-
-GRANT EXECUTE ON FUNCTION jchew.insert_rescu_volumes() TO PUBLIC;
-
 GRANT EXECUTE ON FUNCTION jchew.insert_rescu_volumes() TO bdit_humans WITH GRANT OPTION;
 
-GRANT EXECUTE ON FUNCTION jchew.insert_rescu_volumes() TO jchew;
+CREATE TRIGGER insert_rescu_volumes_trigger
+  AFTER INSERT
+  ON jchew.rescu_raw_15min
+  FOR EACH ROW
+  EXECUTE PROCEDURE jchew.insert_rescu_volumes();
