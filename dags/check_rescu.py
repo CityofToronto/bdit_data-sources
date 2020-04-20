@@ -22,18 +22,18 @@ LOGGER.debug('Pulling information for date = %s',date_to_pull)
 
 def check_rescu(con, date_to_pull):
     with con.cursor() as cur:
-        check_raw = sql.SQL('''SELECT COUNT(raw_uid) FROM jchew.rescu_raw_15min WHERE dt = {}''').format(sql.Literal(date_to_pull))
+        check_raw = sql.SQL('''SELECT COUNT(raw_uid) FROM rescu.raw_15min WHERE dt = {}''').format(sql.Literal(date_to_pull))
         cur.execute(check_raw)
         raw_num = cur.fetchone()[0]
         LOGGER.info('There are %s rows of raw_date for %s', raw_num, date_to_pull)
 
-        check_volume = sql.SQL('''SELECT COUNT(volume_uid) FROM jchew.rescu_volumes_15min WHERE datetime_bin::date = {}''').format(sql.Literal(date_to_pull))
+        check_volume = sql.SQL('''SELECT COUNT(volume_uid) FROM rescu.volumes_15min WHERE datetime_bin::date = {}''').format(sql.Literal(date_to_pull))
         cur.execute(check_volume)
         volume_num = cur.fetchone()[0]
         LOGGER.info('There are %s rows of volume_15min for %s', volume_num, date_to_pull)
 
-        if raw_num == 0 or raw_num < volume_num:
-            raise Exception ('There is a problem here. There is no raw data OR raw_data is less than volume_15min')
+        if raw_num == 0 or raw_num < volume_num or volume_num < 7000:
+            raise Exception ('There is a PROBLEM here. There is no raw data OR raw_data is less than volume_15min OR volumes_15min is less than 7000 which is way too low')
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
@@ -71,7 +71,7 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 10 * * *')
+dag = DAG('rescu_check', default_args=default_args, schedule_interval='6 0 * * *', catchup=False)
 # Run at 5 AM local time every day
 
 task1 = PythonOperator(
