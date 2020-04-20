@@ -11,26 +11,20 @@ import traceback
 def logger():
     
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
-    file_handler = logging.FileHandler('logging.log')
-    file_handler.setFormatter(formatter)
     logger.handlers.clear()
     stream_handler=logging.StreamHandler()
     stream_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
-        
-    with open('logging.log', 'w'):
-        pass
     return logger
 
 logger=logger()
 logger.debug('Start')
 
 # GET DEFAULT DATES (CHANGE WHEN FINALIZED)
-default_start = datetime.date.today() - datetime.timedelta(days=4)
-default_end = datetime.date.today() - datetime.timedelta(days=2)
+default_start = datetime.date.today() - datetime.timedelta(days=1)
+default_end = datetime.date.today() - datetime.timedelta(days=0)
 
 # SET UP CLICK OPTION TO SPECIFY DATES
 CONTEXT_SETTINGS = dict(
@@ -43,7 +37,7 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
-@click.option('--path' , default='/home/jchew/local/db.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--path' , default=r'C:\Users\rdumas\Documents\rescu_bot.cfg', help='enter the path/directory of the config.cfg file')
 
 # READ THE RIGHT FILE
 def read(start_date, end_date, path):
@@ -59,8 +53,9 @@ def read(start_date, end_date, path):
         #start_date in format %Y-%m-%d but we need %d-%b-%Y to read file
         start = start_str.strftime("%d-%b-%Y")
         start_input = str(start).upper()
+        yr = start_str.strftime("%Y")
 
-        file_path = '/home/jchew/local/rescu/rescu_files/STN_15MINVOL_' + start_input + '.rpt'
+        file_path = "\\\\tssrv7\\FlowData\\TextFiles\\Rescu\\AggregatedData\\"+yr+"\\STN_15MINVOL_" + start_input + ".rpt"
         logger.info('Pulling data from filename = %s', file_path)
 
         #table_dt = datetime.datetime.strptime(start_date, '%d-%b-%Y').strftime('%Y-%m-%d')
@@ -95,7 +90,7 @@ def insert(start_str, path, lst):
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
-            insert_data = '''INSERT INTO jchew.rescu_raw_15min (dt, raw_info) VALUES %s'''
+            insert_data = '''INSERT INTO rescu.raw_15min (dt, raw_info) VALUES %s'''
             execute_values(cur, insert_data, lst)
 
             if conn.notices != []:
