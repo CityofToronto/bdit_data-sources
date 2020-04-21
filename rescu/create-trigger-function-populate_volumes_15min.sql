@@ -1,4 +1,4 @@
-CREATE FUNCTION jchew.insert_rescu_volumes()
+CREATE FUNCTION rescu.insert_rescu_volumes()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
@@ -7,7 +7,7 @@ AS $BODY$
 
 BEGIN
 
-INSERT INTO jchew.rescu_volumes_15min (detector_id, datetime_bin, volume_15min, arterycode)
+INSERT INTO rescu.volumes_15min (detector_id, datetime_bin, volume_15min, arterycode)
 
 WITH raw_data AS (	
 	SELECT 	TRIM(SUBSTRING(NEW.raw_info, 15, 12)) AS detector_id,
@@ -28,10 +28,10 @@ RETURN NULL; -- result is ignored since this is an AFTER trigger
 END;
 $BODY$;
 
-GRANT EXECUTE ON FUNCTION jchew.insert_rescu_volumes() TO bdit_humans WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION rescu.insert_rescu_volumes() TO bdit_humans WITH GRANT OPTION;
 
 CREATE TRIGGER insert_rescu_volumes_trigger
   AFTER INSERT
-  ON jchew.rescu_raw_15min
+  ON rescu.raw_15min
   FOR EACH ROW
-  EXECUTE PROCEDURE jchew.insert_rescu_volumes();
+  EXECUTE PROCEDURE rescu.insert_rescu_volumes();
