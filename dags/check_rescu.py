@@ -71,8 +71,8 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('rescu_check', default_args=default_args, schedule_interval='6 0 * * *', catchup=False)
-# Run at 5 AM local time every day
+dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 10 * * *', catchup=False)
+# Run at 6 AM local time every day
 
 task1 = PythonOperator(
     task_id = 'check_rescu',
