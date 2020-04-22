@@ -37,6 +37,8 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Notes](#notes-7)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-9)
+- [RESCU - Traffic Cameras](#rescu---traffic-cameras)
+	- [Data Elements](#data-elements-10)
 
 ## Open Data Releases
 
@@ -297,3 +299,17 @@ locations_zone|coordinate of school|text
 final_sign_installation|final sign installation date|text
 locations_fb|location of flashing beacon|text
 locations_wyss|location of watch your speed sign|text
+
+## RESCU - Traffic Camera
+Road Emergency Services Communication Unit (RESCU) Traffic Cameras track traffic volume on expressways. More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+
+Raw data available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`.
+	
+### Data Elements
+Field Name|Description|Type
+----------|-----------|----
+volume_uid|unique identifier for table|integer
+detector_id|unique identifier for each detector|text
+datetime_bin|date and time|timestamp
+volume_15min|volume|integer
+artery_code|artery code|integer
