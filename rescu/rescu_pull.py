@@ -51,7 +51,7 @@ def read(start_date, end_date, path):
     while True:
 
         #start_date in format %Y-%m-%d but we need %d-%b-%Y to read file
-        start = start_str.strftime("%d-%b-%Y")
+        start = str(int(start_str.strftime("%d"))) + "-" + start_str.strftime("%b-%Y")
         start_input = str(start).upper()
         yr = start_str.strftime("%Y")
 
