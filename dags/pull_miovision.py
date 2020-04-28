@@ -9,6 +9,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.hooks.postgres_hook import PostgresHook
+
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
@@ -36,6 +38,9 @@ def task_fail_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
+miovision_postgres = PostgresHook("miovision_api_bot")
+rds_con = miovision_postgres.get_uri()
+
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
                 'start_date': datetime(2019, 11, 22),
@@ -55,3 +60,12 @@ t1 = BashOperator(
         bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes', 
         retries = 0,
         dag=dag)
+
+refresh_views = PostgresOperator(sql='SELECT miovision_api.refresh_matview()',
+                            task_id='refresh_view',
+                            postgres_conn_id='miovision_api_bot',
+                            autocommit=True,
+                            retries = 0,
+                            dag=dag)
+
+t1 >> refresh_views
