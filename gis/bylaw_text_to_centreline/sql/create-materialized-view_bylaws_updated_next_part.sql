@@ -81,7 +81,7 @@ WHERE (next_bylaw.section - part_one.section) != 'empty'
 -- 133 rows
 SELECT NULL::integer AS bylaw_id, cl.lf_name, geo_id, 50 AS speed_limit, 
 NULL::integer AS int1, NULL::integer AS int2, NULL::text AS con, NULL::text AS note, 
-ST_Difference(cl.geom, ST_Buffer(part_one.geom, 0.00001)) AS geom, (numrange(0.0,1.0) - part_one.section) AS section, 
+ST_Difference(cl.geom, ST_Buffer(part_one.geom, 0.00001)) AS geom, ('[0,1]'::numrange - part_one.section) AS section, 
 NULL::geometry AS oid1_geom, NULL::geometry AS oid1_geom_translated, 
 NULL::geometry AS oid2_geom, NULL::geometry AS oid2_geom_translated, 
 NULL::date AS date_added, NULL::date AS date_repealed
@@ -96,7 +96,7 @@ NULL::date AS date_added, NULL::date AS date_repealed
 SELECT NULL::integer AS bylaw_id, lf_name, geo_id, 50 AS speed_limit, 
 NULL::integer AS int1, NULL::integer AS int2, NULL::text AS con, NULL::text AS note, 
 ST_Difference (cl.geom, ST_Buffer(ST_Union(part_one.geom, part_two.geom), 0.00001) ) AS geom,
-(numrange(0,1) - range_merge(part_one.section, part_two.section))::numrange AS section, 
+('[0,1]'::numrange - range_merge(part_one.section, part_two.section))::numrange AS section, 
 NULL::geometry AS oid1_geom, NULL::geometry AS oid1_geom_translated, 
 NULL::geometry AS oid2_geom, NULL::geometry AS oid2_geom_translated, 
 NULL::date AS date_added, NULL::date AS date_repealed
