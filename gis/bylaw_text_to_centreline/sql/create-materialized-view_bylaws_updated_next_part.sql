@@ -1,5 +1,5 @@
-CREATE MATERIALIZED VIEW jchew.bylaws_updated_next_part AS
---gis.centreline has 67769 rows
+CREATE MATERIALIZED VIEW jchew.bylaws_updated_next_part_filtered AS
+--gis.centreline has 67769 rows (only 46584 of them in the fcode_desc we want, 21185 are )
 WITH whole AS(
 --69487 rows (69303 rows if only include entire centreline)
 SELECT bylaws.id AS bylaw_id, centre.lf_name, bylaws.geo_id, bylaws.speed_limit_km_per_h AS speed_limit, 
@@ -25,7 +25,7 @@ ORDER BY geo_id, date_added DESC NULLS LAST, bylaw_id DESC
 )
 
 , no_bylaw AS (
---46564 rows
+--25379 rows
 SELECT 
 NULL::integer AS bylaw_id, lf_name, geo_id, 50 AS speed_limit, 
 NULL::integer AS int1, NULL::integer AS int2, NULL::text AS con, NULL::text AS note, 
@@ -35,6 +35,9 @@ NULL::geometry AS oid2_geom, NULL::geometry AS oid2_geom_translated,
 NULL::date AS date_added, NULL::date AS date_repealed
 FROM gis.centreline
 WHERE geo_id NOT IN (SELECT geo_id FROM whole_added)
+AND fcode_desc IN ('Collector','Collector Ramp','Expressway','Expressway Ramp',
+'Local','Major Arterial','Major Arterial Ramp','Minor Arterial',
+'Minor Arterial Ramp','Pending', 'Other')
 )
 
 , part_one AS (
@@ -118,7 +121,7 @@ UNION
 SELECT * FROM part_two_without_bylaw
 ;
 
-COMMENT ON MATERIALIZED VIEW jchew.bylaws_updated_next_part
+COMMENT ON MATERIALIZED VIEW jchew.bylaws_updated_next_part_filtered
     IS 'This view consists of a few parts.
 
 1. no_bylaw -> centrelines not involved in bylaws
