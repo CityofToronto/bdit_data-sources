@@ -9,7 +9,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.operators.postgres_operator import PostgresOperator
 
 
 SLACK_CONN_ID = 'slack'
@@ -37,9 +37,6 @@ def task_fail_slack_alert(context):
         # proxy='http://137.15.73.132:8080'
         )
     return failed_alert.execute(context=context)
-
-miovision_postgres = PostgresHook("miovision_api_bot")
-rds_con = miovision_postgres.get_uri()
 
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
