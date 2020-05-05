@@ -88,6 +88,7 @@ zone_id SMALLINT,
 stop_url TEXT,
 location_type TEXT ,
 parent_station INT ,
+stop_timezone TEXT, --This is null but it's in the feed
 wheelchair_boarding SMALLINT ,
 feed_id int
 );
@@ -115,7 +116,7 @@ trip_id BIGINT NOT NULL,
 trip_headsign TEXT ,
 trip_short_name TEXT,
 direction_id SMALLINT NOT NULL,
-block_id BIGINT NOT NULL,
+block_id BIGINT,
 shape_id INT NOT NULL,
 wheelchair_accessible SMALLINT,
 feed_id int
