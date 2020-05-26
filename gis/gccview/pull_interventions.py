@@ -9,7 +9,7 @@ from psycopg2.extras import execute_values
 from time import sleep
 import click
 CONFIG = configparser.ConfigParser()
-CONFIG.read(str(Path.home().joinpath('db.cfg')))
+CONFIG.read(r'/home/nchan/db.cfg')
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
