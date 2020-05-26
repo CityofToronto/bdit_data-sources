@@ -38,7 +38,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner':'natalie',
                 'depends_on_past':False,
-                'start_date': datetime(2019, 11, 22),
+                'start_date': datetime(2020, 5, 26),
                 'email': ['natalie.chan@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
