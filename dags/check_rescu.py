@@ -1,6 +1,7 @@
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
@@ -71,7 +72,7 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 10 * * *', catchup=False)
+dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 11 * * *', catchup=False)
 # Run at 6 AM local time every day
 
 task1 = PythonOperator(
@@ -80,3 +81,12 @@ task1 = PythonOperator(
     dag=dag,
     op_args=[con, date_to_pull]
     )
+
+refresh_views = PostgresOperator(sql='SELECT covid.refresh_rescu_matview()',
+                            task_id='refresh_rescu_view',
+                            postgres_conn_id='rescu_bot',
+                            autocommit=True,
+                            retries = 0,
+                            dag=dag)
+
+task1 >> refresh_views
