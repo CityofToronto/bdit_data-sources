@@ -1,4 +1,3 @@
-import csv
 import click
 import datetime
 import psycopg2
