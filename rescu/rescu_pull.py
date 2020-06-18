@@ -7,8 +7,7 @@ import logging
 import configparser
 import traceback
 
-def logger():
-    
+def logger(): 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
@@ -17,19 +16,16 @@ def logger():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     return logger
-
 logger=logger()
 logger.debug('Start')
 
-# GET DEFAULT DATES (CHANGE WHEN FINALIZED)
+# GET DEFAULT DATES
 default_start = datetime.date.today() - datetime.timedelta(days=1)
-default_end = datetime.date.today() - datetime.timedelta(days=0)
+default_end = datetime.date.today()
 
 # SET UP CLICK OPTION TO SPECIFY DATES
 CONTEXT_SETTINGS = dict(
-    default_map={'run_rescu': {'flag': 0}}
-)
-
+    default_map={'run_rescu': {'flag': 0}} )
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
     pass
@@ -44,29 +40,21 @@ def read(start_date, end_date, path):
     start_str = datetime.datetime.strptime(str(start_date), '%Y-%m-%d').date()
     end_str = datetime.datetime.strptime(str(end_date), '%Y-%m-%d').date()
     time_delta = datetime.timedelta(days=1)
-  
     logger.info('Pulling for dates: %s to %s' %(start_str, end_str))
 
     while True:
-
         #start_date in format %Y-%m-%d but we need %d-%b-%Y to read file
-        start = str(int(start_str.strftime("%d"))) + "-" + start_str.strftime("%b-%Y")
-        start_input = str(start).upper()
+        start_input = str(start_str.strftime("%d-%b-%Y")).upper()
         yr = start_str.strftime("%Y")
-
         file_path = "\\\\tssrv7\\FlowData\\TextFiles\\Rescu\\AggregatedData\\"+yr+"\\STN_15MINVOL_" + start_input + ".rpt"
         logger.info('Pulling data from filename = %s', file_path)
 
-        #table_dt = datetime.datetime.strptime(start_date, '%d-%b-%Y').strftime('%Y-%m-%d')
         logger.info('Working on dt = %s', start_str)
         lst = [] 
-
         with open(file_path, "r") as fp:
             for line in fp:
                 new_line = line.strip('\n')
-                lst.append( ( str(start_str), new_line), )
-
-        logger.debug(lst[0:5])
+                lst.append(( str(start_str), new_line),)
 
         try:
             insert(start_str, path, lst)
@@ -91,7 +79,6 @@ def insert(start_str, path, lst):
         with conn.cursor() as cur:
             insert_data = '''INSERT INTO rescu.raw_15min (dt, raw_info) VALUES %s'''
             execute_values(cur, insert_data, lst)
-
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
     logger.info('Added raw data for dt = %s', start_str)
