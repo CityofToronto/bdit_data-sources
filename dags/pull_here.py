@@ -6,7 +6,7 @@ Slack notifications is raised when the airflow process fails.
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook
@@ -55,12 +55,29 @@ default_args = {'owner':'rdumas',
                         'LANG':'C.UTF-8'}
                 }
 
-dag = DAG('pull_here',default_args=default_args, schedule_interval='0 13 * * 1')
-# Run at 8 AM local time every monday
+dag = DAG('pull_here',default_args=default_args, schedule_interval=' 30 16 * * * ')
+#Every day at 1630
+# dag = DAG('pull_here',default_args=default_args, schedule_interval='0 13 * * 1')
+# Run at 1PM local time every monday
 
-t1 = BashOperator(
+# date_to_pull = datetime.today().date() - timedelta(days=2)
+
+# Execution date seems to be the day before this was run, so yesterday_ds_nodash
+# should be equivalent to two days ago. https://stackoverflow.com/a/37739468/4047679
+
+pull_data = BashOperator(
         task_id = 'pull_here',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg', 
+        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
+        # params = {'date':date_to_pull.strftime('%Y%m%d')},
         retries = 0,
         dag=dag,
         )
+
+agg_tti = PostgresOperator(sql="SELECT covid.generate_citywide_tti('{{ yesterday_ds }}')",
+                           task_id='aggregate_tti',
+                           postgres_conn_id='here_bot',
+                           autocommit=True,
+                           retries = 0,
+                           dag=dag)
+
+pull_data >> agg_tti
