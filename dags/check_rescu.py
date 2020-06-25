@@ -39,7 +39,7 @@ SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
-            :red_circle: RESCU row number is too low. 
+            :red_circle: Something is wrong with RESCU. Rescue me please! 
             *Task*: {task}  
             *Dag*: {dag} 
             *Execution Time*: {exec_date}  
@@ -60,10 +60,10 @@ def task_fail_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
-default_args = {'owner':'rdumas',
+default_args = {'owner':'jchew',
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 17),
-                'email': ['raphael.dumas@toronto.ca'],
+                'email': ['joven.chew@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -71,7 +71,7 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 11 * * *', catchup=False)
+dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 6 * * *', catchup=False)
 # Run at 6 AM local time every day
 
 task1 = PythonOperator(
