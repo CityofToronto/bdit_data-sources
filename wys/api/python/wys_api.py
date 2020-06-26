@@ -29,7 +29,7 @@ class TimeoutException(Exception):
     pass
 
 def logger():
-    logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
+    #logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     return logger
