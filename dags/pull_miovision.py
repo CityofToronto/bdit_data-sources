@@ -9,8 +9,6 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.operators.postgres_operator import PostgresOperator
-
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
