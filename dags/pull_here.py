@@ -6,8 +6,10 @@ Slack notifications is raised when the airflow process fails.
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.hooks.postgres_hook import PostgresHook
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
@@ -34,6 +36,9 @@ def task_fail_slack_alert(context):
     )
     return failed_alert.execute(context=context)
 
+here_postgres = PostgresHook("here_bot")
+rds_con = here_postgres.get_uri()
+
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
                 'start_date': datetime(2020, 1, 5),
@@ -43,7 +48,8 @@ default_args = {'owner':'rdumas',
                  'retries': 0,
                  'retry_delay': timedelta(minutes=5),
                  'on_failure_callback': task_fail_slack_alert,
-                 'env':{'LC_ALL':'C.UTF-8', #Necessary for Click
+                 'env':{'here_bot':rds_con,
+                        'LC_ALL':'C.UTF-8', #Necessary for Click
                         'LANG':'C.UTF-8'}
                 }
 
