@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.hooks.postgres_hook import PostgresHook
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
