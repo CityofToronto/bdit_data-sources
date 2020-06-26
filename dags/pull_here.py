@@ -57,10 +57,6 @@ default_args = {'owner':'rdumas',
 
 dag = DAG('pull_here',default_args=default_args, schedule_interval=' 30 16 * * * ')
 #Every day at 1630
-# dag = DAG('pull_here',default_args=default_args, schedule_interval='0 13 * * 1')
-# Run at 1PM local time every monday
-
-# date_to_pull = datetime.today().date() - timedelta(days=2)
 
 # Execution date seems to be the day before this was run, so yesterday_ds_nodash
 # should be equivalent to two days ago. https://stackoverflow.com/a/37739468/4047679
@@ -68,7 +64,6 @@ dag = DAG('pull_here',default_args=default_args, schedule_interval=' 30 16 * * *
 pull_data = BashOperator(
         task_id = 'pull_here',
         bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
-        # params = {'date':date_to_pull.strftime('%Y%m%d')},
         retries = 0,
         dag=dag,
         )
