@@ -6,11 +6,10 @@ Slack notifications is raised when the airflow process fails.
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook
-
 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
@@ -37,7 +36,6 @@ def task_fail_slack_alert(context):
     )
     return failed_alert.execute(context=context)
 
-
 here_postgres = PostgresHook("here_bot")
 rds_con = here_postgres.get_uri()
 
@@ -55,12 +53,15 @@ default_args = {'owner':'rdumas',
                         'LANG':'C.UTF-8'}
                 }
 
-dag = DAG('pull_here',default_args=default_args, schedule_interval='0 13 * * 1')
-# Run at 8 AM local time every monday
+dag = DAG('pull_here',default_args=default_args, schedule_interval=' 30 16 * * * ')
+#Every day at 1630
 
-t1 = BashOperator(
+# Execution date seems to be the day before this was run, so yesterday_ds_nodash
+# should be equivalent to two days ago. https://stackoverflow.com/a/37739468/4047679
+
+pull_data = BashOperator(
         task_id = 'pull_here',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg', 
+        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
         retries = 0,
         dag=dag,
         )
