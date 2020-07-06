@@ -63,7 +63,7 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
-@click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , default=0, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , default=None, help='enter 1 to not process the data')
 @click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
