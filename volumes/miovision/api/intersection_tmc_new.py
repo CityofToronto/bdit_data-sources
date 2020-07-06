@@ -1,4 +1,4 @@
-# TESTING PHASE, TRYING TO PULL NEW INTERSECTIONS ONLY
+# TESTING USING NEW TABLES
 import sys
 import json
 from requests import Session
@@ -215,9 +215,9 @@ def process_data(conn, pull, start_time, end_iteration_time):
                     cur.execute(update, time_period)
                     logger.info('Aggregated to 15 minute bins')
 
-                    # atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
-                    # cur.execute(atr_aggregation, time_period)
-                    # logger.info('Completed data processing for %s', start_time)
+                    atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
+                    cur.execute(atr_aggregation, time_period)
+                    logger.info('Completed data processing for %s', start_time)
 
                     # missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
                     # cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argument
@@ -269,14 +269,19 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     if intersection > 0:
         with conn.cursor() as cur: 
-            string="SELECT * from miovision_api.intersections_new WHERE intersection_uid = %s"
+            string= '''SELECT * FROM miovision_api.intersections_new 
+                        WHERE intersection_uid = %s
+                        AND start_time::date > date_installed 
+                        AND date_decommissioned IS NULL'''
             cur.execute(string, (intersection,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
-            string2="SELECT * from miovision_api.intersections_new WHERE intersection_uid > 32"
-            cur.execute(string2)
+            string2= '''SELECT * FROM miovision_api.intersections_new 
+                        WHERE %s::date > date_installed 
+                        AND date_decommissioned IS NULL'''
+            cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
 
