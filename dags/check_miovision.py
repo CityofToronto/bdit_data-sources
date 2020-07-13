@@ -17,22 +17,21 @@ logging.basicConfig(level=logging.DEBUG)
 mio_bot = PostgresHook("miovision_api_bot")
 con = mio_bot.get_conn()
 
-start_date = str(datetime.today().date() - timedelta(days=1))
-end_date = str(datetime.today().date())
-date_range = (start_date, end_date)
-LOGGER.info('Check if cameras are working for date range = %s', date_range)
-
-def check_miovision(con, date_range):
+def check_miovision(con, start_date, end_date):
+    date_range = (start_date, end_date)
+    LOGGER.info('Check if cameras are working for date range = %s', date_range)
     with con.cursor() as cur: 
-        working_machine = "SELECT miovision_api.determine_working_machine(%s::date, %s::date)"
+        working_machine = '''SELECT miovision_api.determine_working_machine(%s::date, %s::date)'''
         # change above function when ready
         cur.execute(working_machine, date_range)
-        broken_flag=cur.fetchone()[0]
         LOGGER.info(con.notices[-1]) 
-    
-    if broken_flag > 0:
-        raise Exception ('A Miovision camera may be broken!')
-
+        while True:
+            broken_flag = cur.fetchall()
+            if broken_flag is None: 
+                break
+            LOGGER.info(broken_flag)
+            raise Exception ('A Miovision camera may be broken!')
+            
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -76,5 +75,10 @@ task1 = PythonOperator(
     task_id = 'check_miovision',
     python_callable = check_miovision,
     dag=dag,
-    op_args=[con, date_range]
+    op_kwargs={
+      'con': con,
+      # execution date is by default a day before if the process runs daily
+      'start_date': '{{ ds }}', 
+      'end_date' : '{{ macros.ds_add(ds, 1) }}'
+    }
     )
