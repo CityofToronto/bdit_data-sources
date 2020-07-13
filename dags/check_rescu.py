@@ -17,10 +17,8 @@ logging.basicConfig(level=logging.DEBUG)
 rescu_bot = PostgresHook("rescu_bot")
 con = rescu_bot.get_conn()
 
-date_to_pull = str(datetime.today() - timedelta(days=1))
-LOGGER.debug('Pulling information for date = %s',date_to_pull)
-
 def check_rescu(con, date_to_pull):
+    LOGGER.info('Pulling information for date = %s',date_to_pull)
     with con.cursor() as cur:
         check_raw = sql.SQL('''SELECT COUNT(raw_uid) FROM rescu.raw_15min WHERE dt = {}''').format(sql.Literal(date_to_pull))
         cur.execute(check_raw)
@@ -39,7 +37,7 @@ SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
-            :red_circle: Something is wrong with RESCU. Rescue me please! 
+            :red_circle: RESCU row number is too low. 
             *Task*: {task}  
             *Dag*: {dag} 
             *Execution Time*: {exec_date}  
@@ -78,5 +76,9 @@ task1 = PythonOperator(
     task_id = 'check_rescu',
     python_callable = check_rescu,
     dag=dag,
-    op_args=[con, date_to_pull]
+    op_kwargs={
+      'con': con,
+      # execution date is by default a day before if the process runs daily
+      'date_to_pull': '{{ ds }}'
+    }
     )
