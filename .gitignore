@@ -187,7 +187,7 @@ bluetooth/api/se_deviceclass.py
 bluetooth/api/psyconfig.cfg
 *.lock
 bluetooth/api/config.cfg
-volumes/miovision/api/config.cfg
+volumes/miovision/api/config_miovision_api_bot.cfg
 
 # Google Sheets API keys.
 token.pickle
