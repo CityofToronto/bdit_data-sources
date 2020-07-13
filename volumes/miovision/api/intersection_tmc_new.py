@@ -262,14 +262,6 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     #         invalid_flag=cur.fetchone()[0]
     #         logger.info(conn.notices[-1]) 
 
-    with conn:
-        with conn.cursor() as cur: 
-            working_machine = "SELECT miovision_api.determine_working_machine(%s::date, %s::date)"
-            # change above function when ready
-            cur.execute(working_machine, time_period)
-            broken_flag=cur.fetchone()[0]
-            logger.info(conn.notices[-1]) 
-
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
