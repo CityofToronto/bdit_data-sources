@@ -211,7 +211,7 @@ def process_data(conn, pull, start_time, end_iteration_time):
         try:
             with conn:
                 with conn.cursor() as cur:
-                    update="SELECT miovision_api.aggregate_15_min_tmc_test(%s::date, %s::date)"
+                    update="SELECT miovision_api.aggregate_15_min_tmc_test_gap(%s::date, %s::date)"
                     cur.execute(update, time_period)
                     logger.info('Aggregated to 15 minute bins')
 
@@ -259,8 +259,15 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     #     with conn.cursor() as cur: 
     #         invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
     #         cur.execute(invalid_movements, time_period)
-    #         invalid_flag=cur.fetchone()[0]
     #         logger.info(conn.notices[-1]) 
+
+    ###### TO MOVE UNACCEPTABLE 1MIN BIN INTO ANOTHER TABLE
+    # with conn:
+    #     with conn.cursor() as cur: 
+    #         invalid_gaps="SELECT miovision_api.remove_gaps(%s::date, %s::date)"
+    #         cur.execute(invalid_gaps, time_period)
+    #         logger.info(conn.notices[-1])  ****add notice??
+    # logger.info('Removed bins where gaps exceeded allowable size') 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
