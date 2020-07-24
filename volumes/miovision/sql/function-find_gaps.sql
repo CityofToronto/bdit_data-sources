@@ -74,7 +74,7 @@ INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end
 SELECT DISTINCT ON (intersection_uid, DATE_TRUNC('hour', acceptable.gap_start)) *
 FROM acceptable
 WHERE accept = false
-ORDER BY intersection_uid, DATE_TRUNC('hour', acceptable.gap_start)
+ORDER BY DATE_TRUNC('hour', acceptable.gap_start), intersection_uid
 RETURNING *
 	)
 -- FOR NOTICE PURPOSES ONLY
