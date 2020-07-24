@@ -261,13 +261,18 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     #         cur.execute(invalid_movements, time_period)
     #         logger.info(conn.notices[-1]) 
 
-    ###### TO MOVE UNACCEPTABLE 1MIN BIN INTO ANOTHER TABLE
-    # with conn:
-    #     with conn.cursor() as cur: 
-    #         invalid_gaps="SELECT miovision_api.remove_gaps(%s::date, %s::date)"
-    #         cur.execute(invalid_gaps, time_period)
-    #         logger.info(conn.notices[-1])  ****add notice??
-    # logger.info('Removed bins where gaps exceeded allowable size') 
+    ###### UPDATE GAPSIZE LOOKUP TABLE AND RUN find_gaps FUNCTION
+    with conn:
+        with conn.cursor() as cur: 
+            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
+            cur.execute(update_gaps)
+
+    with conn:
+        with conn.cursor() as cur: 
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            cur.execute(invalid_gaps, time_period)
+            logger.info(conn.notices[-1])
+    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
