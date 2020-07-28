@@ -15,7 +15,7 @@ BEGIN
 
 -- FIRST, FIND ALL GAPS
 WITH ful AS (
-SELECT generate_series('2020-07-15'::date, '2020-07-16'::date, interval '1 minute')::timestamp without time zone 
+SELECT generate_series(start_date, end_date, interval '1 minute')::timestamp without time zone 
 	AS datetime_bin)
 , grp AS (
 	SELECT
