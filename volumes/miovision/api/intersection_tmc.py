@@ -228,18 +228,18 @@ def process_data(conn, pull, start_time, end_iteration_time):
     else:
         logger.info('Data Processing Skipped')
 
-    with conn:
-        with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
-            cur.execute(report_dates, time_period)
-            logger.info('report_dates done')
+    # with conn:
+    #     with conn.cursor() as cur:
+    #         report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
+    #         cur.execute(report_dates, time_period)
+    #         logger.info('report_dates done')
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
-            insert_data = '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
+            insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid, 
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
@@ -258,8 +258,20 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
         with conn.cursor() as cur: 
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
             cur.execute(invalid_movements, time_period)
-            invalid_flag=cur.fetchone()[0]
             logger.info(conn.notices[-1]) 
+
+    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
+    with conn:
+        with conn.cursor() as cur: 
+            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
+            cur.execute(update_gaps)
+
+    with conn:
+        with conn.cursor() as cur: 
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            cur.execute(invalid_gaps, time_period)
+            logger.info(conn.notices[-1])
+    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
@@ -268,14 +280,19 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     if intersection > 0:
         with conn.cursor() as cur: 
-            string="SELECT * from miovision_api.intersections WHERE intersection_uid = %s"
+            string= '''SELECT * FROM miovision_api.intersections_new 
+                        WHERE intersection_uid = %s
+                        AND start_time::date > date_installed 
+                        AND date_decommissioned IS NULL'''
             cur.execute(string, (intersection,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
-            string2="SELECT * from miovision_api.intersections"
-            cur.execute(string2)
+            string2= '''SELECT * FROM miovision_api.intersections_new 
+                        WHERE %s::date > date_installed 
+                        AND date_decommissioned IS NULL'''
+            cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
 
