@@ -218,9 +218,10 @@ def process_data(conn, pull, start_time, end_iteration_time):
                     cur.execute(atr_aggregation, time_period)
                     logger.info('Completed data processing for %s', start_time)
 
-                    missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
-                    cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argument
-                    logger.info('missing_dates_query done')
+                    # I THINK THIS IS NO LONGER NECCESSARY?
+                    # missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
+                    # cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argument
+                    # logger.info('missing_dates_query done')
             
         except psycopg2.Error as exc:
             logger.exception(exc)
@@ -228,11 +229,11 @@ def process_data(conn, pull, start_time, end_iteration_time):
     else:
         logger.info('Data Processing Skipped')
 
-    # with conn:
-    #     with conn.cursor() as cur:
-    #         report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
-    #         cur.execute(report_dates, time_period)
-    #         logger.info('report_dates done')
+    with conn:
+        with conn.cursor() as cur:
+            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date)"
+            cur.execute(report_dates, time_period)
+            logger.info('report_dates done')
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
