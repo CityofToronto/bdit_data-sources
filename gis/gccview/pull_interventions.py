@@ -77,7 +77,10 @@ def send_tempdata(output_table, insert_column, return_json):
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
     for feature in features:
-        geom = feature['geometry']
+        try:
+            geom = feature['geometry']
+        except KeyError:
+            geom = None
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
         row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
@@ -106,7 +109,10 @@ def get_geometry(geometry_type, geom):
         'esriGeometryPolygon': polygon
     }
     func = switcher.get(geometry_type)
-    geometry = (func(geom)) 
+    if geom is None:
+        geometry = None
+    else:
+        geometry = (func(geom)) 
     return geometry
 
 def to_time(input):
