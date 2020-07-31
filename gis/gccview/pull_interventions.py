@@ -77,10 +77,7 @@ def send_tempdata(output_table, insert_column, return_json):
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
     for feature in features:
-        try:
-            geom = feature['geometry']
-        except KeyError:
-            geom = None
+        geom = feature.get('geometry')
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
         row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
