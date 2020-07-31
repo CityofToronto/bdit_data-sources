@@ -17,9 +17,9 @@ AS
     avg(mio.vol) AS avg_vol,
         CASE
             WHEN avg(mio.vol) < 100::numeric THEN 20
-            WHEN avg(mio.vol) >= 100::numeric AND avg(mio.vol) < 500::numeric THEN 10
-            WHEN avg(mio.vol) >= 500::numeric AND avg(mio.vol) < 1500::numeric THEN 5
-            WHEN avg(mio.vol) > 1500::numeric THEN 2
+            WHEN avg(mio.vol) >= 100::numeric AND avg(mio.vol) < 500::numeric THEN 15
+            WHEN avg(mio.vol) >= 500::numeric AND avg(mio.vol) < 1500::numeric THEN 10
+            WHEN avg(mio.vol) > 1500::numeric THEN 5
             ELSE NULL::integer
         END AS gap_size
    FROM mio
