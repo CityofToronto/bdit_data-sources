@@ -276,7 +276,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     if intersection > 0:
         with conn.cursor() as cur: 
-            string= '''SELECT * FROM miovision_api.intersections_new 
+            string= '''SELECT * FROM miovision_api.intersections
                         WHERE intersection_uid = %s
                         AND start_time::date > date_installed 
                         AND date_decommissioned IS NULL'''
@@ -285,7 +285,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
-            string2= '''SELECT * FROM miovision_api.intersections_new 
+            string2= '''SELECT * FROM miovision_api.intersections 
                         WHERE %s::date > date_installed 
                         AND date_decommissioned IS NULL'''
             cur.execute(string2, (start_time,))
