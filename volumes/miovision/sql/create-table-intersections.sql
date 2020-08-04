@@ -1,4 +1,4 @@
-﻿CREATE TABLE miovision_api.intersections_new
+﻿CREATE TABLE miovision_api.intersections
 (
     intersection_uid integer,
     id text COLLATE pg_catalog."default",
