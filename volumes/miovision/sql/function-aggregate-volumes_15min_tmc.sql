@@ -17,7 +17,7 @@ WITH zero_padding_movements AS (
 		CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin15)
 		-- make sure that the intersection is still active
 		WHERE intersection_uid IN (SELECT intersection_uid FROM miovision_api.intersections 
-				WHERE start_date::date > date_installed 
+				WHERE start_date::date >= date_installed 
 				AND date_decommissioned IS NULL)
 		)
 , aggregate_insert AS (
