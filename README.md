@@ -20,21 +20,23 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Permanent Count Stations and Automated Traffic Recorder (ATR)](#permanent-count-stations-and-automated-traffic-recorder-atr)
 		- [Data Elements](#data-elements-3)
 		- [Notes](#notes-2)
+	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
+		- [Data Elements](#data-elements-4)
+		- [Notes](#notes-3)
 - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
-	- [Data Elements](#data-elements-4)
-	- [Notes](#notes-3)
-- [Incidents](#incidents)
 	- [Data Elements](#data-elements-5)
 	- [Notes](#notes-4)
-- [Road Disruption Activity (RoDARS)](#road-disruption-activity-rodars)
+- [Incidents](#incidents)
 	- [Data Elements](#data-elements-6)
 	- [Notes](#notes-5)
-- [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
+- [Road Disruption Activity (RoDARS)](#road-disruption-activity-rodars)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-6)
-- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
+- [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-8)
 	- [Notes](#notes-7)
+- [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
+	- [Data Elements](#data-elements-9)
 
 ## Open Data Releases
 
@@ -164,6 +166,34 @@ SampleCount|the number of devices completing the route from start to end in the 
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
 
+### Miovision - Multi-modal Permanent Video Counters
+
+Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
+
+#### Data Elements
+
+Field Name|Description|Type
+----------|-----------|----
+volume_uid|unique identifier for table|integer
+intersection_uid|unique identifier for each intersection|integer
+datetime_bin|date and time|timestamp without time zone
+classification_uid|classify types of vehicles or pedestrians or cyclists|integer
+leg|entry leg of movement|text
+movement_uid|classify how the vehicles/pedestrians/cyclists cross the intersection, eg: straight/turn left/turn right etc|integer
+volume|volume|integer
+volume_15min_tmc_uid|unique identifier to link to table `miovision_api.volumes_15min_tmc`|integer
+
+#### Notes
+
+* Data entry via Airflow that runs Miovision API daily
+* `volume_uid` in the table is not in the right sequence due to different time of inserting data into table
+* Although Miovision API data has been avialable circa Summer'18 but the data is only more reliable May 2019 onwards?
+* `miovision_api` schema currently have data from Jan 2019 onwards but data prior to May 2019 contains many invalid movements
+* Duplicates might also happen at the Miovision side (happened once thus far)
+* Quality control activities:
+    1. unique constraint in `miovision_api` volumes tables
+    2. raise a warning flag when try to insert duplicates data into the table
+
 ## Vehicle Detector Station (VDS)
 
 ### Data Elements
@@ -251,27 +281,19 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
 
-## Miovision - Multi-modal Permanent Video Counters
-Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
+## Vision Zero - Google Sheets API
+This dataset comes from Google Sheets tracking progress on implementation of safety improvements in school zones. \
+Data Available in `vz_safety_programs_staging.school_safety_zone_2018_raw` and `vz_safety_programs_staging.school_safety_zone_2019_raw`
 
 ### Data Elements
+
 Field Name|Description|Type
 ----------|-----------|----
-volume_uid|unique identifier for table|integer
-intersection_uid|unique identifier for each intersection|integer
-datetime_bin|date and time|timestamp without time zone 
-classification_uid|classify types of vehicles or pedestrians or cyclists|integer
-leg|entry leg of movement|text
-movement_uid|classify how the vehicles/pedestrians/cyclists cross the intersection, eg: straight/turn left/turn right etc|integer
-volume|volume|integer
-volume_15min_tmc_uid|unique identifier to link to table `miovision_api.volumes_15min_tmc`|integer
-
-### Notes
-* Data entry via Airflow that runs Miovision API daily
-* `volume_uid` in the table is not in the right sequence due to different time of inserting data into table
-* Although Miovision API data has been avialable circa Summer'18 but the data is only more reliable May 2019 onwards?
-* `miovision_api` schema currently have data from Jan 2019 onwards but data prior to May 2019 contains many invalid movements
-* Duplicates might also happen at the Miovision side (happened once thus far)
-* Quality control activities:
-	1. unique constraint in `miovision_api` volumes tables
-	2. raise a warning flag when try to insert duplicates data into the table
+school_name|name of school|text
+address|address of school|text
+work_order_fb|work order of flashing beacon|text
+work_order_wyss|work order of watch your speed sign|text
+locations_zone|coordinate of school|text
+final_sign_installation|final sign installation date|text
+locations_fb|location of flashing beacon|text
+locations_wyss|location of watch your speed sign|text
