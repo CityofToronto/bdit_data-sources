@@ -256,18 +256,18 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             cur.execute(invalid_movements, time_period)
             logger.info(conn.notices[-1]) 
 
-    # # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-    # with conn:
-    #     with conn.cursor() as cur: 
-    #         update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
-    #         cur.execute(update_gaps)
+    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
+    with conn:
+        with conn.cursor() as cur: 
+            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
+            cur.execute(update_gaps)
 
-    # with conn:
-    #     with conn.cursor() as cur: 
-    #         invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
-    #         cur.execute(invalid_gaps, time_period)
-    #         logger.info(conn.notices[-1])
-    # logger.info('Updated gapsize table and found gaps exceeding allowable size') 
+    with conn:
+        with conn.cursor() as cur: 
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            cur.execute(invalid_gaps, time_period)
+            logger.info(conn.notices[-1])
+    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
@@ -286,11 +286,8 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     else: 
         with conn.cursor() as cur: 
             string2= '''SELECT * FROM miovision_api.intersections 
-                        WHERE %s::date > date_installed 
-                        AND date_decommissioned IS NULL
-                        AND intersection_uid > 32'''  
-                        # since we are pulling new ones first
-                        # since the start_date is different for each intersection, running daily instead everything tgt
+                        WHERE %s::date >= date_installed 
+                        AND date_decommissioned IS NULL'''  
             cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
