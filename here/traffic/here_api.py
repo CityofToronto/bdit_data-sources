@@ -9,12 +9,13 @@ import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import sleep
+from json import JSONDecodeError
+import os 
+import sys
 
 import click
 import requests
 from requests_oauthlib import OAuth1
-
-from notify_email import send_mail
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -84,9 +85,15 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
     query_response = requests.post(query_url, headers=query_header, json=query)
     try:
         query_response.raise_for_status()
-    except requests.exceptions.HTTPError:
+    except requests.exceptions.HTTPError as err:
         LOGGER.error('Error in requesting query')
-        raise HereAPIException(query_response.json()['message'])
+        LOGGER.error(err)
+        try:
+            err_msg = query_response.json()['message']
+        except JSONDecodeError:
+            err_msg = query_response.text
+        finally:
+            raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
 
 def get_download_url(request_id, status_base_url, access_token, user_id):
@@ -105,6 +112,10 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         except KeyError as _:
             LOGGER.error('Missing "status" in response')
             raise HereAPIException(query_status.text)
+        except JSONDecodeError as json_err:
+            LOGGER.warning("JSON error in query status response.")
+            LOGGER.warning(query_status.text)
+            continue
     LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
@@ -120,12 +131,16 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
     
     '''
+    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    ctx.obj['config'] = config
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, config, mapversion)
+        pull_here_data(ctx, startdate, enddate, mapversion)
 
 @cli.command('download')
 @click.argument('download_url')
 @click.argument('filename')
+@click.pass_context
 def download_data(ctx = None, download_url = None, filename = None):
     '''Download data from specified url to specified filename'''
     LOGGER.info('Downloading data')
@@ -135,13 +150,13 @@ def download_data(ctx = None, download_url = None, filename = None):
         shutil.copyfileobj(download.raw, f)
 
 @cli.command('upload')
-@click.argument('dbconfig', type=click.Path(exists=True))
 @click.argument('datafile', type=click.Path(exists=True))
-def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
+@click.pass_context
+def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    if dbconfig:
+    if not dbsetting and not os.getenv('here_bot'):
         configuration = configparser.ConfigParser()
-        configuration.read(dbconfig)
+        configuration.read(ctx.obj['config'])
         dbsetting = configuration['DBSETTINGS']
 
     LOGGER.info('Sending data to database')
@@ -150,23 +165,37 @@ def send_data_to_database(dbconfig=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
-                                        '-c',r'\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;'],
+        copy = r'''"\COPY here.ta (link_dir,tx,epoch_min,length,mean,
+                    stddev,min_spd,max_spd,confidence,pct_5,pct_10,
+                    pct_15,pct_20,pct_25,pct_30,pct_35,pct_40,pct_45,
+                    pct_50,pct_55,pct_60,pct_65,pct_70,pct_75,pct_80,
+                    pct_85,pct_90,pct_95) FROM STDIN WITH (FORMAT csv, HEADER 
+                    TRUE);"'''
+        if os.getenv('here_bot'):
+            #there's a here_bot environment variable to connect to postgresql.
+            #use the environment variable, which requires running subprocess
+            #with env=os.environ.copy(), shell=True
+            #Note that with shell=True, the command must be one long string.
+            cmd = '''psql $here_bot -v "ON_ERROR_STOP=1" -c {copy}'''.format(copy=copy)
+            LOGGER.info(subprocess.check_output(cmd,
+            stdin=unzip.stdout, env=os.environ.copy(), shell=True))
+        else:
+            LOGGER.warning('No here_bot environment variable detected, assuming .pgpass value exists')
+            LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','"ON_ERROR_STOP=1"',
+                                        '-c',copy],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, config, mapversion):
+def pull_here_data(ctx, startdate, enddate, mapversion):
 
     configuration = configparser.ConfigParser()
-    configuration.read(config)
+    configuration.read(ctx.obj['config'])
     dbsettings = configuration['DBSETTINGS']
     apis = configuration['API']
     email = configuration['EMAIL']
-    FORMAT = '%(asctime)s %(name)-2s %(levelname)-2s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
@@ -181,11 +210,10 @@ def pull_here_data(ctx, startdate, enddate, config, mapversion):
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)
-        send_mail(email['to'], email['from'], email['subject'], str(here_exc))
+        sys.exit(1)
     except Exception:
         LOGGER.critical(traceback.format_exc())
-        # Only send email if critical error
-        send_mail(email['to'], email['from'], email['subject'], traceback.format_exc())
+        sys.exit(2)
 
 def main():
     #https://github.com/pallets/click/issues/456#issuecomment-159543498
