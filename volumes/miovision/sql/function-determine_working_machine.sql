@@ -30,7 +30,7 @@ SELECT generate_series(start_date::date, end_date::date, interval '1 minute')::t
 	dense_rank() OVER (ORDER BY ful.datetime_bin)
 	- dense_rank() OVER (PARTITION BY vol.intersection_uid ORDER BY vol.datetime_bin) AS diff
 	FROM ful
-	LEFT JOIN miovision_api.volumes_test vol
+	LEFT JOIN miovision_api.volumes vol
 	USING (datetime_bin)
 ) , island AS (
 SELECT grp.intersection_uid, 
