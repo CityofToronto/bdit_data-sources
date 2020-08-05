@@ -32,9 +32,10 @@ pad.movement_uid,
 CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume
 FROM zero_padding_movements pad
 --To set unacceptable ones to NULL instead (& only gap fill light vehicles, cyclist and pedestrian)
-LEFT JOIN miovision_api.unacceptable_gaps_modified2 un --HAVE TO UPDATE TABLE NAME LATER ON
+LEFT JOIN miovision_api.unacceptable_gaps un 
 	ON un.intersection_uid = pad.intersection_uid
-	AND DATE_TRUNC('hour', un.gap_start) = DATE_TRUNC('hour', pad.datetime_bin15) 	
+	AND pad.datetime_bin15 BETWEEN DATE_TRUNC('hour', gap_start) 
+	AND DATE_TRUNC('hour', gap_end) + interval '1 hour' -- may get back to this later on for fear of removing too much data
 --To get 1min bins
 LEFT JOIN miovision_api.volumes A
 	ON A.datetime_bin >= start_date - INTERVAL '1 hour' 
