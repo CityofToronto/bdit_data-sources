@@ -23,25 +23,8 @@ class TimeoutException(Exception):
 class NotFoundError(Exception):
     """Exception for a 404 error."""
 
-def logger():
-    
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
-    file_handler = logging.FileHandler('logging.log')
-    file_handler.setFormatter(formatter)
-    logger.handlers.clear()
-    stream_handler=logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
-        
-    with open('logging.log', 'w'):
-        pass
-    return logger
-
-logger=logger()
-logger.debug('Start')
+logging.basicConfig(format='%(lineno)d    	%(levelname)s    %(message)s', level=logging.INFO)
+logging.debug('Start')
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
@@ -78,18 +61,18 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
     dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     conn.autocommit = True
-    logger.debug('Connected to DB')
+    logging.debug('Connected to DB')
 
     start_date= dateutil.parser.parse(str(start_date))
     end_date= dateutil.parser.parse(str(end_date))
     start_time=local_tz.localize(start_date)
     end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(start_time,end_time))
+    logging.info('Pulling from %s to %s' %(start_time,end_time))
     
     try:
         pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
     except Exception as e:
-        logger.critical(traceback.format_exc())
+        logging.critical(traceback.format_exc())
 
 
 def get_movement(entrance, exit_dir):
@@ -162,18 +145,18 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
         return table
     elif response.status_code==404:
         error=json.loads(response.content.decode('utf-8'))
-        logger.error('Problem with tmc call for intersection %s', intersection_id1)
-        logger.error(error['error'])
+        logging.error('Problem with tmc call for intersection %s', intersection_id1)
+        logging.error(error['error'])
         raise NotFoundError
     elif response.status_code==400:
-        logger.critical('Bad request error when pulling TMC data for intersection %s', intersection_id1)
-        logger.critical('From %s until %s', start_time, end_iteration_time)
+        logging.critical('Bad request error when pulling TMC data for intersection %s', intersection_id1)
+        logging.critical('From %s until %s', start_time, end_iteration_time)
         error=json.loads(response.content.decode('utf-8'))
-        logger.critical(error['error'])
+        logging.critical(error['error'])
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
-    logger.critical('Unknown error pulling tmcs for intersection %s', intersection_id1)
+    logging.critical('Unknown error pulling tmcs for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 
@@ -198,18 +181,18 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
         return table
     elif response.status_code==404:
         error=json.loads(response.content.decode('utf-8'))
-        logger.error('Problem with ped call for intersection %s', intersection_id1)
-        logger.error(error['error'])
+        logging.error('Problem with ped call for intersection %s', intersection_id1)
+        logging.error(error['error'])
         raise NotFoundError
     elif response.status_code==400:
-        logger.critical('Bad request error when pulling ped data for intersection %s', intersection_id1)
-        logger.critical('From %s until %s', start_time, end_iteration_time)
+        logging.critical('Bad request error when pulling ped data for intersection %s', intersection_id1)
+        logging.critical('From %s until %s', start_time, end_iteration_time)
         error=json.loads(response.content.decode('utf-8'))
-        logger.critical(error['error'])
+        logging.critical(error['error'])
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
-    logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
+    logging.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 def process_data(conn, pull, start_time, end_iteration_time):
@@ -220,23 +203,23 @@ def process_data(conn, pull, start_time, end_iteration_time):
                 with conn.cursor() as cur:
                     update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
                     cur.execute(update, time_period)
-                    logger.info('Aggregated to 15 minute bins')
+                    logging.info('Aggregated to 15 minute bins')
 
                     atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
                     cur.execute(atr_aggregation, time_period)
-                    logger.info('Completed data processing for %s', start_time)
+                    logging.info('Completed data processing for %s', start_time)
             
         except psycopg2.Error as exc:
-            logger.exception(exc)
+            logging.exception(exc)
             sys.exit(1)
     else:
-        logger.info('Data Processing Skipped')
+        logging.info('Data Processing Skipped')
 
     with conn:
         with conn.cursor() as cur:
             report_dates="SELECT miovision_api.report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
-            logger.info('report_dates done')
+            logging.info('report_dates done')
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
@@ -247,7 +230,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
-                logger.warning(conn.notices[-1])
+                logging.warning(conn.notices[-1])
                 if dupes:
                     sys.exit(2)
 
@@ -256,13 +239,13 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
             cur.execute(api_log, time_period)
 
-    logger.info('Inserted into volumes and updated log') 
+    logging.info('Inserted into volumes and updated log') 
     
     with conn:
         with conn.cursor() as cur: 
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
             cur.execute(invalid_movements, time_period)
-            logger.info(conn.notices[-1]) 
+            logging.info(conn.notices[-1]) 
 
 
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
@@ -275,15 +258,15 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
         with conn.cursor() as cur: 
             invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
             cur.execute(invalid_gaps, time_period)
-            logger.info(conn.notices[-1])
-    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
+            logging.info(conn.notices[-1])
+    logging.info('Updated gapsize table and found gaps exceeding allowable size') 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
 
-    if intersection_id > 0:
+    if intersection > 0:
         with conn.cursor() as cur: 
             string= '''SELECT * FROM miovision_api.intersections
                         WHERE intersection_uid = %s
@@ -292,7 +275,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             cur.execute(string, (intersection,))
 
             intersection_list=cur.fetchall()
-            logger.debug(intersection_list)
+            logging.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
             string2= '''SELECT * FROM miovision_api.intersections 
@@ -300,7 +283,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                         AND date_decommissioned IS NULL'''  
             cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
-            logger.debug(intersection_list)
+            logging.debug(intersection_list)
 
     while True:
         table=[]
@@ -309,35 +292,35 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             intersection_uid=intersection[0]
             intersection_id1=intersection[1]
             intersection_name=intersection[2]
-            logger.info(intersection_name+'     '+str(start_time))
+            logging.info(intersection_name+'     '+str(start_time))
             for attempt in range(3):
                 try:
                     table=get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key)
                     table=get_pedestrian(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key)
                     break
                 except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    logger.warning('Retrying in 2 minutes')
+                    logging.error(prox)
+                    logging.warning('Retrying in 2 minutes')
                     sleep(120)
                 except exceptions.RequestException as err:
-                    logger.error(err)
+                    logging.error(err)
                     sleep(75)
                 except NotFoundError:
                     break
                 except TimeoutException as exc_504:
-                    logger.error(exc_504)
+                    logging.error(exc_504)
                     sleep(60)
                 except MiovisionAPIException as miovision_exc:
-                    logger.error(miovision_exc)
+                    logging.error(miovision_exc)
                     break
             else:
-                logger.error('Could not successfully pull data for this intersection')
+                logging.error('Could not successfully pull data for this intersection')
 
-        logger.info('Completed data pulling for %s', start_time)
+        logging.info('Completed data pulling for %s', start_time)
         try: 
             insert_data(conn, start_time, end_iteration_time, table, dupes)
         except psycopg2.Error as exc:
-            logger.exception(exc)
+            logging.exception(exc)
             sys.exit(1)
         
         process_data(conn, pull, start_time, end_iteration_time)
@@ -346,7 +329,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         start_time+=time_delta
         if start_time>=end_time:
             break
-    logger.info('Done')
+    logging.info('Done')
         
 if __name__ == '__main__':
     cli()
