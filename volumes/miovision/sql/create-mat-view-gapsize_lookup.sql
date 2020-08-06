@@ -1,3 +1,4 @@
+
 CREATE MATERIALIZED VIEW miovision_api.gapsize_lookup
 TABLESPACE pg_default
 AS
@@ -27,3 +28,15 @@ AS
   WHERE date_part('isodow'::text, mio.hourly_bin)::integer <@ d.isodow
   GROUP BY mio.intersection_uid, d.period, (mio.hourly_bin::time without time zone)
 WITH DATA;
+
+ALTER TABLE miovision_api.gapsize_lookup
+    OWNER TO jchew;
+
+GRANT ALL ON TABLE miovision_api.gapsize_lookup TO miovision_api_bot;
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.gapsize_lookup TO bdit_humans WITH GRANT OPTION;
+GRANT ALL ON TABLE miovision_api.gapsize_lookup TO jchew;
+
+CREATE UNIQUE INDEX gapsize_lookup_intersection_uid_period_time_bin_idx
+    ON miovision_api.gapsize_lookup USING btree
+    (intersection_uid, period COLLATE pg_catalog."default", time_bin)
+    TABLESPACE pg_default;
