@@ -22,12 +22,11 @@ def check_miovision(con, start_date, end_date):
     LOGGER.info('Check if cameras are working for date range = %s', date_range)
     with con.cursor() as cur: 
         working_machine = '''SELECT miovision_api.determine_working_machine(%s::date, %s::date)'''
-        # change above function when ready
         cur.execute(working_machine, date_range)
         LOGGER.info(con.notices[-1]) 
         while True:
             broken_flag = cur.fetchall()
-            if broken_flag is None: 
+            if not broken_flag: # if broken_flag returns an empty list
                 break
             LOGGER.info(broken_flag)
             raise Exception ('A Miovision camera may be broken!')
