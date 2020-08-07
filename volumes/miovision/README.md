@@ -42,7 +42,7 @@
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections_updated.geojson)
 
 ## 2. Table Structure
 
@@ -61,16 +61,26 @@ class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cycl
 
 #### `intersections`
 
-Reference table for each unique intersection at which data has been collected.
+Reference table for each unique intersection at which data has been collected. `miovision_api.intersections_20200805` is the old intersections table that do not have the `date_installed` or `date_decommissioned` information.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-intersection_uid|serial|Unique identifier for table|10|
+intersection_uid|integer|Unique identifier for table|10|
+id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
 intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-street_main|text|Name of primary street|King|
-street_cross|text|Name of secondary street|Bathurst|
+date_installed|date|Installation date of the camera|2017-10-03|
+date_decommissioned|date|Decommissioned date of the camera|NULL|
 lat|numeric|Latitude of intersection location|43.643945|
 lng|numeric|Longitude of intersection location|-79.402667|
+street_main|text|Name of primary street|King|
+street_cross|text|Name of secondary street|Bathurst|
+int_id|bigint|int_id linked to centrelines|13467722|
+px|integer|px linked to traffic lights|201|
+geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
+n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 
 #### `movement_map`
 
@@ -98,6 +108,8 @@ period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00
 
 This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_tmc). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
 
+`miovision_api.intersection_movements_20200805` is the old intersection movement table that do not have information about the new intersections whereas the new table contains information on all intersections, be it old or new ones.
+
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
  intersection_uid| integer | ID for intersection | 1 |
@@ -124,9 +136,9 @@ volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_
 
 Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018` or `volumes_2019` or `volumes_2020` depending on the year of data.
 
-- *Unique constraint* was added to `miovision_api.volumes` table using 
+- *Unique constraint* was added to `miovision_api.volumes` table as well as the children tables using 
 ```
-ALTER TABLE miovision_api.volumes_2019 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+ALTER TABLE miovision_api.volumes ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 ```
 - **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
 
@@ -136,6 +148,7 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 #### `volumes_15min_tmc`
 
+**WIPPPPPP**
 `volumes_15min_tmc` contains data aggregated into 15 minute bins. As part of the process, the data is [interpolated](#interpolation) if there are gaps in 1-minute bins. 15 minute bins where there are no data are filled with 0s for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6)`); trucks, buses and vans are not filled because they are rarely observed, and filling in light vehicles would be sufficient to ensure there are no gaps for the `Vehicles` class used in [`report_dates`](#refresh-reporting-views) and subsequent views. 
 
 The [`aggregate_15_min_tmc()`](sql/function-aggregate-volumes_15min_tmc.sql) function performs zero-filling by cross-joining a table containing all possible movements ([`intersection_movements`](#intersection_movements)) to create a table with all possible times and movements. Through a join with `volumes`, the query checks if there are no counts at that time, intersection, movement, and classification the is no volume, and fills the gap with a 0-volume bin.
@@ -159,14 +172,19 @@ ALTER TABLE miovision_api.volumes_15min_tmc ADD UNIQUE(intersection_uid, datetim
 (23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
 22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
 
-#### `volumes_tmc_zeroes`
+#### `unacceptable_gaps`
 
-**This is a crossover table to link `volumes` to the `volumes_15min_tmc` table** so that when data are [deleted](#deleting-data) from `volumes` this cascades to all aggregated volumes in the 15-min table, including 0 values. The table contains `volume_15min_tmc_uid` and `volume_uid`. Since the data for the 0-volume 15 minute bins are not in the `volumes` table, this table exists so when the the last volume bin with data is deleted, the corresponding 0-volume 15 minute bins after that time is also deleted.
+**WIPPPPPP**
+Data table storing all the unacceptable gaps using a set of gap sizes that are based on the average volumes at that intersection at a certain period of time in the past 60 days. So first, the materialized view `miovision_api.gapssize_lookup` is updated daily to find out the daily average volume for each intersection_uid, period and time_bin. Then based on the average volume, a gap_size is assigned to that intersection. The set of gap_size implemented is based on an investigation stated in this [notebook](volume_vs_gaps.ipynb). Then, the function `miovision_api.find_gaps` is used to find the gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not. Those that equal to or exceed the allowed gap size will then be inserted into the table `miovision_api.unacceptable_gaps`. This table will then be used in the aggregate_15_min_tmc function to aggregate 1-min bin to 15-min bin.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_uid|int|Identifier for `volumes` table|5100431|
-volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|8|
+gap_start|timestamp without time zone|The timestamp of when the gap starts|2020-05-01 02:53:00|
+gap_end|timestamp without time zone|The timestamp of when the gap ends|2020-05-01 03:08:00|
+gap_minute|integer|Duration of the gap in minute|15|
+allowed_gap|integer|Allowed gap in minute|15|
+accept|boolean|Stating whether this gap is acceptable or not|false|
 
 #### `volumes_15min`
 
@@ -256,13 +274,12 @@ volume_15min_tmc_uid|int|Unique identifier for `volumes_15min_tmc` table|14524|
 
 ### Primary and Foreign Keys
 
-To create explicit relationships between tables, `volumes`, `volume_15min_tmc`, `volume_tmc_zeroes`, `atr_tmc_uid` and `volume_15min` have primary and foreign keys. Primary keys are unique identifiers for each entry in the table, while foreign keys refer to a primary key in another table and show how an entry is related to that entry.
+To create explicit relationships between tables, `volumes`, `volume_15min_tmc`, `atr_tmc_uid` and `volume_15min` have primary and foreign keys. Primary keys are unique identifiers for each entry in the table, while foreign keys refer to a primary key in another table and show how an entry is related to that entry.
 
 #### List of primary and foreign keys
 
 * `volumes` has the primary key `volume_uid` and foreign key `volume_15min_tmc_uid` which refers to `volume_15min_tmc`
 * `volumes_15min_tmc` has the primary key `volume_15min_tmc_uid`
-* `volumes_tmc_zeroes` has the foreign key `volume_uid` which refers to the most recent entry in `volume` before that 0-volume bin, and foreign key `volume_15min_tmc_uid` to refer to the 0-volume bin
 * `volume_15min` has the primary key `volume_15min_uid`
 * `atr_tmc_uid` has foreign keys `volume_15min_tmc_uid` and `volume_15min_uid`, referring to which TMC/ATR bin in `volume_15min_tmc_uid` and `volume_15min` each bin is referring to.
 
