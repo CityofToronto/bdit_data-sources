@@ -33,7 +33,7 @@ The puller can currently grab crosswalk and TMC data from the Miovision API usin
 
 Emailed from Miovision. Keep it secret. Keep it safe.
 
-The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [http://beta.docs.api.miovision.com/](http://beta.docs.api.miovision.com/)
+The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [http://beta.docs.api.miovision.com/](http://beta.docs.api.miovision.com/) .
 
 ## Relevant Calls and Outputs
 
@@ -200,8 +200,9 @@ To perform the data processing, the API script calls several postgres functions 
 |[`aggregate_15_min`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
 [`find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
 [`api_log`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-api_log.sql)|Populates when the data is pulled|
+[refresh_gapsize_lookup](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-refresh_gapsize_lookup.sql)|Refresh materialized view `miovision_api.gapsize_lookup`|
+[find_gaps](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-find_gaps.sql)|Find unacceptabl gaps and insert into table `miovision_api.unacceptable_gaps`|
 [`report_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-report_dates.sql)|Populates `report_dates`|
-[`missing_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-missing_dates.sql)|Populates `missing_dates`|
 
 ## Invalid Movements
 
@@ -227,11 +228,15 @@ Below shows a list of SQL trigger functions and sequences used:
 
 ## Airflow
 
-The Airflow is set up to run every day at 8am. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
+**`pull_miovision`**
+The Airflow is set up to run every day at 3am using the dag name `pull_miovision`. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
 
 Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
 
 The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and to fail the script when that happen.
+
+**`check_miovision`**
+There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least a malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 
 ## Notes
 
