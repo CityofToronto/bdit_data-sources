@@ -21,8 +21,8 @@
 	- [Primary and Foreign Keys](#primary-and-foreign-keys)
 		- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
 	- [Important Views](#important-views)
-- [3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera)
-- [4 Steps to add/remove intersections](#4-steps-to-add/remove-intersections)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+- [4 Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
 - [5. Processing Data from API](#5-processing-data-from-api)
 - [6. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
@@ -297,7 +297,7 @@ The tables below are produced using functions explained in the [API Puller](http
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
-## 3. Finding gaps and malfunctioning camera
+## 3. Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are and their sizes. There are two parts of this in the whole process.
 
@@ -312,7 +312,7 @@ The following process is used to determine the gap size for an intersection and 
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named `check_miovision` that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersection that is not working and from what time to what time that the gap happens which is helpful in figuring out what's happened.
 
-## 4. Steps to add/remove intersections
+## 4. Steps to Add or Remove Intersections
 
 WIP
 
