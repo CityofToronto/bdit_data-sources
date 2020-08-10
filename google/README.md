@@ -202,6 +202,5 @@ The key value pairs it returns are discussed below.
 	“data”: list containing 24 items each representing hour starting from midnight to midnight. Each list item represents wait time for that particular hour. However, this data is not readily available for all businesses. 
 
 	time_spent: The average amount of time spent in the facility. It is a list item containing two items. 
-
 </body>
 </html>
