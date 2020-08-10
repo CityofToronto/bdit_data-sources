@@ -22,7 +22,7 @@
 		- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
 	- [Important Views](#important-views)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-- [4 Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+- [4. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
 - [5. Processing Data from API](#5-processing-data-from-api)
 - [6. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
@@ -314,7 +314,63 @@ The following process is to determine if a Miovision camera is still working. It
 
 ## 4. Steps to Add or Remove Intersections
 
-WIP
+There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.**
+
+1) Download the table `miovision_api.intersections` into a csv file and manually add the new intersections information into the table (coordinates, px, int_id, geom, which leg_restricted). 
+
+	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](http://beta.docs.api.miovision.com/#!/Intersections/get_intersections). `date_installed` and `date_decommissioned` can be found by finding the first / last datetime_bin for that intersection_uid from that website. The last date for the old location can also be found from table `miovision_api.volumes`. 
+	
+	b) `px` for the intersection can then be found easily from this [web interface](https://demo.itscentral.ca/#).
+	
+	c) With the `px` information found above, get the rest of the information (such as `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal`.
+	
+	d) In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
+
+2) Now that the updated table of `miovision_api.intersections` is ready, we have to update the table `miovision_api.intersection_movements`. We need to find out all valid movements for the new intersections from the data but we dont have that yet, so the following has to be done.
+
+	a) Fist, we have to create a couple of dummy tables (`volumes_test`, `volumes_15min_tmc_test`, `volumes_15min_test`) & sequences (`volumes_volume_uid_test_seq`, `volumes_15min_tmc_volume_15min_tmc_uid_test_seq`, `volumes_15min_volume_15min_uid_test_seq`) & function (`aggregate_15_min_tmc_get_valid_movement`).
+	
+	b) **Don't forget to grant `miovision_api_bot` access permission to all those new tables!**
+	
+	c) Modify the script `intersection_tmc.py` to only pull the new intersections into the dummy table and aggregate them into 15min tmc bins and **not** do the other things such as `report_date` etc.
+	
+	d) Once we have finish pulling and aggregating the data, run the below query. 
+	```sql
+	--table with all valid movements of new intersections
+	SELECT DISTINCT intersection_uid, classification_uid, leg, movement_uid
+		INTO miovision_api.intersection_movements_new
+		FROM miovision_api.volumes_15min_tmc_test;
+		ALTER TABLE miovision_api.intersection_movements_new ADD UNIQUE (intersection_uid, classification_uid, leg, movement_uid);
+		COMMENT ON TABLE miovision_api.intersection_movements_new IS 'Unique movements for each NEW intersection by classification';
+
+	--add the old ones into the old table (no need to remove decommissioned one cause what if we need them later on)
+	INSERT INTO miovision_api.intersection_movements_new
+	SELECT *
+	FROM miovision_api.intersection_movements
+	```
+
+3) Now that all the necessary source files are ready, it's time to test run everything! Create new function by directly copying from the old one but only change the table/function name it is reading from. Modify `intersection_tmc.py` again and run it.
+
+4) Check the data pulled for the new intersections to see if you find anything weird on the data, be it at the `volumes` table or at the `volumes_15min` table or even other tables.
+
+5) Once everything is checked and the data seems decent, rename the old tables by adding a date (date of last used) at the end of the table name and rename the new tables by naming it as what the old tables used to be which is the table name currently being used by the function in the daily Airflow process. 
+
+6) Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not even aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+
+7) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
+
+Would like to just include the exact last datetime_bin of those decommissioned camera for future references.
+
+|intersection_uid | last datetime_bin|
+|-----------------|------------------|
+9 | 2020-06-15 15:51:00|
+11 | 2020-06-15 09:46:00|
+13 | 2020-06-15 18:01:00|
+14 | NULL|
+16 | 2020-06-15 19:52:00|
+19 | 2020-06-15 20:18:00|
+30 | 2020-06-15 18:58:00|
+32 | 2020-06-15 18:30:00|
 
 ## 5. Processing Data from API
 
