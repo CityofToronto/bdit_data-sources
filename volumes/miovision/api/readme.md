@@ -214,29 +214,31 @@ This flow chart provides a high level overview of the script:
 ![Flow Chart of the API](img/api_script1.png)
 
 Below shows an overview of functions used in the script:
-![Python Functions](img/python_functions.PNG)
+![Python Functions](img/python_functions.png)
 
 Below shows a list of tables used (separated by source table and results table):
-![Source Tables](img/tables_1.PNG)
-![Results Tables](img/tables_2.PNG)
+![Source Tables](img/tables_1.png)
+![Results Tables](img/tables_2.png)
 
 Below shows a list of SQL functions used:
-![SQL Functions](img/functions.PNG)
+![SQL Functions](img/functions.png)
 
-Below shows a list of SQL trigger functions and sequences used:
-![Trigger Functions and Sequences](img/others.PNG)
+Below shows a list of SQL trigger functions, materialized view and sequences used:
+![Trigger Functions and Sequences](img/others.png)
 
 ## Airflow
 
-**`pull_miovision`**
-The Airflow is set up to run every day at 3am using the dag name `pull_miovision`. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
+### **`pull_miovision`**
+
+The Airflow is set up to run every day at 3am using the dag named `pull_miovision`. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
 
 Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
 
-The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and to fail the script when that happen.
+The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
 
-**`check_miovision`**
-There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least a malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+### **`check_miovision`**
+
+There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 
 ## Notes
 
