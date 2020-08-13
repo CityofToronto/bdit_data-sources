@@ -247,6 +247,8 @@ total volume of TMC should be less than total volume of ATR \
 
 > However, the above is not applicable to pedestrian count which are `classification_uid` = 6 and `movement_uid` = 5,6. Pedestrian count in both TMC and ATR tables has equal number of rows and equal total volume.
 
+- **For pedestrian count**, the `leg` represents the side of crosswalk the pedestrians are at whereas `dir` represents which direction they are walking towards. So, a leg = N and dir = EB means that the pedestrian is at the North crosswalk crossing westbound.
+
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 volume_15min_uid|serial|Unique identifier for table|12412|
