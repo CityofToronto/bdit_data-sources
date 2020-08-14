@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW jchew.blip_really_not_working
+ AS
+ WITH x AS (
+         SELECT aggr_5min.id,
+            aggr_5min.analysis_id,
+            aggr_5min.datetime_bin,
+            aggr_5min.tt,
+            aggr_5min.obs
+           FROM bluetooth.aggr_5min
+          WHERE aggr_5min.datetime_bin > ('now'::text::date - '1 day'::interval)
+        ), z AS (
+         SELECT a.analysis_id,
+            b.device_class_set_name,
+            b.route_name,
+            b.pull_data
+           FROM bluetooth.aggr_5min a
+             LEFT JOIN bluetooth.all_analyses b USING (analysis_id)
+          WHERE a.datetime_bin > ('now'::text::date - '1 day'::interval) AND b.pull_data = true
+          GROUP BY a.analysis_id, b.device_class_set_name, b.route_name, b.pull_data
+         HAVING count(a.datetime_bin) > 0
+        )
+ SELECT c.detector_name
+   FROM x
+     RIGHT JOIN jchew.bt_name_analysis_id c USING (analysis_id)
+  WHERE x.* IS NULL
+EXCEPT
+ SELECT d.detector_name
+   FROM z
+     LEFT JOIN jchew.bt_name_analysis_id d USING (analysis_id, device_class_set_name, route_name)
+  ORDER BY 1;
+
+ALTER TABLE jchew.blip_really_not_working
+    OWNER TO jchew;
+
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE jchew.blip_really_not_working TO bdit_humans;
+GRANT ALL ON TABLE jchew.blip_really_not_working TO jchew;
