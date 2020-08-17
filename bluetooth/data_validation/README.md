@@ -5,7 +5,7 @@ The numbering is to associate them with the results found on [comparison of obs 
 - `bt_ratio` and `he_ratio` show the ratio of dominant number of observations to the total number of observations in both direction. A `0.703` ratio with the bias being `EB` would mean that 70.3% of the total traffic flow in that street is going EB.  
 - `bt_spd` and `he_spd` show the speed difference between EB/WB or NB/SB. The speed difference = EB/NB speed - WB/SB speed. Positive sign indicates traffic travelling in the EB / NB direction is at a higher speed whereas negative sign indicates that traffic travelling in the WB / SB direction is at a higher speed. 
 
-![Top 10 imbalanced routes](img/imbalanced_routes_with_numbering.PNG?raw=true)
+![Top 10 imbalanced routes](directional_bias/img/imbalanced_routes_with_numbering.PNG?raw=true)
 
 **Comparing 1 month of data:**
 
@@ -41,16 +41,16 @@ The numbering is to associate them with the results found on [comparison of obs 
 
 Generally speaking, since there's only one sensor for each intersection tracking traffic flow in all four directions (possible location of sensor shown below), the sensor located at a corner may be inclined to get more results from traffic flow within the range of the antenna which is in a parabolic shape. The sensor may also be installed facing a certain street depending on which route we emphasise more. The particular intersection might also be a cross intersection (four legs) or T-intersection or even has a pork chop island (I'm not making this up). This may also contribute to the directional bias in BT data if there's any. The size of the street may also affect the BT readings.
 
-![sensor location](img/sensor_location.PNG)
+![sensor location](directional_bias/img/sensor_location.PNG)
 
 ### Examples
 
 Comparing BT and HERE ratio for route number 8, Front St between Spadina Ave and University Ave as shown below, we can see that the presence of pork chop island and the location of bluetooth sensor (marked as a red cross) might be the reason why BT sensor is detecting more traffic flow in the EB direction. The WB traffic from University Ave into Front St is about 80 metres away from the sensor which may be harder for the sensor to detect. 
 
-![route 8](img/route_8.PNG)
+![route 8](directional_bias/img/route_8.PNG)
 
 Comparing BT and HERE speed difference for route number 7, Front St between Bathurst St and Spadina Avenue as shown below, we can see that the speed difference in BT data is much greater than that of HERE. Looking into the map where we found out that it is a T-intersection rather than a cross intersection, it might be due to the reason that cars are waiting at the intersection to turn into Front St. 
 
-![route 7](img/route_7.PNG)
+![route 7](directional_bias/img/route_7.PNG)
 
 **Therefore,** there is no one-size-fit-all solution to check if there's actually a directional bias in BT data since the results depends on many different factors such as the location of sensor, type of intersection, width of street or even other factors. However, based on the results above, we can decide if further investigation is required for that route or even tell more about the intersection.
