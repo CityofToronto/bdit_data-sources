@@ -1,15 +1,3 @@
---Find out reference_id for bt sensor that was used in king_pilot (OLD, NOT USED)
-CREATE OR REPLACE VIEW jchew.validation_bluetooth AS
-SELECT X.bt_id, X.analysis_id, Y."referenceId" AS reference_id, X.street_name, X.direction, 
-X.from_intersection AS from_intersection_name, X.to_intersection AS to_intersection_name, 
-Y."fromIntersectionId" AS from_intersection_id, Y."toIntersectionId" AS to_intersection_id, 
-Y."roadClass" AS road_class, Y.direction AS dir, Y."referenceLength" AS reference_length, 
-Y.side, Y.section, Y.score, Y."geometryId"
- FROM king_pilot.bt_segments X
-LEFT JOIN natalie.all_ssbt Y
-ON X.analysis_id = Y.analysis_id
-ORDER BY bt_id
-
 --Find out reference_id for bt sensor that was used in king_pilot (lookup table is more right)
 CREATE OR REPLACE VIEW jchew.validation_bluetooth_geom AS
 SELECT X.bt_id, X.analysis_id, Y."referenceId" AS reference_id, X.street_name, X.direction, 
