@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW bluetooth.blip_not_working_yesterday
+CREATE OR REPLACE VIEW bluetooth.readers_not_working_yesterday
 AS
  WITH x AS (
          SELECT aggr_5min.id,
