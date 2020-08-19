@@ -1,6 +1,4 @@
-CREATE MATERIALIZED VIEW gis.bylaws_speed_limit_layer
-TABLESPACE pg_default
-AS
+CREATE TABLE gis.bylaws_speed_limit_layer AS
  SELECT bylaw.bylaw_id,
     bylaw.lf_name,
     bylaw.geo_id,
@@ -9,10 +7,9 @@ AS
     bylaw.int2,
     bylaw.con,
     bylaw.note,
-        CASE
-            WHEN bylaw.section IS NOT NULL 
-THEN st_linesubstring(cl.geom, lower(bylaw.section)::double precision, upper(bylaw.section)::double precision)
-            ELSE cl.geom
+        CASE WHEN bylaw.section IS NOT NULL 
+        THEN st_linesubstring(cl.geom, lower(bylaw.section)::double precision, upper(bylaw.section)::double precision)
+        ELSE cl.geom
         END AS geom,
     bylaw.section,
     bylaw.oid1_geom,
