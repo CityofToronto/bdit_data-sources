@@ -19,7 +19,7 @@ AS
             bylaws.date_added,
             bylaws.date_repealed
            FROM gis.centreline centre
-             LEFT JOIN bylaws_routing4_dates bylaws USING (geo_id)
+             LEFT JOIN gis.bylaws_routing bylaws USING (geo_id)
           WHERE (bylaws.date_added < now()::date OR bylaws.date_added IS NULL) 
 	 		AND (bylaws.date_repealed > now()::date OR bylaws.date_repealed IS NULL)
 	 		AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'
@@ -119,7 +119,7 @@ AS
                     bylaws.oid2_geom_translated,
                     bylaws.date_added,
                     bylaws.date_repealed
-                   FROM bylaws_routing4_dates bylaws
+                   FROM gis.bylaws_routing bylaws
                   WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)
                   ORDER BY bylaws.date_added DESC NULLS LAST, one.bylaw_id DESC
                  LIMIT 1) b ON b.geo_id = one.geo_id
