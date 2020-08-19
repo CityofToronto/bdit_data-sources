@@ -12,6 +12,10 @@
     - [2c) Special Case 1 - An Intersection and An Offset](#2c-Special-Case-1---An-Intersection-and-An-Offset) 
     - [2d) Special Case 2 - Two Intersections and At Least One Offset](#2d-Special-Case-2---Two-Intersections-and-At-Least-One-Offset)
   - [Confidence output](#Confidence-output)
+- [Creating Bylaws Speed Limit Layer](#Creating-Bylaws-Speed-Limit-Layer)
+  - [Using the Function](#Using-the-Function)
+  - [Match to Centrelines and Categorize Bylaws](#Match-to-Centrelines-and-Categorize-Bylaws)
+  - [Final Clean Up](#Final-Clean-Up)
 - [Quality Control](#Quality-Control) 
   - [pgRouting returns the shortest path but street name different from `highway`](#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway)
   - [Direction stated on bylaws is not taken into account](#direction-stated-on-bylaws-is-not-taken-into-account)
@@ -250,6 +254,114 @@ The image below shows the four possible cases (A1, A2, B1 and B2)
 ## Confidence output
 
 The function outputs a confidence level (`con`), which is defined after the `centreline_segments` variable. This value represents how close the names of the input values are to the intersections they were matched to. Specifically, this value is the sum of the levenshtien distance between the `highway2` value and the street name it matched to and the `btwn1`/`btwn2` value and the street name it matched to. It is the sum of this value for both intersections.
+
+# Creating Bylaws Speed Limit Layer
+
+The function created above was to read bylaws and return the centrelines involved, be it partial or complete. The following steps then have to be done in order to prepare the final bylaws speed limit layer. 
+
+## Using the Function
+ 
+Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_routing.sql).
+
+```sql
+SET client_min_messages = warning; 
+--only show warning messages that I would like to know
+CREATE TABLE gis.bylaws_routing AS
+SELECT law.*, results.*
+FROM jchew.bylaws_to_update law, --bylaws where deleted = false
+LATERAL gis.text_to_centreline(
+law.id,
+law.highway,
+law.between,
+NULL
+) as results
+```
+
+## Match to Centrelines and Categorize Bylaws
+
+The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part two category. This query may seem long but it is technically just handling the bylaws in a few parts. 
+
+1. no_bylaw -> centrelines not involved in bylaws and so the speed limits are set to 50 km/h
+
+2. whole_added -> centrelines involved in bylaws, be it fully or partially
+
+3. part_one_without_bylaw -> parts of centrelines not involved in bylaws if there isn't a next applicable bylaw
+
+4. part_two -> for the partial centrelines, include the next bylaw that applies to it if exists
+
+5. part_two_without_bylaw -> for partial centrelines where next bylaw has been applied to it, the remaining part of the centreline not involved in the bylaws
+
+Some explanation on the long code:
+
+i) [L25](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L25): `AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'` is used here as some geom produced from the function returns "unreadable" geom as the centreline is not involved in the bylaws but is found between the two given intersections. It normally happens for bylaws that are in case 1 or case 2.
+
+ii) [L65](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L65): ` (centreline.fcode_desc::text = ANY (ARRAY['Collector'::character varying, ...` is used here to only include relevant centrelines from `gis.centreline`.
+
+iii) [L84](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
+
+iv) [L123](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the date_added but since not all bylaws have date_added, the id is used instead with bigger id representing more latest bylaw_id.
+
+v) [L135](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference does not work without the st_buffer here.
+
+## Final Clean Up
+
+The final bylaws speed limit layer is a table named `gis.bylaws_speed_limit_layer`. To be honest, the results produced in this step is very similar to the one from the previous step. BUT, the geom in this table is way more accurate as we are cutting the centreline based on the information from section whereas in the previous process, we used buffer to do the slicing. Therefore, even though there are only 303 different rows (only the geom is slightly different) comparing this mat view and the mat view from previous step, we will still use this mat view to ensure that the geom is exactly the same as the geom from `gis.centreline`. The query can be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_speed_limit_layer.sql) where the part mentioned below is the important part.
+
+```sql
+CASE WHEN bylaw.section IS NOT NULL 
+THEN st_linesubstring(cl.geom, lower(bylaw.section)::double precision, upper(bylaw.section)::double precision)
+ELSE cl.geom
+END AS geom,
+```
+
+The output table will look like this
+|bylaw_id|lf_name|geo_id|speed_limit|int1|int2|con|note|geom|section|oid1_geom|oid1_geom_translated|oid2_geom|oid2_geom_translated|date_added|date_repealed|
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+|1805|	Harvie Ave	|2350209|	40	|13461402|	NULL|	Very High (100% match)|	highway2:...| ...	|(0.896704452511841,0.89770788980652]	|...	|...|	NULL|	NULL	|NULL	|NULL|
+|1806|	Harvie Ave|	2350209|	30|	NULL|	NULL|	High (1 character difference)|	highway2:...|...|	[0,0.896704452511841]	|...|	NULL|	...|	...|	NULL|	NULL|
+|NULL	|Harvie Ave|	2350209|	50|	NULL|	NULL|	NULL|	NULL|	...|	(0.89770788980652,1]|	NULL	|NULL|	NULL|	NULL	|NULL	|NULL|
+|3762|	Traymore Cres	|1146129|	40	|13467350	|NULL|	Very High (100% match)|	highway2:...|...|	\[0,0.372174765194242)	|...|	...|	NULL	|NULL	|NULL|	NULL|
+|3763	|Traymore Cres|	1146129	|40|	13467350|	13467108|	Very High (100% match)|	highway2:...| ...|	[0.372174765194242,1]	|...|	...|	...|	NULL|	NULL	|NULL|
+|6583|	Glenvale Blvd|	127|	30|	13455526|	13455120	|Very High (100% match)|	highway2:...| ...|	NULL|	...|NULL|		...|	NULL|	01/15/2019	|NULL|	
+|NULL|Broadway Ave|	129|	50	|	NULL|NULL|NULL|NULL|...|NULL|||||NULL|NULL|								
+
+Look at Harvie Ave (which is considered at part two), the latest bylaw is applied to the centreline partially and the other part of the centreline is either filled with the previous bylaws or the speed limit is just set to 50 if there isn't any previous bylaws applied to that part of the centreline. Traymore Cres is considered as part one where the centreline is partially governed by a bylaw and the other part is governed by an older bylaw. Glencale Blvd is considered as whole_added where the whole centreline is related to a bylaw whereas Broadway Ave is considered as no_bylaw as there is no bylaw governing that centreline.
+
+However, there are centrelines that belong to highway and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
+
+```sql
+--to create a table from the m. view to do the update
+SELECT *
+INTO gis.bylaws_speed_limit_layer_hwy 
+FROM gis.bylaws_speed_limit_layer
+
+--gardiner west of humber river (39 rows)
+UPDATE gis.bylaws_speed_limit_layer_hwy  SET speed_limit = 100 
+WHERE geo_id IN (913014,913062,913089,913152,913159,913172,913187,913249,913264,913354,913364,913367
+,913403,913493,913503,913520,913534,913625,913633,913670,913677,913714,913720,913728
+,913733,913748,913776,913783,913829,913835,913844,913864,913875,20043572,20043579,20043650,20043655,30005878,30005881);
+
+--gardiner east of humber river (128 rows)
+UPDATE gis.bylaws_speed_limit_layer_hwy  SET speed_limit = 90
+WHERE lf_name ILIKE '%F G Gardiner Xy%' 
+AND geo_id NOT IN 
+(913014,913062,913089,913152,913159,913172,913187,913249,913264,913354,913364,913367
+,913403,913493,913503,913520,913534,913625,913633,913670,913677,913714,913720,913728
+,913733,913748,913776,913783,913829,913835,913844,913864,913875,20043572,20043579,20043650,20043655,30005878,30005881,
+14646841,14646863,14646867); --last 3 are ramps in disguise
+
+--highway 2a & 27 (88 rows)
+UPDATE gis.bylaws_speed_limit_layer_hwy SET speed_limit = 80
+WHERE lf_name ILIKE '%highway 2%' ;
+
+--highway 400 series (915 rows)
+UPDATE gis.bylaws_speed_limit_layer_hwy SET speed_limit = 100
+WHERE lf_name ILIKE '%highway 4%' ;
+ 
+--don valley parkway (127 rows)
+UPDATE gis.bylaws_speed_limit_layer_hwy SET speed_limit = 90
+WHERE lf_name ILIKE '%don valley parkway%' ;
+```
 
 # Quality Control
 
