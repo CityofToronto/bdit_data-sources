@@ -17,7 +17,7 @@ AS $BODY$
 BEGIN
 
 _return_geom := ST_LINEMERGE(ST_Union(line_geom)) AS geom FROM 
-jchew.text_to_centreline_updated(0,
+gis.text_to_centreline(0,
 								 _street ,
 								 _from_loc ,
 								 _to_loc);
