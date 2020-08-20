@@ -19,13 +19,18 @@
   - [Using the Function](#Using-the-Function)
   - [Match to Centrelines and Categorize Bylaws](#Match-to-Centrelines-and-Categorize-Bylaws)
   - [Final Clean Up](#Final-Clean-Up)
-- [Quality Control](#Quality-Control) 
+- [Future Enhancement](#Future-Enhancement)
+  - [Wrapper function for `clean_bylaws_text`](#Wrapper-function-for-clean_bylaws_text)
+  - [Include `date_added` and `date_reapealed`](#Include-date_added-and-date_repealed)
+  - [Rename `highway` and `btwn`](#Rename-highway-and-btwn)
+- [Outstanding Work](#Outstanding-Work) 
   - [pgRouting returns the shortest path but street name different from `highway`](#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway)
   - [Direction stated on bylaws is not taken into account](#direction-stated-on-bylaws-is-not-taken-into-account)
   - [Levenshtein distance can fail for streets that have E / W](#levenshtein-distance-can-fail-for-streets-that-have-e--w)
   - [Include former municipality element of the "highway" field](#include-former-municipality-element-of-the-highway-field)
   - [Tackle Cases with "an intersection and two offsets"](#tackle-cases-with-an-intersection-and-two-offsets)
   - [Bylaws mega function does not return readable `geom`](#bylaws-mega-function-does-not-return-readable-geom)
+  - [Tackle Cases with Known Error](#tackle-cases-with-known-error)
   - [Modify `con` (confidence level) definition to better reflect actual situation](#modify-con-confidence-level-definition-to-better-reflect-actual-situation)
 
 ## Intro
@@ -63,10 +68,14 @@ In this case you would input:
 An example query would look like this.
 ```sql
 SELECT * FROM gis.text_to_centreline
-(2958, 'Placentia Boulevard', 'Kenhatch Boulevard and Sandhurst Circle', NULL) 
-
+(2958, 'Placentia Boulevard', 'Kenhatch Boulevard and Sandhurst Circle', NULL) ;
 SELECT * FROM gis.text_to_centreline
-(6393, 'Druid Court', 'Ferris Road and a point 78.19 metres north', NULL) 
+(6393, 'Druid Court', 'Ferris Road and a point 78.19 metres north', NULL) ;
+
+OR 
+
+SELECT (gis.text_to_centreline(2958, 'Placentia Boulevard', 'Kenhatch Boulevard and Sandhurst Circle', NULL)).* ;
+SELECT (gis.text_to_centreline(6393, 'Druid Court', 'Ferris Road and a point 78.19 metres north', NULL)).* ;
 ```
 
 ### Outputs
@@ -109,6 +118,18 @@ The cleaning bylaws text function currently in the main function is [`gis._clean
 
 It is also possible to return multiple variable types without the involvement of a table which is using the `OUT` term when creating the function as shown in [gis.\_clean_bylaws_text()](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-clean_bylaws_text.sql).
 More explanation [here at 41.3.1. Declaring Function Parameters](https://www.postgresql.org/docs/9.6/plpgsql-declarations.html)
+
+Sample query to just clean up the text would look like this:
+```sql
+SELECT (gis._clean_bylaws_text(A.id, A.highway, A.between, NULL)).* FROM (SELECT id, highway, between FROM jchew.bylaws_2020) A  --slower option
+
+SELECT clean_bylaws.* FROM jchew.bylaws_2020, LATERAL gis._clean_bylaws_text(id, highway, between, NULL) AS clean_bylaws --faster option
+
+SELECT clean_bylaws.* FROM jchew.bylaws_2020
+CROSS JOIN LATERAL gis._clean_bylaws_text(id, highway, between, NULL) AS clean_bylaws
+```
+
+Currently, the `gis.clean_bylaws_text` function takes in 4 inputs although normally the bylaws that we received are normally in the `highway & between` format instead of `highway & from & to` format. Therefore, one of the future enhancement can be to produce a [wrapper function](#Wrapper-function-for-clean_bylaws_text) for this function which only takes in 3 inputs.
 
 ## Step 2: Separate into different cases
 
@@ -285,7 +306,7 @@ The function created above was to read bylaws and return the centrelines involve
 
 ## Using the Function
  
-Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_routing.sql).
+Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Quality Control](#Quality-Control) part (iii) .
 
 ```sql
 SET client_min_messages = warning; 
@@ -299,6 +320,14 @@ law.highway,
 law.between,
 NULL
 ) as results
+```
+
+However, the function does not include the `date_added` and `date_repealed` which are essential in the next part. Therefore, in order to get that information, the following query has to be run too. This can be one of the [future enhancement](#Include-date_added-and-date_repealed).
+```sql
+CREATE TABLE gis.bylaws_routing_dates AS
+SELECT result.*, dates.date_added, dates.date_repealed FROM gis.bylaws_routing result
+LEFT JOIN jchew.bylaws_added_repealed_dates dates
+USING (id)
 ```
 
 ## Match to Centrelines and Categorize Bylaws
@@ -389,15 +418,28 @@ UPDATE gis.bylaws_speed_limit_layer_hwy SET speed_limit = 90
 WHERE lf_name ILIKE '%don valley parkway%' ;
 ```
 
-# Quality Control
+# Future Enhancement
+
+The mega function `gis.text_to_centreline` currently works fine on its own. However, there are a few parts of it that can be done better for better clarity and for easier use.
+
+## Wrapper function for `clean_bylaws_text`
+This can also be found in [issue #319](https://github.com/CityofToronto/bdit_data-sources/issues/319). A wrapper function is defined as an endpoint to make a function more user friendly for a specific use case. The current function [`gis._clean_bylaws_text`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-clean_bylaws_text.sql) takes in 4 inputs although most of the time, our inputs are really just 3 inputs with the `btwn` text containing both `frm & to`. Therefore, a cleaner function can be done here. The slightly complicated part is that this function does not output a table or a variable but rather it outputs a record in a format of a pre-defined table.
+
+## Include `date_added` and `date_repealed`
+The function does not output these two information but these two columns are rather important in determining which bylaw is the latest one and which bylaw is the previous one that governs a particular street. This is essential in producing the final bylaws speed limit layer. These two information was found by extracting the information from the `bylaw_no` column from the table provided. The query can be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_added_repealed_dates.sql).
+
+## Rename `highway` and `btwn`
+These two column names are first used because that's how the table provided names them. I personally also find it really confusing as the term `highway` here simply means the street where the bylaw is applied to whereas the term `btwn` means the other two streets that intersect with the street where the bylaw is applied aka the start and end point of the street. Given that these two variables or even certain variation of them are used throughout the whole text_to_centreline function, it can be pretty taxing to rename all of them to sth more sensible.
+
+# Outstanding Work
 
 There is a [Github Issue](https://github.com/CityofToronto/bdit_data-sources/issues/188) on weird bylaws that haven't been matched from Chelsea's work. \
-For example: \
+I summarised them into the 3 points below: \
 i) The streets stated in bylaws are slightly off i.e. they do not intersect or are rather far apart. \
 ii) Directionality matters. Northbound and Southbound route between two intersection are of different centrelines such as the Allen Rd. \
-iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49 distinct id's. This mostly occurs when trying to slice a multilinestring. 
+iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49 distinct id's. This mostly occurs when trying to slice a multilinestring.
 
-Majority of them are also some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below and some idea on how we can tackle them.
+To be honest, since the new process is rather different from her process, it is hard to say if those problems are solved. However, I believe that her outstanding problem is kind of related to some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below, how I found the issue and some idea on how we can tackle them.
 
 ## pgRouting returns the shortest path but street name different from `highway`
 
@@ -408,7 +450,7 @@ This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `bet
 
 ## Direction stated on bylaws is not taken into account
 
-Which is also somehow related to problem (ii) stated above. This can be found at [issue #276](https://github.com/CityofToronto/bdit_data-sources/issues/276). For example: `highway` = 'Black Creek Drive (southbound)' and `between` = 'Eglinton Avenue West and a point 200 metres north of Weston Road'
+Which is also somehow related to problem (ii) stated above. This can be found at [issue #276](https://github.com/CityofToronto/bdit_data-sources/issues/276). For example: `highway` = 'Black Creek Drive (southbound)' and `between` = 'Eglinton Avenue West and a point 200 metres north of Weston Road'. The direction of the `highway` is mentioned in the bylaw but we don't use that and that's sth we can do better. Currently, we just assume that all centrelines found have the specified speed limit for both ways even though it was stated clearly in the bylaws that only southbound traffic needs to conform to that speed limit. I found that there are about 20 bylaws where the direction was explicitly stated.
 
 We might be able to solve it by separating that direction during the cleaning the data process and taking that into account when finding the right centrelines.
 
@@ -428,10 +470,46 @@ This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sou
 This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sources/issues/289). There are about 9 cases of bylaws where there's only one intersection (btwn1 = btwn2) but two offsets (metres_btwn1 IS NOT NULL & metres_btwn2 IS NOT NULL). Examples as shown below.
 ![image](https://user-images.githubusercontent.com/54872846/77802945-60177280-7052-11ea-85de-aae1132d5786.png)
 
-## Bylaws mega function does not return readable `geom`
+## Tackle Cases with Known Error
 
-Which is also somehow related to the problem (iii) above. This can be found at [issue #290](https://github.com/CityofToronto/bdit_data-sources/issues/290). I suspect that there are the presence of multiline strings that are causing this to happen. The highlighted ones are the ones where the `geom` is not viewable and hence `section` columns return NULL. There are also two weird ones where `section` is "[0,)" or "(,1]".
-![image](https://user-images.githubusercontent.com/54872846/77963154-dd3d2480-72aa-11ea-971f-f1cd4165b6d1.png)
+This can be found at [issue #320](https://github.com/CityofToronto/bdit_data-sources/issues/320). When trying to run the mega function on all the bylaws, below are the warning messages I found which may lead us to how we can improve the current function. This problem is related to (iii) above. For my case, I found 31 of them and the log is shown below where most of them are related to the street centrelines being not continuous. 
+
+```sql
+WARNING:  Internal error at case2 for highway2 = Aylesworth Ave , btwn1 = Midland Ave, btwn2 = Phillip Ave : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Cranbrooke Ave , btwn1 = Barse St, btwn2 = Grey Rd : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Firgrove Cres , btwn1 =  Petiole Rd, btwn2 = Jane St : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at mega for bylaw_id = 1632 : 'could not open relation with OID 1406444995' 
+WARNING:  Internal error at case2 for highway2 = Hillhurst Blvd , btwn1 = Avenue Rd, btwn2 = Proudfoot Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Japonica Rd , btwn1 = Crosland Dr, btwn2 = White Abbey Pk : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Lake Shore Blvd E , btwn1 =  Lower Jarvis St, btwn2 = Coxwell Ave : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Lake Shore Blvd W , btwn1 = Humber River, btwn2 = Spadina Ave : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Lonsmount Dr , btwn1 = Bathurst St, btwn2 = Montclair Ave : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Meadowvale Dr , btwn1 = Kenway Rd, btwn2 = Durban Rd : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Moore Ave , btwn1 = Mount Pleasant Rd, btwn2 = Welland Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Queen St E , btwn1 = Victoria Park Ave, btwn2 = Fallingbrook Rd : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Rathburn Rd , btwn1 =  The West Mall, btwn2 = Melbert Rd : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Rexdale Blvd , btwn1 = Highway 427, btwn2 = Islington Ave : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Symes Rd , btwn1 =  Terry Dr, btwn2 = Orman Ave : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Topcliff Ave , btwn1 =  Demaris Ave, btwn2 = Driftwood Ave : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Craven Rd , btwn1 = Gerrard St E, btwn2 = Fairford Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Leslie St , btwn1 = Queen St E, btwn2 = Ivy Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Rhodes Ave , btwn1 = Gerrard St E, btwn2 = Fairford Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Ryerson Ave , btwn1 = Queen St W, btwn2 = Carr St : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Paton Rd , btwn1 = Symington Ave, btwn2 = Rankin Cres : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Roblocke Ave , btwn1 = Irene Ave, btwn2 = Leeds St : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Bond Ave , btwn1 = Leslie St, btwn2 = Scarsdale Rd : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = James St , btwn1 = Queen St W, btwn2 = Albert St : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Hillside Dr , btwn1 =  Gamble Ave, btwn2 = Don Valley Dr : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Redway Rd , btwn2 = Millwood Rd : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Trent Ave , btwn1 = Danforth Ave, btwn2 = Ice Cream Lane : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Meighen Ave , btwn1 =  Medhurst Rd, btwn2 = Victoria Park Ave : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
+WARNING:  Internal error at case2 for highway2 = Merritt Rd , btwn1 =  Valor Blvd, btwn2 = St. Clair Ave E : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = Topham Rd , btwn1 = Tiago Ave, btwn2 = Valor Blvd : 'line_locate_point: 1st arg isn't a line' 
+WARNING:  Internal error at case2 for highway2 = The Queensway , btwn1 =  The West Mall, btwn2 = Kipling Ave : 'line_interpolate_point: 3rd arg isn't within [0,1]' 
+SELECT 26747
+
+Query returned successfully in 1 hr 13 min.
+```
 
 ## Modify `con` (confidence level) definition to better reflect actual situation
 
