@@ -25,7 +25,7 @@ DECLARE
 BEGIN 
 --STEP 1 
 	-- clean bylaws text
-	clean_bylaws := gis.clean_bylaws_text(_bylaw_id, highway, frm, t);
+	clean_bylaws := gis._clean_bylaws_text(_bylaw_id, highway, frm, t);
 
 --STEP 2
 	-- get centrelines geoms
@@ -145,5 +145,5 @@ ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
 COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
     IS '
 The main function for converting text descriptions of locations where bylaws are in effect to centreline segment geometry
-Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/bylaw_text_to_centreline for more information
+Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline for more information
 ';
