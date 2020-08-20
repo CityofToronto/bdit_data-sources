@@ -26,7 +26,7 @@ $BODY$;
 
 ALTER FUNCTION gis.text_to_centreline_geom(text, text, text)
     OWNER TO rdumas;
-GRANT EXECUTE ON gis.text_to_centreline_geom(text, text, text) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline_geom(text, text, text) TO bdit_humans;
 COMMENT ON FUNCTION gis.text_to_centreline_geom(text, text, text) IS 
 'Wrapper function to the text to centreline functions to return only a single line geometry.
 _street is the streetname
