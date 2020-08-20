@@ -9,3 +9,9 @@ law.highway,
 law.between,
 NULL
 ) as results
+
+-- include the date_added and date_repealed information
+CREATE TABLE gis.bylaws_routing_dates AS
+SELECT result.*, dates.date_added, dates.date_repealed FROM gis.bylaws_routing result
+LEFT JOIN jchew.bylaws_added_repealed_dates dates
+USING (id)
