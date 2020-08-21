@@ -95,7 +95,7 @@ The main steps for every type of input (complex or not so complex) are:
 2. Match location text data to intersections
 3. Find lines (centreline segments) between matched intersections using pgRouting
 
-The process will be explained in further detail below. The functions called/variables assigned by these functions can be visualized with the following flow chart ![](jpg/text_to_centreline_updated.jpeg)
+The process will be explained in further detail below. The functions called/variables assigned by these functions can be visualized with the following flow chart ![](jpg/text_to_centreline.jpeg)
 
 ## Step 1: Clean the data
 
