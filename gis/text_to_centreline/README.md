@@ -559,7 +559,59 @@ To be honest, since the new process is rather different from her process, it is 
 ## Where did the bylaws fail
 
 ****WIPPPPP****
+
 I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly did they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). You can also go to [issue #271](https://github.com/CityofToronto/bdit_data-sources/issues/271) to look at some graphics on the failed/problematic bylaws.
+
+Using tables continued from [Usage-case type](#case-type),
+i) `jchew.bylaws_to_route` - Table with bylaws that have to go through the `gis._get_lines_btwn_interxn()` function.
+
+ii) `jchew.bylaws_found_id` - Tables with found id using function `jchew.bylaws_get_id_to_route()` **Add this function into repo**
+
+```sql
+CREATE TABLE jchew.bylaws_to_route AS
+WITH entire AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND TRIM(btwn1) ILIKE '%entire length%' 
+AND btwn2 IS NULL
+),
+normal AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND COALESCE(metres_btwn1, metres_btwn2) IS NULL 
+),
+case1 AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND btwn1 = btwn2 
+AND COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL 
+)
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
+--AND bylaw_id NOT IN (SELECT bylaw_id FROM normal)
+AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
+```
+
+Table `jchew.bylaws_to_route` looks like this. ??
+
+```sql
+CREATE TABLE jchew.bylaws_found_id AS
+WITH selection AS (
+SELECT * FROM jchew.bylaws_to_update
+WHERE id IN (SELECT bylaw_id FROM jchew.bylaws_to_route)
+)
+SELECT law.*, results.*
+FROM selection law,
+LATERAL jchew.bylaws_get_id_to_route(
+law.id,
+law.highway,
+law.between,
+NULL
+) as results
+```
+
+Table `jchew.bylaws_found_id` looks like this. ??
 
 |function|stage |# of bylaws that failed here|
 |--|--|--|
