@@ -6,6 +6,7 @@
   - [Usage](#Usage)
     - [Inputs](#Inputs)
     - [Outputs](#Outputs)
+    - [Case Type](#Case-Type)
 - [How the Function Works](#How-the-Function-Works)
   - [Step 1: Clean the data](#Step-1-Clean-the-data)
   - [Step 2: Separate into different cases](#Step-2-Separate-into-different-cases)
@@ -29,8 +30,8 @@
   - [Levenshtein distance can fail for streets that have E / W](#levenshtein-distance-can-fail-for-streets-that-have-e--w)
   - [Include former municipality element of the "highway" field](#include-former-municipality-element-of-the-highway-field)
   - [Tackle Cases with "an intersection and two offsets"](#tackle-cases-with-an-intersection-and-two-offsets)
-  - [Bylaws mega function does not return readable `geom`](#bylaws-mega-function-does-not-return-readable-geom)
-  - [Tackle Cases with Known Error](#tackle-cases-with-known-error)
+  - [Where did the bylaws fail](#Where-did-the-bylaws-fail)
+  - [Tackle Cases with Known Geom Error](#tackle-cases-with-known-geom-error)
   - [Modify `con` (confidence level) definition to better reflect actual situation](#modify-con-confidence-level-definition-to-better-reflect-actual-situation)
 
 ## Intro
@@ -86,6 +87,70 @@ The function will then returns a table as shown below. I am only showing a singl
 |13443051|	13442736|	104679	|Placentia Blvd|	Very High (100% match)|	highway2:...| ...|NULL|...||...||		43183	|201400|	Collector|
 |13457875|	NULL|	3835696|	Druid Crt|	Very High (100% match)|	highway2: ...|...|	[0,1]|	...|	...|	NULL|	NULL|	21243	|201500|	Local|
 
+### Case Type
+
+The table below summarizes the case type for all bylaws from the table `jchew.bylaws_2020` which is the bylaws information gotten directly via email. Some cleaning also needs to be done to only include bylaws that are not deleted aka need to be processed as well as removing those that are weird (those that got repealed but not deleted & those that were not cleaned nicely.) The first query below is to clean up the bylaws to find out the components/variables from the bylaws text which are to be used in later process and to be used to categorize them into different case type. The second query then only include all bylaws that has to be processed to centrelines. The third query shows how I find out the bylaws that fall into different categories. In short, I will list out the tables used in sequence right here.
+
+i) `jchew.bylaws_2020` - bylaws table provided
+ii) `jchew.bylaws_2020_cleaned` - table that only contains the cleaned text and variables to be used in other process and does not contain other information besides `id`, `highway` and `between` from `jchew.bylaws_2020`
+iii) `jchew.bylaws_to_update` - table that only contains bylaws that have to be updated aka not repealed
+iv) Finding bylaws in different case types.
+
+```sql
+CREATE TABLE jchew.bylaws_2020_cleaned AS 
+SELECT clean_bylaws.* 
+FROM jchew.bylaws_2020, LATERAL gis.clean_bylaws_text(id, highway, between, NULL) AS clean_bylaws
+```
+
+```sql
+CREATE TABLE jchew.bylaws_to_update AS
+SELECT law.*
+FROM jchew.bylaws_2020 law
+WHERE law.deleted = false 
+AND (law.bylaw_no NOT LIKE '%Repealed%' OR law.bylaw_no IS NULL) 
+--to exclude those that got repealed but not deleted (6 of them which are bylaw_id = 4571, 6350, 6477, 6512, 6565, 6566)
+AND law.id IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
+--to exclude those not cleaned nicely (4 of them which are bylaw_id = 2207,2208,2830,6326)
+```
+
+```sql
+WITH entire AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND TRIM(btwn1) ILIKE '%entire length%' 
+AND btwn2 IS NULL
+--ENIRE LENGTH (21 ROWS)
+),
+normal AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND COALESCE(metres_btwn1, metres_btwn2) IS NULL 
+AND TRIM(btwn1) NOT ILIKE '%entire length%'
+--NORMAL CASES (4815 ROWS)
+),
+case1 AS (
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND btwn1 = btwn2 AND COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL 
+--AN INTERXN AND AN OFFSET(68 ROWS)	
+)
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
+AND bylaw_id NOT IN (SELECT bylaw_id FROM normal)
+AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
+--ELSE AKA TWO INTERXN AND AT LEAST ONE OFFSET (259 ROWS)
+```
+
+Out of 5163 bylaws to be processed from `jchew.bylaws_to_update`, the number of bylaws fall into each case type is stated in the table below.
+(4956 bylaws are found from `jchew.bylaws_routing` which means that 207 bylaws are not processed. More on this is discussed in ["Where did the bylaws fail"](#Where-did-the-bylaws-fail) section below). The query used is exactly the same as above except that I only added this one line to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
+
+|case type | number of bylaws | number of bylaws matched | % successfully matched|
+|--|--|--|--|--|
+|entire length|21|20|95%|
+|normal (two intersections without any offset)|4815|4684|97%|
+|case 1 (one intersection and one offset)|68|55|81%|
+|case 2 (two intersections and at least one offset)|259|197|76%|
 
 # How the Function Works
 
@@ -470,7 +535,7 @@ This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sou
 This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sources/issues/289). There are about 9 cases of bylaws where there's only one intersection (btwn1 = btwn2) but two offsets (metres_btwn1 IS NOT NULL & metres_btwn2 IS NOT NULL). Examples as shown below.
 ![image](https://user-images.githubusercontent.com/54872846/77802945-60177280-7052-11ea-85de-aae1132d5786.png)
 
-## Tackle Cases with Known Error
+## Tackle Cases with Known Geom Error
 
 This can be found at [issue #320](https://github.com/CityofToronto/bdit_data-sources/issues/320). When trying to run the mega function on all the bylaws, below are the warning messages I found which may lead us to how we can improve the current function. This problem is related to (iii) above. For my case, I found 31 of them and the log is shown below where most of them are related to the street centrelines being not continuous. 
 
