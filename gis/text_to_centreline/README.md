@@ -25,13 +25,13 @@
   - [Include `date_added` and `date_reapealed`](#Include-date_added-and-date_repealed)
   - [Rename `highway` and `btwn`](#Rename-highway-and-btwn)
 - [Outstanding Work](#Outstanding-Work) 
+  - [Where did the bylaws fail](#where-did-the-bylaws-fail)
+  - [Tackle Cases with Known Geom Error](#tackle-cases-with-known-geom-error)
   - [pgRouting returns the shortest path but street name different from `highway`](#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway)
   - [Direction stated on bylaws is not taken into account](#direction-stated-on-bylaws-is-not-taken-into-account)
   - [Levenshtein distance can fail for streets that have E / W](#levenshtein-distance-can-fail-for-streets-that-have-e--w)
   - [Include former municipality element of the "highway" field](#include-former-municipality-element-of-the-highway-field)
   - [Tackle Cases with "an intersection and two offsets"](#tackle-cases-with-an-intersection-and-two-offsets)
-  - [Where did the bylaws fail](#Where-did-the-bylaws-fail)
-  - [Tackle Cases with Known Geom Error](#tackle-cases-with-known-geom-error)
   - [Modify `con` (confidence level) definition to better reflect actual situation](#modify-con-confidence-level-definition-to-better-reflect-actual-situation)
 
 ## Intro
@@ -223,7 +223,8 @@ For example,
 ```sql
 SELECT * FROM gis.text_to_centreline(3128, 'Richland Crescent', 'Entire Length', NULL)
 ```
-and the result looks like this 
+and the result looks like this
+
 ![](jpg/entire_length.JPG)
 
 
@@ -248,6 +249,7 @@ For example,
 SELECT * FROM gis.text_to_centreline(6974, 'Foxridge Drive', 'Birchmount Road and Kennedy Road', NULL)
 ```
 and the result looks like this
+
 ![](jpg/normal_case.JPG)
 
 
@@ -292,6 +294,7 @@ For example,
 SELECT * FROM gis.text_to_centreline(6440, 'Ravenwood Place', 'Ferris Road and a point 64.11 metres southwest', NULL)
 ```
 and the result looks like this
+
 ![](jpg/case1.JPG)
 
 ### 2d) Special Case 2 - Two Intersections and At Least One Offset
@@ -344,6 +347,7 @@ SELECT * FROM gis.text_to_centreline
 (6668, 'Brimorton Drive', 'A point 101 metres west of Amberjack Boulevard and a point 103 metres east of Dolly Varden Boulevard', NULL)
 ```
 and the result looks like this
+
 ![](jpg/case2.JPG)
 
 #### The logic behind dealing with geom to be trimmed
@@ -552,38 +556,21 @@ iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49
 
 To be honest, since the new process is rather different from her process, it is hard to say if those problems are solved. However, I believe that her outstanding problem is kind of related to some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below, how I found the issue and some idea on how we can tackle them.
 
-## pgRouting returns the shortest path but street name different from `highway`
-
-This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
-This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, only 15 bylaws fail.
-
-![image](https://user-images.githubusercontent.com/54872846/76124099-f7475800-5fc7-11ea-865e-963edefa43be.png)
-
-## Direction stated on bylaws is not taken into account
-
-Which is also somehow related to problem (ii) stated above. This can be found at [issue #276](https://github.com/CityofToronto/bdit_data-sources/issues/276). For example: `highway` = 'Black Creek Drive (southbound)' and `between` = 'Eglinton Avenue West and a point 200 metres north of Weston Road'. The direction of the `highway` is mentioned in the bylaw but we don't use that and that's sth we can do better. Currently, we just assume that all centrelines found have the specified speed limit for both ways even though it was stated clearly in the bylaws that only southbound traffic needs to conform to that speed limit. I found that there are about 20 bylaws where the direction was explicitly stated.
-
-We might be able to solve it by separating that direction during the cleaning the data process and taking that into account when finding the right centrelines.
-
-## Levenshtein distance can fail for streets that have E / W
-
-This can be found at [issue #279](https://github.com/CityofToronto/bdit_data-sources/issues/279). For example, bylaw_id = 6667, highway = 'Welland Ave' and between = 'Lawrence Ave W and Douglas Avenue'. Since changing 'Lawrence Ave W' to 'Lawrence Ave E' only takes 1 step whereas changing 'Welland Ave' to 'Welland Rd' takes 3 steps, the intersection point with the less levenshtein distance is chosen instead, resulting in the segments of road that does not reflect the bylaws text.
-
-I also found that when there are three street names in the intersec5 column and two of the street names are almost the same with the slight change of E to W or vice versa (which happen particularly frequently for Yonge St like Adelaide St E / Yonge St / Adelaide St W, King St E / Yonge St / King St W, Bloor St E / Yonge St / Bloor St W etc), the intersection points found is weird because of the reason above.
-
-## Include former municipality element of the "highway" field
-
-This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched. Examples of the municipality is shown below.
-![image](https://user-images.githubusercontent.com/54872846/78183571-21106500-7436-11ea-8b34-017c73736b48.png)
-
-## Tackle Cases with "an intersection and two offsets"
-
-This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sources/issues/289). There are about 9 cases of bylaws where there's only one intersection (btwn1 = btwn2) but two offsets (metres_btwn1 IS NOT NULL & metres_btwn2 IS NOT NULL). Examples as shown below.
-![image](https://user-images.githubusercontent.com/54872846/77802945-60177280-7052-11ea-85de-aae1132d5786.png)
-
 ## Where did the bylaws fail
 
+****WIPPPPP****
+I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly did they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). You can also go to [issue #271](https://github.com/CityofToronto/bdit_data-sources/issues/271) to look at some graphics on the failed/problematic bylaws.
 
+|function|stage |# of bylaws that failed here|
+|--|--|--|
+|`gis._clean_bylaws_text`|the bylaws text could not be cleaned due to the way they are phrased |4|
+|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
+|`gis._get_intersection_id`|failed at first intersection where no int_id is not found for the first intersection||
+|`gis._get_intersection_id`|failed at both intersections where no int_id is not found for both intersections||
+|`gis._get_intersection_id_highway_equals_btwn`|no int_id can be found for intersection where `highway` equals `btwn`||
+|`gis._get_lines_btwn_intexn`|the intersections could not be routed||
+|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result||
+|`gis._centreline_case2`|bylaws categorized as case 2 did not return any result||
 
 ## Tackle Cases with Known Geom Error
 
@@ -625,6 +612,38 @@ SELECT 26747
 
 Query returned successfully in 1 hr 13 min.
 ```
+
+## pgRouting returns the shortest path but street name different from `highway`
+
+This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
+This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, only 15 bylaws fail.
+
+![image](https://user-images.githubusercontent.com/54872846/76124099-f7475800-5fc7-11ea-865e-963edefa43be.png)
+
+## Direction stated on bylaws is not taken into account
+
+Which is also somehow related to problem (ii) stated above. This can be found at [issue #276](https://github.com/CityofToronto/bdit_data-sources/issues/276). For example: `highway` = 'Black Creek Drive (southbound)' and `between` = 'Eglinton Avenue West and a point 200 metres north of Weston Road'. The direction of the `highway` is mentioned in the bylaw but we don't use that and that's sth we can do better. Currently, we just assume that all centrelines found have the specified speed limit for both ways even though it was stated clearly in the bylaws that only southbound traffic needs to conform to that speed limit. I found that there are about 20 bylaws where the direction was explicitly stated.
+
+We might be able to solve it by separating that direction during the cleaning the data process and taking that into account when finding the right centrelines.
+
+## Levenshtein distance can fail for streets that have E / W
+
+This can be found at [issue #279](https://github.com/CityofToronto/bdit_data-sources/issues/279). For example, bylaw_id = 6667, highway = 'Welland Ave' and between = 'Lawrence Ave W and Douglas Avenue'. Since changing 'Lawrence Ave W' to 'Lawrence Ave E' only takes 1 step whereas changing 'Welland Ave' to 'Welland Rd' takes 3 steps, the intersection point with the less levenshtein distance is chosen instead, resulting in the segments of road that does not reflect the bylaws text.
+
+I also found that when there are three street names in the intersec5 column and two of the street names are almost the same with the slight change of E to W or vice versa (which happen particularly frequently for Yonge St like Adelaide St E / Yonge St / Adelaide St W, King St E / Yonge St / King St W, Bloor St E / Yonge St / Bloor St W etc), the intersection points found is weird because of the reason above.
+
+## Include former municipality element of the "highway" field
+
+This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched. Examples of the municipality is shown below.
+![image](https://user-images.githubusercontent.com/54872846/78183571-21106500-7436-11ea-8b34-017c73736b48.png)
+
+This is a problem because for `bylaw_id` = 6645 where `highway` = "McGillivray Ave" and `between` = "The west end of McGillivray Ave and Kelso Ave", it's routed as shown below and that is not right. Blue line represents the routed centreline where highlighted in yellow is the road segment we want and the two black crosses are the two intersections mentioned in the bylaw text. This happen because there are two 'McGillivray Ave' in Toronto (one is highlighted in maroon and the other is the black cross on the left) and they both are cul de sac. 
+![image](https://user-images.githubusercontent.com/54872846/75820184-e4374c80-5d69-11ea-8360-2e1725106ef9.png)
+
+## Tackle Cases with "an intersection and two offsets"
+
+This can be found at [issue #289](https://github.com/CityofToronto/bdit_data-sources/issues/289). There are about 9 cases of bylaws where there's only one intersection (btwn1 = btwn2) but two offsets (metres_btwn1 IS NOT NULL & metres_btwn2 IS NOT NULL). Examples as shown below.
+![image](https://user-images.githubusercontent.com/54872846/77802945-60177280-7052-11ea-85de-aae1132d5786.png)
 
 ## Modify `con` (confidence level) definition to better reflect actual situation
 
