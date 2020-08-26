@@ -123,7 +123,7 @@ WHERE law.deleted = false
 AND (law.bylaw_no NOT LIKE '%Repealed%' OR law.bylaw_no IS NULL) 
 --to exclude those that got repealed but not deleted (6 of them which are bylaw_id = 4571, 6350, 6477, 6512, 6565, 6566)
 AND law.id IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
---to exclude those not cleaned nicely (3 of them which are bylaw_id = 2207,2208,~~2830~~,6326)
+--to exclude those not cleaned nicely (4 of them which are bylaw_id = 2207,2208,2830?,6326)
 ```
 
 Table `jchew.bylaws_to_update` has the same format and columns as `jchew.bylaws_2020`.
@@ -561,11 +561,13 @@ To be honest, since the new process is rather different from her process, it is 
 I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly do they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). In order to know exactly at which stage did they fail, I have to separate out the steps into different parts, namely finding int_id, finding routes, trimming centrelines and see where they fail.
 
 Using tables continued from [Usage-case type](#case-type),
-i) `jchew.bylaws_to_route` - Table with bylaws that have to be routed.
+i) `jchew.bylaws_to_route` - Table with bylaws that need to be routed.
 
 ii) `jchew.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql) 
 
 iii) `jchew.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_route_id.sql)
+
+*Note that the code in gis.bylaws_get_id_to_route() and gis.bylaws_route_id() are pretty much the same as that in gis._get_intersection_geom and gis._get_lines_btwn_interxn except that the output is slightly modified to enable further investigation on the failed bylaws.
 
 ```sql
 CREATE TABLE jchew.bylaws_to_route AS
@@ -628,7 +630,7 @@ Table `jchew.bylaws_found_routes` contains 26646 rows (as a bylaw can return mul
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 |Warden Avenue|A point 305 metres north of Mack Avenue and St. Clair Avenue East|highway2: Warden Ave btwn1:  Mack Ave btwn2: St. Clair Ave E metres_btwn1: 305 metres_btwn2:  direction_btwn1: north direction_btwn2:|6872|13457981|13455952|...|1|112744|Warden Ave|21501|201300|Minor Arterial|
 
-Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The failed reason correspond to this csv dump [here](**********) (also in table `jchew.failed_bylaws`) which contains all bylaws that failed to be converted into centrelines.
+Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/csv/failed_bylaws.csv) (also in table `jchew.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
 
 |failed_reason|function|stage |# of bylaws that failed here|
 |--|--|--|--|
@@ -636,12 +638,14 @@ Below shows a table on exactly how many bylaws failed at different stage. Please
 |2|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
 |3|`gis._get_intersection_geom`|no int_id is not found for the second intersection only|83|
 |4|`gis._get_intersection_geom`|no int_id is not found for both intersections|67|
-|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|81|
+|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|26|
 |6|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result|0|
 |7|`gis._centreline_case2`|no results for this case2 due to 1st argument isnt a line|8|
 |8|`gis._centreline_case2`|no results for this case2 due to 2nd argument isnt within \[0,1]|10|
 |9|`gis._centreline_case2`|no results for this case2 due to 3rd argument isnt within \[0,1]|12|
 |10|`gis.text_to_centreline`|bylaws failed at the final stage|1|
+
+**Note:** The fact that failed_reason = 6 has 0 failed bylaws does not mean that no case1 failed. It just means that case1 failed at other stage before even reaching the function `gis._centreline_case1()`.
 
 Query used to get the above results are
 ```sql
@@ -668,38 +672,19 @@ WHERE int1 IS NULL
 AND int2 IS NULL
 
 --failed_reason = 5
+--HOWEVER, the following query returns 81 rows, though 55 of them are actually routed but just do not have int1 or int2 aka they are case1
+--THEREFORE, 81 - 55 = 26 cases that failed to be routed
 SELECT * FROM jchew.bylaws_found_id
 WHERE int1 IS NOT NULL
 AND int2 IS NOT NULL
 AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
-
-WITH no_id AS (
---failed_reason = 3 or 4 or 5
---FOUND 103 rows ONLY int2 NULL WHEREAS 96 rows both int1 & int2 NULL
-SELECT * FROM jchew.bylaws_found_id
-WHERE int1 IS NULL
-OR int2 IS NULL
-),
-not_routed AS (
---failed_reason = 6
---FOUND 84 THAT ARE NOT ROUTED
-SELECT * FROM jchew.bylaws_found_id
-WHERE int1 IS NOT NULL
-AND int2 IS NOT NULL
-AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
-	)
---to find how many failed elsewhere
-SELECT * FROM jchew.bylaws_to_update
-WHERE id NOT IN (SELECT id FROM gis.bylaws_routing) 
-AND id NOT IN (SELECT id FROM no_id)
-AND id NOT IN (SELECT id FROM not_routed)
 ```
 
-For failed_reason = 7 or 8 or 9, look at the message returned in the [next section](#Tackle-cases-with-known-geom-error)
+For failed_reason = 6 or 7 or 8 or 9 or 10, look at the message returned in the [next section](#Tackle-cases-with-known-geom-error).
 
 ## Tackle Cases with Known Geom Error
 
-This can be found at [issue #320](https://github.com/CityofToronto/bdit_data-sources/issues/320). When trying to run the mega function on all the bylaws, below are the warning messages I found which may lead us to how we can improve the current function. This problem is related to (iii) above. For my case, I found 31 of them and the log is shown below where most of them are related to the street centrelines being not continuous. 
+This can be found at [issue #320](https://github.com/CityofToronto/bdit_data-sources/issues/320). When trying to run the mega function on all the bylaws, below are the warning messages I found which may lead us to how we can improve the current function. This problem is related to (iii) above under [Outstanding Work](#outstanding-work). For my case, I found 31 of them and the log is shown below where most of them are related to the street centrelines being not continuous. 
 
 ```sql
 WARNING:  Internal error at case2 for highway2 = Aylesworth Ave , btwn1 = Midland Ave, btwn2 = Phillip Ave : 'line_interpolate_point: 2nd arg isn't within [0,1]' 
@@ -738,7 +723,7 @@ SELECT 26747
 Query returned successfully in 1 hr 13 min.
 ```
 
-To summarize a bit, the errors and bylaw_id found are as followed.
+The table below summarizes the error messages above.
 
 |Error|# of bylaws|bylaw_id involved|
 |--|--|--|
