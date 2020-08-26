@@ -123,7 +123,7 @@ WHERE law.deleted = false
 AND (law.bylaw_no NOT LIKE '%Repealed%' OR law.bylaw_no IS NULL) 
 --to exclude those that got repealed but not deleted (6 of them which are bylaw_id = 4571, 6350, 6477, 6512, 6565, 6566)
 AND law.id IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
---to exclude those not cleaned nicely (4 of them which are bylaw_id = 2207,2208,2830,6326)
+--to exclude those not cleaned nicely (3 of them which are bylaw_id = 2207,2208,~~2830~~,6326)
 ```
 
 Table `jchew.bylaws_to_update` has the same format and columns as `jchew.bylaws_2020`.
@@ -558,14 +558,14 @@ To be honest, since the new process is rather different from her process, it is 
 
 ## Where did the bylaws fail
 
-****WIPPPPP****
-
-I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly did they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). You can also go to [issue #271](https://github.com/CityofToronto/bdit_data-sources/issues/271) to look at some graphics on the failed/problematic bylaws.
+I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly do they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). In order to know exactly at which stage did they fail, I have to separate out the steps into different parts, namely finding int_id, finding routes, trimming centrelines and see where they fail.
 
 Using tables continued from [Usage-case type](#case-type),
-i) `jchew.bylaws_to_route` - Table with bylaws that have to go through the `gis._get_lines_btwn_interxn()` function.
+i) `jchew.bylaws_to_route` - Table with bylaws that have to be routed.
 
-ii) `jchew.bylaws_found_id` - Tables with found id using function `jchew.bylaws_get_id_to_route()` **Add this function into repo**
+ii) `jchew.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql) 
+
+iii) `jchew.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_route_id.sql)
 
 ```sql
 CREATE TABLE jchew.bylaws_to_route AS
@@ -574,26 +574,16 @@ SELECT * FROM jchew.bylaws_2020_cleaned
 WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
 AND TRIM(btwn1) ILIKE '%entire length%' 
 AND btwn2 IS NULL
-),
-normal AS (
-SELECT * FROM jchew.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
-AND COALESCE(metres_btwn1, metres_btwn2) IS NULL 
-),
-case1 AS (
-SELECT * FROM jchew.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
-AND btwn1 = btwn2 
-AND COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL 
 )
 SELECT * FROM jchew.bylaws_2020_cleaned
 WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
 AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
---AND bylaw_id NOT IN (SELECT bylaw_id FROM normal)
-AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
 ```
 
-Table `jchew.bylaws_to_route` looks like this. ??
+Table `jchew.bylaws_to_route` contains 5142 rows of bylaws and looks like this. 
+|bylaw_id|highway2|btwn1|direction_btwn1|metres_btwn1|btwn2|direction_btwn2|metres_btwn2|btwn2_orig|btwn2_check|
+|--|--|--|--|--|--|--|--|--|--|
+|6872|Warden Ave|Mack Ave|north|305|St. Clair Ave E|||St. Clair Ave E|St. Clair Ave E|
 
 ```sql
 CREATE TABLE jchew.bylaws_found_id AS
@@ -603,7 +593,7 @@ WHERE id IN (SELECT bylaw_id FROM jchew.bylaws_to_route)
 )
 SELECT law.*, results.*
 FROM selection law,
-LATERAL jchew.bylaws_get_id_to_route(
+LATERAL gis.bylaws_get_id_to_route(
 law.id,
 law.highway,
 law.between,
@@ -611,18 +601,101 @@ NULL
 ) as results
 ```
 
-Table `jchew.bylaws_found_id` looks like this. ??
+Table `jchew.bylaws_found_id` contains 5142 rows and looks like this. 
+|id|city|deleted|bylaw_no|chapter|schedule|schedule_name|highway|between|speed_limit_km_per_h|bylaw_id|note|highway2|int1|int2|oid1_geom|oid1_geom_translated|oid2_geom|oid2_geom_translated|lev_sum1|lev_sum2|
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+|6872|TO|false|\[Added 2019-07-18 by By-law 1201-2019]|950|35|Speed Limits on Public Highways|Warden Avenue|A point 305 metres north of Mack Avenue and St. Clair Avenue East|60|6872|highway2: Warden Ave btwn1:  Mack Ave btwn2: St. Clair Ave E metres_btwn1: 305 metres_btwn2:  direction_btwn1: north direction_btwn2: |Warden Ave|13457981|13455952|...|...|...||0|1|
 
-|function|stage |# of bylaws that failed here|
-|--|--|--|
-|`gis._clean_bylaws_text`|the bylaws text could not be cleaned due to the way they are phrased |4|
-|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
-|`gis._get_intersection_id`|failed at first intersection where no int_id is not found for the first intersection||
-|`gis._get_intersection_id`|failed at both intersections where no int_id is not found for both intersections||
-|`gis._get_intersection_id_highway_equals_btwn`|no int_id can be found for intersection where `highway` equals `btwn`||
-|`gis._get_lines_btwn_intexn`|the intersections could not be routed||
-|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result||
-|`gis._centreline_case2`|bylaws categorized as case 2 did not return any result||
+```sql
+CREATE TABLE jchew.bylaws_found_routes AS 
+WITH select_id AS (
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NOT NULL
+AND int2 IS NOT NULL
+)
+SELECT ids.highway, ids.between, ids.note, rout.*
+FROM select_id ids,
+LATERAL gis.bylaws_route_id(
+ids.id,
+ids.highway2,
+ids.int1,
+ids.int2
+) AS rout
+```
+
+Table `jchew.bylaws_found_routes` contains 26646 rows (as a bylaw can return multiple centrelines) and looks like this. 
+|highway|between|note|bylaw_id|int_start|int_end|line_geom|seq|geo_id|lf_name|objectid|fcode|fode_desc|
+|--|--|--|--|--|--|--|--|--|--|--|--|--|
+|Warden Avenue|A point 305 metres north of Mack Avenue and St. Clair Avenue East|highway2: Warden Ave btwn1:  Mack Ave btwn2: St. Clair Ave E metres_btwn1: 305 metres_btwn2:  direction_btwn1: north direction_btwn2:|6872|13457981|13455952|...|1|112744|Warden Ave|21501|201300|Minor Arterial|
+
+Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The failed reason correspond to this csv dump [here](**********) (also in table `jchew.failed_bylaws`) which contains all bylaws that failed to be converted into centrelines.
+
+|failed_reason|function|stage |# of bylaws that failed here|
+|--|--|--|--|
+|1|`gis._clean_bylaws_text`|bylaws text could not be cleaned due to the way they are phrased |3|
+|2|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
+|3|`gis._get_intersection_geom`|no int_id is not found for the second intersection only|83|
+|4|`gis._get_intersection_geom`|no int_id is not found for both intersections|67|
+|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|81|
+|6|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result|0|
+|7|`gis._centreline_case2`|no results for this case2 due to 1st argument isnt a line|8|
+|8|`gis._centreline_case2`|no results for this case2 due to 2nd argument isnt within \[0,1]|10|
+|9|`gis._centreline_case2`|no results for this case2 due to 3rd argument isnt within \[0,1]|12|
+|10|`gis.text_to_centreline`|bylaws failed at the final stage|1|
+
+Query used to get the above results are
+```sql
+--failed_reason = 1
+SELECT * FROM jchew.bylaws_2020
+WHERE id NOT IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
+AND deleted = FALSE
+
+--failed_reason = 2
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND TRIM(btwn1) ILIKE '%entire length%' 
+AND btwn2 IS NULL
+AND bylaw_id NOT IN (SELECT id FROM gis.bylaws_routing)
+
+--failed_reason = 3
+SELECT * FROM jchew.bylaws_found_id
+WHERE int2 IS NULL
+AND int1 IS NOT NULL
+
+--failed_reason = 4
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NULL
+AND int2 IS NULL
+
+--failed_reason = 5
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NOT NULL
+AND int2 IS NOT NULL
+AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
+
+WITH no_id AS (
+--failed_reason = 3 or 4 or 5
+--FOUND 103 rows ONLY int2 NULL WHEREAS 96 rows both int1 & int2 NULL
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NULL
+OR int2 IS NULL
+),
+not_routed AS (
+--failed_reason = 6
+--FOUND 84 THAT ARE NOT ROUTED
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NOT NULL
+AND int2 IS NOT NULL
+AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
+	)
+--to find how many failed elsewhere
+SELECT * FROM jchew.bylaws_to_update
+WHERE id NOT IN (SELECT id FROM gis.bylaws_routing) 
+AND id NOT IN (SELECT id FROM no_id)
+AND id NOT IN (SELECT id FROM not_routed)
+```
+
+For failed_reason = 7 or 8 or 9, look at the message returned in the [next section](#Tackle-cases-with-known-geom-error)
 
 ## Tackle Cases with Known Geom Error
 
@@ -664,6 +737,15 @@ SELECT 26747
 
 Query returned successfully in 1 hr 13 min.
 ```
+
+To summarize a bit, the errors and bylaw_id found are as followed.
+
+|Error|# of bylaws|bylaw_id involved|
+|--|--|--|
+|'line_locate_point: 1st arg isn't a line'|8|1400, 2204, 2205, 3118, 3659, 5925, 6429, 6451|
+|'line_interpolate_point: 2nd arg isn't within \[0,1]'|10|180, 920, 2354, 2541, 3037, 3746, 5309, 5909, 6278, 6428|
+|'line_interpolate_point: 3rd arg isn't within \[0,1]'|12|1898, 2050, 2633, 3077, 4773, 4802, 4821, 4941, 5375, 5485, 5674, 6869|
+|Internal error at mega for bylaw_id = 1632 : 'could not open relation with OID 1406444995' |1|1632|
 
 ## pgRouting returns the shortest path but street name different from `highway`
 
