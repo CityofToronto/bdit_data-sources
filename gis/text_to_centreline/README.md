@@ -554,7 +554,7 @@ i) The streets stated in bylaws are slightly off i.e. they do not intersect or a
 ii) Directionality matters. Northbound and Southbound route between two intersection are of different centrelines such as the Allen Rd. \
 iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49 distinct id's. This mostly occurs when trying to slice a multilinestring.
 
-To be honest, since the new process is rather different from her process, it is hard to say if those problems are solved. However, I believe that her outstanding problem is kind of related to some issues that I have encountered with my new processes but have not been solved yet. I will list down the issue below, how I found the issue and some idea on how we can tackle them.
+To be honest, since the new process is rather different from Chelsea's process, it is hard to say if those problems are solved. However, her outstanding problem is kind of related to some issues that have been encountered with the new processes but may not have been solved yet. The issues are listed below, followed by how they are found and how one could tackle them.
 
 ## Where did the bylaws fail
 
