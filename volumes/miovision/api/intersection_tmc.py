@@ -23,8 +23,25 @@ class TimeoutException(Exception):
 class NotFoundError(Exception):
     """Exception for a 404 error."""
 
-logging.basicConfig(format='%(lineno)d    	%(levelname)s    %(message)s', level=logging.INFO)
-logging.debug('Start')
+def logger():
+    logger = logging.getLogger(__name__)	
+    logger.setLevel(logging.DEBUG)	
+    formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')	
+    file_handler = logging.FileHandler('logging.log')	
+    file_handler.setFormatter(formatter)	
+    logger.handlers.clear()	
+    stream_handler=logging.StreamHandler()	
+    stream_handler.setFormatter(formatter)	
+    logger.addHandler(file_handler)	
+    logger.addHandler(stream_handler)	
+
+    with open('logging.log', 'w'):	
+        pass	
+    return logger	
+
+logger=logger()	
+logger.debug('Start')
+
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
@@ -288,10 +305,10 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     while True:
         table=[]
         
-        for intersection in intersection_list:
-            intersection_uid=intersection[0]
-            intersection_id1=intersection[1]
-            intersection_name=intersection[2]
+        for interxn in intersection_list:
+            intersection_uid=interxn[0]
+            intersection_id1=interxn[1]
+            intersection_name=interxn[2]
             logging.info(intersection_name+'     '+str(start_time))
             for attempt in range(3):
                 try:
