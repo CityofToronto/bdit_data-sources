@@ -43,7 +43,7 @@
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections_updated.geojson)
+You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections.geojson)
 
 ## 2. Table Structure
 
@@ -137,10 +137,14 @@ volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_
 
 Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018` or `volumes_2019` or `volumes_2020` depending on the year of data.
 
-- *Unique constraint* was added to `miovision_api.volumes` table as well as the children tables using 
+- *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted.
 ```
 ALTER TABLE miovision_api.volumes ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+ALTER TABLE miovision_api.volumes_2018 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+ALTER TABLE miovision_api.volumes_2019 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+ALTER TABLE miovision_api.volumes_2020 ADD UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 ```
+
 - **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
 
 ### Aggregated Data
@@ -361,7 +365,7 @@ There have been some changes to the Miovision cameras and below documents on the
 
 7) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
-Would like to just include the exact last datetime_bin of those decommissioned camera for future references.
+Update the below table of when intersections were decommissioned for future references.
 
 |intersection_uid | last datetime_bin|
 |-----------------|------------------|
