@@ -152,10 +152,12 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
 |path|path|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
-|pull|string|Specifies if the script should only pull data and not process the data|Yes|Processes data in PostgreSQL|
+|pull|BOOLEAN flag|Data processing and gap finding will be skipped|--pull|false|
 |dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
 
 `python intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull=Yes --dupes` is an example with all the options specified.
+
+If `--pull` is specified in the command line (which is equivalent to setting it to True), the script will skip the data processing and gaps finding process. This is useful when we want to just insert data into the volumes table and check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
 
 If `--dupes` is specified in the command line (which is equivalent to setting it to True), the script will fail if duplicates are detected and exit with an exit code of 2. This is set up particularly for Airflow to fail if duplicates are detected so that we would be notified of the issue via Slack message. More can be found in the [Airflow](#airflow) section.\
 If `--dupes` is false, we would only get a warning message but the script will continue to run.
