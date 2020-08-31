@@ -65,7 +65,7 @@ def cli():
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
-@click.option('--intersection' , default=0, help='enter the intersection_uid of the intersection')
+@click.option('--intersection' , default=[], multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , default=None, help='enter 1 to not process the data')
 @click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
@@ -213,6 +213,24 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 def process_data(conn, pull, start_time, end_iteration_time):
+    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
+    if pull is None:
+        with conn:
+            with conn.cursor() as cur: 
+                update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
+                cur.execute(update_gaps)
+
+        with conn:
+            with conn.cursor() as cur: 
+                invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+                cur.execute(invalid_gaps, time_period)
+                logging.info(conn.notices[-1])
+        logging.info('Updated gapsize table and found gaps exceeding allowable size') 
+
+    else:
+        logging.info('Gaps Finding Skipped')
+
+    # Aggregate to 15min tmc / 15min
     time_period = (start_time, end_iteration_time)
     if pull is None:
         try:
@@ -264,32 +282,19 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             cur.execute(invalid_movements, time_period)
             logging.info(conn.notices[-1]) 
 
-
-    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-    with conn:
-        with conn.cursor() as cur: 
-            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
-            cur.execute(update_gaps)
-
-    with conn:
-        with conn.cursor() as cur: 
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
-            cur.execute(invalid_gaps, time_period)
-            logging.info(conn.notices[-1])
-    logging.info('Updated gapsize table and found gaps exceeding allowable size') 
-
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
 
-    if intersection > 0:
+    if intersection != []:
         with conn.cursor() as cur: 
+            wanted = tuple(intersection) # convert list into tuple
             string= '''SELECT * FROM miovision_api.intersections
-                        WHERE intersection_uid = %s
+                        WHERE intersection_uid IN %s
                         AND start_time::date > date_installed 
                         AND date_decommissioned IS NULL '''
-            cur.execute(string, (intersection,))
+            cur.execute(string, wanted)
 
             intersection_list=cur.fetchall()
             logging.debug(intersection_list)
