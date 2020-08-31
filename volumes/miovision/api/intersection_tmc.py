@@ -66,7 +66,7 @@ def cli():
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , default=[], multiple=True, help='enter the intersection_uid of the intersection')
-@click.option('--pull' , default=None, help='enter 1 to not process the data')
+@click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
 @click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
 def run_api(start_date, end_date, path, intersection, pull, dupes):
@@ -214,7 +214,7 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
 
 def process_data(conn, pull, start_time, end_iteration_time):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-    if pull is None:
+    if not pull:
         with conn:
             with conn.cursor() as cur: 
                 update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
@@ -232,7 +232,7 @@ def process_data(conn, pull, start_time, end_iteration_time):
 
     # Aggregate to 15min tmc / 15min
     time_period = (start_time, end_iteration_time)
-    if pull is None:
+    if not pull:
         try:
             with conn:
                 with conn.cursor() as cur:
