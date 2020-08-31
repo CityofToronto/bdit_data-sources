@@ -322,7 +322,7 @@ The following process is to determine if a Miovision camera is still working. It
 
 There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.**
 
-1) Download the table `miovision_api.intersections` into a csv file and manually add the new intersections information into the table (coordinates, px, int_id, geom, which leg_restricted). 
+1) Download the table `miovision_api.intersections` into a csv file and manually add the new intersections information into the table (coordinates, px, int_id, geom, which leg_restricted) using the steps below. Once everything is done, truncate the current table and import the new csv file .
 
 	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](http://beta.docs.api.miovision.com/#!/Intersections/get_intersections). `date_installed` and `date_decommissioned` can be found by finding the first / last datetime_bin for that intersection_uid from that website. The last date for the old location can also be found from table `miovision_api.volumes`. 
 	
@@ -334,36 +334,31 @@ There have been some changes to the Miovision cameras and below documents on the
 
 2) Now that the updated table of `miovision_api.intersections` is ready, we have to update the table `miovision_api.intersection_movements`. We need to find out all valid movements for the new intersections from the data but we dont have that yet, so the following has to be done.
 
-	a) Fist, we have to create a couple of dummy tables (`volumes_test`, `volumes_15min_tmc_test`, `volumes_15min_test`) & sequences (`volumes_volume_uid_test_seq`, `volumes_15min_tmc_volume_15min_tmc_uid_test_seq`, `volumes_15min_volume_15min_uid_test_seq`) & function (`aggregate_15_min_tmc_get_valid_movement`).
+	a) Run the api script with the following command line to only include intersections that we want as well as skipping the data processing process. `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull` . `--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day worth of data first.
 	
-	b) **Don't forget to grant `miovision_api_bot` access permission to all those new tables!**
-	
-	c) Modify the script `intersection_tmc.py` to only pull the new intersections into the dummy table and aggregate them into 15min tmc bins and **not** do the other things such as `report_date` etc.
-	
-	d) Once we have finish pulling and aggregating the data, run the below query. 
+	b) First run the SELECT query below and validate those new intersection movements. Then, INSERT INTO `intersection_movements` table as well as including the ones for the old intersections.
 	```sql
-	--table with all valid movements of new intersections
+	INSERT INTO miovision_api.intersection_movements
 	SELECT DISTINCT intersection_uid, classification_uid, leg, movement_uid
-		INTO miovision_api.intersection_movements_new
-		FROM miovision_api.volumes_15min_tmc_test;
-		ALTER TABLE miovision_api.intersection_movements_new ADD UNIQUE (intersection_uid, classification_uid, leg, movement_uid);
-		COMMENT ON TABLE miovision_api.intersection_movements_new IS 'Unique movements for each NEW intersection by classification';
-
-	--add the old ones into the old table (no need to remove decommissioned one cause what if we need them later on)
-	INSERT INTO miovision_api.intersection_movements_new
-	SELECT *
-	FROM miovision_api.intersection_movements
+	FROM miovision_api.volumes
+        WHERE intersection_uid IN ( *** ) -- only include new intersection_uid
+        AND datetime_bin > today() - interval '1 day'
+	```
+	
+	c) With `--pull` included in the command line, we have now only inserted the bins into the volume table and have not done other processing yet. Therefore, in order to complete the full process, we now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date). 
+	```sql
+	SELECT miovision_api.refresh_gapsize_lookup() ;
+	SELECT miovision_api.find_gaps(%s::date, %s::date) ;
+	SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date) ;
+	SELECT miovision_api.aggregate_15_min(%s::date, %s::date) ; 
+	SELECT miovision_api.report_dates(%s::date, %s::date) ;
 	```
 
-3) Now that all the necessary source files are ready, it's time to test run everything! Create new function by directly copying from the old one but only change the table/function name it is reading from. Modify `intersection_tmc.py` again and run it.
+3) Check the data pulled for the new intersections to see if you find anything weird on the data, be it at the `volumes` table or at the `volumes_15min` table or even other tables.
 
-4) Check the data pulled for the new intersections to see if you find anything weird on the data, be it at the `volumes` table or at the `volumes_15min` table or even other tables.
+4) Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not even aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
-5) Once everything is checked and the data seems decent, rename the old tables by adding a date (date of last used) at the end of the table name and rename the new tables by naming it as what the old tables used to be which is the table name currently being used by the function in the daily Airflow process. 
-
-6) Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not even aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
-
-7) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
+5) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
 Update the below table of when intersections were decommissioned for future references.
 
