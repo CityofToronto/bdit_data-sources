@@ -212,49 +212,42 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
     logging.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
-def process_data(conn, pull, start_time, end_iteration_time):
+def process_data(conn, start_time, end_iteration_time):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-    if not pull:
+
         with conn:
             with conn.cursor() as cur: 
                 update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
                 cur.execute(update_gaps)
-
+    time_period = (start_time, end_iteration_time)
         with conn:
             with conn.cursor() as cur: 
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
                 cur.execute(invalid_gaps, time_period)
-                logging.info(conn.notices[-1])
-        logging.info('Updated gapsize table and found gaps exceeding allowable size') 
-
-    else:
-        logging.info('Gaps Finding Skipped')
+            logger.info(conn.notices[-1])
+    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
 
     # Aggregate to 15min tmc / 15min
-    time_period = (start_time, end_iteration_time)
-    if not pull:
         try:
             with conn:
                 with conn.cursor() as cur:
                     update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
                     cur.execute(update, time_period)
-                    logging.info('Aggregated to 15 minute bins')
+                logger.info('Aggregated to 15 minute bins')
 
                     atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
                     cur.execute(atr_aggregation, time_period)
-                    logging.info('Completed data processing for %s', start_time)
+                logger.info('Completed data processing for %s', start_time)
             
         except psycopg2.Error as exc:
-            logging.exception(exc)
+        logger.exception(exc)
             sys.exit(1)
-    else:
-        logging.info('Data Processing Skipped')
 
     with conn:
         with conn.cursor() as cur:
             report_dates="SELECT miovision_api.report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
-            logging.info('report_dates done')
+            logger.info('report_dates done')
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
@@ -348,7 +341,10 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             logging.exception(exc)
             sys.exit(1)
         
-        process_data(conn, pull, start_time, end_iteration_time)
+        if pull_data:
+            logger.info('Skipping aggregating and processing volume data')
+        else:
+            process_data(conn, start_time, end_iteration_time)
 
         end_iteration_time+=time_delta
         start_time+=time_delta
