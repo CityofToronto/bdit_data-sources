@@ -6,6 +6,7 @@
   - [Usage](#Usage)
     - [Inputs](#Inputs)
     - [Outputs](#Outputs)
+    - [Use Case Examples](#Use-Case-Examples)
     - [Case Type](#Case-Type)
 - [How the Function Works](#How-the-Function-Works)
   - [Step 1: Clean the data](#Step-1-Clean-the-data)
@@ -43,13 +44,13 @@ The function is mainly created to process the City of Toronto's [transportation 
 ## Usage
 
 ### Inputs
-The function takes three inputs, called `highway`, `frm`, and `to`. They are called these names to emulate the names of columns in bylaw certain documents. There are two types of ways that bylaws are explained in documents and they can influence what you input to the function.
+The function takes four inputs, called `_bylaw_id`, `highway`, `frm`, and `to`. They are called these names to emulate the names of columns in bylaw certain documents. There are two types of ways that bylaws are explained in documents and they can influence what you input to the function.
 
 If you have a bylaw written like:
 
-|highway|from|to|
-|--------|---|---|
-| Bloor Street |Royal York Road | St George Street |
+|\_bylaw_id|highway|from|to|
+|----------|--------|---|---|
+|1234| Bloor Street |Royal York Road | St George Street |
 
 `Bloor Street` as `highway`
 `Royal York Road` as `frm`
@@ -57,11 +58,12 @@ If you have a bylaw written like:
 
 However there is a different format:
 
-|highway|between|
-|--------|---|
-| Bloor Street|Between Royal York Road and St George Street |
+|\_bylaw_id|highway|between|
+|----------|--------|---|
+|1234| Bloor Street|Between Royal York Road and St George Street |
 
 In this case you would input:
+- `1234` as `_bylaw_id`
 - `Bloor Street` as `highway`
 - `Between Royal York Road and St George Street` as `frm`
 - `NULL` as `to`.
@@ -86,6 +88,32 @@ The function will then returns a table as shown below. I am only showing a singl
 |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
 |13443051|	13442736|	104679	|Placentia Blvd|	Very High (100% match)|	highway2:...| ...|NULL|...||...||		43183	|201400|	Collector|
 |13457875|	NULL|	3835696|	Druid Crt|	Very High (100% match)|	highway2: ...|...|	[0,1]|	...|	...|	NULL|	NULL|	21243	|201500|	Local|
+
+### Use Case Examples
+
+The above-mentioned query is only for a single use case. However, we normally use the function to run through a table and so the following will show how we can use the function on a table instead. The function takes in `_bylaw_id` as a variable, but really that is just an id for one to identify which row went wrong for troubleshooting. Say if one does not have any id associated with the rows in a table, simply put `NULL` as the variable.
+
+```sql
+SELECT result.* 
+FROM schema_name.table_name , 
+LATERAL gis.text_to_centreline(NULL, lf_name, from_street, to_street)  AS result
+```
+
+There is also a wrapper function named [`gis.text_to_centreline_geom`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-text_to_centreline_geom.sql) which takes in 3 variable, namely `_street`, `_from_loc`, `_to_loc` and only returns geometry (`_return_geom`) found from the function `gis.text_to_centreline`. If one is only interested in finding the geometry from two intersections given in text-based descriptions, this is a really useful function. The following shows how one can run the wrapper function to update the geom column of an existing table.
+
+```sql
+ALTER TABLE schema_name.table_name
+ADD COLUMN geom geometry;
+
+UPDATE schema_name.table_name
+SET geom = result._return_geom
+FROM 
+      (SELECT table_name.id,  geoms.* 
+			FROM schema_name.table_name , 
+			LATERAL gis.text_to_centreline_geom(lf_name, from_street, to_street)  AS geoms
+			) result
+WHERE table_name.id = result.id	
+```
 
 ### Case Type
 
