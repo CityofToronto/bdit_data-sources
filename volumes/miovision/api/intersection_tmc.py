@@ -292,12 +292,12 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             wanted = tuple(intersection) # convert list into tuple
             string= '''SELECT * FROM miovision_api.intersections
                         WHERE intersection_uid IN %s
-                        AND start_time::date > date_installed 
+                        AND %s::date > date_installed 
                         AND date_decommissioned IS NULL '''
-            cur.execute(string, wanted)
+            cur.execute(string, (wanted, start_time))
 
             intersection_list=cur.fetchall()
-            logging.debug(intersection_list)
+            logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
             string2= '''SELECT * FROM miovision_api.intersections 
@@ -307,6 +307,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             intersection_list=cur.fetchall()
             logging.debug(intersection_list)
 
+    if len(intersection_list) == 0:
+        logger.critical('No intersections found in miovision_api.intersections for the specified start time')
+        sys.exit(3)
     while True:
         table=[]
         
