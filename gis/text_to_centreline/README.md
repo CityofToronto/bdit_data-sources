@@ -52,9 +52,11 @@ If you have a bylaw written like:
 |----------|--------|---|---|
 |1234| Bloor Street |Royal York Road | St George Street |
 
-`Bloor Street` as `highway`
-`Royal York Road` as `frm`
-`St George Street` as `to`
+In this case you would input:
+- `1234` as `_bylaw_id`
+- `Bloor Street` as `highway`
+- `Royal York Road` as `frm`
+- `St George Street` as `to`
 
 However there is a different format:
 
