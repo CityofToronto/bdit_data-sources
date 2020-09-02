@@ -23,6 +23,7 @@
 	- [Important Views](#important-views)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
 - [4. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+	- [Deleting data to re-run the process](#Deleting-data-to-re-run-the-process)
 - [5. Processing Data from API](#5-processing-data-from-api)
 - [6. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
@@ -373,6 +374,36 @@ Update the below table of when intersections were decommissioned for future refe
 19 | 2020-06-15 20:18:00|
 30 | 2020-06-15 18:58:00|
 32 | 2020-06-15 18:30:00|
+
+### Deleting data to re-run the process
+
+Uh oh, something went wrong in the process? Fret not, you can delete the data and re-run the process again. Note that you can't do that without deleting since most of our tables have a unique constraint. You will mostly likely violate that if you re-run the process without first removing the relevant data. Below shows the queries that have to be run which included all the tables that are involved. In short, delete 1min bins from `volumes` table and delete 15min bins from both tmc and atr tables (note the different start_time and end_time), delete relevant information from `report_dates`, `api_log` and `unacceptable_gaps`. The example below shows how we delete a day worth of data on 2020-08-20.
+
+```sql
+DELETE FROM miovision_api.volumes
+WHERE datetime_bin BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
+
+DELETE FROM miovision_api.volumes_15min_tmc
+WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
+
+DELETE FROM miovision_api.volumes_15min
+WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
+
+DELETE FROM miovision_api.report_dates
+WHERE dt = '2020-08-20';
+
+DELETE FROM miovision_api.api_log
+WHERE start_date = '2020-08-20';
+
+DELETE FROM miovision_api.unacceptable_gaps
+WHERE gap_start BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
+```
+
+Once you have deleted all the relevant data, you can now re-run the process with the following command line.
+```
+python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --start_date 2020-08-20 --end_date 2020-08-21
+```
+
 
 ## 5. Processing Data from API
 
