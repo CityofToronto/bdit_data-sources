@@ -23,22 +23,25 @@
 	- [Important Views](#important-views)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
 - [4. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
-	- [Deleting data to re-run the process](#Deleting-data-to-re-run-the-process)
-- [5. Processing Data from API](#5-processing-data-from-api)
-- [6. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
+	- [Remvoing Intersections](#Removing-Intersections)
+	- [Adding Intersections](#Adding-Intersections)
+- [5. Repulling data](#Repulling-data)
+	- [Deleting data to re-run process](#Deleting-data-to-re-run-process)
+- [6. Processing Data from API](#5-processing-data-from-api)
+- [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
 	- [A. Populate `volumes`](#a-populate-volumes)
 	- [B. Populate `volumes_15min_tmc` and `volumes_15min`](#b-populate-volumes_15min_tmc-and-volumes_15min)
 	- [C. Refresh reporting views](#c-refresh-reporting-views)
 	- [D. Produce summarized monthly reporting data](#d-produce-summarized-monthly-reporting-data)
 	- [Deleting Data](#deleting-data)
-- [7. Filtering and Interpolation (NO LONGER IN USE)](#7-filtering-and-interpolation-no-longer-in-use)
+- [8. Filtering and Interpolation (NO LONGER IN USE)](#7-filtering-and-interpolation-no-longer-in-use)
 	- [Filtering](#filtering)
 	- [Interpolation](#interpolation)
-- [8. QC Checks](#8-qc-checks)
+- [9. QC Checks](#8-qc-checks)
 	- [Variance check](#variance-check)
 	- [Invalid Movements](#invalid-movements)
-- [9. Open Data](#9-open-data)
+- [10. Open Data](#9-open-data)
 
 ## 1. Overview
 
@@ -160,6 +163,8 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 Whereas for the other classes, we still aggregate them and put them into the 15min bin table as long as they have volume > 0. However, we do not do the same gap filling process for them and hence do not include those where volume = 0 for these classification_uid. The line `HAVING pad.classification_uid IN (1,2,6) OR SUM(A.volume) > 0` does exactly that. 
 
 The [`aggregate_15_min_tmc()`](sql/function-aggregate-volumes_15min_tmc.sql) function performs zero-filling by cross-joining a table containing all possible movements ([`intersection_movements`](#intersection_movements)) to create a table with all possible times and movements for only ACTIVE intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query check if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, else sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', we are setting all 15min bin from '15:00:00 to 16:00:00' to have volume = NULL OR if there is a gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', we are setting all 15min bin from '15:00:00 to 17:00:00' to have volume = NULL. (Not sure if this is causing us to exclude way too many time bins, might get back to this later on). Through a left join with `volumes`, the query aggregates those 1min bins into the 15min bins and exclude those unacceptable ones. Note that those bins fall within the unacceptable_gaps time period for that intersection do not get aggregated and hence are not assigned with `volume_15min_tmc_uid`.
+
+In short, we are setting **volume = NULL** for all 15min bins that are found within the `unacceptable_gaps` table as they are regarded as unreliable and we do not want that to intefere with our aggregation process for different analyses in the future. Setting volume to 0 is different from setting volume to NULL especially when we are trying to find the arithmetic mean.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -321,8 +326,19 @@ The following process is used to determine the gap sizes assigned to an intersec
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersection that is not working and from what time to what time that the gap happens which is helpful in figuring out what's happened.
 
 ## 4. Steps to Add or Remove Intersections
+There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. First remove the decommissioned ones then include the newly installed ones. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.** Ideally, the whole adding and removing process should be able to be done in a day.
 
-There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.** Ideally, the whole adding and removing process should be able to be done in a day.
+### Removing Intersections
+Once we are informed of the decommissioned date of the Miovision cameras, we can then carry out the following steps.
+
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](#intersections) to include the decommissioned date.
+
+2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+
+3) Done. Removing intersections is short and simple.
+
+### Adding Intersections
+Adding intersections on the other hand is not as simple as removing an intersection. We will first have to find out a couple of information before proceeding to aggregating the data. The steps are outlined below.
 
 1) Look at table [`miovision_api.intersections`](#intersections) to see what information about the new intersections that we would need to update the table. Steps below show how we can find the details such as id, coordinates, px, int_id, geom, which leg_restricted etc. Once everything is done, do an INSERT INTO this table to include the new intersections.
 
@@ -358,11 +374,9 @@ There have been some changes to the Miovision cameras and below documents on the
 
 3) Check the data pulled for the new intersections to see if you find anything weird on the data, be it at the `volumes` table or at the `volumes_15min` table or even other tables.
 
-4) Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not even aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+4) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
-5) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
-
-Update the below table of when intersections were decommissioned for future references.
+5) Update the below table of when intersections were decommissioned for future references.
 
 |intersection_uid | last datetime_bin|
 |-----------------|------------------|
@@ -375,6 +389,7 @@ Update the below table of when intersections were decommissioned for future refe
 30 | 2020-06-15 18:58:00|
 32 | 2020-06-15 18:30:00|
 
+## 5. Repulling data
 ### Deleting data to re-run the process
 
 Uh oh, something went wrong in the process? Fret not, you can delete the data and re-run the process again. Note that you can't do that without deleting since most of our tables have a unique constraint. You will mostly likely violate that if you re-run the process without first removing the relevant data. Below shows the queries that have to be run which included all the tables that are involved. In short, delete 1min bins from `volumes` table and delete 15min bins from both tmc and atr tables (note the different start_time and end_time), delete relevant information from `report_dates`, `api_log` and `unacceptable_gaps`. The example below shows how we delete a day worth of data on 2020-08-20.
@@ -404,12 +419,11 @@ Once you have deleted all the relevant data, you can now re-run the process with
 python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --start_date 2020-08-20 --end_date 2020-08-21
 ```
 
+## 6. Processing Data from API
 
-## 5. Processing Data from API
+Refer to the [API README](api/readme.md) for more details.
 
-Refer to the [API README](api/README.md) for more details.
-
-## 6. Processing Data from CSV Dumps (NO LONGER IN USE)
+## 7. Processing Data from CSV Dumps (NO LONGER IN USE)
 
 Prior to the API pipeline being set up, we received data from Miovision in CSV
 files for individual months of data collection, this is the procedure for
@@ -468,7 +482,7 @@ The excel spreadsheet rearranges and rounds the data from `report_summary` so th
 
 It is possible to enable a `FOREIGN KEY` relationship to `CASCADE` a delete from a referenced row (an aggregate one in this case) to its referring rows (disaggregate). However not all rows get ultimately processed into aggregate data. In order to simplify the deletion process, `TRIGGER`s have been set up on the less processed datasets to cascade deletion up to processed data. These can be found in [`trigger-delete-volumes.sql`](sql/trigger-delete-volumes.sql). At present, deleting rows in `raw_data` will trigger deleting the resulting rows in `volumes` and then `volumes_15min_tmc` and `volumes_15min`. 0 rows in `volumes_15min_tmc` are deleted through the intermediary lookup [`volumes_tmc_zeroes`](#volumes_tmc_zeroes).
 
-## 7. Filtering and Interpolation (NO LONGER IN USE)
+## 8. Filtering and Interpolation (NO LONGER IN USE)
 
 ### Filtering
 
@@ -488,7 +502,7 @@ Interpolation should only occur when missing 1 minute bins are due to the camera
 * If the missing bins are between the earliest and latest recorded bin within that 15-minute period, then it can be assumed the missing bin/bins are due to no observed volumes for those minutes. This can be caught if difference between the start and end time is greater than the number of populated minutes in the bin.
 * If there are populated bins in the minute or 2 minute before AND after the 15 minute bin, then it can also be assumed that any missing bins are due to no volume at that minute.
 
-## 8. QC Checks
+## 9. QC Checks
 
 These are some checks to identify issues.
 
@@ -523,7 +537,7 @@ This query checks the relative variance of the volumes over the day to make sure
 
 The data also occasionally includes volumes with invalid movements. An example would be a WB thru movement on an EB one-way street such as Adelaide. Run [`find_invalid_movments.sql`](sql/function-find_invalid_movements.sql) to look for invalid volumes that may need to be deleted. This will create a warning if the number of invalid movements is higher than 1000, and that further QC is needed.
 
-## 9. Open Data
+## 10. Open Data
 
 For the King Street Transit Pilot, the below volume datasets were released. These two datassets are georeferenced by intersection id:
 
