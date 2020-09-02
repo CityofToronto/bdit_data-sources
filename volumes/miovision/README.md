@@ -305,24 +305,25 @@ The tables below are produced using functions explained in the [API Puller](http
 
 ## 3. Finding Gaps and Malfunctioning Camera
 
-In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are and their sizes. There are two parts of this in the whole process.
+In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
 **Part I - Unacceptable Gaps**
-The following process is used to determine the gap size for an intersection and then find out if the gaps are within the acceptable range or not.
-1. The materialized view [`miovision_api.gapsize_lookup`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/create-mat-view-gapsize_lookup.sql) is refreshed/updated daily to find out the daily average volume for each intersection_uid, period and time_bin in the past 60 days. Based on the average volume, a gap_size is assigned to that intersection. 
-2. The set of gap_size implemented is based on an investigation stated in this [notebook](volume_vs_gaps.ipynb). 
-3. Then, the function [`miovision_api.find_gaps`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-find_gaps.sql) is used to find gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the materialized view above.
-4. Gaps that equal to or exceed the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
-5. Based on the `unacceptable_gaps` table, `aggregate_15min_tmc` function will not aggregate 1min bins found within the unacceptable_gaps's `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
+The following process is used to determine the gap sizes assigned to an intersection at different time and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
+
+1. The materialized view [`miovision_api.gapsize_lookup`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/create-mat-view-gapsize_lookup.sql) is refreshed/updated daily to find out the daily average volume for each intersection_uid, period and time_bin in the past 60 days. Based on the average volume, an acceptable gap_size is assigned to that intersection. 
+2. The set of acceptable gap_size implemented is based on an investigation stated in this [notebook](volume_vs_gaps.ipynb). 
+3. Then, the function [`miovision_api.find_gaps`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-find_gaps.sql) is used to find all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the materialized view above.
+4. Gaps that are equal to or exceed the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
+5. Based on the `unacceptable_gaps` table, [`aggregate_15min_tmc`](#volumes_15min_tmc) function will not aggregate 1min bins found within the unacceptable_gaps's `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
 
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersection that is not working and from what time to what time that the gap happens which is helpful in figuring out what's happened.
 
 ## 4. Steps to Add or Remove Intersections
 
-There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.**
+There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.** Ideally, the whole adding and removing process should be able to be done in a day.
 
-1) Download the table [`miovision_api.intersections`](#intersections) into a csv file and manually add the new intersections information into the table (coordinates, px, int_id, geom, which leg_restricted) using the steps below. Once everything is done, truncate the current table and import the new csv file .
+1) Look at table [`miovision_api.intersections`](#intersections) to see what information about the new intersections that we would need to update the table. Steps below show how we can find the details such as id, coordinates, px, int_id, geom, which leg_restricted etc. Once everything is done, do an INSERT INTO this table to include the new intersections.
 
 	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](http://beta.docs.api.miovision.com/#!/Intersections/get_intersections). `date_installed` and `date_decommissioned` can be found by finding the first / last datetime_bin for that intersection_uid from that website. The last date for the old location can also be found from table `miovision_api.volumes`. 
 	
