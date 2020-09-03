@@ -23,7 +23,7 @@
 	- [Important Views](#important-views)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
 - [4. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
-	- [Remvoing Intersections](#Removing-Intersections)
+	- [Removing Intersections](#Removing-Intersections)
 	- [Adding Intersections](#Adding-Intersections)
 - [5. Repulling data](#Repulling-data)
 	- [Deleting data to re-run process](#Deleting-data-to-re-run-process)
