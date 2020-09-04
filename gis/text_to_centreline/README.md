@@ -1,7 +1,7 @@
 
-# <center>Text Description to Centreline Geometry Automation</center>
+# Text Description to Centreline Geometry Automation
 
-- [<center>Text Description to Centreline Geometry Automation</center>](#centerText-Description-to-Centreline-Geometry-Automationcenter)
+- [Text Description to Centreline Geometry Automation](#centerText-Description-to-Centreline-Geometry-Automationcenter)
   - [Intro](#Intro)
   - [Usage](#Usage)
     - [Inputs](#Inputs)
@@ -37,9 +37,9 @@
 
 ## Intro
 
-This is a `README` for the [`gis.text_to_centreline(bylaw_id, highway, fr, t)`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-text_to_centreline.sql) function, which is written in `postgresql`. The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. The input descriptions typically state the street that the bylaw is in effect on and the two intersections between which the bylaw. For example, you could use the function to get the centreline segments of Bloor Street between Royal York Road and St George Street.
+This is a `README` for the [`gis.text_to_centreline(bylaw_id, highway, fr, t)`](sql/function-text_to_centreline.sql) function, which is written in `postgresql`. The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. The input descriptions typically state the street the bylaw is in effect on and the two intersections between which the bylaw applies. For example, you could use the function to get the centreline segments of Bloor Street between Royal York Road and St George Street.
 
-The function is mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be discussed in the [QC](#Quality-Control) area of the document. It should also be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot correctly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return an error.
+The function is mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be discussed in the [Outstanding Work](#Outstanding-Work) area of the document. It should also be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot correctly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return an error.
 
 ## Usage
 
@@ -84,7 +84,7 @@ SELECT (gis.text_to_centreline(6393, 'Druid Court', 'Ferris Road and a point 78.
 ```
 
 ### Outputs
-The function will then returns a table as shown below. I am only showing a single row each from the results of the above sample queries.
+The function will then returns a table as shown below. Note the below is only showing a single row each from the results of the above sample queries.
 
 |int1|	int2|	geo_id|	lf_name|	con|	note|	line_geom|	section|	oid1_geom|	oid1_geom_translated|	oid2_geom|	oid2_geom_translated|	objectid|	fcode	|fcode_desc|
 |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
@@ -101,7 +101,7 @@ FROM schema_name.table_name ,
 LATERAL gis.text_to_centreline(NULL, lf_name, from_street, to_street)  AS result
 ```
 
-There is also a wrapper function named [`gis.text_to_centreline_geom`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-text_to_centreline_geom.sql) which takes in 3 variable, namely `_street`, `_from_loc`, `_to_loc` and only returns geometry (`_return_geom`) found from the function `gis.text_to_centreline`. If one is only interested in finding the geometry from two intersections given in text-based descriptions, this is a really useful function. The following shows how one can run the wrapper function to update the geom column of an existing table.
+There is also a wrapper function named [`gis.text_to_centreline_geom`](sql/function-text_to_centreline_geom.sql) which takes in 3 variable, namely `_street`, `_from_loc`, `_to_loc` and only returns geometry (`_return_geom`) found from the function `gis.text_to_centreline`. If one is only interested in finding the geometry from two intersections given in text-based descriptions, this is a really useful function. The following shows how one can run the wrapper function to update the geom column of an existing table.
 
 ```sql
 ALTER TABLE schema_name.table_name
