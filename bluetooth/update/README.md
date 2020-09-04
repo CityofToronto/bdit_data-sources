@@ -143,4 +143,4 @@ INTO rliu.new_bt_segments
 from (SELECT ST_LineMerge(ST_Union(A.geom)) AS geom, A.analysis_id, A.corridor,A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat, array_agg(DISTINCT A.geo_id) AS geo_id, array_agg(DISTINCT A.lf_name) AS lf_name FROM new_bt_coflate300 A
 GROUP BY A.analysis_id, A.corridor, A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat ORDER BY analysis_id) A
 ```
-After this, the only step is to format the table so it matches `bluetooth.segments`.
+After this, the only step is to format the table so it matches `bluetooth.segments`. 
