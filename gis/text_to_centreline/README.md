@@ -211,7 +211,7 @@ The process will be explained in further detail below. The functions called/vari
 
 The first step is to clean the location description data so it can easily be matched to intersections in the `gis.centreline_intersection` table.
 
-We clean the data mainly using the [`gis.abbr_street`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-abbr_street.sql) function. The intersection table writes roads with appreviations. For example the word street is written as `St` and road is `Rd`, etc.
+We clean the data mainly using the [`gis.abbr_street`](sql/helper_functions/function-abbr_street.sql) function. The intersection table writes roads with appreviations. For example the word street is written as `St` and road is `Rd`, etc.
 
 We want to be able to extract:
 
@@ -224,9 +224,9 @@ There are different cases for how the data is input ([see above](#Usage)), so bo
 
 The `gis.abbr_street` function is called a lot in the cleaning process. It is a function that replaces string segments such as ' Street' with ' St', and ' North' with ' N'.
 
-The cleaning bylaws text function currently in the main function is [`gis._clean_bylaws_text()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-clean_bylaws_text.sql). The big chunk of cleaning bylaws function is now separated and since the function returns composite types and there are many columns involved, it's easier to return them as a table type. More explanation [here at 36.4.7. SQL Functions as Table Sources](https://www.postgresql.org/docs/9.6/xfunc-sql.html).
+The cleaning bylaws text function currently in the main function is [`gis._clean_bylaws_text()`](sql/function-clean_bylaws_text.sql). The big chunk of cleaning bylaws function is now separated and since the function returns composite types and there are many columns involved, it's easier to return them as a table type. More explanation [here at 36.4.7. SQL Functions as Table Sources](https://www.postgresql.org/docs/9.6/xfunc-sql.html).
 
-It is also possible to return multiple variable types without the involvement of a table which is using the `OUT` term when creating the function as shown in [gis.\_clean_bylaws_text()](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-clean_bylaws_text.sql).
+It is also possible to return multiple variable types without the involvement of a table which is using the `OUT` term when creating the function as shown in [gis.\_clean_bylaws_text()](sql/function-clean_bylaws_text.sql).
 More explanation [here at 41.3.1. Declaring Function Parameters](https://www.postgresql.org/docs/9.6/plpgsql-declarations.html)
 
 Sample query to just clean up the text would look like this:
@@ -247,7 +247,7 @@ Currently, the `gis.clean_bylaws_text` function takes in 4 inputs although norma
 
 **If `TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL`, then the bylaw falls into this case.**
 
-If the bylaw occurs on the entire length of the street then call a special function named [`gis._get_entire_length()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-get_entire_length.sql). This function selects all centreline segments in the City of Toronto with the exact name of `highway2`. In this case the street name has to be exact, and if the street name is misspelled then there will be no output geometry. There could potentially be an issue with how this code is written because some streets in the city have the same name but appear in different districts (i.e. Etobicoke and North York). To be solved, currently in issue [#281 Use the former municipality element of the "highway" field](https://github.com/CityofToronto/bdit_data-sources/issues/281)
+If the bylaw occurs on the entire length of the street then call a special function named [`gis._get_entire_length()`](sql/function-get_entire_length.sql). This function selects all centreline segments in the City of Toronto with the exact name of `highway2`. In this case the street name has to be exact, and if the street name is misspelled then there will be no output geometry. There could potentially be an issue with how this code is written because some streets in the city have the same name but appear in different districts (i.e. Etobicoke and North York). To be solved, currently in issue [#281 Use the former municipality element of the "highway" field](https://github.com/CityofToronto/bdit_data-sources/issues/281)
 
 For example,
 ```sql
@@ -262,17 +262,17 @@ and the result looks like this
 
 **If `COALESCE(metres_btwn1, metres_btwn2) IS NULL`, then the bylaw is not a special case.**
 
-The function [`gis._get_intersection_geom()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-get_intersection_geom.sql) is the main function that is called to get the geometry of the intersections between which the bylaw is in effect. The function returns an array with the geometry of the intersection and the `objectid` (unique `ID`) of the intersection. If the `direction` and `metres` values that are inputted to the function are not `NULL`, then the function returns a translated intersection geometry (translated in the direction specified by the number of metres specified). The function takes a value `not_int_id` as an input. This is an intersection `int_id` (intersection `ID`) that we do not want the function to return. We use `int_id` instead of `objectid` since sometimes there are intersection points that are in the exact same location but have different `objectid` values. This is a parameter to this function because sometimes streets can intersect more than once, and we do not want the algorithm to match to the same intersection twice.
+The function [`gis._get_intersection_geom()`](sql/function-get_intersection_geom.sql) is the main function that is called to get the geometry of the intersections between which the bylaw is in effect. The function returns an array with the geometry of the intersection and the `objectid` (unique `ID`) of the intersection. If the `direction` and `metres` values that are inputted to the function are not `NULL`, then the function returns a translated intersection geometry (translated in the direction specified by the number of metres specified). The function takes a value `not_int_id` as an input. This is an intersection `int_id` (intersection `ID`) that we do not want the function to return. We use `int_id` instead of `objectid` since sometimes there are intersection points that are in the exact same location but have different `objectid` values. This is a parameter to this function because sometimes streets can intersect more than once, and we do not want the algorithm to match to the same intersection twice.
 
-In  most cases, the function `gis._get_intersection_geom()` calls on another function named [`gis._get_intersection_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-get_intersection_id.sql). This function returns the `objectid` and `intersection id` of the intersection, as well as how close the match was (where closeness is measured by levenshtein distance). The query in this function works by gathering all of the streets from the City of Toronto intersection streets table that have the same/very similar names to the streets that are described in the bylaw description provided as input to the `text_to_centreline` function (i.e. `btwn1`, `btwn2`, `highway2`). 
+In  most cases, the function `gis._get_intersection_geom()` calls on another function named [`gis._get_intersection_id()`](sql/helper_functions/function-get_intersection_id.sql). This function returns the `objectid` and `intersection id` of the intersection, as well as how close the match was (where closeness is measured by levenshtein distance). The query in this function works by gathering all of the streets from the City of Toronto intersection streets table that have the same/very similar names to the streets that are described in the bylaw description provided as input to the `text_to_centreline` function (i.e. `btwn1`, `btwn2`, `highway2`). 
 
 If there is more than one street with the same unique intersection ID in this subset, then this means the street from `highway2` and the first street from `between` (aka the street from `btwn1`) have been matched. We can use a `HAVING` clause (i.e. `HAVING COUNT(DISTINCT TRIM(intersections.street)) > 1`) to ensure that only the intersections that have been matched to both street names are chosen. The `gis.centreline_intersection_streets` view (that is called in this function) assigns a unique ID to each intersection in the City of Toronto (`gis.centreline_intersection`). Each row contains one street name from an intersection and the ID associated with the intersection.
 
-If the names for `highway` and `btwn` are the same, the `gis._get_intersection_geom()` calls on the function named [`gis._get_intersection_id_highway_equals_btwn()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-get_intersection_id_highway_equals_btwn.sql). This function is intended for cases where the intersection that we want is a cul de sac or a dead end or a pseudo intersection. In these cases the intersection would just be the name of the street. `not_int_id` is a parameter of this function as well since some streets both start and end with an intersection that is a cul de sac or pseudo intersection. The process to find the appropriate intersection is very similar to the `get_intersection_id` function, except it does not have the `HAVING COUNT(intersections.street) > 1`. This is because cul de sac or pseudo intersections intersection only have one entry in the `gis.centreline_intersection_streets` view (since there is only one road involved in the intersection).
+If the names for `highway` and `btwn` are the same, the `gis._get_intersection_geom()` calls on the function named [`gis._get_intersection_id_highway_equals_btwn()`](sql/helper_functions/function-get_intersection_id_highway_equals_btwn.sql). This function is intended for cases where the intersection that we want is a cul de sac or a dead end or a pseudo intersection. In these cases the intersection would just be the name of the street. `not_int_id` is a parameter of this function as well since some streets both start and end with an intersection that is a cul de sac or pseudo intersection. The process to find the appropriate intersection is very similar to the `get_intersection_id` function, except it does not have the `HAVING COUNT(intersections.street) > 1`. This is because cul de sac or pseudo intersections intersection only have one entry in the `gis.centreline_intersection_streets` view (since there is only one road involved in the intersection).
 
 The `oid1_geom` and `oid2_geom` values that are assigned in the `text_to_centreline` function and represented the (sometimes) translated geometry of the intersections. 
 
-Once the id and geometry of the intersections are found, the lines between the two points are then found using pgRouting. The function [`gis._get_lines_btwn_interxn()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-get_lines_btwn_interxn.sql) is used to find the centrelines between the two intersection points using the table `gis.centreline_routing_undirected`. More information about pgRouting can be found [here](https://github.com/CityofToronto/bdit_data_tools/tree/routing/routing). The one used here is undirected as we want to get the shortest route between the two points. Directionality is to be added into the future process, currently in issue [#276 Speed Limit Layer Enhancement (directional)](https://github.com/CityofToronto/bdit_data-sources/issues/276).
+Once the id and geometry of the intersections are found, the lines between the two points are then found using pgRouting. The function [`gis._get_lines_btwn_interxn()`](sql/function-get_lines_btwn_interxn.sql) is used to find the centrelines between the two intersection points using the table `gis.centreline_routing_undirected`. More information about pgRouting can be found [here](https://github.com/CityofToronto/bdit_data_tools/tree/routing/routing). The one used here is undirected as we want to get the shortest route between the two points. Directionality is to be added into the future process, currently in issue [#276 Speed Limit Layer Enhancement (directional)](https://github.com/CityofToronto/bdit_data-sources/issues/276).
 
 For example,
 ```sql
@@ -287,7 +287,7 @@ and the result looks like this
 
 **If `clean_bylaws.btwn1 = clean_bylaws.btwn2`, then the bylaw is special case 1.**
 
-There are some records that start and/or end at locations that are a certain amount of metres away from an intersection. We create a method to assign a geometry to the locations of these bylaws. These segments do not start at one intersection and end at another, they often start/end in the middle of centreline segments. The function used for this case is [`gis._centreline_case1`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-centreline_case1.sql)
+There are some records that start and/or end at locations that are a certain amount of metres away from an intersection. We create a method to assign a geometry to the locations of these bylaws. These segments do not start at one intersection and end at another, they often start/end in the middle of centreline segments. The function used for this case is [`gis._centreline_case1`](sql/function-centreline_case1.sql)
 
 `btwn2` is formatted like: "a point (insert number here) metres (direction - north/south/east/west)"
 
@@ -301,7 +301,7 @@ These records can be filtered with the WHERE clause: `btwn2 LIKE '%point%'`
 
 i) Create a temp table `_wip` as some function may return multiple rows.
 
-ii) Using `gis._get_intersection_geom()` to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
+ii) Using `gis._get_intersection_geom()` to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
 
 iii) A `new_line`, connecting the intersection point to the translated point, is created using ST_MakeLine.
 
@@ -341,13 +341,13 @@ Example: street = "Watson Avenue" btwn = "Between St Marks Road and 100 metres n
 
 For this case, we need to find the intersections *St. Marks and Watson Avenue* and *St. Johns Road and Watson Avenue*. Then find a point that is 100 metres north of the intersection of *St. Johns Road and Watson Avenue*.
 
-The work flow for this case is very similar to 2c except now that we have the two intersection points, we can use pgRouting to link the two points and then add/trim centrelines according to the bylaws. The function used for this case is [`gis._centreline_case2`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-centreline_case2.sql)
+The work flow for this case is very similar to 2c except now that we have the two intersection points, we can use pgRouting to link the two points and then add/trim centrelines according to the bylaws. The function used for this case is [`gis._centreline_case2`](sql/function-centreline_case2.sql)
 
 **The workflow for this case (Two Intersections and At Least One Offset) is:**
 
 i) Create a temp table `_wip2` as some function may return multiple rows.
 
-ii) Using `gis._get_intersection_geom()` to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
+ii) Using `gis._get_intersection_geom()` to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
 
 iii) Using `gis._get_lines_btwn_interxn()` pgRouting to find all relevant centrelines between the two intersections.
 
@@ -451,7 +451,7 @@ The function created above was to read bylaws and return the centrelines involve
 
 ## Using the Function
  
-Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Quality Control](#Quality-Control) part (iii) .
+Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Outstanding Work](#Outstanding-Work) part (iii) .
 
 ```sql
 SET client_min_messages = warning; 
@@ -477,7 +477,7 @@ USING (id)
 
 ## Match to Centrelines and Categorize Bylaws
 
-The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part two category. This query may seem long but it is technically just handling the bylaws in a few parts. 
+The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part two category. This query may seem long but it is technically just handling the bylaws in a few parts. 
 
 1. no_bylaw -> centrelines not involved in bylaws and so the speed limits are set to 50 km/h
 
@@ -491,20 +491,20 @@ The previous step only converts all bylaws into centrelines and do not include c
 
 Some explanation on the long code:
 
-i) [L25](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L25): `AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'` is used here as some geom produced from the function returns "unreadable" geom as the centreline is not involved in the bylaws but is found between the two given intersections. It normally happens for bylaws that are in case 1 or case 2.
+i) [L25](sql/mat-view-bylaws_centreline_categorized.sql#L25): `AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'` is used here as some geom produced from the function returns "unreadable" geom as the centreline is not involved in the bylaws but is found between the two given intersections. It normally happens for bylaws that are in case 1 or case 2.
 
-ii) [L65](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L65): ` (centreline.fcode_desc::text = ANY (ARRAY['Collector'::character varying, ...` is used here to only include relevant centrelines from `gis.centreline`.
+ii) [L65](sql/mat-view-bylaws_centreline_categorized.sql#L65): ` (centreline.fcode_desc::text = ANY (ARRAY['Collector'::character varying, ...` is used here to only include relevant centrelines from `gis.centreline`.
 
-iii) [L84](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
+iii) [L84](sql/mat-view-bylaws_centreline_categorized.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
 
-iv) [L123](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the date_added but since not all bylaws have date_added, the id is used instead with bigger id representing more latest bylaw_id.
+iv) [L123](sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the date_added but since not all bylaws have date_added, the id is used instead with bigger id representing more latest bylaw_id.
 
-v) [L135](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference does not work without the st_buffer here.
+v) [L135](sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference does not work without the st_buffer here.
 
 ## Final Clean Up
 
 ### *`gis.bylaws_speed_limit_layer`*
-The final bylaws speed limit layer is a table named `gis.bylaws_speed_limit_layer`. To be honest, the results produced in this step is very similar to the one from the previous step. BUT, the geom in this table is way more accurate as we are cutting the centreline based on the information from section whereas in the previous process, we used buffer to do the slicing. Therefore, even though there are only 303 different rows (only the geom is slightly different) comparing this mat view and the mat view from previous step, we will still use this mat view to ensure that the geom is exactly the same as the geom from `gis.centreline`. The query can be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/mat-view-bylaws_speed_limit_layer.sql) where the part mentioned below is the important part.
+The final bylaws speed limit layer is a table named [`gis.bylaws_speed_limit_layer`](sql/table-bylaws_speed_limit_layer.sql). To be honest, the results produced in this step is very similar to the one from the previous step. BUT, the geom in this table is way more accurate as we are cutting the centreline based on the information from section whereas in the previous process, we used buffer to do the slicing. Therefore, even though there are only 303 different rows (only the geom is slightly different) comparing this mat view and the mat view from previous step, we will still use this mat view to ensure that the geom is exactly the same as the geom from `gis.centreline`. The query can be found [here](sql/table-bylaws_speed_limit_layer.sql) where the part mentioned below is the important part.
 
 ```sql
 CASE WHEN bylaw.section IS NOT NULL 
@@ -568,10 +568,10 @@ WHERE lf_name ILIKE '%don valley parkway%' ;
 The mega function `gis.text_to_centreline` currently works fine on its own. However, there are a few parts of it that can be done better for better clarity and for easier use.
 
 ## Wrapper function for `clean_bylaws_text`
-This can also be found in [issue #319](https://github.com/CityofToronto/bdit_data-sources/issues/319). A wrapper function is defined as an endpoint to make a function more user friendly for a specific use case. The current function [`gis._clean_bylaws_text`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/function-clean_bylaws_text.sql) takes in 4 inputs although most of the time, our inputs are really just 3 inputs with the `btwn` text containing both `frm & to`. Therefore, a cleaner function can be done here. The slightly complicated part is that this function does not output a table or a variable but rather it outputs a record in a format of a pre-defined table.
+This can also be found in [issue #319](https://github.com/CityofToronto/bdit_data-sources/issues/319). A wrapper function is defined as an endpoint to make a function more user friendly for a specific use case. The current function [`gis._clean_bylaws_text`](sql/function-clean_bylaws_text.sql) takes in 4 inputs although most of the time, our inputs are really just 3 inputs with the `btwn` text containing both `frm & to`. Therefore, a cleaner function can be done here. The slightly complicated part is that this function does not output a table or a variable but rather it outputs a record in a format of a pre-defined table.
 
 ## Include `date_added` and `date_repealed`
-The function does not output these two information but these two columns are rather important in determining which bylaw is the latest one and which bylaw is the previous one that governs a particular street. This is essential in producing the final bylaws speed limit layer. These two information was found by extracting the information from the `bylaw_no` column from the table provided. The query can be found [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/table-bylaws_added_repealed_dates.sql).
+The function does not output these two information but these two columns are rather important in determining which bylaw is the latest one and which bylaw is the previous one that governs a particular street. This is essential in producing the final bylaws speed limit layer. These two information was found by extracting the information from the `bylaw_no` column from the table provided. The query can be found [here](sql/table-bylaws_added_repealed_dates.sql).
 
 ## Rename `highway` and `btwn`
 These two column names are first used because that's how the table provided names them. I personally also find it really confusing as the term `highway` here simply means the street where the bylaw is applied to whereas the term `btwn` means the other two streets that intersect with the street where the bylaw is applied aka the start and end point of the street. Given that these two variables or even certain variation of them are used throughout the whole text_to_centreline function, it can be pretty taxing to rename all of them to sth more sensible.
@@ -594,9 +594,9 @@ Using tables continued from [Usage-case type](#case-type),
 
 i) `jchew.bylaws_to_route` - Table with bylaws that need to be routed.
 
-ii) `jchew.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql) 
+ii) `jchew.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](sql/helper_functions/function-bylaws_get_id_to_route.sql) 
 
-iii) `jchew.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/sql/helper_functions/function-bylaws_route_id.sql)
+iii) `jchew.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](sql/helper_functions/function-bylaws_route_id.sql)
 
 *Note that the code in gis.bylaws_get_id_to_route() and gis.bylaws_route_id() are pretty much the same as that in gis._get_intersection_geom and gis._get_lines_btwn_interxn except that the output is slightly modified to enable further investigation on the failed bylaws.
 
@@ -661,7 +661,7 @@ Table `jchew.bylaws_found_routes` contains 26646 rows (as a bylaw can return mul
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 |Warden Avenue|A point 305 metres north of Mack Avenue and St. Clair Avenue East|highway2: Warden Ave btwn1:  Mack Ave btwn2: St. Clair Ave E metres_btwn1: 305 metres_btwn2:  direction_btwn1: north direction_btwn2:|6872|13457981|13455952|...|1|112744|Warden Ave|21501|201300|Minor Arterial|
 
-Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](https://github.com/CityofToronto/bdit_data-sources/blob/text_to_centreline/gis/text_to_centreline/csv/failed_bylaws.csv) (also in table `jchew.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
+Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](csv/failed_bylaws.csv) (also in table `jchew.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
 
 |failed_reason|function|stage |# of bylaws that failed here|
 |--|--|--|--|
