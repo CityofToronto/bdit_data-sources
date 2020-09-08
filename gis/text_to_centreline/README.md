@@ -8,8 +8,8 @@
   - [Use Case Examples](#Use-Case-Examples)
   - [Case Type](#Case-Type)
   - [How to Create the Speed Limit Layer from Bylaws](#How-to-create-the-speed-limit-layer-from-bylaws)
-  	- [Using the Function](#Using-the-Function)
-  	- [Match to Centrelines and Categorize Bylaws](#Match-to-Centrelines-and-Categorize-Bylaws)
+  	- [Run text_to_centreline() to generate geometries](#Run-text_to_centreline()-to-generate-geometries)
+  	- [Incorporate Centrelines without Bylaws and Cut Centrelines](#Incorporate-centrelines-without-bylaws-and-cut-centrelins)
   	- [Final Clean Up](#Final-Clean-Up)
 - [How the Function Works](#How-the-Function-Works)
   - [Step 1: Clean the data](#Step-1-Clean-the-data)
@@ -30,7 +30,7 @@
   - [pgRouting returns the shortest path but street name different from `highway`](#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway)
   - [Direction stated on bylaws is not taken into account](#direction-stated-on-bylaws-is-not-taken-into-account)
   - [Levenshtein distance can fail for streets that have E / W](#levenshtein-distance-can-fail-for-streets-that-have-e--w)
-  - [Include former municipality element of the "highway" field](#include-former-municipality-element-of-the-highway-field)
+  - [Duplicate street name and former municipality element ignored ](#duplicate-street-name-and-former-municipality-element-ignored)
   - [Tackle Cases with "an intersection and two offsets"](#tackle-cases-with-an-intersection-and-two-offsets)
   - [Modify `con` (confidence level) definition to better reflect actual situation](#modify-con-confidence-level-definition-to-better-reflect-actual-situation)
 
@@ -39,6 +39,8 @@
 This is a `README` for the [`gis.text_to_centreline(bylaw_id, highway, fr, t)`](sql/function-text_to_centreline.sql) function, which is written in `postgresql`. The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. The input descriptions typically state the street the bylaw is in effect on and the two intersections between which the bylaw applies. For example, you could use the function to get the centreline segments of Bloor Street between Royal York Road and St George Street.
 
 The function is mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/posted_speed_limit_update) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be discussed in the [Outstanding Work](#Outstanding-Work) area of the document. It should also be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot correctly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return an error.
+
+The folder named `posted_speed_limit_update` includes past work on transforming bylaws into centreline segments, including python code to transform the xml bylaws on Open Data into Postgresql to process. More on that can be found at this [README](posted_speed_limit_update/README.md).
 
 ## Usage
 
@@ -89,10 +91,10 @@ This function can handle text descriptions of four different categories, all of 
 |entire length|`Entire length`|
 |normal (two intersections without any offset)|`[intersection1 street] and [intersection2 street]`|
 |case 1 (one intersection and one offset)|`[intersection1 street] and a point [xx] meters [cardinal direction ie North]`|
-|case 2 (two intersections and at least one offset)|`A point [xx] meters [cardinal direction] of [intersection1 street] and a point [xx] meters [cardinal direction] of [intersection2 street]|
+|case 2 (two intersections and at least one offset)|`A point [xx] meters [cardinal direction] of [intersection1 street] and a point [xx] meters [cardinal direction] of [intersection2 street]`|
 
 ### Outputs
-The function will then returns a table as shown below. Note the below is only showing a single row each from the results of the above sample queries.
+The function will then returns a table as shown below. Note the below is only showing a single row each from the results of the above sample queries. The `con` value represents how close the names of the input values are to the intersections they were matched to. More about that can be found at the [confidence output](#Confidence-output) section.
 
 |int1|	int2|	geo_id|	lf_name|	con|	note|	line_geom|	section|	oid1_geom|	oid1_geom_translated|	oid2_geom|	oid2_geom_translated|	objectid|	fcode	|fcode_desc|
 |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
@@ -209,7 +211,7 @@ Out of 5163 bylaws to be processed from `jchew.bylaws_to_update`, the number of 
 
 The function created above was to read bylaws and return the centrelines involved, be it partial or complete. The following steps then have to be done in order to prepare the final bylaws speed limit layer. 
 
-#### Using the Function
+#### Run text_to_centreline() to generate geometries
  
 Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Outstanding Work](#Outstanding-Work) part (iii) .
 
@@ -235,11 +237,11 @@ LEFT JOIN jchew.bylaws_added_repealed_dates dates
 USING (id)
 ```
 
-#### Match to Centrelines and Categorize Bylaws
+#### Incorporate Centrelines without Bylaws and Cut Centrelines
 
 The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part two category. This query may seem long but it is technically just handling the bylaws in a few parts. 
 
-1. no_bylaw -> centrelines not involved in bylaws and so the speed limits are set to 50 km/h
+1. no_bylaw -> No bylaw matched, therefore default of 50 km/hr for urban street applies
 
 2. whole_added -> centrelines involved in bylaws, be it fully or partially
 
@@ -257,9 +259,9 @@ ii) [L65](sql/mat-view-bylaws_centreline_categorized.sql#L65): ` (centreline.fco
 
 iii) [L84](sql/mat-view-bylaws_centreline_categorized.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
 
-iv) [L123](sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the date_added but since not all bylaws have date_added, the id is used instead with bigger id representing more latest bylaw_id.
+iv) [L123](sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the `date_added`. Since not all bylaws have `date_added`, the `id` is used instead with larger values representing more recently applied bylaws.
 
-v) [L135](sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference does not work without the st_buffer here.
+v) [L135](sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference needs st_buffer (a really small buffer) here to work properly or else st_difference will not return any results. This may be due to the fact that the geometry might not be exactly the same after the unioning and trimming.
 
 #### Final Clean Up
 
@@ -284,7 +286,11 @@ The output table will look like this
 |6583|	Glenvale Blvd|	127|	30|	13455526|	13455120	|Very High (100% match)|	highway2:...| ...|	NULL|	...|NULL|		...|	NULL|	01/15/2019	|NULL|	
 |NULL|Broadway Ave|	129|	50	|	NULL|NULL|NULL|NULL|...|NULL|||||NULL|NULL|								
 
-Look at Harvie Ave (which is considered at part two), the latest bylaw is applied to the centreline partially and the other part of the centreline is either filled with the previous bylaws or the speed limit is just set to 50 if there isn't any previous bylaws applied to that part of the centreline. Traymore Cres is considered as part one where the centreline is partially governed by a bylaw and the other part is governed by an older bylaw. Glencale Blvd is considered as whole_added where the whole centreline is related to a bylaw whereas Broadway Ave is considered as no_bylaw as there is no bylaw governing that centreline.
+Look at 
+- Harvie Ave which is categorized as case 2: two intersections and at least one offset (or part_two from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)), the latest bylaw is applied to the centreline partially and the other part of the centreline is either filled with the previous bylaws or the speed limit is just set to 50 if there isn't any previous bylaws applied to that part of the centreline. 
+- Traymore Cres is categorized as case 1: one intersection and one offset (or part_one from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) where the centreline is partially governed by a bylaw and the other part is governed by an older bylaw. 
+- Glencale Blvd is categorized as entire length (or whole_added from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) where the whole centreline is related to a bylaw.
+- Broadway Ave is not matched to any bylaws (or no_bylaw from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) as there is no bylaw governing that centreline.
 
 ##### *`gis.bylaws_speed_limit_layer_hwy`*
 However, there are centrelines that belong to highway and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
@@ -427,7 +433,7 @@ These records can be filtered with the WHERE clause: `btwn2 LIKE '%point%'`
 
 i) Create a temp table `_wip` as some function may return multiple rows.
 
-ii) Using `gis._get_intersection_geom()` to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
+ii) Using [`gis._get_intersection_geom()`](sql/function-get_intersection_geom.sql) to get the intersection id & geometry of that one intersection as well as the translated geometry according to the bylaws. The function [`gis._translate_intersection_point()`](sql/helper_functions/function-translate_intersection_point.sql) is used to translate the intersection point and the point is rotated at an angle of 17.5 to make the city boundary an almost vertical or horizontal line.
 
 iii) A `new_line`, connecting the intersection point to the translated point, is created using ST_MakeLine.
 
@@ -437,7 +443,7 @@ v) After combining all centrelines using `ST_LineMerge(ST_Union(individual_centr
 
 vi) `combined_section` specifies the section of the centrelines that was trimmed from the original combined centrelines line_geom named `whole_centreline`, whether it's from the start_point to a cut point ('[0, 0.5678]') or from a cut point to the end_point ('[0.1234, 1]').
 
-vii) Make sure that the `ind_line_geom` and `line_geom_cut` has the same orientation ie drawn in the same direction and insert that into a new column named `line_geom_reversed`.
+vii) Make sure that the `ind_line_geom` (which is the original individual line geometry for each geo_id) and `line_geom_cut` (which is the complete line geometry that matches the text description and got trimmed if neccessary) has the same orientation ie drawn in the same direction and insert that into a new column named `line_geom_reversed`.
 
 viii) Create a small buffer around `line_geom_reversed` and find out if the `ind_line_geom` is within the buffer or how much of the centreline is within the buffer. With that, `line_geom` which is the final individual centrelines (trimmed when needed) aka the wanted output of this function is found. Centrelines are now separated into their respective `geo_id` rows.
 
@@ -507,7 +513,7 @@ and the result looks like this
 ![](jpg/case2.JPG)
 
 #### The logic behind dealing with geom to be trimmed
-To explain some logic used in the function `gis._centreline_case2()`. The part where applicable is shown below. I am using `pgrout_centreline` as the baseline and then adding or trimming centrelines where applicable according to the bylaws. If addition of centrelines is needed, then `ST_Union` is used (see A1 & A2); if subtraction/trimming of centrelines is needed, then `ST_Difference` is used (see B1 & B2).
+To explain some logic used in the function `gis._centreline_case2()`. The part of the code used particularly to match/trim geometry can be found [here](sql/function-centreline_case2.sql#L124-L175). `pgrout_centreline` is used as the baseline and then centreline is added or trimmed where applicable according to the bylaws. If addition of centrelines is needed, then `ST_Union` is used (see A1 & A2); if subtraction/trimming of centrelines is needed, then `ST_Difference` is used (see B1 & B2). 
 
 The image below shows the four possible cases (A1, A2, B1 and B2)
 ![image](https://user-images.githubusercontent.com/54872846/77707649-284df380-6f9c-11ea-9509-b0db0cdf24c5.png)
@@ -790,9 +796,9 @@ This can be found at [issue #279](https://github.com/CityofToronto/bdit_data-sou
 
 I also found that when there are three street names in the intersec5 column and two of the street names are almost the same with the slight change of E to W or vice versa (which happen particularly frequently for Yonge St like Adelaide St E / Yonge St / Adelaide St W, King St E / Yonge St / King St W, Bloor St E / Yonge St / Bloor St W etc), the intersection points found is weird because of the reason above.
 
-## Include former municipality element of the "highway" field
+## Duplicate street name and former municipality element ignored 
 
-This can be found at [issue #281](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched. Examples of the municipality is shown below.
+This can be found at [issue #281 - Include former municipality element of the "highway" field](https://github.com/CityofToronto/bdit_data-sources/issues/281). When a street name is duplicated or triplicated across the city due to amalgamation, there will be a two-character code in the highway field to specify which former municipality is referenced, this should be used to ensure the correct intersections are getting matched. Examples of the municipality is shown below.
 ![image](https://user-images.githubusercontent.com/54872846/78183571-21106500-7436-11ea-8b34-017c73736b48.png)
 
 This is a problem because for `bylaw_id` = 6645 where `highway` = "McGillivray Ave" and `between` = "The west end of McGillivray Ave and Kelso Ave", it's routed as shown below and that is not right. Blue line represents the routed centreline where highlighted in yellow is the road segment we want and the two black crosses are the two intersections mentioned in the bylaw text. This happen because there are two 'McGillivray Ave' in Toronto (one is highlighted in maroon and the other is the black cross on the left) and they both are cul de sac. 
