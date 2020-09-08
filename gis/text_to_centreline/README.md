@@ -6,7 +6,8 @@
   - [Inputs](#Inputs)
   - [Outputs](#Outputs)
   - [Use Case Examples](#Use-Case-Examples)
-  - [Case Type](#Case-Type)
+  - [How Well Does This Work](#How-Well-Does-This-Work)
+  	- [How to Measure Success Rates](#How-to-Measure-Success-Rates)
   - [How to Create the Speed Limit Layer from Bylaws](#How-to-create-the-speed-limit-layer-from-bylaws)
   	- [Run text_to_centreline() to generate geometries](#Run-text_to_centreline()-to-generate-geometries)
   	- [Incorporate Centrelines without Bylaws and Cut Centrelines](#Incorporate-centrelines-without-bylaws-and-cut-centrelins)
@@ -127,9 +128,20 @@ FROM
 WHERE table_name.id = result.id	
 ```
 
-### Case Type
+### How Well Does This Work
 
-The table below summarizes the case type for all bylaws from the table `jchew.bylaws_2020` which is the bylaws information gotten directly via email. Some cleaning also needs to be done to only include bylaws that are not deleted aka need to be processed as well as removing those that are weird (those that got repealed but not deleted & those that were not cleaned nicely.) The first query below is to clean up the bylaws to find out the components/variables from the bylaws text which are to be used in later process and to be used to categorize them into different case type. The second query then only include all bylaws that has to be processed to centrelines. The third query shows how I find out the bylaws that fall into different categories. In short, I will list out the tables used in sequence right here.
+Out of 5163 bylaws that are not repealed as of January 2020, 4956 of them got converted successfully. That means that we have an overall success rate of 96%! The number of bylaws fall into each case type and the percentage of successfully matched is shown in the table below. Those that failed is discussed in ["Where did the bylaws fail"](#Where-did-the-bylaws-fail) section below. The following subsection shows how each case type is found. 
+
+|case type | number of bylaws | number of bylaws matched | % successfully matched|
+|--|--|--|--|
+|entire length|21|20|95%|
+|normal (two intersections without any offset)|4815|4684|97%|
+|case 1 (one intersection and one offset)|68|55|81%|
+|case 2 (two intersections and at least one offset)|259|197|76%|
+
+#### How to Measure Success Rates
+
+The steps below summarize how we find the case type for all bylaws from the table `jchew.bylaws_2020` which is the bylaws information gotten directly via email. Some cleaning needs to be done to only include bylaws that are not deleted aka need to be processed as well as removing those that are weird (those that got repealed but not deleted & those that were not cleaned nicely.) The first query below is to clean up the bylaws to find out the components/variables from the bylaws text which are to be used in later process and to be used to categorize them into different case type. The second query then only include all bylaws that has to be processed to centrelines. The third query shows how I find out the bylaws that fall into different categories. In short, I will list out the tables used in sequence right here.
 
 i) `jchew.bylaws_2020` - bylaws table provided
 
@@ -197,15 +209,8 @@ AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
 --ELSE AKA TWO INTERXN AND AT LEAST ONE OFFSET (259 ROWS)
 ```
 
-Out of 5163 bylaws to be processed from `jchew.bylaws_to_update`, the number of bylaws fall into each case type is stated in the table below.
-(4956 bylaws are found from `jchew.bylaws_routing` which means that 207 bylaws are not processed. More on this is discussed in ["Where did the bylaws fail"](#Where-did-the-bylaws-fail) section below). The query used is exactly the same as above except that I only added this one line to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
+In order to produce the results from the table in How Well Does This Work(#How-Well-Does-This-Work), the query used is exactly the same as above except that  this one line is added to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
 
-|case type | number of bylaws | number of bylaws matched | % successfully matched|
-|--|--|--|--|
-|entire length|21|20|95%|
-|normal (two intersections without any offset)|4815|4684|97%|
-|case 1 (one intersection and one offset)|68|55|81%|
-|case 2 (two intersections and at least one offset)|259|197|76%|
 
 ### How to Create the Speed Limit Layer from Bylaws
 
@@ -239,7 +244,11 @@ USING (id)
 
 #### Incorporate Centrelines without Bylaws and Cut Centrelines
 
-The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part two category. This query may seem long but it is technically just handling the bylaws in a few parts. 
+The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part_two category. The function categorizes centrelines based on how the processed bylaw geometries intersect with the original geometry (not all, entirely, partially, or multiple bylaws). The picture below communicates that idea with the orange lines being the centrelines, highlighted in yellow being where bylaws applied, and the names above the lines being each category which corresponds to the CTE name.
+
+![](jpg/centrelines_categorized.jpg)
+
+This query may seem long but it is technically just handling the bylaws in a few parts.
 
 1. no_bylaw -> No bylaw matched, therefore default of 50 km/hr for urban street applies
 
@@ -287,10 +296,10 @@ The output table will look like this
 |NULL|Broadway Ave|	129|	50	|	NULL|NULL|NULL|NULL|...|NULL|||||NULL|NULL|								
 
 Look at 
-- Harvie Ave which is categorized as case 2: two intersections and at least one offset (or part_two from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)), the latest bylaw is applied to the centreline partially and the other part of the centreline is either filled with the previous bylaws or the speed limit is just set to 50 if there isn't any previous bylaws applied to that part of the centreline. 
-- Traymore Cres is categorized as case 1: one intersection and one offset (or part_one from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) where the centreline is partially governed by a bylaw and the other part is governed by an older bylaw. 
-- Glencale Blvd is categorized as entire length (or whole_added from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) where the whole centreline is related to a bylaw.
-- Broadway Ave is not matched to any bylaws (or no_bylaw from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines)) as there is no bylaw governing that centreline.
+- Harvie Ave which is categorized as or part_two from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines), the latest bylaw is applied to the centreline partially and the other part of the centreline is either filled with the previous bylaws or the speed limit is just set to 50 if there isn't any previous bylaws applied to that part of the centreline. 
+- Traymore Cres is categorized as part_one from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines) where the centreline is partially governed by a bylaw and the other part is governed by an older bylaw. 
+- Glencale Blvd is categorized whole_added from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines) where the whole centreline is related to a bylaw.
+- Broadway Ave is categorized as no_bylaw from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines) as there is no bylaw governing that centreline.
 
 ##### *`gis.bylaws_speed_limit_layer_hwy`*
 However, there are centrelines that belong to highway and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
@@ -513,7 +522,7 @@ and the result looks like this
 ![](jpg/case2.JPG)
 
 #### The logic behind dealing with geom to be trimmed
-To explain some logic used in the function `gis._centreline_case2()`. The part of the code used particularly to match/trim geometry can be found [here](sql/function-centreline_case2.sql#L124-L175). `pgrout_centreline` is used as the baseline and then centreline is added or trimmed where applicable according to the bylaws. If addition of centrelines is needed, then `ST_Union` is used (see A1 & A2); if subtraction/trimming of centrelines is needed, then `ST_Difference` is used (see B1 & B2). 
+To explain some logic used in the function `gis._centreline_case2()`. The part of the code used particularly to match/trim geometry can be found [here](sql/function-centreline_case2.sql#L124-L175). `pgrout_centreline` is used as the baseline and then centreline is added or trimmed where applicable according to the bylaws. If addition of centrelines is needed, then `ST_Union` is used (see A1 & A2); if subtraction/trimming of centrelines is needed, then `ST_Difference` is used (see B1 & B2). The only difference between A1 and A2 is the draw direction and the same goes for B1 and B2.
 
 The image below shows the four possible cases (A1, A2, B1 and B2)
 ![image](https://user-images.githubusercontent.com/54872846/77707649-284df380-6f9c-11ea-9509-b0db0cdf24c5.png)
