@@ -8,7 +8,7 @@
 
 ## Description of Project Problem
 
-We were given a file of approximately 8000 descriptions of locations on Toronto streets, 
+We were given a file of approximately 7000 descriptions of locations on Toronto streets (about 2000 of them are repealed), 
 and each location represented a change to the posted speed limit on a certain stretch or road. 
 Speed limit changes are enacted through bylaws in the City of Toronto, so each record was from a bylaw. Each record also contains and ID (the ID of the location/text description), bylaw number, 
 a date for when the bylaw was passed, the original speed limit of the location, and the updated speed. 
