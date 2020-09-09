@@ -32,6 +32,8 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-6)
+- [GIS - Geographic Information System](#gis---geographic-information-system)
+	- [Text Description to Centreline Geometry Automation](#Text-Description-to-Centreline-Geometry-Automation)
 
 ## Open Data Releases
 
@@ -247,3 +249,8 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 ### Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
+
+## GIS - Geographic Information System
+### Text Description to Centreline Geometry Automation
+
+`gis/text_to_centreline/` contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use. 
