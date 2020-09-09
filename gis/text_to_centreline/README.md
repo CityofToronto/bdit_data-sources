@@ -10,8 +10,8 @@
   	- [How to Measure Success Rates](#How-to-Measure-Success-Rates)
   - [How to Create the Speed Limit Layer from Bylaws](#How-to-create-the-speed-limit-layer-from-bylaws)
   	- [Run text_to_centreline() to generate geometries](#Run-text_to_centreline()-to-generate-geometries)
-  	- [Incorporate Centrelines without Bylaws and Cut Centrelines](#Incorporate-centrelines-without-bylaws-and-cut-centrelins)
-  	- [Final Clean Up](#Final-Clean-Up)
+  	- [Incorporate Centrelines without Bylaws and Cut Centrelines](#Incorporate-centrelines-without-bylaws-and-cut-centrelines)
+  	- [Final Clean Up for Expressway](#Final-Clean-Up-for-Expressway)
 - [How the Function Works](#How-the-Function-Works)
   - [Step 1: Clean the data](#Step-1-Clean-the-data)
   - [Step 2: Separate into different cases](#Step-2-Separate-into-different-cases)
@@ -46,7 +46,7 @@ The folder named `posted_speed_limit_update` includes past work on transforming 
 ## Usage
 
 ### Inputs
-The function takes four inputs, called `_bylaw_id`, `highway`, `frm`, and `to`. They are called these names to emulate the names of columns in bylaw certain documents. There are two types of ways that bylaws are explained in documents and they can influence what you input to the function.
+The function takes four inputs, namely `_bylaw_id`, `highway`, `frm`, and `to`. They are called these names to emulate the names of columns in bylaw certain documents. There are two types of ways that bylaws are explained in documents and they can influence what you input to the function.
 
 If you have a bylaw written like:
 
@@ -130,7 +130,7 @@ WHERE table_name.id = result.id
 
 ### How Well Does This Work
 
-Out of 5163 bylaws that are not repealed as of January 2020, 4956 of them got converted successfully. That means that we have an overall success rate of 96%! The number of bylaws fall into each case type and the percentage of successfully matched is shown in the table below. Those that failed is discussed in ["Where did the bylaws fail"](#Where-did-the-bylaws-fail) section below. The following subsection shows how each case type is found. 
+Out of 5163 bylaws that are not repealed as of January 2020, 4956 of them got converted successfully. That means that we have an overall success rate of 96%! The number of bylaws fall into each case type and the percentage of successfully matched is shown in the table below. Those that failed are discussed in ["Where did the bylaws fail"](#Where-did-the-bylaws-fail) section below. The following subsection shows how each case type is found. 
 
 |case type | number of bylaws | number of bylaws matched | % successfully matched|
 |--|--|--|--|
@@ -209,7 +209,7 @@ AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
 --ELSE AKA TWO INTERXN AND AT LEAST ONE OFFSET (259 ROWS)
 ```
 
-In order to produce the results from the table in How Well Does This Work(#How-Well-Does-This-Work), the query used is exactly the same as above except that  this one line is added to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
+In order to produce the results from the table in [How Well Does This Work](#How-Well-Does-This-Work), the query used is exactly the same as above except that this one line is added to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
 
 
 ### How to Create the Speed Limit Layer from Bylaws
@@ -218,7 +218,7 @@ The function created above was to read bylaws and return the centrelines involve
 
 #### Run text_to_centreline() to generate geometries
  
-Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Outstanding Work](#Outstanding-Work) part (iii) .
+Using the function `gis.text_to_centreline`, convert all bylaws text into centrelines and put the results into a table named `gis.bylaws_routing`. The query used is as shown below and can also be found [here](sql/table-bylaws_routing.sql). **Note** that there were a couple of them that raised a warning message and you can find out more in [Outstanding Work - Tackle Cases with Known Geom Error](#Tackle-cases-with-known-geom-error).
 
 ```sql
 SET client_min_messages = warning; 
@@ -244,7 +244,7 @@ USING (id)
 
 #### Incorporate Centrelines without Bylaws and Cut Centrelines
 
-The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_centreline_categorized.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_centreline_categorized`. We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part_two category. The function categorizes centrelines based on how the processed bylaw geometries intersect with the original geometry (not all, entirely, partially, or multiple bylaws). The picture below communicates that idea with the orange lines being the centrelines, highlighted in yellow being where bylaws applied, and the names above the lines being each category which corresponds to the CTE name.
+The previous step only converts all bylaws into centrelines and do not include centrelines that are not stated in the bylaws. This [mat view query](sql/mat-view-bylaws_speed_limit_layer.sql) categorizes bylaws into different parts and incorporates that into the centreline layer into a mat view named `gis.bylaws_speed_limit_layer`. **This is the final bylaws speed limit layer if one is not interested in the expressways speed limit.** We check if the centrelines are involved in any bylaws, if they are not, set the speed limit to 50km/h. If they are just partially included in the bylaws, we check if there's another bylaw that governs that centreline. If there is, apply the next bylaw; If there is none, set the speed limit to 50km/h. For a centreline that is included partially in more than one bylaws, it falls into the part_two category. The function categorizes centrelines based on how the processed bylaw geometries intersect with the original geometry (not all, entirely, partially, or multiple bylaws). The picture below communicates that idea with the orange lines being the centrelines, highlighted in yellow being where bylaws applied, and the names above the lines being each category which corresponds to the CTE name.
 
 ![](jpg/centrelines_categorized.jpg)
 
@@ -272,10 +272,7 @@ iv) [L123](sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.ge
 
 v) [L135](sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference needs st_buffer (a really small buffer) here to work properly or else st_difference will not return any results. This may be due to the fact that the geometry might not be exactly the same after the unioning and trimming.
 
-#### Final Clean Up
-
-##### *`gis.bylaws_speed_limit_layer`*
-The final bylaws speed limit layer is a table named [`gis.bylaws_speed_limit_layer`](sql/table-bylaws_speed_limit_layer.sql). To be honest, the results produced in this step is very similar to the one from the previous step. BUT, the geom in this table is way more accurate as we are cutting the centreline based on the information from section whereas in the previous process, we used buffer to do the slicing. Therefore, even though there are only 303 different rows (only the geom is slightly different) comparing this mat view and the mat view from previous step, we will still use this mat view to ensure that the geom is exactly the same as the geom from `gis.centreline`. The query can be found [here](sql/table-bylaws_speed_limit_layer.sql) where the part mentioned below is the important part.
+vi) The following few lines which occurred at the UNION part for the CTE next_bylaw, part_two, part_one_without_bylaw, part_two_without_bylaw is there to ensure that the geom is exactly the same as the geom from `gis.centreline`. This geom is more accurate as it does not involve any st_buffer, st_difference, st_union etc.
 
 ```sql
 CASE WHEN bylaw.section IS NOT NULL 
@@ -284,7 +281,7 @@ ELSE cl.geom
 END AS geom,
 ```
 
-The output table will look like this
+The final output table will look like this
 |bylaw_id|lf_name|geo_id|speed_limit|int1|int2|con|note|geom|section|oid1_geom|oid1_geom_translated|oid2_geom|oid2_geom_translated|date_added|date_repealed|
 |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
 |1805|	Harvie Ave	|2350209|	40	|13461402|	NULL|	Very High (100% match)|	highway2:...| ...	|(0.896704452511841,0.89770788980652]	|...	|...|	NULL|	NULL	|NULL	|NULL|
@@ -301,8 +298,10 @@ Look at
 - Glencale Blvd is categorized whole_added from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines) where the whole centreline is related to a bylaw.
 - Broadway Ave is categorized as no_bylaw from [here](#Incorporate-Centrelines-without-Bylaws-and-Cut-Centrelines) as there is no bylaw governing that centreline.
 
+#### Final Clean Up for Expressway
+
 ##### *`gis.bylaws_speed_limit_layer_hwy`*
-However, there are centrelines that belong to highway and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
+There are centrelines that belong to highway (highway as in expressway and not the `highway` column within the function) and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
 
 ```sql
 --to create a table from the m. view to do the update
