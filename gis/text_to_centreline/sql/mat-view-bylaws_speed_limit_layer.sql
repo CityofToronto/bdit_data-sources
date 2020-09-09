@@ -1,4 +1,4 @@
-CREATE MATERIALIZED VIEW gis.bylaws_centreline_categorized
+CREATE MATERIALIZED VIEW gis.bylaws_speed_limit_layer
 TABLESPACE pg_default
 AS
  WITH whole AS (
@@ -215,7 +215,10 @@ UNION
     whole_added.int2,
     whole_added.con,
     whole_added.note,
-    whole_added.geom,
+    CASE WHEN whole_added.section IS NOT NULL 
+	THEN st_linesubstring(cl.geom, lower(whole_added.section)::double precision, upper(whole_added.section)::double precision)
+	ELSE cl.geom
+	END AS geom,
     whole_added.section,
     whole_added.oid1_geom,
     whole_added.oid1_geom_translated,
@@ -224,6 +227,7 @@ UNION
     whole_added.date_added,
     whole_added.date_repealed
    FROM whole_added
+   JOIN gis.centreline cl USING (geo_id, lf_name)
 UNION
  SELECT part_one_without_bylaw.bylaw_id,
     part_one_without_bylaw.lf_name,
@@ -233,7 +237,10 @@ UNION
     part_one_without_bylaw.int2,
     part_one_without_bylaw.con,
     part_one_without_bylaw.note,
-    part_one_without_bylaw.geom,
+    CASE WHEN part_one_without_bylaw.section IS NOT NULL 
+	THEN st_linesubstring(cl.geom, lower(part_one_without_bylaw.section)::double precision, upper(part_one_without_bylaw.section)::double precision)
+	ELSE cl.geom
+	END AS geom,
     part_one_without_bylaw.section,
     part_one_without_bylaw.oid1_geom,
     part_one_without_bylaw.oid1_geom_translated,
@@ -242,6 +249,7 @@ UNION
     part_one_without_bylaw.date_added,
     part_one_without_bylaw.date_repealed
    FROM part_one_without_bylaw
+   JOIN gis.centreline cl USING (geo_id, lf_name)
 UNION
  SELECT part_two.bylaw_id,
     part_two.lf_name,
@@ -251,7 +259,10 @@ UNION
     part_two.int2,
     part_two.con,
     part_two.note,
-    part_two.geom,
+    CASE WHEN part_two.section IS NOT NULL 
+	THEN st_linesubstring(cl.geom, lower(part_two.section)::double precision, upper(part_two.section)::double precision)
+	ELSE cl.geom
+	END AS geom,
     part_two.section,
     part_two.oid1_geom,
     part_two.oid1_geom_translated,
@@ -260,6 +271,7 @@ UNION
     part_two.date_added,
     part_two.date_repealed
    FROM part_two
+   JOIN gis.centreline cl USING (geo_id, lf_name)
 UNION
  SELECT part_two_without_bylaw.bylaw_id,
     part_two_without_bylaw.lf_name,
@@ -269,7 +281,10 @@ UNION
     part_two_without_bylaw.int2,
     part_two_without_bylaw.con,
     part_two_without_bylaw.note,
-    part_two_without_bylaw.geom,
+    CASE WHEN part_two_without_bylaw.section IS NOT NULL 
+	THEN st_linesubstring(cl.geom, lower(part_two_without_bylaw.section)::double precision, upper(part_two_without_bylaw.section)::double precision)
+	ELSE cl.geom
+	END AS geom,
     part_two_without_bylaw.section,
     part_two_without_bylaw.oid1_geom,
     part_two_without_bylaw.oid1_geom_translated,
@@ -278,9 +293,10 @@ UNION
     part_two_without_bylaw.date_added,
     part_two_without_bylaw.date_repealed
    FROM part_two_without_bylaw
+   JOIN gis.centreline cl USING (geo_id, lf_name)
 WITH DATA;
 
-COMMENT ON MATERIALIZED VIEW gis.bylaws_centreline_categorized
+COMMENT ON MATERIALIZED VIEW gis.bylaws_speed_limit_layer
     IS 'This view consists of a few parts.
 
 1. no_bylaw -> centrelines not involved in bylaws
