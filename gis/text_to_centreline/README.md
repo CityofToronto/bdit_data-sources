@@ -607,13 +607,70 @@ i) The streets stated in bylaws are slightly off i.e. they do not intersect or a
 ii) Directionality matters. Northbound and Southbound route between two intersection are of different centrelines such as the Allen Rd. \
 iii) The error message `line_locate_point: 1st arg isn't a line` returned for 49 distinct id's. This mostly occurs when trying to slice a multilinestring.
 
-To be honest, since the new process is rather different from Chelsea's process, it is hard to say if those problems are solved. However, her outstanding problem is kind of related to some issues that have been encountered with the new processes but may not have been solved yet. The issues are listed below, followed by how they are found and how one could tackle them.
+To be honest, since the new process is rather different from Chelsea's process, it is hard to say if those problems are solved. However, her outstanding problem is kind of related to some issues that have been encountered with the new processes but may not have been solved yet. The issues are listed below, followed by how they are found and how one could tackle them. **Note that a bylaw failing may be due to a combination of a couple of reasons and the list below is not exhaustive. Only the ones of greater significance are stated below.**
 
 ## Where did the bylaws fail
 
-I did a check to find out at which stage did the bylaws fail. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly do they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). In order to know exactly at which stage did they fail, I have to separate out the steps into different parts, namely finding int_id, finding routes, trimming centrelines and see where they fail.
+A check was done to find out at which stage the bylaws failed. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws (or 211 bylaws out of 5167 bylaws that are not repealed and not cleaned) that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly do they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). 
 
-Using tables continued from [Usage-case type](#case-type),
+Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](csv/failed_bylaws.csv) (also in table `jchew.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
+
+|failed_reason|function|stage |# of bylaws that failed here|
+|--|--|--|--|
+|1|`gis._clean_bylaws_text`|bylaws text could not be cleaned due to the way they are phrased |3|
+|2|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
+|3|`gis._get_intersection_geom`|no int_id is not found for the second intersection only|83|
+|4|`gis._get_intersection_geom`|no int_id is not found for both intersections|67|
+|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|26| 
+|6|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result|0|
+|7|`gis._centreline_case2`|no results for this case2 due to 1st argument isnt a line|8|
+|8|`gis._centreline_case2`|no results for this case2 due to 2nd argument isnt within \[0,1]|10|
+|9|`gis._centreline_case2`|no results for this case2 due to 3rd argument isnt within \[0,1]|12|
+|10|`gis.text_to_centreline`|bylaws failed at the final stage|1|
+
+**Note (Reasons of failing):** 
+- The fact that failed_reason = 6 has 0 failed bylaws does not mean that no case1 failed. It just means that case1 failed at other stage before even reaching the function `gis._centreline_case1()`.
+- For failed_reason = 1 or 2, it is due to the way the bylaws text was written.
+- For failed_reason = 3 or 4, the 150 bylaws in total that failed at that stage are due to [Direction stated on bylaws is not taken into account](#Direction-stated-on-bylaws-is-not-taken-into-account), [Levenshtein distance can fail for streets that have E / W](#Levenshtein-distance-can-fail-for-streets-that-have-E--W), [Duplicate street name and former municipality element ignored](#Duplicate-street-name-and-former-municipality-element-ignored) and [Tackle Cases with "an intersection and two offsets"](#Tackle-Cases-with-an-intersection-and-two-offsets) .
+- For failed_reason = 5, [pgRouting returns the shortest path but street name different from highway](#pgRouting-returns-the-shortest-path-but-street-name-different-from-highway) is the main reason that they are failing.
+- For failed_reason = 6 or 7 or 8 or 9 or 10, look at the messages returned in the [section Tackle cases with known geom error](#Tackle-cases-with-known-geom-error) to find out more. They are mainly due to an error at `line_locate_point` or `line_interpolate_point`.
+
+Query used to get the above results are
+```sql
+--failed_reason = 1
+SELECT * FROM jchew.bylaws_2020
+WHERE id NOT IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
+AND deleted = FALSE
+
+--failed_reason = 2
+SELECT * FROM jchew.bylaws_2020_cleaned
+WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
+AND TRIM(btwn1) ILIKE '%entire length%' 
+AND btwn2 IS NULL
+AND bylaw_id NOT IN (SELECT id FROM gis.bylaws_routing)
+
+--failed_reason = 3
+SELECT * FROM jchew.bylaws_found_id
+WHERE int2 IS NULL
+AND int1 IS NOT NULL
+
+--failed_reason = 4
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NULL
+AND int2 IS NULL
+
+--failed_reason = 5
+--HOWEVER, the following query returns 81 rows, though 55 of them are actually routed but just do not have int1 or int2 aka they are case1
+--THEREFORE, 81 - 55 = 26 cases that failed to be routed
+SELECT * FROM jchew.bylaws_found_id
+WHERE int1 IS NOT NULL
+AND int2 IS NOT NULL
+AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
+```
+
+In order to know exactly at which stage did they fail, I have to separate out the steps into different parts, namely finding int_id, finding routes, trimming centrelines and see where they fail.
+
+Using tables continued from [section Usage - How to Measure Success Rates](#how-to-measure-success-rates),
 
 i) `jchew.bylaws_to_route` - Table with bylaws that need to be routed.
 
@@ -684,58 +741,6 @@ Table `jchew.bylaws_found_routes` contains 26646 rows (as a bylaw can return mul
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 |Warden Avenue|A point 305 metres north of Mack Avenue and St. Clair Avenue East|highway2: Warden Ave btwn1:  Mack Ave btwn2: St. Clair Ave E metres_btwn1: 305 metres_btwn2:  direction_btwn1: north direction_btwn2:|6872|13457981|13455952|...|1|112744|Warden Ave|21501|201300|Minor Arterial|
 
-Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](csv/failed_bylaws.csv) (also in table `jchew.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
-
-|failed_reason|function|stage |# of bylaws that failed here|
-|--|--|--|--|
-|1|`gis._clean_bylaws_text`|bylaws text could not be cleaned due to the way they are phrased |3|
-|2|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
-|3|`gis._get_intersection_geom`|no int_id is not found for the second intersection only|83|
-|4|`gis._get_intersection_geom`|no int_id is not found for both intersections|67|
-|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|26|
-|6|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result|0|
-|7|`gis._centreline_case2`|no results for this case2 due to 1st argument isnt a line|8|
-|8|`gis._centreline_case2`|no results for this case2 due to 2nd argument isnt within \[0,1]|10|
-|9|`gis._centreline_case2`|no results for this case2 due to 3rd argument isnt within \[0,1]|12|
-|10|`gis.text_to_centreline`|bylaws failed at the final stage|1|
-
-**Note:** The fact that failed_reason = 6 has 0 failed bylaws does not mean that no case1 failed. It just means that case1 failed at other stage before even reaching the function `gis._centreline_case1()`.
-
-Query used to get the above results are
-```sql
---failed_reason = 1
-SELECT * FROM jchew.bylaws_2020
-WHERE id NOT IN (SELECT bylaw_id FROM jchew.bylaws_2020_cleaned)
-AND deleted = FALSE
-
---failed_reason = 2
-SELECT * FROM jchew.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM jchew.bylaws_to_update)
-AND TRIM(btwn1) ILIKE '%entire length%' 
-AND btwn2 IS NULL
-AND bylaw_id NOT IN (SELECT id FROM gis.bylaws_routing)
-
---failed_reason = 3
-SELECT * FROM jchew.bylaws_found_id
-WHERE int2 IS NULL
-AND int1 IS NOT NULL
-
---failed_reason = 4
-SELECT * FROM jchew.bylaws_found_id
-WHERE int1 IS NULL
-AND int2 IS NULL
-
---failed_reason = 5
---HOWEVER, the following query returns 81 rows, though 55 of them are actually routed but just do not have int1 or int2 aka they are case1
---THEREFORE, 81 - 55 = 26 cases that failed to be routed
-SELECT * FROM jchew.bylaws_found_id
-WHERE int1 IS NOT NULL
-AND int2 IS NOT NULL
-AND id NOT IN (SELECT bylaw_id FROM jchew.bylaws_found_routes)
-```
-
-For failed_reason = 6 or 7 or 8 or 9 or 10, look at the message returned in the [next section](#Tackle-cases-with-known-geom-error).
-
 ## Tackle Cases with Known Geom Error
 
 This can be found at [issue #320](https://github.com/CityofToronto/bdit_data-sources/issues/320). When trying to run the mega function on all the bylaws, below are the warning messages I found which may lead us to how we can improve the current function. This problem is related to (iii) above under [Outstanding Work](#outstanding-work). For my case, I found 31 of them and the log is shown below where most of them are related to the street centrelines being not continuous. 
@@ -789,7 +794,7 @@ The table below summarizes the error messages above.
 ## pgRouting returns the shortest path but street name different from `highway`
 
 This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
-This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, only 15 bylaws fail.
+This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, only 26 bylaws fail.
 
 ![image](https://user-images.githubusercontent.com/54872846/76124099-f7475800-5fc7-11ea-865e-963edefa43be.png)
 
