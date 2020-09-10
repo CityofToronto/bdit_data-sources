@@ -36,19 +36,15 @@ def check_rescu(con, date_to_pull):
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: RESCU row number is too low. 
-            *Task*: {task}  
-            *Dag*: {dag} 
-            *Execution Time*: {exec_date}  
-            *Log Url*: {log_url} 
-            """.format(
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-        )
+    
+    # print this task_msg and tag these users
+    task_msg = """The Task {task} failed, 
+        <@U1XGLNWG2> <@UG60NMTPC> <@U1XFV23D4> please fix it :thanks_japanese: """.format(
+        task=context.get('task_instance').task_id,)    
+        
+    # this adds the error log url at the end of the msg
+    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
+            log_url=context.get('task_instance').log_url,)
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
