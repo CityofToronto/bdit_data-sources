@@ -43,6 +43,12 @@ The function is mainly created to process the City of Toronto's [transportation 
 
 The folder named `posted_speed_limit_update` includes past work on transforming bylaws into centreline segments, including python code to transform the xml bylaws on Open Data into Postgresql to process. More on that can be found at this [README](posted_speed_limit_update/README.md).
 
+- If you want to find out where the final speed limit layer is, the materialized view is `gis.bylaws_speed_limit_layer` if expressway speed limit is not your concern or the table is `gis.bylaws_speed_limit_layer_hwy` if you want the right speed limit on the expressways. See [this section on How to Create the Speed Limit Layer from Bylaws](#how-to-create-the-speed-limit-layer-from-bylaws) if you would like to know how those speed limit layers are produced. Note the limitation that the speed limits on ramps are assumed to be the same as the expressways.
+
+- If you want to find out how well this process works, go to the section on [How Well Does This Work](#how-well-does-this-work). That section has a table showing the percentage of bylaws matched as well as the different case types of bylaws. Steps to measure the success rates are also documented in that section.
+
+- If you just want to find out where the bylaws fail, go to the section on [Where did the Bylaws Fail](#where-did-the-bylaws-fail). This section has a table showing at which stage the bylaws fail and the reasons behind that. The [Outstanding Work](#outstanding-work) section outlines the issues that are not resolved yet and their possible solution. 
+
 ## Usage
 
 ### Inputs
@@ -302,6 +308,8 @@ Look at
 
 ##### *`gis.bylaws_speed_limit_layer_hwy`*
 There are centrelines that belong to highway (highway as in expressway and not the `highway` column within the function) and the speed limit is definitely greater than 50km/h. Bylaws we received do not govern the highway and so in short we will not have bylaws stating the speed limit for highway. Therefore, speed limit layer with the right speed limit for highway can be found in table `gis.bylaws_speed_limit_layer_hwy `. In order to fix that, simply apply the code below (with speed limit information found online) to fix the speed limit for expressway.
+
+*Note that there is still uncertainty of ramp speeds and they are now assumed to have the same speed limit as the expressways.*
 
 ```sql
 --to create a table from the m. view to do the update
@@ -597,6 +605,12 @@ The function does not output these two information but these two columns are rat
 
 ## Rename `highway` and `btwn`
 These two column names are first used because that's how the table provided names them. I personally also find it really confusing as the term `highway` here simply means the street where the bylaw is applied to whereas the term `btwn` means the other two streets that intersect with the street where the bylaw is applied aka the start and end point of the street. Given that these two variables or even certain variation of them are used throughout the whole text_to_centreline function, it can be pretty taxing to rename all of them to sth more sensible.
+
+## Reset ramps speed limit
+The speed limit on the ramps is currently assumed to be the same as that on the expressways which is not realistic. The ramps can be found by filtering the category in the table `gis.centreline` whereas the speed limit can be found by Googling.
+
+## Use directional centrelines
+Current process uses routing with the network being `gis.centreline_routing_undirected_lfname` which contains undirectional centrelines. This can be a problem because for streets with median, only a single path is routed with the current process which is taking the shortest path that matches the street names. Note that by implementing this, solving this [outstanding issue](#direction-stated-on-bylaws-is-not-taken-into-account) will be substantially easier.
 
 # Outstanding Work
 
