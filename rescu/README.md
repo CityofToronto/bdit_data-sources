@@ -27,7 +27,19 @@ This [script](rescu_pull.py) is located in the terminal server and takes in thre
 ## `check_rescu.py`
 
 Since the terminal server does not have an internet connection, we will not get notified if the process fails. Therefore, we created an Airflow task to do that job for us. There is a dag named [`check_rescu`](/dags/check_rescu.py) which runs at 6am everyday that checks the number of rows inserted for the day before in both tables `rescu.raw_15min` and `rescu.volumes_15min`. If the number of rows is 0 OR if the number of rows from the raw table is less than that in the volumes table OR if the total number of rows from the volumes table is less than 7000 (the average number of rows per day is about 20,000), a Slack notification will be sent to notify the team. The line that does exactly that is shown below.
-```sql
+```python
 if raw_num == 0 or raw_num < volume_num or volume_num < 7000:
   raise Exception ('There is a PROBLEM here. There is no raw data OR raw_data is less than volume_15min OR volumes_15min is less than 7000 which is way too low')
 ```
+
+When the Slack message is sent, we can run the following check to find out what exactly is wrong with the data pipeline. The Airflow dag only shows us the number of rows in the raw and volumes tables but the reason of failing may still be unclear. Therefore, this query can be used to have a better picture on what is happening with that day of data.
+```sql
+SELECT 
+TRIM(SUBSTRING(raw_info, 15, 12)) AS detector_id,
+dt + LEFT(raw_info,6)::time AS datetime_bin,
+nullif(TRIM(SUBSTRING(raw_info, 27, 10)),'')::int AS volume_15min
+FROM rescu.raw_15min 
+WHERE dt = '2020-09-03'::date --change to the date that you would like to investigate
+AND nullif(TRIM(SUBSTRING(raw_info, 27, 10)),'')::int < 0
+```
+If the column `volume_15min` is `-1`, that means that there is something wrong with the data from the source end and we have to notify the person in charge as this is not something that we can fix. 
