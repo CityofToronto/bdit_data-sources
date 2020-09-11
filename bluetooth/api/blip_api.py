@@ -46,17 +46,17 @@ def parse_args(args, prog=None, usage=None):
                         "previous day. ",
                         metavar=('YYYYMMDD', 'YYYYMMDD'))
     parser.add_argument("-a", "--analysis", action='append', type= int,
-                        help="Analysis ID to pull. Add more flags for multiple IDs")
+                        help="Analysis ID to pull. Add more flags for multiple IDs. Otherwise pulls all routes.")
     parser.add_argument("-d", "--dbsetting",
                         default='config.cfg',
                         help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
     parser.add_argument("--direct",
                         action='store_true',
-                        help="Use DIRECT proxy if using from workstation")
+                        help="Use this flag to use the proxy if using from workstation. Do not use if running from terminal server")
     parser.add_argument("--live",
                         action='store_true',
-                        help="Pull most recent clock hour of live data")
+                        help="Pull most recent clock hour of live data, for King Street Pilot")
 
     return parser.parse_args(args)
 
