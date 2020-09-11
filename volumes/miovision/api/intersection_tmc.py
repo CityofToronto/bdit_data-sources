@@ -24,24 +24,17 @@ class NotFoundError(Exception):
     """Exception for a 404 error."""
 
 def logger():
-    
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')
-    file_handler = logging.FileHandler('logging.log')
-    file_handler.setFormatter(formatter)
-    logger.handlers.clear()
-    stream_handler=logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
-        
-    with open('logging.log', 'w'):
-        pass
-    return logger
+    logger = logging.getLogger(__name__)	
+    logger.setLevel(logging.INFO)	
+    formatter=logging.Formatter('%(asctime)s     	%(levelname)s    %(message)s', datefmt='%d %b %Y %H:%M:%S')	
+    stream_handler=logging.StreamHandler()	
+    stream_handler.setFormatter(formatter)	
+    logger.addHandler(stream_handler)	
+    return logger	
 
-logger=logger()
+logger=logger()	
 logger.debug('Start')
+
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
@@ -64,9 +57,9 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself') 
-@click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
-@click.option('--intersection' , default=0, help='enter the intersection_uid of the intersection')
-@click.option('--pull' , default=None, help='enter 1 to not process the data')
+@click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--intersection' , default=[], multiple=True, help='enter the intersection_uid of the intersection')
+@click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
 @click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
 def run_api(start_date, end_date, path, intersection, pull, dupes):
@@ -212,33 +205,40 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
     logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
-def process_data(conn, pull, start_time, end_iteration_time):
+def process_data(conn, start_time, end_iteration_time):
+    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
+
+    with conn:
+        with conn.cursor() as cur: 
+            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
+            cur.execute(update_gaps)
     time_period = (start_time, end_iteration_time)
-    if pull is None:
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
-                    cur.execute(update, time_period)
-                    logger.info('Aggregated to 15 minute bins')
+    with conn:
+        with conn.cursor() as cur: 
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            cur.execute(invalid_gaps, time_period)
+            logger.info(conn.notices[-1])
+    logger.info('Updated gapsize table and found gaps exceeding allowable size') 
 
-                    atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
-                    cur.execute(atr_aggregation, time_period)
-                    logger.info('Completed data processing for %s', start_time)
+    # Aggregate to 15min tmc / 15min
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
+                cur.execute(update, time_period)
+                logger.info('Aggregated to 15 minute bins')
 
-                    missing_dates_query="SELECT miovision_api.missing_dates(%s::date)"
-                    cur.execute(missing_dates_query, (start_time,)) #Turn it into a tuple to pass single argument
-                    logger.info('missing_dates_query done')
-            
-        except psycopg2.Error as exc:
-            logger.exception(exc)
-            sys.exit(1)
-    else:
-        logger.info('Data Processing Skipped')
+                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"            
+                cur.execute(atr_aggregation, time_period)
+                logger.info('Completed data processing for %s', start_time)
+        
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
 
     with conn:
         with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date);"
+            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
             logger.info('report_dates done')
 
@@ -247,7 +247,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
-            insert_data = '''INSERT INTO miovision_api.volumes (intersection_uid, datetime_bin, classification_uid, 
+            insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid, 
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
@@ -266,34 +266,43 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
         with conn.cursor() as cur: 
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
             cur.execute(invalid_movements, time_period)
-            invalid_flag=cur.fetchone()[0]
             logger.info(conn.notices[-1]) 
 
-def pull_data(conn, start_time, end_time, intersection_id, path, pull, key, dupes):
+def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(days=1)
     end_iteration_time= start_time + time_delta    
 
-    if intersection_id > 0:
+    if intersection != []:
         with conn.cursor() as cur: 
-            string="SELECT * from miovision_api.intersections WHERE intersection_uid = %s"
-            cur.execute(string, (intersection_id,))
+            wanted = tuple(intersection) # convert list into tuple
+            string= '''SELECT * FROM miovision_api.intersections
+                        WHERE intersection_uid IN %s
+                        AND %s::date > date_installed 
+                        AND date_decommissioned IS NULL '''
+            cur.execute(string, (wanted, start_time))
+
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
     else: 
         with conn.cursor() as cur: 
-            string2="SELECT * from miovision_api.intersections"
-            cur.execute(string2)
+            string2= '''SELECT * FROM miovision_api.intersections 
+                        WHERE %s::date >= date_installed 
+                        AND date_decommissioned IS NULL'''  
+            cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
-
+    
+    if len(intersection_list) == 0:
+        logger.critical('No intersections found in miovision_api.intersections for the specified start time')
+        sys.exit(3)
     while True:
         table=[]
         
-        for intersection in intersection_list:
-            intersection_uid=intersection[0]
-            intersection_id1=intersection[1]
-            intersection_name=intersection[2]
+        for interxn in intersection_list:
+            intersection_uid=interxn[0]
+            intersection_id1=interxn[1]
+            intersection_name=interxn[2]
             logger.info(intersection_name+'     '+str(start_time))
             for attempt in range(3):
                 try:
@@ -325,7 +334,10 @@ def pull_data(conn, start_time, end_time, intersection_id, path, pull, key, dupe
             logger.exception(exc)
             sys.exit(1)
         
-        process_data(conn, pull, start_time, end_iteration_time)
+        if pull_data:
+            logger.info('Skipping aggregating and processing volume data')
+        else:
+            process_data(conn, start_time, end_iteration_time)
 
         end_iteration_time+=time_delta
         start_time+=time_delta
