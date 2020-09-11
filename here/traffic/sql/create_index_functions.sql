@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION here.create_tx_idx (tablename TEXT)
 RETURNS INTEGER
 AS $$
 BEGIN
-    EXECUTE format('CREATE INDEX ON here.%I (tx);', tablename);
+    EXECUTE format('CREATE INDEX ON here.%I USING brin(tx);', tablename);
     RETURN 1;
 END;
 $$
