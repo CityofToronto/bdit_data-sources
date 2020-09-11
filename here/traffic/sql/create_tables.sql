@@ -69,8 +69,8 @@ BEGIN
 				ALTER TABLE here.%I OWNER TO here_admins;
 				$$
 				, tablename, tablename);
-			SELECT here.create_link_dir_idx(tablename);
-			SELECT here.create_tx_idx(tablename);
+			PERFORM here.create_link_dir_idx(tablename);
+			PERFORM here.create_tx_idx(tablename);
 		END LOOP;
 	END LOOP;
 END;

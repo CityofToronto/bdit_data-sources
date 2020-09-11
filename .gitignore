@@ -190,10 +190,16 @@ bluetooth/api/config.cfg
 volumes/miovision/api/config.cfg
 config.cfg
 
-<<<<<<< HEAD
-=======
+
+volumes/miovision/api/config_miovision_api_bot.cfg
+
 
 # Google Sheets API keys.
 token.pickle
 key.json
->>>>>>> master
+
+
+rescu/connect/*
+rescu/data/*
+rescu/detector_inventory.csv
+
