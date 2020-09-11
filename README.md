@@ -12,6 +12,8 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Data Elements](#data-elements-1)
 		- [Historical Data](#historical-data)
 	- [Retrieval](#retrieval)
+- [GIS - Geographic Information System](#gis---geographic-information-system)
+	- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
 		- [Data Elements](#data-elements-2)
@@ -36,8 +38,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
 	- [Data Elements](#data-elements-9)
 	- [Notes](#notes-7)
-- [GIS - Geographic Information System](#gis---geographic-information-system)
-	- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
 - [`wys`: Watch Your Speed Signs](#wys-watch-your-speed-signs)
@@ -118,6 +118,12 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
 	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
 	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+
+## GIS - Geographic Information System
+
+### Text Description to Centreline Geometry Automation
+
+[`gis/text_to_centreline/`](gis/text_to_centreline) contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use. 
 
 ## Volume Data
 
@@ -307,12 +313,6 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 ### Notes
 * No real-time data integration
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
-
-## GIS - Geographic Information System
-
-### Text Description to Centreline Geometry Automation
-
-`gis/text_to_centreline/` contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use. 
 
 ## Vision Zero - Google Sheets API
 
