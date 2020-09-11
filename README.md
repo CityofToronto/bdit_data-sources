@@ -12,18 +12,20 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Data Elements](#data-elements-1)
 		- [Historical Data](#historical-data)
 	- [Retrieval](#retrieval)
+- [GIS - Geographic Information System](#gis---geographic-information-system)
+	- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-		- [Data Elements](#data-elements-4)
-		- [Notes](#notes-3)
-	- [RESCU - Loop Detectors](#rescu---loop-detectors)
-		- [Data Elements](#data-elements-5)
-	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
 		- [Data Elements](#data-elements-2)
 		- [Notes](#notes-1)
-	- [Permanent Count Stations and Automated Traffic Recorder (ATR)](#permanent-count-stations-and-automated-traffic-recorder-atr)
+	- [RESCU - Loop Detectors](#rescu---loop-detectors)
 		- [Data Elements](#data-elements-3)
+	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
+		- [Data Elements](#data-elements-4)
 		- [Notes](#notes-2)
+	- [Permanent Count Stations and Automated Traffic Recorder (ATR)](#permanent-count-stations-and-automated-traffic-recorder-atr)
+		- [Data Elements](#data-elements-5)
+		- [Notes](#notes-3)
 - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
 	- [Data Elements](#data-elements-6)
 	- [Notes](#notes-4)
@@ -116,6 +118,12 @@ SampleCount|the number of devices completing the route from start to end in the 
 	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
 	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
 	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+
+## GIS - Geographic Information System
+
+### Text Description to Centreline Geometry Automation
+
+[`gis/text_to_centreline/`](gis/text_to_centreline) contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use. 
 
 ## Volume Data
 
@@ -307,6 +315,7 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
 
 ## Vision Zero - Google Sheets API
+
 This dataset comes from Google Sheets tracking progress on implementation of safety improvements in school zones. \
 Data Available in `vz_safety_programs_staging.school_safety_zone_2018_raw` and `vz_safety_programs_staging.school_safety_zone_2019_raw`
 

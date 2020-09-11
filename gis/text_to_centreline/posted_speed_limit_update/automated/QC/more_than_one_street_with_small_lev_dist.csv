@@ -1,0 +1,39 @@
+street_name,extents,street_name_arr,Match quality
+Don Mills Road,A point 24 metres south of the centre line of the Don Valley Parkway and Steeles Avenue East,"{Don Mills Rd"",""Don Mills Rd E"",""Don Mills Rd W""}""",Bylaw not written properly
+Chester Le Boulevard,Pharmacy Avenue (north intersection) and Pharmacy Avenue (south intersection),"{Chester Le Blvd"",""1 Chester Le Blvd""}""",Seems like there is an issue with the centreline (investigate 1 Chester Le Blvd)
+William R. Allen Road (northbound),Eglinton Avenue West and Lawrence Avenue West,"{William R Allen Rd N"",""William R Allen Rd S""}""",Issue with algortihm - it wont cover this case
+William R. Allen Road (southbound),A point 600 metres north of Eglinton Avenue West and Lawrence Avenue West,"{William R Allen Rd N"",""William R Allen Rd S""}""",Issue with algortihm - it wont cover this case
+William R. Allen Road (southbound),Eglinton Avenue West and a point 600 metres north,"{William R Allen Rd N"",""William R Allen Rd S""}""",Issue with algortihm - it wont cover this case
+Glengrove Avenue,Glen Rush Boulevard (south intersection) and a point 70 metres east of Westgrove Crescent,"{Glengrove Ave"",""Glengrove Ave W""}""",Matches correctly
+Glengrove Avenue West,Avenue Road and a point 309.9 metres west of Mona Drive,"{Glengrove Ave W"",""Glengrove Ave""}""",Matches correctly
+Highway 27,Belfield Road and Steeles Avenue West,"{Highway 27 N"",""Highway 27 S""}""",Issue with algortihm - it wont cover this case
+Old Mill Drive,Riverside Drive and Humberview Road,"{Old Mill Dr"",""Old Mill Rd""}""",Matches correctly
+Old Oak Drive,Dundas Street West and Old Oak Road,"{Old Oak Dr"",""Old Oak Rd""}""",Matches correctly
+Old Oak Road,Donnybrook Lane and Cedarcrest Drive,"{Old Oak Rd"",""Old Oak Dr""}""",Matches correctly
+Sheppard Avenue,Weston Road and Kingston Road,"{Sheppard Ave E"",""Sheppard Ave W""}""",Bylaw not written properly
+The East Mall,Bloor Street West and a point 99 metres north of Gibbs Road,"{The East Mall"",""The West Mall""}""",Matches correctly
+The East Mall,Evans Avenue and East Mall Crescent,"{The East Mall"",""The West Mall""}""",Matches correctly
+The Donway West,A point 30 metres north of Lawrence Avenue East and Belton Road,"{The Donway W"",""The Donway E""}""",Matches correctly
+The East Mall,Burnhamthorpe Road and Capri Road,"{The East Mall"",""The West Mall""}""",Matches correctly
+The East Mall,Bloor Street West and East Mall Crescent,"{The East Mall"",""The West Mall""}""",Matches correctly
+The West Mall,West Mall Crescent and Evans Avenue,"{The West Mall"",""The East Mall""}""",Matches correctly
+Glen Manor Drive,Glen Manor Drive East and Kingston Road,"{Glen Manor Dr"",""Glen Manor Dr E"",""Glen Manor Dr W""}""",Incorrect match - not sure why
+Glen Manor Drive East,Glen Manor Drive (south intersection) and Glen Manor Drive (north intersection),"{Glen Manor Dr E"",""Glen Manor Dr W""}""",Matches correctly
+Glen Manor Drive West,Glen Manor Drive (south intersection) and Glen Manor Drive (north intersection),"{Glen Manor Dr W"",""Glen Manor Dr"",""Glen Manor Dr E""}""",Matches correctly
+Fallingbrook Road,Queen Street East and Windsor Avenue,"{Fallingbrook Rd"",""Fallingbrook Dr""}""",Matches correctly
+Fallingbrook Road,Windsor Avenue and Kingston Road,"{Fallingbrook Rd"",""Fallingbrook Dr""}""",Matches correctly
+Gange Avenue,Birch Avenue and the south limit of Gange Avenue,"{Gange Ave"",""Grange Ave""}""",Matches correctly
+East Lynn Avenue,Danforth Avenue and the south end of East Lynn Avenue,"{East Lynn Ave"",""West Lynn Ave""}""",Matches correctly
+West Lynn Avenue,Danforth Avenue and the south end of West Lynn Avenue,"{West Lynn Ave"",""East Lynn Ave""}""",Matches correctly
+Binswood Avenue,Sammon Avenue and Cosburn Avenue,"{Binswood Ave"",""Inwood Ave""}""",Matches correctly
+George Street South,Henry Lane Terrace (south intersection) and Front Street East,"{George St S"",""George St""}""",Issue with algortihm - it wont cover this case
+Linnsmore Crescent,Danforth Avenue and a point 40.2 metres north of Milverton Boulevard,"{Linnsmore Cres"",""Linsmore Cres""}""",Matches correctly
+Bartlett Avenue North,Dupont Street and Geary Avenue,"{Bartlett Ave N"",""Bartlett Ave""}""",Bylaw not written properly
+Rusholme Drive,Dunda Street West/Beaconsfield Avenue and St. Annes Road,"{Rusholme Dr"",""Rusholme Rd""}""",Matches correctly
+Rusholme Road,Dundas Street West and Bloor Street West,"{Rusholme Rd"",""Rusholme Dr""}""",Matches correctly
+Borough Approach West,Ellesmere Road and Borough Drive,"{Borough Approach W"",""Borough Approach E""}""",Matches correctly
+Russell Hill Road,Boulton Drive and Kilbarry Road,"{Russell Hill Rd"",""Russell Hill Dr""}""",Matches correctly
+May Street,South Drive and the north end of May Street,"{May St"",""May Sq""}""",Matches correctly
+Inwood Avenue,Milverton Boulevard and Mortimer Avenue,"{Inwood Ave"",""Binswood Ave""}""",Matches correctly
+Court Street,Toronto Street and Church Street,"{Court St"",""Court Sq""}""",Matches correctly
+Haddington Avenue,Bathurst Street and Greer Road,"{Haddington Ave"",""Addington Ave"",""Heddington Ave""}""",Matches correctly
