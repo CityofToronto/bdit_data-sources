@@ -25,6 +25,9 @@
   - [Wrapper function for `clean_bylaws_text`](#Wrapper-function-for-clean_bylaws_text)
   - [Include `date_added` and `date_reapealed`](#Include-date_added-and-date_repealed)
   - [Rename `highway` and `btwn`](#Rename-highway-and-btwn)
+  - [Reset ramps speed limit](#Reset-ramps-speed-limit)
+  - [Use directional centrelines](#Use-directional-centrelines)
+  - [Improve sensitivity in `section`](#Improve-sensitivity-in-section)
 - [Outstanding Work](#Outstanding-Work) 
   - [Where did the bylaws fail](#where-did-the-bylaws-fail)
   - [Tackle Cases with Known Geom Error](#tackle-cases-with-known-geom-error)
@@ -611,6 +614,9 @@ The speed limit on the ramps is currently assumed to be the same as that on the 
 
 ## Use directional centrelines
 Current process uses routing with the network being `gis.centreline_routing_undirected_lfname` which contains undirectional centrelines. This can be a problem because for streets with median, only a single path is routed with the current process which is taking the shortest path that matches the street names. Note that by implementing this, solving this [outstanding issue](#direction-stated-on-bylaws-is-not-taken-into-account) will be substantially easier.
+
+## Improve sensitivity in `section`
+There is a comment made on the [part](#incorporate-centrelines-without-bylaws-and-cut-centrelines) about incorporating centrelines without bylaws and only assigning the latest bylaw if the same centreline is found in different bylaws. The problem occurs when a centreline is partially involved in bylaw_B and partially involved in bylaw_A (which is the earlier on bylaw) and partially not involved in any bylaw. As shown in the table for bylaw_id = 1805, the very first row has a `section` of '(0.896704452511841,0.89770788980652]' which is extremely minute and can be filtered. The point is that, normally the new bylaw is used to overwrite the old bylaw but due to the way the bylaws texts are phrased, the centrelines outputs might be slightly different and we want the process to be able to filter that out, particularly on the sensitivty of the column `section`.
 
 # Outstanding Work
 
