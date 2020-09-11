@@ -32,7 +32,6 @@ def task_fail_slack_alert(context):
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username='airflow',
-        # proxy='http://137.15.73.132:8080'
         )
     return failed_alert.execute(context=context)
 
@@ -47,8 +46,8 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_miovision',default_args=default_args, schedule_interval='0 8 * * *')
-# Add 5 hours to make up for the different time zone then another 3 hours to ensure that the data are at least 2 hours old
+dag = DAG('pull_miovision',default_args=default_args, schedule_interval='0 3 * * *')
+# Add 3 hours to ensure that the data are at least 2 hours old
 
 t1 = BashOperator(
         task_id = 'pull_miovision',
