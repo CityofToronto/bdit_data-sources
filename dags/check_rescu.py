@@ -38,7 +38,8 @@ def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
     # print this task_msg and tag these users
-    task_msg = """The Task {task} failed, 
+    task_msg = """The Task {task} failed, the total volume is too low. 
+        Either a lot of loop detectors are down or there's a problem in the pipeline.
         <@U1XGLNWG2> <@UG60NMTPC> <@U1XFV23D4> please fix it :thanks_japanese: """.format(
         task=context.get('task_instance').task_id,)    
         
