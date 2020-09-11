@@ -194,3 +194,8 @@ volumes/miovision/api/config_miovision_api_bot.cfg
 token.pickle
 key.json
 
+
+rescu/connect/*
+rescu/data/*
+rescu/detector_inventory.csv
+
