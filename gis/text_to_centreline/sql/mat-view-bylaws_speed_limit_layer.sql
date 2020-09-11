@@ -297,7 +297,8 @@ UNION
 WITH DATA;
 
 COMMENT ON MATERIALIZED VIEW gis.bylaws_speed_limit_layer
-    IS 'This view consists of a few parts.
+    IS 'Speed limits based on bylaws. 
+This view consists of a few parts.
 
 1. no_bylaw -> centrelines not involved in bylaws
 2. whole_added -> centrelines involved in bylaws, be it fully or partially
