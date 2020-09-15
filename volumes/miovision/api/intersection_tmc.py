@@ -270,7 +270,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
-    time_delta = datetime.timedelta(hours=12)
+    time_delta = datetime.timedelta(hours=6)
     end_iteration_time= start_time + time_delta
 
     if intersection != []:
