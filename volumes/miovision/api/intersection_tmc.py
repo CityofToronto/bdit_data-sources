@@ -268,10 +268,17 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             cur.execute(invalid_movements, time_period)
             logger.info(conn.notices[-1])
 
+
+def daterange(start_time, end_time, dt):
+    """Generator for a sequence of regular time periods."""
+    for i in range(math.ceil((end_time - start_time) / dt)):
+        c_start_t = start_time + i * dt
+        yield (c_start_t, c_start_t + dt)
+
+
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(hours=6)
-    end_iteration_time= start_time + time_delta
 
     if intersection != []:
         with conn.cursor() as cur: 
@@ -296,18 +303,20 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     if len(intersection_list) == 0:
         logger.critical('No intersections found in miovision_api.intersections for the specified start time')
         sys.exit(3)
-    while True:
+
+    for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
+
         table=[]
         
         for interxn in intersection_list:
             intersection_uid=interxn[0]
             intersection_id1=interxn[1]
             intersection_name=interxn[2]
-            logger.info(intersection_name+'     '+str(start_time))
+            logger.info(intersection_name+'     '+str(c_start_t))
             for attempt in range(3):
                 try:
-                    table=get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key)
-                    table=get_pedestrian(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key)
+                    table=get_intersection_tmc(table, c_start_t, c_end_t, intersection_id1, intersection_uid, key)
+                    table=get_pedestrian(table, c_start_t, c_end_t, intersection_id1, intersection_uid, key)
                     break
                 except exceptions.ProxyError as prox:
                     logger.error(prox)
@@ -327,9 +336,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             else:
                 logger.error('Could not successfully pull data for this intersection')
 
-        logger.info('Completed data pulling for %s', start_time)
+        logger.info('Completed data pulling for %s', c_start_t)
         try: 
-            insert_data(conn, start_time, end_iteration_time, table, dupes)
+            insert_data(conn, c_start_t, c_end_t, table, dupes)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)
@@ -337,12 +346,8 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         if pull_data:
             logger.info('Skipping aggregating and processing volume data')
         else:
-            process_data(conn, start_time, end_iteration_time)
+            process_data(conn, c_start_t, c_end_t)
 
-        end_iteration_time+=time_delta
-        start_time+=time_delta
-        if start_time>=end_time:
-            break
     logger.info('Done')
         
 if __name__ == '__main__':
