@@ -8,6 +8,7 @@ import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
+import math
 import logging
 import configparser
 import click
