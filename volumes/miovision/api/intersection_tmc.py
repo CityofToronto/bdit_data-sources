@@ -250,7 +250,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
         with conn.cursor() as cur:
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                              leg,  movement_uid, volume) VALUES %s
-                             ON CONFLICT (volume_uid) DO NOTHING;'''
+                             ON CONFLICT DO NOTHING;'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
@@ -338,7 +338,8 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             else:
                 logger.error('Could not successfully pull data for this intersection')
 
-        logger.info('Completed data pulling for %s', c_start_t)
+        logger.info('Completed data pulling from {0:s} to {1:s}'
+                    .format(c_start_t, c_end_t))
         try: 
             insert_data(conn, c_start_t, c_end_t, table, dupes)
         except psycopg2.Error as exc:
