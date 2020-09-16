@@ -249,8 +249,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     with conn:
         with conn.cursor() as cur:
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
-                             leg,  movement_uid, volume) VALUES %s
-                             ON CONFLICT DO NOTHING;'''
+                             leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
@@ -265,7 +264,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     logger.info('Inserted into volumes and updated log')
     
     with conn:
-        with conn.cursor() as cur: 
+        with conn.cursor() as cur:
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
             cur.execute(invalid_movements, time_period)
             logger.info(conn.notices[-1])
