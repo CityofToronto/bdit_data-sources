@@ -134,7 +134,9 @@ def get_classification(veh_class):
         return '5'
     elif veh_class == 'WorkVan':
         return '8'
-    return '0'
+    elif veh_class == 'MotorizedVehicle':
+        return '9'
+    raise ValueError("vehicle class {0} not recognized!".format(veh_class))
 
 def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
