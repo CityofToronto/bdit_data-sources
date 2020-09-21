@@ -212,12 +212,12 @@ def process_data(conn, start_time, end_iteration_time):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
 
     with conn:
-        with conn.cursor() as cur: 
+        with conn.cursor() as cur:
             update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
             cur.execute(update_gaps)
     time_period = (start_time, end_iteration_time)
     with conn:
-        with conn.cursor() as cur: 
+        with conn.cursor() as cur:
             invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
             cur.execute(invalid_gaps, time_period)
             logger.info(conn.notices[-1])
@@ -234,7 +234,7 @@ def process_data(conn, start_time, end_iteration_time):
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
-        
+
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -264,7 +264,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             cur.execute(api_log, time_period)
 
     logger.info('Inserted into volumes and updated log')
-    
+
     with conn:
         with conn.cursor() as cur:
             invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
@@ -284,7 +284,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     time_delta = datetime.timedelta(hours=6)
 
     if intersection != []:
-        with conn.cursor() as cur: 
+        with conn.cursor() as cur:
             wanted = tuple(intersection) # convert list into tuple
             string= '''SELECT * FROM miovision_api.intersections
                         WHERE intersection_uid IN %s
@@ -294,15 +294,15 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
-    else: 
-        with conn.cursor() as cur: 
+    else:
+        with conn.cursor() as cur:
             string2= '''SELECT * FROM miovision_api.intersections
                         WHERE %s::date >= date_installed
                         AND date_decommissioned IS NULL'''
             cur.execute(string2, (start_time,))
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
-    
+
     if len(intersection_list) == 0:
         logger.critical('No intersections found in miovision_api.intersections for the specified start time')
         sys.exit(3)
@@ -310,7 +310,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
 
         table=[]
-        
+
         for interxn in intersection_list:
             intersection_uid=interxn[0]
             intersection_id1=interxn[1]
@@ -341,18 +341,18 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
         logger.info('Completed data pulling from {0:s} to {1:s}'
                     .format(c_start_t, c_end_t))
-        try: 
+        try:
             insert_data(conn, c_start_t, c_end_t, table, dupes)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)
-        
+
         if pull_data:
             logger.info('Skipping aggregating and processing volume data')
         else:
             process_data(conn, c_start_t, c_end_t)
 
     logger.info('Done')
-        
+
 if __name__ == '__main__':
     cli()
