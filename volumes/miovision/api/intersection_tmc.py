@@ -84,6 +84,7 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
         pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
     except Exception as e:
         logger.critical(traceback.format_exc())
+        sys.exit(1)
 
 
 def get_movement(entrance, exit_dir):
