@@ -348,10 +348,10 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             logger.exception(exc)
             sys.exit(1)
 
-        if pull_data:
-            logger.info('Skipping aggregating and processing volume data')
-        else:
-            process_data(conn, c_start_t, c_end_t)
+    if pull_data:
+        logger.info('Skipping aggregating and processing volume data')
+    else:
+        process_data(conn, start_time, end_time)
 
     logger.info('Done')
 
