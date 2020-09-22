@@ -59,7 +59,7 @@ def cli():
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
-@click.option('--intersection' , default=[], multiple=True, help='enter the intersection_uid of the intersection')
+@click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
 @click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
@@ -284,14 +284,13 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(hours=6)
 
-    if intersection != []:
+    if len(intersection) > 0:
         with conn.cursor() as cur:
-            wanted = tuple(intersection) # convert list into tuple
             string= '''SELECT * FROM miovision_api.intersections
                         WHERE intersection_uid IN %s
                         AND %s::date > date_installed
                         AND date_decommissioned IS NULL '''
-            cur.execute(string, (wanted, start_time))
+            cur.execute(string, (intersection, start_time))
 
             intersection_list=cur.fetchall()
             logger.debug(intersection_list)
