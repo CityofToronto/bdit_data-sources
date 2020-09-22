@@ -4,6 +4,7 @@
 
 - [Table of Contents](#table-of-contents)
 - [1. Overview](#1-overview)
+    - [Folder Structure](#folder-structure)
 - [2. Table Structure](#2-table-structure)
 	- [Reference Tables](#reference-tables)
 		- [`classifications`](#classifications)
@@ -47,7 +48,14 @@
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+
+### Folder Structure
+
+- `api` - scripts and documentation for accessing the Miovision API.
+- `dev_notebooks` - Jupyter Notebooks for development and testing.
+- `geojson` - stores locations of Miovision cameras.
+- `sql` - scripts for producing tables.
 
 ## 2. Table Structure
 
