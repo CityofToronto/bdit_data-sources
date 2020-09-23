@@ -4,6 +4,7 @@
 
 - [Table of Contents](#table-of-contents)
 - [1. Overview](#1-overview)
+    - [Folder Structure](#folder-structure)
 - [2. Table Structure](#2-table-structure)
 	- [Reference Tables](#reference-tables)
 		- [`classifications`](#classifications)
@@ -27,27 +28,34 @@
 	- [Adding Intersections](#Adding-Intersections)
 - [5. Repulling data](#5-Repulling-data)
 	- [Deleting data to re-run process](#Deleting-data-to-re--run-process)
-- [6. Processing Data from API](#5-processing-data-from-api)
-- [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#6-processing-data-from-csv-dumps-no-longer-in-use)
+- [6. Processing Data from API](#6-processing-data-from-api)
+- [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#7-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
 	- [A. Populate `volumes`](#a-populate-volumes)
 	- [B. Populate `volumes_15min_tmc` and `volumes_15min`](#b-populate-volumes_15min_tmc-and-volumes_15min)
 	- [C. Refresh reporting views](#c-refresh-reporting-views)
 	- [D. Produce summarized monthly reporting data](#d-produce-summarized-monthly-reporting-data)
 	- [Deleting Data](#deleting-data)
-- [8. Filtering and Interpolation (NO LONGER IN USE)](#7-filtering-and-interpolation-no-longer-in-use)
+- [8. Filtering and Interpolation (NO LONGER IN USE)](#8-filtering-and-interpolation-no-longer-in-use)
 	- [Filtering](#filtering)
 	- [Interpolation](#interpolation)
-- [9. QC Checks](#8-qc-checks)
+- [9. QC Checks](#9-qc-checks)
 	- [Variance check](#variance-check)
 	- [Invalid Movements](#invalid-movements)
-- [10. Open Data](#9-open-data)
+- [10. Open Data](#10-open-data)
 
 ## 1. Overview
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+
+### Folder Structure
+
+- `api` - scripts and documentation for accessing the Miovision API.
+- `dev_notebooks` - Jupyter Notebooks for development and testing.
+- `geojson` - stores locations of Miovision cameras.
+- `sql` - scripts for producing tables.
 
 ## 2. Table Structure
 
