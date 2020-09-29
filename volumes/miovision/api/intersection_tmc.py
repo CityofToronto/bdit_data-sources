@@ -212,10 +212,6 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
 def process_data(conn, start_time, end_iteration_time):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
 
-    with conn:
-        with conn.cursor() as cur:
-            update_gaps="SELECT miovision_api.refresh_gapsize_lookup()"
-            cur.execute(update_gaps)
     time_period = (start_time, end_iteration_time)
     with conn:
         with conn.cursor() as cur:
