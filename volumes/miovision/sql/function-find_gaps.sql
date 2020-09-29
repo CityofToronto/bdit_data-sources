@@ -21,8 +21,8 @@ WITH wkdy_lookup(period, isodow) AS (
     datetime_bin(volumes.datetime_bin, 60) AS hourly_bin,
     sum(volumes.volume) AS vol
    FROM miovision_api.volumes
-  WHERE volumes.datetime_bin >= GREATEST(start_date::timestamp without time zone - '60 days'::interval, '2019-01-01 00:00:00') AND
-        volumes.datetime_bin < GREATEST(start_date::timestamp without time zone, '2019-03-01 00:00:00')
+  WHERE volumes.datetime_bin >= end_date::timestamp without time zone - '60 days'::interval AND
+        volumes.datetime_bin < end_date::timestamp without time zone
   GROUP BY volumes.intersection_uid, (datetime_bin(volumes.datetime_bin, 60))
 ), gapsize_lookup AS (
  SELECT mio.intersection_uid,
