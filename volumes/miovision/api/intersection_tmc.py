@@ -21,6 +21,9 @@ class MiovisionAPIException(Exception):
 class TimeoutException(Exception):
     """Exception if API gives a 504 error"""
 
+class ServerException(Exception):
+    """Exception if API gives a 500 error"""
+
 class NotFoundError(Exception):
     """Exception for a 404 error."""
 
@@ -170,6 +173,8 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
+    elif response.status_code==500:
+        raise ServerException('Error'+str(response.status_code))
     logger.critical('Unknown error pulling tmcs for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
@@ -206,6 +211,8 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
+    elif response.status_code==500:
+        raise ServerException('Error'+str(response.status_code))
     logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
@@ -332,6 +339,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                     break
                 except TimeoutException as exc_504:
                     logger.error(exc_504)
+                    sleep(60)
+                except ServerException as exc_500:
+                    logger.error(exc_500)
                     sleep(60)
                 except MiovisionAPIException as miovision_exc:
                     logger.error(miovision_exc)
