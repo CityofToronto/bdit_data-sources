@@ -15,14 +15,30 @@ import click
 import traceback
 from time import sleep
 
-class MiovisionAPIException(Exception):
+
+class BreakingError(Exception):
+    """Base class for exceptions that immediately halt API pulls."""
+
+
+class MiovisionAPIException(BreakingError):
     """Base class for exceptions."""
 
-class TimeoutException(Exception):
+
+class NotFoundError(BreakingError):
+    """Exception for a 404 error."""
+
+
+class RetryError(Exception):
+    """Base class for exceptions that warrant a retry."""
+
+
+class TimeoutException(RetryError):
     """Exception if API gives a 504 error"""
 
-class NotFoundError(Exception):
-    """Exception for a 404 error."""
+
+class ServerException(RetryError):
+    """Exception if API gives a 500 error"""
+
 
 def logger():
     logger = logging.getLogger(__name__)
@@ -32,6 +48,7 @@ def logger():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     return logger
+
 
 logger=logger()
 logger.debug('Start')
@@ -139,12 +156,14 @@ def get_classification(veh_class):
         return '9'
     raise ValueError("vehicle class {0} not recognized!".format(veh_class))
 
-def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key):
+def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
+                         intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
     response=session.get(url+intersection_id1+tmc_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
+        table = []
         tmc=json.loads(response.content.decode('utf-8'))
         for item in tmc:
 
@@ -170,17 +189,21 @@ def get_intersection_tmc(table, start_time, end_iteration_time, intersection_id1
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
+    elif response.status_code==500:
+        raise ServerException('Error'+str(response.status_code))
     logger.critical('Unknown error pulling tmcs for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 
-def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, intersection_uid, key):
+def get_pedestrian(start_time, end_iteration_time, intersection_id1,
+                   intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
 
     response=session.get(url+intersection_id1+ped_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
+        table = []
         ped=json.loads(response.content.decode('utf-8'))
         for item in ped:
 
@@ -206,6 +229,8 @@ def get_pedestrian(table, start_time, end_iteration_time, intersection_id1, inte
         sys.exit(5)
     elif response.status_code==504:
         raise TimeoutException('Error'+str(response.status_code))
+    elif response.status_code==500:
+        raise ServerException('Error'+str(response.status_code))
     logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
 
@@ -305,35 +330,41 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
 
-        table=[]
+        table = []
 
         for interxn in intersection_list:
             intersection_uid=interxn[0]
             intersection_id1=interxn[1]
             intersection_name=interxn[2]
             logger.info(intersection_name+'     '+str(c_start_t))
+
             for attempt in range(3):
                 try:
-                    table=get_intersection_tmc(table, c_start_t, c_end_t, intersection_id1, intersection_uid, key)
-                    table=get_pedestrian(table, c_start_t, c_end_t, intersection_id1, intersection_uid, key)
+                    table_veh = get_intersection_tmc(
+                        c_start_t, c_end_t, intersection_id1,
+                        intersection_uid, key)
+                    table_ped = get_pedestrian(
+                        c_start_t, c_end_t,
+                        intersection_id1, intersection_uid, key)
                     break
-                except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    logger.warning('Retrying in 2 minutes')
-                    sleep(120)
-                except exceptions.RequestException as err:
+                except (exceptions.ProxyError, exceptions.RequestException,
+                        RetryError) as err:
                     logger.error(err)
-                    sleep(75)
-                except NotFoundError:
-                    break
-                except TimeoutException as exc_504:
-                    logger.error(exc_504)
-                    sleep(60)
-                except MiovisionAPIException as miovision_exc:
-                    logger.error(miovision_exc)
+                    logger.warning('Retrying in 2 minutes if tries remain.')
+                    sleep(120)
+                except BreakingError as err:
+                    logger.error(err)
+                    table_veh = []
+                    table_ped = []
                     break
             else:
-                logger.error('Could not successfully pull data for this intersection')
+                logger.error('Could not successfully pull '
+                             'data for this intersection after 3 tries.')
+                table_veh = []
+                table_ped = []
+
+            table.extend(table_veh)
+            table.extend(table_ped)
 
         logger.info('Completed data pulling from {0:s} to {1:s}'
                     .format(c_start_t, c_end_t))
