@@ -15,17 +15,30 @@ import click
 import traceback
 from time import sleep
 
-class MiovisionAPIException(Exception):
+
+class BreakingError(Exception):
+    """Base class for exceptions that immediately halt API pulls."""
+
+
+class MiovisionAPIException(BreakingError):
     """Base class for exceptions."""
 
-class TimeoutException(Exception):
+
+class NotFoundError(BreakingError):
+    """Exception for a 404 error."""
+
+
+class RetryError(Exception):
+    """Base class for exceptions that warrant a retry."""
+
+
+class TimeoutException(RetryError):
     """Exception if API gives a 504 error"""
 
-class ServerException(Exception):
+
+class ServerException(RetryError):
     """Exception if API gives a 500 error"""
 
-class NotFoundError(Exception):
-    """Exception for a 404 error."""
 
 def logger():
     logger = logging.getLogger(__name__)
@@ -35,6 +48,7 @@ def logger():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     return logger
+
 
 logger=logger()
 logger.debug('Start')
@@ -320,13 +334,14 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
 
-        table=[]
+        table = []
 
         for interxn in intersection_list:
             intersection_uid=interxn[0]
             intersection_id1=interxn[1]
             intersection_name=interxn[2]
             logger.info(intersection_name+'     '+str(c_start_t))
+
             for attempt in range(3):
                 try:
                     table_veh = get_intersection_tmc(
@@ -336,27 +351,19 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                         c_start_t, c_end_t,
                         intersection_id1, intersection_uid, key)
                     break
-                except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    logger.warning('Retrying in 2 minutes')
-                    sleep(120)
-                except exceptions.RequestException as err:
+                except (exceptions.ProxyError, exceptions.RequestException,
+                        RetryError) as err:
                     logger.error(err)
-                    sleep(75)
-                except NotFoundError:
-                    break
-                except TimeoutException as exc_504:
-                    logger.error(exc_504)
-                    sleep(60)
-                except ServerException as exc_500:
-                    logger.error(exc_500)
-                    sleep(60)
-                except MiovisionAPIException as miovision_exc:
-                    logger.error(miovision_exc)
+                    logger.warning('Retrying in 2 minutes if tries remain.')
+                    sleep(120)
+                except BreakingError as err:
+                    logger.error(err)
+                    table_veh = []
+                    table_ped = []
                     break
             else:
                 logger.error('Could not successfully pull '
-                             'data for this intersection')
+                             'data for this intersection after 3 tries.')
                 table_veh = []
                 table_ped = []
 
