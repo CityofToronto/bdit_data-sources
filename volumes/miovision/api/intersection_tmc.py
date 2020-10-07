@@ -367,7 +367,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             table.extend(table_ped)
 
             # Hack to slow down API hit rate.
-            sleep(60)
+            sleep(1)
 
         logger.info('Completed data pulling from {0:s} to {1:s}'
                     .format(c_start_t, c_end_t))
