@@ -49,3 +49,14 @@ The remaining four fields are retrieved from route_points field from all_analyse
 6. start_detector: start detector name is retrieved from the first item in the list with key = name.
 7. end_route_point_id: This id is retrieved from the second item in the list with the key = id.
 8. end_detector: end detector name is retrieved from the second item in the list with key = name.
+
+## Function: route_point_status:
+
+This function also takes the date as an input for example:  '2020-10-01'.
+
+It returns the following four fields:
+route_pnt: This is the route point id. This id is either the start_route_point_id or end_route_point_id.
+reader: This is the given name for the bluetooth reader at that particular route point id.
+active_date: This is the date when the last signal is received from the reader. If the date input in the function is lower than this date, input date is retrieved. Meaning that the route point was active as of the input date.
+active: this is a bool field. If the route point is sending signal for the requested date, the value is true else false.
+  
