@@ -4,7 +4,7 @@
 
 CREATE TABLE miovision_api.volumes
 (
-  volume_uid serial NOT NULL,
+  volume_uid bigserial NOT NULL,
   intersection_uid integer,
   datetime_bin timestamp without time zone,
   classification_uid integer,
