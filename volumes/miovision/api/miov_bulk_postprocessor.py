@@ -74,7 +74,7 @@ def cli():
 
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--n_months' , default=default_n_months,
+@click.option('--n_months', type=int, default=default_n_months,
               help=('number of months from the start date to process. '
                     'Processing will automatically halt once the date range '
                     'exceeds the present day'))
@@ -91,10 +91,8 @@ def run_api(start_date, n_months, path):
     logger.debug('Connected to DB')
 
     start_date= dateutil.parser.parse(str(start_date))
-    end_date= dateutil.parser.parse(str(end_date))
     start_time=local_tz.localize(start_date)
-    end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(start_time,end_time))
+    logger.info('Processing from %s for %s months' %(start_time, n_months))
 
     try:
         process_data_loop(conn, start_time, n_months)
@@ -147,7 +145,8 @@ def monthrange(start_time, n_months):
 
 def process_data_loop(conn, start_time, n_months):
 
-    today_date = datetime.date.today()
+    today_date = datetime.datetime.combine(
+        datetime.date.today(), datetime.datetime.min.time())
 
     with conn:
         for (c_start_t, c_end_t) in monthrange(start_time, n_months):
