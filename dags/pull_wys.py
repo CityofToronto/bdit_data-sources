@@ -17,7 +17,7 @@ from googleapiclient.discovery import build
 from dateutil.relativedelta import relativedelta
 
 try:
-    sys.path.append('/etc/airflow/dev_scripts/wys/api/python/')
+    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
     from wys_api import api_main
     from wys_google_sheet import read_masterlist
 except:
