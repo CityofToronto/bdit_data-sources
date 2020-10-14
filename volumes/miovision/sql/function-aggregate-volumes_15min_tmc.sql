@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_tmc(
+CREATE OR REPLACE FUNCTION miovision_csv.aggregate_15_min_tmc_2020(
 	start_date date,
 	end_date date)
     RETURNS void
@@ -21,7 +21,7 @@ WITH zero_padding_movements AS (
 				AND date_decommissioned IS NULL)
 		)
 , aggregate_insert AS (
-INSERT INTO miovision_api.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
+INSERT INTO miovision_csv.volumes2020_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 
 SELECT 
 pad.intersection_uid,
@@ -32,12 +32,12 @@ pad.movement_uid,
 CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume
 FROM zero_padding_movements pad
 --To set unacceptable ones to NULL instead (& only gap fill light vehicles, cyclist and pedestrian)
-LEFT JOIN miovision_api.unacceptable_gaps un 
+LEFT JOIN miovision_csv.unacceptable_gaps_2020 un 
 	ON un.intersection_uid = pad.intersection_uid
 	AND pad.datetime_bin15 >= DATE_TRUNC('hour', gap_start)
 	AND pad.datetime_bin15 < DATE_TRUNC('hour', gap_end) + interval '1 hour' -- may get back to this later on for fear of removing too much data
 --To get 1min bins
-LEFT JOIN miovision_api.volumes A
+LEFT JOIN miovision_csv.volumes_2020 A
 	ON A.datetime_bin >= start_date - INTERVAL '1 hour' 
 	AND A.datetime_bin < end_date - INTERVAL '1 hour'
 	AND A.datetime_bin >= pad.datetime_bin15 
@@ -53,7 +53,7 @@ RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_u
 )
 
 --To update foreign key for 1min bin table
-UPDATE miovision_api.volumes a
+UPDATE miovision_csv.volumes_2020 a
 	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
 	FROM aggregate_insert b
 	WHERE a.datetime_bin >= start_date - interval '1 hour' AND a.datetime_bin < end_date -  interval '1 hour'
@@ -70,12 +70,12 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
-    OWNER TO jchew;
+ALTER FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date)
+    OWNER TO czhu;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO PUBLIC;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO jchew;
+GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO czhu;
 
