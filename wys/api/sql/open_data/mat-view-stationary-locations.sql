@@ -7,7 +7,7 @@ SELECT area_short::INT as ward_no, sign_id, address, sign_name, dir, schedule,
     flash_speed, 
     strobe_speed, 
 	CASE WHEN prev_start IS NOT NULL THEN start_date ELSE MIN(datetime_bin) END AS start_date,
-	CASE WHEN max(datetime_bin) < date_trunc('month'::text, now())
+	CASE WHEN max(datetime_bin) < date_trunc('month'::text, now()) - INTERVAL '1 day'
 		 THEN LEAST(next_start::timestamp without time zone, 
 		            max(datetime_bin))
 		END AS end_date,
