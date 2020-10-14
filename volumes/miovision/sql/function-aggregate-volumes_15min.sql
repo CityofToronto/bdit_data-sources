@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
+CREATE OR REPLACE FUNCTION miovision_csv.aggregate_15_min_2020(
 	start_date date,
 	end_date date)
     RETURNS integer
@@ -18,7 +18,7 @@ BEGIN
             SUM(A.volume) AS volume,
             array_agg(volume_15min_tmc_uid) AS uids
 
-        FROM miovision_api.volumes_15min_tmc A
+        FROM miovision_csv.volumes2020_15min_tmc A
         INNER JOIN miovision_api.movement_map B -- TMC to ATR crossover table.
         ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid 
         WHERE A.processed IS NULL
@@ -28,14 +28,14 @@ BEGIN
     ),
     --Inserts the ATR bins to the ATR table
     insert_atr AS (
-    INSERT INTO miovision_api.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
+    INSERT INTO miovision_csv.volumes2020_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
     SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, volume
     FROM transformed
     RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
     
     --Updates crossover table with new IDs
     , insert_crossover AS(
-    INSERT INTO miovision_api.volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
+    INSERT INTO miovision_csv.volumes2020_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
     SELECT volume_15min_tmc_uid, volume_15min_uid
     FROM insert_atr A
     INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) AS volume_15min_tmc_uid FROM transformed) B
@@ -48,7 +48,7 @@ BEGIN
 	RETURNING volume_15min_tmc_uid
     )
     --Sets processed column to TRUE
-    UPDATE miovision_api.volumes_15min_tmc a
+    UPDATE miovision_csv.volumes2020_15min_tmc a
     SET processed = TRUE
     FROM insert_crossover b 
     WHERE a.volume_15min_tmc_uid=b.volume_15min_tmc_uid;

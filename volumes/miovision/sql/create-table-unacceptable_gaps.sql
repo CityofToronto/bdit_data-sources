@@ -1,4 +1,4 @@
-CREATE TABLE miovision_api.unacceptable_gaps
+CREATE TABLE miovision_csv.unacceptable_gaps_2020
 (
     intersection_uid integer,
     gap_start timestamp without time zone,

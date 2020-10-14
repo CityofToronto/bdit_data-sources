@@ -1,5 +1,5 @@
 
-CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
+CREATE OR REPLACE FUNCTION miovision_csv.find_gaps_2020(
 	start_date date,
 	end_date date)
     RETURNS integer
@@ -20,7 +20,8 @@ WITH wkdy_lookup(period, isodow) AS (
  SELECT volumes.intersection_uid,
     datetime_bin(volumes.datetime_bin, 60) AS hourly_bin,
     sum(volumes.volume) AS vol
-   FROM miovision_api.volumes
+   FROM miovision_csv.volumes_2020
+   -- Use either the last 60 days before the end date or the first 60 days of data.
   WHERE volumes.datetime_bin > (GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone) - '60 days'::interval) AND
         volumes.datetime_bin <= GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone)
   GROUP BY volumes.intersection_uid, (datetime_bin(volumes.datetime_bin, 60))
@@ -51,7 +52,7 @@ WITH wkdy_lookup(period, isodow) AS (
 	dense_rank() OVER (ORDER BY ful.datetime_bin)
 	- dense_rank() OVER (PARTITION BY vol.intersection_uid ORDER BY vol.datetime_bin) AS diff
 	FROM ful
-	LEFT JOIN miovision_api.volumes vol
+	LEFT JOIN miovision_csv.volumes_2020 vol
 	USING (datetime_bin)
 ), island AS (
 	SELECT grp.intersection_uid, 
@@ -95,7 +96,7 @@ WITH wkdy_lookup(period, isodow) AS (
 ), fail AS (
 	-- INSERT INTO THE TABLE
 	-- DISTINCT ON cause there might be more than 1 gap happening in the same hour for the same intersection
-	INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
+	INSERT INTO miovision_csv.unacceptable_gaps_2020(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
 	SELECT DISTINCT ON (intersection_uid, DATE_TRUNC('hour', acceptable.gap_start)) *
 	FROM acceptable
 	WHERE accept = false
