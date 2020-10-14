@@ -296,7 +296,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
 
 def daterange(start_time, end_time, dt):
     """Generator for a sequence of regular time periods."""
-    for i in range(math.ceil((end_time - start_time) / dt)):
+    for i in range(math.ceil((end_time - start_time) / dt) - 1):
         c_start_t = start_time + i * dt
         yield (c_start_t, c_start_t + dt)
 
