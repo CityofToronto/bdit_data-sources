@@ -158,7 +158,9 @@ def process_data_loop(conn, start_time, n_months):
             elif today_date < c_end_t:
                 c_end_t = today_date
 
-            logger.info("Processing dates", c_start_t, " - ", c_end_t)
+            logger.info(
+                "Processing dates " + c_start_t.strftime("%Y-%m-%d")
+                + " - " + c_end_t.strftime("%Y-%m-%d"))
 
             process_data(conn, c_start_t, c_end_t)
 
