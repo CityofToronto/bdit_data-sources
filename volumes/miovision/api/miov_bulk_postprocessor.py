@@ -92,7 +92,8 @@ def run_api(start_date, n_months, path):
 
     start_date= dateutil.parser.parse(str(start_date))
     start_time=local_tz.localize(start_date)
-    logger.info('Processing from %s for %s months' %(start_time, n_months))
+    logger.info('Processing from {0} for {1} months'
+                .format(start_time.strftime("%Y-%m-%d"), n_months))
 
     try:
         process_data_loop(conn, start_time, n_months)
