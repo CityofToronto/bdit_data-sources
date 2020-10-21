@@ -147,19 +147,18 @@ def process_data_loop(conn, start_time, n_months):
     with conn:
         for (c_start_t, c_end_t) in dayrange(start_time, n_months):
             # If the interval is in the future, stop processing.
-            # if today_date <= c_start_t:
-            #     break
-            # # If the end of the interval exceeds the present day, set the end
-            # # to the present.
-            # elif today_date < c_end_t:
-            #     c_end_t = today_date
+            if today_date <= c_start_t:
+                break
+            # If the end of the interval exceeds the present day, set the end
+            # to the present.
+            elif today_date < c_end_t:
+                c_end_t = today_date
 
-            # logger.info(
-            #     "Processing dates " + c_start_t.strftime("%Y-%m-%d")
-            #     + " - " + c_end_t.strftime("%Y-%m-%d"))
+            logger.info(
+                "Processing dates " + c_start_t.strftime("%Y-%m-%d")
+                + " - " + c_end_t.strftime("%Y-%m-%d"))
 
-            # process_data_june2020(conn, c_start_t, c_end_t)
-            print(c_start_t, c_end_t)
+            process_data_june2020(conn, c_start_t, c_end_t)
 
 
 if __name__ == '__main__':
