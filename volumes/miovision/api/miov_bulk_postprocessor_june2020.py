@@ -143,6 +143,7 @@ def process_data_loop(conn, start_time, n_months):
 
     today_date = datetime.datetime.combine(
         datetime.date.today(), datetime.datetime.min.time())
+    today_date = local_tz.localize(today_date)
 
     with conn:
         for (c_start_t, c_end_t) in dayrange(start_time, n_months):
