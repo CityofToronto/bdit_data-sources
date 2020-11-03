@@ -300,7 +300,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
 
 def daterange(start_time, end_time, dt):
     """Generator for a sequence of regular time periods."""
-    for i in range(math.ceil((end_time - start_time) / dt)):
+    for i in range(math.ceil((end_time - start_time) / dt) - 1):
         c_start_t = start_time + i * dt
         yield (c_start_t, c_start_t + dt)
 
@@ -370,8 +370,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
             table.extend(table_veh)
             table.extend(table_ped)
 
-        logger.info('Completed data pulling from {0:s} to {1:s}'
-                    .format(c_start_t, c_end_t))
+        logger.info('Completed data pulling from %s to %s'
+                    %(c_start_t, c_end_t))
+
         try:
             insert_data(conn, c_start_t, c_end_t, table, dupes)
         except psycopg2.Error as exc:
