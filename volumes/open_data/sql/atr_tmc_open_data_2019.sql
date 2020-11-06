@@ -147,7 +147,6 @@ SELECT g.node_id AS int_id,
 
 
 
-
  DROP MATERIALIZED VIEW IF EXISTS open_data.volumes_tmc_all_shortterm;
 
 CREATE MATERIALIZED VIEW open_data.volumes_tmc_all_shortterm AS
