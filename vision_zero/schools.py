@@ -44,7 +44,7 @@ sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2019_raw'},
           2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
-                 'range_name' : '2020 Master List!A3:AC180', 
+                 'range_name' : 'Master Sheet!A3:AC180', 
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2020_raw'}}
 
@@ -122,7 +122,6 @@ def pull_from_sheet(con, service, year, *args):
 if __name__ == '__main__':
     """The following connects to the database, establishes connection to the sheets and executes function based on the year of data required."""
     CONFIG = configparser.ConfigParser()
-    #CONFIG.read(r'/home/jchew/local/db.cfg')
     CONFIG.read(r'/home/cnangini/googlesheets_db.cfg')
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
@@ -133,3 +132,4 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
     
+
