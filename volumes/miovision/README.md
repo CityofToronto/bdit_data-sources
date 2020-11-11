@@ -104,7 +104,7 @@ Reference table for transforming aggregated turning movement counts (see `volume
 leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
 dir|text|Direction on which 15-minute volume will be assigned|EB|
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
-movement_uid|integer|Identifier representing current turning movement|1|
+movement_uid|integer|Identifier representing current turning movement: 1 - thru; 2 - left turn; 3 - right turn; 4 - u-turn|1|
 
 #### `periods`
 
@@ -128,7 +128,7 @@ This was created using [`create-table-intersection_movements.sql`](sql/create-ta
  intersection_uid| integer | ID for intersection | 1 |
  classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
  leg| text | Entry leg of movement|E|
- movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
+ movement_uid| integer | Identifier linking to specific turning movement stored in `movement_map`|2|
 
 ### Disaggregate Data
 
@@ -143,7 +143,7 @@ intersection_uid|integer|Identifier linking to specific intersection stored in `
 datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
 leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movement_map`|2|
 volume|integer|Total 1-minute volume|12|
 volume_15min_tmc_uid|serial|Foreign key to [`volumes_15min_tmc`](#volumes_15min_tmc)|14524|
 
@@ -165,7 +165,7 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 #### `volumes_15min_tmc`
 
-`volumes_15min_tmc` contains data aggregated into 15 minute bins. Interpolation process is no longer included in the new process now that we have enough data. In the new gap filling process, we try to identify hours of data that we can trust (aka not found in the `unacceptable_gaps` table) and set those 15min bin to NULL instead of 0. To be more specific, 
+`volumes_15min_tmc` contains data aggregated into 15 minute bins. Interpolation process is no longer included in the new process now that we have enough data. In the new gap filling process, we try to identify hours of data that we can trust (aka not found in the `unacceptable_gaps` table) and set those 15min bin to 0 instead of NULL. To be more specific, 
 15 minute bins where there are no data are filled with 0s for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6)`); trucks, buses and vans are not filled because they are rarely observed, and filling in light vehicles would be sufficient to ensure there are no gaps for the `Vehicles` class used in [`report_dates`](#refresh-reporting-views) and subsequent views.
 
 Whereas for the other classes, we still aggregate them and put them into the 15min bin table as long as they have volume > 0. However, we do not do the same gap filling process for them and hence do not include those where volume = 0 for these classification_uid. The line `HAVING pad.classification_uid IN (1,2,6) OR SUM(A.volume) > 0` does exactly that. 
@@ -181,7 +181,7 @@ intersection_uid|integer|Identifier linking to specific intersection stored in `
 datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
 leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movement_map`|2|
 volume|integer|Total 15-minute volume|78|
 volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
 
@@ -229,7 +229,7 @@ An example of `miovision_api.movement_map`:
 ![TMC movements](img/intersection_tmc.png)
 
 **Blue line represents `leg_old` whereas yellow arrows represent `movement_uid`**
-Figure above shows that for each `leg_old` (leg for TMC) , there are four possible `movement_uid`. The `leg_old` is E whereas the `movement_uid` are 1, 2, 3, 4 for the above example. For a fully working intersection, there will be 16 possible TMC since there are 4 directions and 4 legs in each direction for TMC. \
+Figure above shows that for each `leg_old` (leg for TMC) , there are four possible `movement_uid`: 1 - thru; 2 - left turn; 3 - right turn; and 4 - u-turn. For the example above, the `leg_old` is E and `movement_uid` 1, 2, 3, 4 represent traffic coming from the west, north, south and east, respectively. For a fully working intersection, there will be 16 possible TMC since there are 4 directions and 4 legs in each direction for TMC. \
 (4 possible legs * 4 legs each = 16 TMCs)
 
 ![ATR movements](img/intersection_atr2.png)
@@ -468,7 +468,7 @@ entry_dir_name|text|Entry leg of movement|E|
 entry_name|text|(not currently populated)||
 exit_dir_name|text|Exit leg of movement|W|
 exit_name|text|(not currently populated)||
-movement|text|Specific turning movement (see `movements` below)|thru|
+movement|text|Specific turning movement (see `movement_map` below)|thru|
 volume|integer|Total 1-minute volume|12|
 
 ### A. Populate `volumes`
