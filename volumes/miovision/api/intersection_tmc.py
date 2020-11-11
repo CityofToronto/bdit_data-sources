@@ -8,7 +8,6 @@ import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
-import math
 import logging
 import configparser
 import click
@@ -300,7 +299,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
 
 def daterange(start_time, end_time, dt):
     """Generator for a sequence of regular time periods."""
-    for i in range(math.ceil((end_time - start_time) / dt) - 1):
+    for i in range(round((end_time - start_time) / dt)):
         c_start_t = start_time + i * dt
         yield (c_start_t, c_start_t + dt)
 
