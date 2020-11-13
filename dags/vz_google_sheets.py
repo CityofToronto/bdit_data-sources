@@ -42,7 +42,7 @@ def task_fail_slack_alert(context):
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
   sys.path.append('/etc/airflow/data_scripts/vision_zero/')
-  from schools2020 import pull_from_sheet
+  from schools import pull_from_sheet
 except:
   raise ImportError("Cannot import functions to pull school safety zone list")
 
