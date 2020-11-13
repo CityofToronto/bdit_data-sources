@@ -25,11 +25,6 @@ Note
 If the scopes is modified from readonly, delete the file token.pickle."""
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
-
-credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
 """The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
 The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
 Details of the spreadsheets are ID and range whereas details of the table are name of schema and table.
@@ -120,7 +115,17 @@ def pull_from_sheet(con, service, year, *args):
     LOGGER.info('Table %s is done', table)
 
 if __name__ == '__main__':
-    """The following connects to the database, establishes connection to the sheets and executes function based on the year of data required."""
+    """The following connects to the database, establishes connection to the sheets 
+    and executes function based on the year of data required.
+    Note: this part is not run by airflow.
+
+    """
+
+    SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
+
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
+
     CONFIG = configparser.ConfigParser()
     CONFIG.read(r'/home/cnangini/googlesheets_db.cfg')
     dbset = CONFIG['DBSETTINGS']
@@ -131,5 +136,4 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
-    
 
