@@ -362,7 +362,8 @@ Adding intersections on the other hand is not as simple as removing an intersect
 
 	a) Run the [api script](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process. `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull` . `--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day worth of data first.
 	
-	b) First run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. Then, INSERT INTO `intersection_movements` table which only has all the valid movements for old / decommissioned intersections. Keeping the decommissioned ones there too just in case that we might need those in the future.
+	b) First run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. Then, INSERT INTO `intersection_movements` table which has all valid movements for intersections. These include decommissioned intersections, just in case we might need those in the future.
+
 	```sql
 	INSERT INTO miovision_api.intersection_movements
 	SELECT DISTINCT intersection_uid, classification_uid, leg, movement_uid
@@ -374,14 +375,25 @@ Adding intersections on the other hand is not as simple as removing an intersect
 	HAVING COUNT(DISTINCT datetime_bin::time) >= 20;
 	```
 	
-	c) The step before only include valid intersection movements for classification_uid IN (1,2,6) which are light vehicles, cyclists and pedestrians. The reason is that the counts for other mode may not pass the mark of having 20 distinct datetime_bin. However, we know that if vehicles can make that turn, so do trucks, vans and buses which are classification_uid IN (3, 4, 5, 8). Therefore, we will run the below query for each classification_uid that was not included in the previous steps. Note that we can only do one classification_uid at a time and so the following query has to be run 4 times for each intersection_uid, changing classification_uid each time.
+	c) The step before only include valid intersection movements for classification_uid IN (1,2,6) which are light vehicles, cyclists and pedestrians. The reason is that the counts for other mode may not pass the mark of having 20 distinct datetime_bin. However, we know that if vehicles can make that turn, so do trucks, vans, buses and unclassified motorized vehicles, which are classification_uid IN (3, 4, 5, 8, 9). Therefore, we will run the below query for each classification_uid that was not included in the previous steps.
+
 	```sql
+	-- Include all wanted classification_uids here.
+	WITH wanted_veh(classification_uid) AS (
+	         VALUES (3), (4), (5), (8), (9)
+	)
 	INSERT INTO miovision_api.intersection_movements
-          ( intersection_uid, classification_uid, leg, movement_uid )
-	SELECT intersection_uid, '3'::integer AS classification_uid, leg, movement_uid	-- change the classification_uid, one at a time
-	FROM miovision_api.intersection_movements 
-	WHERE intersection_uid = 33							-- change here, one at a time
-	AND classification_uid = 1
+      ( intersection_uid, classification_uid, leg, movement_uid )
+	SELECT a.intersection_uid,
+	       b.classification_uid,
+		   a.leg,
+		   a.movement_uid
+	FROM miovision_api.intersection_movements a
+	CROSS JOIN wanted_veh b
+	-- Specify which intersection_uids to use.
+	WHERE a.intersection_uid BETWEEN 41 AND 54
+	AND a.classification_uid = 1
+	ORDER BY 1, 2, 3, 4
 	```
 	
 	d) Once the above is done, we are done with updating the table [`miovision_api.intersection_movements`](#intersection_movements). **Though, the valid movements should be manually reviewed.**
