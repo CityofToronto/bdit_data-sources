@@ -40,7 +40,7 @@ def run_api(csv, start_date, end_date, gapfinder_dt, path):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
-    dbset = CONFIG['POSTGRES']
+    dbset = CONFIG['DBSETTINGS']
     conn = connect(**dbset)
     conn.autocommit = True
     itmc.logger.debug('Connected to DB')
