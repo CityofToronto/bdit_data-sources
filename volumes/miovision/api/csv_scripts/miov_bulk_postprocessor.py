@@ -54,37 +54,43 @@ def run_api(csv, start_date, end_date, gapfinder_dt, path):
     gdt = datetime.timedelta(days=gapfinder_dt)
 
     if csv:
-        sqlf = {
-            'gaps': "miovision_csv.find_gaps_2020",
-            'tmc': "miovision_csv.aggregate_15_min_tmc_2020",
-            'atr': "miovision_csv.aggregate_15_min_2020"
-        }
         itmc.logger.info('Processing CSV data')
     else:
-        sqlf = {
-            'gaps': "miovision_api.find_gaps",
-            'tmc': "miovision_api.aggregate_15_min_tmc",
-            'atr': "miovision_api.aggregate_15_min",
-            'rep': "miovision_api.report_dates"
-        }
-        itmc.logger.info('Processing CSV data')
+        itmc.logger.info('Processing API data')
 
     try:
-        aggregate_data_loop(conn, sqlf, start_time, end_time, gdt, csv)
+        aggregate_data_loop(conn, start_time, end_time, gdt, csv)
     except Exception as e:
         itmc.logger.critical(traceback.format_exc())
         sys.exit(1)
 
 
-def aggregate_data(conn, sqlf, start_time, end_iteration_time, csv):
+def aggregate_data(conn, start_time, end_iteration_time, csv):
     """Aggregate raw data to 15-minute bins."""
 
+    if csv:
+        sqlf = {
+            'gaps': "SELECT miovision_csv.find_gaps_2020(%s::date, %s::date)",
+            'tmc': ("SELECT miovision_csv.aggregate_15_min_tmc_2020"
+                    "(%s::date, %s::date)"),
+            'atr': ("SELECT miovision_csv.aggregate_15_min_2020"
+                    "(%s::date, %s::date)"),
+        }
+    else:
+        sqlf = {
+            'gaps': "SELECT miovision_api.find_gaps(%s::date, %s::date)",
+            'tmc': ("SELECT miovision_api.aggregate_15_min_tmc"
+                    "(%s::date, %s::date)"),
+            'atr': ("SELECT miovision_api.aggregate_15_min"
+                    "(%s::date, %s::date)"),
+            'rep': "SELECT miovision_api.report_dates(%s::date, %s::date)",
+        }
+
     time_period = (start_time.date(), end_iteration_time.date())
-    sql_command = "SELECT %s(%s::date, %s::date)"
 
     with conn:
         with conn.cursor() as cur:
-            cur.execute(sql_command, (sqlf['gaps'],) + time_period)
+            cur.execute(sqlf['gaps'], time_period)
             itmc.logger.info(conn.notices[-1])
 
     itmc.logger.info('Updated gapsize table and found '
@@ -94,10 +100,10 @@ def aggregate_data(conn, sqlf, start_time, end_iteration_time, csv):
     try:
         with conn:
             with conn.cursor() as cur:
-                cur.execute(sql_command, (sqlf['tmc'],) + time_period)
+                cur.execute(sqlf['tmc'], time_period)
                 itmc.logger.info('Aggregated to 15 minute bins')
 
-                cur.execute(sql_command, (sqlf['atr'],) + time_period)
+                cur.execute(sqlf['atr'], time_period)
                 itmc.logger.info('Completed data processing for %s',
                                  start_time)
 
@@ -109,7 +115,7 @@ def aggregate_data(conn, sqlf, start_time, end_iteration_time, csv):
     if not csv:
         with conn:
             with conn.cursor() as cur:
-                cur.execute(sql_command, (sqlf['rep'],) + time_period)
+                cur.execute(sqlf['rep'], time_period)
                 itmc.logger.info('report_dates done')
 
 
@@ -125,7 +131,7 @@ def dayrange(start_time, end_time, dt):
             yield (c_start_t, c_start_t + dt)
 
 
-def aggregate_data_loop(conn, sqlf, start_time, end_time, gdt, csv):
+def aggregate_data_loop(conn, start_time, end_time, gdt, csv):
 
     today_date = itmc.local_tz.localize(
         datetime.datetime.combine(
@@ -145,7 +151,7 @@ def aggregate_data_loop(conn, sqlf, start_time, end_time, gdt, csv):
                 "Aggregating dates " + c_start_t.strftime("%Y-%m-%d")
                 + " - " + c_end_t.strftime("%Y-%m-%d"))
 
-            aggregate_data(conn, sqlf, c_start_t, c_end_t, csv)
+            aggregate_data(conn, c_start_t, c_end_t, csv)
 
 
 if __name__ == '__main__':
