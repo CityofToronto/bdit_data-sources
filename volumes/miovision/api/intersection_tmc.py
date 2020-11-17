@@ -297,11 +297,10 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             logger.info(conn.notices[-1])
 
 
-def daterange(start_time, end_time, dt):
+def daterange(start_time, end_time, time_delta):
     """Generator for a sequence of regular time periods."""
-    for i in range(round((end_time - start_time) / dt)):
-        c_start_t = start_time + i * dt
-        yield (c_start_t, c_start_t + dt)
+    for i in range(round((end_time - start_time) / time_delta)):
+        yield start_time + i * time_delta
 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
@@ -331,8 +330,9 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         logger.critical('No intersections found in miovision_api.intersections for the specified start time')
         sys.exit(3)
 
-    for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
+    for c_start_t in daterange(start_time, end_time, time_delta):
 
+        c_end_t = c_start_t + time_delta
         table = []
 
         for interxn in intersection_list:
