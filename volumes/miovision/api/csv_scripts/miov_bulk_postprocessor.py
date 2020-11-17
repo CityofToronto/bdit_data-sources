@@ -25,8 +25,8 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--csv', is_flag=True, default=True,
-              help="If True (default), post-processes miovision_csv.")
+@click.option('--csv', is_flag=True,
+              help="If True, post-processes miovision_csv.")
 @click.option('--start_date', default='2020-10-01',
               help='format is YYYY-MM-DD for start date')
 @click.option('--end_date', default='2020-11-11',
@@ -34,13 +34,13 @@ def cli():
                     '& excluding the day itself'))
 @click.option('--gapfinder_dt', default=30,
               help=('Number of days per block used by the gap finder.'))
-@click.option('--path' , default='config_miovision_csv_bot.cfg',
+@click.option('--path', default='config_miovision_csv_bot.cfg',
               help='enter the path/directory of the config.cfg file')
 def run_api(csv, start_date, end_date, gapfinder_dt, path):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
-    dbset = CONFIG['DBSETTINGS']
+    dbset = CONFIG['POSTGRES']
     conn = connect(**dbset)
     conn.autocommit = True
     itmc.logger.debug('Connected to DB')
@@ -64,40 +64,56 @@ def run_api(csv, start_date, end_date, gapfinder_dt, path):
         sqlf = {
             'gaps': "miovision_api.find_gaps",
             'tmc': "miovision_api.aggregate_15_min_tmc",
-            'atr': "miovision_api.aggregate_15_min"
+            'atr': "miovision_api.aggregate_15_min",
+            'rep': "miovision_api.report_dates"
         }
         itmc.logger.info('Processing CSV data')
 
     try:
-        find_gaps_loop(conn, sqlf, start_time, end_time, gdt)
-    except Exception as e:
-        itmc.logger.critical(traceback.format_exc())
-        sys.exit(1)
-
-    try:
-        aggregate_data_loop(conn, sqlf, start_time, end_time)
+        aggregate_data_loop(conn, sqlf, start_time, end_time, gdt, csv)
     except Exception as e:
         itmc.logger.critical(traceback.format_exc())
         sys.exit(1)
 
 
-def find_gaps(conn, sqlf, start_time, end_iteration_time):
-    """UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION"""
-    time_period = (start_time, end_iteration_time)
+def aggregate_data(conn, sqlf, start_time, end_iteration_time, csv):
+    """Aggregate raw data to 15-minute bins."""
+
+    time_period = (start_time.date(), end_iteration_time.date())
+    sql_command = "SELECT %s(%s::date, %s::date)"
 
     with conn:
         with conn.cursor() as cur:
-            invalid_gaps = "SELECT %s(%s::date, %s::date)"
-            print(invalid_gaps)
-            #cur.execute(sqlf['gaps'], invalid_gaps, time_period)
+            cur.execute(sql_command, (sqlf['gaps'],) + time_period)
             itmc.logger.info(conn.notices[-1])
 
     itmc.logger.info('Updated gapsize table and found '
                      'gaps exceeding allowable size from %s to %s'
                      %(start_time, end_iteration_time))
 
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_command, (sqlf['tmc'],) + time_period)
+                itmc.logger.info('Aggregated to 15 minute bins')
 
-def daterange_cap(start_time, end_time, dt):
+                cur.execute(sql_command, (sqlf['atr'],) + time_period)
+                itmc.logger.info('Completed data processing for %s',
+                                 start_time)
+
+    except psycopg2.Error as exc:
+        itmc.logger.exception(exc)
+        sys.exit(1)
+
+    # miovision_api also requires we update `report_dates`.
+    if not csv:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_command, (sqlf['rep'],) + time_period)
+                itmc.logger.info('report_dates done')
+
+
+def dayrange(start_time, end_time, dt):
     """Generator for a sequence of regular time periods, with a shorter last
     period if dt does not divide evenly into end_time - start_time."""
     n_periods = math.ceil((end_time - start_time) / dt)
@@ -109,65 +125,14 @@ def daterange_cap(start_time, end_time, dt):
             yield (c_start_t, c_start_t + dt)
 
 
-def find_gaps_loop(conn, sqlf, start_time, end_time, gdt):
+def aggregate_data_loop(conn, sqlf, start_time, end_time, gdt, csv):
 
-    today_date = datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.min.time())
-
-    with conn:
-        for (c_start_t, c_end_t) in daterange_cap(
-                start_time, end_time, gdt):
-            # If the interval is in the future, stop processing.
-            if today_date <= c_start_t:
-                break
-            # If the end of the interval exceeds the present day, set the end
-            # to the present.
-            elif today_date < c_end_t:
-                c_end_t = today_date
-
-            find_gaps(conn, sqlf, c_start_t, c_end_t)
-
-
-def aggregate_data(conn, sqlf, start_time, end_iteration_time):
-    """Aggregate to 15min tmc / 15min"""
-
-    time_period = (start_time, end_iteration_time)
-
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                update = "SELECT %s(%s::date, %s::date)"
-                print(update)
-                #cur.execute(sqlf['tmc'], update, time_period)
-                itmc.logger.info('Aggregated to 15 minute bins')
-
-                atr_aggregation = "SELECT %s(%s::date, %s::date)"
-                print(update)
-                #cur.execute(sqlf['atr'], atr_aggregation, time_period)
-                itmc.logger.info('Completed data processing for %s',
-                                 start_time)
-
-    except psycopg2.Error as exc:
-        itmc.logger.exception(exc)
-        sys.exit(1)
-
-
-def daterange(start_time, end_time, dt):
-    """Generator for a sequence of regular time periods."""
-    for i in range(round((end_time - start_time) / dt)):
-        c_start_t = start_time + i * dt
-        yield (c_start_t, c_start_t + dt)
-
-
-def aggregate_data_loop(conn, sqlf, start_time, end_time):
-
-    today_date = datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.min.time())
-    dt = datetime.timedelta(days=1)
+    today_date = itmc.local_tz.localize(
+        datetime.datetime.combine(
+            datetime.date.today(), datetime.datetime.min.time()))
 
     with conn:
-        for (c_start_t, c_end_t) in daterange(
-                start_time, end_time, dt):
+        for (c_start_t, c_end_t) in dayrange(start_time, end_time, gdt):
             # If the interval is in the future, stop processing.
             if today_date <= c_start_t:
                 break
@@ -180,7 +145,7 @@ def aggregate_data_loop(conn, sqlf, start_time, end_time):
                 "Aggregating dates " + c_start_t.strftime("%Y-%m-%d")
                 + " - " + c_end_t.strftime("%Y-%m-%d"))
 
-            aggregate_data(conn, sqlf, c_start_t, c_end_t)
+            aggregate_data(conn, sqlf, c_start_t, c_end_t, csv)
 
 
 if __name__ == '__main__':
