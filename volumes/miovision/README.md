@@ -63,7 +63,9 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 
 #### `classifications`
 
-Reference table for all 7 classifications: Lights, Bicycles on Road, Buses, Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, and Bicycles on Crosswalk.
+Reference table for all 8 classifications: Lights, Bicycles on Road, Buses,
+Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, Bicycles on
+Crosswalk and Motorized Vehicles (streetcars and miscellaneous vehicles).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
