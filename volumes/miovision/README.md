@@ -279,8 +279,9 @@ as red lines.
 
 ![Mapping movements](img/intersection_atr2.png)
 
-For a certain `classification_uid` at a certain `datetime_bin`, TMC table shown
-as the top table whereas ATR table shown as the bottom table.
+For light vehicles at King / Bay on 2020-10-15 9:00-9:15 (`intersection_uid =
+17`, `datetime_bin = '2020-10-15 09:00:00'`, `classification_uid = 1`), the TMC
+and ATR movements are:
 
 |leg(tmc)|movement_uid|volume|
 |--------|------------|------|
