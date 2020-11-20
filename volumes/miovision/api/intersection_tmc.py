@@ -13,7 +13,6 @@ import configparser
 import click
 import traceback
 from time import sleep
-from datetimerange import DateTimeRange
 
 
 class BreakingError(Exception):
@@ -296,6 +295,14 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             logger.info(conn.notices[-1])
 
 
+def daterange(start_time, end_time, time_delta):
+    """Generator for a sequence of regular time periods."""
+    curr_time = start_time
+    while curr_time < end_time:
+        yield curr_time
+        curr_time += time_delta
+
+
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(hours=6)
@@ -323,12 +330,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         logger.critical('No intersections found in miovision_api.intersections for the specified start time')
         sys.exit(3)
 
-    # Subtract 1 minute because DateTimeRange goes from start_time to end_time
-    # inclusive.
-    start_time_range = DateTimeRange(
-        start_time, end_time - datetime.timedelta(minutes=1)).range(time_delta)
-
-    for c_start_t in start_time_range:
+    for c_start_t in daterange(start_time, end_time, time_delta):
 
         c_end_t = c_start_t + time_delta
         table = []
