@@ -13,6 +13,7 @@ import configparser
 import click
 import traceback
 from time import sleep
+from datetimerange import DateTimeRange
 
 
 class BreakingError(Exception):
@@ -55,7 +56,7 @@ logger.debug('Start')
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
-local_tz=pytz.timezone('US/Eastern')
+
 session = Session()
 session.proxies = {}
 url='https://api.miovision.com/intersections/'
@@ -90,11 +91,9 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
     conn.autocommit = True
     logger.debug('Connected to DB')
 
-    start_date= dateutil.parser.parse(str(start_date))
-    end_date= dateutil.parser.parse(str(end_date))
-    start_time=local_tz.localize(start_date)
-    end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(start_time,end_time))
+    start_time = dateutil.parser.parse(str(start_date))
+    end_time = dateutil.parser.parse(str(end_date))
+    logger.info('Pulling from %s to %s' %(start_time, end_time))
 
     try:
         pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
@@ -297,12 +296,6 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             logger.info(conn.notices[-1])
 
 
-def daterange(start_time, end_time, time_delta):
-    """Generator for a sequence of regular time periods."""
-    for i in range(round((end_time - start_time) / time_delta)):
-        yield start_time + i * time_delta
-
-
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(hours=6)
@@ -330,7 +323,12 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         logger.critical('No intersections found in miovision_api.intersections for the specified start time')
         sys.exit(3)
 
-    for c_start_t in daterange(start_time, end_time, time_delta):
+    # Subtract 1 minute because DateTimeRange goes from start_time to end_time
+    # inclusive.
+    start_time_range = DateTimeRange(
+        start_time, end_time - datetime.timedelta(minutes=1)).range(time_delta)
+
+    for c_start_t in start_time_range:
 
         c_end_t = c_start_t + time_delta
         table = []
