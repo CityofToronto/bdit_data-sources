@@ -9,8 +9,8 @@
 	- [Reference Tables](#reference-tables)
 		- [`classifications`](#classifications)
 		- [`intersections`](#intersections)
-		- [`movement_map`](#movement_map)
 		- [`movements`](#movements)
+		- [`movement_map`](#movement_map)
 		- [`periods`](#periods)
 		- [`intersection_movements`](#intersection_movements)
 	- [Disaggregate Data](#disaggregate-data)
@@ -98,17 +98,6 @@ e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 
-#### `movement_map`
-
-Reference table for transforming aggregated turning movement counts (see `volumes_15min_tmc`) into segment-level volumes (see `volumes_15min`).
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
-dir|text|Direction on which 15-minute volume will be assigned|EB|
-leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
-movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
-
 #### `movements`
 
 Reference table for road user movements.
@@ -119,6 +108,17 @@ movement_uid|integer|Identifier representing current turning movement|1|
 movement_name|text|Short description of movement|thru|
 crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
 movement_pretty_name|text|Long description of movement|Through|
+
+#### `movement_map`
+
+Reference table for transforming aggregated turning movement counts (see `volumes_15min_tmc`) into segment-level volumes (see `volumes_15min`).
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
+dir|text|Direction on which 15-minute volume will be assigned|EB|
+leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
+movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
 
 #### `periods`
 
