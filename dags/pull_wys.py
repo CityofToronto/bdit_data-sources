@@ -72,7 +72,7 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_wys',default_args=default_args, schedule_interval='0 15 * * *')
+dag = DAG('pull_wys_test',default_args=default_args, schedule_interval='0 15 * * *')
 # Run at 3 PM local time every day
 
 with wys_postgres.get_conn() as con:
