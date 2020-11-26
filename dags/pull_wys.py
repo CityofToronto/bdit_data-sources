@@ -27,26 +27,28 @@ except:
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: WYS Api Pull Failed. 
-            *Task*: {task}  
-            *Dag*: {dag} 
-            *Execution Time*: {exec_date}  
-            *Log Url*: {log_url} 
-            """.format(
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-        )
+
+    if context.get('task_instance').task_id == 't1':
+        task_msg = """:cat_shock: The Task {task} in Pull WYS dag  failed, 
+			<@UHJA7GHQV> please check.""".format(
+            task=context.get('task_instance').task_id,)
+    
+    # else other msg for task2
+    else:
+        task_msg = """The Task {task} in Pull WYS dag failed, 
+			<@UHJA7GHQV> please check.""".format(
+            task=context.get('task_instance').task_id,)    
+        
+    # this adds the error log url at the end of the msg
+    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
+            log_url=context.get('task_instance').log_url,)
     failed_alert = SlackWebhookOperator(
-        task_id='slack_alert',
+        task_id='slack_test',
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow'
-    )
+        username='airflow',
+        )
     return failed_alert.execute(context=context)
 
 #to get credentials to access google sheets
@@ -78,8 +80,11 @@ with wys_postgres.get_conn() as con:
             task_id = 'pull_wys',
             python_callable = api_main, 
             dag = dag,
-            op_kwargs = {'conn':con, 'api_key':api_key}
-            )
+            op_kwargs = {'conn':con, 
+                        'start_date':'{{ ds }}', 
+                        'end_date':'{{ ds }}', 
+                        'api_key':api_key}
+                        )
     
     t2 = PythonOperator(
             task_id = 'read_google_sheets',
