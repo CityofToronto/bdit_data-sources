@@ -63,7 +63,7 @@ api_key = connection.password
 
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
-                'start_date': datetime(2020, 4, 1),
+                'start_date': datetime(2020, 11, 16),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
