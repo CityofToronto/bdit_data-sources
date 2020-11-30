@@ -8,7 +8,6 @@ import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
-import math
 import logging
 import configparser
 import click
@@ -56,7 +55,7 @@ logger.debug('Start')
 time_delta = datetime.timedelta(days=1)
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today())
-local_tz=pytz.timezone('US/Eastern')
+
 session = Session()
 session.proxies = {}
 url='https://api.miovision.com/intersections/'
@@ -91,11 +90,9 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
     conn.autocommit = True
     logger.debug('Connected to DB')
 
-    start_date= dateutil.parser.parse(str(start_date))
-    end_date= dateutil.parser.parse(str(end_date))
-    start_time=local_tz.localize(start_date)
-    end_time=local_tz.localize(end_date)
-    logger.info('Pulling from %s to %s' %(start_time,end_time))
+    start_time = dateutil.parser.parse(str(start_date))
+    end_time = dateutil.parser.parse(str(end_date))
+    logger.info('Pulling from %s to %s' %(start_time, end_time))
 
     try:
         pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
@@ -294,78 +291,78 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
             logger.info(conn.notices[-1])
 
 
-def daterange(start_time, end_time, dt):
+def daterange(start_time, end_time, time_delta):
     """Generator for a sequence of regular time periods."""
-    for i in range(math.ceil((end_time - start_time) / dt) - 1):
-        c_start_t = start_time + i * dt
-        yield (c_start_t, c_start_t + dt)
+    curr_time = start_time
+    while curr_time < end_time:
+        yield curr_time
+        curr_time += time_delta
 
 
-class IntersectionInfo:
-    """Intersection"""
+class Intersection:
 
-    def __init__(self, conn, intersection=()):
+    def __init__(self, uid, id1, name, date_installed,
+                 date_decommissioned):
+        self.uid = uid
+        self.id1 = id1
+        self.name = name
+        self.date_installed = date_installed
+        self.date_decommissioned = date_decommissioned
 
-        with conn.cursor() as cur:
-            sql_query = """SELECT intersection_uid,
-                                  id,
-                                  intersection_name,
-                                  date_installed,
-                                  date_decommissioned
-                           FROM miovision_api.intersections"""
-            if len(intersection) > 0:
-                sql_query += """ WHERE intersection_uid IN %s"""
-                cur.execute(sql_query, (intersection, ))
-            else:
-                cur.execute(sql_query)
-            intersection_list = cur.fetchall()
-            intersection_list = dict(
-                [(x[0], x[1:]) for x in intersection_list])
+    def __repr__(self):
+        return ("intersection_uid: {u}\n"
+                "    intersection_id1: {id1}\n"
+                "    name: {n}\n"
+                "    date_installed: {di}\n"
+                "    date_decommissioned: {ddc}\n"
+                .format(u=self.uid, id1=self.id1,
+                        n=self.name, di=self.date_installed,
+                        ddc=self.date_decommissioned))
 
-        self.int_uids = list(intersection_list.keys())
-        self._int_list = intersection_list
-
-    def __getitem__(self, key):
-        return self._int_list[key]
-
-    def getinfo(self, key):
-        """Returns the ID and name of an intersection.
-        
-        Parameters
-        ----------
-        key : int
-            Intersection UID (from `miovision_api.intersections`).
-        """
-        return self[key][:2]
-
-    def is_active(self, int_uid, ctime):
+    def is_active(self, ctime):
         """Checks if an intersection's Miovision system is active.
         
         Parameters
         ----------
-        int_uid : int
-            Intersection UID (from `miovision_api.intersections`).
         ctime : datetime.datetime
             Time to check.
         """
         cdate = ctime.date()
         # Check if inputted time is at least 1 day after the activation date
-        # of the station.
-        active = cdate > self[int_uid][2]
-        # If deactivation date exists, check that the time is at least 1 day
-        # before.
-        if self[int_uid][3] is not None:
-            active = active and (cdate < self[int_uid][3])
-        return active
+        # of the station. If deactivation date exists, check that the time is
+        # at least 1 day before.
+        if self.date_decommissioned is not None:
+            return ((cdate > self.date_installed)
+                    & (cdate < self.date_decommissioned))
+        return cdate > self.date_installed
+
+
+def get_intersection_info(conn, intersection=()):
+
+    with conn.cursor() as cur:
+        sql_query = """SELECT intersection_uid,
+                              id,
+                              intersection_name,
+                              date_installed,
+                              date_decommissioned
+                       FROM miovision_api.intersections"""
+        if len(intersection) > 0:
+            sql_query += """ WHERE intersection_uid IN %s"""
+            cur.execute(sql_query, (intersection, ))
+        else:
+            cur.execute(sql_query)
+        intersection_list = cur.fetchall()
+
+    return [Intersection(*x) for x in intersection_list]
 
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = datetime.timedelta(hours=6)
 
-    int_info = IntersectionInfo(conn, intersection=intersection)
+    intersections = get_intersection_info(conn, intersection=intersection)
 
-    if len(int_info.int_uids) == 0:
+    if len(intersections) == 0:
         logger.critical('No intersections found in '
                         'miovision_api.intersections for the specified '
                         'start time.')
@@ -374,25 +371,24 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     # So we don't make the comparison thousands of times below.
     user_def_intersection = len(intersection) > 0
 
-    for (c_start_t, c_end_t) in daterange(start_time, end_time, time_delta):
+    for c_start_t in daterange(start_time, end_time, time_delta):
 
+        c_end_t = c_start_t + time_delta
         table = []
 
-        for intersection_uid in int_info.int_uids:
-            intersection_id1, intersection_name = (
-                int_info.getinfo(intersection_uid))
+        for c_intersec in intersections:
 
-            if int_info.is_active(intersection_uid, c_start_t):
-                logger.info(intersection_name + '     ' + str(c_start_t))
+            if c_intersec.is_active(c_start_t):
+                logger.info(c_intersec.name + '     ' + str(c_start_t))
 
                 for attempt in range(3):
                     try:
                         table_veh = get_intersection_tmc(
-                            c_start_t, c_end_t, intersection_id1,
-                            intersection_uid, key)
+                            c_start_t, c_end_t, c_intersec.id1,
+                            c_intersec.uid, key)
                         table_ped = get_pedestrian(
                             c_start_t, c_end_t,
-                            intersection_id1, intersection_uid, key)
+                            c_intersec.id1, c_intersec.uid, key)
                         break
                     except (exceptions.ProxyError,
                             exceptions.RequestException, RetryError) as err:
@@ -418,7 +414,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                 sleep(1)
 
             elif user_def_intersection:
-                logger.info(intersection_name + ' not active on '
+                logger.info(c_intersec.name + ' not active on '
                             + str(c_start_t))
 
         logger.info('Completed data pulling from %s to %s'

@@ -14,13 +14,6 @@ import logging
 from time import sleep
 import socket
 
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-
-SERVICE_ACCOUNT_FILE = '/home/jchew/local/vz_key.json' 
-
-credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -113,6 +106,13 @@ if __name__ == '__main__':
     CONFIG.read(r'/home/jchew/local/db.cfg')
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
+        
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+
+    SERVICE_ACCOUNT_FILE = '/home/jchew/local/vz_key.json' 
+
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
 
     service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
 
