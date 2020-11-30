@@ -1,3 +1,7 @@
+"""
+Miovision bulk postprocessor.
+"""
+
 import click
 import psycopg2
 import configparser
@@ -32,11 +36,11 @@ def cli():
 @click.option('--end_date', default='2020-11-11',
               help=('format is YYYY-MM-DD for end date '
                     '& excluding the day itself'))
-@click.option('--gapfinder_dt', default=30,
-              help=('Number of days per block used by the gap finder.'))
+@click.option('--postproc_dt', default=30,
+              help=('Number of days per block used by the postprocessor.'))
 @click.option('--path', default='config_miovision_csv_bot.cfg',
               help='enter the path/directory of the config.cfg file')
-def run_api(csv, start_date, end_date, gapfinder_dt, path):
+def run_api(csv, start_date, end_date, postproc_dt, path):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
@@ -45,13 +49,11 @@ def run_api(csv, start_date, end_date, gapfinder_dt, path):
     conn.autocommit = True
     itmc.logger.debug('Connected to DB')
 
-    start_date = dateutil.parser.parse(str(start_date))
-    end_date = dateutil.parser.parse(str(end_date))
-    start_time = itmc.local_tz.localize(start_date)
-    end_time = itmc.local_tz.localize(end_date)
+    start_time = dateutil.parser.parse(str(start_date))
+    end_time = dateutil.parser.parse(str(end_date))
     itmc.logger.info('Processing from %s to %s' %(start_time, end_time))
 
-    gdt = datetime.timedelta(days=gapfinder_dt)
+    ppc_dt = datetime.timedelta(days=postproc_dt)
 
     if csv:
         itmc.logger.info('Processing CSV data')
@@ -59,7 +61,7 @@ def run_api(csv, start_date, end_date, gapfinder_dt, path):
         itmc.logger.info('Processing API data')
 
     try:
-        aggregate_data_loop(conn, start_time, end_time, gdt, csv)
+        aggregate_data_loop(conn, start_time, end_time, ppc_dt, csv)
     except Exception as e:
         itmc.logger.critical(traceback.format_exc())
         sys.exit(1)
@@ -119,33 +121,19 @@ def aggregate_data(conn, start_time, end_iteration_time, csv):
                 itmc.logger.info('report_dates done')
 
 
-def dayrange(start_time, end_time, dt):
-    """Generator for a sequence of regular time periods, with a shorter last
-    period if dt does not divide evenly into end_time - start_time."""
-    n_periods = math.ceil((end_time - start_time) / dt)
-    for i in range(n_periods):
-        c_start_t = start_time + i * dt
-        if i + 1 == n_periods:
-            yield (c_start_t, end_time)
-        else:
-            yield (c_start_t, c_start_t + dt)
-
-
-def aggregate_data_loop(conn, start_time, end_time, gdt, csv):
+def aggregate_data_loop(conn, start_time, end_time, ppc_dt, csv):
 
     today_date = itmc.local_tz.localize(
         datetime.datetime.combine(
             datetime.date.today(), datetime.datetime.min.time()))
 
     with conn:
-        for (c_start_t, c_end_t) in dayrange(start_time, end_time, gdt):
-            # If the interval is in the future, stop processing.
+        for c_start_t in itmc.daterange(start_time, end_time, ppc_dt):
+            # If the interval is in the future, stop processing (this only
+            # happens if the user is being silly).
             if today_date <= c_start_t:
                 break
-            # If the end of the interval exceeds the present day, set the end
-            # to the present.
-            elif today_date < c_end_t:
-                c_end_t = today_date
+            c_end_t = min(end_time, c_start_t + ppc_dt)
 
             itmc.logger.info(
                 "Aggregating dates " + c_start_t.strftime("%Y-%m-%d")
