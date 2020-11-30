@@ -1,5 +1,35 @@
-"""
-Miovision bulk postprocessor.
+"""Miovision bulk postprocessor.
+
+Performs the gap finding and masking, and 15-minute TMC and ATR aggregation, of
+intersection_tmc.py on either API or CSV data. For API data it also updates
+report dates.
+
+Currently cannot perform selective aggregation on a subset of stations.
+
+Examples
+--------
+
+The command
+
+```
+python miov_bulk_postprocessor.py --path ./config.cfg --start_date '2020-11-01' --end_date '2020-12-01'
+```
+
+runs a bulk-aggregation API data from 2020-11-01 to 2020-11-30 inclusive.
+
+```
+python miov_bulk_postprocessor.py --path ./config.cfg --csv --start_date '2020-01-01' --end_date '2020-12-01' &> log.txt
+```
+
+postprocesses CSV data from 2020-01-01 to 2020-11-30 inclusive and saves the
+logger output as a text file.
+
+```
+python miov_bulk_postprocess.py --help
+```
+
+returns a list of optional arguments.
+
 """
 
 import click
@@ -24,13 +54,10 @@ CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
 )
 
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    pass
 
-@cli.command()
+@click.command()
 @click.option('--csv', is_flag=True,
-              help="If True, post-processes miovision_csv.")
+              help="If used, post-processes miovision_csv.")
 @click.option('--start_date', default='2020-10-01',
               help='format is YYYY-MM-DD for start date')
 @click.option('--end_date', default='2020-11-11',
@@ -143,4 +170,4 @@ def aggregate_data_loop(conn, start_time, end_time, ppc_dt, csv):
 
 
 if __name__ == '__main__':
-    cli()
+    run_api()
