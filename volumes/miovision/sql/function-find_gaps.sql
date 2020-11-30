@@ -13,7 +13,7 @@ DECLARE tot_gaps integer;
 
 BEGIN
 
--- FIRST, FIND ALL GAPS
+-- FIRST, FIND ACCEPTABLE GAP SIZES
 WITH wkdy_lookup(period, isodow) AS (
          VALUES ('Weekday'::text,'[1,6)'::int4range), ('Weekend'::text,'[6,8)'::int4range)
 ), mio AS (
@@ -35,12 +35,13 @@ WITH wkdy_lookup(period, isodow) AS (
             WHEN avg(mio.vol) >= 500::numeric AND avg(mio.vol) < 1500::numeric THEN 10
             WHEN avg(mio.vol) > 1500::numeric THEN 5
             ELSE NULL::integer
-        END AS gap_size
+        END AS gap_tolerance
    FROM mio
      CROSS JOIN wkdy_lookup d
   WHERE date_part('isodow'::text, mio.hourly_bin)::integer <@ d.isodow
   GROUP BY mio.intersection_uid, d.period, (mio.hourly_bin::time without time zone)
 ), ful AS (
+    -- THEN, FIND ALL GAPS
 	SELECT generate_series(start_date, end_date, interval '1 minute')::timestamp without time zone 
 		AS datetime_bin
 ), grp AS (
@@ -81,9 +82,9 @@ WITH wkdy_lookup(period, isodow) AS (
 ), acceptable AS (
 	-- THEN, MATCH IT TO THE LOOKUP TABLE TO CHECK IF ACCEPTABLE
 	SELECT sel.intersection_uid, sel.gap_start, sel.gap_end,
-		sel.gap_minute, gapsize_lookup.gap_size AS allowed_gap,
-	CASE WHEN gap_minute < gapsize_lookup.gap_size THEN TRUE
-	WHEN gap_minute >= gapsize_lookup.gap_size THEN FALSE
+		sel.gap_minute, gapsize_lookup.gap_tolerance AS allowed_gap,
+	CASE WHEN gap_minute < gapsize_lookup.gap_tolerance THEN TRUE
+	WHEN gap_minute >= gapsize_lookup.gap_tolerance THEN FALSE
 	END AS accept
 	FROM sel 
 	LEFT JOIN gapsize_lookup
@@ -96,6 +97,7 @@ WITH wkdy_lookup(period, isodow) AS (
 	-- INSERT INTO THE TABLE
 	-- DISTINCT ON cause there might be more than 1 gap happening in the same hour for the same intersection
 	INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
+	-- Multiple gaps during the hour won't be stored.
 	SELECT DISTINCT ON (intersection_uid, DATE_TRUNC('hour', acceptable.gap_start)) *
 	FROM acceptable
 	WHERE accept = false
