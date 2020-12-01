@@ -150,9 +150,8 @@ def aggregate_data(conn, start_time, end_iteration_time, csv):
 
 def aggregate_data_loop(conn, start_time, end_time, ppc_dt, csv):
 
-    today_date = itmc.local_tz.localize(
-        datetime.datetime.combine(
-            datetime.date.today(), datetime.datetime.min.time()))
+    today_date = datetime.datetime.combine(
+            datetime.date.today(), datetime.datetime.min.time())
 
     with conn:
         for c_start_t in itmc.daterange(start_time, end_time, ppc_dt):
