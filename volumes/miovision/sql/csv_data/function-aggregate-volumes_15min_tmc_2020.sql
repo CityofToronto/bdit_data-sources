@@ -48,7 +48,8 @@ LEFT JOIN miovision_csv.volumes_2020 A
 	AND A.movement_uid = pad.movement_uid
 WHERE A.volume_15min_tmc_uid IS NULL
 GROUP BY pad.intersection_uid, pad.datetime_bin15, pad.classification_uid, pad.leg, pad.movement_uid, un.accept
-HAVING pad.classification_uid IN (1,2,6) OR SUM(A.volume) > 0 
+HAVING pad.classification_uid IN (1,2,6) OR SUM(A.volume) > 0
+ON CONFLICT DO NOTHING
 RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid, volume
 )
 
