@@ -640,7 +640,7 @@ Below shows a table on exactly how many bylaws failed at different stage. Please
 |2|`gis._get_entire_length`|bylaws categorized as entire length case did not return any result|1|
 |3|`gis._get_intersection_geom`|no int_id is not found for the second intersection only|83|
 |4|`gis._get_intersection_geom`|no int_id is not found for both intersections|67|
-|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|26| 
+|5|`gis._get_lines_btwn_intexn`|the intersections could not be routed|15| 
 |6|`gis._centreline_case1`|bylaws categorized as case 1 did not return any result|0|
 |7|`gis._centreline_case2`|no results for this case2 due to 1st argument isnt a line|8|
 |8|`gis._centreline_case2`|no results for this case2 due to 2nd argument isnt within \[0,1]|10|
@@ -813,7 +813,7 @@ The table below summarizes the error messages above.
 ## pgRouting returns the shortest path but street name different from `highway`
 
 This can be found at [issue #268](https://github.com/CityofToronto/bdit_data-sources/issues/268#issuecomment-595973836). 
-This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, only 26 bylaws fail.
+This happened for `bylaw_id` = 6577 where `highway` = 'Garthdale Court' and `between` = 'Overbrook Place and Purdon Drive'. The two intersection ids found are 13448816 and 13448300 (marked as red cross below). The blue line is the result from pg_routing whereas the highlighted yellow path indicates the road segment from the bylaw. This problem is partially solved after including levenshtein distance as the cost in the routing process to prefer the highway matching the streetname. There were 84 bylaws that failed previously but after applying levenshtein distance as a cost, [only 15 bylaws fail](https://github.com/CityofToronto/bdit_data-sources/issues/268).
 
 ![image](https://user-images.githubusercontent.com/54872846/76124099-f7475800-5fc7-11ea-865e-963edefa43be.png)
 
