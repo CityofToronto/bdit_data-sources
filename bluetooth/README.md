@@ -14,6 +14,7 @@
             - [Filtering devices](#filtering-devices)
         - [all_analyses](#all_analyses)
         - [ClassOfDevice](#classofdevice)
+        - [NewTableSchemas](#Bluetooth_New-Table-Schemas)
 - [3. Technology](#3-technology)
 - [4. Bliptrack UI](#4-bliptrack-ui)
     - [Accessing Bliptrack](#accessing-bliptrack)
@@ -166,6 +167,81 @@ To get major and minor classes from the cod:
 substring(cod::bit(24) from 17 for 6) as minor_device_class,
 substring(cod::bit(24) from 12 for 5) as major_device_class
 ```
+
+#### Bluetooth_New-Table-Schemas
+
+As a part of updating/modernizing Bluetooth Detector Tables [ISSUE #196](https://github.com/CityofToronto/bdit_data-sources/issues/196), the following three tables are prepared. 
+* `reader_history`
+* `reader_locations`
+* `routes`
+
+**reader_history:**
+
+This is a table of bluetooth readers which have been installed at each locations at different times in the past. Readers that have been installed at any point of time in the past are listed in this table irrespective of whether the detector is still phycially present at the installed location or not. This table is the sum-total of all the readers irrespective of their current status.
+ `reader_history` table contains the following fields:
+
+- `reader_history_id`: a unique ID
+
+- `reader_id`: foreign key to `reader_locations`
+
+- `serial_no_bluetooth`: This is a four digit number that is assigned to each bluetooth reader. This serial number corresponds to the **Zone** in the bliptrack table. 
+
+- `serial_no_wifi` : Some readers have both wifi and bluetooth sensors. Those readers which has the wifi serial number is available is populated in this field
+
+- `date_installed` : Date the reader is installed at the location
+
+- `date_uninstalled` : Date when reader is uninstalled from a location
+
+
+**reader_locations:** 
+
+This is a table of all locations at which Bliptrack readers have been installed and are physically existing. The installed readers could be online or offline but has NOT been removed physically. Each intersection has only **one** reader that is assigned to a route. Therefore, if there are more than one readers in a locations that has not been removed, such detectors are listed in the `reader_history` table. This table consists of the following fields:
+
+- `reader_id`: unique ID for a unique reader that corresponds to the `reader_id` in the `reader_history` table.
+
+- `name`: e.g. QN_SP (two characters for E/W street, two characters for N/S street. Whatever name is already existing has been retained for example, A, B, C or Beechwood, Castlefield etc has been retained)
+
+- `int_id`: centreline intersection id, for closest intersection or pseudo intersections in case of an expressway. A logical location closest to a reader that would be an intersection... node
+
+- `date_active`: The date this detector was installed
+
+- `date_inactive`: NULL unless date_last_received is not the most recent date
+
+- `date_last_received`: updated daily if the reader is still producing data. Value will be empty for active detectors
+
+- `project_name`: Name of the project which installed the detector. 
+
+- `geom` : Geometry of the location
+
+
+**routes:** 
+
+Routes contain all the routes that pass through the locations (which are either intersections or pseudo intersections) where readers are installed. It corresponds to a unique segments on which data is collected from the network of readers. For a two way street, routes are created for both directions such as Eastbound (EB) - Westbound (WB) or Northbound (NB) - Southbound (SB). In the City of Toronto, bluetooth readers are installed at various locations at different times by different projects. Thus,  routes were created accordingly as detectors were added into different tables. Easy way to create and update routes is [described here](https://github.com/CityofToronto/bdit_data-sources/issues/234). The routes that were created earlier were in `bluetooth.segments` table and new routes were created in `natalie.bluetooth_routed` table. After more readers were added, new routes were also created in table named `mohan.bt_segments_new`. This table consolidated all three routes into a single table `routes`. 
+The `routes` table has the following fields:
+
+- `analysis_id`: analysis_id from the `bluetooth.all_analyses` table. For new routes that are added lately new analysis_ids starting from 1600000 is assigned. _`all_analyses` table has to be updated to include these new routes for data aggregation_. 
+
+- `name` : name of the route. This generally contains a detail name explaining the route start and end points. For example, `DVP-J to DVP-I` is a route along Don Valley Parkway between detector **J** and **I**.  
+
+- `start_street_name` : This is the name of the street along which the route is created at the start point of the route
+
+- `start_cross_street` : The street that crosses the start street at the start point of the route
+
+- `start_reader_id`: Corresponding reader_id from the reader_locations table at the start point of the route
+
+- `end_street_name` : At times the route can start and end at different street name thus the name of the street along the route where the route ends
+
+- `end_cross_street` : This is the name of the street where the route ends
+
+- `end_reader_id`: Corresponding reader_id from the reader_locations table
+
+- `date_active` : The date when the reader started sending the readings
+
+- `date_inactive` : The date when the reader stopped sending the readings (this will be updated everyday)
+
+- `date_last_received`: Last day reader sent the readings. (this will be updated everyday)
+
+- `geom` : geometry
 
 ## 3. Technology
 
