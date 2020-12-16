@@ -16,6 +16,28 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 ## Common Tasks
 
+### Creating a new airflow DAG
+
+1) Branch off master
+
+2) Create your dag in the dag folder and if applicable, your related script in another appriopriate folder.
+
+3) Commit and pull your testing branch into `dev_script`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
+
+4) Test your dag by added a new symbolic link using the following (make sure you are in the correct directory `/etc/airflow/dag` ):
+
+```
+ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
+```
+
+5) Repeat step 3 until your test is successful.
+
+6) Make a pull request to master.
+
+7) Once your PR is approved and merged, git pull from master in `data_script`.
+
+8) Change the symbolic link to your dag to use the one in `data_script`. 
+
 ### Updating an existing airflow DAG
 
 1) Branch off an appropriate branch and modify your dag in a testing branch, remember to change your dag name to something else.
@@ -30,6 +52,9 @@ ln -s /etc/airflow/dev_scripts/dags/your_dag_test.py your_dag_test.py
 4) If your test is successful, make a pull request to master.
 
 5) Once your PR is approved and merged, git pull from master in `data_script`.
+
+6) Change the symbolic link to your dag to use the one in `data_script`.
+
 
 ### Clearing a task
 
