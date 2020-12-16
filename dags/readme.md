@@ -16,6 +16,21 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 ## Common Tasks
 
+### Updating an existing airflow DAG
+
+1) Branch off an appropriate branch and modify your dag in a testing branch, remember to change your dag name to something else.
+
+2) Pull your testing branch into `dev_script`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
+
+3) Test your dag by added a new symbolic link for testing using the following:
+```
+ln -s /etc/airflow/dev_scripts/dags/your_dag_test.py your_dag_test.py
+```
+
+4) If your test is successful, make a pull request to master.
+
+5) Once your PR is approved and merged, git pull from master in `data_script`.
+
 ### Clearing a task
 
 If you get the following error message when trying to clear a task in the UI
