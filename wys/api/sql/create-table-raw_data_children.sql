@@ -101,3 +101,28 @@ CREATE INDEX raw_data_2020_datetime_bin_idx
     ON wys.raw_data_2020 USING brin
     (datetime_bin)
     TABLESPACE pg_default;
+    
+CREATE TABLE wys.raw_data_2021
+(
+	PRIMARY KEY (raw_data_uid),
+    CONSTRAINT raw_data_2021_api_id_datetime_bin_speed_key UNIQUE (api_id, datetime_bin, speed),
+	CHECK (datetime_bin >= '2021-01-01' AND datetime_bin < '2021-01-01'::DATE + INTERVAL '1 Year')
+)
+INHERITS(wys.raw_data) 
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE wys.raw_data_2021
+    OWNER to rdumas;
+
+GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2021 TO wys_bot;
+-- Index: raw_data_2021_datetime_bin_idx
+
+-- DROP INDEX wys.raw_data_2021_datetime_bin_idx;
+
+CREATE INDEX raw_data_2021_datetime_bin_idx
+    ON wys.raw_data_2021 USING brin
+    (datetime_bin)
+    TABLESPACE pg_default;
