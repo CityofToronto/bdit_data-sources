@@ -18,11 +18,13 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 ### Creating a new airflow DAG
 
-1) Branch off master
+1) Branch off `master` and do your work in your normal git folder.
 
-2) Create your dag in the dag folder and if applicable, your related script in another appriopriate folder.
+2) Create your dag in the dag folder and if applicable, your related script in another appropriate folder.
 
-3) Commit and pull your testing branch into `dev_script`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
+3) Commit and push to GitHub.
+
+4) pull your testing branch into `dev_script`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
 
 4) Test your dag by added a new symbolic link using the following (make sure you are in the correct directory `/etc/airflow/dag` ):
 
