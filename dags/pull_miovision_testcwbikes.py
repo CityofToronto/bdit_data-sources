@@ -32,7 +32,7 @@ def task_fail_slack_alert(context):
     return failed_alert.execute(context=context)
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
-                'start_date': datetime(2019, 11, 22),
+                'start_date': datetime(2021, 1, 1),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
@@ -41,11 +41,11 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_miovision',default_args=default_args, schedule_interval='0 3 * * *')
+dag = DAG('pull_miovision_testcwbikes',default_args=default_args, schedule_interval='0 3 * * *', catchup=True)
 # Add 3 hours to ensure that the data are at least 2 hours old
 
 t1 = BashOperator(
-        task_id = 'pull_miovision',
+        task_id = 'pull_miovision_testcwbikes',
         bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/dev_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{tomorrow_ds}} ', 
         retries = 0,
         dag=dag)
