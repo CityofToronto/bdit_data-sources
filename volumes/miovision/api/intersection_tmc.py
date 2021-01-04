@@ -102,7 +102,9 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
 
 
 def get_movement(entrance, exit_dir):
-    if (entrance == 'N' and exit_dir =='S'):
+    if entrance == 'UNDEFINED' or exit_dir == 'UNDEFINED':
+        return '-1'
+    elif entrance == 'N' and exit_dir =='S':
         return '1'
     elif entrance == 'S' and exit_dir =='N':
         return '1'
@@ -178,7 +180,11 @@ def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
             item['leg']=item.pop('entrance')
 
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'], item['movement'], item['volume']]
-            table.append(temp)
+
+            # Hack to drop any bike approach volumes, since we currently can't
+            # handle them.
+            if item['movement'] != '-1':
+                table.append(temp)
 
         return table
     elif response.status_code==404:
