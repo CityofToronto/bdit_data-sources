@@ -14,13 +14,6 @@ import logging
 from time import sleep
 import socket
 
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-
-SERVICE_ACCOUNT_FILE = '/home/jchew/local/vz_key.json' 
-
-credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -92,7 +85,8 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
 
     insert = sql.SQL('''INSERT INTO {}.{} (ward_no, location, from_street, to_street, direction, installation_date, removal_date,
                        new_sign_number, comments, confirmed) VALUES %s 
-                       ON CONFLICT (installation_date, new_sign_number) DO UPDATE SET 
+                       ON CONFLICT (location, from_street, to_street, direction, installation_date, removal_date, new_sign_number)
+ DO UPDATE SET 
                        removal_date=EXCLUDED.removal_date, new_sign_number=EXCLUDED.new_sign_number, comments=EXCLUDED.comments
                        ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
     LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
@@ -113,6 +107,13 @@ if __name__ == '__main__':
     CONFIG.read(r'/home/jchew/local/db.cfg')
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
+        
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+
+    SERVICE_ACCOUNT_FILE = '/home/jchew/local/vz_key.json' 
+
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
 
     service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
 
