@@ -200,8 +200,8 @@ def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 
-def get_crosswalk(start_time, end_iteration_time, intersection_id1,
-                  intersection_uid, key):
+def get_crosswalk_tmc(start_time, end_iteration_time, intersection_id1,
+                      intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
     params = {'endTime': end_iteration_time, 'startTime' : start_time}
 
@@ -396,7 +396,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                         table_veh = get_intersection_tmc(
                             c_start_t, c_end_t, c_intersec.id1,
                             c_intersec.uid, key)
-                        table_ped = get_crosswalk(
+                        table_ped = get_crosswalk_tmc(
                             c_start_t, c_end_t,
                             c_intersec.id1, c_intersec.uid, key)
                         break
