@@ -32,7 +32,7 @@ def task_fail_slack_alert(context):
     return failed_alert.execute(context=context)
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
-                'start_date': datetime(2021, 1, 1),
+                'start_date': datetime(2020, 12, 14),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
