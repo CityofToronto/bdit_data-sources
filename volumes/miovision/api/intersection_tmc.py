@@ -166,7 +166,12 @@ def get_crosswalk_class(cw_class):
 def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
                          intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
-    params = {'endTime': end_iteration_time, 'startTime' : start_time}
+    # Subtract 1 ms from endTime to handle hallucinated rows that occur at
+    # exactly endTime (See bdit_data-sources/#374).
+    params = {'endTime': (end_iteration_time
+                          - datetime.timedelta(milliseconds=1)),
+              'startTime': start_time}
+
     response=session.get(url+intersection_id1+tmc_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
@@ -209,7 +214,11 @@ def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
 def get_crosswalk_tmc(start_time, end_iteration_time, intersection_id1,
                       intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
-    params = {'endTime': end_iteration_time, 'startTime' : start_time}
+    # Subtract 1 ms from endTime to handle hallucinated rows that occur at
+    # exactly endTime (See bdit_data-sources/#374).
+    params = {'endTime': (end_iteration_time
+                          - datetime.timedelta(milliseconds=1)),
+              'startTime': start_time}
 
     response=session.get(url+intersection_id1+ped_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
