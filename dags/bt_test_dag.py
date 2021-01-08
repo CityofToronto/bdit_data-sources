@@ -40,7 +40,7 @@ def task_fail_slack_alert(context):
     
 default_args = {'owner':'mohan',
                 'depends_on_past':False,
-                'start_date': datetime(2021, 1, 7),
+                'start_date': datetime(2021, 1, 6),
                 'email': ['mohanraj.adhikari@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
@@ -49,7 +49,7 @@ default_args = {'owner':'mohan',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('update_bt_active_date',default_args=default_args, schedule_interval='0 17 * * * *')
+dag = DAG('update_bt_active_date',default_args=default_args, schedule_interval='0 17 * * *')
 
 ## Postgres bluetooth date update task
 # Task to update the date last received from BT readers daily
