@@ -48,7 +48,7 @@ default_args = {'owner':'mohan',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('update_bt_status_history',default_args=default_args, schedule_interval='0 19 * * *')
+dag = DAG('update_bt_status_history',default_args=default_args, schedule_interval='0 12 * * *')
 
 ## Postgres update bluetooth reader_status_history DAG
 # Task to update the reader_status_history table daily
