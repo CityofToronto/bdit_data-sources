@@ -102,7 +102,9 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
 
 
 def get_movement(entrance, exit_dir):
-    if (entrance == 'N' and exit_dir =='S'):
+    if entrance == 'UNDEFINED' or exit_dir == 'UNDEFINED':
+        return '-1'
+    elif entrance == 'N' and exit_dir =='S':
         return '1'
     elif entrance == 'S' and exit_dir =='N':
         return '1'
@@ -134,10 +136,9 @@ def get_crosswalk(item):
     else:
         return '6'
 
+
 def get_classification(veh_class):
-    if (veh_class == 'Pedestrian'):
-        return '6'
-    elif veh_class == 'Light':
+    if veh_class == 'Light':
         return '1'
     elif veh_class == 'Bicycle':
         return '2'
@@ -153,10 +154,24 @@ def get_classification(veh_class):
         return '9'
     raise ValueError("vehicle class {0} not recognized!".format(veh_class))
 
+
+def get_crosswalk_class(cw_class):
+    if cw_class == 'Pedestrian':
+        return '6'
+    elif cw_class == 'Bicycle':
+        return '7'
+    raise ValueError("crosswalk class {0} not recognized!".format(cw_class))
+
+
 def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
                          intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
-    params = {'endTime': end_iteration_time, 'startTime' : start_time}
+    # Subtract 1 ms from endTime to handle hallucinated rows that occur at
+    # exactly endTime (See bdit_data-sources/#374).
+    params = {'endTime': (end_iteration_time
+                          - datetime.timedelta(milliseconds=1)),
+              'startTime': start_time}
+
     response=session.get(url+intersection_id1+tmc_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
     if response.status_code==200:
@@ -170,7 +185,11 @@ def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
             item['leg']=item.pop('entrance')
 
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'], item['movement'], item['volume']]
-            table.append(temp)
+
+            # Hack to drop any bike approach volumes, since we currently can't
+            # handle them.
+            if item['movement'] != '-1':
+                table.append(temp)
 
         return table
     elif response.status_code==404:
@@ -192,10 +211,14 @@ def get_intersection_tmc(start_time, end_iteration_time, intersection_id1,
     raise MiovisionAPIException('Error'+str(response.status_code))
 
 
-def get_pedestrian(start_time, end_iteration_time, intersection_id1,
-                   intersection_uid, key):
+def get_crosswalk_tmc(start_time, end_iteration_time, intersection_id1,
+                      intersection_uid, key):
     headers={'Content-Type':'application/json','Authorization':key}
-    params = {'endTime': end_iteration_time, 'startTime' : start_time}
+    # Subtract 1 ms from endTime to handle hallucinated rows that occur at
+    # exactly endTime (See bdit_data-sources/#374).
+    params = {'endTime': (end_iteration_time
+                          - datetime.timedelta(milliseconds=1)),
+              'startTime': start_time}
 
     response=session.get(url+intersection_id1+ped_endpoint, params=params,
                          headers=headers, proxies=session.proxies)
@@ -204,12 +227,13 @@ def get_pedestrian(start_time, end_iteration_time, intersection_id1,
         ped=json.loads(response.content.decode('utf-8'))
         for item in ped:
 
-            item['classification']='6'
+            item['classification'] = get_crosswalk_class(item['class'])
             item['volume']=item.pop('qty')
             item['movement']=get_crosswalk(item)
             item['leg']=item.pop('crosswalkSide')
             item['exit_dir_name']=None
             temp=[intersection_uid, item['timestamp'], item['classification'], item['leg'],  item['movement'], item['volume']]
+
             table.append(temp)
 
         return table
@@ -230,6 +254,7 @@ def get_pedestrian(start_time, end_iteration_time, intersection_id1,
         raise ServerException('Error'+str(response.status_code))
     logger.critical('Unknown error pulling ped data for intersection %s', intersection_id1)
     raise MiovisionAPIException('Error'+str(response.status_code))
+
 
 def process_data(conn, start_time, end_iteration_time):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
@@ -386,7 +411,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                         table_veh = get_intersection_tmc(
                             c_start_t, c_end_t, c_intersec.id1,
                             c_intersec.uid, key)
-                        table_ped = get_pedestrian(
+                        table_ped = get_crosswalk_tmc(
                             c_start_t, c_end_t,
                             c_intersec.id1, c_intersec.uid, key)
                         break
