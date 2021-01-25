@@ -20,9 +20,9 @@ CREATE TEMPORARY TABLE mis (
 		gap_size interval);
 
 WITH ful AS (
-SELECT generate_series(start_date::date, end_date::date, interval '1 minute')::timestamp without time zone 
-	AS datetime_bin)
-, grp AS (
+	SELECT generate_series(start_date::date, end_date::date, interval '1 minute')::timestamp without time zone 
+		AS datetime_bin
+) , grp AS (
 	SELECT
 	vol.volume_uid,
 	vol.intersection_uid,
@@ -30,26 +30,28 @@ SELECT generate_series(start_date::date, end_date::date, interval '1 minute')::t
 	dense_rank() OVER (ORDER BY ful.datetime_bin)
 	- dense_rank() OVER (PARTITION BY vol.intersection_uid ORDER BY vol.datetime_bin) AS diff
 	FROM ful
-	LEFT JOIN miovision_api.volumes vol
+	LEFT JOIN (SELECT *
+		       FROM miovision_api.volumes
+		       WHERE datetime_bin >= start_date::date AND datetime_bin <= end_date::date) vol
 	USING (datetime_bin)
 ) , island AS (
-SELECT grp.intersection_uid, 
-MAX(datetime_bin) - MIN(datetime_bin) + interval '1 minute' AS island_size, 
-MIN(datetime_bin) AS time_min, MAX(datetime_bin) AS time_max
-FROM grp
-GROUP BY grp.intersection_uid, diff
-ORDER BY grp.intersection_uid, time_min
+	SELECT grp.intersection_uid, 
+		MAX(datetime_bin) - MIN(datetime_bin) + interval '1 minute' AS island_size, 
+		MIN(datetime_bin) AS time_min, MAX(datetime_bin) AS time_max
+	FROM grp
+	GROUP BY grp.intersection_uid, diff
+	ORDER BY grp.intersection_uid, time_min
 ) , gap AS (
-SELECT
-    ROW_NUMBER() OVER(ORDER BY island.intersection_uid, time_min) AS rn,
-	island.intersection_uid,
-	island_size,
-    time_min,
-    time_max,
-    LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS prev_time_end,
-	time_min - LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS gap_size
-FROM island
-ORDER BY rn
+	SELECT
+	    ROW_NUMBER() OVER(ORDER BY island.intersection_uid, time_min) AS rn,
+		island.intersection_uid,
+		island_size,
+	    time_min,
+	    time_max,
+	    LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS prev_time_end,
+		time_min - LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS gap_size
+	FROM island
+	ORDER BY rn
 )
 INSERT INTO mis
 SELECT gap.intersection_uid, prev_time_end AS gap_start, time_min AS gap_end, gap.gap_size
@@ -63,7 +65,7 @@ ORDER BY gap.intersection_uid, gap_start;
 SELECT COUNT(DISTINCT(mis.intersection_uid)) FROM mis INTO tot;
 
 IF tot > 0 
-	THEN RAISE NOTICE 'There''s % gap in the data for all active interesection. A camera might be down.', tot;
+	THEN RAISE NOTICE 'There''s % gap in the data for all active intersections. A camera might be down.', tot;
 ELSE 
 	RAISE NOTICE 'All cameras are working fine';
 END IF;
