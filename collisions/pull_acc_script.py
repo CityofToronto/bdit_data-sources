@@ -118,7 +118,7 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
             cur.execute("COMMENT ON TABLE collisions.acc IS "
                         "'Raw collision database, from Flashcrow "
                         "/data/replicator/flashcrow-CRASH/dat/ACC.dat. "
-                        "Refreshed on %s.';".format(
+                        "Refreshed on {td:s}.';".format(
                             td=str(datetime.date.today())))
 
     if deletefile:

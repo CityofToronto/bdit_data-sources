@@ -28,6 +28,7 @@ GRANT ALL ON TABLE collisions.collision_no TO czhu;
 GRANT SELECT ON TABLE collisions.collision_no TO bdit_humans;
 GRANT SELECT ON TABLE collisions.collision_no TO rsaunders;
 GRANT SELECT ON TABLE collisions.collision_no TO kchan;
+GRANT SELECT ON TABLE collisions.collision_no TO ksun;
 
 
 CREATE INDEX collisions_collision_no_idx
