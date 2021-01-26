@@ -53,65 +53,67 @@ The derived tables use a different naming scheme for columns:
 
 #### `collision.events`
 
-Event Column | Relation to ACC Column | Notes
--- | -- | --
-collision_no |   |  
-accnb | ACCNB |  
-accyear | Derived from ACCDATE |  
-acctime | ACCTIME |  
-longitude | LONGITUDE + 0.00021 |  
-latitude | LATITUDE + 0.000045 |  
-stname1 | STNAME1 |  
-streetype1 | STREETYPE1 |  
-dir1 | DIR1 |  
-stname2 | STNAME2 |  
-streetype2 | STREETYPE2 |  
-dir2 | DIR2 |  
-stname3 | STNAME3 |  
-streetype3 | STREETYPE3 |  
-dir3 | DIR3 |  
-road_class | ROAD_CLASS |  
-location_type | ACCLOC |  
-location_class | LOCCOORD | Simplified location_type
-collision_type | ACCLASS |  
-visibility | VISIBLE |  
-light | LIGHT |  
-road_surface_cond | RDSFCOND |  
-traffic_control | TRAFFICTL |  
-traffic_control_cond | TRAFCTLCOND |  
-on_private_property | PRIVATE_PROPERTY |  
-description | DESCRIPTION |  
+Event   Column | Equivalent ACC Column | Definition | Notes
+-- | -- | -- | --
+collision_no |   | Collision event unique identifier |  
+accnb | ACCNB | Original Oracle data UID | Restarted each year before 1996; use collision_no as a unique ID instead
+accyear | Derived from ACCDATE | Year of collision |  
+acctime | ACCTIME | Time of collision |  
+longitude | LONGITUDE + 0.00021 | Longitude |  
+latitude | LATITUDE + 0.000045 | Latitude |  
+stname1 | STNAME1 | Street name or address | For intersections, the largest road is recorded under stname1
+streetype1 | STREETYPE1 | Street type (Av, Ave, Blvd, etc.) |  
+dir1 | DIR1 | Direction in street name | Eg. W if street is St. Clair W; NOT the street direction of travel!
+stname2 | STNAME2 | Cross street name |  
+streetype2 | STREETYPE2 | Cross street type |  
+dir2 | DIR2 | Cross street direction |  
+stname3 | STNAME3 | Additional street name or address |  
+streetype3 | STREETYPE3 | Additional street type |  
+dir3 | DIR3 | Additional street direction |  
+road_class | ROAD_CLASS | Road class |  
+location_type | ACCLOC | Detailed collision location classification |  
+location_class | LOCCOORD | Simplified collision location classification | Simplified location_type
+collision_type | ACCLASS | Ontario Ministry of Transportation collision class |  
+visibility | VISIBLE | Visibility (usually due to inclement weather) |  
+light | LIGHT | Road lighting conditions |  
+road_surface_cond | RDSFCOND | Road surface conditions |  
+traffic_control | TRAFFICTL | Type of traffic control |  
+traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
+on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
+description | DESCRIPTION | Long-form comments |  
+
 
 #### `collisions.involved`
 
-Involved Column | Relation to ACC Column | Notes
--- | -- | --
-collision_no |   |  
-vehicle_no | VEH_NO |  
-person_no | PER_NO |  
-vehicle_class | VEHTYPE |  
-initial_dir | INITDIR |  
-impact_type | IMPACTYPE |  
-event1 | EVENT1 |  
-event2 | EVENT2 |  
-event3 | EVENT3 |  
-involved_class | INVTYPE |  
-involved_age | INVAGE or BIRTHDATE | Selects from whichever is available/more accurate
-involved_injury_class | INJURY |  
-safety_equip_used | SAFEQUIP |  
-driver_action | DRIVACT |  
-driver_condition | DRIVCOND |  
-pedestrian_action | PEDACT |  
-pedestrian_condition | PEDCOND |  
-pedestrian_collision_type | PEDTYPE |  
-cyclist_action | CYCACT |  
-cyclist_condition | CYCCOND |  
-cyclist_collision_type | CYCLISTYPE |  
-manoeuver | MANOEUVER |  
-posted_speed | POSTED_SPEED |  
-actual_speed | ACTUAL_SPEED |  
-failed_to_remain | FAILTOREM |  
-is_validated | USERID | True if RSU user ID exists
+Involved   Column | Equivalent ACC Column | Definition | Notes
+-- | -- | -- | --
+collision_no |   | Collision event unique identifier |  
+vehicle_no | VEH_NO | Vehicle identifier for individual collision event |  
+person_no | PER_NO | Person identifier for individual collision event |  
+vehicle_class | VEHTYPE | Vehicle class |  
+initial_dir | INITDIR | Initial direction of travel |  
+impact_type | IMPACTYPE | Impact type (eg. rear end, sideswipe) |  
+event1 | EVENT1 | First event that occurred for involved |  
+event2 | EVENT2 | Second event |  
+event3 | EVENT3 | Third event |  
+involved_class | INVTYPE | Class of road user (eg. driver,   passenger, pedestrian)
+involved_age | INVAGE or BIRTHDATE | Age of involved | Selects from whichever is available/more accurate
+involved_injury_class | INJURY | Level of injury |  
+safety_equip_used | SAFEQUIP | Safety equipment used (eg. seat belt) |  
+driver_action | DRIVACT | Driver action |  
+driver_condition | DRIVCOND | Driver condition (eg. impaired) |  
+pedestrian_action | PEDACT | Pedestrian action |  
+pedestrian_condition | PEDCOND | Pedestrian condition |  
+pedestrian_collision_type | PEDTYPE | Pedestrian collision type (eg.   pedestrian hit on sidewalk or shoulder)
+cyclist_action | CYCACT | Cyclist action |  
+cyclist_condition | CYCCOND | Cyclist condition |  
+cyclist_collision_type | CYCLISTYPE | Cyclist collision type (eg. cyclist   struck in parking lot)
+manoeuver | MANOEUVER | Vehicle manoeuver |  
+posted_speed | POSTED_SPEED | Posted speed limit |  
+actual_speed | ACTUAL_SPEED | Speed of vehicle |  
+failed_to_remain | FAILTOREM | Whether the involved fled the scene of the crash |  
+is_validated | USERID | Whether the collision has been validated by Transportation Services | True if RSU user ID exists
+
 
 ## Data Replication Process
 
