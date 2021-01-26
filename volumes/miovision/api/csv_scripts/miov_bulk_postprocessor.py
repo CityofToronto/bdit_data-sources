@@ -38,7 +38,6 @@ import configparser
 from psycopg2 import connect
 import dateutil.parser
 import traceback
-import sys
 import datetime
 from requests import exceptions
 from time import sleep
