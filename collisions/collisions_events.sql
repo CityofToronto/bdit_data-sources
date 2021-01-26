@@ -9,7 +9,7 @@ AS
         SELECT *
         FROM collisions.acc
         WHERE "ACCDATE"::date >= '1985-01-01'::date AND "ACCDATE"::date <= current_date
-    ), event_desc AS (
+    ), events_dat AS (
         SELECT a."ACCNB"::bigint accnb,
                date_part('year', a."ACCDATE"::date) accyear,
                -- Purposely not combining date and time to ensure compatibility with older queries.
@@ -85,11 +85,9 @@ AS
            a.traffic_control_cond,
            a.on_private_property,
            c.description
-    FROM event_desc a
-    LEFT JOIN collisions.collision_no b USING (accnb, accyear)
+    FROM events_dat a
+    JOIN collisions.collision_no b USING (accnb, accyear)
     LEFT JOIN events_desc c USING (accnb, accyear)
-    -- This should only matter if collision.events is refreshed more than a day after collision.collision_no.
-    WHERE b.collision_no IS NOT NULL
     ORDER BY b.collision_no
 WITH DATA;
 
@@ -101,6 +99,9 @@ COMMENT ON MATERIALIZED VIEW collisions.events
 
 GRANT ALL ON TABLE collisions.events TO czhu;
 GRANT SELECT ON TABLE collisions.events TO bdit_humans;
+GRANT SELECT ON TABLE collisions.events TO rsaunders;
+GRANT SELECT ON TABLE collisions.events TO kchan;
+GRANT SELECT ON TABLE collisions.events TO ksun;
 
 CREATE INDEX collision_events_idx
     ON collisions.events USING btree

@@ -106,9 +106,7 @@ AS
 	       a.failed_to_remain,
            a.is_validated
 	FROM involved_desc a
-	LEFT JOIN collisions.collision_no b USING (accnb, accyear)
-    -- This should only matter if collision.events is refreshed more than a day after collision.collision_no.
-    WHERE b.collision_no IS NOT NULL
+	JOIN collisions.collision_no b USING (accnb, accyear)
 	ORDER BY b.collision_no
 WITH DATA;
 
@@ -120,6 +118,9 @@ COMMENT ON MATERIALIZED VIEW collisions.involved
 
 GRANT ALL ON TABLE collisions.involved TO czhu;
 GRANT SELECT ON TABLE collisions.involved TO bdit_humans;
+GRANT SELECT ON TABLE collisions.involved TO rsaunders;
+GRANT SELECT ON TABLE collisions.involved TO kchan;
+GRANT SELECT ON TABLE collisions.involved TO ksun;
 
 CREATE INDEX collision_involved_idx
     ON collisions.involved USING btree
