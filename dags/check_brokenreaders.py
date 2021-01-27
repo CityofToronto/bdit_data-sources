@@ -25,7 +25,7 @@ def bad_readers(run_date):
         cursor.execute(select_query)
         while True:
             broken_reader = cursor.fetchall()
-            num_readers = len(broken_reader)-3
+            num_readers = len(broken_reader)
             if num_readers > 0:
                 LOGGER.info(broken_reader)
                 raise Exception (num_readers, ' readers are broken as of', run_date)
