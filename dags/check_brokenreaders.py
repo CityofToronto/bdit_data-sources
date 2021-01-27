@@ -30,7 +30,7 @@ def bad_readers(con, run_date):
                 LOGGER.info(broken_reader)
                 raise Exception (num_readers, ' readers are broken as of', run_date)
             if num_readers == 0:
-                LOGGER.info('All readers are working as of %s, run_date')
+                LOGGER.info('All readers are working as of date = %s', run_date')
                 
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
