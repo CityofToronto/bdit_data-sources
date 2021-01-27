@@ -19,7 +19,7 @@ CONFIG.read(r'/home/mohan/cre.cfg')
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
-def bad_readers(run_date):
+def bad_readers(con, run_date):
     with con.cursor() as cursor: 
         select_query = """SELECT reader from mohan.broken_reader()"""
         cursor.execute(select_query)
