@@ -2,7 +2,6 @@
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
 - [Overview](#overview)
 - [Input Parameters](#input-parameters)
   - [API Key and URL](#api-key-and-url)
