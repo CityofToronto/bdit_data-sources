@@ -36,7 +36,7 @@ WITH wkdy_lookup(period, isodow) AS (
             WHEN avg(mio.vol) >= 500::numeric AND avg(mio.vol) < 1500::numeric THEN 10
             WHEN avg(mio.vol) > 1500::numeric THEN 5
             ELSE NULL::integer
-        END AS gap_size
+        END AS gap_tolerance
    FROM mio
      CROSS JOIN wkdy_lookup d
   WHERE date_part('isodow'::text, mio.hourly_bin)::integer <@ d.isodow
@@ -82,9 +82,9 @@ WITH wkdy_lookup(period, isodow) AS (
 ), acceptable AS (
 	-- THEN, MATCH IT TO THE LOOKUP TABLE TO CHECK IF ACCEPTABLE
 	SELECT sel.intersection_uid, sel.gap_start, sel.gap_end,
-		sel.gap_minute, gapsize_lookup.gap_size AS allowed_gap,
-	CASE WHEN gap_minute < gapsize_lookup.gap_size THEN TRUE
-	WHEN gap_minute >= gapsize_lookup.gap_size THEN FALSE
+		sel.gap_minute, gapsize_lookup.gap_tolerance AS allowed_gap,
+	CASE WHEN gap_minute < gapsize_lookup.gap_tolerance THEN TRUE
+	WHEN gap_minute >= gapsize_lookup.gap_tolerance THEN FALSE
 	END AS accept
 	FROM sel 
 	LEFT JOIN gapsize_lookup
