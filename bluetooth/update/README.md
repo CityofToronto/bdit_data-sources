@@ -2,145 +2,115 @@
 
 ## Overview
 
-Ocasionally, new segments need to be added to the `bluetooth` schema. This will go over the steps and the general process of what occurred during September 2018 to add the new routes. 
+Ocasionally, new segments need to be added to the `bluetooth` schema. This document will go over the steps and the general process to add new routes along the newly installed bluetooth reader locations. It assumes that `bluetooth.all_analyses` table does not have rows already created for the proposed new routes. The steps listed here are followed to create an entirely new routes for newly installed bluetooth readers in the city.
 
 ## Table of Contents
 
-1. [Parsing Data](#parsing-data)
-2. [Adding Readers](#adding-readers)
-3. [Fuzzy String Matching](#fuzzy-string-matching)
-4. [Cleanup, Warnings, and Alternative Methods](#cleanup-warnings-and-alternative-methods)
-5. [Making Lines](#making-lines)
+- [Updating Bluetooth Segments](#updating-bluetooth-segments)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [Data Updating](#data-updating)
+	- [Adding Readers](#adding-readers)
+	- [Preparatory Tables and Steps](#preparatory-tables-and-steps)
+	- [Finding Nearest Intersection IDs](#finding-nearest-intersection-ids)
+	- [Using pg_routing](#using-pg_routing)
+	- [Things to note](#things-to-note)
+	- [Validating Output](#validating-output)
 
-## Parsing Data
+## Data Updating
 
-In this update, there existed a kml/list of all the new reader names and locations and `bluetooth.all_analyses` already had the routes, `analysis_id` and names of the routes. The names followed whatever was in the bliptrack portal, but does not match the naming convention BDIT uses. The following query parses the `report_name` column into columns for `corridor`, `from_intersection`, and `to_intersection`.
+In this update, there exists an Excel Sheet template that contains details of newly added bluetooth detectors. The details include proposed route name, description, intersection name (BDIT convention), sensor id and lat/lon at start point and sensor id and lat/lon at the end points along with numerous other fields. The template screenshot. 
 
-```SQL
-SELECT analysis_id, split_part(report_name, ' ', 1) AS corridor, report_name
-, 
-CASE WHEN split_part(report_name,  ' ', array_length(regexp_split_to_array(report_name, ' to '), 1))='Mt' THEN 'Mt Pleasant' ELSE split_part(report_name,  ' ', array_length(regexp_split_to_array(report_name, ' to '), 1)) END AS from_intersection,
-split_part(report_name,  ' to ', 2) As to_intersection
---INTO rliu.new_bt_corridors
-FROM rliu.new_bt_routes
+![new_readers_template](img/template.PNG)
 
-WHERE split_part(report_name,  ' to ', 2) <> ''
-ORDER BY from_intersection
-```
+This template was used to include all the details of the routes that can be useful for future analysis. The routes that were updated by adding this batch of new detectors were named with a prefix "DT3_". 
 
 ## Adding Readers
 
-This update had the lat/long given in the form of a kml file. This data needs to be uploaded to the database. Depending on how many new readers there are, it may be worthwile to develop an automated process in PostgreSQL, but this update was done manually in excel. In addition to the lat/long, the streets where the readers are is also needed in 2 columns, and the segment name. The segment name is always the first two letters of each street, with the corridor street first and the intersecting street second. For example, a reader at Bloor/Christie measuring travel times on Bloor would be named `BL_CH`. 
+Depending on how many new readers there are, it may be worthwile to develop an automated process in PostgreSQL, but this update was done manually in the Excel template. In addition to the lat/long, the streets where the readers are is also needed in 2 columns, and the segment name. The segment name is always the first two letters of each street, with the corridor street first and the intersecting street second. For example, a reader at Bloor/Christie measuring travel times on Bloor would be named `BL_CH`. For each proposed route, the excel sheet is  populated with the `start reader`, `end_reader` and assigned a unique `analysis_id`. For this batch of new readers, analysis ids starting from 1600000 were added. 
 
-After uploading data to PostgreSQL, the geometry string is needed. This can be done by adding a column using `ALTER TABLE schema.table_name ADD COLUMN geom GEOMETRY` and then filling in the column with `UPDATE TABLE schema.table_name SET geom = ST_MakePoint(lat, long)`.
+Therefore the reader table will have the following fields populated: 
 
-## Fuzzy String Matching
+`analysis_id`, `street`, `direction`, `from_street`, `to_street`, `from_id`, `to_id`, `start_point_lat`, `start_point_lon`, `end_point_lat` and `end_point_lon`.
 
-The general process was first done to update the speed limits of roads in the centreline table. Please read the [process done for that](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/PostedSpeedLimitUpdate.md) for more detail. The gist of it is this:
 
-* A straight line is drawn between two readers
-* Road segments with similar/exact names to the drawn line is matched to that straight line
 
-### Explanation of Query
+## Preparatory Tables and Steps
+The following steps are utilized to create segments
+1. Get start and end geom for each analysis_id
+2. Create table with detector_id, detector_geom, centreline_int_id
+3. Join the detector's geometry to the closest centreline intersection
+4. Route the segments using street centreline's intersection `gis.centreline_both_dir` using [pgr_dijkstra].
 
+
+After uploading excel data to PostgreSQL, the geometry column is needed. This can be done by adding a column using `ALTER TABLE schema.table_name ADD COLUMN geom GEOMETRY` we need two geometry columns: `from_geom` and `to_geom`.  Filling in the from_geom column with `UPDATE TABLE schema.table_name SET from_geom = ST_MakePoint(start_point_lat, start_point_lon)` and modify the query for `to_geom` = `ST_MakePoint (end_point_lat, end_point_lon)`.
+
+## Finding Nearest Intersection IDs
+
+To get the intersection ids that are close to the newly added detectors location, create a table named `bluetooth_nodes`. This table has four fields:
+`bluetooth_id`, `geom` (this is geometry of bluetooth detectors), `int_id` (nearest intersection id) and `int_geom` (geometry of the nearest intersection to the )
+
+This table is created using the following query:
 ```SQL
-WITH from_join AS (
-SELECT * FROM rliu.new_bt_corridors B
-CROSS JOIN rliu.new_bt_readers A
-WHERE levenshtein(A.reader_name, B.from_intersection, 1, 1, 2) < 4)
+SELECT DISTINCT mohan.new_added_detectors.from_id::integer AS bluetooth_id,
+    mohan.new_added_detectors.from_geom,
+    nodes.int_id,
+    st_transform(nodes.node_geom, 4326) AS int_geom
+   FROM mohan.new_added_detectors
+     CROSS JOIN LATERAL ( SELECT z.int_id,
+            st_transform(z.geom, 98012) AS node_geom
+           FROM gis.centreline_intersection z
+          ORDER BY (z.geom <-> mohan.new_added_detectors.from_geom)
+         LIMIT 1) nodes;
 ```
+Check that correct intersections are returned from this query especially for odd shaped intersections. If required, correct the int_id and geom for such intersections and finalize the table `mohan.bluetooth_nodes`. 
 
-Matches the corridors to the names based on similar from intersections.
-
-```SQL
-, to_join AS (
-SELECT * FROM rliu.new_bt_corridors B
-CROSS JOIN rliu.new_bt_readers A
-WHERE levenshtein(A.reader_name, B.to_intersection, 1, 1, 2) < 4)
-```
-Does the same thing for the to_intersections
+## Using pg_routing
+Once the nearest centreline intersection nodes are linked to the bluetooth readers geom `mohan.bluetooth_nodes`, we are ready to run the following Query to create new routes. 
 
 ```SQL
-, joined_readers AS (
-SELECT A.analysis_id, A.corridor, A.reader_name AS from_intersection, A.long AS from_long, A.lat AS from_lat, B.reader_name AS to_intersection, B.long AS to_long, B.lat AS to_lat FROM from_join A
-INNER JOIN to_join B USING (analysis_id)
+CREATE table mohan.bt_segments_new AS (
+WITH lookup AS (
+SELECT analysis_id, from_id, origin.int_id AS source, to_id, dest.int_id AS target
+FROM mohan.new_added_detectors 
+INNER JOIN mohan.bluetooth_nodes origin ON from_id = origin.bluetooth_id 
+INNER JOIN mohan.bluetooth_nodes dest ON to_id = dest.bluetooth_id
+),
+results AS (
+	SELECT * 
+	FROM lookup
+			 CROSS JOIN LATERAL pgr_dijkstra('SELECT id, source, target, cost FROM gis.centreline_routing_directional inner join gis.centreline on geo_id = id
+where fcode != 207001', source::int, target::int, TRUE)		 
+), 
+lines as (
+	SELECT analysis_id, street, direction, from_street, to_street, edge AS geo_id, geom 
+	FROM results			 
+INNER JOIN gis.centreline ON edge=geo_id
+INNER JOIN mohan.new_added_detectors USING (analysis_id)
+ORDER BY analysis_id
 )
+SELECT analysis_id, street, direction, from_street, to_street,
+	CASE WHEN geom_dir != direction THEN ST_reverse(geom) 
+	ELSE geom 
+	END AS 
+	geom
+FROM ( 
+SELECT analysis_id, street, direction, from_street, to_street, 
+		gis.twochar_direction(gis.direction_from_line(ST_linemerge(ST_union(geom)))) AS geom_dir,
+		ST_linemerge(ST_union(geom)) AS geom
+FROM lines
+GROUP BY analysis_id, street, direction, from_street, to_street) a)
 ```
 
-Makes a single table for the corridors and readers at the from/to intersections.
+![bt_new_segments](img/new_segments.JPG)
 
-```SQL
+## Things to note 
+Geostatistical lines and planning boundaries need to be avoided while pgrouting. 
 
-, make_lines AS (
-SELECT analysis_id, 
-	corridor, 
-	from_intersection, 
-	from_long, 
-	from_lat, 
-	to_intersection, 
-	to_long, 
-	to_lat,
-	ST_MakeLine(ST_MakePoint(from_long, from_lat), ST_MakePoint(to_long, to_lat)) AS line,
-	ST_LENGTH(ST_MakeLine(ST_MakePoint(from_long, from_lat), ST_MakePoint(to_long, to_lat))) AS length 
-FROM 	joined_readers
---Since there are two readers named Sheppard, this is a check to stop it from matching to the wrong reader
-WHERE  ST_LENGTH(ST_MakeLine(ST_MakePoint(from_long, from_lat), ST_MakePoint(to_long, to_lat)))<0.1
-ORDER BY from_intersection
-)
-```
-Draws lines using the reader locations. This is the result.
+## Validating Output
+Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions.If the detectors are located very close to the centerline intersections, it is not necessary to do the  centreline cutting. Else that step is necessary. 
 
-![bt_lines](img/bt_lines.PNG)
-
-```SQL
-, conflation AS (
-SELECT analysis_id, 
-	corridor, 
-	from_intersection, 
-	from_long, 
-	from_lat, 
-	to_intersection, 
-	to_long, 
-	to_lat, s.geom, geo_id, s.lf_name, 
-	ST_Length(st_intersection(ST_BUFFER(ST_Transform(ST_SetSRID(line, 4326), 32190), 1.5*b.length, 'endcap=flat join=round') , ST_Transform(s.geom, 32190))) /ST_Length(ST_Transform(s.geom, 32190))
-	
-	FROM make_lines b
-
-INNER JOIN rliu.bt_centreline s 
-ON 
-ST_DWithin( ST_Transform(s.geom, 32190) ,  ST_BUFFER(ST_Transform(ST_SetSRID(line, 4326), 32190), 3*b.length, 'endcap=flat join=round') , 1000)
+The table is now ready to append to the existing routes table. 
 
 
---AND ST_Length(st_intersection(ST_BUFFER(ST_Transform(ST_SetSRID(line, 4326), 32190), 1.5*b.length, 'endcap=flat join=round') , ST_Transform(s.geom, 32190))) /ST_Length(ST_Transform(s.geom, 32190)) > 0.4
-)
-
-SELECT * 
-INTO rliu.new_bt_coflate1000 
-FROM conflation
-```
-
-Matches the centreline road segment to the drawn lines. Note the buffer is really large (1000 units) to account for segments that run accross multiple roads.
-
-After proper QC (see next section) is applied, it should something like this.
-
-![bt_segments](img/bt_segments.PNG)
-
-## Cleanup, Warnings, and Alternative Methods
-
-This method works really well for straight roads/segments. However, this is especially challenging for segments that are perpendicular, involves curves, or weird geometries/routes. 
-
-A lot of mannual cleanup was required to delete extraneous roads, or add roads to the route, mainly through the `UPDATE` and `DELETE` clauses and using the `geo_ids` from the centreline table.
-
-An alternative method is drawing routes in QGIS connecting the readers on the centreline layer. This may be faster for low number of segments (ex <500).
-
-## Making Lines
-
-At this point, the layer has multiple entries containing centreline segments for each analysis_id. Instead, we need a single line/entry for each analysis_id. This query concatenates the individual centreline segments into one line. The main function doing this work is [`ST_LineMerge()`](https://postgis.net/docs/ST_LineMerge.html)
-
-```SQL
-SELECT A.analysis_id, A.corridor, A.from_intersection,A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat,  A.geo_id,  A.lf_name, (ST_Dump(A.geom)).geom AS geom 
-INTO rliu.new_bt_segments
-from (SELECT ST_LineMerge(ST_Union(A.geom)) AS geom, A.analysis_id, A.corridor,A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat, array_agg(DISTINCT A.geo_id) AS geo_id, array_agg(DISTINCT A.lf_name) AS lf_name FROM new_bt_coflate300 A
-GROUP BY A.analysis_id, A.corridor, A.from_intersection, A.from_long, A.from_lat, A.to_intersection, A.to_long, A.to_lat ORDER BY analysis_id) A
-```
-After this, the only step is to format the table so it matches `bluetooth.segments`.
+[pgr_dijkstra]:https://docs.pgrouting.org/latest/en/pgr_dijkstra.html
