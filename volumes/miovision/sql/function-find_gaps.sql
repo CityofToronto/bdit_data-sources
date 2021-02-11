@@ -17,13 +17,13 @@ BEGIN
 WITH wkdy_lookup(period, isodow) AS (
          VALUES ('Weekday'::text,'[1,6)'::int4range), ('Weekend'::text,'[6,8)'::int4range)
 ), mio AS (
- SELECT volumes.intersection_uid,
-    datetime_bin(volumes.datetime_bin, 60) AS hourly_bin,
-    sum(volumes.volume) AS vol
+ SELECT intersection_uid,
+    datetime_bin(datetime_bin, 60) AS hourly_bin,
+    sum(volume) AS vol
    FROM miovision_api.volumes
-  WHERE volumes.datetime_bin > (GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone) - '60 days'::interval) AND
-        volumes.datetime_bin <= GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone)
-  GROUP BY volumes.intersection_uid, (datetime_bin(volumes.datetime_bin, 60))
+  WHERE datetime_bin > (GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone) - '60 days'::interval) AND
+        datetime_bin <= GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone)
+  GROUP BY intersection_uid, (datetime_bin(datetime_bin, 60))
 ), gapsize_lookup AS (
  SELECT mio.intersection_uid,
     d.period,

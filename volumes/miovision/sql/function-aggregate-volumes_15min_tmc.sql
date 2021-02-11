@@ -11,15 +11,15 @@ AS $BODY$
 BEGIN
 
 WITH zero_padding_movements AS (
-		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
-		SELECT m.*, datetime_bin15 
-		FROM miovision_api.intersection_movements m
-		CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin15)
-		-- make sure that the intersection is still active
-		WHERE intersection_uid IN (SELECT intersection_uid FROM miovision_api.intersections 
-				WHERE start_date::date >= date_installed 
-				AND date_decommissioned IS NULL)
-		)
+	-- Cross product of legal movement for cars, bikes, and peds and the bins to aggregate
+	SELECT m.*, datetime_bin15
+	FROM miovision_api.intersection_movements m
+	CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin15)
+	-- Make sure that the intersection is still active
+	JOIN miovision_api.intersections mai USING (intersection_uid)
+	-- Only include dates during which intersection is active.
+	WHERE datetime_bin15::date > mai.date_installed AND (mai.date_decommissioned IS NULL OR (datetime_bin15::date < mai.date_decommissioned))
+)
 , aggregate_insert AS (
 INSERT INTO miovision_api.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 
