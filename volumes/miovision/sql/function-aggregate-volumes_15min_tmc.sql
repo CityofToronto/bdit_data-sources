@@ -71,11 +71,11 @@ END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
-    OWNER TO jchew;
+    OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO PUBLIC;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO jchew;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_admins;
 

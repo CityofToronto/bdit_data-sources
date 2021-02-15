@@ -33,4 +33,4 @@
 WITH DATA;
 
 ALTER TABLE miovision.report_volumes_15min
-  OWNER TO bdit_humans;
+  OWNER TO miovision_admins;
