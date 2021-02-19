@@ -39,7 +39,7 @@ def broken_readers(con, start_date, end_date):
         broken_list.append(broken_readers)
         num_broken = len(broken_list)
         if num_broken == 0:
-                pass
+            pass
         else:
             LOGGER.info(broken_list)
             raise Exception ('some readers are broken, check broken_readers_log')
@@ -79,7 +79,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner':'mohan',
                 'depends_on_past':False,
-                'start_date': datetime(2021, 2, 11),
+                'start_date': datetime(2021, 2, 19),
                 'email': ['mohanraj.adhikari@toronto.ca'],
                 'email_on_failure': False,
                 'email_on_success': False,
