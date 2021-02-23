@@ -6,7 +6,7 @@ Files were read in and coverted to csv in notebook:
 wys/atr/notebooks/tmc_data_preprocessing.ipynb
 */
 
-CREATE TABLE data_requests.wys_atr_kertcher
+CREATE TABLE data_analysis.wys_validation_counts
 (
 	datetime_bin timestamp without time zone,
 	location text,
@@ -14,6 +14,6 @@ CREATE TABLE data_requests.wys_atr_kertcher
 	count numeric
 );
 
-ALTER TABLE data_requests.wys_atr_kertcher
+ALTER TABLE data_analysis.wys_validation_counts
     OWNER to bdit_humans;
 
