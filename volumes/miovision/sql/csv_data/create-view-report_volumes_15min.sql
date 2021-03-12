@@ -1,4 +1,4 @@
-﻿CREATE MATERIALIZED VIEW miovision.report_volumes_15min AS 
+﻿CREATE MATERIALIZED VIEW miovision_csv.report_volumes_15min AS 
  WITH valid_bins AS (
          SELECT a_1.intersection_uid,
             a_1.class_type_id,
@@ -32,5 +32,5 @@
   WHERE b.time_bin = a.datetime_bin::time without time zone
 WITH DATA;
 
-ALTER TABLE miovision.report_volumes_15min
-  OWNER TO bdit_humans;
+ALTER TABLE miovision_csv.report_volumes_15min
+  OWNER TO miovision_admins;

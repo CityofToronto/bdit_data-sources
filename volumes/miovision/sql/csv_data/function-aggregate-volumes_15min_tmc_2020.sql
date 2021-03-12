@@ -72,11 +72,11 @@ END;
 $BODY$;
 
 ALTER FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date)
-    OWNER TO czhu;
+    OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO PUBLIC;
 
 GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO czhu;
+GRANT EXECUTE ON FUNCTION miovision_csv.aggregate_15_min_tmc_2020(date, date) TO miovision_admins;
 
