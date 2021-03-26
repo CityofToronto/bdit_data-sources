@@ -23,7 +23,7 @@ In this update, there exists an Excel Sheet template that contains details of ne
 
 ![new_readers_template](img/template.PNG)
 
-This template was used to include all the details of the routes that can be useful for future analysis. The routes that were updated by adding this batch of new detectors were named with a prefix "DT3_". 
+This template was used to include all the details of the routes that can be useful for future analysis. The routes that were updated by adding this batch of new detectors were named with a prefix "DT3_" . 
 
 ## Adding Readers
 
@@ -128,7 +128,7 @@ Geostatistical lines and planning boundaries need to be avoided while pgrouting.
 ## Validating Output
 Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions.If the detectors are located very close to the centerline intersections, it is not necessary to do the  centreline cutting. Else that step is necessary. 
 
-The new routes table is now ready.  
+The new routes table is now ready .  
 
 
 [pgr_dijkstra]:https://docs.pgrouting.org/latest/en/pgr_dijkstra.html
