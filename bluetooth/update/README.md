@@ -19,7 +19,7 @@ Ocasionally, new segments need to be added to the `bluetooth` schema. This docum
 
 ## Data Updating
 
-In this update, there exists an Excel Sheet template that contains details of newly added bluetooth detectors. The details include proposed route name, description, intersection name (BDIT convention), sensor id and lat/lon at start point and sensor id and lat/lon at the end points along with numerous other fields. The template screenshot. 
+In this update, there exists an Excel Sheet template that contains details of newly added bluetooth detectors. The details include proposed routes `Name`, `Description`, intersection name as `Name` (according to BDIT convention), four digit bluetooth sensor identification number  as `Sensor` and `latitude/longitude` at start point and the end points along with numerous other fields. Below is the template screenshot. 
 
 ![new_readers_template](img/template.PNG)
 
@@ -27,13 +27,27 @@ This template was used to include all the details of the routes that can be usef
 
 ## Adding Readers
 
-Depending on how many new readers there are, it may be worthwile to develop an automated process in PostgreSQL, but this update was done manually in the Excel template. In addition to the lat/long, the streets where the readers are is also needed in 2 columns, and the segment name. The segment name is always the first two letters of each street, with the corridor street first and the intersecting street second. For example, a reader at Bloor/Christie measuring travel times on Bloor would be named `BL_CH`. For each proposed route, the excel sheet is  populated with the `start reader`, `end_reader` and assigned a unique `analysis_id`. For this batch of new readers, analysis ids starting from 1600000 were added. 
+New readers were added manually in the Excel template and saved as .csv file. In addition to the lat/lon, the street names at each intersection where the readers are located is also needed in two columns for each route as the `from_street` and `to_street`. The `Description` field contains this information. For each proposed route, the excel sheet is populated and assigned a unique `analysis_id`. For this batch of new readers, analysis id starting from 1600000 with increment of 10 were added. 
 
-Therefore the reader table will have the following fields populated: 
+Therefore the new reader table had the following fields populated: 
 
-`analysis_id`, `street`, `direction`, `from_street`, `to_street`, `from_id`, `to_id`, `start_point_lat`, `start_point_lon`, `end_point_lat` and `end_point_lon`.
+`analysis_id` 		- Unique ID for each route
+`street` 			- Name of the street along the route
+`direction` 		- Route direction(East bound, West Bound, North Bound or South Bound)
+`from_street` 		- Name of the intersecting street where the route begins.
+`to_street`			- Name of the intersecting street where the route ends 
+`from_name`			- The reader name (bdit convention) at the start point of the route
+`from_id` 			- The four digit Unique bluetooth id at the start point
+`from_lat` 			- Latitude at the start point of the route
+`from_lon` 			- Longitude at the start point of the route
+`to_name` 			- The reader name (bdit convention) at the end point of the route
+`to_id`				- The four digit Unique bluetooth id at the end point
+`to_lat`			- Latitude at the end point of the route
+`to_lon`			- Longitude at the end point of the route
 
+Below is the table screenshot. 
 
+![new_readers_derived](img/new_table.PNG)
 
 ## Preparatory Tables and Steps
 The following steps are utilized to create segments
@@ -43,7 +57,7 @@ The following steps are utilized to create segments
 4. Route the segments using street centreline's intersection `gis.centreline_both_dir` using [pgr_dijkstra].
 
 
-After uploading excel data to PostgreSQL, the geometry column is needed. This can be done by adding a column using `ALTER TABLE schema.table_name ADD COLUMN geom GEOMETRY` we need two geometry columns: `from_geom` and `to_geom`.  Filling in the from_geom column with `UPDATE TABLE schema.table_name SET from_geom = ST_MakePoint(start_point_lat, start_point_lon)` and modify the query for `to_geom` = `ST_MakePoint (end_point_lat, end_point_lon)`.
+This .csv file was then imported into QGIS and pushed into the mohan schema in postgres. The geometry column is created by adding a column using `ALTER TABLE mohan.new_added_detectors ADD COLUMN from_geom GEOMETRY` we need two geometry columns: `from_geom` and `to_geom`.  Filling in the from_geom column with `UPDATE mohan.new_added_detectors SET to_geom = ST_SetSRID(ST_MakePoint(to_lon, to_lat), 4326)` and modify the query for `from_geom`.
 
 ## Finding Nearest Intersection IDs
 
@@ -52,6 +66,7 @@ To get the intersection ids that are close to the newly added detectors location
 
 This table is created using the following query:
 ```SQL
+CREATE TABLE mohan.bluetooth_nodes AS(
 SELECT DISTINCT mohan.new_added_detectors.from_id::integer AS bluetooth_id,
     mohan.new_added_detectors.from_geom,
     nodes.int_id,
@@ -61,9 +76,12 @@ SELECT DISTINCT mohan.new_added_detectors.from_id::integer AS bluetooth_id,
             st_transform(z.geom, 98012) AS node_geom
            FROM gis.centreline_intersection z
           ORDER BY (z.geom <-> mohan.new_added_detectors.from_geom)
-         LIMIT 1) nodes;
+         LIMIT 1) nodes);
 ```
-Check that correct intersections are returned from this query especially for odd shaped intersections. If required, correct the int_id and geom for such intersections and finalize the table `mohan.bluetooth_nodes`. 
+Check that correct intersections are returned from this query especially for oblique intersections with an offset. If required, correct the intersection_id and geom for such intersections and finalize the table `mohan.bluetooth_nodes`. An example is shown below. The intersection between Dundas St W, Roncesvalles Ave and Boustead Ave is oblique with an offset. The BT reader 5263 (red dot) picked up intersection_id `13466305` (greed dot) as nearest intersection to the reader. But the planned route does not go through this intersection_id. The correct intersection_id for this reader is `113466258`. The intersection_id and geom for this redear was therefore corrected manually.  
+ 
+
+![odd_shaped_intersections](img/odd_intersection.PNG)
 
 ## Using pg_routing
 Once the nearest centreline intersection nodes are linked to the bluetooth readers geom `mohan.bluetooth_nodes`, we are ready to run the following Query to create new routes. 
@@ -110,7 +128,7 @@ Geostatistical lines and planning boundaries need to be avoided while pgrouting.
 ## Validating Output
 Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions.If the detectors are located very close to the centerline intersections, it is not necessary to do the  centreline cutting. Else that step is necessary. 
 
-The table is now ready to append to the existing routes table. 
+The new routes table is now ready.  
 
 
 [pgr_dijkstra]:https://docs.pgrouting.org/latest/en/pgr_dijkstra.html
