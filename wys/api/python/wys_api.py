@@ -150,7 +150,9 @@ def parse_counts_for_location(api_id, raw_records):
         datetime_bin= dateutil.parser.parse(str(datetime_bin))
         counter=record['counter']
         for item in counter:
-            speed_row=[api_id, datetime_bin, item['speed'], item['count']]
+            this_speed=int(item['speed']) if item['speed'] else None
+            this_count=int(item['count']) if item['count'] else None
+            speed_row=[api_id, datetime_bin, this_speed, this_count]
             speed_counts.append(speed_row)
     return speed_counts
 
