@@ -83,13 +83,56 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
         else:
             LOGGER.info('%s does not have any row with different date format', table_name)
 
-    insert = sql.SQL('''INSERT INTO {}.{} (ward_no, location, from_street, to_street, direction, installation_date, removal_date,
-                       new_sign_number, comments, confirmed) VALUES %s 
-                       ON CONFLICT (location, from_street, to_street, direction, installation_date, removal_date, new_sign_number)
- DO UPDATE SET 
-                       removal_date=EXCLUDED.removal_date, new_sign_number=EXCLUDED.new_sign_number, comments=EXCLUDED.comments
-                       ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
-    LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
+    insert = sql.SQL('''
+        WITH new_data (ward_no, location, from_street, to_street, direction, 
+                    installation_date, removal_date, new_sign_number, comments, 
+                    confirmed) 
+                    AS (
+                VALUES %s) 
+        , dupes AS(
+            /*Identify rows that will violate the unique constraint in the 
+            upsert*/
+            INSERT INTO wys.mobile_sign_installations_dupes
+            SELECT ward_no::INT, location, from_street, to_street, direction, 
+            installation_date, removal_date, new_sign_number, comments
+            FROM new_data
+            NATURAL JOIN (SELECT new_sign_number, installation_date
+                    FROM new_data
+                    GROUP BY new_sign_number, installation_date
+                    HAVING COUNT(*)> 1) dupes
+            ON CONFLICT ( location, from_street, to_street, direction, 
+                        installation_date, removal_date, new_sign_number, 
+                        comments)
+            DO NOTHING
+            RETURNING new_sign_number, installation_date
+        )
+        INSERT INTO {}.{} AS existing (ward_no, location, from_street, to_street, 
+                           direction, installation_date, removal_date, 
+                           new_sign_number, comments, confirmed) 
+        SELECT new_data.ward_no::INT, location, from_street, to_street, 
+                direction, installation_date, removal_date, 
+                new_sign_number, comments, confirmed
+        FROM new_data
+        LEFT JOIN dupes USING (new_sign_number, installation_date)
+        --Don't try to insert dupes
+        WHERE dupes.new_sign_number IS NULL
+        ON CONFLICT (installation_date, new_sign_number)
+        DO UPDATE SET 
+            removal_date=EXCLUDED.removal_date,
+            comments=EXCLUDED.comments,
+            direction=EXCLUDED.direction,
+            location=EXCLUDED.location,
+            from_street=EXCLUDED.from_street,
+            to_street=EXCLUDED.to_street
+        -- Prevent unnecessary update if data are unchanged
+        WHERE existing.removal_date!=EXCLUDED.removal_date 
+            OR existing.comments!=EXCLUDED.comments
+            OR existing.direction!=EXCLUDED.direction
+            OR existing.location!=EXCLUDED.location
+            OR existing.from_street!=EXCLUDED.from_street
+            OR existing.to_street!=EXCLUDED.to_street
+        ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
+    
     LOGGER.debug(rows)
 
     try:
@@ -98,9 +141,10 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
                 execute_values(cur, insert, rows)
         LOGGER.info('Table %s is done', table_name)
     except Error as err2:
-        LOGGER.error('Duplicates of primary keys in %s !!!', table_name)
+        LOGGER.error('There was an error inserting into %s', table_name)
         LOGGER.error(err2)
-        
+    
+    LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
 
 if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()
