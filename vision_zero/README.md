@@ -6,7 +6,7 @@ This folder contains scripts to read Vision Zero google spreadsheets and put the
 - A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
 
 ## 1. Data source
-The Google Sheets read are 2018 and 2019 School Safety Zones which are maintained internally.
+The School Safety Zone data are read in from separate Google Sheets for 2018, 2019, 2020 and 2021 which are maintained internally.
 
 ## 2. Get started
 In order to get started, a few things have to be done first.
@@ -58,6 +58,6 @@ from the Google Sheets and put them into postgres tables with the following fiel
 * The script being used reads up to line 180 although the actual data is less than that. This is to anticipate extra schools which might be added into the sheets in the future.
 
 ## 4. Airflow
-The Airflow is set up to run daily. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. More information on that can be found on [Credential management](https://www.notion.so/bditto/Automating-Stuff-5440feb635c0474d84ea275c9f72c362#dcb7f4b37eae48cba5c290dee5a6ef68). The Airflow uses PythonOperator and run two tasks, one for 2018 and the other for 2019 School Safety Zone Sheets.
+The Airflow is set up to run daily. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. More information on that can be found on [Credential management](https://www.notion.so/bditto/Automating-Stuff-5440feb635c0474d84ea275c9f72c362#dcb7f4b37eae48cba5c290dee5a6ef68). The Airflow uses PythonOperator and run tasks for each Google Sheet (curently 2018, 2019, 2020, 2021).
 
 **Note:** An empty `__init__.py` file then has to be created to run Airflow. 
