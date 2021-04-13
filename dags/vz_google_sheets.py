@@ -90,3 +90,9 @@ task3 = PythonOperator(
     op_args=[con, service, 2020]
     )
     
+task4 = PythonOperator(
+    task_id='2021',
+    python_callable=pull_from_sheet,
+    dag=dag,
+    op_args=[con, service, 2021]
+    )

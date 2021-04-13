@@ -41,7 +41,12 @@ sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7
           2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
                  'range_name' : 'Master Sheet!A3:AC180', 
                  'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2020_raw'}}
+                 'table_name' : 'school_safety_zone_2020_raw'},
+          2020: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
+                 'range_name' : 'Master Sheet!A3:AC180', 
+                 'schema_name': 'vz_safety_programs_staging',
+                 'table_name' : 'school_safety_zone_2021_raw'}
+         }
 
 
 """The following provides information about the code when it is running and prints out the log messages 
@@ -136,4 +141,5 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
+    pull_from_sheet(con, service, 2021)
 
