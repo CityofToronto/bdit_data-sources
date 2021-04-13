@@ -1,7 +1,7 @@
 """ This script reads 3 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
 and 2020 School Safety Zone)
-and puts them into 3 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
-'school_safety_zone_2020_raw') using the Google Sheet API.
+and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
+'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
 
 Note
 ----
@@ -42,7 +42,7 @@ sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7
                  'range_name' : 'Master Sheet!A3:AC180', 
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2020_raw'},
-          2020: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
+          2021: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
                  'range_name' : 'Master Sheet!A3:AC180', 
                  'schema_name': 'vz_safety_programs_staging',
                  'table_name' : 'school_safety_zone_2021_raw'}
