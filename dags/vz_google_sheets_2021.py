@@ -41,7 +41,9 @@ def task_fail_slack_alert(context):
 
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
-  sys.path.append('/etc/airflow/data_scripts/vision_zero/')
+  # sys.path.append('/etc/airflow/data_scripts/vision_zero/')
+  # from schools import pull_from_sheet
+  sys.path.append('/home/cnangini/PROJECTS/bdit_data-sources/vision_zero/')
   from schools_2021 import pull_from_sheet
 except:
   raise ImportError("Cannot import functions to pull school safety zone list")
@@ -69,26 +71,26 @@ DEFAULT_ARGS = {
 
 dag = DAG('vz_google_sheets', default_args=DEFAULT_ARGS, schedule_interval='@daily', catchup=False)
 
-task1 = PythonOperator(
-    task_id='2018',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2018]
-    )
-
-task2 = PythonOperator(
-    task_id='2019',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2019]
-    )
-    
-task3 = PythonOperator(
-    task_id='2020',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2020]
-    )
+# task1 = PythonOperator(
+#     task_id='2018',
+#     python_callable=pull_from_sheet,
+#     dag=dag,
+#     op_args=[con, service, 2018]
+#     )
+# 
+# task2 = PythonOperator(
+#     task_id='2019',
+#     python_callable=pull_from_sheet,
+#     dag=dag,
+#     op_args=[con, service, 2019]
+#     )
+#     
+# task3 = PythonOperator(
+#     task_id='2020',
+#     python_callable=pull_from_sheet,
+#     dag=dag,
+#     op_args=[con, service, 2020]
+#     )
     
 task4 = PythonOperator(
     task_id='2021',

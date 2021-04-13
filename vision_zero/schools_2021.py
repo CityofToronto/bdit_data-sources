@@ -138,8 +138,8 @@ if __name__ == '__main__':
 
     service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
 
-    pull_from_sheet(con, service, 2018)
-    pull_from_sheet(con, service, 2019)
-    pull_from_sheet(con, service, 2020)
+#    pull_from_sheet(con, service, 2018)
+#    pull_from_sheet(con, service, 2019)
+#    pull_from_sheet(con, service, 2020)
     pull_from_sheet(con, service, 2021)
 
