@@ -63,6 +63,60 @@ Options:
   --help  Show this message and exit.
 ```
 
+### Refresh old data
+
+Old data needs to be refreshed to a new map version everytime a new version becomes available. 
+
+Steps:
+1) Back up data with the old map version to S3 with [backup_here.py](backup_here.py) 
+
+2) Modify or delete old partition table, then create new ones in postgresql using :
+```
+ALTER TABLE here.ta_201901 RENAME TO ta_201901_old; ALTER TABLE here.ta_201901_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201902 RENAME TO ta_201902_old; ALTER TABLE here.ta_201902_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201903 RENAME TO ta_201903_old; ALTER TABLE here.ta_201903_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201904 RENAME TO ta_201904_old; ALTER TABLE here.ta_201904_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201905 RENAME TO ta_201905_old; ALTER TABLE here.ta_201905_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201906 RENAME TO ta_201906_old; ALTER TABLE here.ta_201906_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201907 RENAME TO ta_201907_old; ALTER TABLE here.ta_201907_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201908 RENAME TO ta_201908_old; ALTER TABLE here.ta_201908_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201909 RENAME TO ta_201909_old; ALTER TABLE here.ta_201909_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201910 RENAME TO ta_201910_old; ALTER TABLE here.ta_201910_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201911 RENAME TO ta_201911_old; ALTER TABLE here.ta_201911_old NO INHERIT here.ta;
+ALTER TABLE here.ta_201912 RENAME TO ta_201912_old; ALTER TABLE here.ta_201912_old NO INHERIT here.ta;
+DO $do$
+DECLARE
+	startdate DATE;
+	yyyymm TEXT;
+	basetablename TEXT := 'ta_';
+	tablename TEXT;
+	yyyy INT := 2019;
+BEGIN
+
+		FOR mm IN 01..12 LOOP
+			startdate:= to_date(yyyy||'-'||mm||'-01', 'YYYY-MM-DD');
+			IF mm < 10 THEN
+				yyyymm:= yyyy||'0'||mm;
+			ELSE
+				yyyymm:= yyyy||''||mm;
+			END IF;
+			tablename:= basetablename||yyyymm;
+			EXECUTE format($$CREATE TABLE here.%I 
+				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
+				UNIQUE(link_dir, tx)
+				) INHERITS (here.ta);
+				ALTER TABLE here.%I OWNER TO here_admins;
+				$$
+				, tablename, tablename);
+			PERFORM here.create_link_dir_idx(tablename);
+			PERFORM here.create_tx_idx(tablename);
+		END LOOP;
+END;
+$do$ LANGUAGE plpgsql
+```
+3. Pull new data using 
+
+
 ## Loading New Data (Old Method)
 
 Data prior to 2017 was downloaded from links provided by Here. After 2017 we use the trafficanalytics portal to query the data and receive a download link for a gzipped csv. These can be downloaded directly onto the EC2 with `curl` or `wget`.
