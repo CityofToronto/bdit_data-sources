@@ -165,11 +165,7 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        copy = r'''"\COPY here.ta (link_dir,tx,epoch_min,length,mean,
-                    stddev,min_spd,max_spd,confidence,pct_5,pct_10,
-                    pct_15,pct_20,pct_25,pct_30,pct_35,pct_40,pct_45,
-                    pct_50,pct_55,pct_60,pct_65,pct_70,pct_75,pct_80,
-                    pct_85,pct_90,pct_95) FROM STDIN WITH (FORMAT csv, HEADER 
+        copy = r'''"\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER 
                     TRUE);"'''
         if os.getenv('here_bot'):
             #there's a here_bot environment variable to connect to postgresql.
