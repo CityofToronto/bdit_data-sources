@@ -30,22 +30,23 @@ The range for both sheets is set from the beginning up to line 180 to include ro
 Details of the spreadsheets are ID and range whereas details of the table are name of schema and table.
 The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
 """
-sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
-                 'range_name' : 'Master List!A4:AC180',
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2018_raw'},
-          2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
-                 'range_name' : '2019 Master List!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2019_raw'},
-          2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
-                 'range_name' : 'Master Sheet!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2020_raw'},
-          2021: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
-                 'range_name' : 'Master Sheet!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2021_raw'}
+sheets = {
+           2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
+                  'range_name' : 'Master List!A4:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2018_raw'},
+           2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
+                  'range_name' : '2019 Master List!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2019_raw'},
+           2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2020_raw'},
+           2021: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2021_raw'}
          }
 
 
@@ -138,8 +139,8 @@ if __name__ == '__main__':
 
     service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
 
-#    pull_from_sheet(con, service, 2018)
-#    pull_from_sheet(con, service, 2019)
-#    pull_from_sheet(con, service, 2020)
+    pull_from_sheet(con, service, 2018)
+    pull_from_sheet(con, service, 2019)
+    pull_from_sheet(con, service, 2020)
     pull_from_sheet(con, service, 2021)
 
