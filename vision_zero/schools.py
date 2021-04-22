@@ -143,4 +143,3 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
     pull_from_sheet(con, service, 2021)
-
