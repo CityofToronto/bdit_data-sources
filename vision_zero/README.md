@@ -40,7 +40,48 @@ user=database username
 password=database password
 ```
 
-## 3. Table generated
+## 3. Adding a new year
+Follow these steps to read in another spreadsheet for year `yyyy`.
+
+### 3.1 Create empty table in database to store spreadsheet
+Create table `vz_safety_programs_staging.school_safety_zone_yyyy_raw`, where `yyyy` is the year to be stored. Follow the format of the existing tables.
+
+
+### 3.2 Edit script that reads in the spreadsheets
+To add a new year `yyyy`, edit `school.py` so that:
+
+1. `sheets` dict has a new element `yyyy`:
+```
+# Add new dictionary item for sheet yyyy
+yyyy: {'spreadsheet_id' : '{id}',
+       'range_name' : 'Master Sheet!A3:AC180',
+       'schema_name': 'vz_safety_programs_staging',
+       'table_name' : 'school_safety_zone_yyyy_raw'}
+```
+where `'{id}'` is the actual id from the URL.
+
+2. Add another call to pull from the new sheet
+```
+pull_from_sheet(con, service, yyyy)
+```
+
+### 3.3 Edit the dag
+Follow the general instructions in the `bdit_data-sources` [README](https://github.com/CityofToronto/bdit_data-sources/tree/master/dags).
+
+Add a new task in `bdit_data-sources/dags/vz_google_sheets.py`:
+e.g.:
+
+```
+task4 = PythonOperator(
+    task_id='yyyy',
+    python_callable=pull_from_sheet,
+    dag=dag,
+    op_args=[con, service, yyyy]
+    )
+```
+
+
+## 4. Table generated
 The script reads information from columns A, B, E, F, Y, Z, AA, AB which are as shown below
 
 |SCHOOL NAME|ADDRESS|FLASHING BEACON W/O|WYSS W/O|School Coordinate (X,Y)|Final Sign Installation Date|FB Locations (X,Y)|WYS Locations (X,Y)|
@@ -57,7 +98,8 @@ from the Google Sheets and put them into postgres tables with the following fiel
 * The Google Sheets API do not read any row with empty cells at the beginning or end of the row or just an entire row of empty cells. It will log an error when that happens.
 * The script being used reads up to line 180 although the actual data is less than that. This is to anticipate extra schools which might be added into the sheets in the future.
 
-## 4. Airflow
+## 5. Airflow
 The Airflow is set up to run daily. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. More information on that can be found on [Credential management](https://www.notion.so/bditto/Automating-Stuff-5440feb635c0474d84ea275c9f72c362#dcb7f4b37eae48cba5c290dee5a6ef68). The Airflow uses PythonOperator and run tasks for each Google Sheet (curently 2018, 2019, 2020, 2021).
 
 **Note:** An empty `__init__.py` file then has to be created to run Airflow. 
+
