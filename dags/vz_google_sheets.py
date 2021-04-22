@@ -96,3 +96,4 @@ task4 = PythonOperator(
     dag=dag,
     op_args=[con, service, 2021]
     )
+
