@@ -1,5 +1,5 @@
-""" This script reads 3 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
-and 2020 School Safety Zone)
+""" This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
+2020 School Safety Zone, and 2021 School Safety Zone)
 and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
 'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
 
