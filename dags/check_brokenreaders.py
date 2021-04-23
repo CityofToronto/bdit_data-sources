@@ -29,7 +29,7 @@ def pipeline_check(con):
         select_query1 = '''SELECT MAX (datetime_bin)::date from bluetooth.aggr_5min'''
         cursor.execute(select_query1)
         latest_date = cursor.fetchone()
-        if (latest_date[0]) >= start_date - datetime.timedelta(days=1):
+        if (latest_date[0]) >= 'start_date' - datetime.timedelta(days=1):
             pass
         else:
             raise Exception ('pipeline failed')
