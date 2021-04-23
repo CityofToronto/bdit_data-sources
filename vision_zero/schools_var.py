@@ -21,10 +21,10 @@ import json
 from airflow import DAG
 from airflow.models import Variable
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
-# ssz2018 = dag_config['ssz2018']
-# ssz2019 = dag_config['ssz2019']
-# ssz2020 = dag_config['ssz2020']
-# ssz2021 = dag_config['ssz2021']
+ssz2018 = dag_config['ssz2018']
+ssz2019 = dag_config['ssz2019']
+ssz2020 = dag_config['ssz2020']
+ssz2021 = dag_config['ssz2021']
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -40,19 +40,19 @@ Details of the spreadsheets are ID and range whereas details of the table are na
 The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
 """
 sheets = {
-           2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
+           2018: {'spreadsheet_id' : ssz2018, 
                   'range_name' : 'Master List!A4:AC180',
                   'schema_name': 'vz_safety_programs_staging',
                   'table_name' : 'school_safety_zone_2018_raw'},
-           2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
+           2019: {'spreadsheet_id' : ssz2019, 
                   'range_name' : '2019 Master List!A3:AC180', 
                   'schema_name': 'vz_safety_programs_staging',
                   'table_name' : 'school_safety_zone_2019_raw'},
-           2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
+           2020: {'spreadsheet_id' : ssz2020, 
                   'range_name' : 'Master Sheet!A3:AC180', 
                   'schema_name': 'vz_safety_programs_staging',
                   'table_name' : 'school_safety_zone_2020_raw'},
-           2021: {'spreadsheet_id' : '11NfFwVFAZQNrXnqS065eTgGLEuRf8FBmhFUnhTq3X6A', 
+           2021: {'spreadsheet_id' : ssz2021, 
                   'range_name' : 'Master Sheet!A3:AC180', 
                   'schema_name': 'vz_safety_programs_staging',
                   'table_name' : 'school_safety_zone_2021_raw'}
