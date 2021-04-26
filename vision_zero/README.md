@@ -44,28 +44,53 @@ password=database password
 Follow these steps to read in another spreadsheet for year `yyyy`.
 
 ### 3.1 Create empty table in database to store spreadsheet
-Create table `vz_safety_programs_staging.school_safety_zone_yyyy_raw`, where `yyyy` is the year to be stored. Follow the format of the existing tables.
+Create an empty table `vz_safety_programs_staging.school_safety_zone_yyyy_raw`, where `yyyy` is the year to be stored, as a child of parent table `vz_safety_programs_staging.school_safety_zone_raw_parent`. Follow the format of the existing child tables (e.g. `vz_safety_programs_staging.school_safety_zone_2018_raw`) and declare the inheritance:
 
-
-### 3.2 Edit script that reads in the spreadsheets
-To add a new year `yyyy`, edit `school.py` so that:
-
-1. `sheets` dict has a new element `yyyy`:
 ```
-# Add new dictionary item for sheet yyyy
-yyyy: {'spreadsheet_id' : '{id}',
-       'range_name' : 'Master Sheet!A3:AC180',
-       'schema_name': 'vz_safety_programs_staging',
-       'table_name' : 'school_safety_zone_yyyy_raw'}
-```
-where `'{id}'` is the actual id from the URL.
+CREATE TABLE vz_safety_programs_staging.school_safety_zone_yyyy_raw (
+   	like vz_safety_programs_staging.school_safety_zone_2018_raw 
+	including all
+) INHERITS (vz_safety_programs_staging.school_safety_zone_raw_parent);
 
-2. Add another call to pull from the new sheet
+```
+
+### 3.2 Add id of google sheet to Airflow variable
+In Airflow is already defined a dictionary containing key-value pairs to store the sheet `id` for each sheet. Go to Admin -> Variables in the Airflow GUI and edit `ssz_spreadsheet_ids` to add a new key `sszyyyy` for year `yyyy` and the `id` of the Google sheet for that year.
+
+
+
+### 3.3 Edit script that reads in the spreadsheets
+The `id` for each sheet is then called in `schools.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
+
+```
+from airflow.models import Variable
+dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
+ssz2018 = dag_config['ssz2018']
+sszyyyy = dag_config['sszyyyy']
+```
+
+Next, add to the `sheets` dictionary just below the variable calls the details about the sheet for the new year:
+
+```
+sheets = {
+           2018: {'spreadsheet_id' : ssz2018,
+                  'range_name' : 'Master List!A4:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2018_raw'},
+           yyyy: {'spreadsheet_id' : sszyyyy,
+                  'range_name' : 'Master Sheet!A3:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_yyyy_raw'}
+         }
+```
+
+Finally, at the end of `schools.py`, add a new call to pull from the sheet for year `yyyy`:
+
 ```
 pull_from_sheet(con, service, yyyy)
 ```
 
-### 3.3 Edit the dag
+### 3.4 Edit the dag
 Follow the general instructions in the `bdit_data-sources` [README](https://github.com/CityofToronto/bdit_data-sources/tree/master/dags).
 
 Add a new task in `bdit_data-sources/dags/vz_google_sheets.py`:
