@@ -17,6 +17,8 @@ from airflow.operators.sql import SQLCheckOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+# Credentials
+from airflow.hooks.postgres_hook import PostgresHook
 wys_postgres = PostgresHook("wys_bot")
 wys_uri = wys_postgres.get_uri()
 
@@ -59,13 +61,14 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
+# minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
+
 DUPES_DAG = DAG(
     'dupes_dag',
-    default_args=DEFAULT_ARGS,
-    max_active_runs=1,
-    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],
-    schedule_interval='0 4 * * 1-5')    
-    # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
+    default_args=DEFAULT_ARGS, 
+    schedule_interval='0 5 * * *', # Run at 5am local time each day 
+    catchup=False
+)
 
 #CHECK_DUPES = BashOperator(
 #    task_id='wys_api_count_dupes',
@@ -82,7 +85,7 @@ DUPES_DAG = DAG(
 #    autocommit=True,
 #    retries = 0,
 #    dag=DUPES_DAG
-)
+#)
 
 # operator = SQLCheckOperator(
 #     sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes"
@@ -91,7 +94,7 @@ DUPES_DAG = DAG(
 # https://stackoverflow.com/questions/66005381/error-in-airflow-sqlcheckoperator-attributeerror-nonetype-object-has-no-att
 CHECK_DUPES = SQLCheckOperator(
     task_id='wys_api_count_dupes',
-    sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes"
+    sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes",
     postgres_conn_id='wys_bot',
     #use_legacy_sql=False,
     dag=DUPES_DAG
