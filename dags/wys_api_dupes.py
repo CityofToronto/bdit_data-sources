@@ -13,6 +13,7 @@ import psycopg2
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.sql import SQLCheckOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
@@ -23,7 +24,7 @@ SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
-            :red_circle: Task Failed.
+            :red_circle: Task Failed. <UHJA7GHQV> <U1XGLNWG2>
             *Task*: {task}
             *Dag*: {dag}
             *Execution Time*: {exec_date}
@@ -66,22 +67,38 @@ DUPES_DAG = DAG(
     schedule_interval='0 4 * * 1-5')    
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
-CHECK_DUPES = BashOperator(
-    task_id='wys_api_count_dupes',
-    bash_command = '''/home/cnangini/PROJECTS/bdit_data-sources/wys/api/python/wys_api_count_dupes.sh ''', # SPACE !!!!
-    env={'wys_uri':wys_uri},
-    retries=0,
-    dag=DUPES_DAG
+#CHECK_DUPES = BashOperator(
+#    task_id='wys_api_count_dupes',
+#    bash_command = '''/home/cnangini/PROJECTS/bdit_data-sources/wys/api/python/wys_api_count_dupes.sh ''', # SPACE !!!!
+#    env={'wys_uri':wys_uri},
+#    retries=0,
+#    dag=DUPES_DAG
+#)
+
+#CHECK_DUPES = PostgresOperator(
+#    sql='''select count(*) from wys.mobile_sign_installations_dupes''',
+#    task_id='wys_api_count_dupes',
+#    postgres_conn_id='wys_bot',
+#    autocommit=True,
+#    retries = 0,
+#    dag=DUPES_DAG
 )
 
-CHECK_DUPES = PostgresOperator(
-    sql='''select count(*) from wys.mobile_sign_installations_dupes;''',
+# operator = SQLCheckOperator(
+#     sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes"
+# )
+
+# https://stackoverflow.com/questions/66005381/error-in-airflow-sqlcheckoperator-attributeerror-nonetype-object-has-no-att
+CHECK_DUPES = SQLCheckOperator(
     task_id='wys_api_count_dupes',
+    sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes"
     postgres_conn_id='wys_bot',
-    autocommit=True,
-    retries = 0,
-    dag=dag
+    #use_legacy_sql=False,
+    dag=DUPES_DAG
 )
+#operator = SQLCheckOperator(
+#     sql="SELECT COUNT(*) FROM wys.mobile_sign_installations_dupes"
+#)
 
 # To run:
 # airflow test dupes_dag wys_api_count_dupes 29/08/2019
