@@ -90,9 +90,7 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = pipeline_check,
     dag=blip_pipeline,
     op_kwargs={
-        'con': con,
-        'start_date': '{{ ds }}',
-        'end_date' : '{{ ds }}'
+        'con': con
         })
     task2 = PostgresOperator(sql='''SELECT * from mohan.insert_report_date()''',
                             task_id='update_routes_table',
@@ -118,8 +116,6 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = broken_readers,
     dag=blip_pipeline,
     op_kwargs={
-        'con': con,
-        'start_date': '{{ ds }}',
-        'end_date' : '{{macros.ds_add(ds,1)}}'
+        'con': con
         }) 
 task1 >> [task2, task3, task4] >> task5
