@@ -90,7 +90,7 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = pipeline_check,
     dag=blip_pipeline,
     op_kwargs={
-        'conn': con,
+        'con': con,
         'start_date': '{{ ds }}',
         'end_date' : '{{ ds }}'
         })
@@ -118,7 +118,7 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = broken_readers,
     dag=blip_pipeline,
     op_kwargs={
-        'conn': con,
+        'con': con,
         'start_date': '{{ ds }}',
         'end_date' : '{{macros.ds_add(ds,1)}}'
         }) 
