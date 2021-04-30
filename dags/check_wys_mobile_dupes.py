@@ -11,15 +11,9 @@ import os
 import sys
 import psycopg2
 from airflow import DAG
-from airflow.operators.sql import SQLCheckOperator
+from airflow.operators.check_operator import CheckOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-
-# Credentials
-from airflow.hooks.postgres_hook import PostgresHook
-wys_postgres = PostgresHook("wys_bot")
-wys_uri = wys_postgres.get_uri()
-
 
 # Slack error alert
 SLACK_CONN_ID = 'slack'
@@ -30,6 +24,7 @@ def task_fail_slack_alert(context):
     task_msg = """The Task {task} found dupes in `wys.mobile_sign_installations_dupes`.
         <@UHJA7GHQV> <@U1XGLNWG2> SVP jetez un oeil :eyes: :thanks_japanese: :meow_baguettehero:""".format(
         task=context.get('task_instance').task_id,)
+
 
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -56,8 +51,6 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-# minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
-
 DUPES_DAG = DAG(
     'check_wys_mobile_dupes',
     default_args=DEFAULT_ARGS, 
@@ -65,15 +58,11 @@ DUPES_DAG = DAG(
     catchup=False
 )
 
-# https://stackoverflow.com/questions/66005381/error-in-airflow-sqlcheckoperator-attributeerror-nonetype-object-has-no-att
-task1 = SQLCheckOperator(
+# task1 will fail when there are a non-zero number of rows in the table
+# and this will trigger a slack alert message
+task1 = CheckOperator(
     task_id='check_wys_mobile_dupes',
     sql='''SELECT COUNT(1) = 0 FROM wys.mobile_sign_installations_dupes''',
-    postgres_conn_id='wys_bot',
-    #use_legacy_sql=False,
+    conn_id='wys_bot',
     dag=DUPES_DAG
 )
-
-# To run:
-# airflow test check_wys_mobile_dupes task1 29/08/2019
-
