@@ -14,14 +14,14 @@ import configparser
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-#to connect to pgadmin bot after creating bt_bot
+#to connect to pgadmin bot
 bt_postgres = PostgresHook("bt_bot")
 
 #To connect to pgadmin
-CONFIG = configparser.ConfigParser()
-CONFIG.read(r'/home/mohan/cre.cfg')
-dbset = CONFIG['DBSETTINGS']
-con = connect(**dbset)
+#CONFIG = configparser.ConfigParser()
+#CONFIG.read(r'/home/mohan/cre.cfg')
+#dbset = CONFIG['DBSETTINGS']
+con = bt_postgres.get_conn()
 broken_list = []
 
 def pipeline_check(con):
@@ -76,7 +76,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner':'mohan',
                 'depends_on_past':False,
-                'start_date': datetime(2021, 4, 15),
+                'start_date': datetime(2021, 4, 29),
                 'email': ['mohanraj.adhikari@toronto.ca'],
                 'email_on_failure': False,
                 'email_on_success': False,
@@ -90,27 +90,26 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = pipeline_check,
     dag=blip_pipeline,
     op_kwargs={
-    'con': con,
-    # execution date is by default a day before if the process runs daily
-    'start_date': '{{ ds }}',
-    'end_date' : '{{macros.ds_add(ds,1)}}'
-    })
+        'conn': con,
+        'start_date': '{{ ds }}',
+        'end_date' : '{{ ds }}'
+        })
     task2 = PostgresOperator(sql='''SELECT * from mohan.insert_report_date()''',
                             task_id='update_routes_table',
-                            postgres_conn_id='mohan',
+                            postgres_conn_id='bt_bot',
                             autocommit=True,
                             retries = 0,
                             dag=blip_pipeline
                             )
     task3 = PostgresOperator(sql='''SELECT * from mohan.reader_status_history({{ds}})''',
                             task_id='bt_reader_status_history',
-                            postgres_conn_id='mohan',
+                            postgres_conn_id='bt_bot',
                             autocommit=True,
                             retries = 0,
                             dag=blip_pipeline)
     task4 = PostgresOperator(sql='''SELECT * from mohan.reader_locations_dt_update({{ds}})''',
                             task_id='bt_reader_locations',
-                            postgres_conn_id='mohan',
+                            postgres_conn_id='bt_bot',
                             autocommit=True,
                             retries = 0,
                             dag=blip_pipeline)                        
@@ -119,9 +118,8 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = broken_readers,
     dag=blip_pipeline,
     op_kwargs={
-    'con': con,
-    # execution date is by default a day before if the process runs daily
-    'start_date': '{{ ds }}',
-    'end_date' : '{{macros.ds_add(ds,1)}}'
-    }) 
+        'conn': con,
+        'start_date': '{{ ds }}',
+        'end_date' : '{{macros.ds_add(ds,1)}}'
+        }) 
 task1 >> [task2, task3, task4] >> task5
