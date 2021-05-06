@@ -28,7 +28,7 @@
 	- [Removing Intersections](#Removing-Intersections)
 	- [Adding Intersections](#Adding-Intersections)
 - [5. Repulling data](#5-Repulling-data)
-	- [Deleting data to re-run process](#Deleting-data-to-re--run-process)
+	- [Deleting data to re-run process](#Deleting-data-to-re-run-the-process)
 - [6. Processing Data from API](#6-processing-data-from-api)
 - [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#7-processing-data-from-csv-dumps-no-longer-in-use)
 	- [`raw_data`](#raw_data)
@@ -604,6 +604,8 @@ Once you have deleted all the relevant data, you can now re-run the process with
 ```
 python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --start_date 2020-08-20 --end_date 2020-08-21
 ```
+
+The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
 
 ## 6. Processing Data from API
 
