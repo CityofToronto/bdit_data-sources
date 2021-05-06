@@ -102,12 +102,14 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 `dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
 
 ## Quality Checks
-An analysis on 23.4.2021 to investigate rows with NULL speed and count columns was performed in notebook `investigate_api_nulls.ipynb` in this directory, as part of [issue #393](https://github.com/CityofToronto/bdit_data-sources/issues/393). Main findings:
 
-- there are currently `872` rows in `wys.raw_data`  
+### NULL rows in API data
+
+An analysis on `2021-04-23` to investigate rows with NULL speed and count columns was performed after noticing that NULL rows had started to appear in the database on `2021-03-31`. For details see notebook `investigate_api_nulls.ipynb` in this directory , as part of [issue #393](https://github.com/CityofToronto/bdit_data-sources/issues/393). Main findings:
+
+- there are currently `872` distinct signs in `wys.raw_data`  
 - `727` of these contain rows with NULL speed or count columns  
 - `739` signs have been operating since `> 2021-03-31`
 - of the `734` signs have operating since `> 2021-03-31`, `734` have NULL speed or count columns
-- only `395` rows have matching geoms in `wys.wys_stat_signs_speed_limit`
 
 Please see the notebook for a Gantt-style visualization of the NULL date ranges. 
