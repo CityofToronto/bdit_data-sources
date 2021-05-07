@@ -118,4 +118,4 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     op_kwargs={
         'con': con
         }) 
-task1 >> [task2, task3, task4] >> task5
+task1 >> [task2, task3, task4, task5]
