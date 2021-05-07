@@ -36,7 +36,7 @@ def pipeline_check(con):
 
 def broken_readers(con):
     with con.cursor() as cursor: 
-        select_query2 = '''SELECT * from mohan.broken_readers('{{ds}}')'''
+        select_query2 = '''SELECT * from mohan.broken_readers('{{ ds }}')'''
         cursor.execute(select_query2)
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
@@ -60,7 +60,7 @@ def task_fail_slack_alert(context):
         task_msg = """:among_us_ghost: some readers {task} have failed. Check the log, <@U01858E603T>.""".format(
                 task=context.get('task_instance').task_id,)
     else:
-        task_msg = """Unknown error has occured in {task} blip_check_update DAG. Deep dive required, <@U01858E603T> please check ASAP.""".format(
+        task_msg = """:among_us_dead: Error occured in Task {task}. Deep dive required, <@U01858E603T> please check ASAP.""".format(
                 task=context.get('task_instance').task_id,)
 
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,) 
@@ -99,13 +99,13 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
                             retries = 0,
                             dag=blip_pipeline
                             )
-    task3 = PostgresOperator(sql='''SELECT * from mohan.reader_status_history('{{ds}}')''',
+    task3 = PostgresOperator(sql='''SELECT * from mohan.reader_status_history('{{ ds }}')''',
                             task_id='bt_reader_status_history',
                             postgres_conn_id='bt_bot',
                             autocommit=True,
                             retries = 0,
                             dag=blip_pipeline)
-    task4 = PostgresOperator(sql='''SELECT * from mohan.reader_locations_dt_update('{{ds}}')''',
+    task4 = PostgresOperator(sql='''SELECT * from mohan.reader_locations_dt_update('{{ ds }}')''',
                             task_id='bt_reader_locations',
                             postgres_conn_id='bt_bot',
                             autocommit=True,
