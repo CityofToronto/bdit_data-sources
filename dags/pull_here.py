@@ -6,7 +6,6 @@ Slack notifications is raised when the airflow process fails.
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook

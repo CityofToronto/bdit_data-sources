@@ -6,7 +6,6 @@ import sys
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.postgres_operator import PostgresOperator
-from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
