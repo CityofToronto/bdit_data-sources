@@ -36,7 +36,7 @@ def pipeline_check(con):
 
 def broken_readers(con):
     with con.cursor() as cursor: 
-        select_query2 = '''SELECT reader from mohan.broken_readers('{{ds}}')'''
+        select_query2 = '''SELECT * from mohan.broken_readers('{{ds}}')'''
         cursor.execute(select_query2)
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
