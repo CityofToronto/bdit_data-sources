@@ -34,9 +34,9 @@ def pipeline_check(con):
         else:
             raise Exception ('pipeline failed')
 
-def broken_readers(con):
+def broken_readers(con, check_date):
     with con.cursor() as cursor: 
-        select_query2 = '''SELECT * from mohan.broken_readers('{{ ds }}')'''
+        select_query2 = '''SELECT * from mohan.broken_readers(%s::date')'''
         cursor.execute(select_query2)
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
@@ -117,5 +117,6 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     dag=blip_pipeline,
     op_kwargs={
         'con': con
+        'check_date': '{{ ds }}'
         }) 
 task1 >> [task2, task3, task4, task5]
