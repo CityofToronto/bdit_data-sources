@@ -99,13 +99,13 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
                             retries = 0,
                             dag=blip_pipeline
                             )
-    task3 = PostgresOperator(sql='''SELECT * from mohan.reader_status_history({{ds}})''',
+    task3 = PostgresOperator(sql='''SELECT * from mohan.reader_status_history('{{ds}}')''',
                             task_id='bt_reader_status_history',
                             postgres_conn_id='bt_bot',
                             autocommit=True,
                             retries = 0,
                             dag=blip_pipeline)
-    task4 = PostgresOperator(sql='''SELECT * from mohan.reader_locations_dt_update({{ds}})''',
+    task4 = PostgresOperator(sql='''SELECT * from mohan.reader_locations_dt_update('{{ds}}')''',
                             task_id='bt_reader_locations',
                             postgres_conn_id='bt_bot',
                             autocommit=True,
