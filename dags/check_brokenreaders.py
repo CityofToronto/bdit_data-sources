@@ -116,7 +116,7 @@ with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17
     python_callable = broken_readers,
     dag=blip_pipeline,
     op_kwargs={
-        'con': con
+        'con': con,
         'check_date': '{{ ds }}'
         }) 
 task1 >> [task2, task3, task4, task5]
