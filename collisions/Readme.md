@@ -45,7 +45,7 @@ generate three derived tables:
   1985-01-01 and present. Columns have proper data types (rather than all
   integers like in `collisions.acc`) and categorical columns use their text
   descriptions rather than numerical codes.
-- `collisions.events`: all collision individual-level data for collisions
+- `collisions.involved`: all collision individual-level data for collisions
   between 1985-01-01 and present, with refinements similar to
   `collisions.events`.
 
