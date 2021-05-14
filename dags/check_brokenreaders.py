@@ -32,8 +32,8 @@ def pipeline_check(con):
 
 def broken_readers(con, check_date):
     with con.cursor() as cursor: 
-        select_query2 = '''SELECT * from mohan.broken_readers(%(check_date)s)'''
-        cursor.execute(select_query2)
+        select_query2 = '''SELECT * from mohan.broken_readers(%s::date)'''
+        cursor.execute(select_query2, check_date)
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
         num_broken = len(broken_list)
