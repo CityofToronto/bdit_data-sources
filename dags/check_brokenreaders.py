@@ -17,10 +17,6 @@ logging.basicConfig(level=logging.DEBUG)
 #to connect to pgadmin bot
 bt_postgres = PostgresHook("bt_bot")
 
-#To connect to pgadmin
-#CONFIG = configparser.ConfigParser()
-#CONFIG.read(r'/home/mohan/cre.cfg')
-#dbset = CONFIG['DBSETTINGS']
 con = bt_postgres.get_conn()
 broken_list = []
 
@@ -32,11 +28,11 @@ def pipeline_check(con):
         if (latest_date[0]) >= (datetime.now().date() - timedelta(1)):
             pass
         else:
-            raise Exception ('pipeline failed')
+            raise Exception ('there is no data in bluetooth.aggr_5min for yesterday')
 
 def broken_readers(con, check_date):
     with con.cursor() as cursor: 
-        select_query2 = '''SELECT * from mohan.broken_readers(%s)'''
+        select_query2 = '''SELECT * from mohan.broken_readers(check_date)'''
         cursor.execute(select_query2, check_date)
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
@@ -47,7 +43,7 @@ def broken_readers(con, check_date):
             LOGGER.info(broken_list)
             raise Exception ('some readers are broken, check broken_readers_log')
         
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
