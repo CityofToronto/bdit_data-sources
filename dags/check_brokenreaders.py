@@ -37,7 +37,7 @@ def broken_readers(con, check_date):
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
         num_broken = len(broken_list)
-        if num_broken == 0:
+        if num_broken < 2:
             pass
         else:
             LOGGER.info(broken_list)
