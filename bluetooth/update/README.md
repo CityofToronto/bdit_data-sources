@@ -126,9 +126,9 @@ GROUP BY analysis_id, street, direction, from_street, to_street) a)
 Geostatistical lines and planning boundaries need to be avoided while pgrouting. 
 
 ## Validating Output
-Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions.If the detectors are located very close to the centerline intersections, it is not necessary to do the  centreline cutting. Else that step is necessary. 
+Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions.If the detectors are located very close to the centerline intersections, it is not necessary to do the  centreline cutting. If any bluetooth detectors are not located at the start or end point of a centreline, we will need to cut the centreline using ST_linelocatepoint() as explained in [here.](https://github.com/CityofToronto/bdit_data-sources/issues/234) . 
 
-The new routes table is now ready .  
+The new routes table is now ready to append to the existing routes table.  
 
 
 [pgr_dijkstra]:https://docs.pgrouting.org/latest/en/pgr_dijkstra.html
