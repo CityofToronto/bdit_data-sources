@@ -15,6 +15,8 @@ The raw dataset is stored under `collisions.acc`, a direct mirror of the same
 table on the MOVE server (which itself mirrors from Oracle). The data dictionary
 for this table is maintained jointly with MOVE and found on [Notion
 here](https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
+The guidebook that defines the values and categories for many colums is found
+[here](http://insideto.toronto.ca/transportation/files/carsmap/user-manual.pdf).
 
 ### Properties of `collisions.acc`
 - Each row represents one individual involved in a collision, so some data is
