@@ -29,6 +29,7 @@ def pipeline_check(con):
             pass
         else:
             raise Exception ('there is no data in bluetooth.aggr_5min for yesterday')
+            pass
 
 def broken_readers(con, check_date):
     with con.cursor() as cursor: 
@@ -37,7 +38,7 @@ def broken_readers(con, check_date):
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
         num_broken = len(broken_list)
-        if num_broken < 2:
+        if broken_readers[0][0] == '':
             pass
         else:
             LOGGER.info(broken_list)
@@ -80,7 +81,7 @@ default_args = {'owner':'mohan',
                 'retry_delay': timedelta(minutes=5),
                 'on_failure_callback': task_fail_slack_alert
                 }
-with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17 * * *') as blip_pipeline:
+with DAG('blip_check_update', default_args=default_args, schedule_interval='0 17 * * *', catchup=False) as blip_pipeline:
     task1 = PythonOperator(
     task_id = 'pipeline_check',
     python_callable = pipeline_check,
