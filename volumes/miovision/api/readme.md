@@ -2,7 +2,6 @@
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
 - [Overview](#overview)
 - [Input Parameters](#input-parameters)
   - [API Key and URL](#api-key-and-url)
@@ -151,11 +150,11 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 |start_date|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
+|path|path|Specifies the directory where the `config.cfg` file is|`/etc/airflow/data_scripts/volumes/miovision/api/config.cfg`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
 |pull|BOOLEAN flag|Data processing and gap finding will be skipped|--pull|false|
 |dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
 
-`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --pull --dupes` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=C:\Users\rliu4\Documents\GitHub\bdit_data-sources\volumes\miovision\api --dupes` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen as well as the script to fail if duplicates are detected.
+`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --pull --dupes` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen as well as the script to fail if duplicates are detected.
 
 If `--pull` is specified in the command line (which is equivalent to setting it to True), the script will skip the data processing and gaps finding process. This is useful when we want to just insert data into the volumes table and check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
 

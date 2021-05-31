@@ -18,4 +18,4 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
 ALTER FUNCTION miovision_api.api_log(date, date)
-  OWNER TO rliu;
+  OWNER TO miovision_admins;

@@ -11,15 +11,15 @@ AS $BODY$
 BEGIN
 
 WITH zero_padding_movements AS (
-		/*Cross product of legal movement for cars, bikes, and peds and the bins to aggregate*/
-		SELECT m.*, datetime_bin15 
-		FROM miovision_api.intersection_movements m
-		CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin15)
-		-- make sure that the intersection is still active
-		WHERE intersection_uid IN (SELECT intersection_uid FROM miovision_api.intersections 
-				WHERE start_date::date >= date_installed 
-				AND date_decommissioned IS NULL)
-		)
+	-- Cross product of legal movement for cars, bikes, and peds and the bins to aggregate
+	SELECT m.*, datetime_bin15
+	FROM miovision_api.intersection_movements m
+	CROSS JOIN generate_series(start_date - interval '1 hour', end_date - interval '1 hour 15 minutes', INTERVAL '15 minutes') AS dt(datetime_bin15)
+	-- Make sure that the intersection is still active
+	JOIN miovision_api.intersections mai USING (intersection_uid)
+	-- Only include dates during which intersection is active.
+	WHERE datetime_bin15::date > mai.date_installed AND (mai.date_decommissioned IS NULL OR (datetime_bin15::date < mai.date_decommissioned))
+)
 , aggregate_insert AS (
 INSERT INTO miovision_api.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 
@@ -34,8 +34,8 @@ FROM zero_padding_movements pad
 --To set unacceptable ones to NULL instead (& only gap fill light vehicles, cyclist and pedestrian)
 LEFT JOIN miovision_api.unacceptable_gaps un 
 	ON un.intersection_uid = pad.intersection_uid
-	AND pad.datetime_bin15 BETWEEN DATE_TRUNC('hour', gap_start) 
-	AND DATE_TRUNC('hour', gap_end) + interval '1 hour' -- may get back to this later on for fear of removing too much data
+	AND pad.datetime_bin15 >= DATE_TRUNC('hour', gap_start)
+	AND pad.datetime_bin15 < DATE_TRUNC('hour', gap_end) + interval '1 hour' -- may get back to this later on for fear of removing too much data
 --To get 1min bins
 LEFT JOIN miovision_api.volumes A
 	ON A.datetime_bin >= start_date - INTERVAL '1 hour' 
@@ -71,11 +71,11 @@ END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_15_min_tmc(date, date)
-    OWNER TO jchew;
+    OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO PUBLIC;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO jchew;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_tmc(date, date) TO miovision_admins;
 

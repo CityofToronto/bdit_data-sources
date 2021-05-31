@@ -1,0 +1,14 @@
+street_name,extents,confidence,info
+Bourdon Avenue,Burr Road and Maple Life Drive,Low (6 character difference),Matched correctly
+Duncairn Road,The Donway West and Bond Avenue,Low (6 character difference),Incorrectly written bylaw
+Dunn Avenue,A point 13 metres south of Springhurst Avenue and Springhurst Avenue,Low (6 character difference),Wrong geometry matched
+Glenview Avenue,Yonge Street and a point 36.3 metres west of Glen Castle Street.,Low (7 character difference),Incorrectly written bylaw
+Haddon Street,Old Orchard Boulevard and a point 124.3 metres north of Old Orchard Boulevard,Low (6 character difference),Matched correctly
+Homewood Avenue (TO),Carlton Street between the north end of Homewood Avenue,Low (6 character difference),Incorrectly written bylaw
+Varisty Road,St. Mark's  Road (north intersection) and Old Dundas Street,Low (7 character difference),Matched correctly
+Westrose Avenue,Lynngrove Avenue and the northeast of Westrose Avenue,Low (6 character difference),Incorrectly written bylaw
+Gange Avenue,Birch Avenue and the south limit of Gange Avenue,Low (6 character difference),Matched correctly
+Clifton Road,Mount Pleasant Road and Moore Avenue,Low (6 character difference),Matched correctly
+Howland Avenue,Dupont Street and CPR underpass,Low (6 character difference),Incorrectly written bylaw
+Howland Avenue,CPR underpass and Bridgman Avenue,Low (6 character difference),Incorrectly written bylaw
+St. Leonard's Crescent,Dawlish Avenue (east intersection)/Fidelia Avenue and St. Leonard's Avenue,Low (6 character difference),Matched correctly

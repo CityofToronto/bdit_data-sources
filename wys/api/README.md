@@ -60,16 +60,16 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 `datetime_bin`|timestamp|Start time of the bin|2018-10-29 10:00:00
 `speed`|integer|Exact speed of the number of vehicles in `count`|47
 `count`|integer|Number of vehicles in datetime_bin/api_id/speed combination|2
-`counts_15min`|integer|A unique identifier for `counts_15min` table. Indicates if the data has already been processed or not.|150102
+`speed_count_uid`|integer|A unique identifier for `speed_counts_agg_5kph` table. Indicates if the data has already been processed or not.|150102
 
-`wys.counts_15min` has aggregated 15 minute time bins, and aggregated 5 km/h speed bins by using the `aggregate_speed_counts_15min()` function. Values for the speed bins are replaced by lookup table IDS.
+`wys.speed_counts_agg_5kph` has data aggregated to 1-hour and 5 km/h bins using the `aggregate_speed_counts_one_hour_5kph()` function. Values for the speed bins are replaced by lookup table IDs.
 
 |Field name|Data type|Description|Example|
 |------|------|-------|------|
-`counts_15min`|integer|A unique identifier for the `counts_15min` table|2655075
+`speed_counts_agg_5kph_id`|integer|A unique identifier for the `speed_counts_agg_5kph` table|2655075
 `api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
-`datetime_bin`|timestamp|Start time of the 15 minute aggregated bin|2018-10-29 10:00:00
-`speed_id`|integer|A unique identifier for the 5 minute speed bin in the `speed_bins` table|5
+`datetime_bin`|timestamp|Start time of the 1 houraggregated bin|2018-10-29 10:00:00
+`speed_id`|integer|A unique identifier for the 5 kph speed bin in the `speed_bins` table|5
 `count`|integer|Number of vehicles in datetime_bin/api_id/speed bin combination|7
 
 ### Lookup Tables

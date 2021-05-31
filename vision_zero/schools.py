@@ -1,6 +1,7 @@
-""" This script is made to read two Vision Zero google spreadsheets ('2018 School Safety Zone' and '2019 School Safety Zone')
-and put them into two postgres tables ('school_safety_zone_2018_raw' and 'school_safety_zone_2019_raw')
-using Google Sheet API.
+""" This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
+2020 School Safety Zone, and 2021 School Safety Zone)
+and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
+'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
 
 Note
 ----
@@ -16,6 +17,13 @@ from psycopg2.extras import execute_values
 from psycopg2 import sql
 import logging 
 
+from airflow.models import Variable
+dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
+ssz2018 = dag_config['ssz2018']
+ssz2019 = dag_config['ssz2019']
+ssz2020 = dag_config['ssz2020']
+ssz2021 = dag_config['ssz2021']
+
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
@@ -24,22 +32,30 @@ Note
 If the scopes is modified from readonly, delete the file token.pickle."""
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
-
-credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
 """The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
 The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
-Details of the spreadsheets are ID and range whereas details of the table are name of schema and table."""
-sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
-                 'range_name' : 'Master List!A4:AC180',
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2018_raw'},
-          2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
-                 'range_name' : '2019 Master List!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2019_raw'}}
+Details of the spreadsheets are ID and range whereas details of the table are name of schema and table.
+The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
+"""
+sheets = {
+           2018: {'spreadsheet_id' : ssz2018, 
+                  'range_name' : 'Master List!A4:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2018_raw'},
+           2019: {'spreadsheet_id' : ssz2019, 
+                  'range_name' : '2019 Master List!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2019_raw'},
+           2020: {'spreadsheet_id' : ssz2020, 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2020_raw'},
+           2021: {'spreadsheet_id' : ssz2021, 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2021_raw'}
+         }
+
 
 """The following provides information about the code when it is running and prints out the log messages 
 if they are of logging level equal to or greater than INFO"""
@@ -47,9 +63,12 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def pull_from_sheet(con, service, year, *args):
-    """This function is to call the Google Sheets API, pull values from the Sheet using service and push them into the postgres table using con.
-    Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4, 5, 24, 25, 26, 27) are transposed to the table.
-    Rows with empty cells at the beginning or end of the row or just an entire row of empty cells are not included in the postgres table.
+    """This function is to call the Google Sheets API, pull values from the Sheet using service
+    and push them into the postgres table using con.
+    Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
+    5, 24, 25, 26, 27) are transposed to the table.
+    Rows with empty cells at the beginning or end of the row or just an entire row of empty cells
+    are not included in the postgres table.
     The existing table on postgres will be truncated first prior to inserting data into it.
 
     Note
@@ -109,9 +128,19 @@ def pull_from_sheet(con, service, year, *args):
     LOGGER.info('Table %s is done', table)
 
 if __name__ == '__main__':
-    """The following connects to the database, establishes connection to the sheets and executes function based on the year of data required."""
+    """The following connects to the database, establishes connection to the sheets 
+    and executes function based on the year of data required.
+    Note: this part is not run by airflow.
+
+    """
+
+    SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
+
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
+
     CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'/home/jchew/local/db.cfg')
+    CONFIG.read(r'/home/cnangini/googlesheets_db.cfg')
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
 
@@ -119,4 +148,5 @@ if __name__ == '__main__':
 
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
-    
+    pull_from_sheet(con, service, 2020)
+    pull_from_sheet(con, service, 2021)
