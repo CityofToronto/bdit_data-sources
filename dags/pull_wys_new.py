@@ -30,18 +30,18 @@ def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
     if context.get('task_instance').task_id == 't1':
-        task_msg = """:cat_shock: The Task {task} in Pull WYS dag failed, 
+        task_msg = """:cat_shocked: The Task {task} in Pull WYS dag failed, 
 			<@UHJA7GHQV> please check.""".format(
             task=context.get('task_instance').task_id,)
     
     elif context.get('task_instance').task_id == 'check_wys_mobile_dupes_id':
-        task_msg = """:cat_shock: There are dupes in `wys.mobile_sign_installations_dupes`. 
+        task_msg = """:cat_shocked: There are dupes in `wys.mobile_sign_installations_dupes`. 
 			<@UHJA7GHQV> please check.""".format(
             task=context.get('task_instance').task_id,)
     
     # else other msg for task2
     else:
-        task_msg = """The Task {task} in Pull WYS dag failed, 
+        task_msg = """:blob_fail: The Task {task} in Pull WYS dag failed, 
 			<@UHJA7GHQV> please check.""".format(
             task=context.get('task_instance').task_id,)    
         
@@ -108,8 +108,8 @@ t2b = CheckOperator(
     dag=dag
 )
 
-# Dag order should be: t2 then t2b
-# Task t2 is independent of the other dags and so does not need to be ordered
+# Dag order should be: t2 (read google sheets) then t2b (check for dupes)
+# Task t1 (pull_wys) is independent of the other dags and so does not need to be ordered
 t2 >> t2b
 
 
