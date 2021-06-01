@@ -28,24 +28,23 @@ BEGIN
     ),
     --Inserts the ATR bins to the ATR table
     insert_atr AS (
-    INSERT INTO miovision_api.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
-    SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, volume
-    FROM transformed
-    RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
-    
+        INSERT INTO miovision_api.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
+        SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, volume
+        FROM transformed
+        RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
     --Updates crossover table with new IDs
     , insert_crossover AS(
-    INSERT INTO miovision_api.volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
-    SELECT volume_15min_tmc_uid, volume_15min_uid
-    FROM insert_atr A
-    INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) AS volume_15min_tmc_uid FROM transformed) B
-        ON A.intersection_uid=B.intersection_uid 
-        AND A.datetime_bin=B.datetime_bin
-        AND A.classification_uid=B.classification_uid 
-        AND A.leg=B.leg
-        AND A.dir=B.dir
-    ORDER BY volume_15min_uid
-	RETURNING volume_15min_tmc_uid
+        INSERT INTO miovision_api.volumes_tmc_atr_xover (volume_15min_tmc_uid, volume_15min_uid)
+        SELECT volume_15min_tmc_uid, volume_15min_uid
+        FROM insert_atr A
+        INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) AS volume_15min_tmc_uid FROM transformed) B
+            ON A.intersection_uid=B.intersection_uid 
+            AND A.datetime_bin=B.datetime_bin
+            AND A.classification_uid=B.classification_uid 
+            AND A.leg=B.leg
+            AND A.dir=B.dir
+        ORDER BY volume_15min_uid
+        RETURNING volume_15min_tmc_uid
     )
     --Sets processed column to TRUE
     UPDATE miovision_api.volumes_15min_tmc a
