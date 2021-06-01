@@ -20,6 +20,7 @@ WITH zero_padding_movements AS (
 	-- Only include dates during which intersection is active.
 	WHERE datetime_bin15::date > mai.date_installed AND (mai.date_decommissioned IS NULL OR (datetime_bin15::date < mai.date_decommissioned))
 ), aggregate_insert AS (
+	INSERT INTO miovision_api.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 	SELECT pad.intersection_uid,
 		pad.datetime_bin15 AS datetime_bin,
 		pad.classification_uid,
@@ -46,29 +47,12 @@ WITH zero_padding_movements AS (
 	WHERE A.volume_15min_tmc_uid IS NULL
 	GROUP BY pad.intersection_uid, pad.datetime_bin15, pad.classification_uid, pad.leg, pad.movement_uid, un.accept
 	HAVING pad.classification_uid IN (1,2,6,10) OR SUM(A.volume) > 0
-), agg_insert_tmcs AS (
-	INSERT INTO miovision_api.volumes_15min_tmc(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-	SELECT *
-	FROM aggregate_insert
-	WHERE classification_uid != 10
 	RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid, volume
-), agg_insert_bike_approach AS (
-	INSERT INTO miovision_api.volumes_15min_bike_atr(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-	SELECT *
-	FROM aggregate_insert
-	WHERE classification_uid = 10
-	RETURNING intersection_uid, volume_15min_tmc_uid, datetime_bin, classification_uid, leg, movement_uid, volume
-), agg_union AS (
-	SELECT *
-	FROM agg_insert_tmcs
-	UNION ALL
-	SELECT *
-	FROM agg_insert_bike_approach
 )
 --To update foreign key for 1min bin table
 UPDATE miovision_api.volumes a
 	SET volume_15min_tmc_uid = b.volume_15min_tmc_uid
-	FROM agg_union b
+	FROM aggregate_insert b
 	WHERE a.datetime_bin >= start_date - interval '1 hour' AND a.datetime_bin < end_date -  interval '1 hour'
 	AND a.volume_15min_tmc_uid IS NULL AND b.volume > 0 
 	AND a.intersection_uid  = b.intersection_uid 
@@ -77,7 +61,7 @@ UPDATE miovision_api.volumes a
 	AND a.leg = b.leg
 	AND a.movement_uid = b.movement_uid
 ;
-	
+
 RAISE NOTICE '% Done aggregating to 15min TMC bin', timeofday();
 END;
 
