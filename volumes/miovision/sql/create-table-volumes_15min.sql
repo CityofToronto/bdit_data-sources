@@ -21,7 +21,6 @@ ALTER TABLE miovision_api.volumes_15min
 GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
-GRANT ALL ON TABLE miovision_api.volumes_15min TO rliu;
 
 -- Index: miovision_api.volumes_15min_classification_uid_idx
 
