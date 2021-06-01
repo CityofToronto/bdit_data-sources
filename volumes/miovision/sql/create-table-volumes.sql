@@ -24,7 +24,6 @@ ALTER TABLE miovision_api.volumes
 GRANT ALL ON TABLE miovision_api.volumes TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes TO aharpal;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes TO bdit_humans WITH GRANT OPTION;
-GRANT UPDATE, INSERT, DELETE ON TABLE miovision_api.volumes TO rliu;
 
 -- Index: miovision_api.volumes_datetime_bin_idx
 
