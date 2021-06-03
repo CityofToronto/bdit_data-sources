@@ -321,9 +321,9 @@ def process_data(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
-                update="SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date)"
+                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
                 cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute bins')
+                logger.info('Aggregated to 15 minute movement bins')
 
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)

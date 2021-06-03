@@ -1,6 +1,6 @@
-﻿﻿CREATE TABLE miovision_api.volumes_15min_mvt
+﻿CREATE TABLE miovision_api.volumes_15min_mvt
 (
-  volume_15min_tmc_uid serial NOT NULL,
+  volume_15min_mvt_uid serial NOT NULL,
   intersection_uid integer,
   datetime_bin timestamp without time zone,
   classification_uid integer,
@@ -8,7 +8,7 @@
   movement_uid integer,
   volume numeric,
   processed boolean,
-  CONSTRAINT volumes_15min_mvt_pkey PRIMARY KEY (volume_15min_tmc_uid),
+  CONSTRAINT volumes_15min_mvt_pkey PRIMARY KEY (volume_15min_mvt_uid),
   CONSTRAINT volumes_15min_mvt_intersection_uid_datetime_bin_classificat_key UNIQUE (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 )
 WITH (
@@ -56,12 +56,12 @@ CREATE INDEX volumes_15min_mvt_leg_movement_uid_idx
   USING btree
   (leg COLLATE pg_catalog."default", movement_uid);
 
--- Index: miovision_api.volumes_15min_mvt_volume_15min_tmc_uid_idx
+-- Index: miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_idx
 
--- DROP INDEX miovision_api.volumes_15min_mvt_volume_15min_tmc_uid_idx;
+-- DROP INDEX miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_idx;
 
-CREATE INDEX volumes_15min_mvt_volume_15min_tmc_uid_idx
+CREATE INDEX volumes_15min_mvt_volume_15min_mvt_uid_idx
   ON miovision_api.volumes_15min_mvt
   USING btree
-  (volume_15min_tmc_uid);
+  (volume_15min_mvt_uid);
 
