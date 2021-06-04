@@ -1,7 +1,7 @@
-""" This script reads 3 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
-and 2020 School Safety Zone)
-and puts them into 3 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
-'school_safety_zone_2020_raw') using the Google Sheet API.
+""" This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
+2020 School Safety Zone, and 2021 School Safety Zone)
+and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
+'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
 
 Note
 ----
@@ -17,6 +17,13 @@ from psycopg2.extras import execute_values
 from psycopg2 import sql
 import logging 
 
+from airflow.models import Variable
+dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
+ssz2018 = dag_config['ssz2018']
+ssz2019 = dag_config['ssz2019']
+ssz2020 = dag_config['ssz2020']
+ssz2021 = dag_config['ssz2021']
+
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
@@ -30,18 +37,24 @@ The range for both sheets is set from the beginning up to line 180 to include ro
 Details of the spreadsheets are ID and range whereas details of the table are name of schema and table.
 The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
 """
-sheets = {2018: {'spreadsheet_id' : '16ZmWa6ZoIrJ9JW_aMveQsBM5vuGWq7zH0Vw_rvmSC7A', 
-                 'range_name' : 'Master List!A4:AC180',
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2018_raw'},
-          2019: {'spreadsheet_id' : '19JupdNNJSnHpO0YM5sHJWoEvKumyfhqaw-Glh61i2WQ', 
-                 'range_name' : '2019 Master List!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2019_raw'},
-          2020: {'spreadsheet_id' : '1pJipqKLSuAoYvxiUXHHhdSwTalrag5cbTGxBl1kDSsg', 
-                 'range_name' : 'Master Sheet!A3:AC180', 
-                 'schema_name': 'vz_safety_programs_staging',
-                 'table_name' : 'school_safety_zone_2020_raw'}}
+sheets = {
+           2018: {'spreadsheet_id' : ssz2018, 
+                  'range_name' : 'Master List!A4:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2018_raw'},
+           2019: {'spreadsheet_id' : ssz2019, 
+                  'range_name' : '2019 Master List!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2019_raw'},
+           2020: {'spreadsheet_id' : ssz2020, 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2020_raw'},
+           2021: {'spreadsheet_id' : ssz2021, 
+                  'range_name' : 'Master Sheet!A3:AC180', 
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2021_raw'}
+         }
 
 
 """The following provides information about the code when it is running and prints out the log messages 
@@ -136,4 +149,4 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2018)
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
-
+    pull_from_sheet(con, service, 2021)
