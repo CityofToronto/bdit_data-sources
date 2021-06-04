@@ -36,12 +36,7 @@ WITH (
 );
 ALTER TABLE here.ta
   OWNER TO here_admins;
-
-CREATE TABLE IF NOT EXISTS here.ta_staging (
-LIKE here.ta)
-;
-ALTER TABLE here.ta_staging
-OWNER TO here_admins;*/
+*/
 
 /*Loops through the years and then months for which we currently have data in order to create a partitioned table for each month*/
 
