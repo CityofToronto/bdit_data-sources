@@ -65,7 +65,7 @@ Options:
 
 ### Refresh old data
 
-Old data needs to be refreshed to a new map version everytime a new version becomes available. 
+Old data needs to be refreshed to a new map version when a new version becomes available. 
 
 Steps:
 1) Back up data with the old map version to S3 with [backup_here.py](backup_here.py) 
@@ -114,7 +114,7 @@ BEGIN
 END;
 $do$ LANGUAGE plpgsql
 ```
-3. Pull new data using 
+3. Pull new data using [reimport.py](reimport.py). Run with `nohup` and pipe the stdout to a log file. 
 
 
 ## Loading New Data (Old Method)
