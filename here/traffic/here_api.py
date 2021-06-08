@@ -165,19 +165,19 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        copy = r'''"\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER 
-                    TRUE);"'''
+        copy = r'''\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER 
+                    TRUE);'''
         if os.getenv('here_bot'):
             #there's a here_bot environment variable to connect to postgresql.
             #use the environment variable, which requires running subprocess
             #with env=os.environ.copy(), shell=True
             #Note that with shell=True, the command must be one long string.
-            cmd = '''psql $here_bot -v "ON_ERROR_STOP=1" -c {copy}'''.format(copy=copy)
+            cmd = '''psql $here_bot -v "ON_ERROR_STOP=1" -c "{copy}"'''.format(copy=copy)
             LOGGER.info(subprocess.check_output(cmd,
             stdin=unzip.stdout, env=os.environ.copy(), shell=True))
         else:
             LOGGER.warning('No here_bot environment variable detected, assuming .pgpass value exists')
-            LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','"ON_ERROR_STOP=1"',
+            LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','ON_ERROR_STOP=1',
                                         '-c',copy],
                                         stdin=unzip.stdout))
         subprocess.check_call(['rm', datafile])
