@@ -1,8 +1,8 @@
--- FUNCTION: mohan.reader_locations_dt_update(date)
+-- FUNCTION: bluetooth.reader_locations_dt_update(date)
 
--- DROP FUNCTION mohan.reader_locations_dt_update(date);
+-- DROP FUNCTION bluetooth.reader_locations_dt_update(date);
 
-CREATE OR REPLACE FUNCTION mohan.reader_locations_dt_update(
+CREATE OR REPLACE FUNCTION bluetooth.reader_locations_dt_update(
 	insert_value date)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -76,21 +76,21 @@ AS $BODY$
          SELECT DISTINCT c.detector_name,
             max(c.last_reported) AS max,
             c.route_status,
-            detectors_history_final.reader_id as id
+            bluetooth.detectors_history_final.reader_id as id
            FROM c
-             LEFT JOIN detectors_history_final ON c.detector_name = detectors_history_final.read_name::text
+             LEFT JOIN bluetooth.detectors_history_final ON c.detector_name = bluetooth.detectors_history_final.read_name::text
           WHERE c.route_status = 'True'::text
-          GROUP BY c.route_status, c.detector_name, detectors_history_final.reader_id
+          GROUP BY c.route_status, c.detector_name, bluetooth.detectors_history_final.reader_id
         ), final as (
  SELECT DISTINCT c.detector_name,
     max(c.last_reported) AS max,
     c.route_status,
-    detectors_history_final.reader_id
+    bluetooth.detectors_history_final.reader_id
    FROM c
-     LEFT JOIN detectors_history_final ON c.detector_name = detectors_history_final.read_name::text
+     LEFT JOIN bluetooth.detectors_history_final ON c.detector_name = bluetooth.detectors_history_final.read_name::text
   WHERE c.route_status = 'False'::text AND NOT (c.detector_name IN ( SELECT active.detector_name
            FROM active))
-  GROUP BY c.route_status, c.detector_name, detectors_history_final.reader_id
+  GROUP BY c.route_status, c.detector_name, bluetooth.detectors_history_final.reader_id
 UNION
  SELECT active.detector_name,
     active.max,
@@ -100,14 +100,14 @@ UNION
 , date_refresh as(   
 SELECT max(max) as date_last_received, reader_id
 from final
-where reader_id in (select reader_id from mohan.reader_locations)
+where reader_id in (select reader_id from bluetooth.reader_locations)
 group by reader_id
 order by reader_id)
 
-UPDATE mohan.reader_locations
-set date_last_received = (SELECT date_last_received from date_refresh where date_refresh.reader_id = mohan.reader_locations.reader_id)
+UPDATE bluetooth.reader_locations
+set date_last_received = (SELECT date_last_received from date_refresh where date_refresh.reader_id = bluetooth.reader_locations.reader_id)
 	;
 end; $BODY$;
 
-ALTER FUNCTION mohan.reader_locations_dt_update(date)
-    OWNER TO mohan;
+ALTER FUNCTION bluetooth.reader_locations_dt_update(date)
+    OWNER TO bluetooth;

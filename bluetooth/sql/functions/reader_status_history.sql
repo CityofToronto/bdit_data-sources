@@ -1,8 +1,8 @@
--- FUNCTION: mohan.reader_status_history(date)
+-- FUNCTION: bluetooth.reader_status_history(date)
 
--- DROP FUNCTION mohan.reader_status_history(date);
+-- DROP FUNCTION bluetooth.reader_status_history(date);
 
-CREATE OR REPLACE FUNCTION mohan.reader_status_history(
+CREATE OR REPLACE FUNCTION bluetooth.reader_status_history(
 	insert_value date)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -11,7 +11,8 @@ CREATE OR REPLACE FUNCTION mohan.reader_status_history(
     VOLATILE 
 AS $BODY$	
 	begin
-		with x AS 
+		--return query
+			with x AS 
 			(select DISTINCT(analysis_id), 
 			 CASE
 			 WHEN MAX (datetime_bin::date)>= (insert_value-1) then (insert_value-1)
@@ -78,23 +79,23 @@ AS $BODY$
          SELECT DISTINCT c.detector_name,
             max(c.last_reported) AS max,
             c.route_status,
-            detectors_history_final.reader_id as id,
+            bluetooth.detectors_history_final.reader_id as id,
 			c.dt
            FROM c
-             LEFT JOIN detectors_history_final ON c.detector_name = detectors_history_final.read_name::text
+             LEFT JOIN bluetooth.detectors_history_final ON c.detector_name = bluetooth.detectors_history_final.read_name::text
           WHERE c.route_status = 'True'::text
-          GROUP BY c.route_status, c.detector_name, detectors_history_final.reader_id, c.dt
+          GROUP BY c.route_status, c.detector_name, bluetooth.detectors_history_final.reader_id, c.dt
         ), final as (
  SELECT DISTINCT c.detector_name,
     max(c.last_reported) AS max,
     c.route_status,
-    detectors_history_final.reader_id,
+    bluetooth.detectors_history_final.reader_id,
 			c.dt
    FROM c
-     LEFT JOIN detectors_history_final ON c.detector_name = detectors_history_final.read_name::text
+     LEFT JOIN bluetooth.detectors_history_final ON c.detector_name = bluetooth.detectors_history_final.read_name::text
   WHERE c.route_status = 'False'::text AND NOT (c.detector_name IN ( SELECT active.detector_name
            FROM active))
-  GROUP BY c.route_status, c.detector_name, detectors_history_final.reader_id, c.dt
+  GROUP BY c.route_status, c.detector_name, bluetooth.detectors_history_final.reader_id, c.dt
 UNION
  SELECT active.detector_name,
     active.max,
@@ -103,7 +104,7 @@ UNION
 	active.dt
    FROM active)
    
-   INSERT INTO mohan.reader_status_history (reader_id, last_active_date, active, dt)
+   INSERT INTO bluetooth.reader_status_history (reader_id, last_active_date, active, dt)
    SELECT DISTINCT reader_id, max(max),route_status::bool, dt
    from final
    where reader_id IS NOT NULL
@@ -113,5 +114,5 @@ UNION
 	;
 end; $BODY$;
 
-ALTER FUNCTION mohan.reader_status_history(date)
-    OWNER TO mohan;
+ALTER FUNCTION bluetooth.reader_status_history(date)
+    OWNER TO bluetooth;
