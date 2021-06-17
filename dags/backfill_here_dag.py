@@ -1,4 +1,7 @@
 """
+WORK IN PROGRESS DO NOT USE
+
+"""
 Pipeline to backfill here data and put them into the here.ta table using Bash Operator.
 Slack notifications is raised when the airflow process fails.
 """
@@ -15,7 +18,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = '<@UF4RQFQ11> !!! {task_id} in backfilling here DAG failed.'.format(task_id=context.get('task_instance').task_id)   
+    task_msg = '<@UF4RQFQ11>.... :meow_verysad: {task_id} in backfilling here DAG very sadly failed.'.format(task_id=context.get('task_instance').task_id)   
     slack_msg = task_msg + """(<{log_url}|log>)""".format(
             log_url=context.get('task_instance').log_url,)
     failed_alert = SlackWebhookOperator(
@@ -31,9 +34,9 @@ here_postgres = PostgresHook("here_bot")
 rds_con = here_postgres.get_uri()
 s3_conn_id = 'conn_S3'
 
-default_args = {'owner':'rdumas',
+default_args = {'owner':'natalie',
                 'depends_on_past':True,
-                'start_date': datetime(2016, 12, 1),
+                'start_date': datetime(2017, 12, 1),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                 'email_on_success': False,
