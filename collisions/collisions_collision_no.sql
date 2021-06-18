@@ -18,13 +18,11 @@ WITH DATA;
 
 
 ALTER TABLE collisions.collision_no
-    OWNER TO czhu;
+    OWNER TO collision_admins;
 
 COMMENT ON MATERIALIZED VIEW collisions.collision_no
     IS 'Collision number to link involved and events matviews.';
 
-
-GRANT ALL ON TABLE collisions.collision_no TO czhu;
 GRANT SELECT ON TABLE collisions.collision_no TO bdit_humans;
 GRANT SELECT ON TABLE collisions.collision_no TO rsaunders;
 GRANT SELECT ON TABLE collisions.collision_no TO kchan;
