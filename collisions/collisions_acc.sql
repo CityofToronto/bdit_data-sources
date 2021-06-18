@@ -117,7 +117,7 @@ GRANT SELECT ON TABLE collisions.acc TO bdit_humans;
 GRANT SELECT ON TABLE collisions.acc TO rsaunders;
 GRANT SELECT ON TABLE collisions.acc TO kchan;
 
-COMMENT ON TABLE czhu.involvedraw2019
+COMMENT ON TABLE collisions.acc
     IS 'Raw collision database, from Flashcrow /data/replicator/flashcrow-CRASH/dat/ACC.dat.'
 
 CREATE INDEX collisions_acc_idx
