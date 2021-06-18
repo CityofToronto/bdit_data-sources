@@ -5,7 +5,7 @@
 CREATE MATERIALIZED VIEW collisions.involved
 TABLESPACE pg_default
 AS
-	WITH involved_desc AS (
+    WITH involved_desc AS (
         SELECT a."ACCNB"::bigint AS accnb,
                date_part('year', a."ACCDATE"::date) AS accyear,
                CASE
@@ -13,8 +13,8 @@ AS
                    ELSE NULL::integer
                END vehicle_no,
                CASE
-               	   WHEN btrim(a."PER_NO"::text) ~ '^[0-9]+$'::text THEN btrim(a."PER_NO"::text)::integer
-               	   ELSE NULL::integer
+                      WHEN btrim(a."PER_NO"::text) ~ '^[0-9]+$'::text THEN btrim(a."PER_NO"::text)::integer
+                      ELSE NULL::integer
                END person_no,
                upper(btrim(i.description)) AS vehicle_class,
                upper(btrim(j.description)) AS initial_dir,
@@ -75,39 +75,39 @@ AS
         LEFT JOIN collision_factors.cyclistype y ON a."CYCLISTYPE"::text = y.cyclistype
         LEFT JOIN collision_factors.manoeuver z ON a."MANOEUVER"::text = z.manoeuver
     )
-	SELECT b.collision_no,
-	       a.vehicle_no,
-	       a.person_no,
-	       a.vehicle_class,
-	       a.initial_dir,
-	       a.impact_type,
-	       a.event1,
-	       a.event2,
-	       a.event3,
-	       a.involved_class,
-	       CASE
-	           WHEN a.involved_age > 0 THEN a.involved_age
-	           WHEN a.involved_age = 0 AND a.birthdate IS NOT NULL THEN a.involved_age
-	           ELSE NULL::integer
-	       END AS involved_age,
-	       a.involved_injury_class,
-	       a.safety_equip_used,
-	       a.driver_action,
-	       a.driver_condition,
-	       a.pedestrian_action,
-	       a.pedestrian_condition,
-	       a.pedestrian_collision_type,
-	       a.cyclist_action,
-	       a.cyclist_condition,
-	       a.cyclist_collision_type,
-	       a.manoeuver,
-	       a.posted_speed,
-	       a.actual_speed,
-	       a.failed_to_remain,
+    SELECT b.collision_no,
+           a.vehicle_no,
+           a.person_no,
+           a.vehicle_class,
+           a.initial_dir,
+           a.impact_type,
+           a.event1,
+           a.event2,
+           a.event3,
+           a.involved_class,
+           CASE
+               WHEN a.involved_age > 0 THEN a.involved_age
+               WHEN a.involved_age = 0 AND a.birthdate IS NOT NULL THEN a.involved_age
+               ELSE NULL::integer
+           END AS involved_age,
+           a.involved_injury_class,
+           a.safety_equip_used,
+           a.driver_action,
+           a.driver_condition,
+           a.pedestrian_action,
+           a.pedestrian_condition,
+           a.pedestrian_collision_type,
+           a.cyclist_action,
+           a.cyclist_condition,
+           a.cyclist_collision_type,
+           a.manoeuver,
+           a.posted_speed,
+           a.actual_speed,
+           a.failed_to_remain,
            a.is_validated
-	FROM involved_desc a
-	JOIN collisions.collision_no b USING (accnb, accyear)
-	ORDER BY b.collision_no
+    FROM involved_desc a
+    JOIN collisions.collision_no b USING (accnb, accyear)
+    ORDER BY b.collision_no
 WITH DATA;
 
 ALTER TABLE collisions.involved
