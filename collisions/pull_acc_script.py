@@ -102,11 +102,10 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
             cur.execute("TRUNCATE collisions.acc;")
 
     # Upload new data.
-    logger.info('Uploading ACC.dat using '
-                + upload_command.format(**upload_kwargs))
+    logger.info('Uploading ACC.dat to Postgres.')
     upload_command = [
-        'psql', '-U', upload_kwargs['user'], '-h', upload_kwargs['host'],
-        '-d', upload_kwargs['dbname'], '-c',
+        'psql', '-U', postgres_settings['user'], '-h',
+        postgres_settings['host'], '-d', postgres_settings['dbname'], '-c',
         ('\\COPY czhu.acctest FROM \'{0}\' WITH (DELIMITER E\'\\t\', NULL '
          '\'\\N\', FORMAT CSV, HEADER FALSE);').format(accpath)
     ]
