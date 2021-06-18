@@ -110,9 +110,8 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE collisions.acc
-    OWNER to czhu;
+    OWNER to collision_admins;
 
-GRANT ALL ON TABLE collisions.acc TO czhu;
 GRANT SELECT ON TABLE collisions.acc TO bdit_humans;
 GRANT SELECT ON TABLE collisions.acc TO rsaunders;
 GRANT SELECT ON TABLE collisions.acc TO kchan;
@@ -122,4 +121,5 @@ COMMENT ON TABLE collisions.acc
 
 CREATE INDEX collisions_acc_idx
     ON collisions.acc USING btree
-    ("ACCNB", "ACCDATE");
+    ("ACCNB", "ACCDATE")
+    TABLESPACE pg_default;

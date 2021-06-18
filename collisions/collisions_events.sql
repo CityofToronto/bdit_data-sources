@@ -30,20 +30,32 @@ AS
                upper(btrim(b.description)) location_type,
                upper(btrim(c.description)) location_class,
                upper(btrim(d.description)) collision_type,
+               upper(btrim(k.description)) impact_type,
                upper(btrim(e.description)) visibility,
                upper(btrim(f.description)) light,
                upper(btrim(g.description)) road_surface_cond,
+               CASE
+                   WHEN btrim(a."PX") ~ '^[0-9]+$' THEN btrim(a."PX")::integer
+                   ELSE NULL::integer
+               END AS px,
                upper(btrim(h.description)) traffic_control,
                upper(btrim(i.description)) traffic_control_cond,
                CASE
                 WHEN a."PRIVATE_PROPERTY" = 'Y' THEN True
                 WHEN a."PRIVATE_PROPERTY" = 'N' THEN False
                 ELSE NULL
-               END on_private_property
+               END on_private_property,
+               -- Based on https://github.com/CityofToronto/bdit_data-sources/pull/349#issuecomment-803133700
+               CASE
+                   WHEN a."ACCNB"::bigint >= 1000000000 THEN 'TPS'
+                   WHEN a."ACCNB"::bigint >= 100000000 THEN 'CRC'
+                   ELSE NULL
+               END data_source
         FROM valid_rows a
         LEFT JOIN collision_factors.accloc b ON a."ACCLOC"::text = b.accloc
         LEFT JOIN collision_factors.loccoord c ON a."LOCCOORD"::text = c.loccoord
         LEFT JOIN collision_factors.acclass d ON a."ACCLASS"::text = d.acclass
+        LEFT JOIN collision_factors.impactype k ON a."IMPACTYPE"::text = k.impactype
         LEFT JOIN collision_factors.visible e ON a."VISIBLE"::text = e.visible
         LEFT JOIN collision_factors.light f ON a."LIGHT"::text = f.light
         LEFT JOIN collision_factors.rdsfcond g ON a."RDSFCOND"::text = g.rdsfcond
@@ -65,6 +77,7 @@ AS
            a.acctime,
            a.longitude,
            a.latitude,
+           ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326) geom,
            a.stname1,
            a.streetype1,
            a.dir1,
@@ -78,13 +91,16 @@ AS
            a.location_type,
            a.location_class,
            a.collision_type,
+           a.impact_type,
            a.visibility,
            a.light,
            a.road_surface_cond,
+           a.px,
            a.traffic_control,
            a.traffic_control_cond,
            a.on_private_property,
-           c.description
+           c.description,
+           a.data_source
     FROM events_dat a
     JOIN collisions.collision_no b USING (accnb, accyear)
     LEFT JOIN events_desc c USING (accnb, accyear)
@@ -92,12 +108,11 @@ AS
 WITH DATA;
 
 ALTER TABLE collisions.events
-    OWNER TO czhu;
+    OWNER TO collision_admins;
 
 COMMENT ON MATERIALIZED VIEW collisions.events
     IS 'Event-level variables in collisions.acc.';
 
-GRANT ALL ON TABLE collisions.events TO czhu;
 GRANT SELECT ON TABLE collisions.events TO bdit_humans;
 GRANT SELECT ON TABLE collisions.events TO rsaunders;
 GRANT SELECT ON TABLE collisions.events TO kchan;
@@ -106,4 +121,9 @@ GRANT SELECT ON TABLE collisions.events TO ksun;
 CREATE INDEX collision_events_idx
     ON collisions.events USING btree
     (collision_no)
+    TABLESPACE pg_default;
+
+CREATE INDEX collision_events_gidx
+    ON collisions.events USING gist
+    (geom)
     TABLESPACE pg_default;
