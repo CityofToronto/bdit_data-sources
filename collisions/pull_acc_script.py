@@ -75,14 +75,28 @@ def download_acc(flashcrow_settings, templocation, accpath, logger):
         ('ec2-user@flashcrow-etl.intra.dev-toronto.ca:'
          '/data/replicator/flashcrow-CRASH/dat/ACC.dat'), templocation]
     # check_returncode raises an exception if the command failed.
-    subprocess.run(rsync_command, stderr=subprocess.PIPE).check_returncode()
+    outcome = subprocess.run(rsync_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('rsync encountered the following error while downloading'
+                    'from the MOVE server:')
+        logger.info(outcome.stderr)
+        raise
 
     # To also delete columns, use """sed -i -r 's/\S+//{COLUMN NUMBER}' {FILE}"""
     # https://stackoverflow.com/questions/15361632/delete-a-column-with-awk-or-sed
     logger.info('Removing double-quotes from ACC.dat for '
                 'compatibility with PSQL.')
     sed_command = ['sed', '-i', 's/"//g', accpath]
-    subprocess.run(sed_command, stderr=subprocess.PIPE).check_returncode()
+    outcome = subprocess.run(sed_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('sed encountered the following error '
+                    'while trimming ACC.dat:')
+        logger.info(outcome.stderr)
+        raise
 
     # Get number of lines in ACC.dat, which is used later for self-consistency
     # checks.
@@ -106,11 +120,18 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
     upload_command = [
         'psql', '-U', postgres_settings['user'], '-h',
         postgres_settings['host'], '-d', postgres_settings['dbname'], '-c',
-        ('\\COPY czhu.acctest FROM \'{0}\' WITH (DELIMITER E\'\\t\', NULL '
+        ('\\COPY collisions.acc FROM \'{0}\' WITH (DELIMITER E\'\\t\', NULL '
          '\'\\N\', FORMAT CSV, HEADER FALSE);').format(accpath)
     ]
     # check_returncode raises an exception if the command failed.
-    subprocess.run(upload_command, stderr=subprocess.PIPE).check_returncode()
+    outcome = subprocess.run(upload_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('psql encountered the following error '
+                    'while uploading to Postgres:')
+        logger.info(outcome.stderr)
+        raise
 
     with psycopg2.connect(**postgres_settings) as conn:
         with conn.cursor() as cur:
@@ -123,8 +144,14 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
 
     if deletefile:
         logger.info('Deleting ACC.dat')
-        (subprocess.run(['rm', accpath], stderr=subprocess.PIPE)
-         .check_returncode())
+        outcome = subprocess.run(['rm', accpath], stderr=subprocess.PIPE)
+        try:
+            outcome.check_returncode()
+        except subprocess.CalledProcessError:
+            logger.info('rm encountered the following error '
+                        'while deleting ACC.dat:')
+            logger.info(outcome.stderr)
+            raise
 
 
 def process_acc(postgres_settings, logger):
