@@ -11,14 +11,23 @@ the process of being completely transitioned into the [MOVE platform](https://gi
 
 ## Table Structure
 
-The raw dataset is stored under `collisions.acc`, a direct mirror of the same
-table on the MOVE server (which itself mirrors from Oracle). The data dictionary
-for this table is maintained jointly with MOVE and found on [Notion
-here](https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
-The guidebook that defines the values and categories for many colums is found
-[here](http://insideto.toronto.ca/transportation/files/carsmap/user-manual.pdf).
+The `collisions` schema houses raw and derived collision data tables. The
+`collision_factors` schema houses tables to convert raw Motor Vehicle Accident
+(MVA) report codes to human-readable categories (discussed further below). Both
+are owned by `collision_admins`.
 
-### Properties of `collisions.acc`
+### `acc`
+
+The raw dataset is `collisions.acc`, a direct mirror of the same table on the
+MOVE server (which itself mirrors from Oracle). The data dictionary for `ACC`
+is maintained jointly with MOVE and found on [Notion here](
+https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
+The guides that define values and categories for most columns can be found in
+the [Manuals page on Notion](https://www.notion.so/bditto/ca4e026b4f20474cbb32ccfeecf9dd76?v=a9428dc0fb3447e5b9c1427f8868e7c8).
+In particular see the Colliion Coding Manual, Motor Vehicle Collision Report
+2015, and Motor Vehicle Accident Codes Ver. 1.
+
+Properties of `collisions.acc`:
 - Each row represents one individual involved in a collision, so some data is
   repeated between rows. The data dictionary indicates which values are at the
   event-level, and which at the individual level.
@@ -29,12 +38,16 @@ The guidebook that defines the values and categories for many colums is found
   example `LOCCOORD` is a simplified version of `ACCLOC`.
 - Categorical data is coded using numbers. These numbers come from the Motor
   Vehicle Accident (MVA) reporting scheme.
-- Some columns are not included due to privacy concerns.
+- Some columns, such as the TPS officer badge number, are not included due to
+  privacy concerns. The most egregious of these are only available in the
+  original Oracle database, and have already been removed in the MOVE server
+  data.
 
 ### Collision Factors
 
 Categorical data codes are in the `collision_factors` schema as tables. Each
-table name corresponds to the categorical column in `collisions.acc`.
+table name corresponds to the categorical column in `collisions.acc`. These are
+joined against `collisions.acc` to produce the derived tables.
 
 ### Derived Tables
 
@@ -132,3 +145,7 @@ future `collisions.acc` will be directly mirrored from the MOVE server.
 
 Scripts that define the tables and materialized views can be found in this
 folder.
+
+**It is highly recommended to run this process outside of regular work hours, as
+large file transfers from Flashcrow and to the Postgres can sometimes be
+interrupted by the VPN.**
