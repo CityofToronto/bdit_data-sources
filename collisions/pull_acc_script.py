@@ -71,7 +71,8 @@ def download_acc(flashcrow_settings, templocation, accpath, logger):
 
     logger.info('Downloading ACC.dat from Flashcrow server.')
     rsync_command = [
-        'rsync', '-Pav', '-e', 'ssh -i {:s}'.format(flashcrow_settings['pem']),
+        '/usr/bin/rsync', '-Pav', '-e',
+        'ssh -i {:s}'.format(flashcrow_settings['pem']),
         ('ec2-user@flashcrow-etl.intra.dev-toronto.ca:'
          '/data/replicator/flashcrow-CRASH/dat/ACC.dat'), templocation]
     # check_returncode raises an exception if the command failed.
@@ -88,7 +89,7 @@ def download_acc(flashcrow_settings, templocation, accpath, logger):
     # https://stackoverflow.com/questions/15361632/delete-a-column-with-awk-or-sed
     logger.info('Removing double-quotes from ACC.dat for '
                 'compatibility with PSQL.')
-    sed_command = ['sed', '-i', 's/"//g', accpath]
+    sed_command = ['/bin/sed', '-i', 's/"//g', accpath]
     outcome = subprocess.run(sed_command, stderr=subprocess.PIPE)
     try:
         outcome.check_returncode()
@@ -118,7 +119,7 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
     # Upload new data.
     logger.info('Uploading ACC.dat to Postgres.')
     upload_command = [
-        'psql', '-U', postgres_settings['user'], '-h',
+        '/usr/bin/psql', '-U', postgres_settings['user'], '-h',
         postgres_settings['host'], '-d', postgres_settings['dbname'], '-c',
         ('\\COPY collisions.acc FROM \'{0}\' WITH (DELIMITER E\'\\t\', NULL '
          '\'\\N\', FORMAT CSV, HEADER FALSE);').format(accpath)
@@ -144,7 +145,7 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
 
     if deletefile:
         logger.info('Deleting ACC.dat')
-        outcome = subprocess.run(['rm', accpath], stderr=subprocess.PIPE)
+        outcome = subprocess.run(['/bin/rm', accpath], stderr=subprocess.PIPE)
         try:
             outcome.check_returncode()
         except subprocess.CalledProcessError:
