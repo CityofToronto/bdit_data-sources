@@ -102,6 +102,7 @@ WITH wkdy_lookup(period, isodow) AS (
 	FROM acceptable
 	WHERE accept = false
 	ORDER BY DATE_TRUNC('hour', acceptable.gap_start), intersection_uid
+	ON CONFLICT DO NOTHING
 	RETURNING *
 )
 -- FOR NOTICE PURPOSES ONLY
