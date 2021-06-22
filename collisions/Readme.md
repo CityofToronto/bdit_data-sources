@@ -4,8 +4,8 @@ The collisions dataset consists of data on individuals involved in traffic
 collisions from approximately 1985 to the present day (though there are some
 historical collisions from even earlier included). The data comes from the
 Toronto Police Services (TPS) and the Collision Reporting Centre (CRC), and
-is combined by a Data & Analytics team in Transportation Services Policy &
-Innovation, currently led by Racheal Saunders. It is currently hosted in an
+is combined by a Data Collections team in Transportation Services Policy &
+Innovation, currently led by David McElroy. It is currently hosted in an
 Oracle database and maintained using legacy software from the 1990s, but is in
 the process of being completely transitioned into the [MOVE platform](https://github.com/CityofToronto/bdit_flashcrow).
 
@@ -34,6 +34,23 @@ Properties of `collisions.acc`:
 - There is no UID. `ACCNB` serves as one starting in 2013, but prior to that the
   number would reset annually. Derived tables use `collision_no`, defined in
   `collisions.collision_no`.
+  - `ACCNB` [is
+    generated from TPS and CRC counterparts](https://github.com/CityofToronto/bdit_data-sources/pull/349#issuecomment-803133700)
+    when data is loaded into the Oracle database. It can only be 10 characters
+    long (by antiquated convention). TPS GO numbers, with format
+    `GO-{YEAR_REPORTED}{NUMBER}`, are converted into `ACCNB` by extracting
+    `{NUMBER}`, zero-padding it to 9 digits, and adding the last digit of the
+    year to the front (eg. `GO-2020267847` is translated to `0000267847`). CRC
+    collision numbers are recycled annually, with convention dictating that the
+    first CRC number be `8000000` (then the next `8000001`, etc.). To convert
+    these to `ACCNB`s, the last two digits of the year are added to the front
+    (eg. `8000285` reported in 2019 is converted to `198000285`).
+  - To keep the dataset current, particularly for fatal collisions, Data
+    Collections will occasionally manually enter collisions using information
+    directly obtained from TPS, or from public media. These entries may not
+    follow ACCNB naming conventions. When formal data is transferred from TPS,
+    they are manually merged with these human-generated entries.
+  - The date the collision was reported is not included in `acc`.
 - Some rows are derived from other rows by the Data & Analytics team; for
   example `LOCCOORD` is a simplified version of `ACCLOC`.
 - Categorical data is coded using numbers. These numbers come from the Motor
