@@ -19,7 +19,8 @@ CROSS JOIN classes
 WHERE datetime_bin::time >= '06:00' AND datetime_bin::time < '20:00' AND EXTRACT(isodow FROM datetime_bin) <= 5
 AND datetime_bin BETWEEN start_date AND end_date
 GROUP BY intersection_uid, classes.y, datetime_bin::date, CASE WHEN datetime_bin <= '2017-11-11' THEN 'Baseline' ELSE to_char(date_trunc('month',datetime_bin),'Mon YYYY') END
-HAVING COUNT(DISTINCT datetime_bin::time) >= 40;
+HAVING COUNT(DISTINCT datetime_bin::time) >= 40
+ON CONFLICT DO NOTHING;
 						
 
 
