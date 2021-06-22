@@ -47,6 +47,9 @@ AS
                END on_private_property,
                -- Based on https://github.com/CityofToronto/bdit_data-sources/pull/349#issuecomment-803133700
                CASE
+                   -- In the case of 2020 TPS collisions, the leading digit of
+                   -- ACCNB is 0, which must be treated uniquely.
+                   WHEN LEFT(a."ACCNB", 1) = '0' AND LENGTH(a."ACCNB") = 10 AND a."ACCDATE" BETWEEN '2020-01-01' AND '2020-12-31' THEN 'TPS'
                    WHEN a."ACCNB"::bigint >= 1000000000 THEN 'TPS'
                    WHEN a."ACCNB"::bigint >= 100000000 THEN 'CRC'
                    ELSE NULL
