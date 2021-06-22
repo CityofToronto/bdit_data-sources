@@ -1,0 +1,1263 @@
+<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis version="3.10.4-A Coruña" projectname="">
+  <homePath path=""/>
+  <title></title>
+  <autotransaction active="0"/>
+  <evaluateDefaultValues active="0"/>
+  <trust active="0"/>
+  <projectCrs>
+    <spatialrefsys>
+      <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+      <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+      <srsid>3452</srsid>
+      <srid>4326</srid>
+      <authid>EPSG:4326</authid>
+      <description>WGS 84</description>
+      <projectionacronym>longlat</projectionacronym>
+      <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+      <geographicflag>true</geographicflag>
+    </spatialrefsys>
+  </projectCrs>
+  <layer-tree-group>
+    <customproperties/>
+    <layer-tree-layer checked="Qt::Checked" name="detectors_status" id="detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a" expanded="1" source="dbname='bigdata' host=10.160.12.47 port=5432 authcfg=155g48f key='_uid_' checkPrimaryKeyUnicity='1' table=&quot;(SELECT row_number() over () AS _uid_,* FROM (SELECT DISTINCT ON (reader_id) reader_locations.*, street1, street2,&#xd; CASE WHEN status = 'online' AND (date_last_received is null or date_last_received &lt; '2021-06-19' )THEN 'Inactive' &#xd; &#x9;&#x9;&#x9;ELSE status end as status&#xd; &#x9;FROM mohan.reader_locations&#xd; &#x9;INNER JOIN mohan.detectors_history_final USING (reader_id)&#xd; &#x9;WHERE reader_locations.geom IS NOT NULL &#xd; &#x9;ORDER BY reader_id, date_end DESC NULLS FIRST&#xa;) AS _subq_1_&#xa;)&quot; (geom) sql=" providerKey="postgres">
+      <customproperties/>
+    </layer-tree-layer>
+    <layer-tree-layer checked="Qt::Checked" name="routes" id="routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96" expanded="1" source="dbname='bigdata' host=10.160.12.47 port=5432 authcfg=155g48f key='_uid_' checkPrimaryKeyUnicity='1' table=&quot;(SELECT row_number() over () AS _uid_,* FROM (SELECT analysis_id, name, start_street_name, start_cross_street, start_reader_id, end_street_name, end_cross_street, end_reader_id, date_active, date_inactive, geom&#xd; , date_last_received,&#xd; CASE WHEN date_last_received is null or date_last_received &lt; '2021-06-20' THEN 'Inactive' ELSE 'Active' end as status&#xd; &#x9;FROM mohan.routes&#xa;) AS _subq_1_&#xa;)&quot; (geom) sql=" providerKey="postgres">
+      <customproperties/>
+    </layer-tree-layer>
+    <custom-order enabled="0">
+      <item>routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96</item>
+      <item>detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a</item>
+    </custom-order>
+  </layer-tree-group>
+  <snapping-settings type="1" unit="1" tolerance="12" intersection-snapping="0" mode="2" enabled="0">
+    <individual-layer-settings>
+      <layer-setting type="1" tolerance="12" units="1" id="routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96" enabled="0"/>
+      <layer-setting type="1" tolerance="12" units="1" id="detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a" enabled="0"/>
+    </individual-layer-settings>
+  </snapping-settings>
+  <relations/>
+  <mapcanvas name="theMapCanvas" annotationsVisible="1">
+    <units>degrees</units>
+    <extent>
+      <xmin>-79.45947465135630239</xmin>
+      <ymin>43.61758277604890566</ymin>
+      <xmax>-79.27017961811505131</xmax>
+      <ymax>43.7185256450947719</ymax>
+    </extent>
+    <rotation>12</rotation>
+    <destinationsrs>
+      <spatialrefsys>
+        <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+        <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+        <srsid>3452</srsid>
+        <srid>4326</srid>
+        <authid>EPSG:4326</authid>
+        <description>WGS 84</description>
+        <projectionacronym>longlat</projectionacronym>
+        <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+        <geographicflag>true</geographicflag>
+      </spatialrefsys>
+    </destinationsrs>
+    <rendermaptile>0</rendermaptile>
+    <expressionContextScope/>
+  </mapcanvas>
+  <projectModels/>
+  <legend updateDrawingOrder="true">
+    <legendlayer checked="Qt::Checked" name="detectors_status" open="true" drawingOrder="-1" showFeatureCount="0">
+      <filegroup hidden="false" open="true">
+        <legendlayerfile isInOverview="0" layerid="detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a" visible="1"/>
+      </filegroup>
+    </legendlayer>
+    <legendlayer checked="Qt::Checked" name="routes" open="true" drawingOrder="-1" showFeatureCount="0">
+      <filegroup hidden="false" open="true">
+        <legendlayerfile isInOverview="0" layerid="routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96" visible="1"/>
+      </filegroup>
+    </legendlayer>
+  </legend>
+  <mapViewDocks/>
+  <mapViewDocks3D/>
+  <mapcanvas name="" annotationsVisible="1">
+    <units>unknown</units>
+    <extent>
+      <xmin>0</xmin>
+      <ymin>0</ymin>
+      <xmax>0</xmax>
+      <ymax>0</ymax>
+    </extent>
+    <rotation>0</rotation>
+    <rendermaptile>0</rendermaptile>
+    <expressionContextScope/>
+  </mapcanvas>
+  <projectlayers>
+    <maplayer hasScaleBasedVisibilityFlag="0" type="vector" simplifyLocal="1" minScale="1e+08" simplifyDrawingHints="0" simplifyMaxScale="1" geometry="Point" simplifyDrawingTol="1" refreshOnNotifyMessage="" readOnly="0" refreshOnNotifyEnabled="0" autoRefreshTime="0" styleCategories="AllStyleCategories" autoRefreshEnabled="0" simplifyAlgorithm="0" labelsEnabled="0" maxScale="0" wkbType="Point">
+      <extent>
+        <xmin>-79.53158888999999476</xmin>
+        <ymin>43.61650277999999759</ymin>
+        <xmax>-79.17078600000000677</xmax>
+        <ymax>43.80882600000000338</ymax>
+      </extent>
+      <id>detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a</id>
+      <datasource>dbname='bigdata' host=10.160.12.47 port=5432 authcfg=155g48f key='_uid_' checkPrimaryKeyUnicity='1' table="(SELECT row_number() over () AS _uid_,* FROM (SELECT DISTINCT ON (reader_id) reader_locations.*, street1, street2,&#xd; CASE WHEN status = 'online' AND (date_last_received is null or date_last_received &lt; '2021-06-19' )THEN 'Inactive' &#xd; 			ELSE status end as status&#xd; 	FROM mohan.reader_locations&#xd; 	INNER JOIN mohan.detectors_history_final USING (reader_id)&#xd; 	WHERE reader_locations.geom IS NOT NULL &#xd; 	ORDER BY reader_id, date_end DESC NULLS FIRST
+) AS _subq_1_
+)" (geom) sql=</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>detectors_status</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+          <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+          <srsid>3452</srsid>
+          <srid>4326</srid>
+          <authid>EPSG:4326</authid>
+          <description>WGS 84</description>
+          <projectionacronym>longlat</projectionacronym>
+          <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+          <geographicflag>true</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+            <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+            <srsid>3452</srsid>
+            <srid>4326</srid>
+            <authid>EPSG:4326</authid>
+            <description>WGS 84</description>
+            <projectionacronym>longlat</projectionacronym>
+            <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+            <geographicflag>true</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <legend type="default-vector"/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <renderer-v2 symbollevels="0" type="categorizedSymbol" enableorderby="0" attr="status" forceraster="0">
+        <categories>
+          <category render="true" value="added" symbol="0" label="added"/>
+          <category render="true" value="decommissioned" symbol="1" label="decommissioned"/>
+          <category render="true" value="duplicate" symbol="2" label="duplicate"/>
+          <category render="true" value="Inactive" symbol="3" label="Inactive"/>
+          <category render="true" value="moved" symbol="4" label="moved"/>
+          <category render="true" value="offline" symbol="5" label="offline"/>
+          <category render="true" value="online" symbol="6" label="online"/>
+          <category render="true" value="routepoint name" symbol="7" label="routepoint name"/>
+          <category render="true" value="" symbol="8" label=""/>
+        </categories>
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="102,194,165,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="1" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="255,217,47,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="2" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="141,160,203,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="3" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="252,141,98,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="4" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="231,138,195,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="5" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="252,141,98,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="6" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="166,216,84,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="7" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="229,196,148,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="8" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="229,196,148,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+        <source-symbol>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer class="SimpleMarker" locked="0" pass="0" enabled="1">
+              <prop v="0" k="angle"/>
+              <prop v="183,72,75,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0.8" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="4" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </source-symbol>
+        <colorramp type="colorbrewer" name="[source]">
+          <prop v="7" k="colors"/>
+          <prop v="0" k="inverted"/>
+          <prop v="colorbrewer" k="rampType"/>
+          <prop v="Set2" k="schemeName"/>
+        </colorramp>
+        <rotation/>
+        <sizescale/>
+      </renderer-v2>
+      <customproperties>
+        <property value="0" key="embeddedWidgets/count"/>
+        <property key="variableNames"/>
+        <property key="variableValues"/>
+      </customproperties>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <SingleCategoryDiagramRenderer diagramType="Histogram" attributeLegend="1">
+        <DiagramCategory scaleBasedVisibility="0" penColor="#000000" diagramOrientation="Up" barWidth="5" enabled="0" backgroundColor="#ffffff" lineSizeScale="3x:0,0,0,0,0,0" opacity="1" penWidth="0" backgroundAlpha="255" sizeType="MM" sizeScale="3x:0,0,0,0,0,0" height="15" minimumSize="0" scaleDependency="Area" maxScaleDenominator="1e+08" minScaleDenominator="0" rotationOffset="270" labelPlacementMethod="XHeight" penAlpha="255" width="15" lineSizeType="MM">
+          <fontProperties style="" description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0"/>
+          <attribute field="" color="#000000" label=""/>
+        </DiagramCategory>
+      </SingleCategoryDiagramRenderer>
+      <DiagramLayerSettings priority="0" obstacle="0" linePlacementFlags="18" showAll="1" dist="0" zIndex="0" placement="0">
+        <properties>
+          <Option type="Map">
+            <Option type="QString" value="" name="name"/>
+            <Option name="properties"/>
+            <Option type="QString" value="collection" name="type"/>
+          </Option>
+        </properties>
+      </DiagramLayerSettings>
+      <geometryOptions removeDuplicateNodes="0" geometryPrecision="0">
+        <activeChecks/>
+        <checkConfiguration/>
+      </geometryOptions>
+      <fieldConfiguration>
+        <field name="_uid_">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="reader_id">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="name">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="int_id">
+          <editWidget type="Range">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_active">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_inactive">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_last_received">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="project_name">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="street1">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="street2">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="status">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" field="_uid_" name=""/>
+        <alias index="1" field="reader_id" name=""/>
+        <alias index="2" field="name" name=""/>
+        <alias index="3" field="int_id" name=""/>
+        <alias index="4" field="date_active" name=""/>
+        <alias index="5" field="date_inactive" name=""/>
+        <alias index="6" field="date_last_received" name=""/>
+        <alias index="7" field="project_name" name=""/>
+        <alias index="8" field="street1" name=""/>
+        <alias index="9" field="street2" name=""/>
+        <alias index="10" field="status" name=""/>
+      </aliases>
+      <excludeAttributesWMS/>
+      <excludeAttributesWFS/>
+      <defaults>
+        <default field="_uid_" applyOnUpdate="0" expression=""/>
+        <default field="reader_id" applyOnUpdate="0" expression=""/>
+        <default field="name" applyOnUpdate="0" expression=""/>
+        <default field="int_id" applyOnUpdate="0" expression=""/>
+        <default field="date_active" applyOnUpdate="0" expression=""/>
+        <default field="date_inactive" applyOnUpdate="0" expression=""/>
+        <default field="date_last_received" applyOnUpdate="0" expression=""/>
+        <default field="project_name" applyOnUpdate="0" expression=""/>
+        <default field="street1" applyOnUpdate="0" expression=""/>
+        <default field="street2" applyOnUpdate="0" expression=""/>
+        <default field="status" applyOnUpdate="0" expression=""/>
+      </defaults>
+      <constraints>
+        <constraint exp_strength="0" field="_uid_" constraints="3" notnull_strength="1" unique_strength="1"/>
+        <constraint exp_strength="0" field="reader_id" constraints="3" notnull_strength="1" unique_strength="1"/>
+        <constraint exp_strength="0" field="name" constraints="3" notnull_strength="1" unique_strength="1"/>
+        <constraint exp_strength="0" field="int_id" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_active" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_inactive" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_last_received" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="project_name" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="street1" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="street2" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="status" constraints="3" notnull_strength="1" unique_strength="1"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint field="_uid_" desc="" exp=""/>
+        <constraint field="reader_id" desc="" exp=""/>
+        <constraint field="name" desc="" exp=""/>
+        <constraint field="int_id" desc="" exp=""/>
+        <constraint field="date_active" desc="" exp=""/>
+        <constraint field="date_inactive" desc="" exp=""/>
+        <constraint field="date_last_received" desc="" exp=""/>
+        <constraint field="project_name" desc="" exp=""/>
+        <constraint field="street1" desc="" exp=""/>
+        <constraint field="street2" desc="" exp=""/>
+        <constraint field="status" desc="" exp=""/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig actionWidgetStyle="dropDown" sortOrder="0" sortExpression="">
+        <columns>
+          <column width="-1" type="field" name="_uid_" hidden="0"/>
+          <column width="-1" type="field" name="reader_id" hidden="0"/>
+          <column width="-1" type="field" name="name" hidden="0"/>
+          <column width="-1" type="field" name="int_id" hidden="0"/>
+          <column width="-1" type="field" name="date_active" hidden="0"/>
+          <column width="-1" type="field" name="date_inactive" hidden="0"/>
+          <column width="-1" type="field" name="date_last_received" hidden="0"/>
+          <column width="-1" type="field" name="project_name" hidden="0"/>
+          <column width="-1" type="field" name="status" hidden="0"/>
+          <column width="-1" type="actions" hidden="1"/>
+          <column width="-1" type="field" name="street1" hidden="0"/>
+          <column width="-1" type="field" name="street2" hidden="0"/>
+        </columns>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[# -*- coding: utf-8 -*-
+"""
+QGIS forms can have a Python function that is called when the form is
+opened.
+
+Use this function to add extra logic to your forms.
+
+Enter the name of the function in the "Python Init function"
+field.
+An example follows:
+"""
+from qgis.PyQt.QtWidgets import QWidget
+
+def my_form_open(dialog, layer, feature):
+	geom = feature.geometry()
+	control = dialog.findChild(QWidget, "MyLineEdit")
+]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable>
+        <field editable="1" name="_uid_"/>
+        <field editable="1" name="date_active"/>
+        <field editable="1" name="date_inactive"/>
+        <field editable="1" name="date_last_received"/>
+        <field editable="1" name="int_id"/>
+        <field editable="1" name="name"/>
+        <field editable="1" name="project_name"/>
+        <field editable="1" name="reader_id"/>
+        <field editable="1" name="status"/>
+        <field editable="1" name="street1"/>
+        <field editable="1" name="street2"/>
+      </editable>
+      <labelOnTop>
+        <field name="_uid_" labelOnTop="0"/>
+        <field name="date_active" labelOnTop="0"/>
+        <field name="date_inactive" labelOnTop="0"/>
+        <field name="date_last_received" labelOnTop="0"/>
+        <field name="int_id" labelOnTop="0"/>
+        <field name="name" labelOnTop="0"/>
+        <field name="project_name" labelOnTop="0"/>
+        <field name="reader_id" labelOnTop="0"/>
+        <field name="status" labelOnTop="0"/>
+        <field name="street1" labelOnTop="0"/>
+        <field name="street2" labelOnTop="0"/>
+      </labelOnTop>
+      <widgets/>
+      <previewExpression>name</previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer hasScaleBasedVisibilityFlag="0" type="vector" simplifyLocal="1" minScale="1e+08" simplifyDrawingHints="1" simplifyMaxScale="1" geometry="Line" simplifyDrawingTol="1" refreshOnNotifyMessage="" readOnly="0" refreshOnNotifyEnabled="0" autoRefreshTime="0" styleCategories="AllStyleCategories" autoRefreshEnabled="0" simplifyAlgorithm="0" labelsEnabled="0" maxScale="0" wkbType="MultiCurve">
+      <extent>
+        <xmin>-79.53137339307799891</xmin>
+        <ymin>43.61672298848409923</ymin>
+        <xmax>-79.17081142499999658</xmax>
+        <ymax>43.80899511999999874</ymax>
+      </extent>
+      <id>routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96</id>
+      <datasource>dbname='bigdata' host=10.160.12.47 port=5432 authcfg=155g48f key='_uid_' checkPrimaryKeyUnicity='1' table="(SELECT row_number() over () AS _uid_,* FROM (SELECT analysis_id, name, start_street_name, start_cross_street, start_reader_id, end_street_name, end_cross_street, end_reader_id, date_active, date_inactive, geom&#xd; , date_last_received,&#xd; CASE WHEN date_last_received is null or date_last_received &lt; '2021-06-20' THEN 'Inactive' ELSE 'Active' end as status&#xd; 	FROM mohan.routes
+) AS _subq_1_
+)" (geom) sql=</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>routes</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+          <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+          <srsid>3452</srsid>
+          <srid>4326</srid>
+          <authid>EPSG:4326</authid>
+          <description>WGS 84</description>
+          <projectionacronym>longlat</projectionacronym>
+          <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+          <geographicflag>true</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <contact>
+          <name></name>
+          <organization></organization>
+          <position></position>
+          <voice></voice>
+          <fax></fax>
+          <email></email>
+          <role></role>
+        </contact>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["unknown"],AREA["World"],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+            <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+            <srsid>3452</srsid>
+            <srid>4326</srid>
+            <authid>EPSG:4326</authid>
+            <description>WGS 84</description>
+            <projectionacronym>longlat</projectionacronym>
+            <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+            <geographicflag>true</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent>
+          <spatial minx="0" maxz="0" miny="0" maxx="0" crs="EPSG:4326" minz="0" dimensions="2" maxy="0"/>
+          <temporal>
+            <period>
+              <start></start>
+              <end></end>
+            </period>
+          </temporal>
+        </extent>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <legend type="default-vector"/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <renderer-v2 symbollevels="0" type="categorizedSymbol" enableorderby="1" attr="status" forceraster="0">
+        <categories>
+          <category render="true" value="Inactive" symbol="0" label="Inactive"/>
+          <category render="true" value="Active" symbol="1" label="Active"/>
+          <category render="true" value="" symbol="2" label=""/>
+        </categories>
+        <symbols>
+          <symbol force_rhr="0" type="line" alpha="1" name="0" clip_to_extent="1">
+            <layer class="SimpleLine" locked="0" pass="0" enabled="1">
+              <prop v="square" k="capstyle"/>
+              <prop v="5;2" k="customdash"/>
+              <prop v="3x:0,0,0,0,0,0" k="customdash_map_unit_scale"/>
+              <prop v="MM" k="customdash_unit"/>
+              <prop v="0" k="draw_inside_polygon"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="252,141,98,255" k="line_color"/>
+              <prop v="solid" k="line_style"/>
+              <prop v="0.86" k="line_width"/>
+              <prop v="MM" k="line_width_unit"/>
+              <prop v="0.4" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="0" k="ring_filter"/>
+              <prop v="0" k="use_custom_dash"/>
+              <prop v="3x:0,0,0,0,0,0" k="width_map_unit_scale"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="1" clip_to_extent="1">
+            <layer class="SimpleLine" locked="0" pass="0" enabled="1">
+              <prop v="square" k="capstyle"/>
+              <prop v="5;2" k="customdash"/>
+              <prop v="3x:0,0,0,0,0,0" k="customdash_map_unit_scale"/>
+              <prop v="MM" k="customdash_unit"/>
+              <prop v="0" k="draw_inside_polygon"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="102,194,165,255" k="line_color"/>
+              <prop v="solid" k="line_style"/>
+              <prop v="0.86" k="line_width"/>
+              <prop v="MM" k="line_width_unit"/>
+              <prop v="0.4" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="0" k="ring_filter"/>
+              <prop v="0" k="use_custom_dash"/>
+              <prop v="3x:0,0,0,0,0,0" k="width_map_unit_scale"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="2" clip_to_extent="1">
+            <layer class="SimpleLine" locked="0" pass="0" enabled="1">
+              <prop v="square" k="capstyle"/>
+              <prop v="5;2" k="customdash"/>
+              <prop v="3x:0,0,0,0,0,0" k="customdash_map_unit_scale"/>
+              <prop v="MM" k="customdash_unit"/>
+              <prop v="0" k="draw_inside_polygon"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="141,160,203,255" k="line_color"/>
+              <prop v="solid" k="line_style"/>
+              <prop v="0.86" k="line_width"/>
+              <prop v="MM" k="line_width_unit"/>
+              <prop v="0.4" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="0" k="ring_filter"/>
+              <prop v="0" k="use_custom_dash"/>
+              <prop v="3x:0,0,0,0,0,0" k="width_map_unit_scale"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+        <source-symbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="0" clip_to_extent="1">
+            <layer class="SimpleLine" locked="0" pass="0" enabled="1">
+              <prop v="square" k="capstyle"/>
+              <prop v="5;2" k="customdash"/>
+              <prop v="3x:0,0,0,0,0,0" k="customdash_map_unit_scale"/>
+              <prop v="MM" k="customdash_unit"/>
+              <prop v="0" k="draw_inside_polygon"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="243,166,178,255" k="line_color"/>
+              <prop v="solid" k="line_style"/>
+              <prop v="0.86" k="line_width"/>
+              <prop v="MM" k="line_width_unit"/>
+              <prop v="0.4" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="0" k="ring_filter"/>
+              <prop v="0" k="use_custom_dash"/>
+              <prop v="3x:0,0,0,0,0,0" k="width_map_unit_scale"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </source-symbol>
+        <colorramp type="colorbrewer" name="[source]">
+          <prop v="3" k="colors"/>
+          <prop v="0" k="inverted"/>
+          <prop v="colorbrewer" k="rampType"/>
+          <prop v="Set2" k="schemeName"/>
+        </colorramp>
+        <rotation/>
+        <sizescale/>
+        <orderby>
+          <orderByClause asc="0" nullsFirst="0">"status"</orderByClause>
+        </orderby>
+      </renderer-v2>
+      <customproperties>
+        <property value="0" key="embeddedWidgets/count"/>
+        <property key="variableNames"/>
+        <property key="variableValues"/>
+      </customproperties>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <SingleCategoryDiagramRenderer diagramType="Histogram" attributeLegend="1">
+        <DiagramCategory scaleBasedVisibility="0" penColor="#000000" diagramOrientation="Up" barWidth="5" enabled="0" backgroundColor="#ffffff" lineSizeScale="3x:0,0,0,0,0,0" opacity="1" penWidth="0" backgroundAlpha="255" sizeType="MM" sizeScale="3x:0,0,0,0,0,0" height="15" minimumSize="0" scaleDependency="Area" maxScaleDenominator="1e+08" minScaleDenominator="0" rotationOffset="270" labelPlacementMethod="XHeight" penAlpha="255" width="15" lineSizeType="MM">
+          <fontProperties style="" description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0"/>
+        </DiagramCategory>
+      </SingleCategoryDiagramRenderer>
+      <DiagramLayerSettings priority="0" obstacle="0" linePlacementFlags="18" showAll="1" dist="0" zIndex="0" placement="2">
+        <properties>
+          <Option type="Map">
+            <Option type="QString" value="" name="name"/>
+            <Option name="properties"/>
+            <Option type="QString" value="collection" name="type"/>
+          </Option>
+        </properties>
+      </DiagramLayerSettings>
+      <geometryOptions removeDuplicateNodes="0" geometryPrecision="0">
+        <activeChecks/>
+        <checkConfiguration/>
+      </geometryOptions>
+      <fieldConfiguration>
+        <field name="_uid_">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="analysis_id">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="name">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start_street_name">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start_cross_street">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start_reader_id">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="end_street_name">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="end_cross_street">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="end_reader_id">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_active">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_inactive">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_last_received">
+          <editWidget type="DateTime">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="status">
+          <editWidget type="TextEdit">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" field="_uid_" name=""/>
+        <alias index="1" field="analysis_id" name=""/>
+        <alias index="2" field="name" name=""/>
+        <alias index="3" field="start_street_name" name=""/>
+        <alias index="4" field="start_cross_street" name=""/>
+        <alias index="5" field="start_reader_id" name=""/>
+        <alias index="6" field="end_street_name" name=""/>
+        <alias index="7" field="end_cross_street" name=""/>
+        <alias index="8" field="end_reader_id" name=""/>
+        <alias index="9" field="date_active" name=""/>
+        <alias index="10" field="date_inactive" name=""/>
+        <alias index="11" field="date_last_received" name=""/>
+        <alias index="12" field="status" name=""/>
+      </aliases>
+      <excludeAttributesWMS/>
+      <excludeAttributesWFS/>
+      <defaults>
+        <default field="_uid_" applyOnUpdate="0" expression=""/>
+        <default field="analysis_id" applyOnUpdate="0" expression=""/>
+        <default field="name" applyOnUpdate="0" expression=""/>
+        <default field="start_street_name" applyOnUpdate="0" expression=""/>
+        <default field="start_cross_street" applyOnUpdate="0" expression=""/>
+        <default field="start_reader_id" applyOnUpdate="0" expression=""/>
+        <default field="end_street_name" applyOnUpdate="0" expression=""/>
+        <default field="end_cross_street" applyOnUpdate="0" expression=""/>
+        <default field="end_reader_id" applyOnUpdate="0" expression=""/>
+        <default field="date_active" applyOnUpdate="0" expression=""/>
+        <default field="date_inactive" applyOnUpdate="0" expression=""/>
+        <default field="date_last_received" applyOnUpdate="0" expression=""/>
+        <default field="status" applyOnUpdate="0" expression=""/>
+      </defaults>
+      <constraints>
+        <constraint exp_strength="0" field="_uid_" constraints="3" notnull_strength="1" unique_strength="1"/>
+        <constraint exp_strength="0" field="analysis_id" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="name" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="start_street_name" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="start_cross_street" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="start_reader_id" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="end_street_name" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="end_cross_street" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="end_reader_id" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_active" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_inactive" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="date_last_received" constraints="0" notnull_strength="0" unique_strength="0"/>
+        <constraint exp_strength="0" field="status" constraints="3" notnull_strength="1" unique_strength="1"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint field="_uid_" desc="" exp=""/>
+        <constraint field="analysis_id" desc="" exp=""/>
+        <constraint field="name" desc="" exp=""/>
+        <constraint field="start_street_name" desc="" exp=""/>
+        <constraint field="start_cross_street" desc="" exp=""/>
+        <constraint field="start_reader_id" desc="" exp=""/>
+        <constraint field="end_street_name" desc="" exp=""/>
+        <constraint field="end_cross_street" desc="" exp=""/>
+        <constraint field="end_reader_id" desc="" exp=""/>
+        <constraint field="date_active" desc="" exp=""/>
+        <constraint field="date_inactive" desc="" exp=""/>
+        <constraint field="date_last_received" desc="" exp=""/>
+        <constraint field="status" desc="" exp=""/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig actionWidgetStyle="dropDown" sortOrder="0" sortExpression="">
+        <columns>
+          <column width="-1" type="field" name="_uid_" hidden="0"/>
+          <column width="-1" type="field" name="analysis_id" hidden="0"/>
+          <column width="-1" type="field" name="name" hidden="0"/>
+          <column width="-1" type="field" name="start_street_name" hidden="0"/>
+          <column width="-1" type="field" name="start_cross_street" hidden="0"/>
+          <column width="-1" type="field" name="start_reader_id" hidden="0"/>
+          <column width="-1" type="field" name="end_street_name" hidden="0"/>
+          <column width="-1" type="field" name="end_cross_street" hidden="0"/>
+          <column width="-1" type="field" name="end_reader_id" hidden="0"/>
+          <column width="-1" type="field" name="date_active" hidden="0"/>
+          <column width="-1" type="field" name="date_inactive" hidden="0"/>
+          <column width="-1" type="field" name="date_last_received" hidden="0"/>
+          <column width="-1" type="field" name="status" hidden="0"/>
+          <column width="-1" type="actions" hidden="1"/>
+        </columns>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[# -*- coding: utf-8 -*-
+"""
+QGIS forms can have a Python function that is called when the form is
+opened.
+
+Use this function to add extra logic to your forms.
+
+Enter the name of the function in the "Python Init function"
+field.
+An example follows:
+"""
+from qgis.PyQt.QtWidgets import QWidget
+
+def my_form_open(dialog, layer, feature):
+	geom = feature.geometry()
+	control = dialog.findChild(QWidget, "MyLineEdit")
+]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable>
+        <field editable="1" name="_uid_"/>
+        <field editable="1" name="analysis_id"/>
+        <field editable="1" name="date_active"/>
+        <field editable="1" name="date_inactive"/>
+        <field editable="1" name="date_last_received"/>
+        <field editable="1" name="end_cross_street"/>
+        <field editable="1" name="end_reader_id"/>
+        <field editable="1" name="end_street_name"/>
+        <field editable="1" name="name"/>
+        <field editable="1" name="start_cross_street"/>
+        <field editable="1" name="start_reader_id"/>
+        <field editable="1" name="start_street_name"/>
+        <field editable="1" name="status"/>
+      </editable>
+      <labelOnTop>
+        <field name="_uid_" labelOnTop="0"/>
+        <field name="analysis_id" labelOnTop="0"/>
+        <field name="date_active" labelOnTop="0"/>
+        <field name="date_inactive" labelOnTop="0"/>
+        <field name="date_last_received" labelOnTop="0"/>
+        <field name="end_cross_street" labelOnTop="0"/>
+        <field name="end_reader_id" labelOnTop="0"/>
+        <field name="end_street_name" labelOnTop="0"/>
+        <field name="name" labelOnTop="0"/>
+        <field name="start_cross_street" labelOnTop="0"/>
+        <field name="start_reader_id" labelOnTop="0"/>
+        <field name="start_street_name" labelOnTop="0"/>
+        <field name="status" labelOnTop="0"/>
+      </labelOnTop>
+      <widgets/>
+      <previewExpression>name</previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+  </projectlayers>
+  <layerorder>
+    <layer id="routes_7022e41b_f7a0_4f42_a48f_f2e35f39dd96"/>
+    <layer id="detectors_5_994d6c21_e941_4742_8a23_51c63e1f511a"/>
+  </layerorder>
+  <properties>
+    <Gui>
+      <CanvasColorBluePart type="int">255</CanvasColorBluePart>
+      <CanvasColorGreenPart type="int">255</CanvasColorGreenPart>
+      <CanvasColorRedPart type="int">255</CanvasColorRedPart>
+      <SelectionColorAlphaPart type="int">255</SelectionColorAlphaPart>
+      <SelectionColorBluePart type="int">0</SelectionColorBluePart>
+      <SelectionColorGreenPart type="int">255</SelectionColorGreenPart>
+      <SelectionColorRedPart type="int">255</SelectionColorRedPart>
+    </Gui>
+    <Legend>
+      <filterByMap type="bool">false</filterByMap>
+    </Legend>
+    <Measure>
+      <Ellipsoid type="QString">EPSG:7030</Ellipsoid>
+    </Measure>
+    <Measurement>
+      <AreaUnits type="QString">m2</AreaUnits>
+      <DistanceUnits type="QString">meters</DistanceUnits>
+    </Measurement>
+    <PAL>
+      <CandidatesLine type="int">50</CandidatesLine>
+      <CandidatesPoint type="int">16</CandidatesPoint>
+      <CandidatesPolygon type="int">30</CandidatesPolygon>
+      <DrawRectOnly type="bool">false</DrawRectOnly>
+      <DrawUnplaced type="bool">false</DrawUnplaced>
+      <SearchMethod type="int">0</SearchMethod>
+      <ShowingAllLabels type="bool">false</ShowingAllLabels>
+      <ShowingCandidates type="bool">false</ShowingCandidates>
+      <ShowingPartialsLabels type="bool">true</ShowingPartialsLabels>
+      <TextFormat type="int">0</TextFormat>
+      <UnplacedColor type="QString">255,0,0,255</UnplacedColor>
+    </PAL>
+    <Paths>
+      <Absolute type="bool">false</Absolute>
+    </Paths>
+    <PositionPrecision>
+      <Automatic type="bool">true</Automatic>
+      <DecimalPlaces type="int">2</DecimalPlaces>
+    </PositionPrecision>
+    <SpatialRefSys>
+      <ProjectionsEnabled type="int">1</ProjectionsEnabled>
+    </SpatialRefSys>
+  </properties>
+  <visibility-presets/>
+  <transformContext/>
+  <projectMetadata>
+    <identifier></identifier>
+    <parentidentifier></parentidentifier>
+    <language></language>
+    <type></type>
+    <title></title>
+    <abstract></abstract>
+    <links/>
+    <author>Raphael Dumas</author>
+    <creation>2021-06-22T10:42:16</creation>
+  </projectMetadata>
+  <Annotations/>
+  <Layouts/>
+  <Bookmarks/>
+  <ProjectViewSettings UseProjectScales="0">
+    <Scales/>
+  </ProjectViewSettings>
+</qgis>
