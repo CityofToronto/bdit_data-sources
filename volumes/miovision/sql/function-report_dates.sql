@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION miovision_api.report_dates(
+﻿CREATE OR REPLACE FUNCTION miovision_api.get_report_dates(
     start_date timestamp without time zone,
     end_date timestamp without time zone)
   RETURNS integer AS
@@ -29,3 +29,17 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+
+ALTER FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone)
+    OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone) TO bdit_humans WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone) TO dbadmin WITH GRANT OPTION;
+
+GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone) TO miovision_api_bot;
+
+GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp without time zone, timestamp without time zone) TO miovision_admins;
