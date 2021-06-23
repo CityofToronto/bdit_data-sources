@@ -285,7 +285,7 @@ def process_data(conn, start_time, end_iteration_time):
 
     with conn:
         with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.report_dates(%s::date, %s::date)"
+            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
             logger.info('report_dates done')
 
