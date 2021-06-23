@@ -244,9 +244,9 @@ class MiovPuller:
         # Classes 7 and 8 are for bike approach volumes.
         if row['exit'] == 'UNDEFINED':
             return (row['entrance'], '7')
-        elif row['entrance'] == 'UNDEFINED':
+        if row['entrance'] == 'UNDEFINED':
             return (row['exit'], '8')
-        elif row['entrance'] == row['exit']:
+        if row['entrance'] == row['exit']:
             return (row['entrance'], '4')
         movement = self.tmc_movements_no_uturn[
             EEPair(entrance=row['entrance'], exit=row['exit'])]
