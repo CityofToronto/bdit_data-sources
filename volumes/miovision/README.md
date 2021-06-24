@@ -551,7 +551,6 @@ Adding intersections on the other hand is not as simple as removing an intersect
 	
 	e) Then, we have to proceed to finish aggregating data with the updated table. With `--pull` included in the command line, we have now only inserted the bins into the volume table and have not done other processing yet. Therefore, in order to complete the full process, we now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date). 
 	```sql
-	SELECT miovision_api.refresh_gapsize_lookup() ;
 	SELECT miovision_api.find_gaps(%s::date, %s::date) ;
 	SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date) ;
 	SELECT miovision_api.aggregate_15_min(%s::date, %s::date) ; 
