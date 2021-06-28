@@ -44,7 +44,9 @@ Properties of `collisions.acc`:
     collision numbers are recycled annually, with convention dictating that the
     first CRC number be `8000000` (then the next `8000001`, etc.). To convert
     these to `ACCNB`s, the last two digits of the year are added to the front
-    (eg. `8000285` reported in 2019 is converted to `198000285`).
+    (eg. `8000285` reported in 2019 is converted to `198000285`). The format of
+    each `ACCNB` is reverse engineered to determine the source of the data for
+    the `data_source` column in `collisions.events`.
   - To keep the dataset current, particularly for fatal collisions, Data
     Collections will occasionally manually enter collisions using information
     directly obtained from TPS, or from public media. These entries may not
@@ -93,26 +95,30 @@ accyear | Derived from ACCDATE | Year of collision |  
 acctime | ACCTIME | Time of collision |  
 longitude | LONGITUDE + 0.00021 | Longitude |  
 latitude | LATITUDE + 0.000045 | Latitude |  
+geom | Derived from longitude and latitude |  Point geometry of collision  |  Coordinate reference system is EPSG:4326
 stname1 | STNAME1 | Street name or address | For intersections, the largest road is recorded under stname1
 streetype1 | STREETYPE1 | Street type (Av, Ave, Blvd, etc.) |  
 dir1 | DIR1 | Direction in street name | Eg. W if street is St. Clair W; NOT the street direction of travel!
 stname2 | STNAME2 | Cross street name |  
 streetype2 | STREETYPE2 | Cross street type |  
 dir2 | DIR2 | Cross street direction |  
-stname3 | STNAME3 | Additional street name or address |  
+stname3 | STNAME3 | Additional street name, offset distance, or address |  
 streetype3 | STREETYPE3 | Additional street type |  
 dir3 | DIR3 | Additional street direction |  
 road_class | ROAD_CLASS | Road class |  
 location_type | ACCLOC | Detailed collision location classification |  
 location_class | LOCCOORD | Simplified collision location classification | Simplified location_type
 collision_type | ACCLASS | Ontario Ministry of Transportation collision class |  
+impact_type | IMPACTYPE | Impact type (eg. rear end, sideswipe) |  
 visibility | VISIBLE | Visibility (usually due to inclement weather) |  
 light | LIGHT | Road lighting conditions |  
 road_surface_cond | RDSFCOND | Road surface conditions |  
+px | PX | Signalized intersection PX number |  
 traffic_control | TRAFFICTL | Type of traffic control |  
 traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
 on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
 description | DESCRIPTION | Long-form comments |  
+data_source | ACCNB | Source of data | See properties of `collisions.acc`, above, for details
 
 
 #### `collisions.involved`
@@ -120,11 +126,11 @@ description | DESCRIPTION | Long-form comments |  
 Involved   Column | Equivalent ACC Column | Definition | Notes
 -- | -- | -- | --
 collision_no |   | Collision event unique identifier |  
-vehicle_no | VEH_NO | Vehicle identifier for individual collision event |  
 person_no | PER_NO | Person identifier for individual collision event |  
+vehicle_no | VEH_NO | Vehicle identifier for individual collision event |  
 vehicle_class | VEHTYPE | Vehicle class |  
 initial_dir | INITDIR | Initial direction of travel |  
-impact_type | IMPACTYPE | Impact type (eg. rear end, sideswipe) |  
+impact_location | IMPLOC | Location of impact on road |  
 event1 | EVENT1 | First event that occurred for involved |  
 event2 | EVENT2 | Second event |  
 event3 | EVENT3 | Third event |  
@@ -144,7 +150,8 @@ manoeuver | MANOEUVER | Vehicle manoeuver |  
 posted_speed | POSTED_SPEED | Posted speed limit |  
 actual_speed | ACTUAL_SPEED | Speed of vehicle |  
 failed_to_remain | FAILTOREM | Whether the involved fled the scene of the crash |  
-is_validated | USERID | Whether the collision has been validated by Transportation Services | True if RSU user ID exists
+validation_userid | USERID | ID of last Transportation Services staff member to validate this involved |  
+time_last_edited | TS | Time of last edit from Transportation Services |  
 
 
 ## Data Replication Process
