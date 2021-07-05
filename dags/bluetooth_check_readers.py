@@ -26,6 +26,7 @@ def pipeline_check(con):
         select_query1 = '''SELECT MAX (datetime_bin)::date from bluetooth.aggr_5min'''
         cursor.execute(select_query1)
         latest_date = cursor.fetchone()
+        #please suggest if this try except works
         try:
             if (latest_date[0]) >= (datetime.now().date() - timedelta(1)):
                 pass
@@ -41,6 +42,7 @@ def broken_readers(con, check_date):
         broken_readers = cursor.fetchall()
         broken_list.append(broken_readers)
         num_broken = len(broken_list)
+        #please suggest if this try except works
         try:
             if broken_readers[0][0] == '':
                 pass
