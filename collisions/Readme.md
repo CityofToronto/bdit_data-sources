@@ -167,8 +167,34 @@ future `collisions.acc` will be directly mirrored from the MOVE server.
    `collisions.involved` materialized views.
 4. Perform simple consistency checks to ensure all data were properly copied.
 
+`pull_acc_script.py` requires:
+
+```
+click>=7.1.2
+psycopg2>=2.8.4
+```
+
 Scripts that define the tables and materialized views can be found in this
 folder.
+
+### Running the Data Replication
+
+1. Ensure you have a ConfigParser file available. See the [official Python
+   documentation](https://docs.python.org/3/library/configparser.html) to set
+   one up if you do not.
+2. Obtain the PEM key for connecting to MOVE over SSH from either your manager
+   or the MOVE product team.
+3. Add `'POSTGRES'` and `'FLASHCROW'` entries to your ConfigParser file.
+   `'POSTGRES'` should contain `user`, `password`, `host` and `port` entries,
+   corresponding to the Postgres credentials of the user running
+   `pull_acc_script.py`. `'FLASHCROW'` should have a `pem` entry, which gives
+   the filepath and name of the PEM key.
+4. Run `pull_acc_script.py`. You're required to pass the path of the
+   ConfigParser file using the `cfgpath` keyword:
+   ```
+   python pull_acc_script.py --cfgpath /{PATH}/{TO}/{FILE}/{FILENAME}
+   ```
+   For additional options, run `python pull_acc_script.py --help`.
 
 **It is highly recommended to run this process outside of regular work hours, as
 large file transfers from Flashcrow and to the Postgres can sometimes be
