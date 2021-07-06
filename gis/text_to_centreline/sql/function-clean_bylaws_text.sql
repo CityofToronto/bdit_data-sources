@@ -1,21 +1,21 @@
 --First create a table
 CREATE TABLE gis.cleaned_bylaws_text (
 	bylaw_id INT,
-	highway2 TEXT, 
-	btwn1 TEXT, 
-	direction_btwn1 TEXT, 
-	metres_btwn1 FLOAT, 
-	btwn2 TEXT, 
-	direction_btwn2 TEXT, 
+	highway2 TEXT,
+	btwn1 TEXT,
+	direction_btwn1 TEXT,
+	metres_btwn1 FLOAT,
+	btwn2 TEXT,
+	direction_btwn2 TEXT,
 	metres_btwn2 FLOAT,
-	btwn2_orig TEXT, 
+	btwn2_orig TEXT,
 	btwn2_check TEXT
 	);
 
---Then, create a function 
-DROP FUNCTION gis._clean_bylaws_text(integer, text, text, text);
+--Then, create a function
+--DROP FUNCTION gis._clean_bylaws_text(integer, text, text, text);
 CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
-RETURNS gis.cleaned_bylaws_text 
+RETURNS gis.cleaned_bylaws_text
 LANGUAGE 'plpgsql'
 AS $$
 
@@ -33,14 +33,18 @@ DECLARE
 	(split_part
 	(split_part
 	(regexp_REPLACE
-	(regexp_REPLACE(frm, '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g')
-	, '\(.*?\)', '', 'g')
+	(regexp_REPLACE
+	 --add one more REPLACE to deal with possibly capitalized AND
+	 (regexp_REPLACE
+	 (frm, '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g')
+	, '[Aa][Nn][Dd]', 'and', 'g')
+	  , '\(.*?\)', '', 'g')
 	, ' to ', 1)
 	, ' and ', 1)
 	, '\(.*\)', '', 'g')
-	, '[Bb]etween ', '', 'g')
+	 , '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g') --handle possibly capitalized BETWEEN
 	, 'A point', '', 'g'))
-	
+
 	ELSE gis.abbr_street(regexp_REPLACE
 	(regexp_REPLACE
 	(regexp_REPLACE(frm, '\(.*?\)', '', 'g')
@@ -57,17 +61,26 @@ DECLARE
 	);
 
 	btwn2_orig_v1 TEXT := CASE WHEN t IS NULL THEN
-			(CASE WHEN split_part(regexp_REPLACE(frm,  '\(.*?\)', '', 'g'), ' and ', 2) <> ''
+			(CASE WHEN split_part
+				(regexp_REPLACE
+				(regexp_REPLACE	--additional REPLACE to handle possibly capitalized AND
+					(frm,  '\(.*?\)', '', 'g')
+					, '[Aa][Nn][Dd]', 'and', 'g')
+					, ' and ', 2) <> ''
 			THEN gis.abbr_street(regexp_REPLACE
 			(split_part
 			(regexp_REPLACE
 			(regexp_REPLACE
-			(regexp_REPLACE(frm, '\(.*?\)', '', 'g')
+			(regexp_REPLACE
+			(regexp_REPLACE	--additional REPLACE to handle possibly capitalized AND
+				(frm, '\(.*?\)', '', 'g')
+			, '[Aa][Nn][Dd]', 'and', 'g')
 			, '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
 			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
 			, ' and ', 2)
 			--Delete 'thereof' and some other words
-			, '[Bb]etween |(A point)|(thereof)|(the northeast of)', '', 'g'))
+-- 			, '[Bb]etween |(A point)|(thereof)|(the northeast of)', '', 'g'))
+			 , '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] |(A point)|(thereof)|(the northeast of)', '', 'g'))
 
 			WHEN split_part(frm, ' to ', 2) <> ''
 			THEN gis.abbr_street(regexp_REPLACE
@@ -79,7 +92,7 @@ DECLARE
 			, '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'g')
 			, 'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'g')
 			, ' to ', 2)
-			, '[Bb]etween ', '', 'g')
+			, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g') --handle possibly capitalized BETWEEN
 			, 'A point', '', 'g'))
 			END)
 
@@ -111,7 +124,8 @@ DECLARE
 				(split_part
 				(frm, ' to ', 1)
 				, ' and ', 1)
-				, '[Bb]etween ', '', 'g')) LIKE '% m %'
+ 				--handle possibly capitalized BETWEEN
+				, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')) LIKE '% m %'
 				THEN split_part
 				(split_part
 				(gis.abbr_street
@@ -119,10 +133,13 @@ DECLARE
 				(regexp_REPLACE
 				(regexp_REPLACE
 				(split_part
+				(regexp_REPLACE	--additional REPLACE to handle possibly capitalized AND
 				(split_part
 				(frm, ' to ', 1)
+				, '[Aa][Nn][Dd]', 'and', 'g')
 				, ' and ', 1)
-				, '[Bb]etween ', '', 'g')
+ 				--handle possibly capitalized BETWEEN
+				, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')
 				, 'further ', '', 'g')
 				, 'east/north', 'northeast', 'g'))
 				, ' m ', 2)
@@ -147,20 +164,20 @@ DECLARE
 
 	direction_btwn2 TEXT := CASE WHEN t IS NULL THEN (
 				CASE WHEN btwn2_orig LIKE '% m %'
-				OR
+				OR  --handle possibly capitalized BETWEEN
 				(
 					CASE WHEN split_part(frm, ' and ', 2) <> ''
-					THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'))
+					THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'))
 					WHEN split_part(frm, ' to ', 2) <> ''
-					THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'))
+					THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'))
 					END
 				) LIKE '% m %'
 				THEN
 				(
 					CASE WHEN split_part(frm, ' and ', 2) <> ''
-					THEN regexp_REPLACE(regexp_replace(split_part(split_part( gis.abbr_street(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
+					THEN regexp_REPLACE(regexp_replace(split_part(split_part( gis.abbr_street(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
 					WHEN split_part(frm, ' to ', 2) <> ''
-					THEN regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
+					THEN regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
 					END
 				)
 				ELSE NULL
@@ -184,7 +201,8 @@ DECLARE
 				(split_part
 				(split_part(frm, ' to ', 1)
 				, ' and ', 1)
-				, 'Between ', '', 'g')) LIKE '% m %'
+			        --handle possibly capitalized BETWEEN
+				, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')) LIKE '% m %'
 				THEN regexp_REPLACE
 				(regexp_REPLACE
 				(regexp_REPLACE
@@ -194,7 +212,8 @@ DECLARE
 				(split_part
 				(split_part(frm, ' to ', 1)
 				, ' and ', 1)
-				, '[Bb]etween ', '', 'g'))
+			        --handle possibly capitalized BETWEEN
+				, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'))
 				, ' m ' ,1)
 				, 'a point ', '', 'g')
 				, 'A point', '', 'g')
@@ -221,21 +240,21 @@ DECLARE
 
 
 	metres_btwn2 FLOAT :=	(CASE WHEN t IS NULL THEN
-				( CASE WHEN btwn2_orig LIKE '% m %' OR
+				( CASE WHEN btwn2_orig LIKE '% m %' OR --handle possibly capitalized BETWEEN
 					(
 						CASE WHEN split_part(frm, ' and ', 2) <> ''
-						THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
+						THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*?\)', '', 'g'), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'))
 						WHEN split_part(frm, ' to ', 2) <> ''
-						THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
+						THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*?\)', '', 'g'), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'))
 						END
 					)
 				LIKE '% m %'
 				THEN
 				(
 				CASE WHEN split_part(frm, ' and ', 2) <> ''
-				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part( gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::FLOAT
+				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part( gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*\)', '', 'g'), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::FLOAT
 				WHEN split_part(frm, ' to ', 2) <> ''
-				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::FLOAT
+				THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*\)', '', 'g'), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::FLOAT
 				END
 				)
 				ELSE NULL
@@ -259,10 +278,19 @@ DECLARE
 	-- we need to be able to differentiate the two cases
 	-- the difference between the two is that one of the cases has a 'of' to describe the second road that intersects with "street"/"highway2"
 	btwn2_check TEXT := CASE WHEN t IS NULL THEN
-			(CASE WHEN split_part(frm, ' and ', 2) <> ''
-			THEN gis.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
+			(CASE WHEN split_part
+				(regexp_REPLACE --additional REPLACE to handle possibly capitalized AND
+					(frm, '[Aa][Nn][Dd]', 'and', 'g')
+						, ' and ', 2) <> ''
+			THEN gis.abbr_street(regexp_REPLACE
+				(regexp_REPLACE
+					(split_part
+					(regexp_REPLACE --additional REPLACE to handle possibly capitalized AND
+						(frm, '[Aa][Nn][Dd]', 'and', 'g')
+						, ' and ', 2)
+					, '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'), 'A point', '', 'g'))
 			WHEN split_part(frm, ' to ', 2) <> ''
-			THEN gis.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
+			THEN gis.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb][Ee][Tt][Ww][Ee][Ee][Nn] ', '', 'g'), 'A point', '', 'g'))
 			END)
 
 			ELSE
@@ -281,7 +309,7 @@ DECLARE
 	);
 
 BEGIN
-RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, metres_btwn2: %, direction_btwn1: %, direction_btwn2: %', 
+RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, metres_btwn2: %, direction_btwn1: %, direction_btwn2: %',
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 RETURN ROW(_bylaw_id, highway2, btwn1, direction_btwn1, metres_btwn1, btwn2, direction_btwn2, metres_btwn2,
