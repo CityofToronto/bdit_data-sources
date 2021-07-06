@@ -30,7 +30,7 @@ In particular see the Colliion Coding Manual, Motor Vehicle Collision Report
 Properties of `collisions.acc`:
 - Each row represents one individual involved in a collision, so some data is
   repeated between rows. The data dictionary indicates which values are at the
-  event-level, and which at the individual level.
+  **event** level, and which at the individual **involved** level.
 - There is no UID. `ACCNB` serves as one starting in 2013, but prior to that the
   number would reset annually. Derived tables use `collision_no`, defined in
   `collisions.collision_no`.
@@ -61,6 +61,14 @@ Properties of `collisions.acc`:
   privacy concerns. The most egregious of these are only available in the
   original Oracle database, and have already been removed in the MOVE server
   data.
+- TPS and CRC send collision records once they are reported and entered into
+  their respective databases, which often leads to collisions being reported
+  months, or even years, after they occurred. TPS and CRC will also send changes
+  to existing collision records to eg. correct data entry errors or update the
+  health status of an injured individual. Moreover, staff at Data & Analytics
+  are constantly validating collision records, writing these changes directly to
+  the Oracle database. Therefore, one **cannot compare** historical control
+  totals on eg. the number of individuals involved with recently-generated ones.
 
 ### Collision Factors
 
