@@ -77,15 +77,15 @@ class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cycl
 
 #### `intersections`
 
-Reference table for each unique intersection at which data has been collected. `miovision_api.intersections_20200805` is the old intersections table that do not have the `date_installed` or `date_decommissioned` information.
+Reference table for each unique intersection at which data has been collected.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 intersection_uid|integer|Unique identifier for table|10|
 id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
 intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-date_installed|date|Installation date of the camera|2017-10-03|
-date_decommissioned|date|Decommissioned date of the camera|NULL|
+date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
+date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
 lat|numeric|Latitude of intersection location|43.643945|
 lng|numeric|Longitude of intersection location|-79.402667|
 street_main|text|Name of primary street|King|
@@ -394,7 +394,7 @@ There have been some changes to the Miovision cameras and below documents on the
 ### Removing Intersections
 Once we are informed of the decommissioned date of the Miovision cameras, we can then carry out the following steps.
 
-1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](#intersections) to include the decommissioned date.
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
 2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_tmc` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
@@ -405,11 +405,11 @@ Adding intersections on the other hand is not as simple as removing an intersect
 
 1) Look at table [`miovision_api.intersections`](#intersections) to see what information about the new intersections that we would need to update the table. Steps below show how we can find the details such as id, coordinates, px, int_id, geom, which leg_restricted etc. Once everything is done, do an INSERT INTO this table to include the new intersections.
 
-	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). `date_installed` and `date_decommissioned` can be found by finding the first / last datetime_bin for that intersection_uid from that website. The last date for the old location can also be found from table `miovision_api.volumes`. 
+	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). The key needed to authorize the API is the same one used by the Miovision Airflow user. `date_installed` and `date_decommissioned` are the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'), and `date_decommissioned` is the date of the *last row of data from the location*. `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the Jupyter notebook in the `update_intersections` folder. If it is already a day later, the last date for the old location can be found from the `miovision_api.volumes` table.
 	
 	b) `px` for the intersection can then be found easily from this [web interface](https://demo.itscentral.ca/#).
 	
-	c) With the `px` information found above, get the rest of the information (such as `street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal`.
+	c) With the `px` information found above, get the rest of the information (such as `street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` (`int_id` is `node_id` in `gis.traffic_signal`).
 	
 	d) In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
 
@@ -551,7 +551,6 @@ Adding intersections on the other hand is not as simple as removing an intersect
 	
 	e) Then, we have to proceed to finish aggregating data with the updated table. With `--pull` included in the command line, we have now only inserted the bins into the volume table and have not done other processing yet. Therefore, in order to complete the full process, we now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date). 
 	```sql
-	SELECT miovision_api.refresh_gapsize_lookup() ;
 	SELECT miovision_api.find_gaps(%s::date, %s::date) ;
 	SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date) ;
 	SELECT miovision_api.aggregate_15_min(%s::date, %s::date) ; 
