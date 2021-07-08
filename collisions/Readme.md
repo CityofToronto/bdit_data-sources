@@ -2,12 +2,25 @@
 
 The collisions dataset consists of data on individuals involved in traffic
 collisions from approximately 1985 to the present day (though there are some
-historical collisions from even earlier included). The data comes from the
-Toronto Police Services (TPS) and the Collision Reporting Centre (CRC), and
-is combined by a Data Collections team in Transportation Services Policy &
-Innovation, currently led by David McElroy. It is currently hosted in an
-Oracle database and maintained using legacy software from the 1990s, but is in
-the process of being completely transitioned into the [MOVE platform](https://github.com/CityofToronto/bdit_flashcrow).
+historical collisions from even earlier included).
+
+## Data Sources and Ingestion Pipeline
+
+The data comes from the Toronto Police Services (TPS) Versadex and the Collision
+Reporting Centre (CRC) database, and is combined by a Data Collections team in
+Transportation Services Policy & Innovation, currently led by David McElroy.
+Data is transferred to a Transportation Services file server from TPS weekly as
+a set of XML files, and from the CRC monthly as a single CSV file. A set of
+scripts (managed by Jim Millington) read in these raw data into a
+Transportation Services Oracle database table. This table is manually validated
+by Data Collections, and edits are made using legacy software from the 1990s.
+The table is copied to a file in the [MOVE data
+platform](https://github.com/CityofToronto/bdit_flashcrow)'s AWS fileserver on a
+weekly basis. `pull_acc_script.py`, described below, copies this file onto our
+Postgres database.
+
+This archaic (and unnecessarily complicated) pipeline will soon be superceded by
+the [MOVE platform](https://github.com/CityofToronto/bdit_flashcrow).
 
 ## Table Structure
 
@@ -19,7 +32,7 @@ are owned by `collision_admins`.
 ### `acc`
 
 The raw dataset is `collisions.acc`, a direct mirror of the same table on the
-MOVE server (which itself mirrors from Oracle). The data dictionary for `ACC`
+MOVE server. The data dictionary for `ACC`
 is maintained jointly with MOVE and found on [Notion here](
 https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
 The guides that define values and categories for most columns can be found in
@@ -63,12 +76,13 @@ Properties of `collisions.acc`:
   data.
 - TPS and CRC send collision records once they are reported and entered into
   their respective databases, which often leads to collisions being reported
-  months, or even years, after they occurred. TPS and CRC will also send changes
-  to existing collision records to eg. correct data entry errors or update the
-  health status of an injured individual. Moreover, staff at Data & Analytics
-  are constantly validating collision records, writing these changes directly to
-  the Oracle database. Therefore, one **cannot compare** historical control
-  totals on eg. the number of individuals involved with recently-generated ones.
+  months, or even years, after they occurred. TPS and CRC will also send
+  changes to existing collision records (using the same XML/CSV pipeline
+  described above) to correct data entry errors or update the health status
+  of an injured individual. Moreover, staff at Data & Analytics are constantly
+  validating collision records, writing these changes directly to the Oracle
+  database. Therefore, one **cannot compare** historical control totals on eg.
+  the number of individuals involved with recently-generated ones.
 
 ### Collision Factors
 
@@ -126,7 +140,7 @@ traffic_control | TRAFFICTL | Type of traffic control |  
 traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
 on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
 description | DESCRIPTION | Long-form comments |  
-data_source | ACCNB | Source of data | See properties of `collisions.acc`, above, for details
+data_source | | Source of data | See properties of `collisions.acc`, above, for details
 
 
 #### `collisions.involved`
@@ -142,7 +156,7 @@ impact_location | IMPLOC | Location of impact on road |
 event1 | EVENT1 | First event that occurred for involved |  
 event2 | EVENT2 | Second event |  
 event3 | EVENT3 | Third event |  
-involved_class | INVTYPE | Class of road user (eg. driver,   passenger, pedestrian)
+involved_class | INVTYPE | Class of road user (eg. driver, passenger, pedestrian)
 involved_age | INVAGE or BIRTHDATE | Age of involved | Selects from whichever is available/more accurate
 involved_injury_class | INJURY | Level of injury |  
 safety_equip_used | SAFEQUIP | Safety equipment used (eg. seat belt) |  
@@ -181,6 +195,8 @@ future `collisions.acc` will be directly mirrored from the MOVE server.
 click>=7.1.2
 psycopg2>=2.8.4
 ```
+
+for parsing command line arguments and connecting to Postgres, respectively.
 
 Scripts that define the tables and materialized views can be found in this
 folder.
