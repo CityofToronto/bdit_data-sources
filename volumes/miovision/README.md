@@ -405,11 +405,11 @@ Adding intersections on the other hand is not as simple as removing an intersect
 
 1) Look at table [`miovision_api.intersections`](#intersections) to see what information about the new intersections that we would need to update the table. Steps below show how we can find the details such as id, coordinates, px, int_id, geom, which leg_restricted etc. Once everything is done, do an INSERT INTO this table to include the new intersections.
 
-	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). `date_installed` and `date_decommissioned` are the dates corresponding to the first and the last available `datetime_bin`, respectively. If it is already a day past, the last date for the old location can also be found from table `miovision_api.volumes`. Note that the `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'), and `date_decommissioned` is the date of the *last row of data from the location*.
+	a) New intersections name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). The key needed to authorize the API is the same one used by the Miovision Airflow user. `date_installed` and `date_decommissioned` are the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'), and `date_decommissioned` is the date of the *last row of data from the location*. `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the Jupyter notebook in the `update_intersections` folder. If it is already a day later, the last date for the old location can be found from the `miovision_api.volumes` table.
 	
 	b) `px` for the intersection can then be found easily from this [web interface](https://demo.itscentral.ca/#).
 	
-	c) With the `px` information found above, get the rest of the information (such as `street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal`.
+	c) With the `px` information found above, get the rest of the information (such as `street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` (`int_id` is `node_id` in `gis.traffic_signal`).
 	
 	d) In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
 
