@@ -18,7 +18,7 @@ WITH zero_padding_movements AS (
 	-- Make sure that the intersection is still active
 	JOIN miovision_api.intersections mai USING (intersection_uid)
 	-- Only include dates during which intersection is active.
-	WHERE datetime_bin15::date > mai.date_installed AND (mai.date_decommissioned IS NULL OR (datetime_bin15::date < mai.date_decommissioned))
+	WHERE datetime_bin15> mai.date_installed + INTERVAL '1 day' AND (mai.date_decommissioned IS NULL OR (datetime_bin15< mai.date_decommissioned - INTERVAL '1 day'))
 ), aggregate_insert AS (
 	INSERT INTO miovision_api.volumes_15min_mvt(intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
 	SELECT pad.intersection_uid,
@@ -75,4 +75,3 @@ GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO PUBL
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_admins;
-
