@@ -244,9 +244,9 @@ class MiovPuller:
         # Classes 7 and 8 are for bike approach volumes.
         if row['exit'] == 'UNDEFINED':
             return (row['entrance'], '7')
-        if row['entrance'] == 'UNDEFINED':
+        elif row['entrance'] == 'UNDEFINED':
             return (row['exit'], '8')
-        if row['entrance'] == row['exit']:
+        elif row['entrance'] == row['exit']:
             return (row['entrance'], '4')
         movement = self.tmc_movements_no_uturn[
             EEPair(entrance=row['entrance'], exit=row['exit'])]
@@ -306,64 +306,18 @@ class MiovPuller:
         return table_veh, table_ped
 
 
-def process_data(conn, start_time, end_iteration_time):
-    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-
-    time_period = (start_time, end_iteration_time)
-    with conn:
-        with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
-            cur.execute(invalid_gaps, time_period)
-            logger.info(conn.notices[-1])
-    logger.info('Updated gapsize table and found gaps exceeding allowable size')
-
-    # Aggregate to 15min tmc / 15min
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
-                cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute movement bins')
-
-                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
-                cur.execute(atr_aggregation, time_period)
-                logger.info('Completed data processing for %s', start_time)
-
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-    with conn:
-        with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
-            cur.execute(report_dates, time_period)
-            logger.info('report_dates done')
-
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
-            insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
+            insert_data = '''INSERT INTO czhu.miovision_volumes(intersection_uid, datetime_bin, classification_uid,
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
                 if dupes:
                     sys.exit(2)
-
-    with conn:
-        with conn.cursor() as cur:
-            api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
-            cur.execute(api_log, time_period)
-
-    logger.info('Inserted into volumes and updated log')
-
-    with conn:
-        with conn.cursor() as cur:
-            invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
-            cur.execute(invalid_movements, time_period)
-            logger.info(conn.notices[-1])
 
 
 def daterange(start_time, end_time, time_delta):
@@ -501,7 +455,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     if pull:
         logger.info('Skipping aggregating and processing volume data')
     else:
-        process_data(conn, start_time, end_time)
+        logger.info('JUST NO.')
 
     logger.info('Done')
 
