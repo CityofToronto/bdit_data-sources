@@ -8,3 +8,12 @@ CREATE TABLE miovision_api.unacceptable_gaps
     accept boolean,
     CONSTRAINT intersection_uid_gap_start_gap_end_key UNIQUE (intersection_uid, gap_start, gap_end)
 )
+
+ALTER TABLE miovision_api.unacceptable_gaps
+    OWNER to miovision_admins;
+
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.unacceptable_gaps TO bdit_humans WITH GRANT OPTION;
+
+GRANT ALL ON TABLE miovision_api.unacceptable_gaps TO miovision_admins;
+
+GRANT ALL ON TABLE miovision_api.unacceptable_gaps TO miovision_api_bot;

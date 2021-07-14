@@ -149,7 +149,7 @@ Field Name|Type|Description
 ----------|----|-----------
 ID|Autonumber|Autonumber function
 COUNT_INFO_ID|number|ID number linked to [countinfomics](#1. countinfomics) table containing higher-level information
-COUNT_TIME|Date/Time|Effective time of counts (time displayed is the end time period)
+COUNT_TIME|Date/Time|Effective time of counts (**time displayed is the end time period**)
 N_CARS_R|number|S/B cars turning right
 N_CARS_T|number|S/B cars going through
 N_CARS_L|number|S/B cars turning left
@@ -227,7 +227,7 @@ Field Name|Type|Description
 ----------|----|-----------
 count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
 count|bigint|vehicle count
-timecount|Date/Time|Effective time of counts (time displayed is the end time period)
+timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
 
 #### countinfo
 

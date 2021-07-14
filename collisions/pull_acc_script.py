@@ -5,7 +5,7 @@ Pulls ACC.dat from the Flashcrow server and uploads it to collisions.ACC
 
 import click
 import configparser
-import os
+import subprocess
 import datetime
 import pathlib
 import psycopg2
@@ -70,19 +70,34 @@ def download_acc(flashcrow_settings, templocation, accpath, logger):
     """Downloads ACC.dat from Flashcrow."""
 
     logger.info('Downloading ACC.dat from Flashcrow server.')
-    rsync_command = (
-        'rsync -Pav -e "ssh -i {pk:s}" '
-        'ec2-user@flashcrow-etl.intra.dev-toronto.ca:'
-        '/data/replicator/flashcrow-CRASH/dat/ACC.dat {fl:s}')
-    os.system(rsync_command
-              .format(pk=flashcrow_settings['pem'], fl=templocation))
+    rsync_command = [
+        '/usr/bin/rsync', '-Pav', '-e',
+        'ssh -i {:s}'.format(flashcrow_settings['pem']),
+        ('ec2-user@flashcrow-etl.intra.dev-toronto.ca:'
+         '/data/replicator/flashcrow-CRASH/dat/ACC.dat'), templocation]
+    # check_returncode raises an exception if the command failed.
+    outcome = subprocess.run(rsync_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('rsync encountered the following error while downloading'
+                    'from the MOVE server:')
+        logger.info(outcome.stderr)
+        raise
 
     # To also delete columns, use """sed -i -r 's/\S+//{COLUMN NUMBER}' {FILE}"""
     # https://stackoverflow.com/questions/15361632/delete-a-column-with-awk-or-sed
-    sedcommand = """sed -i 's/"//g' {fp:s}"""
-    logger.info('Reformatting ACC for compatibility with PSQL using '
-                + sedcommand.format(fp=accpath))
-    os.system(sedcommand.format(fp=accpath))
+    logger.info('Removing double-quotes from ACC.dat for '
+                'compatibility with PSQL.')
+    sed_command = ['/bin/sed', '-i', 's/"//g', accpath]
+    outcome = subprocess.run(sed_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('sed encountered the following error '
+                    'while trimming ACC.dat:')
+        logger.info(outcome.stderr)
+        raise
 
     # Get number of lines in ACC.dat, which is used later for self-consistency
     # checks.
@@ -102,15 +117,22 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
             cur.execute("TRUNCATE collisions.acc;")
 
     # Upload new data.
-    upload_kwargs = dict(postgres_settings)
-    upload_kwargs['accpath'] = accpath
-    upload_command = (
-        r"""psql -U {user} -h {host} -d {dbname} -c "\COPY """
-        r"""collisions.acc FROM '{accpath}' WITH """
-        r"""(DELIMITER E'\t', NULL '\N', FORMAT CSV, HEADER FALSE);" """)
-    logger.info('Uploading ACC.dat using '
-                + upload_command.format(**upload_kwargs))
-    os.system(upload_command.format(**upload_kwargs))
+    logger.info('Uploading ACC.dat to Postgres.')
+    upload_command = [
+        '/usr/bin/psql', '-U', postgres_settings['user'], '-h',
+        postgres_settings['host'], '-d', postgres_settings['dbname'], '-c',
+        ('\\COPY collisions.acc FROM \'{0}\' WITH (DELIMITER E\'\\t\', NULL '
+         '\'\\N\', FORMAT CSV, HEADER FALSE);').format(accpath)
+    ]
+    # check_returncode raises an exception if the command failed.
+    outcome = subprocess.run(upload_command, stderr=subprocess.PIPE)
+    try:
+        outcome.check_returncode()
+    except subprocess.CalledProcessError:
+        logger.info('psql encountered the following error '
+                    'while uploading to Postgres:')
+        logger.info(outcome.stderr)
+        raise
 
     with psycopg2.connect(**postgres_settings) as conn:
         with conn.cursor() as cur:
@@ -123,7 +145,14 @@ def upload_acc(accpath, postgres_settings, logger, deletefile):
 
     if deletefile:
         logger.info('Deleting ACC.dat')
-        os.remove(accpath)
+        outcome = subprocess.run(['/bin/rm', accpath], stderr=subprocess.PIPE)
+        try:
+            outcome.check_returncode()
+        except subprocess.CalledProcessError:
+            logger.info('rm encountered the following error '
+                        'while deleting ACC.dat:')
+            logger.info(outcome.stderr)
+            raise
 
 
 def process_acc(postgres_settings, logger):
