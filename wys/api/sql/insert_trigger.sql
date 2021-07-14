@@ -1,8 +1,9 @@
 CREATE OR REPLACE FUNCTION wys.insert_trigger()
 RETURNS TRIGGER AS $$
 BEGIN 
-
-    IF (new.datetime_bin >= '2020-01-01' AND new.datetime_bin < '2020-01-01'::DATE + INTERVAL '1 year') THEN 
+    IF (new.datetime_bin >= '2021-01-01' AND new.datetime_bin < '2021-01-01'::DATE + INTERVAL '1 year') THEN 
+        INSERT INTO wys.raw_data_2021 VALUES (NEW.*) ON CONFLICT DO NOTHING; 
+    ELSIF (new.datetime_bin >= '2020-01-01' AND new.datetime_bin < '2020-01-01'::DATE + INTERVAL '1 year') THEN 
         INSERT INTO wys.raw_data_2020 VALUES (NEW.*) ON CONFLICT DO NOTHING; 
     ELSIF (new.datetime_bin >= '2019-01-01' AND new.datetime_bin < '2019-01-01'::DATE + INTERVAL '1 year') THEN 
         INSERT INTO wys.raw_data_2019 VALUES (NEW.*) ON CONFLICT DO NOTHING; 

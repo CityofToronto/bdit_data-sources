@@ -11,9 +11,9 @@ CREATE TABLE miovision_api.volumes
   leg text,
   movement_uid integer,
   volume integer,
-  volume_15min_tmc_uid integer,
-  CONSTRAINT volumes_volumes_15min_tmc_uid_fkey FOREIGN KEY (volume_15min_tmc_uid)
-      REFERENCES miovision_api.volumes_15min_tmc (volume_15min_tmc_uid) MATCH SIMPLE
+  volume_15min_mvt_uid integer,
+  CONSTRAINT volumes_volumes_15min_mvt_uid_fkey FOREIGN KEY (volume_15min_mvt_uid)
+      REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE SET NULL
 )
 WITH (
@@ -24,7 +24,6 @@ ALTER TABLE miovision_api.volumes
 GRANT ALL ON TABLE miovision_api.volumes TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes TO aharpal;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes TO bdit_humans WITH GRANT OPTION;
-GRANT UPDATE, INSERT, DELETE ON TABLE miovision_api.volumes TO rliu;
 
 -- Index: miovision_api.volumes_datetime_bin_idx
 
@@ -53,14 +52,14 @@ CREATE INDEX volumes_intersection_uid_idx
   USING btree
   (intersection_uid);
 
--- Index: miovision_api.volumes_volume_15min_tmc_uid_idx
+-- Index: miovision_api.volumes_volume_15min_mvt_uid_idx
 
--- DROP INDEX miovision_api.volumes_volume_15min_tmc_uid_idx;
+-- DROP INDEX miovision_api.volumes_volume_15min_mvt_uid_idx;
 
-CREATE INDEX volumes_volume_15min_tmc_uid_idx
+CREATE INDEX volumes_volume_15min_mvt_uid_idx
   ON miovision_api.volumes
   USING btree
-  (volume_15min_tmc_uid);
+  (volume_15min_mvt_uid);
 
 
 -- Create a trigger function to insert into the volumes table of the right year
@@ -71,15 +70,18 @@ CREATE OR REPLACE FUNCTION miovision_api.volumes_insert_trigger()
     VOLATILE NOT LEAKPROOF 
 AS $BODY$
 BEGIN
-	IF new.datetime_bin >= '2018-01-01'::date AND new.datetime_bin < ('2018-01-01'::date + '1 year'::interval) THEN 
+	IF new.datetime_bin >= '2021-01-01'::date AND new.datetime_bin < ('2021-01-01'::date + '1 year'::interval) THEN 
+		INSERT INTO miovision_api.volumes_2021 (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume) 
+		VALUES (NEW.intersection_uid, NEW.datetime_bin, NEW.classification_uid, NEW.leg, NEW.movement_uid, NEW.volume);
+	ELSIF new.datetime_bin >= '2018-01-01'::date AND new.datetime_bin < ('2018-01-01'::date + '1 year'::interval) THEN 
 		INSERT INTO miovision_api.volumes_2018 (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume) 
-		VALUES (NEW.*);
+		VALUES (NEW.intersection_uid, NEW.datetime_bin, NEW.classification_uid, NEW.leg, NEW.movement_uid, NEW.volume);
 	ELSIF new.datetime_bin >= '2019-01-01'::date AND new.datetime_bin < ('2019-01-01'::date + '1 year'::interval) THEN 
 		INSERT INTO miovision_api.volumes_2019 (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume) 
 		VALUES (NEW.intersection_uid, NEW.datetime_bin, NEW.classification_uid, NEW.leg, NEW.movement_uid, NEW.volume);
 	ELSIF new.datetime_bin >= '2020-01-01'::date AND new.datetime_bin < ('2020-01-01'::date + '1 year'::interval) THEN 
 		INSERT INTO miovision_api.volumes_2020 (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume) 
-		VALUES (NEW.*);
+		VALUES (NEW.intersection_uid, NEW.datetime_bin, NEW.classification_uid, NEW.leg, NEW.movement_uid, NEW.volume);
   ELSE 
     RAISE EXCEPTION 'Datetime_bin out of range.  Fix the volumes_insert_trigger() function!';
 	END IF;
@@ -112,14 +114,14 @@ BEGIN
 			tablename:= basetablename||yyyy;
 			EXECUTE format($$DROP TABLE IF EXISTS miovision_api.%I CASCADE; CREATE TABLE miovision_api.%I 
 				(CHECK (datetime_bin >= DATE '$$||startdate ||$$'AND datetime_bin < DATE '$$||startdate ||$$'+ INTERVAL '1 year')
-        ,FOREIGN KEY (volume_15min_tmc_uid) REFERENCES miovision_api.volumes_15min_tmc (volume_15min_tmc_uid) MATCH SIMPLE
+        ,FOREIGN KEY (volume_15min_mvt_uid) REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE SET NULL
 				 , UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 				) INHERITS (miovision_api.volumes)$$
 				, tablename, tablename);
 			EXECUTE format($$ALTER TABLE miovision_api.%I OWNER TO miovision_admins$$, tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I USING brin(datetime_bin) $$, tablename);
-      EXECUTE format($$ CREATE INDEX ON miovision_api.%I (volume_15min_tmc_uid) $$, tablename);
+      EXECUTE format($$ CREATE INDEX ON miovision_api.%I (volume_15min_mvt_uid) $$, tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I (intersection_uid) $$, tablename);
 	END LOOP;
 END;

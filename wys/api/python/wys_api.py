@@ -2,7 +2,7 @@
 """
 Created on Wed Oct 17 15:26:52 2018
 
-@author: rliu4
+@author: rliu4, jchew, radumas
 """
 
 import configparser
@@ -150,7 +150,9 @@ def parse_counts_for_location(api_id, raw_records):
         datetime_bin= dateutil.parser.parse(str(datetime_bin))
         counter=record['counter']
         for item in counter:
-            speed_row=[api_id, datetime_bin, item['speed'], item['count']]
+            this_speed=int(item['speed']) if item['speed'] else None
+            this_count=int(item['count']) if item['count'] else None
+            speed_row=[api_id, datetime_bin, this_speed, this_count]
             speed_counts.append(speed_row)
     return speed_counts
 
@@ -247,20 +249,22 @@ def cli():
 @click.option('--location_flag' , default=0, help='enter the location_id of the sign')
 
 def run_api(start_date, end_date, path, location_flag):
-    start_date= dateutil.parser.parse(str(start_date)).date()
-    end_date= dateutil.parser.parse(str(end_date)).date()
+    
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
     api_main(start_date, end_date, location_flag, CONFIG)
 
-def api_main(start_date=dateutil.parser.parse(default_start).date(), 
-             end_date=dateutil.parser.parse(default_end).date(),
+def api_main(start_date=default_start,
+             end_date=default_end,
              location_flag=0, CONFIG=None, conn=None, api_key=None):
     if CONFIG and not conn:
         key=CONFIG['API']
         api_key=key['key']
         dbset = CONFIG['DBSETTINGS']
         conn = connect(**dbset)
+
+    start_date= dateutil.parser.parse(str(start_date)).date()
+    end_date= dateutil.parser.parse(str(end_date)).date()
 
     signs_list=[]
     try:
