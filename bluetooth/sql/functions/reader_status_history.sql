@@ -4,7 +4,7 @@
 
 CREATE OR REPLACE FUNCTION bluetooth.reader_status_history(
 	insert_value date)
-    RETURNS void
+    RETURNS TABLE(an_id bigint, last_received date, status text, ddown integer, start_route_point_id text, start_detector text, end_route_point_id text, end_detector text)
     LANGUAGE 'plpgsql'
 
     COST 100
@@ -15,17 +15,17 @@ AS $BODY$
 			with x AS 
 			(select DISTINCT(analysis_id), 
 			 CASE
-			 WHEN MAX (datetime_bin::date)>= (insert_value-1) then (insert_value-1)
+			 WHEN MAX (datetime_bin::date)>= (insert_value) then (insert_value)
 			 ELSE MAX (datetime_bin::date)
 			 END 
 			 as last_reported,
 			CASE
-			WHEN  MAX (datetime_bin::date)>= (insert_value-1) then 'True'::text
+			WHEN  MAX (datetime_bin::date)>= (insert_value) then 'True'::text
 		else 'False'::text
 		END 
 		AS route_status
 			 ,CASE
-		WHEN max(aggr_5min.datetime_bin::date) >= (insert_value::text::date - 1) THEN insert_value::date
+		WHEN max(aggr_5min.datetime_bin::date) >= (insert_value::text::date) THEN insert_value::date
                     ELSE (insert_value::date)
 		END AS dt
 		from 
@@ -110,6 +110,10 @@ UNION
    where reader_id IS NOT NULL
    group by reader_id, route_status, dt
    ORDER BY reader_id
+   ;
+
+   UPDATE bluetooth.reader_locations
+   set date_last_received = (SELECT DISTINCT max(max) from final where bluetooth.detectors_history_final.reader_id = bluetooth.reader_locations.reader_id)
 
 	;
 end; $BODY$;
