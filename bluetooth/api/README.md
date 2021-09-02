@@ -63,3 +63,22 @@ python blip_api.py -y 20180501 20180512 -a 156435 -a 165375 -d config.cfg
 
 Compares Blip route configurations in the database with the previous day's tables and sends an email if there are new or updated routes.
 This script runs on the EC2 in order to be able to use the [`email_notifications`](https://github.com/CityofToronto/bdit_python_utilities/tree/master/email_notifications) module
+
+### blip_space_log
+
+Fetches a JSON from a REST API on the Blip Server that reports the server's space. Checks whether the space is below 15 Gigs and logs whether there is sufficient space or not. IT's monitoring system monitors this log and will email us of any issues.
+
+#### TimedRotatingFileHandler
+
+The logger in this script implements [this handler](https://docs.python.org/3/library/logging.handlers.html#timedrotatingfilehandler) in order to ensure there is approximately only 1 line in the file every day. It will maintain a backup of 7 log files on a rotating basis for the 7 previous days. 
+
+```python
+logger = logging.getLogger('blip_space_logger')
+handler = TimedRotatingFileHandler(r'C:\Users\Public\Documents\blip_space\blip_space_log.log',
+                             when='D', interval=1, backupCount=7)
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(message)s',
+                              "%Y-%m-%d %H:%M:%S")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+```
