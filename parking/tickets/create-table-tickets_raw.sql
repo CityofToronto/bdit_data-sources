@@ -14,7 +14,7 @@ CREATE TABLE parking.tickets_raw (
 	source_file text
 );
 
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans;
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE parking.tickets_raw TO bdit_humans;
 
 
 CREATE INDEX parking_tickets_uid_idx
