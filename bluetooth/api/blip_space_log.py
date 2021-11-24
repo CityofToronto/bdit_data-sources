@@ -14,13 +14,12 @@ logger = logging.getLogger('blip_space_logger')
 logger.setLevel(logging.INFO)
 
 handler = TimedRotatingFileHandler(r'C:\Users\Public\Documents\blip_space\blip_space_log.log',
-                             when='D', interval=1, backupCount=7)
-handler.suffix = "%Y%m%d"
+                             when='midnight', interval=1, backupCount=7)
+
 formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(message)s',
                               "%Y-%m-%d %H:%M:%S")
 handler.setFormatter(formatter)
-#Since TimedRotatingFileHandler won't rotate logs unless the program is running through midnight, force a manual rollover 
-handler.doRollover()
+
 logger.addHandler(handler)
 
 
