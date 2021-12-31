@@ -59,7 +59,7 @@ default_args = {'owner':'rdumas',
 here_admin_bot = PostgresHook('here_admin_bot')
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/here/sql/')
+    sys.path.append('/etc/airflow/data_scripts/here/traffic/')
     from here_eoy_create_tables import create_here_ta_tables, create_sql_for_trigger
 except:
     raise ImportError("Cannot import functions for end of year HERE maintenance")
