@@ -18,7 +18,7 @@ BEGIN
 _startdate:= to_date(_yyyy||'-01-01', 'YYYY-MM-DD');
 _tablename:= 'raw_data_'||_yyyy;
 
-EXECUTE format($$CREATE TABLE wys.%I 
+EXECUTE format($$CREATE TABLE wys.%I (
                 PRIMAY KEY (raw_data_uid),
 				(CHECK (datetime_bin >= DATE %L AND datetime_bin < DATE %L + INTERVAL '1 year')
             	 , UNIQUE(api_id, datetime_bin, speed)
