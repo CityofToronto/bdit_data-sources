@@ -43,6 +43,6 @@ END;
 $BODY$;
 
 GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables(text) TO bt_admins;
-GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables(text) TO bt_admin_bot;
+GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables(text) TO bt_bot;
 
 COMMENT ON FUNCTION bluetooth.create_obs_tables(text) IS 'Loops through the months of the provided year to create a partitioned table for each month';
