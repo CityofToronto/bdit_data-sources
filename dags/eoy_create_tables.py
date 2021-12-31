@@ -72,6 +72,7 @@ default_args = {'owner':'rdumas',
 here_admin_bot = PostgresHook('here_admin_bot')
 bt_bot = PostgresHook('bt_bot')
 miovision_bot = PostgresHook('miovision_api_bot')
+wys_bot = PostgresHook('wys_bot')
 
 try:
     sys.path.append('/etc/airflow/data_scripts/here/traffic/')
@@ -90,6 +91,13 @@ try:
     from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
 except:
     raise ImportError("Cannot import functions for end of year Miovision maintenance")
+
+try:
+    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
+    from wys_eoy_create_tables import create_wys_raw_data_table, replace_wys_raw_data_trigger
+except:
+    raise ImportError("Cannot import functions for end of year Miovision maintenance")
+
 
 dag = DAG('eoy_table_create', default_args=default_args,
         schedule_interval='5 9 14-21 12 1') #9:05 on the 3rd Monday of the month
@@ -134,7 +142,20 @@ insrt_holidays = PythonOperator(task_id='insert_holidays',
                                     dag = dag,
                                     op_args = ['{{ ds }}'])
 
+wys_create_table = PythonOperator(task_id='wys_create_table',
+                                    python_callable = create_wys_raw_data_table,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': wys_bot,
+                                                 'dt': '{{ ds }}'}
+                                    )
+wys_replace_trigger = PythonOperator(task_id='wys_replace_trigger',
+                                    python_callable = replace_wys_raw_data_trigger,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': wys_bot,
+                                                 'dt': '{{ ds }}'})
+
 
 here_create_tables >> here_sql_trigger_slack
 bt_create_tables >> bt_replace_trigger
 miovision_create_table >> miovision_replace_trigger
+wys_create_table >> wys_replace_trigger
