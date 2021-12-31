@@ -57,10 +57,17 @@ default_args = {'owner':'rdumas',
                 }
 
 here_admin_bot = PostgresHook('here_admin_bot')
+bt_bot = PostgresHook('bt_bot')
 
 try:
     sys.path.append('/etc/airflow/data_scripts/here/traffic/')
     from here_eoy_create_tables import create_here_ta_tables, create_sql_for_trigger
+except:
+    raise ImportError("Cannot import functions for end of year HERE maintenance")
+
+try:
+    sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/')
+    from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
 except:
     raise ImportError("Cannot import functions for end of year HERE maintenance")
 
@@ -78,4 +85,20 @@ here_sql_trigger_slack = PythonOperator(task_id='here_sql_trigger_slack',
                                     dag = dag,
                                     op_args = ['{{ ds }}'],
                                     on_success_callback=slack_here_trigger_sql)
+
+bt_create_tables = PythonOperator(task_id='bt_create_tables',
+                                    python_callable = create_bt_obs_tables,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': bt_bot,
+                                                 'dt': '{{ ds }}'}
+                                    )
+bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
+                                    python_callable = replace_bt_trigger,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': bt_bot,
+                                                 'dt': '{{ ds }}'})
+
+
+
 here_create_tables >> here_sql_trigger_slack
+bt_create_tables >> bt_replace_trigger
