@@ -16,7 +16,7 @@ DECLARE
 
 BEGIN
 _startdate:= to_date(_yyyy||'-01-01', 'YYYY-MM-DD');
-_tablename:= basetablename||_yyyy;
+_tablename:= 'volumes'||_yyyy;
 
 EXECUTE format($$CREATE TABLE miovision_api.%I 
 				(CHECK (datetime_bin >= DATE %L AND datetime_bin < DATE %L + INTERVAL '1 year')
@@ -25,7 +25,7 @@ EXECUTE format($$CREATE TABLE miovision_api.%I
 				 , UNIQUE(intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 				) INHERITS (miovision_api.volumes)$$
 				, _tablename, _startdate, _startdate, _tablename);
-			EXECUTE format($$ALTER TABLE miovision_api.%I OWNER TO miovision_admins$$, tablename);
+			EXECUTE format($$ALTER TABLE miovision_api.%I OWNER TO miovision_admins$$, _tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I USING brin(datetime_bin) $$, _tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I (volume_15min_mvt_uid) $$, _tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I (intersection_uid) $$, _tablename);

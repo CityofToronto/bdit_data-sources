@@ -73,7 +73,7 @@ except:
     raise ImportError("Cannot import functions for end of year bluetooth maintenance")
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/miovision/sql/')
+    sys.path.append('/etc/airflow/data_scripts/volumes/miovision/sql/')
     from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
 except:
     raise ImportError("Cannot import functions for end of year Miovision maintenance")
@@ -108,10 +108,10 @@ bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
 miovision_create_table = PythonOperator(task_id='miovision_create_table',
                                     python_callable = create_miovision_vol_table,
                                     dag = dag,
-                                    op_kwargs = {'pg_hook': bt_bot,
+                                    op_kwargs = {'pg_hook': miovision_bot,
                                                  'dt': '{{ ds }}'}
                                     )
-miovis_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
+miovision_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                     python_callable = replace_miovision_vol_trigger,
                                     dag = dag,
                                     op_kwargs = {'pg_hook': miovision_bot,
@@ -119,3 +119,4 @@ miovis_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
 
 here_create_tables >> here_sql_trigger_slack
 bt_create_tables >> bt_replace_trigger
+miovision_create_table >> miovision_replace_trigger
