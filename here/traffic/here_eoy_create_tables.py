@@ -15,13 +15,16 @@ def create_here_ta_tables(pg_hook = None, dt = None):
     conn = pg_hook.get_conn()
     year = _get_year_from_dt(dt)
     try:
-        with conn.cursor() as cur:
-            logger.info('Creating HERE tables for year: %s', dt)
-            cur.execute('SELECT here.create_tables(%s)', (year,))
+        with conn:
+            with conn.cursor() as cur:
+                logger.info('Creating HERE tables for year: %s', year)
+                cur.execute('SELECT here.create_tables(%s)', (year,))
     except psycopg2.Error as exc:
         logger.exception('There was an error creating HERE tables')
         logger.exception(exc)
         raise Exception()
+    finally:
+        conn.close()
 
 def create_sql_for_trigger(dt):
     '''Creates sql for the trigger to send data to the newly created tables'''
