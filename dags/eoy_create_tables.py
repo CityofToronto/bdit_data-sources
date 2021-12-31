@@ -2,11 +2,13 @@ import sys
 
 from airflow import DAG
 from datetime import datetime, timedelta
+
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-
+from dateutil.relativedelta import relativedelta
+import holidays
 
 
 SLACK_CONN_ID = 'slack_data_pipeline'
@@ -44,6 +46,17 @@ def slack_here_trigger_sql(context):
     ```{task_msg}```'''.format(task_msg=task_msg)
     success_alert = prep_slack_message(slack_msg)
     return success_alert.execute(context=context)
+
+def insert_holidays(dt):
+    next_year = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    holidays_year = holidays.CA(prov='ON', years=next_year)
+    ref_bot = PostgresHook('ref_bot')
+    with ref_bot.get_conn() as con, con.cursor() as cur:
+        for dt, name in holidays_year.items():
+            name = name.replace('Observed', 'obs')
+            cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
+        
+
 
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
@@ -116,6 +129,11 @@ miovision_replace_trigger = PythonOperator(task_id='miovision_replace_trigger',
                                     dag = dag,
                                     op_kwargs = {'pg_hook': miovision_bot,
                                                  'dt': '{{ ds }}'})
+insrt_holidays = PythonOperator(task_id='insert_holidays',
+                                    python_callable = insert_holidays,
+                                    dag = dag,
+                                    op_args = ['{{ ds }}'])
+
 
 here_create_tables >> here_sql_trigger_slack
 bt_create_tables >> bt_replace_trigger
