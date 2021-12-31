@@ -20,9 +20,7 @@ END IF;
 RETURN NULL;
 END;
 $BODY$;
-
-ALTER FUNCTION bluetooth.observations_insert_trigger()
-    OWNER TO bt_admins;'''
+'''
 
 def _get_year_from_dt(dt):
     next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
