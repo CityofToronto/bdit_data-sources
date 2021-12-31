@@ -19,7 +19,7 @@ BEGIN
 
 	FOR _mm IN 01..12 LOOP
 		_startdate:= to_date(_yyyy||'-'||_mm||'-01', 'YYYY-MM-DD');
-		IF mm < 10 THEN
+		IF _mm < 10 THEN
 			_yyyymm:= _yyyy||'0'||_mm;
 		ELSE
 			_yyyymm:= _yyyy||''||_mm;
