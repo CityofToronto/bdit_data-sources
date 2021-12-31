@@ -9,6 +9,7 @@ CREATE OR REPLACE FUNCTION here.create_tables(
 
     COST 100
     VOLATILE STRICT 
+    SECURITY DEFINER
 AS $BODY$
 
 
