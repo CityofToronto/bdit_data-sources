@@ -32,7 +32,7 @@ def create_sql_for_trigger(dt):
     year = _get_year_from_dt(dt)
 
     insert_statement = '''IF (NEW.tx >= DATE '{year}-{month}-01' AND NEW.tx < DATE '{year}-{month}-01' +INTERVAL '1 month') THEN
-    INSERT INTO here.ta_{year}{month} VALUES (NEW.*)ON CONFLICT DO NOTHING;'''
+INSERT INTO here.ta_{year}{month} VALUES (NEW.*)ON CONFLICT DO NOTHING;'''
     sql = insert_statement.format(year=year, month=12)
     for month in range(11, 0, -1):
         if month < 10:
