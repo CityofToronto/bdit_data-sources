@@ -58,6 +58,7 @@ default_args = {'owner':'rdumas',
 
 here_admin_bot = PostgresHook('here_admin_bot')
 bt_bot = PostgresHook('bt_bot')
+miovision_bot = PostgresHook('miovision_api_bot')
 
 try:
     sys.path.append('/etc/airflow/data_scripts/here/traffic/')
@@ -69,7 +70,13 @@ try:
     sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/')
     from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
 except:
-    raise ImportError("Cannot import functions for end of year HERE maintenance")
+    raise ImportError("Cannot import functions for end of year bluetooth maintenance")
+
+try:
+    sys.path.append('/etc/airflow/data_scripts/miovision/sql/')
+    from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
+except:
+    raise ImportError("Cannot import functions for end of year Miovision maintenance")
 
 dag = DAG('eoy_table_create', default_args=default_args,
         schedule_interval='5 9 14-21 12 1') #9:05 on the 3rd Monday of the month
@@ -95,10 +102,20 @@ bt_create_tables = PythonOperator(task_id='bt_create_tables',
 bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                     python_callable = replace_bt_trigger,
                                     dag = dag,
-                                    op_kwargs = {'pg_hook': bt_bot,
+                                    op_kwargs = {'pg_hook': miovision_bot,
                                                  'dt': '{{ ds }}'})
 
-
+miovision_create_table = PythonOperator(task_id='miovision_create_table',
+                                    python_callable = create_miovision_vol_table,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': bt_bot,
+                                                 'dt': '{{ ds }}'}
+                                    )
+miovis_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
+                                    python_callable = replace_miovision_vol_trigger,
+                                    dag = dag,
+                                    op_kwargs = {'pg_hook': miovision_bot,
+                                                 'dt': '{{ ds }}'})
 
 here_create_tables >> here_sql_trigger_slack
 bt_create_tables >> bt_replace_trigger
