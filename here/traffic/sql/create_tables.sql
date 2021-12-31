@@ -1,4 +1,4 @@
-/*DROP TABLE IF EXISTS here.ta CASCADE;
+--DROP TABLE IF EXISTS here.ta CASCADE;
 
 CREATE TABLE here.ta
 (
@@ -36,38 +36,5 @@ WITH (
 );
 ALTER TABLE here.ta
   OWNER TO here_admins;
-*/
 
-/*Loops through the years and then months for which we currently have data in order to create a partitioned table for each month*/
-
-DO $do$
-DECLARE
-	startdate DATE;
-	yyyymm TEXT;
-	basetablename TEXT := 'ta_';
-	tablename TEXT;
-BEGIN
-
-	for yyyy IN 2012..2016 LOOP
-		FOR mm IN 01..12 LOOP
-			startdate:= to_date(yyyy||'-'||mm||'-01', 'YYYY-MM-DD');
-			IF mm < 10 THEN
-				yyyymm:= yyyy||'0'||mm;
-			ELSE
-				yyyymm:= yyyy||''||mm;
-			END IF;
-			tablename:= basetablename||yyyymm;
-			EXECUTE format($$CREATE TABLE here.%I 
-				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
-				UNIQUE(link_dir, tx)
-				) INHERITS (here.ta);
-				ALTER TABLE here.%I OWNER TO here_admins;
-				$$
-				, tablename, tablename);
-			PERFORM here.create_link_dir_idx(tablename);
-			PERFORM here.create_tx_idx(tablename);
-		END LOOP;
-	END LOOP;
-END;
-$do$ LANGUAGE plpgsql
 	
