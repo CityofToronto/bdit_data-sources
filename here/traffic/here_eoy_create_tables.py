@@ -5,7 +5,7 @@ import psycopg2
 
 def _get_year_from_dt(dt):
     next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
-    return next_dt.year
+    return str(next_dt.year)
 
 def create_here_ta_tables(pg_hook = None, dt = None):
     '''Executes the postgresql function to create here tables for the given 
