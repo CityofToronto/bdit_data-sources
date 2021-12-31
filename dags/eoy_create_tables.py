@@ -94,7 +94,7 @@ except:
 
 try:
     sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
-    from wys_eoy_create_tables import create_wys_raw_data_table, replace_wys_raw_data_trigger
+    from wys_eoy_create_table import create_wys_raw_data_table, replace_wys_raw_data_trigger
 except:
     raise ImportError("Cannot import functions for end of year Miovision maintenance")
 
