@@ -21,7 +21,7 @@ def create_here_ta_tables(pg_hook = None, dt = None):
     except psycopg2.Error as exc:
         logger.exception('There was an error creating HERE tables')
         logger.exception(exc)
-        raise Exception(exc)
+        raise Exception()
 
 def create_sql_for_trigger(dt):
     '''Creates sql for the trigger to send data to the newly created tables'''
