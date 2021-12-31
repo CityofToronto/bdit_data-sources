@@ -17,7 +17,7 @@ def create_here_ta_tables(pg_hook = None, dt = None):
     try:
         with conn.cursor() as cur:
             logger.info('Creating HERE tables for year: %s', dt)
-            cur.execute('SELECT here.create_tables(%s)', year)
+            cur.execute('SELECT here.create_tables(%s)', (year,))
     except psycopg2.Error as exc:
         logger.exception('There was an error creating HERE tables')
         logger.exception(exc)
