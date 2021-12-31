@@ -1,9 +1,11 @@
 import logging
-import datetime 
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import psycopg2
 
 def _get_year_from_dt(dt):
-    return datetime.strptime(dt,  "%Y-%m-%d").year
+    next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    return next_dt.year
 
 def create_here_ta_tables(pg_hook = None, dt = None):
     '''Executes the postgresql function to create here tables for the given 
@@ -29,9 +31,10 @@ def create_sql_for_trigger(dt):
     insert_statement = '''IF (NEW.tx >= DATE '{year}-{month}-01' AND NEW.tx < DATE '{year}-{month}-01' +INTERVAL '1 month') THEN  INSERT INTO here.ta_{year}{month} 
 VALUES (NEW.*)ON CONFLICT DO NOTHING;'''
     sql = insert_statement.format(year=year, month=12)
-    for month in range(11, 1, -1):
+    for month in range(11, 0, -1):
+        if month < 10:
+            month= '0'+str(month)
         sql += '\n ELS'+insert_statement.format(year=year, month=month)
 
     return sql
-
 
