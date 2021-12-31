@@ -20,7 +20,7 @@ _tablename:= 'raw_data_'||_yyyy;
 
 EXECUTE format($$CREATE TABLE wys.%I (
                 PRIMAY KEY (raw_data_uid),
-				(CHECK (datetime_bin >= DATE %L AND datetime_bin < DATE %L + INTERVAL '1 year')
+				CHECK (datetime_bin >= DATE %L AND datetime_bin < DATE %L + INTERVAL '1 year')
             	 , UNIQUE(api_id, datetime_bin, speed)
 				) INHERITS (wys.raw_data)$$
 				, _tablename, _startdate, _startdate, _tablename);
