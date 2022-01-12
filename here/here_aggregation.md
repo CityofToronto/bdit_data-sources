@@ -1,8 +1,10 @@
 # What is HERE data?
 
-We get speed data for all streets in the City of Toronto from HERE Technologies which summarizes GPS traces of connected cars, trucks, and other devices. We have a daily automated airflow pipeline that pulls 5 minutes aggregated speed data for each link in the city from the here API. 
+We get speed data for all streets in the City of Toronto from HERE Technologies which summarizes GPS traces of connected cars, trucks, and other devices. We have a daily [automated airflow pipeline](!https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls 5 minutes aggregated speed data for each link in the city from the here API. 
 
 This is the coverage of here links in the city of Toronto. (from `here_gis.streets_21_1`)
+![image](https://user-images.githubusercontent.com/46324452/149184544-bbff447b-bba7-4585-aebf-d9fc65d21998.png)
+
 
 # Data Requests
 
@@ -39,13 +41,13 @@ Geometries can come in a couple of different formats. The goal is to get segment
 
 ### Travel time request app
 
-The travel time data request app (only accessible with VPN) was created by U of T students as a part of their computer science project. It allows users to draw segments using the here routing network, and download the drawn segments as geojson. There are a few issues with the returned geojson (an extra `[]` brackets, and some formatting issues around multi linestrings) 
+The [travel time data request app](!https://github.com/CityofToronto/bdit_tt_request_app) (only accessible with VPN) was created by U of T students as a part of their computer science project. It allows users to draw segments using the here routing network, and download the drawn segments as geojson. There are a few issues with the returned geojson, such as extra `[]`, and some formatting issues around multi linestrings. 
 
 Steps to format geojson from the app:
 
-1) Open the geojson on a text editor and get rid of the outer most square brackets `[]`
+1) Open the geojson in a text editor and get rid of the outer most square brackets `[]`
 
-2) Inspect the geojson on [geojson.io](http://geojson.io) or QGIS 
+2) Inspect the geojson on [geojson.io](http://geojson.io) or QGIS and make sure the geojson file is valid
 
 3) QC, import the geojson in QGIS and make sure the segments were drawn correctly
 
@@ -60,16 +62,16 @@ Steps to format geojson from the app:
 | --- | --- | --- | --- | --- | --- |
 | Lakeshore Blvd | Park Lawn Rd | York St | WB | 1239874T | 30 |
 
-[Example](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/blob/traffic_op_20210107/input_manipulation%20/here_routing/traffic_signal_optimization/i0113-clean_data.sql) cleaning sqls. 
+[Example](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/blob/here_traffic/i0203_rto_corridors/here_traffic/i0203_input) cleaning sql. 
 
 ### PX numbers (Traffic Signals)
 
 Another format geometries are defined are from and to PX numbers, which are traffic signal IDs. For example:
 
-| px_start | px_end | street | from_street | to_street |
-| --- | --- | --- | --- | --- |
-| PX102 | PX150 | University Ave | Wellington  | Adelaide |
-| PX150 | PX156 | University Ave | Adelaide | Richmond |
+| px_start | px_end | street | from_street | to_street | direction |
+| --- | --- | --- | --- | --- | --- |
+| PX102 | PX150 | University Ave | Wellington  | Adelaide | NB
+| PX150 | PX156 | University Ave | Adelaide | Richmond | NB
 
 In this case, we will need to “draw” the segments using [pgRouting](!http://pgrouting.org/), a PostgreSQL extension in pgadmin. There is a function `here_gis.get_links_btwn_px_21_1(px_start, px_end)` in our database which takes in two input: start px number, end px number and returns the link_dirs that make up the segment between two pxs. It first find the closest here node from the input px geometry using nearest neighbour, and then route the here nodes using `pgr_dijkstra` which finds the shortest path between two nodes. 
 
@@ -93,7 +95,7 @@ Sometimes, we don’t get anything other than a simple text description.
 | --- | --- | --- |
 | Lakeshore Blvd | Park Lawn Rd | York St |
 
-In this case, we can either go to the travel time request app and draw the segment there, or route them with a function. 
+In this case, we can either go to the travel time request app and draw the segment ourselves, or route them with a function. 
 
 Steps to draw segments from text description:
 
@@ -249,7 +251,7 @@ GROUP BY    uid, street, from_street, to_street, direction, period, total_length
 
 The steps to aggregate here data in project analysis are similar to data requests. They are slightly different in terms of the way we structure and organize data, as well as the base network used. 
 
-For example, bigger projects such as ActiveTO and RapidTO has their own schema `activeto`, and `rapidto`. SQLs for smaller projects reside in schema `data_analysis`. Time range, date range, as well geometry are usually defined in separate tables or views for easier modification and reusability. 
+For example, bigger projects such as ActiveTO and RapidTO has their own schema `activeto`, and `rapidto`. SQLs for smaller projects reside in schema `data_analysis`. Time range, date range, as well geometry are usually defined in separate tables or views for easy modification and reusability. 
 
 ### Define time period in a view or a table
 
@@ -272,7 +274,7 @@ Example from `activeto.analysis_ranges`
 
 ### Define segments
 
-Defining segments for projects are often different than data requests, since a lot of the time we use congestion network instead of here network. Using the congestion network allows us to create other monitoring indices  such as Travel Time Index (TTI) and Buffer Index (BI).
+Defining segments for projects are often different than data requests, since a lot of the time we use [congestion network](!https://github.com/CityofToronto/bdit_congestion/issues/40) instead of here network. Using the congestion network allows us to create other monitoring indices such as Travel Time Index (TTI) and Buffer Index (BI).
 
 Example table structure:
 
@@ -447,7 +449,7 @@ where at least 80% of the report corridor (by distance) has observations at the 
 
 ### Using congestion tables
 
-Congestions summary tables are updated by an airflow pipeline that runs every day and aggregates 5 min bin link level data up to segment level, creating segment weekly travel time index and citywide travel time index. 
+Congestions summary tables are updated by an [airflow pipeline](!https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5 min bin link level data up to segment level, creating segment weekly travel time index and citywide travel time index. 
 
 Aggregating with congestion tables are simpler than aggregating directly from the raw speed table. We can omit step 1 to 3, and start from step 4. Select directly from summary tables such as weekly segment level tti from `congestion.segments_weekly_tti`. Follow step 5 and 6 and convert tti to travel times using the baseline travel time for each segments. 
 
