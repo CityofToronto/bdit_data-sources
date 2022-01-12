@@ -1,27 +1,27 @@
 # What is HERE data?
 
-We get speed data for all streets in the City of Toronto source from HERE Technologies that summarizes GPS traces of connected cars, trucks, and other devices. We have a daily automated airflow pipeline that pulls 5 min aggregated data for each link in the city from the here api. 
+We get speed data for all streets in the City of Toronto from HERE Technologies which summarizes GPS traces of connected cars, trucks, and other devices. We have a daily automated airflow pipeline that pulls 5 minutes aggregated speed data for each link in the city from the here API. 
 
 This is the coverage of here links in the city of Toronto. (from `here_gis.streets_21_1`)
 
 # Data Requests
 
-We often get data requests from other units asking for speed data on certain streets over a certain amount of time. For example before and after studies, and reoccuring requests such as school zone prioritization, and traffic signal optimization. 
+We often get data requests from other units asking for speed data on certain streets over a certain amount of time. For example before and after studies for bikelane installations, and reoccurring requests such as school zone prioritization, and traffic signal optimization. 
 
-Before aggregating the data, there are a few things we need to figure out first:
+Before aggregating the data, we need to figure out the input and output parameters first:
 
-Input Parameters
+**Input Parameters**
 
 - Geometry
     - The spatial extent of the study area
 - Time range
     - Time periods definitions, e.g. am peak, pm peak
 - Date range
-    - Over what period of time? (has to have at least 2 weeks of data)
+    - Over what period of time?
     - Day of week, weekday or Weekend
     - Including or excluding holidays
 
-Output Parameters
+**Output Parameters**
 
 - average speed / travel time
 - min speed / travel time
@@ -39,11 +39,11 @@ Geometries can come in a couple of different formats. The goal is to get segment
 
 ### Travel time request app
 
-The travel time data request app (only accessible with VPN) was created by U of T students as a part of their computer sciemce project. It allows users to draw segments using the here routing network, and download the drawn segments as geojson. There are a few issues with the returned geojson (an extra `[]` brackets, and some formatting issues around multi linestrings) 
+The travel time data request app (only accessible with VPN) was created by U of T students as a part of their computer science project. It allows users to draw segments using the here routing network, and download the drawn segments as geojson. There are a few issues with the returned geojson (an extra `[]` brackets, and some formatting issues around multi linestrings) 
 
 Steps to format geojson from the app:
 
-1) Open the geojson on an text editor and get rid of the outer most square brackets `[]`
+1) Open the geojson on a text editor and get rid of the outer most square brackets `[]`
 
 2) Inspect the geojson on [geojson.io](http://geojson.io) or QGIS 
 
@@ -64,7 +64,7 @@ Steps to format geojson from the app:
 
 ### PX numbers (Traffic Signals)
 
-Another format geometries are define are from and to PX numbers, which are traffic signal IDs. For example:
+Another format geometries are defined are from and to PX numbers, which are traffic signal IDs. For example:
 
 | px_start | px_end | street | from_street | to_street |
 | --- | --- | --- | --- | --- |
@@ -247,9 +247,9 @@ GROUP BY    uid, street, from_street, to_street, direction, period, total_length
 
 # Project Analysis
 
-The steps to aggregare here data in project analysis are similar to data requests. They are slightly different in term of the way we structure and organize data, as well as the base network used. 
+The steps to aggregate here data in project analysis are similar to data requests. They are slightly different in terms of the way we structure and organize data, as well as the base network used. 
 
-For example, bigger projects such as ActiveTO and RapidTO has their own schema `activeto`, and `rapidto`. SQLs for smaller projects reside in schema `data_analysis`. Time range, date range, as well geometry are usually defined in seperate tables or views for easier modification and reusability. 
+For example, bigger projects such as ActiveTO and RapidTO has their own schema `activeto`, and `rapidto`. SQLs for smaller projects reside in schema `data_analysis`. Time range, date range, as well geometry are usually defined in separate tables or views for easier modification and reusability. 
 
 ### Define time period in a view or a table
 
@@ -272,7 +272,7 @@ Example from `activeto.analysis_ranges`
 
 ### Define segments
 
-Defining segments for projects are often different than data request, since a lot of the times we use the congestion network instead of the here network. Using the congestion network allows us to create other monitoring indicies such as Travel Time Index (TTI) and Buffer Index (BI).
+Defining segments for projects are often different than data requests, since a lot of the time we use congestion network instead of here network. Using the congestion network allows us to create other monitoring indices  such as Travel Time Index (TTI) and Buffer Index (BI).
 
 Example table structure:
 
@@ -447,6 +447,22 @@ where at least 80% of the report corridor (by distance) has observations at the 
 
 ### Using congestion tables
 
-Congestions summary tables are updated by an airflow pipeline that runs everyday and aggregates 5 min bin link level data up to segment level, creating segment weekly travel time index and citywide travel time index. 
+Congestions summary tables are updated by an airflow pipeline that runs every day and aggregates 5 min bin link level data up to segment level, creating segment weekly travel time index and citywide travel time index. 
 
-Aggregating with congestion tables are simplier than aggregating directly from the raw speed table. Omit step 1 to 3, and start from step 4. Select directly from summary tables such as weekly segment level tti from `congestion.segments_weekly_tti`. Follow step 5 and 6 and convert tti to travel times using the baseline travel time for each segments. 
+Aggregating with congestion tables are simpler than aggregating directly from the raw speed table. We can omit step 1 to 3, and start from step 4. Select directly from summary tables such as weekly segment level tti from `congestion.segments_weekly_tti`. Follow step 5 and 6 and convert tti to travel times using the baseline travel time for each segments. 
+
+For example:
+```
+SELECT 	corridor_id,
+		analysis_period,
+		time_period,
+		week,
+		SUM(A.tti * B.tt_baseline) / SUM(B.tt_baseline) AS tti, 
+		SUM(A.tti * B.tt_baseline) / SUM(B.tt_baseline) * C.tt_baseline AS tt 
+
+FROM 		segment_tt A
+INNER JOIN	segment_baseline B USING (segment_id)
+INNER JOIN	corridor_baseline C USING (corridor_id)
+INNER JOIN	congestion.segments_v5 D USING (segment_id)
+INNER JOIN	activeto.kqqr_here_corridors E USING (corridor_id)
+```
