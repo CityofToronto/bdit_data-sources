@@ -142,19 +142,8 @@ Example of `congestion.segments_tti_weekly`:
 	FROM 		data_requests.input_table -- input table
 	GROUP BY 	input_table.uid 
 ```
-
-**Step 2**: Calculate the baseline travel time for each corridor
-
-```sql
-
-    SELECT    segment_lookup.corridor_id,
-              sum(bl.tt_baseline_10pct_corr) / 60::double precision AS tt_baseline
-    FROM      segment_lookup
-    JOIN      congestion.tt_segments_baseline_v5_2019 bl USING (segment_id)
-    GROUP BY  segment_lookup.corridor_id
-        )
-```        
-**Step 3**: Aggregate segment level travel time index to the defined time period
+    
+**Step 2**: Aggregate segment level travel time index to the defined time period
 ```sql
     SELECT      segment_id,
                 analysis_period,
@@ -169,7 +158,7 @@ Example of `congestion.segments_tti_weekly`:
                 time_bin <@ time_range 
     GROUP BY    segment_id, analysis_period, time_range, week
 ```       
-**Step 4**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80% of the segment (by distance) has observations at the corridor level
+**Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80% of the segment (by distance) has observations at the corridor level
 
 ```sql
 SELECT      corridor_id,
@@ -180,7 +169,7 @@ SELECT      corridor_id,
             sum(tti * tt_baseline) / sum(tt_baseline) * tt_baseline AS tt
 FROM        segment_tt 
 GROUP BY    corridor_id, analysis_period, time_period, week, tt_baseline
-HAVING      sum(segment_length) > (0.80 * corridor_length)::double precision;
+HAVING      sum(segment_length) > (0.80 * corridor_length)::double precision
 ```
 
 ### Using the raw speed table `here.ta`
