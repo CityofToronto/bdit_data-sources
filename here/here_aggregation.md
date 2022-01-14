@@ -11,7 +11,7 @@
 
 ## What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](!https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
 
 *Travel Time Index: is the ratio of the average travel time and free-flow speeds. For example, a TTI of 1.3 indicates a 20-minute free-flow trip requires 26 minutes.*
 
@@ -20,7 +20,7 @@ HERE data is travel time data provided by HERE Technologies from a mix of vehicl
 This is the coverage of here links in the city of Toronto. (from `here_gis.streets_21_1`)
 ![image](https://user-images.githubusercontent.com/46324452/149184544-bbff447b-bba7-4585-aebf-d9fc65d21998.png)
 
-This is the coverage of congestion network. 
+This is the coverage of the congestion network. 
 ![image](https://user-images.githubusercontent.com/46324452/149438775-20360279-10ef-4963-8d6a-188e934bb0c2.png)
 
 
@@ -48,7 +48,7 @@ Geometries can come in a couple of different formats. Check this [guide](https:/
 
 ## Time range
 
-We typically aggregate speed data up to different periods, for example AM Peak and PM Peak. For data requests, we usually define them in `CTE`, for straight-forward modification in future data requests. For project analysis, we typically define time ranges in a table, which allows us to join directly to a table instead of repeating the same CTE in every query (and you will only need to modify one table if time ranges changes!). 
+We typically aggregate speed data up to different periods, for example AM Peak and PM Peak. For data requests, we usually define them in `CTE`, for straight-forward modification in future data requests. For project analysis, we typically define time ranges in a table, which allows us to join directly to a table instead of repeating the same CTE in every query (and you will only need to modify one table if time ranges change!). 
 
 Example of a CTE:
 ```sql
@@ -110,14 +110,14 @@ Common output parameters:
 ## Important things to note:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.  
-- Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arthmetic mean.
-- Links without data: To estimate segment level travel time when some links don't have data, we only include segment where at least 80% of links (by distance) has observations. 
+- Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
+- Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) has observations. 
 
 ## Aggregation
 
 ### Using congestion tables
 
-Congestions summary tables are updated by an [airflow pipeline](!https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
+Congestions summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
 
 When to use congestion summary tables:
 
@@ -130,7 +130,7 @@ Example of `congestion.segments_tti_weekly`:
   | 1234 | 2021-02-19 | Weekday | 06:00:00 |3| 11.79 | 1.23 | 
 | 1224 | 2021-02-19 | Weekday | 06:30:00 | 4|13.09 | 1.34 |  
 
-**Step 1**: Calculate corridor's total length and the number of segments that make up the corridor. Knowing the total length and the total number of segments can allow us to filter corridors that does not have enough data for aggregation. 
+**Step 1**: Calculate corridor's total length and the number of segments that make up the corridor. Knowing the total length and the total number of segments can allow us to filter corridors that do not have enough data for aggregation. 
      
 ```sql
 -- Calculate corridor length and number of links
