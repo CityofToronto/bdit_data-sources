@@ -70,9 +70,7 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 
 #### `classifications`
 
-Reference table for all 8 classifications: Lights, Bicycles on Road, Buses,
-Single-Unit Trucks, Articulated Trucks, Pedestrians on Crosswalk, Bicycles on
-Crosswalk and Motorized Vehicles (streetcars and miscellaneous vehicles).
+Reference table for all 8 classifications: Lights (aka cars + other passenger vehicles), two entries for Bicycles (to account for traditional turning movement counts and bicycle entrances and exits), Buses, Single-Unit Trucks, Articulated Trucks, Pedestrians (on crosswalks) and Motorized Vehicles (streetcars and miscellaneous vehicles).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -114,6 +112,19 @@ movement_uid|integer|Identifier representing current turning movement|1|
 movement_name|text|Short description of movement|thru|
 crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
 movement_pretty_name|text|Long description of movement|Through|
+
+Here is a description of the movement_uids and corresponding types:
+**movement_uid**|**movement_pretty_name**|**definition**|
+:-----|:-----|:-----|
+1|Through|Vehicle drove through the intersection (no turns)
+2|Left|Vehicle turned left
+3|Right|Vehicle turned right
+4|U-Turn|Vehicle went back from whence it came - usually excluded from counts
+5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be facing east)
+6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be facing west)
+7|Bicycle Entrance|Used to determine where bicycles enter the intersection
+8|Bicycle Exit|Used to determine where bicycles exited the intersection
+
 
 #### `movement_map`
 
@@ -187,7 +198,7 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 `volumes_15min_tmc` (see [Warning](#Warning)) contains data aggregated into 15 minute bins. In order to
 make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` (for classifications 1,2,6).
+or `0` (for classifications 1,2,6 which correspond to light vehicles, bicycles and pedestrians).
 
 The 1-min data do not identify if a camera is malfunctioning, so gaps in data
 could either mean there was no volume, or that the camera malfunctioned. Because
@@ -202,17 +213,20 @@ vehicles (`classification_uid IN (1,2,6)`) are filled in because those are the
 modes we report on more frequently. Other modes are not filled because they have
 much lower volumes, so the 0s would expand the size of the dataset considerably.
 
-The [`aggregate_15_min_tmc()`](sql/function-aggregate-volumes_15min_tmc.sql) function performs zero-filling by cross-joining a table containing all possible movements ([`intersection_movements`](#intersection_movements)) to create a table with all possible times and movements for active intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, else sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', we are setting all 15min bin from '15:00:00 to 16:00:00' to have volume = NULL OR if there is a gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', we are setting all 15min bin from '15:00:00 to 17:00:00' to have volume = NULL. (Not sure if this is causing us to exclude way too many time bins, might get back to this later on). Through a left join with `volumes`, the query aggregates those 1min bins into the 15min bins and exclude those unacceptable ones. Note that those bins fall within the unacceptable_gaps time period for that intersection do not get aggregated and hence are not assigned with `volume_15min_tmc_uid`.
+The [`aggregate_15_min_tmc()`](sql/function-aggregate-volumes_15min_tmc.sql) function performs zero-filling by cross-joining a table containing all possible movements ([`intersection_movements`](#intersection_movements)) to create a table with all possible times and movements for active intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, else sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. 
+
+If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', we are setting all 15min bin from '15:00:00 to 16:00:00' to have volume = NULL OR if there is a gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', we are setting all 15min bin from '15:00:00 to 17:00:00' to have volume = NULL. (Not sure if this is causing us to exclude way too many time bins, might get back to this later on). Through a left join with `volumes`, the query aggregates those 1min bins into the 15min bins and exclude those unacceptable ones. Note that those bins fall within the unacceptable_gaps time period for that intersection do not get aggregated and hence are not assigned with `volume_15min_mvt_uid`.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_15min_tmc_uid|serial|Unique identifier for table|14524|
+volume_15min_mvt_uid|serial|Unique identifier for table|14524|
 intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
 datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
 leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 15-minute volume|78|
+processed|boolean|
 volume_15min_uid|integer|Foreign key to [`volumes_15min`](#volumes_15min)|12412|
 
 - *Unique constraint* was added to `miovision_api.volumes_15min_tmc`  table using 
