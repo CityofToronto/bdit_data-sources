@@ -55,7 +55,7 @@ References to `miovision_15min_tmc` in this document do not reflect the current 
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson) >>update the map
 
 ### Folder Structure
 
@@ -113,22 +113,23 @@ movement_name|text|Short description of movement|thru|
 crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
 movement_pretty_name|text|Long description of movement|Through|
 
+
 Here is a description of the movement_uids and corresponding types:
+
 **movement_uid**|**movement_pretty_name**|**definition**|
 :-----|:-----|:-----|
-1|Through|Vehicle drove through the intersection (no turns)
-2|Left|Vehicle turned left
-3|Right|Vehicle turned right
-4|U-Turn|Vehicle went back from whence it came - usually excluded from counts
-5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be facing east)
-6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be facing west)
-7|Bicycle Entrance|Used to determine where bicycles enter the intersection
-8|Bicycle Exit|Used to determine where bicycles exited the intersection
-
+1|Through|Vehicle drove through the intersection (no turns)|
+2|Left|Vehicle turned left|
+3|Right|Vehicle turned right|
+4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
+5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be facing east)|
+6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be facing west)|
+7|Bicycle Entrance|Used to determine where bicycles enter the intersection|
+8|Bicycle Exit|Used to determine where bicycles exited the intersection|
 
 #### `movement_map`
 
-Reference table for transforming aggregated turning movement counts (see `volumes_15min_tmc`) into segment-level volumes (see `volumes_15min`).
+Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -147,12 +148,14 @@ period_id|integer|Unique identifier for table|3|
 day_type|text|Day type for date filter|[Weekday OR Weekend]|
 period_name|text|Textual description of period|14 Hour|
 period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
+report_flag|boolean|Indicates whether the period is used in a report|true|
+
 
 #### `intersection_movements`
 
-This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_tmc). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
+This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
 
-`miovision_api.intersection_movements_20200805` is the old intersection movement table that do not have information about the new intersections whereas the new table contains information on all intersections, be it old or new ones.
+Since this reference table must be updated every time a new intersection is added, there are several iterations of it. The earliest is `miovision_api.intersection_movements_20200805`; the latest is `intersection_movements_20210712`. Users should use `intersection_movements` and may find their permissions restricted on the dated versions of this table.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -178,7 +181,7 @@ movement_uid|integer|Identifier linking to specific turning movement stored in `
 volume|integer|Total 1-minute volume|12|
 volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_tmc)|14524|
 
-Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018` or `volumes_2019` or `volumes_2020` depending on the year of data.
+Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year of data.
 
 - *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted.
 ```
@@ -198,7 +201,7 @@ The process in [**Processing Data from CSV Dumps**](#4-processing-data-from-csv-
 
 `volumes_15min_tmc` (see [Warning](#Warning)) contains data aggregated into 15 minute bins. In order to
 make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` (for classifications 1,2,6 which correspond to light vehicles, bicycles and pedestrians).
+or `0` for classifications 1,2,6 (which corresponds to light vehicles, bicycles and pedestrians).
 
 The 1-min data do not identify if a camera is malfunctioning, so gaps in data
 could either mean there was no volume, or that the camera malfunctioned. Because
