@@ -105,8 +105,31 @@ def location_id(api_key):
 
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
-                         headers=headers)
+    if start_date > datetime.datetime.today().date() - datetime.timedelta(days=2):
+        response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
+                            headers=headers)
+        if response.status_code==200:
+            statistics=response.json()
+            return statistics
+    else:
+        # To pull data older than two days, pull daily data as 1-hour intervals
+        statistics = None
+        for hr in range(24):
+            response=session.get(url+statistics_url+str(location)+'/date/'+
+                                 str(start_date)+'/from/'+str(hr).zfill(2)+
+                                 ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
+                                 headers=headers)
+            if response.status_code==200 and statistics is None:
+                statistics=response.json()
+            elif response.status_code==200:
+                # Append to previous hours
+                statistics['LocInfo']['Parameters']['to'] = response.json()['LocInfo']['Parameters']['to']
+                statistics['LocInfo']['raw_records'].append(response.json()['LocInfo']['raw_records'])
+            else:
+                break
+        if hr == 23:
+            return statistics
+    # Error handling
     if response.status_code==200:
         statistics=response.json()
         return statistics
