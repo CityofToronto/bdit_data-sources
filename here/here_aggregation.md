@@ -6,7 +6,7 @@
     - [Date Range](#date-range)
 - [Output Parameters](#output-parameters)  
 - [Aggregation](#aggregation)
-    - [Using congestion tables](#using-congetion-tables)
+    - [Using congestion tables](#using-congestion-tables)
     - [Using raw speed table](#using-raw-speed-table)
 
 ## What is HERE data?
@@ -36,7 +36,7 @@ This is the coverage of the congestion network.
     - Day of week, weekday or weekend
     - Including or excluding holidays
 
-## Geometry
+### Geometry
 
 Geometries can come in a couple of different formats. Check this [guide](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/tree/edit_readme_here#geometry) to learn how to generate geometries. The goal is to get segments definition and their equivalent link dir lookup in the following format. 
 
