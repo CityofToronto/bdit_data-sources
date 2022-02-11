@@ -103,33 +103,39 @@ def location_id(api_key):
             raise WYS_APIException(str(e))
     logger.info('location_id done')
 
+def get_statistics_hourly(location, start_date, hr, api_key):
+    headers={'Content-Type':'application/json','x-api-key':api_key}
+    response=session.get(url+statistics_url+str(location)+'/date/'+
+                        str(start_date)+'/from/'+str(hr).zfill(2)+
+                        ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
+                        headers=headers)
+    # Error handling
+    if response.status_code==200:
+        statistics=response.json()
+        return statistics
+    elif response.status_code==204:
+        error=response.json()
+        logger.error('204 error    '+error['error_message'])
+    elif response.status_code==404:
+        error=response.json()
+        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+    elif response.status_code==401:
+        error=response.json()
+        logger.error('401 error    '+error['error_message'])
+    elif response.status_code==405:
+        error=response.json()
+        logger.error('405 error    '+error['error_message'])        
+    elif response.status_code==504:
+        error=response.json()
+        logger.error('504 error')
+        raise TimeoutException('Error'+str(response.status_code))
+    else:
+        raise WYS_APIException('Error'+str(response.status_code))
+
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    if start_date > datetime.datetime.today().date() - datetime.timedelta(days=2):
-        response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
-                            headers=headers)
-        if response.status_code==200:
-            statistics=response.json()
-            return statistics
-    else:
-        # To pull data older than two days, pull daily data as 1-hour intervals
-        statistics = None
-        for hr in range(24):
-            response=session.get(url+statistics_url+str(location)+'/date/'+
-                                 str(start_date)+'/from/'+str(hr).zfill(2)+
-                                 ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
-                                 headers=headers)
-            if response.status_code==200 and statistics is None:
-                statistics=response.json()
-            elif response.status_code==200:
-                # Append to previous hours
-                statistics['LocInfo']['Parameters']['to'] = response.json()['LocInfo']['Parameters']['to']
-                statistics['LocInfo']['raw_records'].append(response.json()['LocInfo']['raw_records'])
-            else:
-                break
-        if hr == 23:
-            return statistics
-    # Error handling
+    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
+                         headers=headers)
     if response.status_code==200:
         statistics=response.json()
         return statistics
@@ -232,33 +238,45 @@ def get_data_for_date(start_date, signs_iterator, api_key):
         List of active sign locations to be inserted into wys.locations
     '''
     speed_counts, sign_locations = [], []
-    for sign in signs_iterator:
-        api_id=sign[0]
-        name=sign[1]
-        logger.debug(str(name))
-        
-        for attempt in range(3):
-            try:
-                statistics=get_statistics(api_id, start_date, api_key)
-                raw_data=statistics['LocInfo']
-                raw_records=raw_data['raw_records']
-                spd_cnts = parse_counts_for_location(api_id, raw_records)
-                speed_counts.extend(spd_cnts)
-                sign_location = parse_location(api_id, start_date, raw_data['Location'])
-                sign_locations.append(sign_location)
-                
-            except TimeoutException:
-                sleep(180)
-            except exceptions.ProxyError as prox:
-                logger.error(prox)
-                logger.warning('Retrying in 2 minutes')
-                sleep(120)
-            except exceptions.RequestException as err:
-                logger.error(err)
-                sleep(75)
-
-            else:
-                break
+    sign_hr_iterator = {int(i[0]):(i,list(range(24))) for i in signs_iterator}
+    sign_locations_list = []
+    for attempt in range(3):
+        for sign in sign_hr_iterator.values():
+            api_id=sign[0][0]
+            name=sign[0][1]
+            logger.debug(str(name))
+            hr_iterator = sign[1]
+            for hr in hr_iterator:
+                try:
+                    statistics=get_statistics_hourly(api_id, start_date, hr, api_key)
+                    raw_data=statistics['LocInfo']
+                    raw_records=raw_data['raw_records']
+                    spd_cnts = parse_counts_for_location(api_id, raw_records)
+                    speed_counts.extend(spd_cnts)
+                    if api_id not in sign_locations_list:
+                        sign_location = parse_location(api_id, start_date, raw_data['Location'])
+                        sign_locations.append(sign_location)
+                        sign_locations_list.append(api_id)
+                except TimeoutException:
+                    sleep(180)
+                except exceptions.ProxyError as prox:
+                    logger.error(prox)
+                    logger.warning('Retrying in 2 minutes')
+                    sleep(120)
+                except exceptions.RequestException as err:
+                    logger.error(err)
+                    sleep(75)
+                else:
+                   sign[1].remove(hr)
+                   if sign[1] == []:
+                       del sign_hr_iterator[api_id]
+        # return if already got all requested data
+        if sign_hr_iterator == {}:
+            return speed_counts, sign_locations
+    # log failures (if any)
+    for api_id in sign_hr_iterator:
+        logger.error('Failed to extract the data of sign #{} on {} for {} hours ({})'.format(
+            api_id, start_date, len(sign_hr_iterator[api_id][1]), ','.join(sign_hr_iterator[api_id][1])))
     return speed_counts, sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
