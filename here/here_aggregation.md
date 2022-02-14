@@ -166,7 +166,7 @@ If the congestion tables are not suitable for your study, you can aggregate here
 ```sql
 -- Calculate segment length and number of links
 
-	SELECT 		corridor_id,
+	SELECT 		uid,
 				sum(length) AS total_length, -- calculate the total length of each corridor
 				count(links) AS num_seg -- the number of segments in each segment
 
@@ -201,23 +201,24 @@ If the congestion tables are not suitable for your study, you can aggregate here
 
 ```sql
 -- Aggregate link level hourly travel time to corridor level
-	SELECT 		b.uid,
+	SELECT 		uid,
 			    link_hourly.datetime_bin,
-			    b.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
+			    corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
 
     FROM 		link_hourly
-	GROUP BY 	link_hourly.datetime_bin, b.uid, b.total_length, period
+    INNER JOIN   corridor_detail USING (uid)
+	GROUP BY 	link_hourly.datetime_bin, uid, corridor_detail.total_length, period
 
-	HAVING 		sum(link_hourly.here_length) >= (b.total_length * 0.8) -- where at least 80% of links have data
+	HAVING 		sum(link_hourly.here_length) >= (total_length * 0.8) -- where at least 80% of links have data
 ```
 
 **Step 4**: Aggregate corridor level hourly travel time up to each defined time periods for each day
 
 ```sql
 -- Aggregate corridor level hourly travel time to time periods	
-   SELECT 		corridor_hourly.uid,
-				corridor_hourly.period,
-            	avg(corridor_hourly.corr_tt) AS corr_mean_tt
+   SELECT 		uid,
+				period,
+            	avg(corr_tt) AS corr_mean_tt
 
    FROM 		corridor_hourly
    GROUP BY     period, uid, total_length
@@ -228,9 +229,9 @@ If the congestion tables are not suitable for your study, you can aggregate here
 ```sql
 SELECT 	    uid,
 			period,
-            min(corridor_agg.corr_mean_tt) AS min_tt,
-            avg(corridor_agg.corr_mean_tt) AS mean_tt,
-            max(corridor_agg.corr_mean_tt) AS max_tt
+            min(corr_mean_tt) AS min_tt,
+            avg(corr_mean_tt) AS mean_tt,
+            max(corr_mean_tt) AS max_tt
 
 FROM 	    corridor_agg
 GROUP BY    uid, period
