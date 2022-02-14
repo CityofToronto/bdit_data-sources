@@ -116,13 +116,15 @@ Example of `congestion.segments_tti_weekly`:
 **Step 1**: Calculate corridor's total length and the number of segments that make up the corridor. Knowing the total length and the total number of segments can allow us to filter corridors that do not have enough data for aggregation. 
      
 ```sql
--- Calculate corridor length and number of links
+-- Calculate corridor length and number of links, as well as the sum of baseline travel time
 
 	SELECT 		corridor_id,
 				sum(length) AS total_length, -- calculate the total length of each corridor
-				count(segment_id) AS num_seg -- the number of segments in each segment
+				count(segment_id) AS num_seg, -- the number of segments in each segment
+                sum(tt_baseline) AS corr_baseline -- the baseline travel time of each corridor
 
 	FROM 		data_requests.input_table -- input table
+    INNER JOIN  baseline_segments_tt using (segment_id) -- baseline table
 	GROUP BY 	input_table.uid 
 ```
     
@@ -149,9 +151,9 @@ SELECT      corridor_id,
             time_period,
             week,
             sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
-            sum(tti * tt_baseline) / sum(tt_baseline) * tt_baseline AS tt
+            sum(tti * tt_baseline) / sum(tt_baseline) * corr_baseline AS tt
 FROM        segment_tt 
-GROUP BY    corridor_id, analysis_period, time_period, week
+GROUP BY    corridor_id, analysis_period, time_period, week, corr_baseline
 HAVING      sum(segment_length) > (0.80 * corridor_length)::double precision
 ```
 
