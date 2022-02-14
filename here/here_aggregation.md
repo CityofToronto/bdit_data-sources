@@ -21,7 +21,7 @@
 
 ### Geometry
 
-Geometries can come in a couple of different formats. Check this [guide](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/tree/edit_readme_here#geometry) to learn how to generate geometries. The goal is to get segments definition and their equivalent link dir lookup in the following format. 
+Geometries can come in a couple of different formats. Check this [guide](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/tree/master#how-to-generate-geometries-for-requests) to learn how to generate geometries. The goal is to get segments definition and their equivalent link dir lookup in the following format. 
 
 | street_name | from_street | to_street | direction | link_dir | link_length |
 | --- | --- | --- | --- | --- | --- |
@@ -29,7 +29,7 @@ Geometries can come in a couple of different formats. Check this [guide](https:/
 | Lakeshore Blvd | Park Lawn Rd | York St | WB | 1239875T | 65 |
 
 
-## Time range
+### Time range
 
 We typically aggregate speed data up to different periods, for example AM Peak and PM Peak. For data requests, we usually define them in `CTE`, for straight-forward modification in future data requests. For project analysis, we typically define time ranges in a table, which allows us to join directly to a table instead of repeating the same CTE in every query (and you will only need to modify one table if time ranges change!). 
 
@@ -49,7 +49,7 @@ Example of a table (from `activeto.analysis_periods`):
 | 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
 | 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
 
-## Date range
+### Date range
 
 Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHERE` clause for data requests and in a table for project analysis. Date ranges are often project specific. For example in before and after studies, we would define different date ranges for periods such as `before`, `installation`, and `after`. In program monitoring projects, we might want to aggregate data up to a daily, weekly or monthly averages.  
 
@@ -90,7 +90,7 @@ Common output parameters:
 - 85th percentile speed
 - average travel time index 
 
-## Important things to note:
+### Important things to note:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.  
 - Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
@@ -151,7 +151,7 @@ SELECT      corridor_id,
             sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
             sum(tti * tt_baseline) / sum(tt_baseline) * tt_baseline AS tt
 FROM        segment_tt 
-GROUP BY    corridor_id, analysis_period, time_period, week, tt_baseline
+GROUP BY    corridor_id, analysis_period, time_period, week
 HAVING      sum(segment_length) > (0.80 * corridor_length)::double precision
 ```
 
