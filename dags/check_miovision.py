@@ -31,7 +31,7 @@ def check_miovision(con, start_date, end_date):
             LOGGER.info(broken_flag)
             raise Exception ('A Miovision camera may be broken!')
             
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
