@@ -9,7 +9,7 @@ from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
