@@ -9,13 +9,13 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
     # print this task_msg and tag these users
     task_msg = """:meow_camera: Miovision pulling failed :meow_headache:.
-        <@U1XGLNWG2> <@UG60NMTPC> please fix it :thanks_japanese: """.format(
+        <@U1XGLNWG2> please fix it :thanks_japanese: """.format(
         task=context.get('task_instance').task_id,)    
         
     # this adds the error log url at the end of the msg
