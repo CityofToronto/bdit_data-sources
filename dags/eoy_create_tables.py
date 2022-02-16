@@ -8,10 +8,13 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
+from airflow.models import Variable
 import holidays
 
 
 SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
 
 def prep_slack_message(message):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -29,8 +32,8 @@ def task_fail_slack_alert(context):
     
     # print this task_msg and tag these users
     task_msg = """As part of End of Year table creation, {task} failed.
-        <@U1XGLNWG2> check out the """.format(
-        task=context.get('task_instance').task_id,)    
+        {list_names} check out the """.format(
+        task=context.get('task_instance').task_id, slack_name = list_names,)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """<{log_url}|log> :notes_minion: """.format(
@@ -42,8 +45,8 @@ def slack_here_trigger_sql(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_instance = context.get('task_instance')
     task_msg = task_instance.xcom_pull(task_ids=task_instance.task_id)
-    slack_msg = '''<@U1XGLNWG2>, add the following sql to the :here: TA trigger\n
-    ```{task_msg}```'''.format(task_msg=task_msg)
+    slack_msg = '''{slack_name}, add the following sql to the :here: TA trigger\n
+    ```{task_msg}```'''.format(task_msg=task_msg, slack_name = list_names,)
     success_alert = prep_slack_message(slack_msg)
     return success_alert.execute(context=context)
 
