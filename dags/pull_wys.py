@@ -9,6 +9,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook
+from airflow.models import Variable 
 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from googleapiclient.discovery import build
@@ -23,19 +24,22 @@ except:
 
 
 SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
     if context.get('task_instance').task_id == 't1':
-        task_msg = """:cat_shock: The Task {task} in Pull WYS dag  failed, 
-			someone please check.""".format(
-            task=context.get('task_instance').task_id,)
+        task_msg = """:cat_shock: The Task {task} in Pull WYS dag failed, 
+			{slack_name} please check.""".format(
+            task=context.get('task_instance').task_id, slack_name = list_names,)
     
     # else other msg for task2
     else:
-        task_msg = """The Task {task} in Pull WYS dag failed, 
-			<@UHJA7GHQV> please check.""".format(
-            task=context.get('task_instance').task_id,)    
+        task_msg = """ :eyes: The Task {task} in Pull WYS dag failed, 
+			{slack_name} please check.""".format(
+            task=context.get('task_instance').task_id, slack_name = list_names,)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
