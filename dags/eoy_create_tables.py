@@ -18,7 +18,6 @@ list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_confi
 slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
 def prep_slack_message(message):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_message = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
@@ -164,7 +163,7 @@ wys_replace_trigger = PythonOperator(task_id='wys_replace_trigger',
                                                  'dt': '{{ ds }}'})
 
 success_alert = SlackWebhookOperator(
-                                    task_id='slack_test',
+                                    task_id='success_msg',
                                     http_conn_id='slack',
                                     webhook_token=slack_webhook_token,
                                     message=task_success_slack_alert(),
