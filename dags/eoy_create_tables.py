@@ -41,6 +41,14 @@ def task_fail_slack_alert(context):
     failed_alert = prep_slack_message(slack_msg)
     return failed_alert.execute(context=context)
 
+def task_success_slack_alert():   
+    # print this task_msg and tag these users
+    task_msg = """All End of Year tables have been successfully created, 
+        {slack_name} please checkout the tables on the database and make sure 
+        they have been properly created. """.format(slack_name = list_names,)   
+
+    return task_msg
+
 def slack_here_trigger_sql(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_instance = context.get('task_instance')
@@ -157,8 +165,16 @@ wys_replace_trigger = PythonOperator(task_id='wys_replace_trigger',
                                     op_kwargs = {'pg_hook': wys_bot,
                                                  'dt': '{{ ds }}'})
 
+success_alert = SlackWebhookOperator(
+                                    task_id='slack_test',
+                                    http_conn_id='slack',
+                                    webhook_token=slack_webhook_token,
+                                    message=task_success_slack_alert(),
+                                    username='airflow',
+                                    dag=dag)                                            
 
-here_create_tables >> here_sql_trigger_slack
-bt_create_tables >> bt_replace_trigger
-miovision_create_table >> miovision_replace_trigger
-wys_create_table >> wys_replace_trigger
+
+here_create_tables >> here_sql_trigger_slack >> success_alert
+bt_create_tables >> bt_replace_trigger >> success_alert
+miovision_create_table >> miovision_replace_trigger >> success_alert
+wys_create_table >> wys_replace_trigger >> success_alert
