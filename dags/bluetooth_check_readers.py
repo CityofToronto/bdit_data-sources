@@ -5,6 +5,7 @@ from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
@@ -53,15 +54,18 @@ def broken_readers(con, check_date):
            
         
 SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
     if context.get('task_instance').task_id == 'pipeline_check':
-        task_msg = """:among_us_dead: No bluetooth data was found in the database for this date. Remote desktop to the terminal server.Check the blip_api log.""".format(
+        task_msg = """:among_us_dead: No bluetooth data was found in the database for this date. Remote desktop to the terminal server. Check the blip_api log.""".format(
                 task=context.get('task_instance').task_id,)
     else:
-        task_msg = """:among_us_dead: Error occured in task {task}. Deep dive required, <@U01858E603T> please check ASAP.""".format(
-                task=context.get('task_instance').task_id,)
+        task_msg = """:among_us_dead: Error occured in task {task}. Deep dive required, {slack_name} please check ASAP.""".format(
+                task=context.get('task_instance').task_id, slack_name = list_names,)
 
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,) 
     
