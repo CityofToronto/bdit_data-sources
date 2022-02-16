@@ -15,6 +15,7 @@ import holidays
 SLACK_CONN_ID = 'slack_data_pipeline'
 dag_config = Variable.get('slack_member_id', deserialize_json=True)
 list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
 def prep_slack_message(message):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -28,8 +29,6 @@ def prep_slack_message(message):
     return slack_message
 
 def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    
     # print this task_msg and tag these users
     task_msg = """As part of End of Year table creation, {task} failed.
         {list_names} check out the """.format(
@@ -50,7 +49,6 @@ def task_success_slack_alert():
     return task_msg
 
 def slack_here_trigger_sql(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_instance = context.get('task_instance')
     task_msg = task_instance.xcom_pull(task_ids=task_instance.task_id)
     slack_msg = '''{slack_name}, add the following sql to the :here: TA trigger\n
