@@ -145,7 +145,7 @@ miovision_replace_trigger = PythonOperator(task_id='miovision_replace_trigger',
                                     dag = dag,
                                     op_kwargs = {'pg_hook': miovision_bot,
                                                  'dt': '{{ ds }}'})
-insrt_holidays = PythonOperator(task_id='insert_holidays',
+insert_holidays = PythonOperator(task_id='insert_holidays',
                                     python_callable = insert_holidays,
                                     dag = dag,
                                     op_args = ['{{ ds }}'])
@@ -175,3 +175,4 @@ here_create_tables >> here_sql_trigger_slack >> success_alert
 bt_create_tables >> bt_replace_trigger >> success_alert
 miovision_create_table >> miovision_replace_trigger >> success_alert
 wys_create_table >> wys_replace_trigger >> success_alert
+insert_holidays >> success_alert
