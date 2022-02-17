@@ -8,14 +8,18 @@ from datetime import datetime, timedelta
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable 
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
-SLACK_CONN_ID = 'slack'
+
+SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = 'The {task} in Refreshing the WYS Open Data failed, <@U1XGLNWG2> go fix it meow :meow_headache: '.format(
-            task=context.get('task_instance').task_id,)    
+    task_msg = 'The {task} in Refreshing the WYS Open Data failed, {list_names} go fix it meow :meow_headache: '.format(
+            task=context.get('task_instance').task_id, slack_name = list_names,)    
         
     slack_msg = task_msg + """(<{log_url}|log>)""".format(
             log_url=context.get('task_instance').log_url,)
