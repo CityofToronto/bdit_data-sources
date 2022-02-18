@@ -238,7 +238,9 @@ def get_data_for_date(start_date, signs_iterator, api_key):
         List of active sign locations to be inserted into wys.locations
     '''
     speed_counts, sign_locations = [], []
+    # for each api_id: tuple of sign data and 24 hours to process
     sign_hr_iterator = {int(i[0]):(i,list(range(24))) for i in signs_iterator}
+    # to assure each sign's location is only added once
     sign_locations_list = []
     for attempt in range(3):
         for sign in sign_hr_iterator.values():
@@ -276,7 +278,8 @@ def get_data_for_date(start_date, signs_iterator, api_key):
     # log failures (if any)
     for api_id in sign_hr_iterator:
         logger.error('Failed to extract the data of sign #{} on {} for {} hours ({})'.format(
-            api_id, start_date, len(sign_hr_iterator[api_id][1]), ','.join(sign_hr_iterator[api_id][1])))
+                    api_id, start_date, len(sign_hr_iterator[api_id][1]), 
+                    ','.join(map(str,sign_hr_iterator[api_id][1]))))
     return speed_counts, sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -404,12 +407,12 @@ def update_locations(conn, loc_table):
         execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
         update_locations_sql="""
             WITH locations AS (
-                SELECT api_id, address, sign_name, dir, loc, max(start_date)
+                SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date
                 FROM wys.locations 
-                GROUP BY api_id, address, sign_name, loc, dir
+                ORDER BY api_id, start_date DESC
             ),
             differences AS (
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
@@ -418,7 +421,7 @@ def update_locations(conn, loc_table):
                 
                 UNION
                 
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date,     
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date,     
                        a.loc 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
@@ -427,7 +430,7 @@ def update_locations(conn, loc_table):
                 
                 UNION 
                 
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
