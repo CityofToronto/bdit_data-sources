@@ -90,12 +90,10 @@ default_args = {'owner':'mohan',
                 }
 with DAG('bluetooth_check_readers', default_args=default_args, schedule_interval='0 8 * * *', catchup=False) as blip_pipeline:
     pipeline_check = PythonOperator(
-    task_id = 'pipeline_check',
-    python_callable = pipeline_check,
-    dag=blip_pipeline,
-    op_kwargs={
-        'con': con
-        })
+                                    task_id = 'pipeline_check',
+                                    python_callable = pipeline_check,
+                                    dag=blip_pipeline,
+                                    op_args=(con, '{{ ds }}'))
     update_routes_table = PostgresOperator(sql='''SELECT * from bluetooth.insert_report_date()''',
                             task_id='update_routes_table',
                             postgres_conn_id='bt_bot',
