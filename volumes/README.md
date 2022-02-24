@@ -35,6 +35,7 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
 		- [category](#category)
 			- [Content](#content-5)
 			- [Table Structure](#table-structure-4)
+	- [5. Useful Views](#5-useful-views)
 - [Open Data](#open-data)
 	- [King Street Pilot](#king-street-pilot)
 
@@ -251,6 +252,12 @@ Field Name|Type|Description
 ----------|----|-----------
 category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
 category_name|text|name of the data source
+
+### 5. Useful Views
+
+- `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
+
+- `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
 ## Open Data
 
