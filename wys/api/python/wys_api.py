@@ -415,7 +415,7 @@ def update_locations(conn, loc_table):
         cur.execute(calc_geom_temp_table)
         update_locations_sql="""
             WITH locations AS (
-                SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom
+                SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom, id
                 FROM wys.locations 
                 ORDER BY api_id, start_date DESC
             ),
@@ -424,37 +424,35 @@ def update_locations(conn, loc_table):
                        a.loc, a.geom 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND A.sign_name = B.sign_name 
-                WHERE B.sign_name IS NULL
-                      AND (st_distance_sphere(A.geom, B.geom) > 100 
-                           OR A.dir <> B.dir)
-                
-                UNION
-                
-                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date,     
-                       a.loc, a.geom 
+                                      AND (st_distance_sphere(A.geom, B.geom) > 100
+                                           OR A.dir <> B.dir)
+            ), 
+            new_signs AS (
+                INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
+                SELECT * FROM differences
+            ),
+            updated_signs AS (
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.loc, a.start_date, 
+                       a.geom, b.id 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND B.address = A.address
-                WHERE B.address IS NULL
-                      AND (st_distance_sphere(A.geom, B.geom) > 100 
-                           OR A.dir <> B.dir)
-                
-                UNION 
-                
-                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
-                       a.loc, a.geom
-                FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND B.loc = A.loc
-                WHERE B.loc IS NULL
-                      AND (st_distance_sphere(A.geom, B.geom) > 100 
-                           OR A.dir <> B.dir)
-            
+                                      AND st_distance_sphere(A.geom, B.geom) < 100
+                                      AND A.dir = B.dir
+                                      AND (A.sign_name <> B.sign_name
+                                        OR A.address <> B.address)
+            UPDATE wys.locations a
+                SET a.api_id = b.api_id,
+                    a.address = b.address,
+                    a.sign_name = b.sign_name,
+                    a.dir = b.dir,
+                    a.start_date = b.start_date,
+                    a.loc = b.loc,
+                    a.id = b.id,
+                    a.geom = b.geom
+                FROM updated_signs b
+                WHERE a.id = b.id
             )
             
-            INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom) 
-            SELECT * FROM differences
         """
         cur.execute(update_locations_sql)
 
