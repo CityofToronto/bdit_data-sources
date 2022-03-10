@@ -25,9 +25,12 @@
 			- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
 		- [Important Views](#important-views)
 	- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-
-
+	- [4. Repulling data](#4-repulling-data)
+		- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+        
 ## 1. Overview
+
+The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api`.
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
@@ -400,3 +403,34 @@ The following process is used to determine the gap sizes assigned to an intersec
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
 
+## 4. Repulling data
+### Deleting data to re-run the process
+
+Uh oh, something went wrong in the process? Fret not, you can delete the data and re-run the process again. Note that you can't do that without deleting since most of our tables have a unique constraint. You will mostly likely violate that if you re-run the process without first removing the relevant data. Below you can find queries that have to be run which include all the tables that are involved. The precis version: delete 1min bins from `volumes` table and delete 15min bins from both mvt (tmc) and atr tables (note the different start_time and end_time), delete relevant information from `report_dates`, `api_log` and `unacceptable_gaps`. The example below shows how we delete a day worth of data on 2020-08-20.
+
+```sql
+DELETE FROM miovision_api.volumes
+WHERE datetime_bin BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
+
+DELETE FROM miovision_api.volumes_15min_mvt
+WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
+
+DELETE FROM miovision_api.volumes_15min
+WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
+
+DELETE FROM miovision_api.report_dates
+WHERE dt = '2020-08-20';
+
+DELETE FROM miovision_api.api_log
+WHERE start_date = '2020-08-20';
+
+DELETE FROM miovision_api.unacceptable_gaps
+WHERE gap_start BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
+```
+
+Once you have deleted all the relevant data, you can now re-run the process with the following command line.
+```
+python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --start_date 2020-08-20 --end_date 2020-08-21
+```
+
+The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
