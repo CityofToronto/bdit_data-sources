@@ -68,14 +68,14 @@ AS $BODY$
       -- Select only the detectors that are active
 		, active AS (
          SELECT      DISTINCT detector_list.detector_name,
-                     max(detector_list.last_reported) AS max,
+                     max(detector_list.last_reported) AS last_reported,
                      detector_list.route_status,
                      detectors_history_final.reader_id AS id,
                      detector_list.dt
 
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name
-         WHERE       detector_list.route_status = 'True'::text
+         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name -- Should be changed
+         WHERE       detector_list.route_status = TRUE
          GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_final.reader_id, detector_list.dt)
       
       -- Combine active and deactive detector 
@@ -86,15 +86,15 @@ AS $BODY$
                      detectors_history_final.reader_id,
 			            detector_list.dt
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name
-         WHERE       detector_list.route_status = 'False'::text AND 
+         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name  -- Should be changed
+         WHERE       detector_list.route_status = FALSE AND 
                      NOT (detector_list.detector_name IN (SELECT active.detector_name FROM active))
          GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_final.reader_id, detector_list.dt
 
          UNION
          
          SELECT      active.detector_name,
-                     active.max,
+                     active.last_reported,
                      active.route_status,
                      active.id,
                      active.dt
