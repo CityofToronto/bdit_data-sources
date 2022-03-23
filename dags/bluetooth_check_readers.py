@@ -4,6 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
+from airflow.operators.sql import SQLCheckOperator
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 from psycopg2 import sql
@@ -20,23 +21,9 @@ bt_postgres = PostgresHook("bt_bot")
 
 con = bt_postgres.get_conn()
 broken_list = []
-# check if the blip data was aggregated into aggr_5min bins as of yesterday.
-# if the aggr_5min table has at least one record for yesterday, it means pipeline is working 
-def pipeline_check(con, check_date):
-    with con.cursor() as cursor:
-        select_query1 = '''SELECT MAX (datetime_bin)::date from bluetooth.aggr_5min'''
-        cursor.execute(select_query1)
-        latest_date = cursor.fetchone()
-        #please suggest if this try except works
-        try:
-            if (latest_date[0]) >= (check_date - timedelta(1)):
-                pass
-            else:
-                raise Exception ('There is no data in bluetooth.aggr_5min for yesterday')
-        except:
-            pass
 
 def broken_readers(con, check_date):
+# Send slack channel a msg when there are broken readers. 
     with con.cursor() as cursor: 
         select_query2 = '''SELECT * from bluetooth.broken_readers(%s::date)'''
         cursor.execute(select_query2, (check_date,))
@@ -89,31 +76,42 @@ default_args = {'owner':'mohan',
                 'on_failure_callback': task_fail_slack_alert
                 }
 with DAG('bluetooth_check_readers', default_args=default_args, schedule_interval='0 8 * * *', catchup=False) as blip_pipeline:
-    pipeline_check = PythonOperator(
-                                    task_id = 'pipeline_check',
-                                    python_callable = pipeline_check,
-                                    dag=blip_pipeline,
-                                    op_args=(con, '{{ ds }}'))
-    update_routes_table = PostgresOperator(sql='''SELECT * from bluetooth.insert_report_date()''',
-                            task_id='update_routes_table',
-                            postgres_conn_id='bt_bot',
-                            autocommit=True,
-                            retries = 0,
-                            dag=blip_pipeline
-                            )
+
+## Tasks ##
+    # Check if the blip data was aggregated into aggr_5min bins as of yesterday.
+    pipeline_check = SQLCheckOperator(task_id = 'pipeline_check',
+                                      conn_id = 'bt_bot',
+                                      sql = '''SELECT   CASE WHEN max(datetime_bin)::date = '{{ ds }}' THEN TRUE 
+                                                        ELSE FALSE END 
+                                               FROM     bluetooth.aggr_5min''' ,
+                                      dag = blip_pipeline)   
+                                                          
+
+    # Update bluetooth.routes with the latest last_reported_date
+    update_routes_table = PostgresOperator( sql='''SELECT * from bluetooth.insert_report_date()''',
+                                            task_id='update_routes_table',
+                                            postgres_conn_id='bt_bot',
+                                            autocommit=True,
+                                            retries = 0,
+                                            dag=blip_pipeline
+                                            )
+    # Update bluetooth.reader_locations with the latest reader status
     update_reader_status = PostgresOperator(sql='''SELECT * from bluetooth.reader_status_history('{{ ds }}')''',
-                            task_id='update_reader_status',
-                            postgres_conn_id='bt_bot',
-                            autocommit=True,
-                            retries = 0,
-                            dag=blip_pipeline
-                            )
-    broken_readers = PythonOperator(
-    task_id = 'broken_readers',
-    python_callable = broken_readers,
-    dag=blip_pipeline,
-    op_kwargs={
-        'con': con,
-        'check_date': '{{ ds }}'
-        }) 
+                                            task_id='update_reader_status',
+                                            postgres_conn_id='bt_bot',
+                                            autocommit=True,
+                                            retries = 0,
+                                            dag=blip_pipeline
+                                            )
+    # Send slack channel a msg when there are broken readers 
+    broken_readers = PythonOperator(task_id = 'broken_readers',
+                                    python_callable = broken_readers,
+                                    dag=blip_pipeline,
+                                    op_kwargs={ 'con': con,
+                                                'check_date': '{{ ds }}'}
+                                    ) 
+
+## Flow ##
+# Check blip data was aggregated as of yesterday then update routes table and reader status
+# Lastly alert slack channel if there are broken readers
 pipeline_check >>[update_routes_table, update_reader_status]>> broken_readers
