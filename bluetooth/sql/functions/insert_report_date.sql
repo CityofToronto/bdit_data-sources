@@ -1,7 +1,3 @@
--- FUNCTION: mohan.insert_report_date()
-
--- DROP FUNCTION mohan.insert_report_date();
-
 CREATE OR REPLACE FUNCTION bluetooth.insert_report_date(
 	)
     RETURNS void
@@ -10,19 +6,24 @@ CREATE OR REPLACE FUNCTION bluetooth.insert_report_date(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 	
-	begin
-		with x AS 
-(
-SELECT analysis_id, max(datetime_bin::date) as last_reported_date
-from bluetooth.aggr_5min
-GROUP by analysis_id
-	)
+BEGIN
+
+WITH routes_status AS (
+
+    SELECT      analysis_id, max(datetime_bin)::date AS last_reported_date
+    FROM        bluetooth.aggr_5min
+    GROUP BY    analysis_id)
+
 UPDATE bluetooth.routes
-SET date_last_received = (SELECT last_reported_date from x where x.analysis_id = bluetooth.routes.analysis_id)	
-		;
-		end; 
+SET date_last_received = (SELECT last_reported_date 
+                          FROM routes_status 
+                          WHERE routes_status.analysis_id = bluetooth.routes.analysis_id);
+
+END; 
 		
 $BODY$;
 
 ALTER FUNCTION bluetooth.insert_report_date()
-    OWNER TO mohan;
+    OWNER TO bt_admins;
+
+COMMENT ON FUNCTION bluetooth.insert_report_date() IS  '''This function updates the table bluetooth.routes with each routes last reported date.'''
