@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import traceback
+import json
 from psycopg2 import connect, sql, InternalError, IntegrityError, DatabaseError
 from datetime import date
 from itertools import product
@@ -196,7 +197,7 @@ def update_configs(all_analyses, dbset):
                               for route_point in report.routePoints]
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,
-                   minimum_point_completed=db.encode_json(
+                   minimum_point_completed=json.dumps(
                                            report.minimumPointCompleted.__json__()),
                    outcomes=report.outcomes,
                    report_id=report.reportId,
@@ -205,7 +206,6 @@ def update_configs(all_analyses, dbset):
                    route_name=report.routeName,
                    route_points=report.routePoints)
         #If upsert fails, log error and continue, don't add analysis to analyses to pull
-        # http://www.pygresql.org/contents/pg/db_wrapper.html#pg.DB.upsert
         try:
             upserted = db.upsert('bluetooth.all_analyses', row,
                                  pull_data='included.pull_data')
