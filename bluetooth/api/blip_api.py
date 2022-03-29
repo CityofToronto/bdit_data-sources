@@ -279,6 +279,7 @@ def move_data(dbset):
         except RetryError as retry_err:
             LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
             retry_err.reraise()
+<<<<<<< HEAD
         db.begin()
         query = db.query("SELECT bluetooth.move_raw_data();")
         if query.getresult()[0][0] != 1:
@@ -291,6 +292,30 @@ def move_data(dbset):
         query = db.query("TRUNCATE bluetooth.raw_data;")
         db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
         db.commit()
+=======
+        ## BT move raw data
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT bluetooth.move_raw_data();")
+                query = cur.fetchone()
+        if query[0] != 1:
+            conn.rollback()
+            raise DatabaseError('bluetooth.move_raw_data did not complete successfully') 
+        ## King pilot 
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT king_pilot.load_bt_data();")
+                query = cur.fetchone()    
+        if query[0] != 1:
+            conn.rollback()
+            raise DatabaseError('king_pilot.load_bt_data did not complete successfully') 
+        ## Truncate and delete 
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE bluetooth.raw_data;")
+                cur.execute("DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;")
+                
+>>>>>>> 40b3ce0... #131 got rid of print() comments
     except DatabaseError as dberr:
         LOGGER.error(dberr)
         db.rollback()
