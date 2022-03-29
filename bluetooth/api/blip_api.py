@@ -89,7 +89,7 @@ def get_data_for_config(blip, un: str, pw: str, config):
 @retry(retry=retry_if_exception_type(psycopg2.InternalError),
        wait=wait_exponential(multiplier=15, max=900), before_sleep=before_sleep_log(LOGGER, logging.ERROR))
 def _get_db(dbset):
-    '''Create a pygresql DB object and retry for up to 15 minutes if the connection is unsuccessful'''
+    '''Create a psycopg2 DB object and retry for up to 15 minutes if the connection is unsuccessful'''
     return connect(**dbset)
 
 
@@ -99,7 +99,7 @@ def insert_data(data: list, dbset: dict, live: bool):
     :param data:
         List of dictionaries, gets converted to list of tuples
     :param dbset:
-        DB settings passed to Pygresql to create a connection 
+        DB settings passed to psycopg2 to create a connection 
     '''
     num_rows = len(data)
     if num_rows > 0:
