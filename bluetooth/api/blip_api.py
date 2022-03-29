@@ -197,8 +197,12 @@ def update_configs(all_analyses, dbset):
                               for route_point in report.routePoints]
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,
+<<<<<<< HEAD
                    minimum_point_completed=db.encode_json(
                        report.minimumPointCompleted.__json__()),
+=======
+                   minimum_point_completed=json.dumps(report.minimumPointCompleted.__json__()),
+>>>>>>> c7cf1df... #131 update upsert sql
                    outcomes=report.outcomes,
                    report_id=report.reportId,
                    report_name=report.reportName,
@@ -207,8 +211,30 @@ def update_configs(all_analyses, dbset):
                    route_points=report.routePoints)
         #If upsert fails, log error and continue, don't add analysis to analyses to pull
         try:
-            upserted = db.upsert('bluetooth.all_analyses', row,
-                                 pull_data='included.pull_data')
+            upsert_sql = '''INSERT INTO bluetooth.all_analyses (device_class_set_name, analysis_id, 
+                                                                minimum_point_completed, outcomes, report_id, report_name, 
+                                                                route_id, route_name, route_points)
+                            VALUES (%s)
+                            ON CONFLICT (analysis_id)
+                            DO UPDATE SET (device_class_set_name, minimum_point_completed, outcomes, report_id, report_name, route_id, route_name, route_points, pull_data)
+                                            = (device_class_set_name = excluded.device_class_set_name
+                                               minimum_point_completed = excluded.minimum_point_completed,
+                                               outcomes = excluded.outcomes ,
+                                               report_id = excluded.report_id,
+                                               report_name = excluded.report_name,
+                                               route_id = excluded.route_id ,
+                                               route_name = excluded.route_name ,
+                                               route_points = excluded.route_points,
+                                               pull_data = included.pull_data); 
+                        '''
+            with conn:
+                with conn.cursor() as cur:  
+                    cur.execute(upsert_sql, row)
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute('SELECT pull_data, analysis_id, report_id FROM bluetooth.all_analyses')
+                    upserted = cur.fetchone()
+                    
             analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
                                                            'report_name': upserted['report_name']}
         except IntegrityError as err:
@@ -298,10 +324,19 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             routes_to_pull = update_configs(all_analyses, dbset)
         else:
             LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
+<<<<<<< HEAD
             sql = '''WITH analyses AS (SELECT unnest(%(analysis)s::bigint[]) AS analysis_id)
                     SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
             query = db.query_formatted(sql, {'analysis':analysis})
             routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+=======
+            sql = '''WITH analyses AS (SELECT unnest((%s)::bigint[]) AS analysis_id)
+                    SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, analysis)
+            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+>>>>>>> c7cf1df... #131 update upsert sql
         date_to_process = None
 
     if years is None and live:
