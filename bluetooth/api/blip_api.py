@@ -261,7 +261,7 @@ def move_data(dbset):
             with conn.cursor() as cur:
                 cur.execute("SELECT bluetooth.move_raw_data();")
                 query = cur.fetchone()
-        if query[0][0] != 1:
+        if query[0] != 1:
             conn.rollback()
             raise DatabaseError('bluetooth.move_raw_data did not complete successfully') 
         ## King pilot 
@@ -269,7 +269,7 @@ def move_data(dbset):
             with conn.cursor() as cur:
                 cur.execute("SELECT king_pilot.load_bt_data();")
                 query = cur.fetchone()    
-        if query[0][0] != 1:
+        if query[0] != 1:
             conn.rollback()
             raise DatabaseError('king_pilot.load_bt_data did not complete successfully') 
         ## Truncate and delete 
