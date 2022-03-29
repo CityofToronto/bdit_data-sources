@@ -9,9 +9,11 @@ import datetime
 import logging
 import os
 import sys
+#from syslog import LOG_DEBUG
 import time
 import traceback
 import json
+import psycopg2
 from psycopg2 import connect, sql, InternalError, IntegrityError, DatabaseError
 from datetime import date
 from itertools import product
@@ -169,6 +171,10 @@ def get_wsdl_client(wsdlfile, direct=None, live=False):
             config[key] = zeep.xsd.SkipValue
     return blip, config
 
+class Object:
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, 
+            sort_keys=True, indent=None)
 
 def update_configs(all_analyses, dbset):
     '''
@@ -188,31 +194,34 @@ def update_configs(all_analyses, dbset):
     with conn:
         with conn.cursor() as curs:
             curs.execute('''TRUNCATE bluetooth.all_analyses_day_old;
-                            INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;''')
+                            INSERT INTO bluetooth.all_analyses_day_old 
+							SELECT * FROM bluetooth.all_analyses;''')
         
     analyses_pull_data = {}
     for report in all_analyses:
-        report.outcomes = [outcome.__json__() for outcome in report.outcomes]
-        report.routePoints = [route_point.__json__()
-                              for route_point in report.routePoints]
+        outcomes_arr = json.dumps([i.__dict__ for i in report.outcomes])
+        routePoints_arr = json.dumps([i.__dict__ for i in report.routePoints])
+
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,
-                   minimum_point_completed=json.dumps(report.minimumPointCompleted.__json__()),
-                   outcomes=report.outcomes,
+                   minimum_point_completed=json.dumps(
+                        report.minimumPointCompleted.__json__()),
+                   outcomes= outcomes_arr,
                    report_id=report.reportId,
                    report_name=report.reportName,
                    route_id=report.routeId,
                    route_name=report.routeName,
-                   route_points=report.routePoints)
+                   route_points=routePoints_arr)
+
         #If upsert fails, log error and continue, don't add analysis to analyses to pull
         try:
             upsert_sql = '''INSERT INTO bluetooth.all_analyses (device_class_set_name, analysis_id, 
                                                                 minimum_point_completed, outcomes, report_id, report_name, 
                                                                 route_id, route_name, route_points)
-                            VALUES (%s)
+                            VALUES (%(device_class_set_name)s, %(analysis_id)s, %(minimum_point_completed)s, %(outcomes)s, %(report_id)s, %(report_name)s, %(route_id)s, %(route_name)s, %(route_points)s)
                             ON CONFLICT (analysis_id)
                             DO UPDATE SET (device_class_set_name, minimum_point_completed, outcomes, report_id, report_name, route_id, route_name, route_points, pull_data)
-                                            = (device_class_set_name = excluded.device_class_set_name
+                                            = (device_class_set_name = excluded.device_class_set_name,
                                                minimum_point_completed = excluded.minimum_point_completed,
                                                outcomes = excluded.outcomes ,
                                                report_id = excluded.report_id,
@@ -333,7 +342,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                     SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
             with conn:
                 with conn.cursor() as cur:
-                    cur.execute(sql, analysis)
+                    cur.execute(sql, (analysis,))
             routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
         date_to_process = None
 
