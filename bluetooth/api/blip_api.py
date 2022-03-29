@@ -258,11 +258,11 @@ def update_configs(all_analyses, dbset):
                     cur.execute(upsert_sql, row)
             with conn:
                 with conn.cursor() as cur:
-                    cur.execute('SELECT pull_data, analysis_id, report_id FROM bluetooth.all_analyses')
+                    cur.execute('SELECT pull_data, analysis_id, report_name FROM bluetooth.all_analyses')
                     upserted = cur.fetchone()
                     
-            analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
-                                                           'report_name': upserted['report_name']}
+            analyses_pull_data[upserted[1]] = {'pull_data': upserted[0],
+                                                           'report_name': upserted[2]}
         except IntegrityError as err:
             LOGGER.error(err)
 
