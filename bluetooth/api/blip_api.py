@@ -243,16 +243,15 @@ def update_configs(all_analyses, dbset):
                                                                 route_id, route_name, route_points)
                             VALUES (%(device_class_set_name)s, %(analysis_id)s, %(minimum_point_completed)s, %(outcomes)s, %(report_id)s, %(report_name)s, %(route_id)s, %(route_name)s, %(route_points)s)
                             ON CONFLICT (analysis_id)
-                            DO UPDATE SET (device_class_set_name, minimum_point_completed, outcomes, report_id, report_name, route_id, route_name, route_points, pull_data)
-                                            = (device_class_set_name = excluded.device_class_set_name,
-                                               minimum_point_completed = excluded.minimum_point_completed,
-                                               outcomes = excluded.outcomes ,
-                                               report_id = excluded.report_id,
-                                               report_name = excluded.report_name,
-                                               route_id = excluded.route_id ,
-                                               route_name = excluded.route_name ,
-                                               route_points = excluded.route_points,
-                                               pull_data = included.pull_data); 
+                            DO UPDATE SET (device_class_set_name, minimum_point_completed, outcomes, report_id, report_name, route_id, route_name, route_points)
+                                            = (EXCLUDED.device_class_set_name,
+                                               EXCLUDED.minimum_point_completed,
+                                               EXCLUDED.outcomes ,
+                                               EXCLUDED.report_id,
+                                               EXCLUDED.report_name,
+                                               EXCLUDED.route_id ,
+                                               EXCLUDED.route_name ,
+                                               EXCLUDED.route_points); 
                         '''
             with conn:
                 with conn.cursor() as cur:  
