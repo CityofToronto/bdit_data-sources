@@ -256,20 +256,21 @@ def update_configs(all_analyses, dbset):
             with conn:
                 with conn.cursor() as cur:  
                     cur.execute(upsert_sql, row)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute('SELECT pull_data, analysis_id, report_name FROM bluetooth.all_analyses')
-                    upserted = cur.fetchone()
-                    
-            analyses_pull_data[upserted[1]] = {'pull_data': upserted[0],
-                                                           'report_name': upserted[2]}
+      
+            analyses_pull_data[row['analysis_id']] = {'pull_data': True,
+                                                           'report_name': row['report_name']}
         except IntegrityError as err:
             LOGGER.error(err)
 
+<<<<<<< HEAD
     db.close()
 
+=======
+    conn.close()
+>>>>>>> 65c4a6f... #131 fix upsert returned values to use inserting row
     analyses_to_pull = {analysis_id: analysis for (
-        analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
+                                                analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
+
     return analyses_to_pull
 
 def move_data(dbset):
@@ -309,7 +310,7 @@ def move_data(dbset):
         if query[0] != 1:
             conn.rollback()
             raise DatabaseError('king_pilot.load_bt_data did not complete successfully') 
-        ## Truncate and delete 
+        ## Truncate and delete if successful 
         with conn:
             with conn.cursor() as cur:
                 cur.execute("TRUNCATE bluetooth.raw_data;")
@@ -361,10 +362,18 @@ def main(dbsetting: 'path/to/config.cfg' = None,
         db = DB(**dbset)
 
     if live:
+<<<<<<< HEAD
         
         
         query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
         routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+=======
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
+        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+
+>>>>>>> 65c4a6f... #131 fix upsert returned values to use inserting row
     else:
         #Querying data that's been further processed overnight
         if not analysis:
@@ -373,6 +382,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                                                             api_settings['pw'])
             LOGGER.info('Updating route configs')
             routes_to_pull = update_configs(all_analyses, dbset)
+
         else:
             LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
 <<<<<<< HEAD
@@ -387,7 +397,11 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                 with conn.cursor() as cur:
                     cur.execute(sql, (analysis,))
             routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+<<<<<<< HEAD
 >>>>>>> c7cf1df... #131 update upsert sql
+=======
+
+>>>>>>> 65c4a6f... #131 fix upsert returned values to use inserting row
         date_to_process = None
 
     if years is None and live:
