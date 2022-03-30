@@ -153,9 +153,22 @@ WHERE fcode_desc IN ('Collector','Collector Ramp','Expressway','Expressway Ramp'
 ``` 
 
 ## Validating Output
-Validate the length of the segments with length ST_length(geom) and direction using gis.direction_from_line(geom) functions. If the detectors are located very close to the centerline intersections, it is not necessary to do the centreline cutting. If any bluetooth detectors are not located at the start or end point of a centreline, we will need to cut the centreline using ST_linelocatepoint() as explained in [here.](https://github.com/CityofToronto/bdit_data-sources/issues/234) . 
+Validate the length of the segments with length `ST_length(geom)` and direction using `gis.direction_from_line(geom)` functions. If the detectors are located very close to the centerline intersections, it is not necessary to do the centreline cutting. If any bluetooth detectors are not located at the start or end point of a centreline, we will need to cut the centreline using `ST_linesubstring()` as explained in [here.](https://github.com/CityofToronto/bdit_data-sources/issues/234).  
+
+Steps to cut centreline using `ST_linesubstring()`:
+1) Find the closest point of the detector on the centreline with [ST_closespoint()](https://postgis.net/docs/ST_ClosestPoint.html).   
+```sql
+ST_closestpoint(detector_geom, centreline_geom)
+```
+2) Return the location of the point relative to the centreline using [`ST_linelocatepoint()`](https://postgis.net/docs/ST_LineLocatePoint.html)
+```sql
+ST_linelocatepoint(geom, closest_point_geom)
+```
+3) Cut the line using [`ST_linesubstring()`](https://postgis.net/docs/ST_LineSubstring.html) 
+```sql
+ST_linesubstring(geom, 0, st_linelocatepoint)
+```
 
 The new routes table is now ready to append to the existing routes table.  
-
 
 [pgr_dijkstra]:https://docs.pgrouting.org/latest/en/pgr_dijkstra.html
