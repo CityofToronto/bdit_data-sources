@@ -4,7 +4,7 @@
 
 CREATE OR REPLACE FUNCTION bluetooth.reader_status_history(_dt date)
 
-   RETURNS TABLE(an_id bigint, 
+   RETURNS TABLE( an_id bigint, 
                   last_received date, 
                   status text, 
                   ddown integer, 
@@ -109,9 +109,9 @@ AS $BODY$
    ORDER BY          reader_id;
 
    UPDATE bluetooth.reader_locations
-   set date_last_received = (SELECT DISTINCT max(last_reported) from detector_status where bluetooth.detectors_history_final.reader_id = bluetooth.reader_locations.reader_id);
+   set date_last_received = (SELECT DISTINCT max(last_reported) from detector_status where detectors_history_final.reader_id = reader_locations.reader_id);
 END;
 $BODY$;
 
 ALTER FUNCTION bluetooth.reader_status_history(date)
-    OWNER TO bluetooth;
+    OWNER TO bt_admins;
