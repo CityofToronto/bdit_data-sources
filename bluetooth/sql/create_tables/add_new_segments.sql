@@ -29,9 +29,7 @@ SELECT 			analysis_id,
 				direction, 
 				from_street, 
 				to_street,
-				CASE WHEN geom_dir != direction THEN ST_reverse(geom) 
-					 ELSE geom 
-				END AS geom, 
+				geom, 
 				ST_Length(ST_transform(geom, 2592)) as length
 FROM (	SELECT 	analysis_id, street, direction, from_street, to_street, 
 				gis.twochar_direction(gis.direction_from_line(ST_linemerge(ST_union(geom)))) AS geom_dir,
