@@ -70,26 +70,26 @@ AS $BODY$
          SELECT      DISTINCT detector_list.detector_name,
                      max(detector_list.last_reported) AS last_reported,
                      detector_list.route_status,
-                     detectors_history_final.reader_id AS id,
+                     detectors_history_corrected.reader_id AS id,
                      detector_list.dt
 
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name -- Should be changed
+         LEFT JOIN   bluetooth.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name -- Should be changed
          WHERE       detector_list.route_status = TRUE
-         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_final.reader_id, detector_list.dt)
+         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_corrected.reader_id, detector_list.dt)
       
       -- Combine active and deactive detector 
       , detector_status as (
          SELECT      DISTINCT detector_list.detector_name,
                      max(detector_list.last_reported) AS last_reported,
                      detector_list.route_status,
-                     detectors_history_final.reader_id,
+                     detectors_history_corrected.reader_id,
 			            detector_list.dt
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_final ON detector_list.detector_name = detectors_history_final.read_name  -- Should be changed
+         LEFT JOIN   bluetooth.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name  -- Should be changed
          WHERE       detector_list.route_status = FALSE AND 
                      NOT (detector_list.detector_name IN (SELECT active.detector_name FROM active))
-         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_final.reader_id, detector_list.dt
+         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_corrected.reader_id, detector_list.dt
 
          UNION
          
@@ -109,7 +109,7 @@ AS $BODY$
    ORDER BY          reader_id;
 
    UPDATE bluetooth.reader_locations
-   set date_last_received = (SELECT DISTINCT max(last_reported) from detector_status where detectors_history_final.reader_id = reader_locations.reader_id);
+   set date_last_received = (SELECT DISTINCT max(last_reported) from detector_status where detectors_history_corrected.reader_id = reader_locations.reader_id);
 END;
 $BODY$;
 
