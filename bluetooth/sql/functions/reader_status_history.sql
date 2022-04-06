@@ -26,8 +26,8 @@ AS $BODY$
                         ELSE MAX (datetime_bin::date)
                      END as last_reported,
                      CASE
-                        WHEN  MAX (datetime_bin::date)>= (_dt) then 'True'::text
-                        ELSE 'False'::text
+                        WHEN  MAX (datetime_bin::date)>= (_dt) then True
+                        ELSE False
                      END AS route_status,
                      _dt::date AS dt
 
@@ -36,6 +36,7 @@ AS $BODY$
 		   GROUP BY    analysis_id)
       
       -- Extract start and end route point id and detector name for each analysis_id
+            -- Extract start and end route point id and detector name for each analysis_id
       , route_info AS (
          SELECT      status_info.analysis_id,
                      status_info.last_reported,
@@ -62,54 +63,46 @@ AS $BODY$
                      route_info.end_detector AS detector_name,
                      route_info.route_status,
                      route_info.last_reported,
-			            route_info.dt
+			         route_info.dt
          FROM        route_info)
 
       -- Select only the detectors that are active
 		, active AS (
-         SELECT      DISTINCT detector_list.detector_name,
+         SELECT      DISTINCT reader_id,
                      max(detector_list.last_reported) AS last_reported,
                      detector_list.route_status,
-                     detectors_history_corrected.reader_id AS id,
                      detector_list.dt
 
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name -- Should be changed
+         INNER JOIN   mohan.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name 
          WHERE       detector_list.route_status = TRUE
-         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_corrected.reader_id, detector_list.dt)
-      
-      -- Combine active and deactive detector 
-      , detector_status as (
-         SELECT      DISTINCT detector_list.detector_name,
+         GROUP BY    detector_list.route_status, detectors_history_corrected.reader_id, detector_list.dt)
+      	
+		-- Insert into reader_status_history table
+   	INSERT INTO  bluetooth.reader_status_history (reader_id, last_active_date, active, dt)
+		
+        SELECT       DISTINCT reader_id,
                      max(detector_list.last_reported) AS last_reported,
                      detector_list.route_status,
-                     detectors_history_corrected.reader_id,
 			            detector_list.dt
          FROM        detector_list
-         LEFT JOIN   bluetooth.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name  -- Should be changed
+         INNER JOIN  mohan.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name 
          WHERE       detector_list.route_status = FALSE AND 
-                     NOT (detector_list.detector_name IN (SELECT active.detector_name FROM active))
-         GROUP BY    detector_list.route_status, detector_list.detector_name, detectors_history_corrected.reader_id, detector_list.dt
+                     NOT (reader_id IN (SELECT reader_id FROM active))
+         GROUP BY    detector_list.route_status,detectors_history_corrected.reader_id, detector_list.dt
 
-         UNION
+         UNION ALL
          
-         SELECT      active.detector_name,
+         SELECT      active.reader_id,
                      active.last_reported,
                      active.route_status,
-                     active.id,
                      active.dt
-         FROM        active)
-   
-   INSERT INTO       bluetooth.reader_status_history (reader_id, last_active_date, active, dt)
+         FROM        active;
 
-   SELECT            DISTINCT reader_id, max(last_reported), route_status, dt
-   FROM              detector_status
-   WHERE             reader_id IS NOT NULL
-   GROUP by          reader_id, route_status, dt
-   ORDER BY          reader_id;
-
+   -- Update reader_locations' date_last_received with active reader's last reported date
    UPDATE bluetooth.reader_locations
-   set date_last_received = (SELECT DISTINCT max(last_reported) from detector_status where detectors_history_corrected.reader_id = reader_locations.reader_id);
+   set date_last_received = (SELECT DISTINCT max(last_reported) from active where active.reader_id = reader_locations.reader_id);
+
 END;
 $BODY$;
 
