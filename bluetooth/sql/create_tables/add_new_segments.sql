@@ -35,4 +35,46 @@ FROM (	SELECT 	analysis_id, street, direction, from_street, to_street,
 				gis.twochar_direction(gis.direction_from_line(ST_linemerge(ST_union(geom)))) AS geom_dir,
 				ST_linemerge(ST_union(geom)) AS geom
 		FROM lines
-		GROUP BY analysis_id, street, direction, from_street, to_street) a
+		GROUP BY analysis_id, street, direction, from_street, to_street) a;
+
+
+alter table mohan.bt_segments_new 
+add column end_street text;
+
+update  mohan.bt_segments_new 
+set end_street = end_street_name
+from mohan.routes 
+where routes.analysis_id = bt_segments_new.analysis_id;
+
+alter table mohan.bt_segments_new 
+add column segment_name text;
+
+update mohan.bt_segments_new 
+set segment_name = concat(from_name,  '_', to_name) 
+from mohan.new_added_detectors 
+where new_added_detectors.analysis_id = bt_segments_new.analysis_id;
+
+alter table mohan.bt_segments_new 
+add column bluetooth boolean;
+
+alter table mohan.bt_segments_new 
+add column wifi boolean;
+
+update mohan.bt_segments_new 
+set bluetooth = TRUE;
+
+update mohan.bt_segments_new -- only true for segments on highway 
+set bluetooth = FALSE; 
+
+alter table mohan.bt_segments_new 
+add column duplicate boolean;
+
+alter table mohan.bt_segments_new 
+add column reversed boolean;
+
+update mohan.bt_segments_new 
+set duplicate = FALSE; -- not sure what this is
+
+update mohan.bt_segments_new 
+set reversed = FALSE; -- false cause geoms are in the correct directional
+
