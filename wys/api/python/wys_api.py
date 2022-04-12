@@ -408,9 +408,10 @@ def update_locations(conn, loc_table):
         execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
         calc_geom_temp_table = """
             UPDATE daily_intersections
-            SET geom = st_setsrid(st_makepoint(split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 2)::double precision, 
-                                               split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 1)::double precision), 
-                                  4326);
+            SET geom = ST_Transform(ST_SetSRID(ST_MakePoint(split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 2)::double precision, 
+                                                            split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 1)::double precision), 
+                                               4326),
+                                    2952);
             """
         cur.execute(calc_geom_temp_table)
         update_locations_sql="""
@@ -423,9 +424,10 @@ def update_locations(conn, loc_table):
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc, a.geom 
                 FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
+                LEFT JOIN locations B ON (A.api_id = B.api_id
                                       AND (st_distance_sphere(A.geom, B.geom) > 100
-                                           OR A.dir <> B.dir)
+                                           OR A.dir <> B.dir))
+                                      OR api_id NOT IN (SELECT api_id FROM locations)
             ), 
             new_signs AS (
                 INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
