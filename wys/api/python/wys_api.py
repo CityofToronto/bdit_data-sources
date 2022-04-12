@@ -424,10 +424,10 @@ def update_locations(conn, loc_table):
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc, a.geom 
                 FROM daily_intersections A
-                LEFT JOIN locations B ON (A.api_id = B.api_id
+                JOIN locations B ON (A.api_id = B.api_id
                                       AND (st_distance_sphere(A.geom, B.geom) > 100
                                            OR A.dir <> B.dir))
-                                      OR api_id NOT IN (SELECT api_id FROM locations)
+                                      OR A.api_id NOT IN (SELECT api_id FROM locations)
             ), 
             new_signs AS (
                 INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
