@@ -49,7 +49,7 @@ def broken_readers(con, check_date):
 
         else: 
         # Send slack msg.
-            data = {"text": "TESTING The following detectors are broken",
+            data = {"text": "The following detectors are broken",
                     "username": "Airflow",
                     "channel": 'data_pipelines',
                     "attachments": [{"text": "{}".format(formatted_br)}]}
@@ -89,8 +89,7 @@ with DAG('bluetooth_check_readers', default_args=default_args, schedule_interval
     # Check if the blip data was aggregated into aggr_5min bins as of yesterday.
     pipeline_check = SQLCheckOperator(task_id = 'pipeline_check',
                                       conn_id = 'bt_bot',
-                                      sql = '''SELECT   CASE WHEN max(datetime_bin)::date = '{{ ds }}' THEN TRUE 
-                                                        ELSE FALSE END 
+                                      sql = '''SELECT   max(datetime_bin)::date = '{{ ds }}' 
                                                FROM     bluetooth.aggr_5min''' ,
                                       dag = blip_pipeline)   
                                                           
