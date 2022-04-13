@@ -442,6 +442,7 @@ def update_locations(conn, loc_table):
                                       AND A.dir = B.dir
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
+            )
             UPDATE wys.locations a
                 SET a.api_id = b.api_id,
                     a.address = b.address,
@@ -453,7 +454,7 @@ def update_locations(conn, loc_table):
                     a.geom = b.geom
                 FROM updated_signs b
                 WHERE a.id = b.id
-            )
+            
             
         """
         cur.execute(update_locations_sql)
