@@ -248,6 +248,7 @@ def get_data_for_date(start_date, signs_iterator, api_key):
             name=sign[0][1]
             logger.debug(str(name))
             hr_iterator = sign[1]
+            processed_hr = []
             for hr in hr_iterator:
                 try:
                     statistics=get_statistics_hourly(api_id, start_date, hr, api_key)
@@ -269,9 +270,12 @@ def get_data_for_date(start_date, signs_iterator, api_key):
                     logger.error(err)
                     sleep(75)
                 else:
-                   sign[1].remove(hr)
-                   if sign[1] == []:
-                       del sign_hr_iterator[api_id]
+                   # keep track of processed intervals
+                   processed_hr.append(hr) 
+            # only keep intervals with no data
+            sign[1] = [h for h in sign[1] if h not in processed_hr]
+        # only keep signs with missing data
+        sign_hr_iterator = {i:sign_hr_iterator[i] for i in sign_hr_iterator if len(sign_hr_iterator[i][1]) > 0}
         # return if already got all requested data
         if sign_hr_iterator == {}:
             return speed_counts, sign_locations
@@ -442,6 +446,7 @@ def update_locations(conn, loc_table):
                                       AND A.dir = B.dir
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
+            )
             UPDATE wys.locations a
                 SET a.api_id = b.api_id,
                     a.address = b.address,
@@ -453,7 +458,7 @@ def update_locations(conn, loc_table):
                     a.geom = b.geom
                 FROM updated_signs b
                 WHERE a.id = b.id
-            )
+            
             
         """
         cur.execute(update_locations_sql)
