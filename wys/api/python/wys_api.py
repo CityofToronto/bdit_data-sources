@@ -239,7 +239,7 @@ def get_data_for_date(start_date, signs_iterator, api_key):
     '''
     speed_counts, sign_locations = [], []
     # for each api_id: tuple of sign data and 24 hours to process
-    sign_hr_iterator = {int(i[0]):(i,list(range(24))) for i in signs_iterator}
+    sign_hr_iterator = {int(i[0]):[i,list(range(24))] for i in signs_iterator}
     # to assure each sign's location is only added once
     sign_locations_list = []
     for attempt in range(3):
