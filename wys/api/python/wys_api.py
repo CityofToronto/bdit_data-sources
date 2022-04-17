@@ -127,7 +127,7 @@ def get_statistics_hourly(location, start_date, hr, api_key):
         logger.error('405 error    '+error['error_message'])        
     elif response.status_code==504:
         error=response.json()
-        logger.error('504 error')
+        logger.error('504 error pulling %s for %s', location, hr)
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise WYS_APIException('Error'+str(response.status_code))
@@ -447,17 +447,17 @@ def update_locations(conn, loc_table):
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
             )
-            UPDATE wys.locations a
-                SET a.api_id = b.api_id,
-                    a.address = b.address,
-                    a.sign_name = b.sign_name,
-                    a.dir = b.dir,
-                    a.start_date = b.start_date,
-                    a.loc = b.loc,
-                    a.id = b.id,
-                    a.geom = b.geom
+            UPDATE wys.locations 
+                SET api_id = b.api_id,
+                    address = b.address,
+                    sign_name = b.sign_name,
+                    dir = b.dir,
+                    start_date = b.start_date,
+                    loc = b.loc,
+                    id = b.id,
+                    geom = b.geom
                 FROM updated_signs b
-                WHERE a.id = b.id
+                WHERE locations.id = b.id
             
             
         """
