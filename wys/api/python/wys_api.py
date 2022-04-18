@@ -462,9 +462,7 @@ def update_locations(conn, loc_table):
                     id = b.id,
                     geom = b.geom
                 FROM updated_signs b
-                WHERE locations.id = b.id
-            
-            
+                WHERE locations.id = b.id            
         """
         cur.execute(update_locations_sql)
 

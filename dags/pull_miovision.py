@@ -8,15 +8,18 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable 
 
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    
     # print this task_msg and tag these users
     task_msg = """:meow_camera: Miovision pulling failed :meow_headache:.
-        <@U1XGLNWG2> <@UG60NMTPC> please fix it :thanks_japanese: """.format(
-        task=context.get('task_instance').task_id,)    
+        {slack_name} please fix it :thanks_japanese: """.format(
+        task=context.get('task_instance').task_id, slack_name = list_names,)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -29,6 +32,7 @@ def task_fail_slack_alert(context):
         username='airflow',
         )
     return failed_alert.execute(context=context)
+
 default_args = {'owner':'rdumas',
                 'depends_on_past':False,
                 'start_date': datetime(2019, 11, 22),
