@@ -127,7 +127,8 @@ def get_statistics_hourly(location, start_date, hr, api_key):
         logger.error('405 error    '+error['error_message'])        
     elif response.status_code==504:
         error=response.json()
-        logger.error('504 error')
+        logger.error('504 timeout pulling sign %s for hour %s', 
+                     location, hr)
         raise TimeoutException('Error'+str(response.status_code))
     else:
         raise WYS_APIException('Error'+str(response.status_code))
@@ -243,6 +244,10 @@ def get_data_for_date(start_date, signs_iterator, api_key):
     # to assure each sign's location is only added once
     sign_locations_list = []
     for attempt in range(3):
+        if attempt > 0:
+            logger.info('Attempt %d, %d signs remaining',
+                        attempt + 1,
+                        len(sign_hr_iterator) )
         for sign in sign_hr_iterator.values():
             api_id=sign[0][0]
             name=sign[0][1]
@@ -429,7 +434,7 @@ def update_locations(conn, loc_table):
                        a.loc, a.geom 
                 FROM daily_intersections A
                 JOIN locations B ON (A.api_id = B.api_id
-                                      AND (st_distance_sphere(A.geom, B.geom) > 100
+                                      AND (st_distance(A.geom, B.geom) > 100
                                            OR A.dir <> B.dir))
                                       OR A.api_id NOT IN (SELECT api_id FROM locations)
             ), 
@@ -442,24 +447,22 @@ def update_locations(conn, loc_table):
                        a.geom, b.id 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND st_distance_sphere(A.geom, B.geom) < 100
+                                      AND st_distance(A.geom, B.geom) < 100
                                       AND A.dir = B.dir
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
             )
-            UPDATE wys.locations a
-                SET a.api_id = b.api_id,
-                    a.address = b.address,
-                    a.sign_name = b.sign_name,
-                    a.dir = b.dir,
-                    a.start_date = b.start_date,
-                    a.loc = b.loc,
-                    a.id = b.id,
-                    a.geom = b.geom
+            UPDATE wys.locations 
+                SET api_id = b.api_id,
+                    address = b.address,
+                    sign_name = b.sign_name,
+                    dir = b.dir,
+                    start_date = b.start_date,
+                    loc = b.loc,
+                    id = b.id,
+                    geom = b.geom
                 FROM updated_signs b
-                WHERE a.id = b.id
-            
-            
+                WHERE locations.id = b.id            
         """
         cur.execute(update_locations_sql)
 
