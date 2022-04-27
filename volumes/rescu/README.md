@@ -8,7 +8,7 @@ Raw data is available in `rescu.raw_15min` whereas processed 15-min data is avai
 
 ## `rescu_pull.py`
 
-This [script](rescu_pull.py) is located in the terminal server and takes in three variables which are `start_date`, `end_date` and `path`. It is a job that runs on a daily basis in the morning and imports the latest 15-minute volume file from a particular drive into our RDS. By default, the `start_date` and `end_date` are the beginning and the end of the day before. However, the user can also specify the date range from which the data should be pulled to ensure that this process can be used for other applications too. This script is automated to run daily on the terminal server to ingest a day worth of data collected from the day before. The steps are as followed:
+This [script](rescu_pull.py) is located in the terminal server and takes in three variables which are `start_date`, `end_date` (exclusive) and `path`. It is a job that runs on a daily basis in the morning and imports the latest 15-minute volume file from a particular drive into our RDS. By default, the `start_date` and `end_date` are the beginning and the end of the day before (today - 1 day and 12:00 today respectively). However, the user can also specify the date range from which the data should be pulled to ensure that this process can be used for other applications too. This script is automated to run daily on the terminal server to ingest a day worth of data collected from the day before. The steps are as followed:
 
 1) The script reads information from a .rpt file and then inserts the date into a table named `rescu.raw_15min`. The table has the following information
 
