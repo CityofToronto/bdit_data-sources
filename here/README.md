@@ -224,6 +224,6 @@ of functions using SQL like the following, replaced `TX` with the appropriate ti
 SELECT * FROM pgr_dijkstra('SELECT * FROM here.get_network_for_tx(TX)', start_vertex_id, end_vertex_id)
 ```
 
-## Aggregation Traffic Data
+## Aggregating Traffic Data
 
 HERE Traffic time data is at a link and 5-min resolution but, for data requests and projects we typically aggregate them up to a segment or over a certain time period. Check out this [documentation](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/here_aggregation.md) to learn more about aggregating here data.
