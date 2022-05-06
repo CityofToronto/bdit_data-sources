@@ -39,7 +39,7 @@ def format_br_list(returned_list):
 def broken_readers(con, check_date):
 # Send slack channel a msg when there are broken readers. 
     with con.cursor() as cursor: 
-        sql_query = '''SELECT * from bluetooth.broken_readers(%s::date)'''
+        sql_query = '''SELECT * from bluetooth.broken_readers_temp(%s::date)'''
         cursor.execute(sql_query, (check_date,))
         broken_readers = cursor.fetchall()
         formatted_br = format_br_list(broken_readers)
@@ -49,7 +49,7 @@ def broken_readers(con, check_date):
 
         else: 
         # Send slack msg.
-            data = {"text": "The following detectors are broken",
+            data = {"text": "The following bluetooth readers are not reporting data as of yesterday:",
                     "username": "Airflow",
                     "channel": 'data_pipelines',
                     "attachments": [{"text": "{}".format(formatted_br)}]}
@@ -84,18 +84,20 @@ default_args = {'owner':'mohan',
                 'on_failure_callback': task_fail_slack_alert
                 }
 
-with DAG('bluetooth_check_readers', default_args=default_args, schedule_interval='0 8 * * *', catchup=False) as blip_pipeline:
+with DAG('bluetooth_check_readers_temp', default_args=default_args, schedule_interval='0 8 * * *', catchup=False) as blip_pipeline:
 ## Tasks ##
     # Check if the blip data was aggregated into aggr_5min bins as of yesterday.
     pipeline_check = SQLCheckOperator(task_id = 'pipeline_check',
                                       conn_id = 'bt_bot',
-                                      sql = '''SELECT   max(datetime_bin)::date = '{{ ds }}' 
-                                               FROM     bluetooth.aggr_5min''' ,
+                                      sql = '''SELECT   * 
+                                               FROM     bluetooth.aggr_5min
+                                               WHERE    datetime_bin >='{{ ds }}' and datetime_bin < '{{ tomorrow_ds  }}'
+                                               LIMIT 1''' ,
                                       dag = blip_pipeline)   
                                                           
 
     # Update bluetooth.routes with the latest last_reported_date
-    update_routes_table = PostgresOperator( sql='''SELECT * from bluetooth.insert_report_date()''',
+    update_routes_table = PostgresOperator( sql='''SELECT * from bluetooth.insert_report_date_temp()''',
                                             task_id='update_routes_table',
                                             postgres_conn_id='bt_bot',
                                             autocommit=True,
