@@ -129,7 +129,7 @@ streetype3 | STREETYPE3 | Additional street type |  
 dir3 | DIR3 | Additional street direction |  
 road_class | ROAD_CLASS | Road class |  
 location_type | ACCLOC | Detailed collision location classification |  
-location_class | LOCCOORD | Simplified collision location classification | Simplified location_type
+location_class | LOCCOORD | Simplified collision location classification | Simplified location_type. ⚠️Only exists for validated collisions, exercise caution in using.
 collision_type | ACCLASS | Ontario Ministry of Transportation collision class |  
 impact_type | IMPACTYPE | Impact type (eg. rear end, sideswipe) |  
 visibility | VISIBLE | Visibility (usually due to inclement weather) |  
