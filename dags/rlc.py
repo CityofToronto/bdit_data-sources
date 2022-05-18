@@ -68,22 +68,64 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
+
 def pull_rlc(conn):
-  '''
-  Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
-  and overwrite existing rlc table in the vz_safety_programs_staging schema.
-  '''
+    '''
+    Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
+    and overwrite existing rlc table in the vz_safety_programs_staging schema.
+    '''
 
-  local_table='vz_safety_programs_staging.rlc'
+    local_table='vz_safety_programs_staging.rlc'
+    url = "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/9fcff3e1-3737-43cf-b410-05acd615e27b/resource/7e4ac806-4e7a-49d3-81e1-7a14375c9025/download/Red%20Light%20Cameras%20Data.geojson"  
+    return_json = requests.get(url).json()
+    
+    rlcs = return_json['features']
+    rows = []
+    for info in rlcs:
+        # temporary list of properties of one RLC to be appended into the rows list
+        one_rlc = []
 
-  url = "https://secure.toronto.ca/opendata/cart/red_light_cameras.json"
-  return_json = requests.get(url).json()
-  rows = [list(feature.values()) for feature in return_json]
-  insert = 'INSERT INTO {0} VALUES %s'.format(local_table)
-  with conn:
-    with conn.cursor() as cur:
-      execute_values(cur, insert, rows)
-      print(rows)
+        # dive deeper into the json objects
+        properties = info['properties']
+        geom = info['geometry']
+        coords = geom['coordinates']
+
+        # append the values in the same order as in the table
+        one_rlc.append(properties['RLC'])
+        one_rlc.append(properties['TCS'])
+        one_rlc.append(properties['NAME'])
+        one_rlc.append(properties['ADDITIONAL_INFO'])
+        one_rlc.append(properties['MAIN'])
+        one_rlc.append(properties['SIDE1'])
+        one_rlc.append(properties['SIDE2'])
+        one_rlc.append(properties['MID_BLOCK'])
+        one_rlc.append(properties['PRIVATE_ACCESS'])
+
+        # longitude and latitude
+        one_rlc.append(coords[1])
+        one_rlc.append(coords[0])
+
+        one_rlc.append(properties['X'])
+        one_rlc.append(properties['Y'])
+        one_rlc.append(properties['DISTRICT'])
+        one_rlc.append(properties['WARD_1'])
+        one_rlc.append(properties['WARD_2'])
+        one_rlc.append(properties['WARD_3'])
+        one_rlc.append(properties['WARD_4'])
+        one_rlc.append(properties['POLICE_DIVISION_1'])
+        one_rlc.append(properties['POLICE_DIVISION_2'])
+        one_rlc.append(properties['POLICE_DIVISION_3'])
+        one_rlc.append(properties['ACTIVATION_DATE'])
+        
+        # append the properties of one RLC to rows[]
+        rows.append(one_rlc)
+    
+    # insert into the local table
+    insert = 'INSERT INTO {0} VALUES %s'.format(local_table)
+    with conn:
+        with conn.cursor() as cur:
+            execute_values(cur, insert, rows)
+            print(rows)
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
