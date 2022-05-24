@@ -133,7 +133,7 @@ refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_ma
 				retries = 0
 				dag = 'BDITTO_ACC_REPLICATOR' #how does this even work if it's separated from the BDITTO_ACC_REPLICATOR definition? Clearly I'm missing something...
     )
-refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()'
+refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()'
 				task_id = 'refresh_col_no'
 				postgres_conn_id = 'replicator_bot'
 				autocommit = True
