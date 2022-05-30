@@ -81,6 +81,8 @@ def pull_rlc(conn):
     
     rlcs = return_json['features']
     rows = []
+
+    # each "info" is all the properties of one RLC, including its coords
     for info in rlcs:
         # temporary list of properties of one RLC to be appended into the rows list
         one_rlc = []
@@ -91,37 +93,20 @@ def pull_rlc(conn):
         coords = geom['coordinates']
 
         # append the values in the same order as in the table
-        one_rlc.append(properties['RLC'])
-        one_rlc.append(properties['TCS'])
-        one_rlc.append(properties['NAME'])
-        one_rlc.append(properties['ADDITIONAL_INFO'])
-        one_rlc.append(properties['MAIN'])
-        one_rlc.append(properties['SIDE1'])
-        one_rlc.append(properties['SIDE2'])
-        one_rlc.append(properties['MID_BLOCK'])
-        one_rlc.append(properties['PRIVATE_ACCESS'])
 
-        # longitude and latitude
-        one_rlc.append(coords[1])
-        one_rlc.append(coords[0])
+        # column names in the PG table
+        col_names = ['rlc','tcs','loc','additional_info','main','side1','side2','mid_block','private_access','x','y','district','ward1','ward2','ward3','ward4','police_division_1','police_division_2','police_division_3','date_installed','longitude','latitude'] 
 
-        one_rlc.append(properties['X'])
-        one_rlc.append(properties['Y'])
-        one_rlc.append(properties['DISTRICT'])
-        one_rlc.append(properties['WARD_1'])
-        one_rlc.append(properties['WARD_2'])
-        one_rlc.append(properties['WARD_3'])
-        one_rlc.append(properties['WARD_4'])
-        one_rlc.append(properties['POLICE_DIVISION_1'])
-        one_rlc.append(properties['POLICE_DIVISION_2'])
-        one_rlc.append(properties['POLICE_DIVISION_3'])
-        one_rlc.append(properties['ACTIVATION_DATE'])
-        
-        # append the properties of one RLC to rows[]
+        # attribute names in JSON dict
+        att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','X','Y','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
+        for attr in att_names:
+            one_rlc.append(properties[attr])
+        one_rlc += coords # or just coords if it's already a list of just these two elements
+
         rows.append(one_rlc)
     
     # insert into the local table
-    insert = 'INSERT INTO {0} VALUES %s'.format(local_table)
+    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
     with conn:
         with conn.cursor() as cur:
             execute_values(cur, insert, rows)
