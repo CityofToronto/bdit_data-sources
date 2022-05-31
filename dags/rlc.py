@@ -8,11 +8,11 @@ in the bigdata RDS (table will be truncated each time this script is called).
 from datetime import datetime
 import os
 import sys
+from threading import local
 import psycopg2
 import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 
 # Credentials
@@ -105,10 +105,11 @@ def pull_rlc(conn):
 
         rows.append(one_rlc)
     
-    # insert into the local table
+    # truncate and insert into the local table
     insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
     with conn:
         with conn.cursor() as cur:
+            cur.execute("TRUNCATE {}".format(local_table))
             execute_values(cur, insert, rows)
             print(rows)
 
@@ -122,14 +123,6 @@ RLC_DAG = DAG(
     schedule_interval='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
-TRUNCATE_TABLE = BashOperator(
-    task_id='truncate_rlc',
-    bash_command="/truncate_rlc.sh",
-    env={'vz_pg_uri':vz_pg_uri},
-    retries=0,
-    dag=RLC_DAG
-)
-
 PULL_RLC = PythonOperator(
     task_id='pull_rlc',
     python_callable=pull_rlc,
@@ -141,4 +134,4 @@ PULL_RLC = PythonOperator(
 # airflow test rlc_dag pull_rlc 29/08/2019
 
 # https://airflow.apache.org/concepts.html?highlight=what%20dag#bitshift-composition
-TRUNCATE_TABLE >> PULL_RLC
+PULL_RLC
