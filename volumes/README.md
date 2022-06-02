@@ -1,42 +1,55 @@
 # Traffic Volumes
 
-Traffic volume data (traffic counts and turning movements) from the FLOW database. Data tables currently stored in the `traffic` schema. 
+Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
 
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-- [1. Loading Data](#1-loading-data)
-- [2. Schema Overview](#2-schema-overview)
-- [3. Traffic Count Types](#3-traffic-count-types)
-	- [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
-		- [Data Elements](#data-elements)
-		- [Notes](#notes)
-	- [Automated Traffic Recorders (ATRs)](#automated-traffic-recorders-atrs)
-		- [Data Elements](#data-elements-1)
-		- [Notes](#notes-1)
-- [4. Relevant Tables](#4-relevant-tables)
-	- [arterydata](#arterydata)
-		- [Content](#content)
-		- [Table Structure](#table-structure)
-	- [det](#det)
-		- [Content](#content-1)
-		- [Table Structure](#table-structure-1)
-	- [countinfomics](#countinfomics)
-		- [Content](#content-2)
-		- [Table Structure](#table-structure-2)
-	- [cnt_det](#cnt_det)
-		- [Content](#content-3)
-		- [Table Stucture](#table-stucture)
-	- [countinfo](#countinfo)
-		- [Content](#content-4)
-		- [Table Structure](#table-structure-3)
-	- [category](#category)
-		- [Content](#content-5)
-		- [Table Structure](#table-structure-4)
+- [`rescu`: Loop Detector Data](#rescu-loop-detector-data)
+- [FLOW Data](#flow-data)
+	- [1. Loading Data](#1-loading-data)
+	- [2. Schema Overview](#2-schema-overview)
+	- [3. Traffic Count Types](#3-traffic-count-types)
+		- [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
+			- [Data Elements](#data-elements)
+			- [Notes](#notes)
+		- [Automated Traffic Recorders (ATRs)](#automated-traffic-recorders-atrs)
+			- [Data Elements](#data-elements-1)
+			- [Notes](#notes-1)
+	- [4. Relevant Tables](#4-relevant-tables)
+		- [arterydata](#arterydata)
+			- [Content](#content)
+			- [Table Structure](#table-structure)
+		- [det](#det)
+			- [Content](#content-1)
+			- [Table Structure](#table-structure-1)
+		- [countinfomics](#countinfomics)
+			- [Content](#content-2)
+			- [Table Structure](#table-structure-2)
+		- [cnt_det](#cnt_det)
+			- [Content](#content-3)
+			- [Table Stucture](#table-stucture)
+		- [countinfo](#countinfo)
+			- [Content](#content-4)
+			- [Table Structure](#table-structure-3)
+		- [category](#category)
+			- [Content](#content-5)
+			- [Table Structure](#table-structure-4)
+	- [5. Useful Views](#5-useful-views)
 - [Open Data](#open-data)
 	- [King Street Pilot](#king-street-pilot)
 
-## 1. Loading Data
+## `rescu`: Loop Detector Data
+
+Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. 
+More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
+or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+
+Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`. Data are pulled daily.
+
+## FLOW Data
+
+### 1. Loading Data
 
 The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
 
@@ -52,7 +65,7 @@ For one really large table (larger than the 11GB max database size for Oracle Ex
 
 Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
 
-## 2. Schema Overview
+### 2. Schema Overview
 The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
 
 !['flow_tables_relationship'](img/flow_tables_relationship.png)
@@ -68,18 +81,18 @@ Table Name|Description
 [countinfo](#countinfo)|Intermediate table linking ATR observations to Artery Codes
 [category](#category)|Reference table for Category ID (i.e traffic count type)
 
-## 3. Traffic Count Types
+### 3. Traffic Count Types
 
-### Turning Movement Counts (TMCs)
+#### Turning Movement Counts (TMCs)
 
-#### Data Elements
+##### Data Elements
 * Location Identifier (SLSN *Node* ID)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
 	- vehicle types
 	- cyclists and pedestrian counts are approach only
 	
-#### Notes
+##### Notes
 * No regular data load schedule. 
 * Data files collected by 2-3 staff members.
 * Manually geo-reference volume data to an SLSN node during data import process.
@@ -91,16 +104,16 @@ Table Name|Description
 * Each count station is given a unique identifier to avoid duplicate records.
 * Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents.
 
-### Automated Traffic Recorders (ATRs)
+#### Automated Traffic Recorders (ATRs)
 
-#### Data Elements
+##### Data Elements
 * Location Identifier (SLSN *Link* ID)
 * Direction
 * 15 min aggregated interval time
 * 15 min volume
 	- typically aggregated by direction, although data may be available by lane
 
-#### Notes
+##### Notes
 * The counts represent roadway and direction(s), not on a lane-by-lane level
 * No regular data load schedule
 * Manually geo-reference volume data to an SLSN node during data import process
@@ -108,15 +121,15 @@ Table Name|Description
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
 
-## 4. Relevant Tables
+### 4. Relevant Tables
 
-### arterydata
+#### arterydata
 
-#### Content
+##### Content
 
 This table contains the location information of each volume count. 
 
-#### Table Structure
+##### Table Structure
 
 Field Name|Type|Description
 ----------|----|-----------
@@ -137,7 +150,7 @@ Field Name|Type|Description
 ----------|----|-----------
 ID|Autonumber|Autonumber function
 COUNT_INFO_ID|number|ID number linked to [countinfomics](#1. countinfomics) table containing higher-level information
-COUNT_TIME|Date/Time|Effective time of counts (time displayed is the end time period)
+COUNT_TIME|Date/Time|Effective time of counts (**time displayed is the end time period**)
 N_CARS_R|number|S/B cars turning right
 N_CARS_T|number|S/B cars going through
 N_CARS_L|number|S/B cars turning left
@@ -187,13 +200,13 @@ S_OTHER|number|South side - optional field
 E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
 
-### countinfomics
+#### countinfomics
 
-#### Content
+##### Content
 
 This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
 
-#### Table Structure
+##### Table Structure
 
 Field Name|Type|Description
 ----------|----|-----------
@@ -203,42 +216,48 @@ count_date|date|date on which the count was conducted
 day_no|bigint|day of the week
 category_id|int|ID number linked to [category](#category) table containing the source of the count
 
-### cnt_det
+#### cnt_det
 
-#### Content
+##### Content
 
 This table contains individual data entries from all sources other than turning movement counts.
 
-#### Table Stucture
+##### Table Stucture
 
 Field Name|Type|Description
 ----------|----|-----------
 count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
 count|bigint|vehicle count
-timecount|Date/Time|Effective time of counts (time displayed is the end time period)
+timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
 
-### countinfo
+#### countinfo
 
-#### Content
+##### Content
 
 Similar to [countinfomics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
 
-#### Table Structure
+##### Table Structure
 
 See [countinfomics](#countinfomics)
 
-### category
+#### category
 
-#### Content
+##### Content
 
 This is a reference table referencing the data source of each entry.
 
-#### Table Structure
+##### Table Structure
 
 Field Name|Type|Description
 ----------|----|-----------
 category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
 category_name|text|name of the data source
+
+### 5. Useful Views
+
+- `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
+
+- `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
 ## Open Data
 

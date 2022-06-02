@@ -14,6 +14,46 @@
 	device_class 		smallint
 );
 
+
+/*Loops through the months for which we currently have data in order to create a partitioned table for each month*/
+
+DO $do$
+DECLARE
+	startdate DATE;
+	yyyy TEXT := '2020';
+	yyyymm TEXT;
+	basetablename TEXT := 'observations_';
+	tablename TEXT;
+BEGIN
+
+	FOR mm IN 01..12 LOOP
+		startdate:= to_date(yyyy||'-'||mm||'-01', 'YYYY-MM-DD');
+		IF mm < 10 THEN
+			yyyymm:= yyyy||'0'||mm;
+		ELSE
+			yyyymm:= yyyy||''||mm;
+		END IF;
+		tablename:= basetablename||yyyymm;
+		EXECUTE format($$CREATE TABLE bluetooth.%I 
+			(PRIMARY KEY (id),
+			CHECK (measured_timestamp > DATE '$$||startdate ||$$'AND measured_timestamp <= DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
+			UNIQUE(user_id, analysis_id, measured_time, measured_timestamp)
+			) INHERITS (bluetooth.observations);
+			ALTER TABLE bluetooth.%I
+  				OWNER TO bt_admins;
+			CREATE INDEX ON bluetooth.%I (analysis_id);
+			CREATE INDEX ON bluetooth.%I (cod);
+			CREATE INDEX ON bluetooth.%I USING brin(measured_timestamp);
+			$$
+			, tablename);
+		
+	END LOOP;
+END;
+$do$ LANGUAGE plpgsql
+	
+
+for 
+
 CREATE TABLE IF NOT EXISTS bluetooth.observations_201401 (
 	CONSTRAINT	pk_201401	primary key (id),
 	CONSTRAINT	ck_201401	CHECK		(	measured_timestamp > TIMESTAMP '2014-01-01' 

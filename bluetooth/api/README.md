@@ -12,6 +12,12 @@ Install the necessary packages using `pip` or `pipenv`: `pip install -r requirem
 
 Make sure [`parsing_utilities`](https://github.com/CityofToronto/bdit_python_utilities) is available to your python environment.
 
+In order to use the package `time_parsing`, you will have to install it with this command:
+```shell
+pipenv install -e 'git+https://github.com/CityofToronto/bdit_python_utilities.git#egg=parsing_utilities&subdirectory=parsing_utilities'
+```
+
+
 #### Usage
 
 ```shell
@@ -26,16 +32,18 @@ optional arguments:
                         Range of dates (YYYYMMDD) to operate over from
                         startdate to enddate, else defaults to previous day.
   -a ANALYSIS, --analysis ANALYSIS
-                        Analysis ID to pull. Add more flags for multiple IDs
+                        Analysis ID to pull. Add more flags for multiple IDs, 
+                        else defaults to all pullable routes
   -d DBSETTING, --dbsetting DBSETTING
                         Filename with connection settings to the database
                         (default: opens config.cfg)
-  --direct              Use DIRECT proxy if using from workstation
-  --live                Pull most recent clock hour of live data
+  --direct              Use this flag to use the proxy if using from workstation. 
+                        Do not use if running from terminal server
+  --live                Pull most recent clock hour of live data, for King Street Pilot
 ```
 
-`--direct` is a work-around to make this work on a workstation instead of the terminal server.
-`--live` is for pulling "live" data, versus "historical" data. This is to update the King Street Transit Pilot internal dashboards more frequently than daily. "live" data is less well filtered by the vendor's database.
+- `--direct` is a work-around to make this work on a workstation instead of the terminal server. There's no need to set proxy environment variables instead.
+- `--live` is for pulling "live" data, versus "historical" data. This is to update the King Street Transit Pilot internal dashboards more frequently than daily. "live" data is less well filtered by the vendor's database.
 
 If you want to pull individual analyses for a particular date, use the `-a` flag. For example, the below command will pull data for analysis IDs 156435 and  165375 from May 1st to May 12th 2018 inclusive:
 
