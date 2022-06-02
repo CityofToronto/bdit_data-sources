@@ -17,8 +17,8 @@ from airflow.operators.python_operator import PythonOperator
 
 # Credentials
 from airflow.hooks.postgres_hook import PostgresHook
-vz_cred = PostgresHook("vzbigdata") # name of Conn Id defined in UI
-vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
+vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
+#vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
 conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
 
 # ------------------------------------------------------------------------------
