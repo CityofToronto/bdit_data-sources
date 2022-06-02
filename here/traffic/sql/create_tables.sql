@@ -36,12 +36,7 @@ WITH (
 );
 ALTER TABLE here.ta
   OWNER TO here_admins;
-
-CREATE TABLE IF NOT EXISTS here.ta_staging (
-LIKE here.ta)
-;
-ALTER TABLE here.ta_staging
-OWNER TO here_admins;*/
+*/
 
 /*Loops through the years and then months for which we currently have data in order to create a partitioned table for each month*/
 
@@ -50,8 +45,6 @@ DECLARE
 	startdate DATE;
 	yyyymm TEXT;
 	basetablename TEXT := 'ta_';
-	baserulename TEXT := 'here_ta_insert_';
-	rulename TEXT;
 	tablename TEXT;
 BEGIN
 
@@ -65,17 +58,14 @@ BEGIN
 			END IF;
 			tablename:= basetablename||yyyymm;
 			EXECUTE format($$CREATE TABLE here.%I 
-				(--CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month')
-				) INHERITS (here.ta)$$
-				, tablename);
-			EXECUTE format($$ALTER TABLE here.%I OWNER TO here_admins$$, tablename);
-			rulename := baserulename||yyyymm;
-			EXECUTE format($$CREATE OR REPLACE RULE %I AS
-				    ON INSERT TO here.ta
-				   WHERE new.tx >= %L::date AND new.tx < (%L::date + '1 mon'::interval) 
-				   DO INSTEAD  INSERT INTO here.%I 
-				  VALUES (new.*)
-				  $$, rulename, startdate, startdate, tablename);
+				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
+				UNIQUE(link_dir, tx)
+				) INHERITS (here.ta);
+				ALTER TABLE here.%I OWNER TO here_admins;
+				$$
+				, tablename, tablename);
+			PERFORM here.create_link_dir_idx(tablename);
+			PERFORM here.create_tx_idx(tablename);
 		END LOOP;
 	END LOOP;
 END;
