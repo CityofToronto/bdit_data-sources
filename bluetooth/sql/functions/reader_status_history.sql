@@ -63,7 +63,7 @@ AS $BODY$
                      route_info.end_detector AS detector_name,
                      route_info.route_status,
                      route_info.last_reported,
-			         route_info.dt
+			            route_info.dt
          FROM        route_info)
 
       -- Select only the detectors that are active
@@ -74,9 +74,9 @@ AS $BODY$
                      detector_list.dt
 
          FROM        detector_list
-         INNER JOIN   mohan.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name 
+         INNER JOIN  bluetooth.readers_history_corrected history ON detector_list.detector_name = history.read_name 
          WHERE       detector_list.route_status = TRUE
-         GROUP BY    detector_list.route_status, detectors_history_corrected.reader_id, detector_list.dt)
+         GROUP BY    detector_list.route_status, history.reader_id, detector_list.dt)
       	
 		-- Insert into reader_status_history table
    	INSERT INTO  bluetooth.reader_status_history (reader_id, last_active_date, active, dt)
@@ -86,10 +86,10 @@ AS $BODY$
                      detector_list.route_status,
 			            detector_list.dt
          FROM        detector_list
-         INNER JOIN  mohan.detectors_history_corrected ON detector_list.detector_name = detectors_history_corrected.read_name 
+         INNER JOIN  bluetooth.readers_history_corrected history ON detector_list.detector_name = history.read_name 
          WHERE       detector_list.route_status = FALSE AND 
                      NOT (reader_id IN (SELECT reader_id FROM active))
-         GROUP BY    detector_list.route_status,detectors_history_corrected.reader_id, detector_list.dt
+         GROUP BY    detector_list.route_status,history.reader_id, detector_list.dt
 
          UNION ALL
          
