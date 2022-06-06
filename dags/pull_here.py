@@ -41,8 +41,8 @@ default_args = {'owner':'rdumas',
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
-                 'retries': 0,
-                 'retry_delay': timedelta(minutes=5),
+                 'retries': 3, #Retry 3 times
+                 'retry_delay': timedelta(minutes=45), #Retry after 45 mins
                  'on_failure_callback': task_fail_slack_alert,
                  'env':{'here_bot':rds_con,
                         'LC_ALL':'C.UTF-8', #Necessary for Click
