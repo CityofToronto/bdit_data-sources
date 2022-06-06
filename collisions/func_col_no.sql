@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION collisions_replicator.refresh_mat_view_collisions_no(
     COST 100
     VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
-    REFRESH MATERIALIZED VIEW CONCURRENTLY collisions_replicator.collisions_no WITH DATA ;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY collisions_replicator.collision_no WITH DATA ;
 $BODY$;
 
 ALTER FUNCTION collisions_replicator.refresh_mat_view_collisions_no()
@@ -17,8 +17,8 @@ ALTER FUNCTION collisions_replicator.refresh_mat_view_collisions_no()
 
 GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_view_collisions_no() TO collisions_bot;
 
-GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_view_collisions_no() TO replicator_bot;
-
 GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_view_collisions_no() TO scannon;
 
 REVOKE ALL ON FUNCTION collisions_replicator.refresh_mat_view_collisions_no() FROM PUBLIC;
+
+REVOKE ALL ON FUNCTION collisions_replicator.refresh_mat_view_collisions_no() FROM replicator_bot;
