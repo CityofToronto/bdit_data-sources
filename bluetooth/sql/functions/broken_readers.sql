@@ -19,7 +19,7 @@ SELECT          reader_id, read_name
 
 FROM            bluetooth.reader_status_history
 INNER join      bluetooth.detectors_history_corrected using(reader_id) -- needs to be changed to something else or another version
-WHERE           active IS FALSE and last_active_date = _dt - 2 
+WHERE           active IS FALSE AND last_active_date = _dt - 2 AND dt = _dt
 END; 
 
 $BODY$;
