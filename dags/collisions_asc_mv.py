@@ -27,7 +27,7 @@ def task_fail_sassy_slack_alert(context):
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow',
+        username='airflow'
         )
     return failed_alert.execute(context=context)
 
