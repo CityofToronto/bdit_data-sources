@@ -51,22 +51,19 @@ with DAG('BDITTO_ACC_REPLICATOR', # going waaaaaayyyyy out on a limb of the magi
 				task_id = 'update_acc_sc',
 				postgres_conn_id = 'replicator_bot',
 				autocommit = True,
-				retries = 0,
-				dag = 'BDITTO_ACC_REPLICATOR'#how does this even work if it's separated from the BDITTO_ACC_REPLICATOR definition? Is that the DAG? Since I'm still in the magical assumption tree I'mma just assume it's the DAG, so...
+				retries = 0
     )
                                  
     refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()',
 				task_id = 'refresh_col_no',
 				postgres_conn_id = 'replicator_bot',
 				autocommit = True,
-				retries = 0,
-				dag = 'BDITTO_ACC_REPLICATOR' #ibid
+				retries = 0
     )
     refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()',
 				task_id = 'refresh_ev_inv_mvs',
 				postgres_conn_id = 'replicator_bot',
 				autocommit = True,
-				retries = 0,
-				dag = 'BDITTO_ACC_REPLICATOR' #ibid
+				retries = 0
     )     
     update_acc_sc >> refresh_col_no >> refresh_events_involved
