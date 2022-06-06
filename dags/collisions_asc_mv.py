@@ -62,7 +62,7 @@ with DAG('BDITTO_ACC_REPLICATOR', # going waaaaaayyyyy out on a limb of the magi
 				retries = 0
 				dag = 'BDITTO_ACC_REPLICATOR' #ibid
     )
-    refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()'
+    refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()'
 				task_id = 'refresh_ev_inv_mvs'
 				postgres_conn_id = 'replicator_bot'
 				autocommit = True
