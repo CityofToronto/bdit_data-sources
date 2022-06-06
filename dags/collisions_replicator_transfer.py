@@ -49,20 +49,20 @@ with DAG('BDITTO_ACC_REPLICATOR', # going waaaaaayyyyy out on a limb of the magi
          
     update_acc_sc = PostgresOperator(sql = 'SELECT collisions_replicator.update_acc_safe_copy()',
 				task_id = 'update_acc_sc',
-				postgres_conn_id = 'replicator_bot',
+				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
                                  
     refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()',
 				task_id = 'refresh_col_no',
-				postgres_conn_id = 'replicator_bot',
+				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
     refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()',
 				task_id = 'refresh_ev_inv_mvs',
-				postgres_conn_id = 'replicator_bot',
+				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )     
