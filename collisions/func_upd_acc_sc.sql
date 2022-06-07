@@ -130,7 +130,7 @@ $BODY$;
 ALTER FUNCTION collisions_replicator.update_acc_safe_copy()
     OWNER TO scannon;
 
-GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy() TO replicator_bot;
+GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy() TO collisions_bot;
 
 GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy() TO scannon;
 

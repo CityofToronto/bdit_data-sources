@@ -16,7 +16,7 @@ $BODY$;
 ALTER FUNCTION collisions_replicator.refresh_mat_views()
     OWNER TO scannon;
 
-GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_views() TO replicator_bot;
+GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_views() TO collisions_bot;
 
 GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_mat_views() TO scannon;
 
