@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from airflow.operators.postgres_operator import PostgresOperator 
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 
 #This script does things with those operators:
 #1) uses ACC to update acc_safe_copy
