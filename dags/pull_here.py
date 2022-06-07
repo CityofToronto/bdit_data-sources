@@ -40,13 +40,14 @@ default_args = {'owner':'rdumas',
                 'start_date': datetime(2020, 1, 5),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
-                 'email_on_success': False,
-                 'retries': 0,
-                 'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_slack_alert,
-                 'env':{'here_bot':rds_con,
-                        'LC_ALL':'C.UTF-8', #Necessary for Click
-                        'LANG':'C.UTF-8'}
+                'email_on_success': False,
+                'retries': 3, #Retry 3 times
+                'retry_delay': timedelta(minutes=60), #Retry after 60 mins
+                'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
+                'on_failure_callback': task_fail_slack_alert,
+                'env':{'here_bot':rds_con,
+                       'LC_ALL':'C.UTF-8', #Necessary for Click
+                       'LANG':'C.UTF-8'}
                 }
 
 dag = DAG('pull_here',default_args=default_args, schedule_interval=' 30 16 * * * ')
