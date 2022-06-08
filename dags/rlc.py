@@ -81,6 +81,12 @@ def pull_rlc(conn):
     
     rlcs = return_json['features']
     rows = []
+    
+    # column names in the PG table
+    col_names = ['rlc','tcs','loc','additional_info','main','side1','side2','mid_block','private_access','x','y','district','ward1','ward2','ward3','ward4','police_division_1','police_division_2','police_division_3','date_installed','longitude','latitude'] 
+
+    # attribute names in JSON dict
+    att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','X','Y','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
 
     # each "info" is all the properties of one RLC, including its coords
     for info in rlcs:
@@ -93,12 +99,6 @@ def pull_rlc(conn):
         coords = geom['coordinates']
 
         # append the values in the same order as in the table
-
-        # column names in the PG table
-        col_names = ['rlc','tcs','loc','additional_info','main','side1','side2','mid_block','private_access','x','y','district','ward1','ward2','ward3','ward4','police_division_1','police_division_2','police_division_3','date_installed','longitude','latitude'] 
-
-        # attribute names in JSON dict
-        att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','X','Y','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
         for attr in att_names:
             one_rlc.append(properties[attr])
         one_rlc += coords # or just coords if it's already a list of just these two elements
@@ -112,6 +112,56 @@ def pull_rlc(conn):
             cur.execute("TRUNCATE {}".format(local_table))
             execute_values(cur, insert, rows)
             print(rows)
+
+# ------------------------------------------------------------------------------
+# Pull APS data
+def pull_aps(conn):
+    local_table='bqu.aps'
+    url = "https://secure.toronto.ca/opendata/cart/traffic_signals_with_aps.json?v=3"
+    return_json = requests.get(url).json()
+    rows = []
+    
+    # column names in the PG table
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details'] 
+
+    # attribute names in JSON dict
+    att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'activation_date']
+    
+    for aps in return_json:
+        # temporary list of properties of one APS to be appended into the rows list
+        one_aps = []
+
+        # append the values in the same order as in the table
+        one_aps.append('Audible Pedestrian Signals') # append the asset_name as listed in EC2
+
+        for attr in att_names:
+            one_aps.append(aps[attr])
+
+        one_aps.append(None) # the 'details' for APS are all Null in PG
+
+        rows.append(one_aps)
+        
+        insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM {} WHERE asset_type = 'Audible Pedestrian Signals'".format(local_table))
+                execute_values(cur, insert, rows)
+
+
+# ------------------------------------------------------------------------------
+# Pull LBS data
+
+
+
+# ------------------------------------------------------------------------------
+# Pull PXO data
+
+
+
+# ------------------------------------------------------------------------------
+# Pull PHSS data
+
+
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
