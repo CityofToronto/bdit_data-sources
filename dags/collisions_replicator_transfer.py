@@ -43,7 +43,7 @@ default_args = {'owner':'scannon',
                 }
 
 
-with DAG('BDITTO_ACC_REPLICATOR', # going waaaaaayyyyy out on a limb of the magical assumption tree here....
+with DAG('collisions_replicator_transfer', # going waaaaaayyyyy out on a limb of the magical assumption tree here....
          default_args = default_args,
          schedule_interval='0 3 * * *') as daily_update: #runs at 3am every day
          
