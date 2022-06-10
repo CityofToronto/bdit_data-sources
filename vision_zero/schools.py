@@ -23,6 +23,7 @@ ssz2018 = dag_config['ssz2018']
 ssz2019 = dag_config['ssz2019']
 ssz2020 = dag_config['ssz2020']
 ssz2021 = dag_config['ssz2021']
+ssz2022 = dag_config['ssz2022']
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -53,7 +54,11 @@ sheets = {
            2021: {'spreadsheet_id' : ssz2021, 
                   'range_name' : 'Master Sheet!A3:AC180', 
                   'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2021_raw'}
+                  'table_name' : 'school_safety_zone_2021_raw'},
+           2022: {'spreadsheet_id' : ssz2022,
+                  'range_name' : 'Master Sheet!A3:AC180',
+                  'schema_name': 'vz_safety_programs_staging',
+                  'table_name' : 'school_safety_zone_2022_raw'}
          }
 
 
@@ -150,3 +155,4 @@ if __name__ == '__main__':
     pull_from_sheet(con, service, 2019)
     pull_from_sheet(con, service, 2020)
     pull_from_sheet(con, service, 2021)
+    pull_from_sheet(con, service, 2022)
