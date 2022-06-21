@@ -61,9 +61,6 @@ BEGIN
         RAISE EXCEPTION '[traffic.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
         RETURN NULL;
     END IF;
-    IF TG_TABLE_NAME = traffic.det THEN
-		RETURN NULL;
-	END IF;
 	
 	INSERT INTO traffic.logged_actions VALUES (audit_row.*);
     RETURN NULL;
