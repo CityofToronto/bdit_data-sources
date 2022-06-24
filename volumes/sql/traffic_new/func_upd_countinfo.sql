@@ -30,7 +30,7 @@ AS $BODY$
 with delrec as (
 	select * from traffic.countinfo 
 	except 
-	select * from "TRAFFIC_NEW"."COUNTINFO")
+	select "COUNT_INFO_ID", "ARTERYCODE", "COUNT_DATE"::date, "DAY_NO", "COMMENT_", "FILE_NAME", "SOURCE1", "SOURCE2", "LOAD_DATE", "SPEED_INFO_ID", "CATEGORY_ID" from "TRAFFIC_NEW"."COUNTINFO")
 
 Delete from traffic.countinfo where count_info_id in (SELECT count_info_id from delrec);
 
