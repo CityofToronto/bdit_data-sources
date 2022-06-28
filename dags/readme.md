@@ -16,29 +16,51 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 ## Common Tasks
 
-### Creating a new airflow DAG
+### Creating a new Airflow DAG
 
-1) Branch off `master` and do your work in your normal git folder.
+1) Branch off `master` and do your work in your normal git folder, like you do.
 
 2) Create your dag in the dag folder and if applicable, your related script in another appropriate folder.
 
 3) Commit and push to GitHub.
 
-4) pull your testing branch into `dev_scripts`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
+4) Navigate to `/etc/airflow/dev_scripts` and pull your testing branch into `dev_scripts` using: 
 
-4) Test your dag by added a new symbolic link using the following (make sure you are in the correct directory `/etc/airflow/dag` ):
+```
+git pull origin your_branch_name
+```
+
+**DO NOT PUSH ANYTHING IN THIS BRANCH**.
+
+5) Navigate to `/etc/airflow/dag` 
+
+6) Create a new symbolic link using:
 
 ```
 ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
 ```
 
-5) Repeat step 3 until your test is successful.
+7) In a new browser tab, go to https://10.160.2.198/airflow/admin/ and enter your Airflow credentials.
 
-6) Make a pull request to master.
+**Note that the IP address is the address for the EC2 server (so if the EC2's IP address changes, the link will need to change too.**
 
-7) Once your PR is approved and merged, git pull from master in `data_scripts`.
+8) Go to the DAGs tab and find your dag by searching or scrolling though the list. Note that the name of the dag in Airflow is the same as the name in the dag variable within the .py script, which may not be the same as the file name.
 
-8) Change the symbolic link to your dag to use the one in `data_scripts`. 
+9) Trigger your dag and watch what happens. Correct any errors shown in the log. Ensure any alerts are working as expected. Check the output where appropriate. Stay on this step until there are no more errors and everything is functioning splendidly.
+
+10) Head back to GitHub and make a pull request for your pipeline branch to master.
+
+11) Once your PR is approved and merged, navigate to `/etc/airflow/data_scripts` and git pull from master using:
+
+```
+git pull origin master
+```
+
+12) Navigate to `/etc/airflow/dag` and change the symbolic link to your dag to use the one in `data_scripts` using: 
+
+```
+ln -s /etc/airflow/data_scripts/dags/your_dag.py your_dag.py
+```
 
 ### Updating an existing airflow DAG
 
@@ -46,17 +68,18 @@ ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
 
 2) Pull your testing branch into `dev_scripts`, **DO NOT PUSH ANYTHING IN THIS BRANCH**.
 
-3) Test your dag by added a new symbolic link for testing using the following:
+3) Test your dag on Airflow after adding a new symbolic link for testing using:
 ```
 ln -s /etc/airflow/dev_scripts/dags/your_dag_test.py your_dag_test.py
 ```
 
-4) If your test is successful, make a pull request to master.
+4) When your test is successful, make a pull request to master.
 
 5) Once your PR is approved and merged, git pull from master in `data_scripts`.
 
 6) Change the symbolic link to your dag to use the one in `data_scripts`.
 
+**Confused??? There are detailed instructions in the section above: Creating a new Airflow dag**
 
 ### Clearing a task
 
