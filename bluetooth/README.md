@@ -2,39 +2,67 @@
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [1. Overview](#1-overview)
-- [2. Table Structure](#2-table-structure)
+- [Bluetooth - Bliptrack](#bluetooth---bliptrack)
+  - [Table of Contents](#table-of-contents)
+  - [1. Overview](#1-overview)
+  - [2. Table Structure](#2-table-structure)
     - [Open Data Tables](#open-data-tables)
-        - [Live Feed](#live-feed)
-        - [Historical Data](#historical-data)
-        - [Geography](#geography)
+      - [Live Feed](#live-feed)
+      - [Historical Data](#historical-data)
+      - [Geography](#geography)
     - [Internal Tables](#internal-tables)
-        - [Observations](#observations)
-            - [Filtering devices](#filtering-devices)
-        - [all_analyses](#all_analyses)
-        - [ClassOfDevice](#classofdevice)
-- [3. Technology](#3-technology)
-- [4. Bliptrack UI](#4-bliptrack-ui)
+      - [Observations](#observations)
+        - [Filtering devices](#filtering-devices)
+      - [all_analyses](#all_analyses)
+      - [reader_history](#reader_history)
+      - [reader_locations](#reader_locations)
+      - [routes](#routes)
+      - [reader_status_history](#reader_status_history)
+      - [ClassOfDevice](#classofdevice)
+  - [3. Technology](#3-technology)
+  - [4. Bliptrack UI](#4-bliptrack-ui)
     - [Accessing Bliptrack](#accessing-bliptrack)
-        - [Terms](#terms)
-        - [Downloading travel time data](#downloading-travel-time-data)
-        - [Common Issues](#common-issues)
-- [5. Bliptrack API](#5-bliptrack-api)
+      - [Terms](#terms)
+      - [Downloading travel time data](#downloading-travel-time-data)
+      - [Common Issues](#common-issues)
+  - [5. Bliptrack API](#5-bliptrack-api)
     - [Pulling travel time data](#pulling-travel-time-data)
-        - [Under the Hood](#under-the-hood)
-        - [The `analysisId`](#the-analysisid)
-- [6. Bliptrack API OD Data](#6-bliptrack-api-od-data)
+      - [Under the Hood](#under-the-hood)
+      - [The `analysisId`](#the-analysisid)
+  - [6. Bliptrack API OD Data](#6-bliptrack-api-od-data)
     - [Start-End Data](#start-end-data)
-        - [Some notes on `measuredTime` and records](#some-notes-on-measuredtime-and-records)
-        - [Dictionary Structure](#dictionary-structure)
+      - [Some notes on `measuredTime` and records](#some-notes-on-measuredtime-and-records)
+      - [Dictionary Structure](#dictionary-structure)
     - [Others Data](#others-data)
     - [deviceClass and outlierLevel](#deviceclass-and-outlierlevel)
-        - [For the Start-End Data](#for-the-start-end-data)
-        - [For the Others Data](#for-the-others-data)
-        - [outliersLevel](#outlierslevel)
-- [7. Adding New Segments to the Database](#7-adding-new-segments-to-the-database)
-- [8. Open Data Releases](#8-open-data-releases)
+      - [For the Start-End Data](#for-the-start-end-data)
+      - [For the Others Data](#for-the-others-data)
+      - [outliersLevel](#outlierslevel)
+  - [7. Adding New Segments to the Database](#7-adding-new-segments-to-the-database)
+      - [Adding new readers](#adding-new-readers)
+      - [Creating new segments](#creating-new-segments)
+      - [Validating Output](#validating-output)
+  - [8. Open Data Releases](#8-open-data-releases)
+    
+  - [9. Technology](#3-technology)
+  - [10. Bliptrack UI](#4-bliptrack-ui)
+    - [Accessing Bliptrack](#accessing-bliptrack)
+      - [Terms](#terms)
+      - [Downloading travel time data](#downloading-travel-time-data)
+      - [Common Issues](#common-issues)
+  - [11. Bliptrack API](#5-bliptrack-api)
+    - [Pulling travel time data](#pulling-travel-time-data)
+      - [Under the Hood](#under-the-hood)
+      - [The `analysisId`](#the-analysisid)
+  - [12. Bliptrack API OD Data](#6-bliptrack-api-od-data)
+    - [Start-End Data](#start-end-data)
+      - [Some notes on `measuredTime` and records](#some-notes-on-measuredtime-and-records)
+      - [Dictionary Structure](#dictionary-structure)
+    - [Others Data](#others-data)
+    - [deviceClass and outlierLevel](#deviceclass-and-outlierlevel)
+      - [For the Start-End Data](#for-the-start-end-data)
+      - [For the Others Data](#for-the-others-data)
+      - [outliersLevel](#outlierslevel)
 
 ## 1. Overview
 
@@ -134,6 +162,72 @@ The script pulls the route configurations nightly from the Blip server. These ar
 |pull_data|boolean| (defaults to false) whether the script should pull observations |
 `outcomes` are set for different routes for purposes like: filtering BT and WiFi, or tracking Origin Destination points.
 
+
+#### reader_history
+
+This is a table of bluetooth readers that have been installed at each locations at different times in the past. Readers that have been installed at any point of time in the past are listed in this table irrespective of whether the reader is still physically present at the installed location or not. This table is the sum-total of all the readers irrespective of their current status.
+
+
+ `reader_history` table contains the following fields:
+
+|Column|Type|Notes|
+|------|----|-----|
+|`reader_history_id`|integer| Unique ID for each reader|
+|`reader_id`|varchar|foreign key to `reader_locations`. This is a location id. Multiple readers could have been installed in a same location at different times.|  
+|`serial_no_bluetooth`|integer|This is a four digit number that is assigned to each bluetooth reader. This serial number corresponds to the **Zone** in the bliptrack table.| 
+|`serial_no_wifi`|integer|Some readers have both wifi and bluetooth sensors. For those readers which has the wifi sensor its serial number is populated.|
+|`date_installed`|date|Date the reader is installed at the location|
+|`date_uninstalled`|date|Date the reader is uninstalled at the location|
+
+Except the `reader_history_id` all other fields in this table has to be updated manually.
+
+#### reader_locations 
+
+This is a table of all locations at which Bliptrack readers have been installed and are physically existing. The installed readers could be online or offline but has NOT been removed physically. Each intersection has only **one** reader that is assigned to a route/routes. Therefore, if there are more than one readers in a locations that have not been removed, such detectors are listed in the `reader_history` table. The function [`sql/functions/reader_status_history`](sql/functions/) updates the field `date_last_received`. This table consists of the following fields:
+|Column|Type|Notes|
+|------|----|-----|
+|`reader_id`|integer|Unique ID for a unique reader that corresponds to the `reader_id` in the `reader_history` table.|
+|`name`|varchar|Name of location consisting of two characters for E/W street, two characters for N/S street. for example QU_DF for Queen st and Dufferin St. Whatever name is already existing has been retained for example, A, B, C or Beechwood, Castlefield etc has been retained)|
+|`int_id`|integer|Centreline intersection id for closest intersection or pseudo intersections in case of an expressway. A logical location closest to a reader that would be an intersection (Node)|
+|`date_active`|date|The date this reader was installed.|
+|`date_inactive`|date|NULL unless this field is updated manually to reflect the date when this reader is deemed inactive.|
+|`date_last_received`|timestamp without time zone|Latest date when the `aggr_5min` table has data aggregated for this reader. This field is updated daily by the function [`sql/functions/reader_status_history`](sql/functions/).|  
+|`project_name`|varchar|Name of the project by which the detector is installed. 
+|`geom`|geometry| Geometry of the location.|
+
+
+#### routes 
+
+This is a table of all the routes that pass through the locations (which are either intersections or pseudo intersections) where readers are installed. It corresponds to a unique segments on which data is collected from the network of readers. For a two way street, routes are created for both directions such as Eastbound (EB) - Westbound (WB) or Northbound (NB) - Southbound (SB). In the City of Toronto, bluetooth readers are installed at various locations at different times by different projects. Thus, new routes were created accordingly as more readers are added in new locations. Easy way to create and update routes is [described here](https://github.com/CityofToronto/bdit_data-sources/blob/btdag/bluetooth/update/README.md). 
+
+The `routes` table has the following fields:
+
+|Column|Type|Notes|
+|------|----|-----|
+|`analysis_id`|bigint|analysis_id from the `bluetooth.all_analyses` table. For new routes that are added lately, new analysis_id starting from 1600000 is assigned. _`all_analyses` table has to be updated to include these new routes for data aggregation_.|
+|`name`|varchar|name of the route. This generally contains a detail name explaining the route start and end points. For example, `DVP-J to DVP-I` is a route along Don Valley Parkway between detector **J** and **I**.|  
+|`start_street_name`|varchar|This is the name of the street along which the route is created at the start point of the route.|
+|`start_cross_street`|varchar|The street that crosses the start street at the start point of the route.|
+|`start_reader_id`|varchar|Corresponding reader_id from the reader_locations table at the start point of the route.|
+|`end_street_name`|varchar|At times the route can start and end at different street name thus the name of the street along the route where the route ends.|
+|`end_cross_street`|varchar|This is the name of the street where the route ends.|
+|`end_reader_id`|varchar| Corresponding reader_id from the reader_locations table.|
+|`date_active`|date|The date when the `aggr_5min` table started aggregating data from this reader.|
+|`date_inactive`|date|The date when the reader stopped sending the readings. This field has to be updated manually as either one or both of the readers in a route may temporarily stop aggregating data for few days and come back again.|
+|`date_last_received`|date|Last day data on the route is aggregated. This field is updated everyday by the function [`sql/functions/insert_report_date`](sql/functions/). For the routes that are active, the last reported date will be yesterday.|
+|`geom`|geometry||
+
+#### reader_status_history
+
+This is a table that logs the `last_active_date` for each reader daily. This table is used as a lookup table to identify the readers from which data aggregation did not occur aka `broken_readers` as of yesterday. This table is updated by the function [`sql/functions/reader_status_history`](sql/functions/). The function runs daily in `Airflow`. The function [`sql/functions/broken_readers`](sql/functions/) depends on this look up table to identify the readers that were `not active` yesterday but were `active` the day before as `broken_readers`. It has the following four fields.
+
+|Column|Type|Notes|
+|------|----|-----|
+|`reader_id`|integer|The reader_id unique for readers in each location.|
+|`last_active_date`|date|The latest date when the data from the reader was aggregated.|
+|`active`|boolean|Boolean true or false. If the data_aggregation for the reader occured yesterday, this field is true. Else false. |
+|`dt`|date|This is the same date that is used as the parameter in the function to update the table. As the function runs daily in airflow, this field contains the most recent date.|
+
 #### ClassOfDevice
 
 |Column|Type|Notes|
@@ -166,6 +260,7 @@ To get major and minor classes from the cod:
 substring(cod::bit(24) from 17 for 6) as minor_device_class,
 substring(cod::bit(24) from 12 for 5) as major_device_class
 ```
+
 
 ## 3. Technology
 
@@ -228,7 +323,9 @@ The script pulls a day of data for each [analysisID](#the-analysisid) and upload
 Two companion scripts send alerts after this script runs:
 
 - [notify_routes.py](api/notify_routes.py) sends an email if new route configurations appear in the database.
-- [brokenreaders.py](readersdown/) sends an email if a sensor stopped producing data the previous day.
+- [bluetooth_check_readers.py](../dags/bluetooth_check_readers.py) This script runs at 08:00 hrs everyday and sends a slack message in `data_talk` channel if the data pipeline fails as of the day before. If the data pipeline is ok, then the script checks if there are any bluetooth readers which is not sending the data. In case of an occurance of a broken reader, it will then log the list of broken readers in `broken_readers_log` table and also sends a slack message. This script also updates the `date_last_received` field in the `routes` table and `reader_locations` table and add new rows to the `reader_status_history` table.  
+  
+  
 
 #### Under the Hood
 
@@ -315,7 +412,141 @@ Looking at the `outliersLevel` of the Start-End Data is a quick way to check if 
 
 ## 7. Adding New Segments to the Database
 
-Occasionally, new `analysis_id`s need to be added. The detailed process is described [here](update/README.md)
+When new detectors are installed and/or new segments are created, we need to update various sources in the `bluetooth` schema.
+
+### Adding new readers
+
+There will be an Excel Sheet contains details of newly added bluetooth detectors. The details include proposed routes `Name`, `Description`, intersection name as `Name` (according to D&A convention), four digit bluetooth sensor identification number as `Sensor` and `latitude/longitude` at start point and the end points along with numerous other fields. 
+
+New readers were added manually in the Excel Sheet and saved as .csv file. In addition to the lat/lon, the street names at each intersection where the readers are located is also needed in two columns for each route as the `from_street` and `to_street`. The `Description` field contains this information. For each proposed route, the excel sheet is populated and assigned a unique `analysis_id`. For this batch of new readers, analysis id starting from 1600000 with increment of 10 were added. 
+
+Therefore the new reader table will the following fields populated: 
+
+`analysis_id` 		- Unique ID for each route
+`street` 			- Name of the street along the route
+`direction` 		- Route direction(East bound, West Bound, North Bound or South Bound)
+`from_street` 		- Name of the intersecting street where the route begins.
+`to_street`			- Name of the intersecting street where the route ends 
+`from_name`			- The reader name (bdit convention) at the start point of the route
+`from_id` 			- The four digit Unique bluetooth id at the start point
+`from_lat` 			- Latitude at the start point of the route
+`from_lon` 			- Longitude at the start point of the route
+`to_name` 			- The reader name (bdit convention) at the end point of the route
+`to_id`				- The four digit Unique bluetooth id at the end point
+`to_lat`			- Latitude at the end point of the route
+`to_lon`			- Longitude at the end point of the route
+`length`			- Length of the route in metres 
+
+This .csv file was then imported into our postgresql database. The geometry column was created by adding a column using 
+```sql
+ALTER TABLE bluetooth.new_added_detectors ADD COLUMN from_geom GEOMETRY;
+ALTER TABLE bluetooth.new_added_detectors ADD COLUMN to_geom GEOMETRY;
+```
+Then create the geometry using lon and lat
+```sql
+UPDATE bluetooth.new_added_detectors 
+SET to_geom = ST_SetSRID(ST_MakePoint(to_lon, to_lat), 4326)
+SET from_geom = ST_SetSRID(ST_MakePoint(from_lon, from_lat), 4326)
+```
+### Creating new segments
+
+To create new segments, we need to first find closest centreline intersection to the start and end detector's geometry using nearest neighbour, and then route with routing function. 
+
+**Finding Nearest Intersection IDs**
+
+To get the intersection ids that are the closest to the newly added detectors location, create a table named `bluetooth_nodes`. This table has four fields:
+`bluetooth_id`, `geom` (geometry of bluetooth detectors), `int_id` (nearest intersection id) and `int_geom` (geometry of the nearest intersection to the bluetooth detector)
+
+This table is created using the following query:
+```SQL
+CREATE TABLE bluetooth.bluetooth_nodes AS(
+SELECT DISTINCT bluetooth.new_added_detectors.from_id::integer AS bluetooth_id,
+    			bluetooth.new_added_detectors.from_geom,
+    			nodes.int_id,
+    			st_transform(nodes.node_geom, 4326) AS int_geom
+   	FROM 		bluetooth.new_added_detectors
+ 	CROSS JOIN LATERAL (SELECT 		z.int_id,
+            						st_transform(z.geom, 98012) AS node_geom
+           				FROM 		gis.centreline_intersection z
+          				ORDER BY 	(z.geom <-> bluetooth.new_added_detectors.from_geom)
+         				LIMIT 1) nodes);
+```
+Check that correct intersections are returned from this query especially for oblique intersections with an offset. If required, correct the intersection_id and geom for such intersections and finalize the table `bluetooth.bluetooth_nodes`. 
+
+**Draw segment with pg_routing**
+
+Once the nearest centreline intersection nodes are linked to the bluetooth readers geom in `bluetooth.bluetooth_nodes`, we are ready to run the following Query to create new routes by routing. 
+
+```SQL
+CREATE table bluetooth.bt_segments_new AS (
+WITH lookup AS (
+	SELECT 		analysis_id, 
+				from_id, 
+				origin.int_id AS source, 
+				to_id, 
+				dest.int_id AS target
+	FROM 		bluetooth.new_added_detectors 
+	INNER JOIN 	bluetooth.bluetooth_nodes origin ON from_id = origin.bluetooth_id 
+	INNER JOIN 	bluetooth.bluetooth_nodes dest ON to_id = dest.bluetooth_id)
+
+, results AS (
+	SELECT * 
+	FROM lookup
+	CROSS JOIN LATERAL pgr_dijkstra('SELECT id, source, target, cost FROM gis.centreline_routing_directional inner join gis.centreline on geo_id = id
+where fcode != 207001', source::int, target::int, TRUE))
+
+, lines as (
+	SELECT 		  analysis_id, 
+              street, 
+              direction, 
+              from_street, 
+              to_street, 
+              edge AS geo_id, 
+              geom 
+	FROM 		    results			 
+	INNER JOIN 	gis.centreline ON edge=geo_id
+	INNER JOIN 	bluetooth.new_added_detectors USING (analysis_id)
+	ORDER BY 	  analysis_id)
+
+SELECT analysis_id, street, direction, from_street, to_street,
+      CASE WHEN geom_dir != direction THEN ST_reverse(geom) 
+      ELSE geom 
+      END AS geom, 
+      length
+FROM ( 
+SELECT analysis_id, street, direction, from_street, to_street, 
+		gis.twochar_direction(gis.direction_from_line(ST_linemerge(ST_union(geom)))) AS geom_dir,
+		ST_linemerge(ST_union(geom)) AS geom, 
+		ST_length(ST_transform(ST_linemerge(ST_union(geom)), 2952)) AS length
+FROM lines
+GROUP BY analysis_id, street, direction, from_street, to_street) a)
+```
+**Things to note**
+
+A number of centreline need to be excluded during routing, for example: Geostatistical lines and planning boundaries. Those can be filtered using the following where clause: 
+```sql
+WHERE fcode_desc IN ('Collector','Collector Ramp','Expressway','Expressway Ramp',
+'Local','Major Arterial','Major Arterial Ramp','Minor Arterial',
+'Minor Arterial Ramp','Pending')
+``` 
+### Validating Output
+
+Validate the length of the segments with length `ST_length(geom)` and direction using `gis.direction_from_line(geom)` functions. If the detectors are located very close to the centerline intersections, it is not necessary to do the centreline cutting. If any bluetooth detectors are not located at the start or end point of a centreline, we will need to cut the centreline using `ST_linesubstring()` as explained in [here.](https://github.com/CityofToronto/bdit_data-sources/issues/234).  
+
+Steps to cut centreline using `ST_linesubstring()`:
+1) Find the closest point of the detector on the centreline with [ST_closespoint()](https://postgis.net/docs/ST_ClosestPoint.html).   
+```sql
+ST_closestpoint(detector_geom, centreline_geom)
+```
+2) Return the location of the point relative to the centreline using [`ST_linelocatepoint()`](https://postgis.net/docs/ST_LineLocatePoint.html)
+```sql
+ST_linelocatepoint(geom, closest_point_geom)
+```
+3) Cut the line using [`ST_linesubstring()`](https://postgis.net/docs/ST_LineSubstring.html) 
+```sql
+ST_linesubstring(geom, 0, st_linelocatepoint)
+```
+The new routes table is now ready to append to the existing routes table. 
 
 ## 8. Open Data Releases
 
@@ -325,3 +556,4 @@ For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has relea
 
 - [King St. Transit Pilot - Detailed Bluetooth Travel Time](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#739f4e47-737c-1b32-3a0b-45f80e8c2951) contains travel times collected during the King Street Pilot in the same format as the 5-min data set. [Here](sql\analysis\open_data_ksp_travel_times.sql) is the SQL code producing these data.
 - [King St. Transit Pilot – Bluetooth Travel Time Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#a85f193a-4910-f155-6cb9-49f9dedd1392) contains monthly averages of corridor-level travel times by time periods. [Here](sql\analysis\open_data_ksp_agg_travel_times.sql) is the SQL code producing these summaries.
+
