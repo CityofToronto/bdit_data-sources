@@ -67,6 +67,62 @@ if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+
+
+def validate_school_info(row):
+    """ This function tests the data format validity of one row of data pulled from the Google Sheet
+    """
+    is_valid = False
+    
+    # Flashing Beacon W/O
+    wo_fb_valid = is_int(row[2])
+    
+    # WYSS W/O
+    wo_wyss_valid = is_int(row[3])
+    
+    # School Coordinate (X,Y)
+    schl_coord_valid = within_toronto(row[4])
+    
+    # Final Sign Installation Date
+    fsid_valid = is_date(row[5])
+    
+    # FB Locations (X,Y)
+    fb_loc_valid = within_toronto(row[6])
+    
+    # WYS Locations (X,Y)
+    wys_loc_valid = within_toronto(row[7])
+    
+    if wo_fb_valid and wo_wyss_valid and schl_coord_valid and fsid_valid and fb_loc_valid and wys_loc_valid:
+        is_valid = True
+    
+    return is_valid
+#loc.split(',')-> convert to float-> map(float, loc.split(','))
+#for multiple pairs of coords, maybe do a while loop (+2 index if exists)
+#python list comprehension
+#[(l[i],l[i+1]) for i in range(0,len(l),2)] forming a list of tuples
+# find longitude and latitute of Toronto, find max and min, ask Natalie
+
+#Maybe do a validate function for each type of values (numerical, coordinates, etc)
+
+def within_toronto(coords):
+    is_within_toronto = False
+    
+    return is_within_toronto
+
+def is_date(date):
+    is_date = 
+    convert_to_date = sql.SQL(
+    
+    return is_date
+
+def is_int(n):
+    is_integer = True
+    try:
+        int(n)
+    except ValueError:
+        is_integer = False
+    return is_integer
+
 def pull_from_sheet(con, service, year, *args):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
@@ -75,6 +131,9 @@ def pull_from_sheet(con, service, year, *args):
     Rows with empty cells at the beginning or end of the row or just an entire row of empty cells
     are not included in the postgres table.
     The existing table on postgres will be truncated first prior to inserting data into it.
+    
+    UPDATE: The new function will be doing upsert on the existing table, based on school_name.
+            There will be no truncating.
 
     Note
     ----
@@ -108,27 +167,41 @@ def pull_from_sheet(con, service, year, *args):
         for row in values:           
             try:                   
                 i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
-                rows.append(i)
-                LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
-                LOGGER.debug(row)
+                
+                if validate_school_info(i): # return true or false
+                    rows.append(i)
+                    LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                    LOGGER.debug(row)
+                else:
+                    LOGGER.error('An error occurs at %s', ','.join(i)) #double check
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
     
+  '''  
+    [s, g, s,a, s, d, s] [g, h, w, d, ]...
+    function(row)
+    row[1] check content
+  '''  
     schema = sheets[year]['schema_name']
     table = sheets[year]['table_name']
-
+    
+    """
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
     LOGGER.info('Truncating existing table %s', table)
-
+    """
+    
+    #change query to upsert, check Sarah's lightning talk
+    # take school_name as the primary key, but can double check with Raph
     query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
-                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))                                                                                             
+                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
+    
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
 
     with con:
         with con.cursor() as cur:
-            cur.execute(truncate)
+            #cur.execute(truncate)
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
 
