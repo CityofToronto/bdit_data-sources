@@ -72,13 +72,14 @@ logging.basicConfig(level=logging.INFO)
 def validate_school_info(row):
     """ This function tests the data format validity of one row of data pulled from the Google Sheet
     """
-    is_valid = False
     
     # Flashing Beacon W/O
-    wo_fb_valid = is_int(row[2])
-    
+    if not is_int(row[2]):
+        return False
+      
     # WYSS W/O
-    wo_wyss_valid = is_int(row[3])
+    if not is_int(row[3]):
+        return False
     
     # School Coordinate (X,Y)
     schl_coord_valid = within_toronto(row[4])
@@ -92,10 +93,7 @@ def validate_school_info(row):
     # WYS Locations (X,Y)
     wys_loc_valid = within_toronto(row[7])
     
-    if wo_fb_valid and wo_wyss_valid and schl_coord_valid and fsid_valid and fb_loc_valid and wys_loc_valid:
-        is_valid = True
-    
-    return is_valid
+    return True
 #loc.split(',')-> convert to float-> map(float, loc.split(','))
 #for multiple pairs of coords, maybe do a while loop (+2 index if exists)
 #python list comprehension
@@ -107,21 +105,32 @@ def validate_school_info(row):
 def within_toronto(coords):
     is_within_toronto = False
     
+    
+    # use contains or within function
     return is_within_toronto
 
-def is_date(date):
-    is_date = 
-    convert_to_date = sql.SQL(
-    
-    return is_date
+def is_date(date, fuzzy=False):
+    """
+    Return whether the string can be interpreted as a date.
+
+    :param date: str, string to check for date
+    :param fuzzy: bool, ignore unknown tokens in string if True
+    """
+    if date is None:
+        return True
+    else:
+        try: 
+            parse(date, fuzzy=fuzzy)
+            return True
+        except ValueError:
+            return False
 
 def is_int(n):
-    is_integer = True
     try:
         int(n)
     except ValueError:
-        is_integer = False
-    return is_integer
+        return False
+    return True
 
 def pull_from_sheet(con, service, year, *args):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
