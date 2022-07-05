@@ -228,14 +228,15 @@ def update_configs(all_analyses, dbset):
                                                EXCLUDED.report_name,
                                                EXCLUDED.route_id ,
                                                EXCLUDED.route_name ,
-                                               EXCLUDED.route_points); 
+                                               EXCLUDED.route_points)
+                            RETURNING analysis_id, report_name, pull_data; 
                         '''
             with conn:
                 with conn.cursor() as cur:  
                     cur.execute(upsert_sql, row)
-      
-            analyses_pull_data[row['analysis_id']] = {'pull_data': True,
-                                                           'report_name': row['report_name']}
+                    upserted = cur.fetchone()
+            analyses_pull_data[upserted['analysis_id']] = {'pull_data': True,
+                                                           'report_name': upserted['report_name']}
         except IntegrityError as err:
             LOGGER.error(err)
 
@@ -311,12 +312,12 @@ def main(dbsetting: 'path/to/config.cfg' = None,
     LOGGER.info('Fetching config from blip server')
     blip, config = get_wsdl_client(api_settings['WSDLfile'], direct, live)
 
-    try:
-        conn = _get_db(dbset)
-    except InternalError as _:
-        LOGGER.error('Connection error to RDS, sleeping for ten minutes')
-        sleep(60 * 10)
-        conn = _get_db(dbset)
+    try: 
+        conn = _get_db(dbset) 
+    except RetryError as retry_err: 
+        LOGGER.critical('Number of retries exceeded to connect to DB with the error:') 
+        retry_err.reraise() 
+        sys.exit(1) 
 
     if live:
         with conn:
