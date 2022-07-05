@@ -235,8 +235,8 @@ def update_configs(all_analyses, dbset):
                 with conn.cursor() as cur:  
                     cur.execute(upsert_sql, row)
                     upserted = cur.fetchone()
-            analyses_pull_data[upserted['analysis_id']] = {'pull_data': True,
-                                                           'report_name': upserted['report_name']}
+            analyses_pull_data[upserted[0]] = {'pull_data': True,
+                                                           'report_name': upserted[1]}
         except IntegrityError as err:
             LOGGER.error(err)
 
