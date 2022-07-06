@@ -17,6 +17,10 @@ from psycopg2.extras import execute_values
 from psycopg2 import sql
 import logging 
 
+import re
+from dateutil.parser import parse
+from datetime import datetime
+
 from airflow.models import Variable
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
 ssz2018 = dag_config['ssz2018']
@@ -70,7 +74,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def validate_school_info(row):
-    """ This function tests the data format validity of one row of data pulled from the Google Sheet
+    """ This function tests the data format validity of one row of data pulled from the Google Sheet.
+    Each field must pass the validation check for the entire school entry to be upserted into the database
     """
     
     # Flashing Beacon W/O
@@ -82,16 +87,22 @@ def validate_school_info(row):
         return False
     
     # School Coordinate (X,Y)
-    schl_coord_valid = within_toronto(row[4])
+    if not within_toronto(row[4]):
+        return False
     
     # Final Sign Installation Date
-    fsid_valid = is_date(row[5])
+    if not is_date(row[5]):
+        return False
+    else:
+        row[5] = enforce_date_format(row[5])
     
     # FB Locations (X,Y)
-    fb_loc_valid = within_toronto(row[6])
+    if not within_toronto(row[6]):
+        return False
     
     # WYS Locations (X,Y)
-    wys_loc_valid = within_toronto(row[7])
+    if not within_toronto(row[7]):
+        return False
     
     return True
 #loc.split(',')-> convert to float-> map(float, loc.split(','))
@@ -103,11 +114,24 @@ def validate_school_info(row):
 #Maybe do a validate function for each type of values (numerical, coordinates, etc)
 
 def within_toronto(coords):
-    is_within_toronto = False
-    
+    """
+    Return whether all the coordinate pairs in the string are within the boundaries of Toronto.
+
+    :param coords: str, string that is either empty or contains at least one pair of coords
+    """
+    if coords is None:
+        return True
+    else:
+        try:
+            # Get a list of individual coordinates (e.g. lat, long, lat, long, ...) as floats
+            coord = list(map(float, re.split(';|,', coords)))
+            
+            
+            return True
+        except ValueError:
+            return False
     
     # use contains or within function
-    return is_within_toronto
 
 def is_date(date, fuzzy=False):
     """
@@ -124,6 +148,15 @@ def is_date(date, fuzzy=False):
             return True
         except ValueError:
             return False
+
+def enforce_date_format(date, fuzzy=False):
+    if date is None:
+        return None
+    else:
+        # This is repeating the same step from is_date function, is there a better way to do this?
+        parsed_date = parse(date, fuzzy=fuzzy)
+        formatted_date = parsed_date.strftime("%B %-d, %Y")
+        return formatted_date
 
 def is_int(n):
     try:
@@ -175,7 +208,7 @@ def pull_from_sheet(con, service, year, *args):
     else:
         for row in values:           
             try:                   
-                i = (row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27])
+                i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
                 if validate_school_info(i): # return true or false
                     rows.append(i)
