@@ -21,6 +21,7 @@ import re
 from dateutil.parser import parse
 from datetime import datetime
 import geopandas as gpd
+from shapely.geometry import Polygon, LineString, Point
 
 from airflow.models import Variable
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
@@ -123,12 +124,13 @@ def within_toronto(coords):
             pairs_str = coords.split(';')
             pairs = [tuple(map(float, i.split(','))) for i in pairs_str]
             
+            """ !!!!!!!! The toronto_boundaries file needs to be moved to another location, path should also be changed """
             filepath = "~/bdit_data-sources/vision_zero/toronto_boundaries.shp"
             to_boundary = gpd.read_file(filepath)
             
             for pair in pairs:
                 point = Point(pair[1], pair[0]) # GeoPandas uses long-lat coordinate order
-                if not point.within(to_boundary):
+                if not to_boundary.contains(point)[0]:
                     return False
             return True
         except ValueError:
@@ -153,6 +155,7 @@ def is_int(n):
     """
     Returns whether a string can be converted into an integer.
     
+    :param n: str, string to check for if it's an integer
     """
     if n is None:
         return True
@@ -233,7 +236,7 @@ def pull_from_sheet(con, service, year, *args):
     LOGGER.info('Truncating existing table %s', table)
     """
     
-    #change query to upsert, check Sarah's lightning talk
+    # change query to upsert, check Sarah's lightning talk
     # take school_name as the primary key, but can double check with Raph
     query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
                        locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
