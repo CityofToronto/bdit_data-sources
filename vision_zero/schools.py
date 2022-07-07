@@ -20,6 +20,7 @@ import logging
 import re
 from dateutil.parser import parse
 from datetime import datetime
+import geopandas as gpd
 
 from airflow.models import Variable
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
@@ -71,7 +72,7 @@ if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
+#--------------------------------------------------------------------------------------------------
 
 def validate_school_info(row):
     """ This function tests the data format validity of one row of data pulled from the Google Sheet.
@@ -91,10 +92,10 @@ def validate_school_info(row):
         return False
     
     # Final Sign Installation Date
-    if not is_date(row[5]):
-        return False
-    else:
+    try:
         row[5] = enforce_date_format(row[5])
+    except ValueError:
+        return False
     
     # FB Locations (X,Y)
     if not within_toronto(row[6]):
@@ -105,65 +106,64 @@ def validate_school_info(row):
         return False
     
     return True
-#loc.split(',')-> convert to float-> map(float, loc.split(','))
-#for multiple pairs of coords, maybe do a while loop (+2 index if exists)
-#python list comprehension
-#[(l[i],l[i+1]) for i in range(0,len(l),2)] forming a list of tuples
-# find longitude and latitute of Toronto, find max and min, ask Natalie
-
-#Maybe do a validate function for each type of values (numerical, coordinates, etc)
 
 def within_toronto(coords):
     """
-    Return whether all the coordinate pairs in the string are within the boundaries of Toronto.
+    Returns whether all the coordinate pairs in the string are within the boundaries of Toronto.
 
     :param coords: str, string that is either empty or contains at least one pair of coords
     """
     if coords is None:
         return True
-    else:
-        try:
-            # Get a list of individual coordinates (e.g. lat, long, lat, long, ...) as floats
-            coord = list(map(float, re.split(';|,', coords)))
-            
-            
-            return True
-        except ValueError:
-            return False
-    
-    # use contains or within function
-
-def is_date(date, fuzzy=False):
-    """
-    Return whether the string can be interpreted as a date.
-
-    :param date: str, string to check for date
-    :param fuzzy: bool, ignore unknown tokens in string if True
-    """
-    if date is None:
+    elif bool(re.match(r'^Cancel', coords)):
         return True
     else:
-        try: 
-            parse(date, fuzzy=fuzzy)
+        try:
+            # Get a list of lat/long pairs as tuples of floats
+            pairs_str = coords.split(';')
+            pairs = [tuple(map(float, i.split(','))) for i in pairs_str]
+            
+            filepath = "~/bdit_data-sources/vision_zero/toronto_boundaries.shp"
+            to_boundary = gpd.read_file(filepath)
+            
+            for pair in pairs:
+                point = Point(pair[1], pair[0]) # GeoPandas uses long-lat coordinate order
+                if not point.within(to_boundary):
+                    return False
             return True
         except ValueError:
             return False
 
 def enforce_date_format(date, fuzzy=False):
+    """
+    If the string can be interpreted as a date, modify its format for PGSQL compatibility.
+    Else, an exception will be caught in the parent function.
+
+    :param date: str, string to check for date
+    :param fuzzy: bool, ignore unknown tokens in string if True
+    """
     if date is None:
         return None
     else:
-        # This is repeating the same step from is_date function, is there a better way to do this?
         parsed_date = parse(date, fuzzy=fuzzy)
         formatted_date = parsed_date.strftime("%B %-d, %Y")
         return formatted_date
 
 def is_int(n):
-    try:
-        int(n)
-    except ValueError:
-        return False
-    return True
+    """
+    Returns whether a string can be converted into an integer.
+    
+    """
+    if n is None:
+        return True
+    else:
+        try:
+            int(n)
+        except ValueError:
+            return False
+        return True
+
+#--------------------------------------------------------------------------------------------------
 
 def pull_from_sheet(con, service, year, *args):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
