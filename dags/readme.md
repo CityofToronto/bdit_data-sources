@@ -44,9 +44,11 @@ ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
 
 **Note that the IP address is the address for the EC2 server (so if the EC2's IP address changes, the link will need to change too).**
 
-8) Go to the DAGs tab and find your dag by searching or scrolling though the list. Note that the name of the dag in Airflow is the same as the name in the dag variable within the .py script. It's a reallllly good idea to keep these the same, but if they are different, you may experience an unexpected scavenger hunt.
+8) Go to the DAGs tab and find your dag by searching or scrolling though the list. Click on the name. You should see a page devoted to your DAG with menu items like "Graph View" and "Tree View" (among other items) near the top. Click on the Trigger DAG option.
 
-9) Trigger your dag and watch what happens. Correct any errors shown in the log. Ensure any alerts are working as expected. Check the output where appropriate. Stay on this step until there are no more errors and everything is functioning splendidly.
+**Note that the name of the dag in Airflow is the same as the name in the dag variable within the .py script. It's a reallllly good idea to keep these the same, but if they are different, you may experience an unexpected scavenger hunt.**
+
+9) Trigger your dag by clicking the "Trigger" button and watch what happens. Correct any errors shown in the log. Ensure any alerts are working as expected. Check the output where appropriate. Stay on this step until there are no more errors and everything is functioning splendidly.
 
 10) Head back to GitHub and make a pull request for your pipeline branch to master.
 
