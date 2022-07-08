@@ -239,7 +239,10 @@ def pull_from_sheet(con, service, year, *args):
     # change query to upsert, check Sarah's lightning talk
     # take school_name as the primary key, but can double check with Raph
     query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
-                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
+                       locations_fb, locations_wyss) VALUES %s ON CONFLICT (school_name) DO UPDATE SET address = EXCLUDED.address, 
+                       work_order_fb = EXCLUDED.work_order_fb, work_order_wyss = EXCLUDED.work_order_wyss, locations_zone = EXCLUDED.locations_zone,
+                       final_sign_installation = EXCLUDED.final_sign_installation, locations_fb = EXCLUDED.locations_fb, 
+                       locations_wyss = EXCLUDED.locations_wyss''').format(sql.Identifier(schema), sql.Identifier(table))
     
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
