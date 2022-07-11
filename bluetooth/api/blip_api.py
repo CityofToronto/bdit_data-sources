@@ -171,11 +171,6 @@ def get_wsdl_client(wsdlfile, direct=None, live=False):
             config[key] = zeep.xsd.SkipValue
     return blip, config
 
-class Object:
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, 
-            sort_keys=True, indent=None)
-
 def update_configs(all_analyses, dbset):
     '''
     Syncs configs from blip server with database and returns configs to pull 
@@ -336,11 +331,11 @@ def main(dbsetting: 'path/to/config.cfg' = None,
 
         else:
             LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
-            sql = '''WITH analyses AS (SELECT unnest((%s)::bigint[]) AS analysis_id)
+            sql = '''WITH analyses AS (SELECT unnest(%(analysis)s::bigint[]) AS analysis_id)
                     SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
             with conn:
                 with conn.cursor() as cur:
-                    cur.execute(sql, (analysis,))
+                    cur.execute(sql, {'analysis':analysis})
             routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
 
         date_to_process = None
