@@ -4,7 +4,7 @@
 
 ### blip_api
 
-Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data (curerntly disabled) for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
+Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data (currently disabled) for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
 
 #### Installation
 
