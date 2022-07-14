@@ -236,13 +236,16 @@ def pull_from_sheet(con, service, year, *args):
     
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
-
+    
+    if not rows: # Only insert if there is at least one valid row to be inserted
+        LOGGER.warning('There is no valid data for year: %i', year)
+        return
     with con:
         with con.cursor() as cur:
-            cur.execute(truncate)
-            if not rows: # Only insert if there is at least one valid row to be inserted
-                execute_values(cur, query, rows)
+            cur.execute(truncate)  
+            execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
+
 
 if __name__ == '__main__':
     """The following connects to the database, establishes connection to the sheets 
