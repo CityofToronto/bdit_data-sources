@@ -31,7 +31,7 @@ Delete from traffic.node where node_id in (SELECT node_id from delrec);
 $BODY$;
 
 ALTER FUNCTION traffic.update_node()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_node() TO scannon;
 

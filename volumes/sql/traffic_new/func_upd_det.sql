@@ -77,7 +77,7 @@ Delete from traffic.det where id in (SELECT id from delrec);
 $BODY$;
 
 ALTER FUNCTION traffic.update_det()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_det() TO scannon;
 

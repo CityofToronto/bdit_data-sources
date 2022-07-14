@@ -38,7 +38,7 @@ Delete from traffic.countinfomics where count_info_id in (SELECT count_info_id f
 $BODY$;
 
 ALTER FUNCTION traffic.update_countinfomics()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_countinfomics() TO scannon;
 

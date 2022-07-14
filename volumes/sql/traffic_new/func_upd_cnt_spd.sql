@@ -30,7 +30,7 @@ Delete from traffic.cnt_spd where id in (SELECT id from delrec);
 $BODY$;
 
 ALTER FUNCTION traffic.update_cnt_spd()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_cnt_spd() TO scannon;
 

@@ -26,7 +26,7 @@ WITH (
 --TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS traffic.logged_actions
-    OWNER to collision_admins;
+    OWNER to traffic_admins;
 
 GRANT SELECT ON TABLE traffic.logged_actions TO bdit_humans;
 

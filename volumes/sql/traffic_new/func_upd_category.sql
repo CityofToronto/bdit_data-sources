@@ -28,7 +28,7 @@ Delete from traffic.category where category_id in (SELECT category_id from delre
 $BODY$;
 
 ALTER FUNCTION traffic.update_category()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_category() TO scannon;
 

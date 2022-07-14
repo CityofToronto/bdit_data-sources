@@ -37,7 +37,7 @@ Delete from traffic.countinfo where count_info_id in (SELECT count_info_id from 
 $BODY$;
 
 ALTER FUNCTION traffic.update_countinfo()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_countinfo() TO scannon;
 

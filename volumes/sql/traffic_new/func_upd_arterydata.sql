@@ -45,7 +45,7 @@ Delete from traffic.arterydata where arterycode in (SELECT arterycode from delre
 $BODY$;
 
 ALTER FUNCTION traffic.update_arterydata()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_arterydata() TO scannon;
 

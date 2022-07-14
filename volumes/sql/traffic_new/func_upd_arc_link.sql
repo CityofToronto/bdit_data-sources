@@ -29,7 +29,7 @@ Delete from traffic.arc_link where link_id in (SELECT link_id from delrec);
 $BODY$;
 
 ALTER FUNCTION traffic.update_arc_link()
-    OWNER TO scannon;
+    OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_arc_link() TO scannon;
 
