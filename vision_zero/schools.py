@@ -223,34 +223,25 @@ def pull_from_sheet(con, service, year, *args):
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
     
-  '''  
-    [s, g, s,a, s, d, s] [g, h, w, d, ]...
-    function(row)
-    row[1] check content
-  '''  
     schema = sheets[year]['schema_name']
     table = sheets[year]['table_name']
     
-    """
+    
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
     LOGGER.info('Truncating existing table %s', table)
-    """
     
-    # change query to upsert, check Sarah's lightning talk
-    # take school_name as the primary key, but can double check with Raph
+    
     query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
-                       locations_fb, locations_wyss) VALUES %s ON CONFLICT (school_name) DO UPDATE SET address = EXCLUDED.address, 
-                       work_order_fb = EXCLUDED.work_order_fb, work_order_wyss = EXCLUDED.work_order_wyss, locations_zone = EXCLUDED.locations_zone,
-                       final_sign_installation = EXCLUDED.final_sign_installation, locations_fb = EXCLUDED.locations_fb, 
-                       locations_wyss = EXCLUDED.locations_wyss''').format(sql.Identifier(schema), sql.Identifier(table))
+                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
     
     LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
     LOGGER.debug(rows)
 
     with con:
         with con.cursor() as cur:
-            #cur.execute(truncate)
-            execute_values(cur, query, rows)
+            cur.execute(truncate)
+            if not rows: # Only insert if there is at least one valid row to be inserted
+                execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
 
 if __name__ == '__main__':
