@@ -10,23 +10,9 @@ CREATE OR REPLACE FUNCTION traffic.update_cnt_det(
     VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
 
-    insert into traffic.cnt_det (
-	select * from "TRAFFIC_NEW"."CNT_DET"
-	except
-	select * from traffic.cnt_det)
-	on conflict (id) 
-	DO UPDATE 
-		SET count_info_id = EXCLUDED.count_info_id,
-			count = EXCLUDED.count,
-			timecount = EXCLUDED.timecount,
-			speed_class = EXCLUDED.speed_class;
-
-with delrec as (
-	select * from traffic.cnt_det 
-	except 
-	select * from "TRAFFIC_NEW"."CNT_DET")
-
-Delete from traffic.cnt_det where id in (SELECT id from delrec);
+TRUNCATE TABLE traffic.cnt_det;
+INSERT INTO traffic.cnt_det
+(select * from "TRAFFIC_NEW"."CNT_DET")
 
 $BODY$;
 
@@ -34,6 +20,8 @@ ALTER FUNCTION traffic.update_cnt_det()
     OWNER TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_cnt_det() TO scannon;
+
+GRANT EXECUTE ON FUNCTION traffic.update_cnt_det() TO traffic_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.update_cnt_det() TO traffic_bot;
 
