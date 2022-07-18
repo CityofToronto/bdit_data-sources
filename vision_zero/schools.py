@@ -75,9 +75,16 @@ logging.basicConfig(level=logging.INFO)
 
 #--------------------------------------------------------------------------------------------------
 
-def validate_school_info(row):
+def validate_school_info(con, row):
     """ This function tests the data format validity of one row of data pulled from the Google Sheet.
     Each field must pass the validation check for the entire school entry to be upserted into the database
+    
+    Parameters
+    ----------
+    con :
+        Connection to bigdata database.
+    row : list
+        a single row from the spreadsheet.
     """
     
     # Flashing Beacon W/O
@@ -89,7 +96,7 @@ def validate_school_info(row):
         return False
     
     # School Coordinate (X,Y)
-    if not within_toronto(row[4]):
+    if not within_toronto(con, row[4]):
         return False
     
     # Final Sign Installation Date
@@ -99,20 +106,25 @@ def validate_school_info(row):
         return False
     
     # FB Locations (X,Y)
-    if not within_toronto(row[6]):
+    if not within_toronto(con, row[6]):
         return False
     
     # WYS Locations (X,Y)
-    if not within_toronto(row[7]):
+    if not within_toronto(con, row[7]):
         return False
     
     return True
 
-def within_toronto(coords):
+def within_toronto(con, coords):
     """
     Returns whether all the coordinate pairs in the string are within the boundaries of Toronto.
 
-    :param coords: str, string that is either empty or contains at least one pair of coords
+    Parameters
+    ----------
+    con :
+        Connection to bigdata database.
+    coords: str
+        string that is either empty or contains at least one pair of coords
     """
     if coords is None:
         return True
@@ -124,9 +136,8 @@ def within_toronto(coords):
             pairs_str = coords.split(';')
             pairs = [tuple(map(float, i.split(','))) for i in pairs_str]
             
-            """ !!!!!!!! The toronto_boundaries file needs to be moved to another location, path should also be changed """
-            filepath = "~/bdit_data-sources/vision_zero/toronto_boundaries.shp"
-            to_boundary = gpd.read_file(filepath)
+            to_boundary_sql = "SELECT * FROM gis.toronto_boundary"
+            to_boundary = gpd.GeoDataFrame.from_postgis(to_boundary_sql, con)
             
             for pair in pairs:
                 point = Point(pair[1], pair[0]) # GeoPandas uses long-lat coordinate order
