@@ -224,7 +224,7 @@ def pull_from_sheet(con, service, year, *args):
             try:                   
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
-                if validate_school_info(i): # return true or false
+                if validate_school_info(con, i): # return true or false
                     rows.append(i)
                     LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
                     LOGGER.debug(row)
