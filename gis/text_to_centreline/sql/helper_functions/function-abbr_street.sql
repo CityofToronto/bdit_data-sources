@@ -45,6 +45,8 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grove', ' Grv', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grv Rd', ' Grove Rd', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grv Ave', ' Grove Ave', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'Rd Cres', 'Road Cres', 'g');
+_abbrev_street := regexp_REPLACE(_abbrev_street, 'Highway', 'HWY', 'g');
+_abbrev_street := regexp_REPLACE(_abbrev_street, 'North York Toronto', '', 'g');
 return _abbrev_street;
 end;
 $BODY$;
