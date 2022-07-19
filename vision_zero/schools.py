@@ -126,7 +126,7 @@ def within_toronto(con, coords):
     coords: str
         string that is either empty or contains at least one pair of coords
     """
-    if coords is None:
+    if coords is '':
         return True
     elif bool(re.match(r'^Cancel', coords)):
         return True
@@ -168,7 +168,7 @@ def is_int(n):
     
     :param n: str, string to check for if it's an integer
     """
-    if n is None:
+    if n is '':
         return True
     else:
         try:
