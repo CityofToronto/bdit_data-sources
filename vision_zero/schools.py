@@ -155,8 +155,8 @@ def enforce_date_format(date, fuzzy=False):
     :param date: str, string to check for date
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
-    if date is None:
-        return None
+    if date is '':
+        return date
     else:
         parsed_date = parse(date, fuzzy=fuzzy)
         formatted_date = parsed_date.strftime("%B %-d, %Y")
