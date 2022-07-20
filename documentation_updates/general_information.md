@@ -1,9 +1,24 @@
-# GENERAL INFORMATION
+# [DATASET NAME] CENTRELINE Dataset
+[DESCRIPTION] The Toronto Centreline is a data set of linear features representing streets, walkways, rivers, railways, highways and administrative boundaries within the City of Toronto.
 
-| CENTRELINE Dataset                                                                                                                                                    |                 |                 |                 |                          |
-|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------|-----------------|--------------------------|
-| **Description**                                                                                                                                                              | **Source type** | **Keywords**    | **Last update** | **Location**             |
-| The Toronto Centreline is a data set of linear features representing streets, walkways, rivers, railways, highways and administrative boundaries within the City of Toronto. | Infrastructure  | such as Source, type, location, short-time (long-term), program, team.  | 2022            | Toronto, Ontario, Canada |
+<table class="tg">
+
+  <tr>
+    <td class="tg-fymr"><span style="font-weight:bold">Source type</span></td>
+    <td class="tg-fymr"><span style="font-weight:bold">Keywords</span></td>
+    <td class="tg-fymr"><span style="font-weight:bold">Last update</span></td>
+    <td class="tg-fymr"><span style="font-weight:bold">Location</span></td>
+    <td class="tg-0pky"><span style="font-weight:bold">Location</span></td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">Infrastructure</td>
+    <td class="tg-0pky">such as Source, type, location, short-time (long-term), program, team.</td>
+    <td class="tg-0pky">2022</td>
+    <td class="tg-0pky">Toronto, Ontario, Canada</td>
+    <td class="tg-0pky">Toronto, Ontario, Canada</td>
+  </tr>
+</tbody>
+</table>
 
 
 <BR>
