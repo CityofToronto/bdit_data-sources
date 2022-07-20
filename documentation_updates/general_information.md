@@ -2,7 +2,7 @@
 
 | CENTRELINE Dataset                                                                                                                                                    |                 |                 |                 |                          |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------|-----------------|--------------------------|
-| **Description**                                                                                                                                                              | **Source Type** | **Keywords**    | **Last update** | **Location**             |
+| **Description**                                                                                                                                                              | **Source type** | **Keywords**    | **Last update** | **Location**             |
 | The Toronto Centreline is a data set of linear features representing streets, walkways, rivers, railways, highways and administrative boundaries within the City of Toronto. | Infrastructure  | such as Source, type, location, short-time (long-term), program, team.  | 2022            | Toronto, Ontario, Canada |
 
 
@@ -13,14 +13,13 @@
 ||                 |
 |----------------------------|---------------|
 | **Contact**                      | example@info.ca |
-| **Access Link**                        | GCC link                |
-| **Available Format**            | SHP, Excel, GeoJson                |
+| **Access link**                        | GCC link                |
+| **Available format**            | SHP, Excel, GeoJson                |
 | **Temporal coverage**           |recent (up to update date)                 |
-| **Geographical Coverage**       |Examples: `{(xmin,ymin), (xmax,ymax)}`, number of points (intersections, segments), regions, wards, `EPSG=XXXXX`, `CRS=WGS84`               |
+| **Geographical coverage**       |Examples: `{(xmin,ymin), (xmax,ymax)}`, number of points (intersections, segments), regions, wards, `EPSG=XXXXX`, `CRS=WGS84`               |
 | **What to use it for**          |As base map                 |
-| **Date of Data Collection**     |adhoc updates                 |
-| **Collected By**                | Examples: division, unit, programs                |
-|
+| **Date of data collection**     |                |
+| **Collected by**                | Examples: division, unit, programs                |
 
 
 <BR>
@@ -33,10 +32,10 @@
 **What is included in the dataset**
 |                                |            |
 |--------------------------------|------------|
-| **number of features**         |     67769  |
-| **number of categorical data** |           |
-| **number of numerical data**   |          |
-| **geometry**                   |     Yes    |
+| **Number of features**         |     67769  |
+| **Number of categorical data** |           |
+| **Number of numerical data**   |          |
+| **Geometry**                   |     Yes    |
 
 <details>
   <summary>List of columns and definitions</summary>
@@ -66,7 +65,7 @@
 
 <BR>
 
-### **Any quality cooncern:**
+### **Any quality concern:**
 > list code/symbol and definition
 
 ### **Information on variables value (Optional):**
@@ -75,6 +74,8 @@
 </details>
 <BR>
 <BR>
+
+# Relevant Datasets
 
 | Related Data            | Related field      | Read More                                         |
 |-------------------------|--------------------|-----------------------------------------------|
