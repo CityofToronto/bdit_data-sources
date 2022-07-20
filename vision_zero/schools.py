@@ -88,12 +88,12 @@ def validate_school_info(con, row):
     """
     
     # Flashing Beacon W/O
-    if not is_int(row[2]):
-        return False
+    #if not is_int(row[2]):
+    #    return False
       
     # WYSS W/O
-    if not is_int(row[3]):
-        return False
+    #if not is_int(row[3]):
+    #    return False
     
     # School Coordinate (X,Y)
     if not within_toronto(con, row[4]):
