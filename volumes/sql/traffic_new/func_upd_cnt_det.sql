@@ -12,7 +12,7 @@ AS $BODY$
 
 TRUNCATE TABLE traffic.cnt_det;
 INSERT INTO traffic.cnt_det
-(select * from "TRAFFIC_NEW"."CNT_DET")
+(select * from "TRAFFIC_NEW"."CNT_DET");
 
 $BODY$;
 
