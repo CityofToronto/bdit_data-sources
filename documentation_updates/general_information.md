@@ -29,11 +29,11 @@
 |----------------------------|---------------|
 | **Contact**                      | example@info.ca |
 | **Access link**                        | GCC link                |
-| **Available format**            | SHP, Excel, GeoJson                |
+| **Available format**            |SHP, Excel, GeoJson                |
 | **Temporal coverage**           |recent (up to update date)                 |
 | **Geographical coverage**       |Examples: `{(xmin,ymin), (xmax,ymax)}`, number of points (intersections, segments), regions, wards, `EPSG=XXXXX`, `CRS=WGS84`               |
 | **What to use it for**          |As base map                 |
-| **Date of data collection**     |                |
+| **Date of data collection**     | Data gets updates when some changes applied to real-world features                |
 | **Collected by**                | Examples: division, unit, programs                |
 
 
@@ -80,10 +80,10 @@
 
 <BR>
 
-### **Any quality concern:**
+### **Quality Concerns:**
 > list code/symbol and definition
 
-### **Information on variables value (Optional):**
+### **Data Dictionary (Optional):**
 <details>
   <summary>fcode_descriptions</summary>
 </details>
