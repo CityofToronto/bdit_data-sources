@@ -87,33 +87,39 @@ def validate_school_info(con, row):
         a single row from the spreadsheet.
     """
     
+    ret_val = True
+    
     # Flashing Beacon W/O
     #if not is_int(row[2]):
-    #    return False
+    #    ret_val = False
       
     # WYSS W/O
     #if not is_int(row[3]):
-    #    return False
+    #    ret_val = False
     
     # School Coordinate (X,Y)
     if not within_toronto(con, row[4]):
-        return False
+        LOGGER.error('School : outside Toronto')
+        ret_val = False
     
     # Final Sign Installation Date
     try:
         row[5] = enforce_date_format(row[5])
     except ValueError:
-        return False
+        LOGGER.error(row[5]+' cannot be transformed into a date')
+        ret_val = False
     
     # FB Locations (X,Y)
     if not within_toronto(con, row[6]):
-        return False
+        LOGGER.error('FB : outside Toronto')
+        ret_val = False
     
     # WYS Locations (X,Y)
     if not within_toronto(con, row[7]):
-        return False
+        LOGGER.error('WYSS : outside Toronto')
+        ret_val = False
     
-    return True
+    return ret_val
 
 def within_toronto(con, coords):
     """
