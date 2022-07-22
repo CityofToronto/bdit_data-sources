@@ -1,4 +1,14 @@
-## Traffic Patterns: Traffic Models
+# Table of Contents
+- [Traffic Analytics](#traffic-analytics)
+- [Traffic Patterns: Traffic Models](#traffic-patterns:-traffic-models)
+    - [Traffic Patterns: Data Model](#traffic-patterns:-data-model)
+    - [Converting Traffic Patterns](#converting-traffic-patterns)
+- [HERE GIS data](#here-gis-data)
+
+# Traffic Analytics
+Data collected from vehicle probes is loaded into the partitioned here.ta table in our database every night. You can read about that process [here](traffic/README.md).
+
+# Traffic Patterns: Traffic Models
 
 Just like the sun doesn't always shine, the streets of Toronto don't always produce vehicle probe speeds. In those cases, HERE provides us with "traffic patterns," a model for each street link by time of week. This dataset comes in a big honking `tar.gz`. Here are some handy notes for navigating and uploading this data.
 
@@ -60,7 +70,7 @@ $ unzip -p NTP_SPD_NA_181H0.zip NTP_SPD_NA_15MIN_KPH_181H0.csv | psql -h 10.160.
 After these files are uploaded, the tables need to be converted to long format
 using the [SQL below](#converting-traffic-patterns).
 
-### Traffic Patterns: Data Model
+## Traffic Patterns: Data Model
 
 `sql/create_traffic_patterns.sql` contains the SQL to create the tables to contain Traffic Patterns. There are 15-min and 60-min models, which have a basic wide structure of `{pattern_id, h00_00, h00_015, [...], h23_45}` where `hHH_MM` is the speed value for `pattern_id` for that time of day. Both tables share the same `pattern_ids`, which can be found in the lookup reference table `here.traffic_pattern_YY_ref` (where `YY` is the year of the model). This table is of the format `{link_pvid, travel_direction, u, m, t, w, r, f, s}` where each of those letter columns contains a `pattern_id` for that combination of `link_dir` and `day of the week` starting with sUnday.
 
@@ -82,7 +92,7 @@ These wide-format tables are converted to the more relational narrow format with
 |trange| timerange| Time range for which this pattern applies|
 |pattern_speed| integer|Speed in km/hr for that pattern_id & time range|
 
-### Converting Traffic Patterns
+## Converting Traffic Patterns
 
 [`sql/convert_traffic_patterns.sql`](sql/convert_traffic_patterns.sql) contains multiple queries to convert traffic patterns from their wide format into something that is easier to query. The queries all use [`json_build_object(VARIADIC "any")`](https://devdocs.io/postgresql~9.6/functions-json#json_build_object) to create a set of key-value pairs from the values in the columns.
 
@@ -112,3 +122,7 @@ LATERAL json_to_recordset(json_build_array(
     json_build_object('isodow',6,'pattern_id', s)))
 AS smth(isodow int, pattern_id int);
 ```
+
+# HERE GIS data
+
+There are 40+ GIS datasets that are loaded into our database on a quarterly basis (more or less). You can read about how HERE GIS data is loaded [here](gis/README.md).
