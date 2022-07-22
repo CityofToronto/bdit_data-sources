@@ -46,7 +46,7 @@ Example of a table (from `activeto.analysis_periods`):
 
 | analysis_period | time_period | time_range | dow_range | day_type |
 | --- | --- | --- | --- | --- |
-| 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
+| 1 | Weekday- Daily | \[00:00:00,24:00:00) | [1,5] | Weekday |
 | 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
 
 ### Date range
@@ -94,13 +94,13 @@ Common output parameters:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.  
 - Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
-- Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) has observations. 
+- Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80\% of links (by distance) have observations. 
 
 ## Aggregation
 
 ### Using congestion tables
 
-Congestions summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
+Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
 
 When to use congestion summary tables:
 
@@ -143,7 +143,7 @@ Example of `congestion.segments_tti_weekly`:
                 time_bin <@ time_range 
     GROUP BY    segment_id, analysis_period, time_range, week
 ```       
-**Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80% of the segment (by distance) has observations at the corridor level
+**Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80\% of the segment (by distance) has observations at the corridor level
 
 ```sql
 SELECT      corridor_id,
@@ -197,7 +197,7 @@ If the congestion tables are not suitable for your study, you can aggregate here
 	GROUP BY 	input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
 ```
 
-**Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80% of the corridor (by distance) has observations
+**Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80\% of the corridor (by distance) has observations
 
 ```sql
 -- Aggregate link level hourly travel time to corridor level

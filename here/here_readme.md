@@ -9,18 +9,18 @@
     - [HERE Data: dates and time periods](#here-data:-dates-and-time-periods)
 - [HERE data at a glance](#here-data-at-a-glance)
 - [Detailed dataset overview](#detailed-dataset-overview)
-    - [Traffic data (aka the "ta" for "traffic analytics" table)]
-        - [Data Schema]
-            - [Getting link attributes]
-            - [Functional Class 5]
-    - [GIS Data]
-    - [Traffic Patterns: Traffic Models]
-    - [Routing with Traffic Data]
-    - [Aggregating Traffic Data]
-- [Links to HERE data documentation (in one place)]
-- [But I still have questions!!!]
+    - [Traffic data](#traffic-data)
+        - [Data Schema](#data-schema)
+            - [Getting link attributes](#getting-link-attributes)
+            - [Functional Class 5](#functional-class-5)
+    - [GIS Data](#gis-data)
+    - [Traffic Patterns: Traffic Models](#traffic-patterns:-traffic-models)
+    - [Routing with Traffic Data](#routing-with-traffic-data)
+    - [Aggregating Traffic Data](#aggregating-traffic-data)
+- [Links to HERE data documentation (in one place)](#links-to-here-data-documentation-(in-one-place))
+- [But I still have questions!!!](#but-i-still-have-questions!!!)
 
-# Basic Info <a name = basic-info></a>
+# Basic Info
 
 ## Keywords
 travel time, congestion, buffer index, probe data, speed
@@ -52,42 +52,44 @@ We use HERE data to:
 HERE Technologies provides us with a few different datasets, such as:
 - traffic analytics tables containing probe data for all Toronto streets
 - traffic patterns tables containing aggregated speed information for all Toronto streets
-- street attribute tables showing speed limits, street names and one way info for Toronto's streets
+- street attribute tables showing speed limits, street names one way info (and more!) for Toronto's streets
 - many GIS layers of streets, intersections, points of interest, trails, rail corridors and water features.
 
 ## HERE Data: dates and time periods
 As stated above, the traffic analytics table (here.ta) is updated daily. 
 
-Other products are generally updated quarterly, though this schedule has been somewaht disrupted due to the pandemic.
+Other products are generally updated quarterly, though this schedule has been somewhat disrupted due to the pandemic.
 
 There are also aggregated tables or views specific to certain modes (like trucks or cyclists) or time periods (like weekends or night-time).
 
-We have HERE data going back to 2012, but there sure weren't as many people walking around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon.
+We have HERE data going back to 2012, but there sure weren't as many people walking around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon. 
 
-Travel times are calculated for time periods that are at least three weeks or longer. Shorter time periods will not generate enough accurate probe data.
+Travel times are calculated for time periods that are at least three weeks or longer. Shorter time periods will not generate enough accurate probe data. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations.
 
 # HERE data at a glance
 
 The Question       | The Answer     |
 :----------------- | :---------------
-What is the HERE dataset used for? | To calculate travel times and monitor congestion, mostly
+What is the HERE dataset used for? | To calculate travel times and monitor congestion (mostly)
 Where is the HERE dataset from? | HERE Technologies, via an agreement with the Ontario Ministry of Transportation (MTO)
 Is it available on Open Data? | No
 What area does the HERE dataset represent? | All of Toronto; the co-ordinate system is EPSG: 4326
 Where is it stored? | On an internal postgres database called bigdata; in several schema (here, here_analysis, here_eval and here_gis)
+Are there any naming conventions? | If you see `_##_#` at the end of a table name (like `streets_21_1`) the first number is the year, and the second number is the quarter.
 How often is it updated? | Probe data are updated every day; reference files are usually updated quarterly
+How long are the time bins? | 5 minutes
 How far back does it go? | To 2012, but 2014 data are much more accurate
-What are the limitations? | Travel times are generally calculated for time periods lasting three or more weeks
+What are the limitations? | Travel times are generally calculated for time periods lasting three or more weeks; use data from 2014 onward
 What can I get? | Custom aggregations
 Are raw data available? | No
 How do I cite HERE data? | ???
 Who can I contact about HERE data? | Email us at transportationdata@toronto.ca
 
-# Detailed dataset overview <a name="detailed-dataset-overview"></a>
+# Detailed dataset overview
 
-## Traffic data (aka the "ta" for "traffic analytics" table)
+## Traffic data
 
-Historical data acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data is stored in partitioned tables under `here.ta`. Have a look at the [procedure for loading new data](traffic/README.md) for that including using [`data_utils`](../data_utils/), which has been extended to partition, check constraints and index this data.
+Historical data are acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data points are stored in partitioned tables under `here.ta` (fun fact: the "ta" stands for traffic analytics)! Have a look at the [procedure for loading new data](traffic/README.md) for that including using [`data_utils`](../data_utils/), which has been extended to partition, check constraints and index this data.
 
 ### Data Schema
 
@@ -104,7 +106,7 @@ Historical data acquired through the Traffic Analytics download portal. Data goe
 |confidence|integer| [10-40] degree to which observation depends on historical data (higher is better)|
 |pct_x|integer| Speed at the x percentile in 5% bins|
 
-For an exploratory description of coverage (or how much probe data there is for our roads) check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb).
+For an exploratory description of coverage (or how much probe data there is) for our roads, check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb).
 
 #### Getting link attributes
 
@@ -128,11 +130,11 @@ A lot of map layers provided by HERE, see the [README](gis/README.md) in the [gi
 
 Just like the sun doesn't always shine, the streets of Toronto don't always produce vehicle probe speeds. In those cases, HERE provides us with traffic patterns, a model for each street link by time of week.
 
-### Traffic Patterns: Data Model
+### Traffic Patterns: Data Model 
 
-`sql/create_traffic_patterns.sql` contains the SQL to create the tables that contain Traffic Patterns. There are 15-min and 60-min models, which have a basic wide structure of `{pattern_id, h00_00, h00_015, [...], h23_45}` where `hHH_MM` is the speed value for `pattern_id` for that time of day. Both the 15-min and 60-min tables share the same `pattern_ids`, which can be found in the lookup reference table `here.traffic_pattern_YY_ref` (where `YY` is the year of the model). This table is of the format `{link_pvid, travel_direction, u, m, t, w, r, f, s}` where each of those letter columns contains a `pattern_id` for that combination of `link_dir` and `day of the week` starting with sUnday.
+The Traffic Patterns dataset comes in 15-min and 60-min models, which have a basic wide structure of `{pattern_id, h00_00, h00_015, [...], h23_45}` where `hHH_MM` is the speed value for `pattern_id` for that time of day. 
 
-These wide-format tables are converted to a narrow format which makes relating traffic patterns to other datasets much easier.
+Both the 15-min and 60-min tables share the same `pattern_ids`, which can be found in the lookup reference table `here.traffic_pattern_YY_ref` (where `YY` is the year of the model). This table is of the format `{link_pvid, travel_direction, u, m, t, w, r, f, s}` where each of those letter columns contains a `pattern_id` for that combination of `link_dir` and `day of the week` starting with sUnday.
 
 `here.traffic_pattern_YY_ref_narrow`
 
@@ -142,7 +144,9 @@ These wide-format tables are converted to a narrow format which makes relating t
 |isodow |integer | ISO Day of Week|
 |pattern_id |integer | id referring to the pattern for that link_dir, day of week combination|
 
-`here.traffic_pattern_YY_spd_MM_narrow` (15 & 60 minute patterns have the same structure)
+The tables are converted to a narrow format (which means that the 15-min and 60-min time periods show up in one field (`trange`) instead of each time period taking up its own column). The 15-min and 60-min tables have the same format.
+
+`here.traffic_pattern_YY_spd_MM_narrow`
 
 |column | type | definition |
 |-------|------|------------|
@@ -150,13 +154,13 @@ These wide-format tables are converted to a narrow format which makes relating t
 |trange| timerange| Time range for which this pattern applies|
 |pattern_speed| integer|Speed in km/hr for that pattern_id & time range|
 
-Check out this [documentation](here/here_loading.md) to see how the "traffic patterns" tables are loaded and transformed.
+Check out this [documentation](here/here_loading.md) for more info on how the traffic patterns tables are loaded and transformed.
 
 ## Routing with Traffic Data
 
 One use of historical traffic data is the ability to route a vehicle from an
 arbitrary point to another arbitrary point using traffic data **at that point
-in time**. Since our data is already in a database, this can be accomplished
+in time**. Since our data are already in a database, this can be accomplished
 using the [`pgRouting`](http://pgrouting.org/) PostgreSQL extension. It is
 necessary to have [traffic patterns](#traffic-patterns-traffic-models) loaded
 to fill in gaps in traffic data in time.
@@ -166,10 +170,15 @@ The following views prepare the HERE data for routing (code found
 
 - `here.routing_nodes`: a view of all intersections derived from the `z_levels`
   gis layer.
-- `here.routing_streets_18_3`: The geography of streets is provided as
+- `here.routing_streets_YY_Q`: The geography of streets is provided as
   centerlines, but traffic is provided directionally. This view creates
   directional links for each permitted travel direction on a navigable street
   with a `geom` drawn in the direction of travel.
+
+Its a good idea to make sure that your tables or views are from the same time period, or as close to the same time period, as possible. Due to some inconsistencies in what we receive from MTO, perfect time period matches are not always possible. For example, as of July 2022:
+- the latest traffic pattern dataset that we have is for 2019 (the 15-min table is called `here.traffic_pattern_19_spd_15`);
+- our latest street + intersection networks are for Q1 of 2021 (`here_gis.streets_21_1` and `here_gis.z_levels_21_1`, respectively); and,
+- we have probe data from last night (in `here.ta`, via the partitioned table `here.ta_202207`).
 
 The function
 [`here.get_network_for_tx()`](traffic/sql/function_routing_network.sql)
@@ -196,6 +205,8 @@ SELECT * FROM pgr_dijkstra('SELECT * FROM here.get_network_for_tx(TX)', start_ve
 ## Aggregating Traffic Data
 
 HERE Traffic time data is at a link and 5-min resolution but, for data requests and projects we typically aggregate them up to a segment or over a certain time period. Check out this [documentation](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/here_aggregation.md) to learn more about aggregating here data.
+
+Custom aggregations can take hours to generate. Using aggregate tables can really help speed up the process!
 
 # All the links to HERE data documentation (in one place)
 ...by order of appearance in this readme...
