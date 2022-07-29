@@ -46,7 +46,7 @@ Example of a table (from `activeto.analysis_periods`):
 
 | analysis_period | time_period | time_range | dow_range | day_type |
 | --- | --- | --- | --- | --- |
-| 1 | Weekday- Daily | \[00:00:00,24:00:00) | [1,5] | Weekday |
+| 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
 | 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
 
 ### Date range
