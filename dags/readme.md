@@ -57,6 +57,13 @@ ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
 ```
 git pull origin master
 ```
+You might get an error that says `fatal: detected dubious owner in repository at '/etc/airflow/data_scripts'`.
+If you get this error, don't panic! Git is keeping you safe by preventing you from navigating to a directory that could have a maliciously crafted `/scratch/.git/`.
+We know that's not the case here, so if you get the error, just enter:
+```
+git config --global --add safe.directory '/etc/airflow/data_scripts'
+```
+...and git will know that everyone is safe! Yay!!!
 
 12) Navigate to `/etc/airflow/dag` and change the symbolic link to your dag to use the one in `data_scripts` using: 
 
