@@ -4,6 +4,13 @@ https://secure.toronto.ca/opendata/cart/red_light_cameras.json (see
 https://secure.toronto.ca/opendata/cart/red_light_cameras/details.html). This
 json file will be stored in the existing table 'vz_safety_programs_staging.rlc'
 in the bigdata RDS (table will be truncated each time this script is called).
+
+(Added on Aug 03 2022)
+Also contains the pipeline for pulling:
+- Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
+- Accessible Pedestrian Signals (APS)
+- Pedestrian Crossovers (PXO)
+
 """
 from datetime import datetime
 import os
@@ -14,6 +21,9 @@ import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+
+from dateutil.parser import parse
+from datetime import datetime
 
 # Credentials
 from airflow.hooks.postgres_hook import PostgresHook
@@ -116,52 +126,168 @@ def pull_rlc(conn):
 # ------------------------------------------------------------------------------
 # Pull APS data
 def pull_aps(conn):
-    local_table='bqu.aps'
-    url = "https://secure.toronto.ca/opendata/cart/traffic_signals_with_aps.json?v=3"
-    return_json = requests.get(url).json()
-    rows = []
     
+    local_table='vz_safety_programs_staging.signals_cart'
+    url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
+    return_json = requests.get(url).json()
+    
+    rows = []
+
     # column names in the PG table
     col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details'] 
 
     # attribute names in JSON dict
-    att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'activation_date']
+    att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'aps_activation_date', 'aps_operation']
+
+    # each "info" is all the properties of one APS, including its coords
+    for obj in return_json:
+        if obj['aps_signal'] == "1":
+
+            # temporary list of properties of one APS to be appended into the rows list
+            one_aps = []
+
+            one_aps.append('Audible Pedestrian Signals') # append the asset_name as listed in EC2
+
+            # append the values in the same order as in the table
+            for attr in att_names:
+                one_aps.append(obj[attr])
+
+            rows.append(one_aps)
     
-    for aps in return_json:
-        # temporary list of properties of one APS to be appended into the rows list
-        one_aps = []
-
-        # append the values in the same order as in the table
-        one_aps.append('Audible Pedestrian Signals') # append the asset_name as listed in EC2
-
-        for attr in att_names:
-            one_aps.append(aps[attr])
-
-        one_aps.append(None) # the 'details' for APS are all Null in PG
-
-        rows.append(one_aps)
-        
-        insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM {} WHERE asset_type = 'Audible Pedestrian Signals'".format(local_table))
-                execute_values(cur, insert, rows)
-
-
-# ------------------------------------------------------------------------------
-# Pull LBS data
-
-
+    # delete existing APS and insert into the local table
+    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM {} WHERE asset_type = 'Audible Pedestrian Signals'".format(local_table))
+            execute_values(cur, insert, rows)
 
 # ------------------------------------------------------------------------------
 # Pull PXO data
+def pull_pxo(conn):
+    
+    local_table='bqu.pxo_new'
+    url = "https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json"
+    return_json = requests.get(url).json()
+    
+    rows = []
 
+    # column names in the PG table
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details'] 
 
+    # attribute names in JSON dict
+    att_names = ['px', 'main', 'midblock', 'side1', 'side2', 'lat', 'long', 'activation_date', 'additional_info']
+
+    # each "info" is all the properties of one RLC, including its coords
+    for pxo in return_json:
+        # temporary list of properties of one RLC to be appended into the rows list
+        one_pxo = []
+
+        one_pxo.append('Pedestrian Crossovers') # append the asset_name as listed in EC2
+
+        # append the values in the same order as in the table
+        for attr in att_names:
+            one_pxo.append(pxo[attr])
+
+        rows.append(one_pxo)
+    
+    # delete existing PXO and insert into the local table
+    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM {} WHERE asset_type = 'Pedestrian Crossovers'".format(local_table))
+            execute_values(cur, insert, rows)
 
 # ------------------------------------------------------------------------------
-# Pull PHSS data
+# Pull LPI data
+imp_date_directions = ['lpiNorthImplementationDate', 'lpiSouthImplementationDate', 'lpiEastImplementationDate', 'lpiWestImplementationDate']
 
+def lastest_imp_date(obj):
+    """
+    Returns either a string that is the latest LPI installation date of the four possible directions,
+    or None if none of the four directions have a date string
+    """
+    
+    date_strings = []
+    for direction in imp_date_directions:
+        if obj[direction] is not None:
+            date_strings.append(obj[direction])
+    
+    # If the 'date_strings' list is empty
+    if not date_strings:
+        return None
+    
+    else:
+        # If there is only one valid implementation date, return it
+        if len(date_strings) == 1:
+            return date_strings[0]
+        
+        # If there are more than one valid implementation dates, make comparisons and return the latest one
+        else:
+            
+            # Convert date strings into datetime objects for comparison
+            datetime_format_dates = []
+            for date_string in date_strings:
+                
+                try:
+                    datetime_date = parse(date_string, fuzzy=False)
+                    datetime_format_dates.append(datetime_date)
+                except ValueError:
+                    pass
+            
+            # Case 1: none of the strings in 'date_strings' can be converted to datetime objects
+            if not datetime_format_dates:
+                return None
+            # Case 2: only one date string can be converted into a datetime object
+            elif len(datetime_format_dates) == 1:
+                formatted_date = datetime_format_dates[0].strftime("%Y-%m-%d")
+                return formatted_date
+            # Case 3: more than one date string can be converted into datetime objects
+            else:
+                latest_date = datetime_format_dates[0]
+                for date in datetime_format_dates[1:]:
+                    if date > latest_date:
+                        latest_date = date
+                formatted_date = latest_date.strftime("%Y-%m-%d")
+                return formatted_date
 
+def pull_lpi(conn):
+    
+    local_table='bqu.lpi_new_betterdates'
+    url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
+    return_json = requests.get(url).json()
+    
+    rows = []
+
+    # column names in the PG table
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','details','activation_date'] 
+
+    # attribute names in JSON dict
+    att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'lpiComment']
+
+    # each "info" is all the properties of one LPI, including its coords
+    for obj in return_json:
+        if obj['leading_pedestrian_intervals'] == 1:
+
+            # temporary list of properties of one LPI to be appended into the rows list
+            one_lpi = []
+
+            one_lpi.append('Leading Pedestrian Intervals') # append the asset_name as listed in EC2
+
+            # append the values in the same order as in the table
+            for attr in att_names:
+                one_lpi.append(obj[attr])
+
+            # append the latest LPI implementation date of any of the four directions
+            one_lpi.append(lastest_imp_date(obj))
+
+            rows.append(one_lpi)
+    
+    # delete existing LPI and insert into the local table
+    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM {} WHERE asset_type = 'Leading Pedestrian Intervals'".format(local_table))
+            execute_values(cur, insert, rows)
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
@@ -179,6 +305,28 @@ PULL_RLC = PythonOperator(
     dag=RLC_DAG,
     op_args=[conn]
 )
+
+PULL_APS = PythonOperator(
+    task_id='pull_aps',
+    python_callable=pull_aps,
+    dag=RLC_DAG,
+    op_args=[conn]
+)
+
+PULL_PXO = PythonOperator(
+    task_id='pull_pxo',
+    python_callable=pull_pxo,
+    dag=RLC_DAG,
+    op_args=[conn]
+)
+
+PULL_LPI = PythonOperator(
+    task_id='pull_lpi',
+    python_callable=pull_lpi,
+    dag=RLC_DAG,
+    op_args=[conn]
+)
+
 
 # To run ONE DAG only:
 # airflow test rlc_dag pull_rlc 29/08/2019
