@@ -165,7 +165,7 @@ def pull_aps(conn):
 # Pull PXO data
 def pull_pxo(conn):
     
-    local_table='bqu.pxo_new'
+    local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json"
     return_json = requests.get(url).json()
     
@@ -252,7 +252,7 @@ def lastest_imp_date(obj):
 
 def pull_lpi(conn):
     
-    local_table='bqu.lpi_new_betterdates'
+    local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
     
