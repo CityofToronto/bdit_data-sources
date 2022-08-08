@@ -14,7 +14,7 @@
             - [Getting link attributes](#getting-link-attributes)
             - [Functional Class 5](#functional-class-5)
     - [GIS Data](#gis-data)
-    - [Traffic Patterns: Traffic Models](#traffic-patterns:-traffic-models)
+    - [Traffic Patterns: Traffic Models](#traffic-patterns-traffic-models)
     - [Routing with Traffic Data](#routing-with-traffic-data)
     - [Aggregating Traffic Data](#aggregating-traffic-data)
 - [Links to HERE data documentation (in one place)](#links-to-here-data-documentation-(in-one-place))
@@ -30,7 +30,7 @@ HERE data
 
 ## Description: What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/tree/master/dags) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
 
 *Travel Time Index: is the ratio of the average travel time and free-flow speeds. For example, a TTI of 1.3 indicates a 20-minute free-flow trip requires 26 minutes.*
 
@@ -50,28 +50,28 @@ We use HERE data to:
 
 ## Types of HERE data products
 HERE Technologies provides us with a few different datasets, such as:
-- traffic analytics tables containing probe data for all Toronto streets
-- traffic patterns tables containing aggregated speed information for all Toronto streets
-- street attribute tables showing speed limits, street names one way info (and more!) for Toronto's streets
-- many GIS layers of streets, intersections, points of interest, trails, rail corridors and water features.
+- [traffic analytics](#traffic-data) tables containing probe data for all Toronto streets
+- [traffic patterns](#traffic-patterns-traffic-models) tables containing aggregated speed information for all Toronto streets
+- [street attribute tables](#getting-link-attributes) showing speed limits, street names one way info (and more!) for Toronto's streets
+- [many GIS layers](#gis-data) of streets, intersections, points of interest, trails, rail corridors and water features.
 
 ## HERE Data: dates and time periods
 As stated above, the traffic analytics table (here.ta) is updated daily. 
 
 Other products are generally updated quarterly, though this schedule has been somewhat disrupted due to the pandemic.
 
-There are also aggregated tables or views specific to certain modes (like trucks or cyclists) or time periods (like weekends or night-time).
+There are also aggregated tables or views specific to certain modes (like trucks or cars) or time periods (like weekends or night-time).
 
-We have HERE data going back to 2012, but there sure weren't as many people walking around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon. 
+We have HERE data going back to 2012, but there sure weren't as many people driving around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon. 
 
-Travel times are calculated for time periods that are at least three weeks or longer. Shorter time periods will not generate enough accurate probe data. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations.
+We calculate travel times for time periods that are at least three weeks or longer. Shorter time periods will not generate enough accurate probe data. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations.
 
 # HERE data at a glance
 
 The Question       | The Answer     |
 :----------------- | :---------------
 What is the HERE dataset used for? | To calculate travel times and monitor congestion (mostly)
-Where is the HERE dataset from? | HERE Technologies, via an agreement with the Ontario Ministry of Transportation (MTO)
+Where is the HERE dataset from? | HERE Technologies, via an agreement with Transport Canada
 Is it available on Open Data? | No
 What area does the HERE dataset represent? | All of Toronto; the co-ordinate system is EPSG: 4326
 Where is it stored? | On an internal postgres database called bigdata; in several schema (here, here_analysis, here_eval and here_gis)
@@ -175,10 +175,10 @@ The following views prepare the HERE data for routing (code found
   directional links for each permitted travel direction on a navigable street
   with a `geom` drawn in the direction of travel.
 
-Its a good idea to make sure that your tables or views are from the same time period, or as close to the same time period, as possible. Due to some inconsistencies in what we receive from MTO, perfect time period matches are not always possible. For example, as of July 2022:
+Its a good idea to make sure that your tables or views are from the same time period, or as close to the same time period, as possible. Due to some inconsistencies in what we receive from HERE, perfect time period matches are not always possible. For example, as of July 2022:
 - the latest traffic pattern dataset that we have is for 2019 (the 15-min table is called `here.traffic_pattern_19_spd_15`);
 - our latest street + intersection networks are for Q1 of 2021 (`here_gis.streets_21_1` and `here_gis.z_levels_21_1`, respectively); and,
-- we have probe data from last night (in `here.ta`, via the partitioned table `here.ta_202207`).
+- we have probe data from two days ago (in `here.ta`, via the partitioned table `here.ta_202207`).
 
 The function
 [`here.get_network_for_tx()`](traffic/sql/function_routing_network.sql)
