@@ -47,6 +47,17 @@ def get_access_token(key_id, key_secret, token_url):
     LOGGER.info('Getting Access Token')
     r = requests.post(token_url, auth=oauth1, json=payload, headers=headers)
 
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        LOGGER.error('Error in requesting access token')
+        LOGGER.error(err)
+        try:
+            err_msg = query_response.json()['message']
+        except JSONDecodeError:
+            err_msg = query_response.text
+        finally:
+            raise HereAPIException(err_msg)
     access_token = r.json()['accessToken']
     return access_token
 
