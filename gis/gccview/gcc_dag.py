@@ -58,4 +58,14 @@ for i in layer_list:
                                  bash_command=command,
                                  params={"mapserver_n": i[0], 'id':i[1]}, 
                                  )
- 
+
+""" New code """
+# Enter the new set of layer types, wait for further instructions
+layer_types = {
+    
+    
+    
+                }
+# Create a task for each of the layers
+pull_centreline = PythonOperator()
+pull_ward = PythonOperator()
