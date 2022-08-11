@@ -1,56 +1,38 @@
-/*DROP TABLE IF EXISTS here.ta CASCADE;
-
-CREATE TABLE here.ta
+-- Parent table structure
+CREATE TABLE IF NOT EXISTS here.ta
 (
-  link_dir text NOT NULL,
-  tx timestamp without time zone NOT NULL,
-  epoch_min integer NOT NULL,
-  length int,
-  mean numeric(4,1) NOT NULL,
-  stddev numeric(4,1) NOT NULL,
-  min_spd integer NOT NULL,
-  max_spd integer NOT NULL,
-  confidence integer NOT NULL,
-  pct_5 int NOT NULL,
-pct_10 int NOT NULL,
-pct_15 int NOT NULL,
-pct_20 int NOT NULL,
-pct_25 int NOT NULL,
-pct_30 int NOT NULL,
-pct_35 int NOT NULL,
-pct_40 int NOT NULL,
-pct_45 int NOT NULL,
-pct_50 int NOT NULL,
-pct_55 int NOT NULL,
-pct_60 int NOT NULL,
-pct_65 int NOT NULL,
-pct_70 int NOT NULL,
-pct_75 int NOT NULL,
-pct_80 int NOT NULL,
-pct_85 int NOT NULL,
-pct_90 int NOT NULL,
-pct_95 int NOT NULL
-)
-WITH (
-  OIDS=FALSE
-);
+    link_dir text NOT NULL,
+	dt date NOT NULL,
+	tod time without time zone NOT NULL,
+	tx timestamp without time zone NOT NULL, 
+    length integer,
+    mean numeric(4,1) NOT NULL,
+    stddev numeric(4,1) NOT NULL,
+    min_spd integer NOT NULL,
+    max_spd integer NOT NULL,
+    confidence integer NOT NULL,
+	sample_size integer
+) PARTITION BY RANGE (dt);
+
 ALTER TABLE here.ta
   OWNER TO here_admins;
-*/
 
-/*Loops through the years and then months for which we currently have data in order to create a partitioned table for each month*/
+
+--Loops through the years and then months for which we currently have data in order to create a partitioned table for each month
 
 DO $do$
 DECLARE
 	startdate DATE;
+	enddate DATE;
 	yyyymm TEXT;
 	basetablename TEXT := 'ta_';
 	tablename TEXT;
 BEGIN
 
-	for yyyy IN 2012..2016 LOOP
+	for yyyy IN 2012..2021 LOOP
 		FOR mm IN 01..12 LOOP
 			startdate:= to_date(yyyy||'-'||mm||'-01', 'YYYY-MM-DD');
+			enddate:= startdate + INTERVAL '1 month';
 			IF mm < 10 THEN
 				yyyymm:= yyyy||'0'||mm;
 			ELSE
@@ -58,16 +40,13 @@ BEGIN
 			END IF;
 			tablename:= basetablename||yyyymm;
 			EXECUTE format($$CREATE TABLE here.%I 
-				(CHECK (tx >= DATE '$$||startdate ||$$'AND tx < DATE '$$||startdate ||$$'+ INTERVAL '1 month'),
-				UNIQUE(link_dir, tx)
-				) INHERITS (here.ta);
-				ALTER TABLE here.%I OWNER TO here_admins;
-				$$
-				, tablename, tablename);
-			PERFORM here.create_link_dir_idx(tablename);
-			PERFORM here.create_tx_idx(tablename);
+                            PARTITION OF here.ta
+                            FOR VALUES FROM  (%L) TO (%L);
+                            ALTER TABLE here.%I OWNER TO here_admins;
+                            $$
+                            , tablename, startdate, enddate, tablename);
 		END LOOP;
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
-	
+
