@@ -143,7 +143,7 @@ def within_toronto(con, coords):
             pairs = [tuple(map(float, i.split(','))) for i in pairs_str]
             
             to_boundary_sql = "SELECT * FROM gis.toronto_boundary"
-            to_boundary = gpd.GeoDataFrame.from_postgis(to_boundary_sql, con)
+            to_boundary = gpd.GeoDataFrame.from_postgis(to_boundary_sql, con).to_crs(epsg=3348).buffer(50).to_crs(epsg=4326)
             
             for pair in pairs:
                 point = Point(pair[1], pair[0]) # GeoPandas uses long-lat coordinate order
