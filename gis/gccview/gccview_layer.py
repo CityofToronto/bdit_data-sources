@@ -60,7 +60,7 @@ map
     func = switcher.get(mapserver_n)
     return(func)
 
-def get_tablename(mapserver, id):
+def get_tablename(mapserver, layer_id):
 """
 Function to retrieve the name of the layer
 
@@ -68,7 +68,7 @@ Parameters
 -----------
 mapserver
     The mapserver that host the layer
-id
+layer_id
     The id of the layer
 
 Returns
@@ -81,7 +81,7 @@ output_name
     ajson = r.json()
     layers = ajson['layers']
     for layer in layers:
-        if layer['id'] == id:
+        if layer['id'] == layer_id:
             output_name = (layer['name'].lower()).replace(' ', '_')
         else:
             continue
@@ -138,9 +138,16 @@ def to_time(input):
     time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
-def get_data(mapserver, id, max_number = None, record_max = None):
+
+def get_data(mapserver, layer_id, max_number = None, record_max = None):
     '''Get data from gcc view rest api'''        
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, id)
+    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
+    
+    """ Added stuff """
+    if layer_id == 2:
+        query = {
+            
+    
     query = {"where":"1=1",
              "outFields": "*",
              "outSR": '4326',         
@@ -194,7 +201,7 @@ def send_tempdata(output_table, insert_column, return_json):
                execute_values(cur,sql, rows)    
     print('sent')
 
-def get_layer(mapserver_n, id):
+def get_layer(mapserver_n, layer_id):
     
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
@@ -204,19 +211,19 @@ def get_layer(mapserver_n, id):
     mapserver : int
         The name of the mapserver that host the desire layer
 
-    id : int
+    layer_id : int
         The id of desire layer
         
     """  
     mapserver = mapserver_name(mapserver_n)
-    output_table = get_tablename(mapserver, id)
+    output_table = get_tablename(mapserver, layer_id)
     rule = "add"
     counter = 0
 
     while rule == "add":
            
         if counter == 0:
-            return_json = get_data(mapserver, id)
+            return_json = get_data(mapserver, layer_id)
             insert_column = create_table(output_table, return_json)
             features = return_json['features']
             record_max=(len(features))
@@ -227,7 +234,7 @@ def get_layer(mapserver_n, id):
             if rule != 'add':
                 print('all rows inserted in ', output_table)
         else:
-            return_json = get_data(mapserver, id, max_number = max_number, record_max = record_max)
+            return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
             send_tempdata(output_table, insert_column, return_json)
             counter += 1
             rule = find_limit(return_json)
