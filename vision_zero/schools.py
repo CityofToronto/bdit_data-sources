@@ -23,14 +23,6 @@ from datetime import datetime
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString, Point
 
-from airflow.models import Variable
-dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
-ssz2018 = dag_config['ssz2018']
-ssz2019 = dag_config['ssz2019']
-ssz2020 = dag_config['ssz2020']
-ssz2021 = dag_config['ssz2021']
-ssz2022 = dag_config['ssz2022']
-
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
@@ -39,33 +31,7 @@ Note
 If the scopes is modified from readonly, delete the file token.pickle."""
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-"""The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
-The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
-Details of the spreadsheets are ID and range whereas details of the table are name of schema and table.
-The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
-"""
-sheets = {
-           2018: {'spreadsheet_id' : ssz2018, 
-                  'range_name' : 'Master List!A4:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2018_raw'},
-           2019: {'spreadsheet_id' : ssz2019, 
-                  'range_name' : '2019 Master List!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2019_raw'},
-           2020: {'spreadsheet_id' : ssz2020, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2020_raw'},
-           2021: {'spreadsheet_id' : ssz2021, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2021_raw'},
-           2022: {'spreadsheet_id' : ssz2022,
-                  'range_name' : 'Master Sheet!A3:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2022_raw'}
-         }
+
 
 
 """The following provides information about the code when it is running and prints out the log messages 
@@ -185,7 +151,7 @@ def is_int(n):
 
 #--------------------------------------------------------------------------------------------------
 
-def pull_from_sheet(con, service, year, *args):
+def pull_from_sheet(con, service, year, spreadsheet, *args):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
     Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
@@ -218,8 +184,8 @@ def pull_from_sheet(con, service, year, *args):
         If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
     """
     sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=sheets[year]['spreadsheet_id'],
-                                range=sheets[year]['range_name']).execute()
+    result = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
+                                range=spreadsheet['range_name']).execute()
     values = result.get('values', [])
 
     rows = []
@@ -243,8 +209,8 @@ def pull_from_sheet(con, service, year, *args):
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
     
-    schema = sheets[year]['schema_name']
-    table = sheets[year]['table_name']
+    schema = spreadsheet['schema_name']
+    table = spreadsheet['table_name']
     
     
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
