@@ -20,7 +20,7 @@ list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_confi
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     # print this task_msg and tag these users
-    task_msg = """The Task {task} failed. {slack_name} please fix it """.format(
+    task_msg = """The Task vz_google_sheets:{task} failed. {slack_name} please fix it """.format(
         task=context.get('task_instance').task_id, slack_name = list_names,) 
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
