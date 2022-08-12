@@ -12,7 +12,7 @@
     - [Traffic data](#traffic-data)
         - [Data Schema](#data-schema)
             - [Getting link attributes](#getting-link-attributes)
-            - [Functional Class 5](#functional-class-5)
+            - [Functional Classes](#functional-classes)
     - [GIS Data](#gis-data)
     - [Traffic Patterns: Traffic Models](#traffic-patterns-traffic-models)
     - [Routing with Traffic Data](#routing-with-traffic-data)
@@ -30,7 +30,7 @@ HERE data
 
 ## Description: What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/tree/master/dags) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](traffic/README.md) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
 
 *Travel Time Index: is the ratio of the average travel time and free-flow speeds. For example, a TTI of 1.3 indicates a 20-minute free-flow trip requires 26 minutes.*
 
@@ -64,7 +64,7 @@ There are also aggregated tables or views specific to certain modes (like trucks
 
 We have HERE data going back to 2012, but there sure weren't as many people driving around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon. 
 
-We calculate travel times for time periods that are at least three weeks or longer. Shorter time periods will not generate enough accurate probe data. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations.
+Though data are reported at 5-minute intervals, on any given link (aka road segment) there may not be a lot of observations. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations. Because of this, we calculate travel times for time periods that are at least three weeks or longer so that data from multiple days can be aggregated into a more accurate result.
 
 # HERE data at a glance
 
@@ -75,7 +75,7 @@ Where is the HERE dataset from? | HERE Technologies, via an agreement with Trans
 Is it available on Open Data? | No
 What area does the HERE dataset represent? | All of Toronto; the co-ordinate system is EPSG: 4326
 Where is it stored? | On an internal postgres database called bigdata; in several schema (here, here_analysis, here_eval and here_gis)
-Are there any naming conventions? | If you see `_##_#` at the end of a table name (like `streets_21_1`) the first number is the year, and the second number is the quarter.
+Are there any naming conventions? | If you see `_##_#` at the end of a table name (like `streets_21_1`) the first number is the year, and the second number is the revision (which usually corresponds to the quarter).
 How often is it updated? | Probe data are updated every day; reference files are usually updated quarterly
 How long are the time bins? | 5 minutes
 How far back does it go? | To 2012, but 2014 data are much more accurate
@@ -116,9 +116,11 @@ The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link
 JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numeric
 ```
 
-#### Functional Class 5
+#### Functional Classes
 
-This bucket contains a little bit of everything that doesn't fall into the other classes. Currently exclude
+HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1) while local roads would have a functional class of 4.
+
+Functional class 5 contains a little bit of everything that doesn't fall into the other classes. Currently exclude
 
 `"paved"  = 'Y' AND "poiaccess" =  'N' AND "ar_auto" = 'Y' AND "ar_traff" = 'Y'`
 
