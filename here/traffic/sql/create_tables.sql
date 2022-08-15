@@ -17,9 +17,26 @@ CREATE TABLE IF NOT EXISTS here.ta
 ALTER TABLE here.ta
   OWNER TO here_admins;
 
+-- simple view structure
+CREATE VIEW here.ta_view AS
+
+SELECT *
+FROM here.ta;
+
+ALTER TABLE here.ta_view
+  OWNER TO here_admins;
+  
+-- Instead of inserting to ta_view, 
+-- insert to parent table trigger
+
+CREATE TRIGGER transform_trigger
+        INSTEAD OF INSERT
+        ON here.ta_view
+        FOR EACH ROW
+        EXECUTE PROCEDURE here.here_insert_trigger();
+
 
 --Loops through the years and then months for which we currently have data in order to create a partitioned table for each month
-
 DO $do$
 DECLARE
 	startdate DATE;
@@ -42,9 +59,12 @@ BEGIN
 			EXECUTE format($$CREATE TABLE here.%I 
                             PARTITION OF here.ta_new
                             FOR VALUES FROM  (%L) TO (%L);
+                            ALTER TABLE here.%I ADD UNIQUE(dt, tod, link_dir);
+                            CREATE INDEX ON here.%I USING brin(tod);
+                            CREATE INDEX ON here.%I (link_dir);
                             ALTER TABLE here.%I OWNER TO here_admins;
                             $$
-                            , tablename, startdate, enddate, tablename);
+                            , tablename, startdate, enddate, tablename, tablename, tablename, tablename);
 		END LOOP;
 	END LOOP;
 END;
