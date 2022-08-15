@@ -38,9 +38,9 @@ BEGIN
 			ELSE
 				yyyymm:= yyyy||''||mm;
 			END IF;
-			tablename:= basetablename||yyyymm;
+			tablename:= basetablename||yyyymm||'_new';
 			EXECUTE format($$CREATE TABLE here.%I 
-                            PARTITION OF here.ta
+                            PARTITION OF here.ta_new
                             FOR VALUES FROM  (%L) TO (%L);
                             ALTER TABLE here.%I OWNER TO here_admins;
                             $$
