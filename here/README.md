@@ -2,30 +2,31 @@
 
 - [Basic Info](#basic-info)
     - [Keywords](#keywords)
-    - [Title of Dataset](#title-of-dataset)
+    - [Title of dataset](#title-of-dataset)
     - [Description: What is HERE data?](#description-what-is-here-data)
     - [Uses for HERE data](#uses-for-here-data)
     - [Types of HERE data products](#types-of-here-data-products)
-    - [HERE Data: dates and time periods](#here-data:-dates-and-time-periods)
+    - [HERE Data: dates and time periods](#here-data-dates-and-time-periods)
 - [HERE data at a glance](#here-data-at-a-glance)
 - [Detailed dataset overview](#detailed-dataset-overview)
     - [Traffic data](#traffic-data)
-        - [Data Schema](#data-schema)
+        - [Data schema](#data-schema)
             - [Getting link attributes](#getting-link-attributes)
-            - [Functional Classes](#functional-classes)
-    - [GIS Data](#gis-data)
-    - [Traffic Patterns: Traffic Models](#traffic-patterns-traffic-models)
-    - [Routing with Traffic Data](#routing-with-traffic-data)
-    - [Aggregating Traffic Data](#aggregating-traffic-data)
-- [Links to HERE data documentation (in one place)](#links-to-here-data-documentation-(in-one-place))
-- [But I still have questions!!!](#but-i-still-have-questions!!!)
+            - [Matching maps and data](#matching-maps-and-data)
+            - [Functional classes](#functional-classes)
+    - [GIS data](#gis-data)
+    - [Traffic patterns: traffic models](#traffic-patterns-traffic-models)
+    - [Routing with traffic data](#routing-with-traffic-data)
+    - [Aggregating traffic data](#aggregating-traffic-data)
+- [All the links to HERE data documentation (in one place)](#all-the-links-to-here-data-documentation-in-one-place)
+- [But I still have questions!!!](#but-i-still-have-questions)
 
-# Basic Info
+# Basic info
 
 ## Keywords
 travel time, congestion, buffer index, probe data, speed
 
-## Title of Dataset:
+## Title of dataset:
 HERE data
 
 ## Description: What is HERE data?
@@ -80,18 +81,18 @@ How often is it updated? | Probe data are updated every day; reference files are
 How long are the time bins? | 5 minutes
 How far back does it go? | To 2012, but 2014 data are much more accurate
 What are the limitations? | Travel times are generally calculated for time periods lasting three or more weeks; use data from 2014 onward
-What can I get? | Custom aggregations
-Are raw data available? | No
-How do I cite HERE data? | ???
+I work for the City - what can I get? | Raw data - observations for all links in 5-minute bins. We can also put together custom aggregations.
+I don't work for the City - what can I get? | Aggregated data (custom aggregations may be possible depending on the intended use of the data).
+Are raw data available? | Yes (if you work for the City)
 Who can I contact about HERE data? | Email us at transportationdata@toronto.ca
 
 # Detailed dataset overview
 
 ## Traffic data
 
-Historical data are acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data points are stored in partitioned tables under `here.ta` (fun fact: the "ta" stands for traffic analytics)! Have a look at the [procedure for loading new data](traffic/README.md) for that including using [`data_utils`](../data_utils/), which has been extended to partition, check constraints and index this data.
+Historical data are acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data points are stored in partitioned tables under `here.ta` (fun fact: the "ta" stands for traffic analytics)! Data are loaded on a daily basis using the python command line application described [here](traffic/README.md).
 
-### Data Schema
+### Data schema
 
 |column|type|notes|
 |------|----|-----|
@@ -116,49 +117,27 @@ The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link
 JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numeric
 ```
 
-#### Functional Classes
+#### Matching maps and data
 
-HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1) while local roads would have a functional class of 4.
+HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. For 2019 to August 2022, the `here.ta` table corresponds to the `here.routing_streets_21_1` layer. You can check to see if the `here.ta` layer corresponds to any given map layer by joining the attributes using the `link_dir` field and examining the results.
+
+#### Functional classes
+
+HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 4).
 
 Functional class 5 contains a little bit of everything that doesn't fall into the other classes. Currently exclude
 
 `"paved"  = 'Y' AND "poiaccess" =  'N' AND "ar_auto" = 'Y' AND "ar_traff" = 'Y'`
 
-## GIS Data
+## GIS data
 
 A lot of map layers provided by HERE, see the [README](gis/README.md) in the [gis](gis/) folder for more info.
 
-## Traffic Patterns: Traffic Models
+## Traffic patterns: traffic models
 
-Just like the sun doesn't always shine, the streets of Toronto don't always produce vehicle probe speeds. In those cases, HERE provides us with traffic patterns, a model for each street link by time of week.
+Just like the sun doesn't always shine, the streets of Toronto don't always produce vehicle probe speeds. In those cases, HERE provides us with traffic patterns, a model for each street link by time of week. Check [this README](traffic_patterns/README.md) for more info.
 
-### Traffic Patterns: Data Model 
-
-The Traffic Patterns dataset comes in 15-min and 60-min models, which have a basic wide structure of `{pattern_id, h00_00, h00_015, [...], h23_45}` where `hHH_MM` is the speed value for `pattern_id` for that time of day. 
-
-Both the 15-min and 60-min tables share the same `pattern_ids`, which can be found in the lookup reference table `here.traffic_pattern_YY_ref` (where `YY` is the year of the model). This table is of the format `{link_pvid, travel_direction, u, m, t, w, r, f, s}` where each of those letter columns contains a `pattern_id` for that combination of `link_dir` and `day of the week` starting with sUnday.
-
-`here.traffic_pattern_YY_ref_narrow`
-
-|column | type | definition |
-|-------|------|------------|
-|link_dir |text | link direction |
-|isodow |integer | ISO Day of Week|
-|pattern_id |integer | id referring to the pattern for that link_dir, day of week combination|
-
-The tables are converted to a narrow format (which means that the 15-min and 60-min time periods show up in one field (`trange`) instead of each time period taking up its own column). The 15-min and 60-min tables have the same format.
-
-`here.traffic_pattern_YY_spd_MM_narrow`
-
-|column | type | definition |
-|-------|------|------------|
-|pattern_id| integer| ID for this pattern|
-|trange| timerange| Time range for which this pattern applies|
-|pattern_speed| integer|Speed in km/hr for that pattern_id & time range|
-
-Check out this [documentation](here/here_loading.md) for more info on how the traffic patterns tables are loaded and transformed.
-
-## Routing with Traffic Data
+## Routing with traffic data
 
 One use of historical traffic data is the ability to route a vehicle from an
 arbitrary point to another arbitrary point using traffic data **at that point
@@ -204,7 +183,7 @@ of functions using SQL like the following, replaced `TX` with the appropriate ti
 SELECT * FROM pgr_dijkstra('SELECT * FROM here.get_network_for_tx(TX)', start_vertex_id, end_vertex_id)
 ```
 
-## Aggregating Traffic Data
+## Aggregating traffic data
 
 HERE Traffic time data is at a link and 5-min resolution but, for data requests and projects we typically aggregate them up to a segment or over a certain time period. Check out this [documentation](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/here_aggregation.md) to learn more about aggregating here data.
 
@@ -213,8 +192,9 @@ Custom aggregations can take hours to generate. Using aggregate tables can reall
 # All the links to HERE data documentation (in one place)
 ...by order of appearance in this readme...
 * [Procedure for loading new data](traffic/README.md) 
+* [Traffic patterns: traffic models](traffic_patterns/README.md)
 * [HERE GIS datasets](gis/README.md)
-* [Aggregating HERE data](here/here_aggregation.md)
+* [Aggregating HERE data](here_aggregation.md)
 
 # But I still have questions!!!
 Awesome! We love talking about data. Further inquiries about HERE data should be sent to transportationdata@toronto.ca.  
