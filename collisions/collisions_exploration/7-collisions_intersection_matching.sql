@@ -88,3 +88,11 @@ SELECT col.collision_no,col.accnb, col.accyear, col.accdate, col.acctime, col.lo
 FROM rbahreh.col_orig_nn col
 LEFT JOIN rbahreh.col_orig_nn_intersection_names int USING(collision_no);
 ---------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+--GEOMETRIC DISTANCE BETWEEN IDENTIFIED INTERSECTION AND COLLISION GEOM
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ALTER TABLE rbahreh.col_orig_nn_int ADD COLUMN int_collision_spatil_dist numeric;
+
+UPDATE rbahreh.col_orig_nn
+SET add1_lfname_nn_trgm_dist = collision_add1<-> lf_name;
