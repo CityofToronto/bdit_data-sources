@@ -291,8 +291,8 @@ def pull_lpi(conn):
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
-RLC_DAG = DAG(
-    'rlc_dag',
+TRAFFIC_SIGNALS_DAG = DAG(
+    'traffic_signals_dag',
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
@@ -302,28 +302,28 @@ RLC_DAG = DAG(
 PULL_RLC = PythonOperator(
     task_id='pull_rlc',
     python_callable=pull_rlc,
-    dag=RLC_DAG,
+    dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
 
 PULL_APS = PythonOperator(
     task_id='pull_aps',
     python_callable=pull_aps,
-    dag=RLC_DAG,
+    dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
 
 PULL_PXO = PythonOperator(
     task_id='pull_pxo',
     python_callable=pull_pxo,
-    dag=RLC_DAG,
+    dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
 
 PULL_LPI = PythonOperator(
     task_id='pull_lpi',
     python_callable=pull_lpi,
-    dag=RLC_DAG,
+    dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
 
