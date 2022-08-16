@@ -154,3 +154,22 @@ UPDATE rbahreh.col_orig_abbr
 SET stname2 = 'Highway 27', streetype2='Hwy'
 WHERE collision_no=1517737;
 ---------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+--CREATE ADRESS COLUMNS FOR EACH COLLISIONS
+---------------------------------------------------------------------------------------------------------------------------------------------------
+--Create columns for address columns: 
+--1-collision_add1 (stname1, streetype1, dir1)
+--1-collision_add2 (stname2, streetype2, dir2)
+--1-collision_add3 (stname3, streetype3, dir3)
+
+--ALTER TABLE rbahreh.col_orig_abbr DROP COLUMN collision_add1, DROP COLUMN collision_add2, DROP COLUMN collision_add3;
+ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN collision_add1 TEXT;
+ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN collision_add2 TEXT;
+ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN collision_add3 TEXT;
+
+UPDATE rbahreh.col_orig_abbr
+SET collision_add1= concat_ws(' ', stname1, streetype1, dir1),
+collision_add2=concat_ws(' ', stname1, streetype1, dir1),
+collision_add3=concat_ws(' ', stname1, streetype1, dir1);
+---------------------------------------------------------------------------------------------------------------------------------------------------
