@@ -149,9 +149,9 @@ to fill in gaps in traffic data in time.
 The following views prepare the HERE data for routing (code found
 [here](traffic/sql/create_here_routing.sql)):
 
-- `here.routing_nodes`: a view of all intersections derived from the `z_levels`
+- `here.routing_nodes_YY_R`: a view of all intersections derived from the `z_levels_YY_R`
   gis layer.
-- `here.routing_streets_YY_Q`: The geography of streets is provided as
+- `here.routing_streets_YY_R`: The geography of streets is provided as
   centerlines, but traffic is provided directionally. This view creates
   directional links for each permitted travel direction on a navigable street
   with a `geom` drawn in the direction of travel.
