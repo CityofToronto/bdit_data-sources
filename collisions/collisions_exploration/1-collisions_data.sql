@@ -29,6 +29,23 @@ CREATE TABLE rbahreh.col_orig AS (SELECT * FROM rbahreh.collisions2010_original)
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 --CHECK THE SRID OF DATA
 ---------------------------------------------------------------------------------------------------------------------------------------------------
-SELECT FIND_SRID('rbahreh', 'col_original', 'geom'); --4326
+SELECT FIND_SRID('rbahreh', 'col_orig', 'geom'); --4326
 SELECT FIND_SRID('rbahreh', 'col_city_boundary', 'geom');--4326
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+--ADD KSI INFORMATION TO COLLISIONS
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ALTER TABLE rbahreh.col_orig ADD COLUMN KSI Boolean;
+
+UPDATE rbahreh.col_orig 
+SET KSI= CASE
+WHEN collision_no in (
+	SELECT DISTINCT collision_no FROM collisions_replicator.involved 
+	WHERE involved_injury_class IN ('MAJOR', 'FATAL')
+) THEN TRUE
+	ELSE FALSE
+	END;--6 seconds
+	
+SELECT COUNT(*) FROM rbahreh.col_orig WHERE KSI=TRUE;--4485 collisions are KSI Collisions
 ---------------------------------------------------------------------------------------------------------------------------------------------------
