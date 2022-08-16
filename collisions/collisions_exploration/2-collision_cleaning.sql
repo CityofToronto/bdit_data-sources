@@ -170,6 +170,6 @@ ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN collision_add3 TEXT;
 
 UPDATE rbahreh.col_orig_abbr
 SET collision_add1= concat_ws(' ', stname1, streetype1, dir1),
-collision_add2=concat_ws(' ', stname1, streetype1, dir1),
-collision_add3=concat_ws(' ', stname1, streetype1, dir1);
+collision_add2=concat_ws(' ', stname2, streetype2, dir2),
+collision_add3=concat_ws(' ', stname3, streetype3, dir3);
 ---------------------------------------------------------------------------------------------------------------------------------------------------
