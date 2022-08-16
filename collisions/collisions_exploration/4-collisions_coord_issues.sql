@@ -7,7 +7,7 @@
 
 SELECT COUNT(DISTINCT collision_no) FROM rbahreh."collisions_2010_pointInPolys";--611273
 
---ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN inside_city
+--ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN inside_city;
 ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN inside_city BOOLEAN;
 
 UPDATE rbahreh.col_orig_abbr
@@ -22,6 +22,8 @@ WHERE inside_city is null;--7889
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 --NULL COORDINATES
 ---------------------------------------------------------------------------------------------------------------------------------------------------
+ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN coord_issue text;
+
 SELECT * FROM rbahreh.col_orig_abbr WHERE longitude is null or latitude is null;--15
 
 UPDATE rbahreh.col_orig_abbr
@@ -33,10 +35,6 @@ WHERE longitude is null or latitude is null;
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 --ZERO COORDINATES
 ---------------------------------------------------------------------------------------------------------------------------------------------------
---ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN inside_city
-ALTER TABLE rbahreh.col_orig_abbr ADD COLUMN coord_issue text;
-
---ZERO COORD
 SELECT * FROM rbahreh.col_orig_abbr WHERE inside_city = False AND (longitude > -5 OR latitude < 5);--1917
 
 UPDATE rbahreh.col_orig_abbr
