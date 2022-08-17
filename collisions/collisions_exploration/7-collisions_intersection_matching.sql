@@ -32,7 +32,7 @@ ANALYSE rbahreh.col_orig_nn;
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 --INTERSECTION MATCHING
 ---------------------------------------------------------------------------------------------------------------------------------------------------
-CREATE TABLE rbahreh.col_orig_nn_intersection AS
+CREATE TABLE rbahreh.col_orig_nn_intersections AS
 (
 	SELECT collision_no, int_id, objectid, distance
 	FROM rbahreh.col_orig_nn
@@ -63,7 +63,7 @@ CREATE TABLE rbahreh.col_orig_nn_intersection_names
 AS
 SELECT col.*, intersection.intersec5, intersection.geom as int_geom,
 ST_Transform(ST_SetSRID(intersection.geom,4326),2952 ) as int_geom_2952
-FROM rbahreh.col_orig_nn_intersection col 
+FROM rbahreh.col_orig_nn_intersections col 
 LEFT JOIN gis.centreline_intersection intersection
 ON col.int_id= intersection.int_id
 GROUP BY col.collision_no,col.int_id,col.objectid,col.distance,intersection.intersec5, intersection.geom; --494855
@@ -94,5 +94,6 @@ LEFT JOIN rbahreh.col_orig_nn_intersection_names int USING(collision_no);
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 ALTER TABLE rbahreh.col_orig_nn_int ADD COLUMN int_collision_spatil_dist numeric;
 
-UPDATE rbahreh.col_orig_nn
-SET add1_lfname_nn_trgm_dist = collision_add1<-> lf_name;
+UPDATE rbahreh.col_orig_nn_int
+SET int_collision_spatil_dist = col_geom_2952 <-> int_geom_2952;
+---------------------------------------------------------------------------------------------------------------------------------------------------
