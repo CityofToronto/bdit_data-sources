@@ -124,6 +124,14 @@ def pull_rlc(conn):
             print(rows)
 
 # ------------------------------------------------------------------------------
+
+signal_types = ['Audible Pedestrian Signals', 'Pedestrian Crossovers', 'Leading Pedestrian Intervals']
+query_delete = sql.SQL('''DELETE FROM {table} WHERE {column_name} = '{signal_type}' ''')
+
+''' Write a function for all the traffic signal insertion '''
+# parameter can be the name of traffic signal
+
+# ------------------------------------------------------------------------------
 # Pull APS data
 def pull_aps(conn):
     
@@ -326,10 +334,3 @@ PULL_LPI = PythonOperator(
     dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
-
-
-# To run ONE DAG only:
-# airflow test rlc_dag pull_rlc 29/08/2019
-
-# https://airflow.apache.org/concepts.html?highlight=what%20dag#bitshift-composition
-PULL_RLC
