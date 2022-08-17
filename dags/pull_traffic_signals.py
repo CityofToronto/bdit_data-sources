@@ -124,10 +124,10 @@ def pull_rlc(conn):
             print(rows)
 
 # ------------------------------------------------------------------------------
-
+"""
 signal_types = ['Audible Pedestrian Signals', 'Pedestrian Crossovers', 'Leading Pedestrian Intervals']
 query_delete = sql.SQL('''DELETE FROM {table} WHERE {column_name} = '{signal_type}' ''')
-
+"""
 ''' Write a function for all the traffic signal insertion '''
 # parameter can be the name of traffic signal
 
@@ -296,6 +296,12 @@ def pull_lpi(conn):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM {} WHERE asset_type = 'Leading Pedestrian Intervals'".format(local_table))
             execute_values(cur, insert, rows)
+
+# ------------------------------------------------------------------------------
+# Pull Traffic Signal Data (All of them)
+
+
+
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
