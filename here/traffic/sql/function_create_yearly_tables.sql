@@ -29,7 +29,8 @@ BEGIN
                         PARTITION OF here.ta
                         FOR VALUES FROM  (%L) TO (%L);
                         CREATE INDEX ON here.%I  (link_dir);
-                       	CREATE INDEX ON here.%I USING brin(tod);
+                       	CREATE INDEX ON here.%I  (tod);
+                        CREATE INDEX ON here.%I  (dt);
                         ALTER TABLE here.%I OWNER TO here_admins;
                         $$
                         , tablename, startdate, enddate, tablename, tablename, tablename);
