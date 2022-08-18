@@ -60,7 +60,7 @@ In Airflow is already defined a dictionary containing key-value pairs to store t
 
 
 ### 3.3 Edit script that reads in the spreadsheets
-The `id` for each sheet is then called in `schools.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
+The `id` for each sheet is then called in `vz_google_sheets.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
 
 ```
 from airflow.models import Variable
@@ -99,11 +99,11 @@ Add a new task in `bdit_data-sources/dags/vz_google_sheets.py`:
 e.g.:
 
 ```
-task6 = PythonOperator(
+task<number> = PythonOperator(
     task_id='yyyy',
     python_callable=pull_from_sheet,
     dag=dag,
-    op_args=[con, service, yyyy]
+    op_args=[con, service, yyyy, sheets[yyyy]]
     )
 ```
 
