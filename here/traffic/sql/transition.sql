@@ -52,6 +52,8 @@ INSERT INTO here_staging.ta VALUES (NEW.link_dir,
 									NEW.min_spd,
 									NEW.max_spd,
 									NEW.confidence,
+									NEW.pct_50, 
+									NEW.pct_85,
 									NEW.sample_size); 
 RETURN NULL;
 END;
@@ -95,8 +97,9 @@ BEGIN
                         CREATE INDEX ON here_staging.%I  (link_dir);
                        	CREATE INDEX ON here_staging.%I (tod);
   						CREATE INDEX ON here_staging.%I (dt);
+                        ALTER TABLE here_staging.%I ADD UNIQUE(dt, tod, link_dir);
                         $$
-                        , tablename, startdate, enddate, tablename, tablename, tablename);
+                        , tablename, startdate, enddate, tablename, tablename, tablename, tablename);
     END LOOP;
 END;
 $BODY$;
