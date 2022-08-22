@@ -10,6 +10,7 @@ Also contains the pipeline for pulling:
 - Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
 - Accessible Pedestrian Signals (APS)
 - Pedestrian Crossovers (PXO)
+- General traffic signals
 
 """
 from datetime import datetime
@@ -113,23 +114,80 @@ def pull_rlc(conn):
             one_rlc.append(properties[attr])
         one_rlc += coords # or just coords if it's already a list of just these two elements
 
-        rows.append(one_rlc)
+        rows.append(tuple(one_rlc))
     
     # truncate and insert into the local table
-    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
+    insert = """INSERT INTO vz_safety_programs_staging.rlc ({columns}) VALUES %s"""
+    insert_query = sql.SQL(insert).format(
+        columns = sql.SQL(',').join([
+            sql.Identifier(col_names[0]),
+            sql.Identifier(col_names[1]),
+            sql.Identifier(col_names[2]),
+            sql.Identifier(col_names[3]),
+            sql.Identifier(col_names[4]),
+            sql.Identifier(col_names[5]),
+            sql.Identifier(col_names[6]),
+            sql.Identifier(col_names[7]),
+            sql.Identifier(col_names[8]),
+            sql.Identifier(col_names[9]),
+            sql.Identifier(col_names[10]),
+            sql.Identifier(col_names[11]),
+            sql.Identifier(col_names[12]),
+            sql.Identifier(col_names[13]),
+            sql.Identifier(col_names[14]),
+            sql.Identifier(col_names[15]),
+            sql.Identifier(col_names[16]),
+            sql.Identifier(col_names[17]),
+            sql.Identifier(col_names[18]),
+            sql.Identifier(col_names[19]),
+            sql.Identifier(col_names[20]),
+            sql.Identifier(col_names[21])
+        ]))
+    
     with conn:
         with conn.cursor() as cur:
             cur.execute("TRUNCATE {}".format(local_table))
-            execute_values(cur, insert, rows)
-            print(rows)
+            execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
-"""
-signal_types = ['Audible Pedestrian Signals', 'Pedestrian Crossovers', 'Leading Pedestrian Intervals']
-query_delete = sql.SQL('''DELETE FROM {table} WHERE {column_name} = '{signal_type}' ''')
-"""
-''' Write a function for all the traffic signal insertion '''
-# parameter can be the name of traffic signal
+
+def insert_data(conn, col_names, rows, ts_type):
+    
+    '''
+    Insert a particular type of traffic signal into vz_safety_programs_staging.signals_cart
+    after first deleting entries of that particular traffic signal. RLCs are not inserted
+    through this function.
+    
+    Params
+    conn: connection to RDS for python via PythonOperator
+    col_names: column names in the PG table
+    rows: rows of information about traffic signal to be inserted
+    ts_type: a string that indicates the type of traffic signal
+    
+    '''
+    
+    insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
+    insert_query = sql.SQL(insert).format(
+        columns = sql.SQL(',').join([
+            sql.Identifier(col_names[0]),
+            sql.Identifier(col_names[1]),
+            sql.Identifier(col_names[2]),
+            sql.Identifier(col_names[3]),
+            sql.Identifier(col_names[4]),
+            sql.Identifier(col_names[5]),
+            sql.Identifier(col_names[6]),
+            sql.Identifier(col_names[7]),
+            sql.Identifier(col_names[8]),
+            sql.Identifier(col_names[9])
+        ]))
+    
+    delete = """DELETE FROM vz_safety_programs_staging.signals_cart WHERE asset_type = %s"""
+    delete_query = sql.SQL(delete)
+    
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute(delete_query, (ts_type,))
+            execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
 # Pull APS data
@@ -160,14 +218,10 @@ def pull_aps(conn):
             for attr in att_names:
                 one_aps.append(obj[attr])
 
-            rows.append(one_aps)
+            rows.append(tuple(one_aps))
     
     # delete existing APS and insert into the local table
-    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM {} WHERE asset_type = 'Audible Pedestrian Signals'".format(local_table))
-            execute_values(cur, insert, rows)
+    insert_data(conn, col_names, rows, 'Audible Pedestrian Signals')
 
 # ------------------------------------------------------------------------------
 # Pull PXO data
@@ -196,14 +250,10 @@ def pull_pxo(conn):
         for attr in att_names:
             one_pxo.append(pxo[attr])
 
-        rows.append(one_pxo)
+        rows.append(tuple(one_pxo))
     
     # delete existing PXO and insert into the local table
-    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM {} WHERE asset_type = 'Pedestrian Crossovers'".format(local_table))
-            execute_values(cur, insert, rows)
+    insert_data(conn, col_names, rows, 'Pedestrian Crossovers')
 
 # ------------------------------------------------------------------------------
 # Pull LPI data
@@ -288,14 +338,10 @@ def pull_lpi(conn):
             # append the latest LPI implementation date of any of the four directions
             one_lpi.append(lastest_imp_date(obj))
 
-            rows.append(one_lpi)
+            rows.append(tuple(one_lpi))
     
     # delete existing LPI and insert into the local table
-    insert = 'INSERT INTO {} ({}) VALUES %s'.format(local_table, ','.join(col_names))
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM {} WHERE asset_type = 'Leading Pedestrian Intervals'".format(local_table))
-            execute_values(cur, insert, rows)
+    insert_data(conn, col_names, rows, 'Leading Pedestrian Intervals')
 
 # ------------------------------------------------------------------------------
 # Pull Traffic Signal Data (All of them)
