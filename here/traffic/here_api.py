@@ -66,7 +66,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
-                            "percentiles":[5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95],
+                            "percentiles":[50,85],
                             "minMax":True,
                             "stdDev":True,
                             "confidence":True,
@@ -74,7 +74,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "length_":True,
                             "gapFilling":False,
                             "speedLimit":False,
-                            "sampleCount":False},
+                            "sampleCount":True},
             "estimatedSize":0,
             "userId":user_id,
             'userEmail':user_email}
