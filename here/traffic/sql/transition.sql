@@ -94,7 +94,7 @@ BEGIN
         EXECUTE format($$CREATE TABLE here_staging.%I 
                         PARTITION OF here_staging.ta
                         FOR VALUES FROM  (%L) TO (%L);
-                        CREATE INDEX ON here_staging.%I  (link_dir);
+                        CREATE INDEX ON here_staging.%I (link_dir);
                        	CREATE INDEX ON here_staging.%I (tod);
   						CREATE INDEX ON here_staging.%I (dt);
                         ALTER TABLE here_staging.%I ADD UNIQUE(dt, tod, link_dir);
@@ -103,3 +103,30 @@ BEGIN
     END LOOP;
 END;
 $BODY$;
+
+
+-- Function to create index  
+CREATE OR REPLACE FUNCTION here_staging.create_indexes(
+	yyyy text,
+	mm text)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE STRICT SECURITY DEFINER PARALLEL UNSAFE
+AS $BODY$
+
+DECLARE 
+	_tablename TEXT;
+
+BEGIN
+    _tablename:= 'ta_'||yyyy||mm;
+	EXECUTE format($$CREATE INDEX ON here_staging.%I (link_dir);
+                     CREATE INDEX ON here_staging.%I (tod);
+  					 CREATE INDEX ON here_staging.%I (dt);
+                     $$
+                     , _tablename, _tablename, _tablename);
+END;
+$BODY$;
+
+ALTER FUNCTION here_staging.create_indexes(text, text)
+    OWNER TO natalie;
