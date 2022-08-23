@@ -449,3 +449,10 @@ PULL_LPI = PythonOperator(
     dag=TRAFFIC_SIGNALS_DAG,
     op_args=[conn]
 )
+
+PULL_TS = PythonOperator(
+    task_id='pull_ts',
+    python_callable=pull_traffic_signal,
+    dag=TRAFFIC_SIGNALS_DAG,
+    op_args=[conn]
+)
