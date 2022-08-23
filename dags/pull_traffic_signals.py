@@ -200,7 +200,7 @@ def pull_aps(conn):
     rows = []
 
     # column names in the PG table
-    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details'] 
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details']
 
     # attribute names in JSON dict
     att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'aps_activation_date', 'aps_operation']
@@ -234,7 +234,7 @@ def pull_pxo(conn):
     rows = []
 
     # column names in the PG table
-    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details'] 
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details']
 
     # attribute names in JSON dict
     att_names = ['px', 'main', 'midblock', 'side1', 'side2', 'lat', 'long', 'activation_date', 'additional_info']
@@ -317,7 +317,7 @@ def pull_lpi(conn):
     rows = []
 
     # column names in the PG table
-    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','details','activation_date'] 
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','details','activation_date']
 
     # attribute names in JSON dict
     att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'lpiComment']
@@ -344,10 +344,73 @@ def pull_lpi(conn):
     insert_data(conn, col_names, rows, 'Leading Pedestrian Intervals')
 
 # ------------------------------------------------------------------------------
-# Pull Traffic Signal Data (All of them)
+''' 
+Pull Traffic Signal Data (All of them) into signals_cart, in case a traffic signal was not pulled before
+'''
+def in_signals_cart(conn, px_number):
+    
+    ''' 
+    Returns a boolean that indicates whether a px is already in vz_safety_programs_staging.signals_cart
+    
+    Params
+    conn: connection to PG server
+    px_number: the 'px' value in each json object from the source URL
+    '''
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXISTS(SELECT 1 FROM vz_safety_programs_staging.signals_cart WHERE asset_type = 'Traffic Signals' AND px = %s)", (px_number,))
+            return cur.fetchone()[0]
 
+def pull_traffic_signal(conn):
+    
+    url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
+    return_json = requests.get(url).json()
+    
+    rows = []
 
+    # column names in the PG table
+    col_names = ['asset_type','px','main_street','midblock_route','side1_street','side2_street','latitude','longitude','activation_date','details']
 
+    # attribute names in JSON dict
+    att_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'lat', 'long', 'activation_date', 'additional_info']
+
+    # each "info" is all the properties of one APS, including its coords
+    
+    for obj in return_json:
+
+        if not in_signals_cart(conn, obj['px']):
+            
+            # temporary list of properties of one TS to be appended into the rows list
+            one_ts = []
+
+            one_ts.append('Traffic Signals') # append the asset_name as listed in EC2
+
+            # append the values in the same order as in the table
+            for attr in att_names:
+                one_ts.append(obj[attr])
+
+            rows.append(tuple(one_ts))
+    
+    # insert into the local table if there is at least one new entry of traffic signals
+    if rows:
+        insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
+        insert_query = sql.SQL(insert).format(
+            columns = sql.SQL(',').join([
+                sql.Identifier(col_names[0]),
+                sql.Identifier(col_names[1]),
+                sql.Identifier(col_names[2]),
+                sql.Identifier(col_names[3]),
+                sql.Identifier(col_names[4]),
+                sql.Identifier(col_names[5]),
+                sql.Identifier(col_names[6]),
+                sql.Identifier(col_names[7]),
+                sql.Identifier(col_names[8]),
+                sql.Identifier(col_names[9])
+            ]))
+
+        with conn:
+            with conn.cursor() as cur:
+                execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
