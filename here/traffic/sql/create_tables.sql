@@ -1,5 +1,5 @@
 -- Parent table structure
-CREATE TABLE IF NOT EXISTS here.ta_new
+CREATE TABLE IF NOT EXISTS here.ta
 (
     link_dir text NOT NULL,
 	dt date NOT NULL,
@@ -16,22 +16,34 @@ CREATE TABLE IF NOT EXISTS here.ta_new
 	sample_size integer
 ) PARTITION BY RANGE (dt);
 
-ALTER TABLE here.ta_new
-  OWNER TO here_admins;
+ALTER TABLE here.ta OWNER TO here_admins;
+GRANT SELECT ON TABLE here_staging.ta TO bdit_humans;
+GRANT INSERT, UPDATE, SELECT, TRIGGER ON TABLE here_staging.ta TO here_bot;
 
--- simple view structure
+-- Simple view structure 
 CREATE VIEW here.ta_view AS
  
-select link_dir, tx, length, mean, stddev, min_spd, max_spd, pct_50, pct_85, confidence 
+SELECT  link_dir, 
+        tx, 
+        NULL:integer as epoch_min, 
+        ength, 
+        sample_size, 
+        mean, 
+        stddev, 
+        min_spd, 
+        max_spd, 
+        confidence, 
+        pct_50, 
+        pct_85 
 
-from here.ta_new
+FROM here.ta
 
-ALTER TABLE here.ta_view
-  OWNER TO here_admins;
+ALTER TABLE here.ta_view OWNER TO here_admins;
+GRANT INSERT, UPDATE, SELECT, TRIGGER ON TABLE here_staging.ta TO here_bot;
+  
   
 -- Instead of inserting to ta_view, 
--- insert to parent table trigger
-
+-- insert to parent table
 CREATE TRIGGER transform_trigger
         INSTEAD OF INSERT
         ON here.ta_view
