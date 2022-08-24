@@ -51,9 +51,9 @@ INSERT INTO here_staging.ta VALUES (NEW.link_dir,
 									NEW.stddev,
 									NEW.min_spd,
 									NEW.max_spd,
-									NEW.confidence,
 									NEW.pct_50, 
 									NEW.pct_85,
+                                    NEW.confidence,
 									NEW.sample_size); 
 RETURN NULL;
 END;
