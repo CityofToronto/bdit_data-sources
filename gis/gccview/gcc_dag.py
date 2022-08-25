@@ -4,6 +4,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+from gccview_layer import get_layer
+
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -60,12 +62,18 @@ for i in layer_list:
                                  )
 
 """ New code """
-# Enter the new set of layer types, wait for further instructions
-layer_types = {
-    
-    
-    
-                }
+# Enter the new set of layer types
+layer_types = {}
 # Create a task for each of the layers
-pull_centreline = PythonOperator()
+
+
+# Change to Airflow 2 syntax
+
+
+pull_centreline = PythonOperator(
+    task_id = 'pull_centreline'
+    python_callable = get_layer
+    dag = dag
+    op_args = layer_list
+)
 pull_ward = PythonOperator()
