@@ -56,7 +56,7 @@ map
         26 : 'cot_geospatial26',
         27 : 'cot_geospatial27',
         28 : 'cot_geospatial28'
-         }
+        }
     func = switcher.get(mapserver_n)
     return(func)
 
@@ -141,12 +141,7 @@ def to_time(input):
 
 def get_data(mapserver, layer_id, max_number = None, record_max = None):
     '''Get data from gcc view rest api'''        
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
-    
-    """ Added stuff """
-    if layer_id == 2:
-        query = {
-            
+    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)     
     
     query = {"where":"1=1",
              "outFields": "*",
