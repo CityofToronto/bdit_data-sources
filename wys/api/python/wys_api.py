@@ -110,23 +110,23 @@ def get_statistics_hourly(location, start_date, hr, api_key):
                         ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
                         headers=headers)
     # Error handling
+    try:
+        res = response.json()
+    except Exception as err: 
+        # catching invalid json responses `json.decoder.JSONDecodeError`
+        logger.error(err)
+        raise
     if response.status_code==200:
-        statistics=response.json()
-        return statistics
+        return res
     elif response.status_code==204:
-        error=response.json()
-        logger.error('204 error    '+error['error_message'])
+        logger.error('204 error    '+res['error_message'])
     elif response.status_code==404:
-        error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+        logger.error('404 error for location %s, ' +res['error_message']+' or request duration invalid', location)
     elif response.status_code==401:
-        error=response.json()
-        logger.error('401 error    '+error['error_message'])
+        logger.error('401 error    '+res['error_message'])
     elif response.status_code==405:
-        error=response.json()
-        logger.error('405 error    '+error['error_message'])        
+        logger.error('405 error    '+res['error_message'])        
     elif response.status_code==504:
-        error=response.json()
         logger.error('504 timeout pulling sign %s for hour %s', 
                      location, hr)
         raise TimeoutException('Error'+str(response.status_code))
