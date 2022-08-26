@@ -62,18 +62,34 @@ for i in layer_list:
                                  )
 
 """ New code """
+"""
+command = '''python /home/natalie/airflow/tasks/gcc_layer.py --mapserver_n={{params.mapserver_n}} --id={{params.id}}'''
+# loop through the lob's we want to use to build up our dag
+for i in layer_list:
+    generate_tasks = BashOperator(dag = dag, 
+                                 task_id='Task_'+ str(i[0])+'_'+str(i[1]), 
+                                 bash_command=command,
+                                 params={"mapserver_n": i[0], 'id':i[1]}, 
+                                 )
+"""
+
+
+''' New code '''
 # Enter the new set of layer types
-layer_types = {}
-# Create a task for each of the layers
+
+list_gis_core = []
+list_ptc = []
+list_gis = []
+
 
 
 # Change to Airflow 2 syntax
 
 
-pull_centreline = PythonOperator(
-    task_id = 'pull_centreline'
-    python_callable = get_layer
-    dag = dag
-    op_args = layer_list
-)
-pull_ward = PythonOperator()
+# Task for pulling centreline
+pull_layer = PythonOperator(
+    task_id = 'Task_'+ str(i[0])+'_'+str(i[1]), 
+    python_callable = get_layer,
+    dag = gcc_dag,
+    op_kwargs = [mapserver_n]
+)                 
