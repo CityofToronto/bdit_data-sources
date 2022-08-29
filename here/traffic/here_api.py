@@ -51,7 +51,13 @@ def get_access_token(key_id, key_secret, token_url):
         r.raise_for_status()
     except KeyError as k_err:
         LOGGER.error('Key Error in getting access token, response was') 
-        raise HereAPIException(r.text)
+        LOGGER.error(k_err)
+        try: 
+            err_msg = r.json()['message'] 
+        except JSONDecodeError:
+            err_msg = r.text
+        finally:
+            LOGGER.error(err_msg)
     except requests.exceptions.HTTPError as err:
         LOGGER.error('Error in requesting access token')
         LOGGER.error(err)
@@ -130,7 +136,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         LOGGER.info('Polling status of query request: %s', request_id)
         query_status = requests.get(status_url, headers = status_header)
         try:
-            query_status.raise_for_status()
+            status = str(query_status.json()['status'])
         except requests.exceptions.HTTPError as err:
             LOGGER.error('Error in polling status of query request')
             LOGGER.error(err)
