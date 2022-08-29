@@ -137,8 +137,8 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         LOGGER.info('Polling status of query request: %s', request_id)
         query_status = requests.get(status_url, headers = status_header)
         try:
-            status = str(query_status.json()['status'])
             query_status.raise_for_status()
+            status = str(query_status.json()['status'])
         except requests.exceptions.HTTPError as err:
             LOGGER.error('Error in polling status of query request')
             LOGGER.error(err)
