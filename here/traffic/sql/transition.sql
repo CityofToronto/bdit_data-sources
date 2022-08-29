@@ -28,9 +28,20 @@ CREATE TABLE IF NOT EXISTS here_staging.ta
 -- Create view in staging schema
 CREATE VIEW here_staging.ta_view AS
  
-select link_dir, tx, length, mean, stddev, min_spd, max_spd, pct_50, pct_85, confidence, sample_size 
+SELECT  link_dir, 
+        tx, 
+        NULL:integer as epoch_min, 
+        length, 
+        sample_size, 
+        mean, 
+        stddev, 
+        min_spd, 
+        max_spd, 
+        confidence, 
+        pct_50, 
+        pct_85 
 
-from here_staging.ta;
+FROM here.ta;
 
 
 -- Create insert function in staging schema
