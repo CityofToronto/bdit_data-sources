@@ -58,6 +58,7 @@ def get_access_token(key_id, key_secret, token_url):
             err_msg = r.text
         finally:
             LOGGER.error(err_msg)
+            raise HereAPIException(r.text)
     except requests.exceptions.HTTPError as err:
         LOGGER.error('Error in requesting access token')
         LOGGER.error(err)
@@ -137,6 +138,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         query_status = requests.get(status_url, headers = status_header)
         try:
             status = str(query_status.json()['status'])
+            query_status.raise_for_status()
         except requests.exceptions.HTTPError as err:
             LOGGER.error('Error in polling status of query request')
             LOGGER.error(err)
