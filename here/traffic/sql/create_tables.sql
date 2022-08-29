@@ -26,7 +26,7 @@ CREATE VIEW here.ta_view AS
 SELECT  link_dir, 
         tx, 
         NULL:integer as epoch_min, 
-        ength, 
+        length, 
         sample_size, 
         mean, 
         stddev, 
