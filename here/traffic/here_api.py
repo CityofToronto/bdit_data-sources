@@ -49,35 +49,18 @@ def get_access_token(key_id, key_secret, token_url):
 
     try:
         r.raise_for_status()
-    except KeyError as k_err:
-        LOGGER.error('Key Error in getting access token, response was') 
-        LOGGER.error(k_err)
-        try: 
-            err_msg = r.json()['message'] 
-        except JSONDecodeError:
-            err_msg = r.text
-        finally:
-            LOGGER.error(err_msg)
-            raise HereAPIException(r.text)
-    except requests.exceptions.HTTPError as err:
-        LOGGER.error('Error in requesting access token')
-        LOGGER.error(err)
-        try:
-            err_msg = r.json()['message']
-        except JSONDecodeError:
-            err_msg = r.text
-        finally:
-            raise HereAPIException(err_msg)
-
-    try:
         access_token = r.json()['accessToken']
-    except JSONDecodeError:
-        LOGGER.error('Json Decode Error in retrieving access token')
-        LOGGER.error(err_msg)
-    except ValueError as err:
-        LOGGER.error('Value error in retrieving access token from json')
-        LOGGER.error(err)
-    return access_token
+    except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError)  as err:
+        error = 'Error in requesting access token \n'
+        error += 'Response was:\n'
+        try:
+            resp = r.json()['message']
+        except JSONDecodeError:
+            resp = r.text
+        finally:
+            error += resp
+            error += '\n'
+            raise HereAPIException(error)
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
                 request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
@@ -139,18 +122,18 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         try:
             query_status.raise_for_status()
             status = str(query_status.json()['status'])
-        except requests.exceptions.HTTPError as err:
-            LOGGER.error('Error in polling status of query request')
-            LOGGER.error(err)
+        except (requests.exceptions.HTTPError, KeyError) as err:
+            error = 'Error in polling status of query request \n'
+            error += 'err\n'
+            error += 'Response was:\n'
             try:
-                err_msg = str(query_status.json()['status'])
+                resp = str(query_status.json()['message'])
             except JSONDecodeError:
-                err_msg = status.text
+                resp = query_status.text
             finally:
-                raise HereAPIException(err_msg)
-        except KeyError as _:
-            LOGGER.error('Missing "status" in response')
-            raise HereAPIException(query_status.text)
+                error += resp
+                error += '\n'
+                raise HereAPIException(error)
         except JSONDecodeError as json_err:
             LOGGER.warning("JSON error in query status response.")
             LOGGER.warning(query_status.text)
