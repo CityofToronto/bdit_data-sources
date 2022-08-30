@@ -50,7 +50,7 @@ def get_access_token(key_id, key_secret, token_url):
     try:
         r.raise_for_status()
         access_token = r.json()['accessToken']
-    except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError)  as err:
+    except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError) as err:
         error = 'Error in requesting access token \n'
         error += 'Response was:\n'
         try:
