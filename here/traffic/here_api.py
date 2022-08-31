@@ -50,6 +50,7 @@ def get_access_token(key_id, key_secret, token_url):
     try:
         r.raise_for_status()
         access_token = r.json()['accessToken']
+
     except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError) as err:
         error = 'Error in requesting access token \n'
         error += 'Response was:\n'
@@ -61,6 +62,7 @@ def get_access_token(key_id, key_secret, token_url):
             error += resp
             error += '\n'
             raise HereAPIException(error)
+    return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
                 request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
