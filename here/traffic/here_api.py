@@ -130,7 +130,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
             error += 'Response was:\n'
             try:
                 resp = str(query_status.json()['message'])
-            except JSONDecodeError:
+            except:
                 resp = query_status.text
             finally:
                 error += resp
