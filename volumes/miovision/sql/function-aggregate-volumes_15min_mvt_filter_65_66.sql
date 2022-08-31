@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt(
+CREATE FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(
 	start_date date,
 	end_date date)
     RETURNS void
@@ -67,11 +67,11 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
+ALTER FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date)
     OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date) TO PUBLIC;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date) TO miovision_admins;
