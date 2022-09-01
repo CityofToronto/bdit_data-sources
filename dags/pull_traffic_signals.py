@@ -411,7 +411,35 @@ def pull_traffic_signal(conn):
         with conn:
             with conn.cursor() as cur:
                 execute_values(cur, insert_query, rows)
-
+    # --------------------------------------------------------------------------
+    '''
+    Key: column names in the json
+    Value: column names in gis.traffic_signal
+    '''
+    
+    # Decide between two lists vs one dictionary, try both of them out
+    # Put the table in readme
+    matched_names = {
+        'px': 'px',
+        'abc': 'def'
+        
+    }
+    
+    complete_rows = []
+    
+    column_names = []
+    attribute_names = []
+    
+    for obj in return_json:
+        one_complete_ts = []
+        for attr in attribute_names:
+            one_complete_ts.append(obj[attr])
+            
+        complete_rows.append(one_complete_ts)
+    
+    # Upsert query to update gis.traffic_signal
+    
+                
 # ------------------------------------------------------------------------------
 # Set up the dag and task
 TRAFFIC_SIGNALS_DAG = DAG(
