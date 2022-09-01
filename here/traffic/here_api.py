@@ -61,6 +61,7 @@ def get_access_token(key_id, key_secret, token_url):
             error += resp
             error += '\n'
             raise HereAPIException(error)
+    return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
                 request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
@@ -128,7 +129,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
             error += 'Response was:\n'
             try:
                 resp = str(query_status.json()['message'])
-            except JSONDecodeError:
+            except:
                 resp = query_status.text
             finally:
                 error += resp
