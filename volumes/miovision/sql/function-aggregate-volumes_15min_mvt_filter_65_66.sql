@@ -1,3 +1,4 @@
+/*
 CREATE FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(
 	start_date date,
 	end_date date)
@@ -9,6 +10,7 @@ CREATE FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(
 AS $BODY$
 
 BEGIN
+*/
 
 WITH zero_padding_movements AS (
 	-- Cross product of legal movement for cars, bikes, and peds and the bins to aggregate
@@ -63,6 +65,8 @@ UPDATE miovision_api.volumes a
 ;
 
 RAISE NOTICE '% Done aggregating to 15min MVT bin', timeofday();
+
+/*
 END;
 
 $BODY$;
@@ -75,3 +79,4 @@ GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date) TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_filter_65_66(date, date) TO miovision_admins;
+*/
