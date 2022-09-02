@@ -18,7 +18,7 @@ import psycopg2
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
-
+import json
 
 class WYS_APIException(Exception):
     """Base class for exceptions."""
@@ -112,7 +112,7 @@ def get_statistics_hourly(location, start_date, hr, api_key):
     # Error handling
     try:
         res = response.json()
-    except Exception as err: 
+    except json.decoder.JSONDecodeError as err:
         # catching invalid json responses `json.decoder.JSONDecodeError`
         logger.error(err)
         raise
@@ -274,6 +274,8 @@ def get_data_for_date(start_date, signs_iterator, api_key):
                 except exceptions.RequestException as err:
                     logger.error(err)
                     sleep(75)
+                except Exception as err:
+                    logger.error(err)
                 else:
                    # keep track of processed intervals
                    processed_hr.append(hr) 
