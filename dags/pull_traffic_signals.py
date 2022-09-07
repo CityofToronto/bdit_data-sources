@@ -361,10 +361,22 @@ def in_signals_cart(conn, px_number):
             cur.execute("SELECT EXISTS(SELECT 1 FROM vz_safety_programs_staging.signals_cart WHERE asset_type = 'Traffic Signals' AND px = %s)", (px_number,))
             return cur.fetchone()[0]
 
+def get_point_geometry(long, lat):
+    
+    '''
+    Returns a string that will be converted to geometry in postGIS
+    
+    Params
+    long: value of 'long' in json
+    lat: value of 'lat' in json
+    '''
+    return 'SRID=4326;Point('+(str(long))+' '+ (str(lat))+')'  
+        
 def pull_traffic_signal(conn):
     
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
+    
     
     rows = []
 
@@ -411,34 +423,48 @@ def pull_traffic_signal(conn):
         with conn:
             with conn.cursor() as cur:
                 execute_values(cur, insert_query, rows)
-    # --------------------------------------------------------------------------
-    '''
-    Key: column names in the json
-    Value: column names in gis.traffic_signal
-    '''
+                
     
-    # Decide between two lists vs one dictionary, try both of them out
-    # Put the table in readme
-    matched_names = {
-        'px': 'px',
-        'abc': 'def'
-        
-    }
+    # --------------------------------------------------------------------------
+    
     
     complete_rows = []
     
-    column_names = []
-    attribute_names = []
+    # column names in the PG table
+    column_names = ['px', 'main_street', 'midblock_route', 'side1_street', 'side2_street', 'private_access', 'additional_info', 'x', 'y', 'latitude', 'longitude',
+                    'activationdate', 'signalsystem', 'non_system', 'control_mode', 'pedwalkspeed', 'aps_operation', 'numberofapproaches', 'geo_id', 'node_id',
+                    'audiblepedsignal', 'transit_preempt', 'fire_preempt', 'rail_preempt', 'bicycle_signal', 'ups', 'led_blankout_sign',
+                    'lpi_north_implementation_date', 'lpi_south_implementation_date', 'lpi_east_implementation_date', 'lpi_west_implementation_date', 'lpi_comment',
+                    'aps_activation_date', 'leading_pedestrian_intervals', 'geom']
+    
+    # attribute names in JSON dict
+    attribute_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'private_access', 'additional_info', 'x', 'y', 'lat', 'long',
+                      'activation_date', 'signal_system', 'non_system', 'mode_of_control', 'ped_walk_speed', 'aps_operation', 'no_of_signalized_approaches', 'geo_id', 'node_id',
+                      'aps_signal', 'transit_preempt', 'fire_preempt', 'rail_preempt', 'bicycle_signal', 'ups', 'ledBlankoutSign',
+                      'lpiNorthImplementationDate', 'lpiSouthImplementationDate', 'lpiEastImplementationDate', 'lpiWestImplementationDate', 'lpiComment',
+                      'aps_activation_date', 'leading_pedestrian_intervals']
     
     for obj in return_json:
         one_complete_ts = []
         for attr in attribute_names:
             one_complete_ts.append(obj[attr])
-            
+        # Create point geometry based on x and y
+        one_complete_ts.append(get_point_geometry(obj['long'], obj['lat']))
+        
         complete_rows.append(one_complete_ts)
     
     # Upsert query to update gis.traffic_signal
-    
+    insert = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px)"""
+
+    insert_query = sql.SQL(insert).format(
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names])
+    )
+
+    print(insert_query.as_string(conn))
+
+    with conn:
+        with conn.cursor() as cur:
+            execute_values(cur, insert_query, complete_rows)
                 
 # ------------------------------------------------------------------------------
 # Set up the dag and task
