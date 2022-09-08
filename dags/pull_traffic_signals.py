@@ -5,12 +5,12 @@ https://secure.toronto.ca/opendata/cart/red_light_cameras/details.html). This
 json file will be stored in the existing table 'vz_safety_programs_staging.rlc'
 in the bigdata RDS (table will be truncated each time this script is called).
 
-(Added on Aug 03 2022)
+(Edited on 2022-09-08)
 Also contains the pipeline for pulling:
 - Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
 - Accessible Pedestrian Signals (APS)
 - Pedestrian Crossovers (PXO)
-- General traffic signals
+- General traffic signals, into vz_safety_programs_staging.signals_cart and gis.traffic_signal
 
 """
 from datetime import datetime
@@ -119,30 +119,8 @@ def pull_rlc(conn):
     # truncate and insert into the local table
     insert = """INSERT INTO vz_safety_programs_staging.rlc ({columns}) VALUES %s"""
     insert_query = sql.SQL(insert).format(
-        columns = sql.SQL(',').join([
-            sql.Identifier(col_names[0]),
-            sql.Identifier(col_names[1]),
-            sql.Identifier(col_names[2]),
-            sql.Identifier(col_names[3]),
-            sql.Identifier(col_names[4]),
-            sql.Identifier(col_names[5]),
-            sql.Identifier(col_names[6]),
-            sql.Identifier(col_names[7]),
-            sql.Identifier(col_names[8]),
-            sql.Identifier(col_names[9]),
-            sql.Identifier(col_names[10]),
-            sql.Identifier(col_names[11]),
-            sql.Identifier(col_names[12]),
-            sql.Identifier(col_names[13]),
-            sql.Identifier(col_names[14]),
-            sql.Identifier(col_names[15]),
-            sql.Identifier(col_names[16]),
-            sql.Identifier(col_names[17]),
-            sql.Identifier(col_names[18]),
-            sql.Identifier(col_names[19]),
-            sql.Identifier(col_names[20]),
-            sql.Identifier(col_names[21])
-        ]))
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+    )
     
     with conn:
         with conn.cursor() as cur:
@@ -168,18 +146,8 @@ def insert_data(conn, col_names, rows, ts_type):
     
     insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
     insert_query = sql.SQL(insert).format(
-        columns = sql.SQL(',').join([
-            sql.Identifier(col_names[0]),
-            sql.Identifier(col_names[1]),
-            sql.Identifier(col_names[2]),
-            sql.Identifier(col_names[3]),
-            sql.Identifier(col_names[4]),
-            sql.Identifier(col_names[5]),
-            sql.Identifier(col_names[6]),
-            sql.Identifier(col_names[7]),
-            sql.Identifier(col_names[8]),
-            sql.Identifier(col_names[9])
-        ]))
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+    )
     
     delete = """DELETE FROM vz_safety_programs_staging.signals_cart WHERE asset_type = %s"""
     delete_query = sql.SQL(delete)
@@ -407,18 +375,8 @@ def pull_traffic_signal(conn):
     if rows:
         insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
         insert_query = sql.SQL(insert).format(
-            columns = sql.SQL(',').join([
-                sql.Identifier(col_names[0]),
-                sql.Identifier(col_names[1]),
-                sql.Identifier(col_names[2]),
-                sql.Identifier(col_names[3]),
-                sql.Identifier(col_names[4]),
-                sql.Identifier(col_names[5]),
-                sql.Identifier(col_names[6]),
-                sql.Identifier(col_names[7]),
-                sql.Identifier(col_names[8]),
-                sql.Identifier(col_names[9])
-            ]))
+            columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+        )
 
         with conn:
             with conn.cursor() as cur:
@@ -465,7 +423,7 @@ def pull_traffic_signal(conn):
     with conn:
         with conn.cursor() as cur:
             execute_values(cur, insert_query, complete_rows)
-                
+    
 # ------------------------------------------------------------------------------
 # Set up the dag and task
 TRAFFIC_SIGNALS_DAG = DAG(
