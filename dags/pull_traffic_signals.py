@@ -312,22 +312,6 @@ def pull_lpi(conn):
     insert_data(conn, col_names, rows, 'Leading Pedestrian Intervals')
 
 # ------------------------------------------------------------------------------
-''' 
-Pull Traffic Signal Data (All of them) into signals_cart, in case a traffic signal was not pulled before
-'''
-def in_signals_cart(conn, px_number):
-    
-    ''' 
-    Returns a boolean that indicates whether a px is already in vz_safety_programs_staging.signals_cart
-    
-    Params
-    conn: connection to PG server
-    px_number: the 'px' value in each json object from the source URL
-    '''
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS(SELECT 1 FROM vz_safety_programs_staging.signals_cart WHERE asset_type = 'Traffic Signals' AND px = %s)", (px_number,))
-            return cur.fetchone()[0]
 
 def get_point_geometry(long, lat):
     
@@ -345,7 +329,6 @@ def pull_traffic_signal(conn):
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
     
-    
     rows = []
 
     # column names in the PG table
@@ -357,34 +340,29 @@ def pull_traffic_signal(conn):
     # each "info" is all the properties of one APS, including its coords
     
     for obj in return_json:
-
-        if not in_signals_cart(conn, obj['px']):
             
-            # temporary list of properties of one TS to be appended into the rows list
-            one_ts = []
+        # temporary list of properties of one TS to be appended into the rows list
+        one_ts = []
 
-            one_ts.append('Traffic Signals') # append the asset_name as listed in EC2
+        one_ts.append('Traffic Signals') # append the asset_name as listed in EC2
 
-            # append the values in the same order as in the table
-            for attr in att_names:
-                one_ts.append(obj[attr])
+        # append the values in the same order as in the table
+        for attr in att_names:
+            one_ts.append(obj[attr])
 
-            rows.append(tuple(one_ts))
+        rows.append(tuple(one_ts))
     
-    # insert into the local table if there is at least one new entry of traffic signals
-    if rows:
-        insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
-        insert_query = sql.SQL(insert).format(
-            columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
-        )
+    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px)"""
+    upsert_query = sql.SQL(upsert).format(
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+    )
 
-        with conn:
-            with conn.cursor() as cur:
-                execute_values(cur, insert_query, rows)
+    with conn:
+        with conn.cursor() as cur:
+            execute_values(cur, upsert_query, rows)
                 
     
     # --------------------------------------------------------------------------
-    
     
     complete_rows = []
     
@@ -412,17 +390,15 @@ def pull_traffic_signal(conn):
         complete_rows.append(one_complete_ts)
     
     # Upsert query to update gis.traffic_signal
-    insert = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px)"""
+    upsert_gis = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px)"""
 
-    insert_query = sql.SQL(insert).format(
+    upsert_query_gis = sql.SQL(upsert_gis).format(
         columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names])
     )
 
-    print(insert_query.as_string(conn))
-
     with conn:
         with conn.cursor() as cur:
-            execute_values(cur, insert_query, complete_rows)
+            execute_values(cur, upsert_query_gis, complete_rows)
     
 # ------------------------------------------------------------------------------
 # Set up the dag and task
