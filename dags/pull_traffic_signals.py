@@ -370,16 +370,8 @@ def pull_traffic_signal(conn):
 
         rows.append(tuple(one_ts))
     
-    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px) WHERE asset_type = 'Traffic Signals' """
-    
-    
-    upsert_query = sql.SQL(upsert).format(
-        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
-    )
-
-    with conn:
-        with conn.cursor() as cur:
-            execute_values(cur, upsert_query, rows)
+    # delete existing Traffic Signals and insert into the local table
+    insert_data(conn, col_names, rows, 'Traffic Signals')
     
     # --------------------------------------------------------------------------
     ''' 
