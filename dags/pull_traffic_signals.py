@@ -1,18 +1,22 @@
 """
-Pipeline for pulling Red Light Camera data from Open Data API in json format via
-https://secure.toronto.ca/opendata/cart/red_light_cameras.json (see
-https://secure.toronto.ca/opendata/cart/red_light_cameras/details.html). This
-json file will be stored in the existing table 'vz_safety_programs_staging.rlc'
-in the bigdata RDS (table will be truncated each time this script is called).
+Pipeline for pulling various types of Traffic Signals data from Open Data API in json format.
+Information about the types of traffic signals and the tables that store them is listed below.
 
-(Edited on 2022-09-08)
-Also contains the pipeline for pulling:
+vz_safety_programs_staging.rlc
+- Red Light Cameras (RLC)
+
+vz_safety_programs_staging.signals_cart
 - Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
 - Accessible Pedestrian Signals (APS)
 - Pedestrian Crossovers (PXO)
-- General traffic signals, into vz_safety_programs_staging.signals_cart and gis.traffic_signal
+- Traffic Signals
 
+gis.traffic_signal
+- Traffic Signals
+
+Updated on 2022-09-12
 """
+
 from datetime import datetime
 import os
 import sys
@@ -79,7 +83,6 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-
 def pull_rlc(conn):
     '''
     Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
@@ -128,7 +131,6 @@ def pull_rlc(conn):
             execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
-
 def insert_data(conn, col_names, rows, ts_type):
     
     '''
@@ -158,8 +160,11 @@ def insert_data(conn, col_names, rows, ts_type):
             execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
-# Pull APS data
 def pull_aps(conn):
+    
+    '''
+    Pulls Accessible Pedestrian Signals
+    '''
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
@@ -192,8 +197,10 @@ def pull_aps(conn):
     insert_data(conn, col_names, rows, 'Audible Pedestrian Signals')
 
 # ------------------------------------------------------------------------------
-# Pull PXO data
 def pull_pxo(conn):
+    '''
+    Pulls Pedestrian Crossovers
+    '''
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json"
@@ -224,7 +231,6 @@ def pull_pxo(conn):
     insert_data(conn, col_names, rows, 'Pedestrian Crossovers')
 
 # ------------------------------------------------------------------------------
-# Pull LPI data
 imp_date_directions = ['lpiNorthImplementationDate', 'lpiSouthImplementationDate', 'lpiEastImplementationDate', 'lpiWestImplementationDate']
 
 def lastest_imp_date(obj):
@@ -277,6 +283,9 @@ def lastest_imp_date(obj):
                 return formatted_date
 
 def pull_lpi(conn):
+    '''
+    Pulls Pedestrian Head Start Signals/Leading Pedestrian Intervals
+    '''
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
@@ -312,19 +321,28 @@ def pull_lpi(conn):
     insert_data(conn, col_names, rows, 'Leading Pedestrian Intervals')
 
 # ------------------------------------------------------------------------------
-
 def get_point_geometry(long, lat):
     
     '''
     Returns a string that will be converted to geometry in postGIS
     
     Params
-    long: value of 'long' in json
-    lat: value of 'lat' in json
+    long: value of 'long' in traffic_signals/v3 json
+    lat: value of 'lat' in traffic_signals/v3 json
     '''
     return 'SRID=4326;Point('+(str(long))+' '+ (str(lat))+')'  
         
 def pull_traffic_signal(conn):
+    '''
+    This function would pull all records from https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
+    into the bigdata database. One copy will be in vz_safety_programs_staging.signals_cart while another will be in
+    gis.traffic_signal
+    '''
+    # --------------------------------------------------------------------------
+    '''
+    Delete previous records of asset_type = 'Traffic Signals' and then insert all records from Open API 
+    into vz_safety_programs_staging.signals_cart
+    '''
     
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
@@ -352,7 +370,9 @@ def pull_traffic_signal(conn):
 
         rows.append(tuple(one_ts))
     
-    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px) WHERE asset_type = 'Traffic Signals'"""
+    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px) WHERE asset_type = 'Traffic Signals' """
+    
+    
     upsert_query = sql.SQL(upsert).format(
         columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
     )
@@ -360,9 +380,11 @@ def pull_traffic_signal(conn):
     with conn:
         with conn.cursor() as cur:
             execute_values(cur, upsert_query, rows)
-                
     
     # --------------------------------------------------------------------------
+    ''' 
+    Upsert into gis.traffic_signal, an audited table
+    '''
     
     complete_rows = []
     
