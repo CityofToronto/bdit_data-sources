@@ -352,7 +352,7 @@ def pull_traffic_signal(conn):
 
         rows.append(tuple(one_ts))
     
-    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px)"""
+    upsert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s ON CONFLICT (px) WHERE asset_type = 'Traffic Signals'"""
     upsert_query = sql.SQL(upsert).format(
         columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
     )
@@ -390,7 +390,10 @@ def pull_traffic_signal(conn):
         complete_rows.append(one_complete_ts)
     
     # Upsert query to update gis.traffic_signal
-    upsert_gis = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px)"""
+    upsert_gis = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px) DO UPDATE SET """
+    for col in column_names:
+        upsert_gis += (col + '=EXCLUDED.' + col + ',')
+    upsert_gis = upsert_gis.rstrip(",") # delete the trailing comma
 
     upsert_query_gis = sql.SQL(upsert_gis).format(
         columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names])
