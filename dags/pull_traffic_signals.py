@@ -22,6 +22,7 @@ import os
 import sys
 from threading import local
 import psycopg2
+from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
