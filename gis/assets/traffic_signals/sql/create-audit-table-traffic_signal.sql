@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS gis.traffic_signal
     lpi_east_implementation_date timestamp without time zone,
     lpi_west_implementation_date timestamp without time zone,
     lpi_comment text COLLATE pg_catalog."default",
+    aps_activation_date timestamp without time zone,
+    leading_pedestrian_intervals integer,
     CONSTRAINT _traffic_signal_pkey PRIMARY KEY (px)
 )
 WITH (
