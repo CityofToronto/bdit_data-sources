@@ -35,7 +35,6 @@ from datetime import datetime
 from airflow.hooks.postgres_hook import PostgresHook
 vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
 #vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
-conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
 
 # ------------------------------------------------------------------------------
 # Slack notification
@@ -84,12 +83,13 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-def pull_rlc(conn):
+def pull_rlc():
     '''
     Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
     and overwrite existing rlc table in the vz_safety_programs_staging schema.
     '''
-
+    conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
+    
     local_table='vz_safety_programs_staging.rlc'
     url = "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/9fcff3e1-3737-43cf-b410-05acd615e27b/resource/7e4ac806-4e7a-49d3-81e1-7a14375c9025/download/Red%20Light%20Cameras%20Data.geojson"  
     return_json = requests.get(url).json()
@@ -161,11 +161,13 @@ def insert_data(conn, col_names, rows, ts_type):
             execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
-def pull_aps(conn):
+def pull_aps():
     
     '''
     Pulls Accessible Pedestrian Signals
     '''
+    
+    conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
@@ -198,10 +200,12 @@ def pull_aps(conn):
     insert_data(conn, col_names, rows, 'Audible Pedestrian Signals')
 
 # ------------------------------------------------------------------------------
-def pull_pxo(conn):
+def pull_pxo():
     '''
     Pulls Pedestrian Crossovers
     '''
+    
+    conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json"
@@ -283,10 +287,12 @@ def lastest_imp_date(obj):
                 formatted_date = latest_date.strftime("%Y-%m-%d")
                 return formatted_date
 
-def pull_lpi(conn):
+def pull_lpi():
     '''
     Pulls Pedestrian Head Start Signals/Leading Pedestrian Intervals
     '''
+    
+    conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
     local_table='vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
@@ -333,12 +339,14 @@ def get_point_geometry(long, lat):
     '''
     return 'SRID=4326;Point('+(str(long))+' '+ (str(lat))+')'  
         
-def pull_traffic_signal(conn):
+def pull_traffic_signal():
     '''
     This function would pull all records from https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
     into the bigdata database. One copy will be in vz_safety_programs_staging.signals_cart while another will be in
     gis.traffic_signal
     '''
+    
+    conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     # --------------------------------------------------------------------------
     '''
     Delete previous records of asset_type = 'Traffic Signals' and then insert all records from Open API 
@@ -431,34 +439,29 @@ TRAFFIC_SIGNALS_DAG = DAG(
 PULL_RLC = PythonOperator(
     task_id='pull_rlc',
     python_callable=pull_rlc,
-    dag=TRAFFIC_SIGNALS_DAG,
-    op_args=[conn]
+    dag=TRAFFIC_SIGNALS_DAG
 )
 
 PULL_APS = PythonOperator(
     task_id='pull_aps',
     python_callable=pull_aps,
-    dag=TRAFFIC_SIGNALS_DAG,
-    op_args=[conn]
+    dag=TRAFFIC_SIGNALS_DAG
 )
 
 PULL_PXO = PythonOperator(
     task_id='pull_pxo',
     python_callable=pull_pxo,
-    dag=TRAFFIC_SIGNALS_DAG,
-    op_args=[conn]
+    dag=TRAFFIC_SIGNALS_DAG
 )
 
 PULL_LPI = PythonOperator(
     task_id='pull_lpi',
     python_callable=pull_lpi,
-    dag=TRAFFIC_SIGNALS_DAG,
-    op_args=[conn]
+    dag=TRAFFIC_SIGNALS_DAG
 )
 
 PULL_TS = PythonOperator(
     task_id='pull_ts',
     python_callable=pull_traffic_signal,
-    dag=TRAFFIC_SIGNALS_DAG,
-    op_args=[conn]
+    dag=TRAFFIC_SIGNALS_DAG
 )
