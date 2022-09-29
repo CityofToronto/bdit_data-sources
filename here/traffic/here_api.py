@@ -47,7 +47,20 @@ def get_access_token(key_id, key_secret, token_url):
     LOGGER.info('Getting Access Token')
     r = requests.post(token_url, auth=oauth1, json=payload, headers=headers)
 
-    access_token = r.json()['accessToken']
+    try:
+        r.raise_for_status()
+        access_token = r.json()['accessToken']
+    except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError) as err:
+        error = 'Error in requesting access token \n'
+        error += 'Response was:\n'
+        try:
+            resp = r.json()['message']
+        except JSONDecodeError:
+            resp = r.text
+        finally:
+            error += resp
+            error += '\n'
+            raise HereAPIException(error)
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
@@ -66,7 +79,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
-                            "percentiles":[5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95],
+                            "percentiles":[50,85],
                             "minMax":True,
                             "stdDev":True,
                             "confidence":True,
@@ -74,7 +87,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "length_":True,
                             "gapFilling":False,
                             "speedLimit":False,
-                            "sampleCount":False},
+                            "sampleCount":True},
             "estimatedSize":0,
             "userId":user_id,
             'userEmail':user_email}
@@ -108,15 +121,27 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
         LOGGER.info('Polling status of query request: %s', request_id)
         query_status = requests.get(status_url, headers = status_header)
         try:
+            query_status.raise_for_status()
             status = str(query_status.json()['status'])
-        except KeyError as _:
-            LOGGER.error('Missing "status" in response')
-            raise HereAPIException(query_status.text)
+        except (requests.exceptions.HTTPError, KeyError) as err:
+            error = 'Error in polling status of query request \n'
+            error += 'err\n'
+            error += 'Response was:\n'
+            try:
+                resp = str(query_status.json()['message'])
+            except:
+                resp = query_status.text
+            finally:
+                error += resp
+                error += '\n'
+                raise HereAPIException(error)
         except JSONDecodeError as json_err:
             LOGGER.warning("JSON error in query status response.")
             LOGGER.warning(query_status.text)
             continue
+
     LOGGER.info('Requested query completed')
+    
     return query_status.json()['outputUrl']
 
 @click.group(invoke_without_command=True)
@@ -165,7 +190,7 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        copy = r'''"\COPY here.ta FROM STDIN WITH (FORMAT csv, HEADER 
+        copy = r'''"\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER 
                     TRUE);"'''
         if os.getenv('here_bot'):
             #there's a here_bot environment variable to connect to postgresql.
@@ -199,6 +224,7 @@ def pull_here_data(ctx, startdate, enddate, mapversion):
         request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
+
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
         ctx.invoke(download_data, download_url=download_url, filename=filename)
 

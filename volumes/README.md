@@ -51,6 +51,28 @@ Raw data is available in `rescu.raw_15min` whereas processed 15-min data is avai
 
 ### 1. Loading Data
 
+**Here is your quick July 2022 loading data update:**
+- Data are loaded into the TRAFFIC_NEW schema on BigData every night
+- For nine tables, data are upserted from TRAFFIC_NEW into traffic. The nine tables are:
+    - arc_link
+    - arterydata
+    - category
+    - cnt_det
+    - cnt_spd
+    - countinfo
+    - countinfomics
+    - det
+    - nodes
+- We audit some of these tables (in traffic.logged_actions) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
+    - arc_link
+    - arterydata
+    - category
+    - countinfo
+    - countinfomics
+    - nodes
+
+**And now back to your regularly scheduled documentation...**
+
 The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
 
 In a SQL window, create the `TRAFFIC` tablespace for import.
