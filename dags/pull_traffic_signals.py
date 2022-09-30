@@ -169,7 +169,7 @@ def pull_aps():
     
     conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
-    local_table='vz_safety_programs_staging.signals_cart'
+    # table is 'vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
     
@@ -207,7 +207,7 @@ def pull_pxo():
     
     conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
-    local_table='vz_safety_programs_staging.signals_cart'
+    # table is 'vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json"
     return_json = requests.get(url).json()
     
@@ -294,7 +294,7 @@ def pull_lpi():
     
     conn = vz_cred.get_conn() # connection to RDS for python via PythonOperator
     
-    local_table='vz_safety_programs_staging.signals_cart'
+    # table is 'vz_safety_programs_staging.signals_cart'
     url = "https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json"
     return_json = requests.get(url).json()
     
