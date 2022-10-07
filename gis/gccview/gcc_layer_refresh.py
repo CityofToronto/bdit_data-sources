@@ -1,4 +1,4 @@
-# The official new GCC puller DAG file
+# The official new GCC puller functions file
 import configparser
 import requests
 import datetime
