@@ -20,21 +20,6 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 #-------------------------------------------------------------------------------------------------------
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-
-
-DEFAULT_ARGS = {
- 'owner': 'natalie',
- 'depends_on_past': False,
- 'start_date': datetime(2022, 10, 5),
- 'email_on_failure': False, 
- 'email': ['natalie.chan@toronto.ca'], 
- 'retries': 0,
- 'on_failure_callback': task_fail_slack_alert
-}
-
-#-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
     Function to return the mapserver name from integer.
@@ -452,7 +437,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                                                                                                  tablename = sql.Identifier(output_table)))
                 LOGGER.info('New table %s created and added to audit table list', output_table)
                 
-# Added 'schema_name' to the function
+
 def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     
     """
@@ -514,23 +499,3 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     
     if is_audited:
         update_table(output_table, insert_column, excluded_column, primary_key, schema_name)
-
-#-------------------------------------------------------------------------------------------------------
-vfh32_layers = {"city_ward": [0, 0, 'bqu', True],
-                "centreline": [0, 2, 'bqu', False],
-                "intersection": [12, 42, 'bqu', False],
-                "ibms_grid": [11, 25, 'bqu', True]
-}
-
-gcc_layers_dag = DAG(
-    'pull_gcc_layers',
-    default_args=DEFAULT_ARGS,
-    schedule_interval='@daily'
-)
-
-for layer in vfh32_layers:
-    pull_layer = PythonOperator(
-        task_id = 'Task_'+ str(layer),
-        python_callable = get_layer,
-        op_args = vfh32_layers[layer]
-    )
