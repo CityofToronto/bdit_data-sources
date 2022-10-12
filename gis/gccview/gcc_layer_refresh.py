@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 #-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
-    Function to return the mapserver name from integer.
+    Function to return the mapserver name from integer
     
     Parameters
     ------------
@@ -66,18 +66,17 @@ def mapserver_name(mapserver_n):
     mapserver_name = switcher.get(mapserver_n)
     return(mapserver_name)
 
-def get_tablename(mapserver, layer_id, is_audited):
+def get_tablename(mapserver, layer_id):
     """
-    Function to retrieve the name of the layer
+    Function to return the name of the layer
 
     Parameters
     -----------
     mapserver: string
-        The mapserver that host the layer
+        The name of the mapserver we are accessing, returned from function mapserver_name
+    
     layer_id: integer
-        The id of the layer
-    is_audited: Boolean
-        Whether we want to have the table be audited (true) or be partitioned (false)
+        Unique layer id that represent a single layer in the mapserver
     
     Returns
     --------
@@ -109,7 +108,31 @@ def get_fieldtype(field):
     return fieldtype
 
 def create_audited_table(output_table, return_json, schema_name, primary_key):
-    '''Create a new table in postgresql for the layer'''
+    """
+    Function to create a new table in postgresql for the layer (for audited tables only)
+
+    Parameter
+    ---------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+        
+    primary_key : string
+        Primary key for this layer, returned from dictionary pk_dict
+
+    Returns
+    --------
+    insert_columm : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    
+    excluded_column : SQL composed
+        Composed object that is similar to insert_column, but has 'EXCLUDED.' attached before each column name, used for UPSERT query
+    """
     
     fields = return_json['fields']
     insert_column_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) for field in fields]
@@ -150,6 +173,29 @@ def create_audited_table(output_table, return_json, schema_name, primary_key):
     return insert_column, excluded_column
 
 def create_partitioned_table(output_table, return_json, schema_name):
+    """
+    Function to create a new table in postgresql for the layer (for partitioned tables only)
+
+    Parameter
+    ---------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+
+    Returns
+    --------
+    insert_columm : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    
+    output_table_with_date : string
+        Table name with date attached at the end, for partitioned tables in postgresql 
+    """
+    
     fields = return_json['fields']
     insert_column_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) for field in fields]
     insert_column_list.insert(0, sql.Identifier('version_date'))
@@ -196,15 +242,48 @@ def get_geometry(geometry_type, geom):
     return geometry
 
 def to_time(input):
-    '''Convert epoch time to postgresql timestamp without time zone'''    
+    """
+    Convert epoch time to postgresql timestamp without time zone
+
+    Parameters
+    -----------
+    input : string
+        Epoch time attribute in return_json
+
+    Returns
+    --------
+    time : string
+        Time in the type of postgresql timestamp without time zone
+    """
+    
     time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
 def get_data(mapserver, layer_id, max_number = None, record_max = None):
-    '''Get data from gcc view rest api'''        
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
+    """
+    Function to retreive layer data from GCCView rest api
+
+    Parameters
+    -----------
+    mapserver : string
+        The name of the mapserver we are accessing, returned from function mapserver_name
+
+    layer_id : integer
+        Unique layer id that represent a single layer in the mapserver
+
+    max_number : integer
+        Number for parameter `resultOffset` in the query, indicating the number of rows this query is going to skip
+
+    record_max : integer
+        Number for parameter `resultRecordCount` in the query, indicating the number of rows this query is going to fetch
+
+    Returns
+    --------
+    return_json : json
+        Resulted json response from calling the GCCView rest api
+    """
     
-    """ Added stuff """
+    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
     
     # If the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
@@ -223,7 +302,6 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
              "resultOffset": "{}".format(max_number),
              "resultRecordCount": "{}".format(record_max),
              "f":"json"}
-        print(query["where"])
     else:
         query = {"where":"1=1",
              "outFields": "*",
@@ -253,7 +331,20 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     return return_json
 
 def find_limit(return_json):
-    '''Check if last query return all rows'''   
+    """
+    Function to check if last query return all rows
+
+    Parameters
+    -----------
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+
+    Returns
+    --------
+    keep_adding : Boolean
+        boolean 'keep_adding' indicating if last query returned all rows in the layer
+    """
+    
     if return_json.get('exceededTransferLimit', False) == True:
         keep_adding = True
     else:
@@ -261,7 +352,23 @@ def find_limit(return_json):
     return keep_adding
 
 def insert_audited_data(output_table, insert_column, return_json, schema_name):
-    '''Send data to postgresql'''   
+    """
+    Function to insert data to our postgresql database, the data is inserted into a temp table (for audited tables)
+
+    Parameters
+    ----------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    insert_column : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+    """
     rows = []
     features = return_json['features']
     fields = return_json['fields']
@@ -289,7 +396,23 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name):
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
 def insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name):
-    '''Send data to postgresql'''   
+    """
+    Function to insert data to our postgresql database (for partitioned tables)
+
+    Parameters
+    ----------
+    output_table_with_date : string
+        Table name for postgresql, returned from function create_partitioned_table
+
+    insert_column : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+    """   
     
     today_string = datetime.date.today().strftime('%Y-%m-%d')
     
@@ -363,19 +486,26 @@ pk_dict = {
 	}
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name):
-    """Function to find differences between existing table and the newly created table.
+    """
+    Function to find differences between existing table and the newly created temp table, then UPSERT,
+    the temp table will be dropped in the end (for audited tables only)
 
     Parameters
     ----------
     output_table : string
         Table name for postgresql, returned from function get_tablename
 
-    insert_column : string
-        String of column name and types use for creating a new postgresql table
-
+    insert_column : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    
+    excluded_column : SQL composed
+        Composed object that is similar to insert_column, but has 'EXCLUDED.' attached before each column name, used for UPSERT query
+    
     primary_key : string
-        primary key for this layer, returned from function get_info
-
+        primary key for this layer, returned from dictionary pk_dict
+    
+    schema_name : string
+        The schema in which the table will be inserted into
     """
     
     # Name the temporary table '_table' as opposed to 'table' for now
@@ -384,22 +514,6 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     now = datetime.datetime.now()
     date = (str(now.year)+str(now.month)+str(now.day))
     
-    
-    """
-    insert_column1 = str(insert_column).split(",")
-    
-    print(insert_column1)
-    
-    except_column = '('
-    for i in insert_column1:
-            except_value = "EXCLUDED.{}".format(i)
-            except_column = except_column + except_value +','
-            
-    print('except_column: ' + except_column)
-    
-    excluded_column = except_column[:-1]+')'
-    print('excluded_column' + excluded_column)
-    """
     # Find if old table exists
     with con:
         with con.cursor() as cur:
@@ -439,7 +553,6 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                 
 
 def get_layer(mapserver_n, layer_id, schema_name, is_audited):
-    
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -449,11 +562,18 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
         The name of the mapserver that host the desire layer
 
     layer_id : int
-        The id of desire layer
-        
-    """  
+        The id of desired layer
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+    
+    is_audited: Boolean
+        Whether we want to have the table be audited (true) or be partitioned (false)
+    
+    """
+    
     mapserver = mapserver_name(mapserver_n)
-    output_table = get_tablename(mapserver, layer_id, is_audited)
+    output_table = get_tablename(mapserver, layer_id)
     #--------------------------------
     if is_audited:
         primary_key = pk_dict.get(output_table)
