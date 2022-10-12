@@ -144,10 +144,6 @@ def create_audited_table(output_table, return_json, schema_name, primary_key):
     excluded_column_list.append(sql.SQL('EXCLUDED.') + sql.Identifier('geom'))
     excluded_column = sql.SQL(',').join(excluded_column_list)
     
-    print(excluded_column.as_string(con))
-    
-    print('insert_column ' + insert_column.as_string(con))
-    
     # Since this is a temporary table, name it '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
@@ -161,7 +157,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key):
             create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{table} ({columns})").format(schema = sql.Identifier(schema_name),
                                                                       table = sql.Identifier(temp_table_name),
                                                                       columns = col_list_string)
-            print('create_sql' + create_sql.as_string(con))
+            
             cur.execute(create_sql)
     
     # Add a pk
@@ -202,8 +198,6 @@ def create_partitioned_table(output_table, return_json, schema_name):
     insert_column_list.append(sql.Identifier('geom'))
     insert_column = sql.SQL(',').join(insert_column_list)
     
-    print(insert_column.as_string(con))
-    
     # Date format YYYY-MM-DD, for the SQL query
     today_string = datetime.date.today().strftime('%Y-%m-%d')
     # Date format _YYYYMMDD, to be attached at the end of output_table name
@@ -217,7 +211,7 @@ def create_partitioned_table(output_table, return_json, schema_name):
                                                                                                                                             schema = sql.Identifier(schema_name),
                                                                                                                                             parent_table = sql.Identifier(output_table))
             
-            print('create_sql' + create_sql.as_string(con))
+            
             cur.execute(create_sql, (today_string, ))
             
     return insert_column, output_table_with_date
