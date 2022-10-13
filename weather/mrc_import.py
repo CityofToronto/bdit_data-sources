@@ -5,6 +5,7 @@
 
 #Environment Canada imports
 import asyncio
+from types import coroutine
 from env_canada import ECWeather
 
 #other packages
@@ -24,7 +25,12 @@ conn=connect(**dbset)"""
 
 def pull_weather(today):
     ec_en = ECWeather(station_id='ON/s0000458', language='english')
-    asyncio.run(ec_en.update())
+
+    #for python 3.7+ ONLY:
+    # asyncio.run(ec_en.update())
+
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(ec_en.update())
 
     return ec_en.daily_forecasts
 
