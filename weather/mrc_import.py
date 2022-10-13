@@ -23,10 +23,10 @@ dbset=CONFIG['DBSETTINGS']
 conn=connect(**dbset)
 
 def pull_weather(today):
-    
+    ec_en = ECWeather(station_id='ON/s0000458', language='english')
+    asyncio.run(ec_en.update())
 
-
-    return
+    return ec_en.daily_forecasts
 
 def insert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
@@ -38,6 +38,7 @@ def insert_weather(conn, weather_df):
 if __name__ == '__main__':
    #Get current date to pull
     today = datetime.date.today()
+    forecast = pull_weather(today)
    
     weather_df = pd.read_excel(weather_file)
     weather_df = (weather_df.rename(columns={
