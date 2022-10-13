@@ -1,5 +1,16 @@
-#Original script from https://github.com/Toronto-Big-Data-Innovation-Team/activeto/blob/jasonlee/weekend_closures/scripts/import_weather.py
+######  mrc_import.py  ######
+# Pulls daily weather forecast from Environment Canada.
+# 
+# Original script from https://github.com/Toronto-Big-Data-Innovation-Team/activeto/blob/jasonlee/weekend_closures/scripts/import_weather.py
 
+#Environment Canada imports
+import asyncio
+from env_canada import ECWeather
+
+#other packages
+import os
+import sys
+import datetime
 import pandas as pd
 import numpy as np
 from configparser import ConfigParser
@@ -11,19 +22,23 @@ CONFIG.read('config/db.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
 conn=connect(**dbset)
 
-# Weather file path (In Excel format)
-weather_file = r"weather_csv\filename.csv"
+def pull_weather(today):
+    
 
 
+    return
 
 def insert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
     with conn:
         with conn.cursor() as cur:
-            insert_sql = '''INSERT INTO jasonleejs.weather(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
+            insert_sql = '''INSERT INTO weather.historical_daily(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 if __name__ == '__main__':
+   #Get current date to pull
+    today = datetime.date.today()
+   
     weather_df = pd.read_excel(weather_file)
     weather_df = (weather_df.rename(columns={
         'Date/Time': 'date',
