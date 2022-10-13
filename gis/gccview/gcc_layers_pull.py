@@ -43,9 +43,10 @@ DEFAULT_ARGS = {
 
 #-------------------------------------------------------------------------------------------------------
 vfh32_layers = {"city_ward": [0, 0, 'bqu', True],
-                "centreline": [0, 2, 'bqu', False],
+                #"centreline": [0, 2, 'bqu', False],
                 "intersection": [12, 42, 'bqu', False],
-                "ibms_grid": [11, 25, 'bqu', True]
+                "ibms_grid": [11, 25, 'bqu', True],
+                "centreline_intersection_point": [0, 19, 'bqu', False]
 }
 
 gcc_layers_dag = DAG(
