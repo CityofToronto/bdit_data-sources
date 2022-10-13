@@ -6,7 +6,7 @@
 #Environment Canada imports
 import asyncio
 from types import coroutine
-from env_canada import ECWeather
+from env_canada import ECWeather, ECHistoricalRange
 
 #other packages
 import os
@@ -30,9 +30,16 @@ def pull_weather(today):
     # asyncio.run(ec_en.update())
 
     loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(ec_en.update())
+    loop.run_until_complete(ec_en.update())
 
-    return ec_en.daily_forecasts
+    return ec_en.conditions
+
+def pull_weather_df(today):
+    coord = ['43.74', '-79.37']
+    
+    ec = ECHistoricalRange(station_id='ON/s0000458', timeframe='daily', daterange=(today, today))
+    ec.get_data()
+    return ec.csv
 
 def insert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
@@ -46,6 +53,9 @@ if __name__ == '__main__':
     today = datetime.date.today()
     forecast = pull_weather(today)
     print(forecast)
+
+    weather_csv = pull_weather_df(today)
+    print(weather_csv)
    
 
     """weather_df = pd.read_excel(weather_file)
