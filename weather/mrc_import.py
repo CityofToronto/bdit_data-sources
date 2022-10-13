@@ -17,10 +17,10 @@ from configparser import ConfigParser
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
 
-CONFIG=ConfigParser()
+"""CONFIG=ConfigParser()
 CONFIG.read('config/db.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
-conn=connect(**dbset)
+conn=connect(**dbset)"""
 
 def pull_weather(today):
     ec_en = ECWeather(station_id='ON/s0000458', language='english')
@@ -39,8 +39,10 @@ if __name__ == '__main__':
    #Get current date to pull
     today = datetime.date.today()
     forecast = pull_weather(today)
+    print(forecast)
    
-    weather_df = pd.read_excel(weather_file)
+
+    """weather_df = pd.read_excel(weather_file)
     weather_df = (weather_df.rename(columns={
         'Date/Time': 'date',
         'Max Temp (°C)': 'max_temp',
@@ -51,4 +53,4 @@ if __name__ == '__main__':
         'Total Precip (mm)': 'total_precip'})
         .replace({np.nan: None}))
 
-    insert_weather(conn, weather_df)
+    insert_weather(conn, weather_df)"""
