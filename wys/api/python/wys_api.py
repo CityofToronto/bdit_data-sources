@@ -15,6 +15,7 @@ from time import sleep
 import click
 import dateutil.parser
 import psycopg2
+from psycopg2 import sql
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
@@ -335,26 +336,22 @@ def api_main(start_date=default_start,
         logger.info('Pulling '+str(start_date))
         table, loc_table = get_data_for_date(start_date, signs_list, api_key)
 
-        
-        
         try:    
             with conn.cursor() as cur:
-                logger.debug('Inserting '+str(len(table))+' rows of data')
+                logger.info('Inserting '+str(len(table))+' rows of data. Note: Insert gets roll back on error.')
                 yr = start_date.year
-                insert_sql = '''
-                    INSERT INTO wys.raw_data_'''+str(yr)+''' (api_id, datetime_bin, speed, count) 
-                    VALUES %s
-                    ON CONFLICT DO NOTHING
-                '''
+                table_name = 'raw_data_'+str(yr)
+                insert_sql = sql.SQL("INSERT INTO wys.{table} VALUES %s ON CONFLICT DO NOTHING".format(table=sql.Identifier(table_name)))                                   
                 execute_values(cur, insert_sql, table)
+                
         except psycopg2.Error as exc:
             logger.critical('Error inserting speed count data')
             logger.critical(exc)
             sys.exit(1)
-    
+
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph();")
+                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, end_date))
                 logger.info('Aggregated Speed Count Data')
         except psycopg2.Error as exc:
             logger.critical('Error aggregating data to 1-hour bins')
