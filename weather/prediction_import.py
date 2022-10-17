@@ -59,7 +59,7 @@ def pull_prediction(tmrw):
         "text_summary_day": daytime_forecast['text_summary'],
         "text_summary_night": nighttime_forecast['text_summary']
     }
-    return forecast
+    return tmrw_forecast
 
 
 def insert_weather(conn, weather_df):
