@@ -207,7 +207,7 @@ def create_partitioned_table(output_table, return_json, schema_name):
     with con:
         with con.cursor() as cur:
             
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {child_table} PARTITION OF {schema}.{parent_table} FOR VALUES IN (%s)").format(child_table = sql.Identifier(output_table_with_date),
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{child_table} PARTITION OF {schema}.{parent_table} FOR VALUES IN (%s)").format(child_table = sql.Identifier(output_table_with_date),
                                                                                                                                             schema = sql.Identifier(schema_name),
                                                                                                                                             parent_table = sql.Identifier(output_table))
             
