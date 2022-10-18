@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS gis_core.centreline
 (
-    version_date timestamp without time zone,
+    version_date date,
     centreline_id integer,
     linear_name_id integer,
     linear_name_full text COLLATE pg_catalog."default",
