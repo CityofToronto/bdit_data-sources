@@ -13,6 +13,7 @@ import traceback
 from time import sleep
 
 import click
+import json
 import dateutil.parser
 import psycopg2
 from psycopg2 import sql
@@ -110,24 +111,24 @@ def get_statistics_hourly(location, start_date, hr, api_key):
                         str(start_date)+'/from/'+str(hr).zfill(2)+
                         ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
                         headers=headers)
+    try:
+        res = response.json()
+    except json.decoder.JSONDecodeError as err:
+        # catching invalid json responses `json.decoder.JSONDecodeError`
+        logger.error(err + response)
+        raise
     # Error handling
     if response.status_code==200:
-        statistics=response.json()
-        return statistics
+        return res
     elif response.status_code==204:
-        error=response.json()
-        logger.error('204 error    '+error['error_message'])
+        logger.error('204 error '+res['error_message'])
     elif response.status_code==404:
-        error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+        logger.error('404 error for location %s, ' +res['error_message']+' or request duration invalid', location)
     elif response.status_code==401:
-        error=response.json()
-        logger.error('401 error    '+error['error_message'])
+        logger.error('401 error    '+res['error_message'])
     elif response.status_code==405:
-        error=response.json()
-        logger.error('405 error    '+error['error_message'])        
+        logger.error('405 error    '+res['error_message'])        
     elif response.status_code==504:
-        error=response.json()
         logger.error('504 timeout pulling sign %s for hour %s', 
                      location, hr)
         raise TimeoutException('Error'+str(response.status_code))
@@ -275,6 +276,8 @@ def get_data_for_date(start_date, signs_iterator, api_key):
                 except exceptions.RequestException as err:
                     logger.error(err)
                     sleep(75)
+                except Exception as err:
+                    logger.error(err)
                 else:
                    # keep track of processed intervals
                    processed_hr.append(hr) 
