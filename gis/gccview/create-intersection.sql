@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS gis_core.intersection
 (
-    version_date timestamp without time zone,
+    version_date date,
     intersection_id integer,
     date_effective timestamp without time zone,
     date_expiry timestamp without time zone,
