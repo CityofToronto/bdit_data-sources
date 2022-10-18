@@ -41,6 +41,7 @@ def pull_weather_df(today):
     ec = env_canada.ECHistorical(station_id='ON/s0000458', year=2022, month=1, language="english", timeframe='2')
     loop = asyncio.get_event_loop()
     loop.run_until_complete(ec.update())
+
     return ec.csv
 
 def insert_weather(conn, weather_df):
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     print(weather_csv)
    
 
-    """weather_df = pd.read_excel(weather_file)
+    weather_df = pd.read_excel(weather_file)
     weather_df = (weather_df.rename(columns={
         'Date/Time': 'date',
         'Max Temp (°C)': 'max_temp',
@@ -71,4 +72,4 @@ if __name__ == '__main__':
         'Total Precip (mm)': 'total_precip'})
         .replace({np.nan: None}))
 
-    insert_weather(conn, weather_df)"""
+    insert_weather(conn, weather_df)
