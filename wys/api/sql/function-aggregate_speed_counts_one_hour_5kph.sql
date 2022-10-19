@@ -17,14 +17,14 @@ BEGIN
 	WITH insert_data AS (
 		--Aggregated into speed bins and 1 hour bin
 		INSERT INTO 	wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
-		SELECT 			api_id, date_trunc('hour', datetime_bin) datetime_bin, speed_id, sum(count) AS volume
+		SELECT 			api_id, date_trunc('hour', datetime_bin) hr, speed_id, sum(count) AS volume
 		FROM 			wys.raw_data
 		INNER JOIN 		wys.speed_bins_old ON speed <@ speed_bin
 		WHERE			speed_count_uid IS NULL AND 
                         "count" IS NOT NULL AND 
                         datetime_bin::date >= _start_date AND datetime_bin::date < _end_date
         
-		GROUP BY 		api_id, datetime_bin,  speed_id 
+		GROUP BY 		api_id, hr,  speed_id 
 		RETURNING 		speed_counts_agg_5kph_id, api_id, datetime_bin, speed_id
 		)
 	
