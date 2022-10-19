@@ -22,7 +22,7 @@ BEGIN
 		INNER JOIN 		wys.speed_bins_old ON speed <@ speed_bin
 		WHERE			speed_count_uid IS NULL AND 
                         "count" IS NOT NULL AND 
-                        datetime_bin::date >= _start_date AND datetime_bin::date < _end_date
+                        datetime_bin >= _start_date AND datetime_bin < _end_date
         
 		GROUP BY 		api_id, hr,  speed_id 
 		RETURNING 		speed_counts_agg_5kph_id, api_id, datetime_bin, speed_id
