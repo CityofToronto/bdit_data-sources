@@ -523,10 +523,11 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                                                                                                                                                                                           temp_table = sql.Identifier(temp_table_name)))
                                                                                                                                                                                           
                 # And then upsert stuff
-                upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict (" + primary_key + ") do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
+                upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
                 cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
                                                           tablename = sql.Identifier(output_table),
                                                           temp_table = sql.Identifier(temp_table_name),
+                                                          pk = sql.Identifier(primary_key),
                                                           cols = insert_column,
                                                           excl_cols = excluded_column,
                                                           date = sql.Identifier(date)))
