@@ -354,7 +354,7 @@ def api_main(start_date=default_start,
 
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, end_date))
+                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, start_date + datetime.timedelta(days=1)))
                 logger.info('Aggregated Speed Count Data')
         except psycopg2.Error as exc:
             logger.critical('Error aggregating data to 1-hour bins')
