@@ -18,7 +18,6 @@ con = connect(**dbset)
 if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
 #-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
@@ -521,8 +520,14 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                 cur.execute(sql.SQL("select {schema}.audit_table({schema}.{tablename})").format(schema = sql.Identifier(schema_name),
                                                                                                  tablename = sql.Identifier(output_table)))
                 LOGGER.info('New table %s created and added to audit table list', output_table)
-                
 
+#-------------------------------------------------------------------------------------------------------
+@click.command()
+@click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int)
+@click.option('--layer_id', '-ly', help = 'Layer id', type = int)
+@click.option('--schema_name', '-s', help = 'Name of destination schema', type = str)
+@click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool)
+#-------------------------------------------------------------------------------------------------------
 def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
@@ -540,7 +545,6 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     
     is_audited: Boolean
         Whether we want to have the table be audited (true) or be partitioned (false)
-    
     """
     
     mapserver = mapserver_name(mapserver_n)
@@ -590,3 +594,6 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     
     if is_audited:
         update_table(output_table, insert_column, excluded_column, primary_key, schema_name)
+
+if __name__ == '__main__':
+    get_layer()
