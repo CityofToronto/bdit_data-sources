@@ -35,35 +35,11 @@ def mapserver_name(mapserver_n):
         The name of the mapserver
     """
     
-    switcher ={
-        0 : 'cot_geospatial',
-        2 : 'cot_geospatial2',
-        3 : 'cot_geospatial3',
-        5 : 'cot_geospatial5',
-        6 : 'cot_geospatial6',
-        7 : 'cot_geospatial7',
-        8 : 'cot_geospatial8',
-        10 : 'cot_geospatial10',
-        11 : 'cot_geospatial11',
-        12 : 'cot_geospatial12',
-        13 : 'cot_geospatial13',
-        14 : 'cot_geospatial14',
-        15 : 'cot_geospatial15',
-        16 : 'cot_geospatial16',
-        17 : 'cot_geospatial17',
-        18 : 'cot_geospatial18',
-        19 : 'cot_geospatial19',
-        20 : 'cot_geospatial20',
-        21 : 'cot_geospatial21',
-        22 : 'cot_geospatial22',
-        23 : 'cot_geospatial23',
-        24 : 'cot_geospatial24',
-        25 : 'cot_geospatial25',
-        26 : 'cot_geospatial26',
-        27 : 'cot_geospatial27',
-        28 : 'cot_geospatial28'
-        }
-    mapserver_name = switcher.get(mapserver_n)
+    if mapserver_n == 0:
+        mapserver_name = 'cot_geospatial'
+    else:
+        mapserver_name = 'cot_geospatial' + str(mapserver_n)
+    
     return(mapserver_name)
 
 def get_tablename(mapserver, layer_id):
