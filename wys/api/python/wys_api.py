@@ -88,7 +88,7 @@ def location_id(api_key):
                 if statistics[4:11] == 'LocInfo':
                     temp=[location, sign_name, address]
                     location_id.append(temp)
-            logger.debug(str(len(location_id))+' locations have data')
+            logger.info(str(len(location_id))+' locations have data')
             return location_id
         except TimeoutException as exc_504:
             logger.exception(exc_504)
