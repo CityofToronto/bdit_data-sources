@@ -36,9 +36,12 @@ def pull_weather(today):
 
 def pull_weather_df(today):
     coord = ['43.74', '-79.37']
+
     
-    ec = env_canada.ECHistorical(station_id='ON/s0000458', timeframe='daily', daterange=(today, today))
-    ec.get_data()
+    ec = env_canada.ECHistorical(station_id='ON/s0000458', year=2022, month=1, language="english", timeframe='2')
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(ec.update())
+
     return ec.csv
 
 def insert_weather(conn, weather_df):
