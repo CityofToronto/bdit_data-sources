@@ -203,3 +203,4 @@ rescu/connect/*
 rescu/data/*
 rescu/detector_inventory.csv
 
+volumes/miovision/update_intersections/new_intersection_activation_dates.ipynb
