@@ -60,14 +60,25 @@ def get_tablename(mapserver, layer_id):
     """
     
     url = 'https://insideto-gis.toronto.ca/arcgis/rest/services/'+mapserver+'/MapServer/layers?f=json'
-    r = requests.get(url, verify = False)
-    ajson = r.json()
-    layers = ajson['layers']
-    for layer in layers:
-        if layer['id'] == layer_id:
-            output_name = (layer['name'].lower()).replace(' ', '_')
-        else:
-            continue
+    try:
+        r = requests.get(url, verify = False, timeout = 20)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as err_h:
+        LOGGER.error("Invalid HTTP response: ", err_h)
+    except requests.exceptions.ConnectionError as err_c:
+        LOGGER.error("Network problem: ", err_c)
+    except requests.exceptions.Timeout as err_t:
+        LOGGER.error("Timeout: ", err_t)
+    except requests.exceptions.RequestException as err:
+        LOGGER.error("Error: ", err)
+    else:
+        ajson = r.json()
+        layers = ajson['layers']
+        for layer in layers:
+            if layer['id'] == layer_id:
+                output_name = (layer['name'].lower()).replace(' ', '_')
+            else:
+                continue
 
     return output_name
 
@@ -289,14 +300,23 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
              "f":"json"}
     
     while True:
-        try :
-            r = requests.get(base_url, params = query, verify = False)
-        except requests.exceptions.ConnectionErrors:
+        try:
+            r = requests.get(base_url, params = query, verify = False, timeout = 20)
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as err_h:
+            LOGGER.error("Invalid HTTP response: ", err_h)
+        except requests.exceptions.ConnectionError as err_c:
+            LOGGER.error("Network problem: ", err_c)
             sleep(10)
             continue
+        except requests.exceptions.Timeout as err_t:
+            LOGGER.error("Timeout: ", err_t)
+        except requests.exceptions.RequestException as err:
+            LOGGER.error("Error: ", err)
         else:
             return_json = r.json()
             break
+    
     return return_json
 
 def find_limit(return_json):
