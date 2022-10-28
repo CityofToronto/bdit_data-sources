@@ -511,31 +511,40 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             result = cur.fetchone()
             # If table exists
             if result[0] == 1:
-                
-                # Delete rows that no longer exists in the new table
-                cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} = (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name),
-                                                                                                                                                                                          tablename = sql.Identifier(output_table),
-                                                                                                                                                                                          pk = sql.Identifier(primary_key),
-                                                                                                                                                                                          temp_table = sql.Identifier(temp_table_name)))
-                                                                                                                                                                                          
-                # And then upsert stuff
-                upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
-                cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
-                                                          tablename = sql.Identifier(output_table),
-                                                          temp_table = sql.Identifier(temp_table_name),
-                                                          pk = sql.Identifier(primary_key),
-                                                          cols = insert_column,
-                                                          excl_cols = excluded_column,
-                                                          date = sql.Identifier(date)))
+            
+                try:
+                    # Delete rows that no longer exists in the new table
+                    cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} = (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
 
+                    # And then upsert stuff
+                    upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
+                    cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
+                                                              tablename = sql.Identifier(output_table),
+                                                              temp_table = sql.Identifier(temp_table_name),
+                                                              pk = sql.Identifier(primary_key),
+                                                              cols = insert_column,
+                                                              excl_cols = excluded_column,
+                                                              date = sql.Identifier(date)))
+                except Exception:
+                    # pass exception to function
+                    logging.exception("Failed to UPSERT")
+                    # rollback the previous transaction before starting another
+                    con.rollback()
+            
             # if table does not exist -> create a new one and add to audit list
             else:
-                cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
-                
-                cur.execute(sql.SQL("select {schema}.audit_table({schema}.{tablename})").format(schema = sql.Identifier(schema_name),
-                                                                                                 tablename = sql.Identifier(output_table)))
-                LOGGER.info('New table %s created and added to audit table list', output_table)
-        
+                try:
+                    cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
+
+                    cur.execute(sql.SQL("select {schema}.audit_table({schema}.{tablename})").format(schema = sql.Identifier(schema_name),
+                                                                                                     tablename = sql.Identifier(output_table)))
+                    LOGGER.info('New table %s created and added to audit table list', output_table)
+                except Exception:
+                    # pass exception to function
+                    logging.exception("Failed to create new table")
+                    # rollback the previous transaction before starting another
+                    con.rollback()
+            
             # And then drop the temp table (if exists)
             cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
                                                                                          temp_table = sql.Identifier(temp_table_name)))
