@@ -511,6 +511,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             result = cur.fetchone()
             # If table exists
             if result[0] == 1:
+                
                 # Delete rows that no longer exists in the new table
                 cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} = (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name),
                                                                                                                                                                                           tablename = sql.Identifier(output_table),
@@ -526,21 +527,19 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                                                           cols = insert_column,
                                                           excl_cols = excluded_column,
                                                           date = sql.Identifier(date)))
-                # And then drop the temp table
-                cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
-                                                                                                 temp_table = sql.Identifier(temp_table_name)))
-                LOGGER.info('Updated table %s', output_table)           
+
             # if table does not exist -> create a new one and add to audit list
             else:
-                cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name),
-                                                                                                                                                                               temp_table = sql.Identifier(temp_table_name),
-                                                                                                                                                                               tablename = sql.Identifier(output_table),
-                                                                                                                                                                               date = sql.Identifier(date)))
+                cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
                 
                 cur.execute(sql.SQL("select {schema}.audit_table({schema}.{tablename})").format(schema = sql.Identifier(schema_name),
                                                                                                  tablename = sql.Identifier(output_table)))
                 LOGGER.info('New table %s created and added to audit table list', output_table)
-
+        
+            # And then drop the temp table (if exists)
+            cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
+                                                                                         temp_table = sql.Identifier(temp_table_name)))
+            LOGGER.info('Updated table %s', output_table)
 #-------------------------------------------------------------------------------------------------------
 @click.command()
 @click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int)
