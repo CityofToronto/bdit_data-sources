@@ -30,7 +30,7 @@ conn=connect(**dbset)
 # Params:
 #     tmrwy: a valid datetime object of the day after the current date to be used in match w/ Env. Canada forecast
 #
-def pull_prediction(tmrw):
+def pull_prediction(today, tmrw):
 
     tmrw_text = tmrw.strftime("%A")
 
@@ -56,7 +56,8 @@ def pull_prediction(tmrw):
         "min_temp": nighttime_forecast['temperature'],
         "precip_prob": daytime_forecast['precip_probability'],
         "text_summary_day": daytime_forecast['text_summary'],
-        "text_summary_night": nighttime_forecast['text_summary']
+        "text_summary_night": nighttime_forecast['text_summary'],
+        "date_pulled": today
     }
     return tmrw_forecast
     
@@ -73,10 +74,14 @@ def insert_weather(conn, weather_df):
 if __name__ == '__main__':
     #Get current date to pull
     today = datetime.date.today()
-    tmrw = today + datetime.timedelta(days=1)
-    tmrw_forecast = pull_prediction(tmrw)
-   
+    pull_date = today + datetime.timedelta(days=1)
+
     weather_df = pd.DataFrame.from_dict([tmrw_forecast])
+
+    for i in range(0,5):
+        date_forecast = pull_prediction(today, pull_date)
+   
+  
     print(weather_df)
     insert_weather(conn, weather_df)
     print("Process Complete")

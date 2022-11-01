@@ -7,6 +7,7 @@
 import asyncio
 from types import coroutine
 import env_canada
+from env_canada import ECHistoricalRange, get_historical_stations
 
 #other packages
 import os
@@ -18,10 +19,10 @@ from configparser import ConfigParser
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
 
-"""CONFIG=ConfigParser()
+CONFIG=ConfigParser()
 CONFIG.read('config/db.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
-conn=connect(**dbset)"""
+conn=connect(**dbset)
 
 def pull_weather(today):
     ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
