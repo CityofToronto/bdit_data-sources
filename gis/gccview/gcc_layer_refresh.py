@@ -525,6 +525,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                                                               cols = insert_column,
                                                               excl_cols = excluded_column,
                                                               date = sql.Identifier(date)))
+                    LOGGER.info('Updated table %s', output_table)
                 except Exception:
                     # pass exception to function
                     logging.exception("Failed to UPSERT")
@@ -548,7 +549,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             # And then drop the temp table (if exists)
             cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
                                                                                          temp_table = sql.Identifier(temp_table_name)))
-            LOGGER.info('Updated table %s', output_table)
+
 #-------------------------------------------------------------------------------------------------------
 @click.command()
 @click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int)
