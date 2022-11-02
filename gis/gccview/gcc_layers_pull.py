@@ -6,6 +6,16 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+# Credentials - to be passed through PythonOperator
+from airflow.hooks.postgres_hook import PostgresHook
+# EC2 con
+ec2_cred = PostgresHook("")
+ec2_con = ec2_cred.get_conn()
+# Morbius con
+morbius_cred = PostgresHook("")
+morbius_con = morbius_cred.get_conn()
+
+
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -86,7 +96,7 @@ ec2_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "private_road": [27, 13, 'gis', True],
               "school": [28, 17, 'gis', True],
               "library": [28, 28, 'gis', True]
-}
+             }
 
 
 morbius_layers = {"city_ward": [0, 0, 'gis', True],
@@ -108,12 +118,12 @@ for layer in ec2_layers:
     pull_ec2_layer = PythonOperator(
         task_id = 'EC2_Task_'+ str(layer),
         python_callable = get_layer,
-        op_args = ec2_layers[layer]
+        op_args = ec2_layers[layer] + [ec2_con]
     )
 
 for layer in morbius_layers:
     pull_morbius_layer = PythonOperator(
         task_id = 'Morbius_Task_'+ str(layer),
         python_callable = get_layer,
-        op_args = morbius_layers[layer]
+        op_args = morbius_layers[layer] + [morbius_con]
     )
