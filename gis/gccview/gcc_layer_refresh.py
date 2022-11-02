@@ -301,7 +301,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     
     while True:
         try:
-            r = requests.get(base_url, params = query, verify = False, timeout = 20)
+            r = requests.get(base_url, params = query, verify = False, timeout = 300)
             r.raise_for_status()
         except requests.exceptions.HTTPError as err_h:
             LOGGER.error("Invalid HTTP response: ", err_h)
