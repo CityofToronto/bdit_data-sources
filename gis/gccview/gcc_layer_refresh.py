@@ -8,11 +8,6 @@ from psycopg2.extras import execute_values
 import logging
 from time import sleep
 import click
-CONFIG = configparser.ConfigParser()
-CONFIG.read('/home/bqu/db_ec2.cfg')
-#CONFIG.read('/home/bqu/db_morbius.cfg')
-dbset = CONFIG['DBSETTINGS']
-con = connect(**dbset)
 
 """The following provides information about the code when it is running and prints out the log messages 
 if they are of logging level equal to or greater than INFO"""
@@ -93,7 +88,7 @@ def get_fieldtype(field):
         fieldtype = 'timestamp without time zone'
     return fieldtype
 
-def create_audited_table(output_table, return_json, schema_name, primary_key):
+def create_audited_table(output_table, return_json, schema_name, primary_key, con):
     """
     Function to create a new table in postgresql for the layer (for audited tables only)
 
@@ -110,6 +105,9 @@ def create_audited_table(output_table, return_json, schema_name, primary_key):
         
     primary_key : string
         Primary key for this layer, returned from dictionary pk_dict
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
 
     Returns
     --------
@@ -154,7 +152,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key):
                                                                                                pk = sql.Identifier(primary_key)))
     return insert_column, excluded_column
 
-def create_partitioned_table(output_table, return_json, schema_name):
+def create_partitioned_table(output_table, return_json, schema_name, con):
     """
     Function to create a new table in postgresql for the layer (for partitioned tables only)
 
@@ -168,6 +166,9 @@ def create_partitioned_table(output_table, return_json, schema_name):
     
     schema_name : string
         The schema in which the table will be inserted into
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
 
     Returns
     --------
@@ -340,7 +341,7 @@ def find_limit(return_json):
         keep_adding = False
     return keep_adding
 
-def insert_audited_data(output_table, insert_column, return_json, schema_name):
+def insert_audited_data(output_table, insert_column, return_json, schema_name, con):
     """
     Function to insert data to our postgresql database, the data is inserted into a temp table (for audited tables)
 
@@ -357,6 +358,9 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name):
     
     schema_name : string
         The schema in which the table will be inserted into
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
     """
     rows = []
     features = return_json['features']
@@ -384,7 +388,7 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name):
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
-def insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name):
+def insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con):
     """
     Function to insert data to our postgresql database (for partitioned tables)
 
@@ -401,6 +405,9 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
     
     schema_name : string
         The schema in which the table will be inserted into
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
     """   
     
     today_string = datetime.date.today().strftime('%Y-%m-%d')
@@ -474,7 +481,7 @@ pk_dict = {
     "library": "id",
 	}
 
-def update_table(output_table, insert_column, excluded_column, primary_key, schema_name):
+def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
     Function to find differences between existing table and the newly created temp table, then UPSERT,
     the temp table will be dropped in the end (for audited tables only)
@@ -495,6 +502,9 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     
     schema_name : string
         The schema in which the table will be inserted into
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
     """
     
     # Name the temporary table '_table' as opposed to 'table' for now
@@ -557,7 +567,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
 @click.option('--schema_name', '-s', help = 'Name of destination schema', type = str)
 @click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool)
 #-------------------------------------------------------------------------------------------------------
-def get_layer(mapserver_n, layer_id, schema_name, is_audited):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, con):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -574,6 +584,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
     
     is_audited: Boolean
         Whether we want to have the table be audited (true) or be partitioned (false)
+    
+    con: Airflow Connection
+        Could be the connection to EC2 or to Morbius
     """
     
     mapserver = mapserver_name(mapserver_n)
@@ -590,18 +603,18 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
         if counter == 0:
             return_json = get_data(mapserver, layer_id)
             if is_audited:
-                (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key)
+                (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
             else:
-                (insert_column, output_table_with_date) = create_partitioned_table(output_table, return_json, schema_name)
+                (insert_column, output_table_with_date) = create_partitioned_table(output_table, return_json, schema_name, con)
             
             features = return_json['features']
             record_max=(len(features))
             max_number = record_max
             
             if is_audited:
-                insert_audited_data(output_table, insert_column, return_json, schema_name)
+                insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name)
+                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)
@@ -610,9 +623,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
         else:
             return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
             if is_audited:
-                insert_audited_data(output_table, insert_column, return_json, schema_name)
+                insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name)
+                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)
@@ -622,7 +635,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited):
                 LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
     
     if is_audited:
-        update_table(output_table, insert_column, excluded_column, primary_key, schema_name)
+        update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
 
 if __name__ == '__main__':
     get_layer()
