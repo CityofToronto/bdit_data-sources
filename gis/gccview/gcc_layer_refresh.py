@@ -13,6 +13,50 @@ import click
 if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+#-------------------------------------------------------------------------------------------------------
+pk_dict = {
+	"city_ward": "area_id",
+    "census_tract": "area_id",
+    "neighbourhood_improvement_area": "area_id",
+    "priority_neighbourhood_for_investment": "area_id",
+    "ibms_district": "area_id",
+    "ibms_grid": "area_id",
+    "bikeway": "centreline_id",
+    "traffic_camera": "rec_id",
+    "permit_parking_area": "area_long_code",
+    "prai_transit_shelter": "id",
+    "traffic_bylaw_point": "objectid",
+    "traffic_bylaw_line": "objectid",
+    "loop_detector": "id",
+    "electrical_vehicle_charging_station": "id",
+    "day_care_centre": "loc_id",
+    "middle_childcare_centre": "id",
+    "business_improvement_area": "area_id",
+    "proposed_business_improvement_area": "objectid",
+    "film_permit_all": "objectid",
+    "film_permit_parking_all": "objectid",
+    "hotel": "id",
+    "convenience_store": "objectid",
+    "supermarket": "objectid",
+    "place_of_worship": "objectid",
+    "ymca": "objectid",
+    "aboriginal_organization": "id",
+    "attraction": "objectid",
+    "dropin": "objectid",
+    "early_years_centre": "objectid",
+    "family_resource_centre": "objectid",
+    "food_bank": "objectid",
+    "longterm_care": "id",
+    "parenting_family_literacy": "id",
+    "retirement_home": "id",
+    "senior_housing": "objectid",
+    "shelter": "objectid",
+    "social_housing": "objectid",
+    "private_road": "objectid",
+    "school": "objectid",
+    "library": "id",
+	}
 #-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
@@ -437,49 +481,6 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
         with con.cursor() as cur:
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table_with_date)
-
-pk_dict = {
-	"city_ward": "area_id",
-    "census_tract": "area_id",
-    "neighbourhood_improvement_area": "area_id",
-    "priority_neighbourhood_for_investment": "area_id",
-    "ibms_district": "area_id",
-    "ibms_grid": "area_id",
-    "bikeway": "centreline_id",
-    "traffic_camera": "rec_id",
-    "permit_parking_area": "area_long_code",
-    "prai_transit_shelter": "id",
-    "traffic_bylaw_point": "objectid",
-    "traffic_bylaw_line": "objectid",
-    "loop_detector": "id",
-    "electrical_vehicle_charging_station": "id",
-    "day_care_centre": "loc_id",
-    "middle_childcare_centre": "id",
-    "business_improvement_area": "area_id",
-    "proposed_business_improvement_area": "objectid",
-    "film_permit_all": "objectid",
-    "film_permit_parking_all": "objectid",
-    "hotel": "id",
-    "convenience_store": "objectid",
-    "supermarket": "objectid",
-    "place_of_worship": "objectid",
-    "ymca": "objectid",
-    "aboriginal_organization": "id",
-    "attraction": "objectid",
-    "dropin": "objectid",
-    "early_years_centre": "objectid",
-    "family_resource_centre": "objectid",
-    "food_bank": "objectid",
-    "longterm_care": "id",
-    "parenting_family_literacy": "id",
-    "retirement_home": "id",
-    "senior_housing": "objectid",
-    "shelter": "objectid",
-    "social_housing": "objectid",
-    "private_road": "objectid",
-    "school": "objectid",
-    "library": "id",
-	}
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
