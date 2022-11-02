@@ -85,7 +85,7 @@ ec2_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "social_housing": [26, 62, 'gis', True],
               "private_road": [27, 13, 'gis', True],
               "school": [28, 17, 'gis', True],
-              "library": [28, 28, 'gis', True],
+              "library": [28, 28, 'gis', True]
 }
 
 
