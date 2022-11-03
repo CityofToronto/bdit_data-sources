@@ -76,14 +76,11 @@ if __name__ == '__main__':
     today = datetime.date.today()
     pull_date = today + datetime.timedelta(days=1)
 
-    five_day_forecast = []
-
     for i in range(0,5):
-        five_day_forecast.append(pull_prediction(today, pull_date))
+        day_forecast = (pull_prediction(today, pull_date))
+        weather_df = pd.DataFrame.from_dict([day_forecast])
+        print("INSERTING: " + weather_df)
+        insert_weather(conn, weather_df)
+        pull_date = pull_date + datetime.timedelta(days=1)
 
-    weather_df = pd.DataFrame.from_dict([five_day_forecast])
-   
-  
-    print(weather_df)
-    insert_weather(conn, weather_df)
     print("Process Complete")
