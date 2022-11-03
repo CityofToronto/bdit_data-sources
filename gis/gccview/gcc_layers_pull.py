@@ -5,6 +5,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
 from gcc_layer_refresh import get_layer
 
+from datetime import datetime
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
@@ -45,7 +46,7 @@ def task_fail_slack_alert(context):
 DEFAULT_ARGS = {
  'owner': 'natalie',
  'depends_on_past': False,
- 'start_date': datetime(2022, 10, 5),
+ 'start_date': datetime(2022, 11, 3),
  'email_on_failure': False, 
  'email': ['natalie.chan@toronto.ca'], 
  'retries': 0,
