@@ -22,3 +22,24 @@ def task_fail_slack_alert(context):
 
 
 #import python scripts
+try:
+    sys.path.append('script-path')
+    from prediction_import import prediction_upsert
+except:
+    raise ImportError("script import failed")
+
+
+#DAG
+
+default_args = {
+    'owner': 'radumas'
+}
+
+dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily', catchup=False)
+
+#dag tasks
+t1 = PythonOperator(
+    task_id = 'pull_prediction',
+    python_callable = prediction_upsert,
+    dag=dag
+)
