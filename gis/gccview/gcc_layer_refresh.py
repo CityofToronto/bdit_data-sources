@@ -562,11 +562,13 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                                                                                          temp_table = sql.Identifier(temp_table_name)))
 
 #-------------------------------------------------------------------------------------------------------
+'''
 @click.command()
 @click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int)
 @click.option('--layer_id', '-ly', help = 'Layer id', type = int)
 @click.option('--schema_name', '-s', help = 'Name of destination schema', type = str)
 @click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool)
+'''
 #-------------------------------------------------------------------------------------------------------
 def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     """
@@ -638,6 +640,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     
     if is_audited:
         update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
-
+'''
 if __name__ == '__main__':
     get_layer()
+'''
