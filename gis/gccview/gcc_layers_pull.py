@@ -1,4 +1,8 @@
 # The official new GCC puller DAG file
+import sys
+import os
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
 from gcc_layer_refresh import get_layer
 
 from airflow import DAG
