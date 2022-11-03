@@ -568,7 +568,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
 @click.option('--schema_name', '-s', help = 'Name of destination schema', type = str)
 @click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool)
 #-------------------------------------------------------------------------------------------------------
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, con):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -586,10 +586,11 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, con):
     is_audited: Boolean
         Whether we want to have the table be audited (true) or be partitioned (false)
     
-    con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
+    cred: Airflow PostgresHook
+        Contains credentials to enable a connection to a database
     """
     
+    con = cred.get_conn()
     mapserver = mapserver_name(mapserver_n)
     output_table = get_tablename(mapserver, layer_id)
     #--------------------------------
