@@ -104,23 +104,22 @@ morbius_layers = {"city_ward": [0, 0, 'gis', True],
                   "ibms_district": [11, 23, 'gis', True]
                  }
 
-
-gcc_layers_dag = DAG(
+with DAG(
     'pull_gcc_layers',
     default_args=DEFAULT_ARGS,
     schedule_interval='@daily'
-)
+) as gcc_layers_dag:
 
-for layer in ec2_layers:
-    pull_ec2_layer = PythonOperator(
-        task_id = 'EC2_Task_'+ str(layer),
-        python_callable = get_layer,
-        op_args = ec2_layers[layer] + [ec2_cred]
-    )
+    for layer in ec2_layers:
+        pull_ec2_layer = PythonOperator(
+            task_id = 'EC2_Task_'+ str(layer),
+            python_callable = get_layer,
+            op_args = ec2_layers[layer] + [ec2_cred]
+        )
 
-for layer in morbius_layers:
-    pull_morbius_layer = PythonOperator(
-        task_id = 'Morbius_Task_'+ str(layer),
-        python_callable = get_layer,
-        op_args = morbius_layers[layer] + [morbius_cred]
-    )
+    for layer in morbius_layers:
+        pull_morbius_layer = PythonOperator(
+            task_id = 'Morbius_Task_'+ str(layer),
+            python_callable = get_layer,
+            op_args = morbius_layers[layer] + [morbius_cred]
+        )
