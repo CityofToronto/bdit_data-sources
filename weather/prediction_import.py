@@ -64,14 +64,22 @@ def pull_prediction(today, tmrw):
 
 
 def insert_weather(conn, weather_df):
-    weather_fields = ['date', 'max_temp', 'min_temp', 'precip_prob', 'text_summary_day', 'text_summary_night']
+    weather_fields = ['date', 'max_temp', 'min_temp', 'precip_prob', 'text_summary_day', 'text_summary_night', 'date_pulled']
     with conn:
         with conn.cursor() as cur:
-            insert_sql = '''INSERT INTO weather.prediction_daily(dt, temp_max, temp_min, precip_prob, text_summary_day, text_summary_night) VALUES %s'''
+            insert_sql = '''INSERT INTO weather.prediction_daily
+                            (
+                                (dt, temp_max, temp_min, precip_prob, text_summary_day, text_summary_night, date_pulled)
+                            ) VALUES %s
+                            ON CONFLICT (dt)
+                            DO UPDATE
+                            SET (temp_max, temp_min, precip_prob, text_summary_day, text_summary_night, date_pulled)
+                                = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.precip_prob, EXCLUDED.text_summary_day, EXCLUDED.text_summary_night, EXCLUDED.date_pulled)'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 
 if __name__ == '__main__':
+#def prediction_upsert():
     #Get current date to pull
     today = datetime.date.today()
     pull_date = today + datetime.timedelta(days=1)
@@ -79,7 +87,7 @@ if __name__ == '__main__':
     for i in range(0,5):
         day_forecast = (pull_prediction(today, pull_date))
         weather_df = pd.DataFrame.from_dict([day_forecast])
-        print("INSERTING: " + weather_df)
+        #print("INSERTING: " + weather_df)
         insert_weather(conn, weather_df)
         pull_date = pull_date + datetime.timedelta(days=1)
 

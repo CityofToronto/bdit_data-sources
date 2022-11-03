@@ -1,5 +1,6 @@
 """
-Pipeline to pull weather data from Envrionment Canada and upsert into weather.prediction_daily table.
+Pipeline to pull weather prediction data from Envrionment Canada and upsert into weather.prediction_daily table.
+Then, 
 A Slack notification is raised when the airflow process fails.
 """
 import sys
@@ -37,8 +38,10 @@ default_args = {
 
 dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily', catchup=False)
 
+#=======================================#
 #dag tasks
-t1 = PythonOperator(
+
+PULL_PREDICTION = PythonOperator(
     task_id = 'pull_prediction',
     python_callable = prediction_upsert,
     dag=dag
