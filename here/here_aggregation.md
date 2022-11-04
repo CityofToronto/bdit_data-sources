@@ -201,7 +201,7 @@ WHERE
    AND tx::time without time zone <@ time_ranges.time_range 
    AND date_part('isodow'::text, a.tx)::integer <@ time_ranges.dow
 
-	GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
+GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
 ```
 
 **Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80% of the corridor (by distance) has observations
