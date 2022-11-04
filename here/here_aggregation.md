@@ -94,7 +94,7 @@ Common output parameters:
 
 ### Important things to note:
 
-- Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.  
+- Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.
 - Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
 - Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) has observations.
 
@@ -197,7 +197,8 @@ WHERE
    ( -- define date range
       tx >= '2019-01-01 00:00:00'::timestamp without time zone
       AND tx < '2019-02-18 00:00:00'::timestamp without time zone
-   )tx::time without time zone <@ time_ranges.time_range 
+   )
+   AND tx::time without time zone <@ time_ranges.time_range 
    AND date_part('isodow'::text, a.tx)::integer <@ time_ranges.dow
 
 	GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
