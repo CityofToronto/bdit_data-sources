@@ -26,8 +26,6 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gis.centreline_intersection_point
-    OWNER to bqu;
+    OWNER to gis_admins;
 
 GRANT SELECT ON TABLE gis.centreline_intersection_point TO ptc_humans;
-
-GRANT ALL ON TABLE gis.centreline_intersection_point TO gis_admins;

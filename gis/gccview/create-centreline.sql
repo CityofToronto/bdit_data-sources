@@ -50,10 +50,8 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gis_core.centreline
-    OWNER to bqu;
+    OWNER to gis_admins;
 
 GRANT SELECT ON TABLE gis_core.centreline TO bdit_humans;
-
-GRANT ALL ON TABLE gis_core.centreline TO gis_admins;
 
 GRANT ALL ON TABLE gis_core.centreline TO bqu;
