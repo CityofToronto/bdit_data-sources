@@ -13,27 +13,54 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import Variable
 from dags.pull_wys import SLACK_CONN_ID 
 
+
+#import python scripts
+try:
+    sys.path.append('script-path')
+    from prediction_import import prediction_upsert
+    from mrc_import import historical_upsert
+except:
+    raise ImportError("script import failed")
+
+
 SLACK_CONN_ID = 'slack_data_pipeline'
 dag_config = Variable.get('slack_member_id', deserialize_json=True)
 list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
 
 
 def task_fail_slack_alert(context):
-    return
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+
+    if context.get('task_instance').task_id == 'pull_prediction':
+        task_msg = """:cat_shock: The Task {task} in Pull Weather dag failed, 
+			{slack_name} please check.""".format(
+            task=context.get('task_instance').task_id, slack_name = list_names,)
+    
+    else:
+        task_msg = """ :eyes: The Task {task} in Pull Weather dag failed, 
+			{slack_name} please check.""".format(
+            task=context.get('task_instance').task_id, slack_name = list_names,)    
+        
+    # this adds the error log url at the end of the msg
+    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
+            log_url=context.get('task_instance').log_url,)
+    failed_alert = SlackWebhookOperator(
+        task_id='slack_test',
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username='airflow',
+        )
+    return failed_alert.execute(context=context)
 
 
-#import python scripts
-try:
-    sys.path.append('script-path')
-    from prediction_import import prediction_upsert
-except:
-    raise ImportError("script import failed")
 
 
 #DAG
-
+ 
 default_args = {
-    'owner': 'radumas'
+    'owner': 'radumas',
+    'on_failure_callback': task_fail_slack_alert
 }
 
 dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily', catchup=False)
@@ -41,8 +68,17 @@ dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily',
 #=======================================#
 #dag tasks
 
+#with con as conn:
 PULL_PREDICTION = PythonOperator(
     task_id = 'pull_prediction',
     python_callable = prediction_upsert,
     dag=dag
+    op_args=[conn]
+)
+
+PULL_HISTORICAL = PythonOperator(
+    task_id = 'pull_prediction',
+    python_callable = prediction_upsert,
+    dag=dag
+    op_args=[conn]
 )

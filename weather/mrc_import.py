@@ -52,7 +52,8 @@ def insert_weather(conn, weather_df):
             insert_sql = '''INSERT INTO weather.historical_daily(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
+def historical_upsert(conn):
    #Get current date to pull
     today = datetime.date.today()
     forecast = pull_weather(today)

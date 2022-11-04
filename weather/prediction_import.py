@@ -18,10 +18,10 @@ from configparser import ConfigParser
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
 
-CONFIG=ConfigParser()
+"""CONFIG=ConfigParser()
 CONFIG.read('config.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
-conn=connect(**dbset)
+conn=connect(**dbset)"""
 
 
 #### pull_prediction(tmrw) ####
@@ -78,8 +78,8 @@ def insert_weather(conn, weather_df):
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 
-if __name__ == '__main__':
-#def prediction_upsert():
+#if __name__ == '__main__':
+def prediction_upsert(conn):
     #Get current date to pull
     today = datetime.date.today()
     pull_date = today + datetime.timedelta(days=1)
