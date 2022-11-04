@@ -18,7 +18,7 @@ ec2_cred = PostgresHook("gcc_bot_bigdata")
 # Morbius connection credentials
 morbius_cred = PostgresHook("gcc_bot")
 
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
@@ -40,7 +40,7 @@ def task_fail_slack_alert(context):
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username='airflow',
-        proxy='http://137.15.73.132:8080')
+        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080')
     return failed_alert.execute(context=context)
 
 DEFAULT_ARGS = {
