@@ -40,8 +40,6 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gis.intersection
-    OWNER to bqu;
+    OWNER to gis_admins;
 
 GRANT SELECT ON TABLE gis.intersection TO ptc_humans;
-
-GRANT ALL ON TABLE gis.intersection TO gis_admins;
