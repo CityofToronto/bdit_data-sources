@@ -13,6 +13,8 @@ from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import Variable
 from dags.pull_wys import SLACK_CONN_ID 
 
+#connection credentials
+ec2_cred = PostgresHook("weather_bot")
 
 #import python scripts
 try:
@@ -55,11 +57,17 @@ def task_fail_slack_alert(context):
 
 
 
-
 #DAG
  
 default_args = {
-    'owner': 'radumas',
+    'owner':'rdumas',
+    'depends_on_past':False,
+    'start_date': datetime(2022, 11, 8),
+    'email': ['raphael.dumas@toronto.ca'],
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
     'on_failure_callback': task_fail_slack_alert
 }
 
@@ -68,17 +76,17 @@ dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily',
 #=======================================#
 #dag tasks
 
-#with con as conn:
-PULL_PREDICTION = PythonOperator(
-    task_id = 'pull_prediction',
-    python_callable = prediction_upsert,
-    dag=dag
-    op_args=[conn]
-)
+with ec2_cred.get_conn() as conn:
+    PULL_PREDICTION = PythonOperator(
+        task_id = 'pull_prediction',
+        python_callable = prediction_upsert,
+        dag=dag,
+        op_args=[conn]
+    )
 
-PULL_HISTORICAL = PythonOperator(
-    task_id = 'pull_prediction',
-    python_callable = prediction_upsert,
-    dag=dag
-    op_args=[conn]
-)
+    PULL_HISTORICAL = PythonOperator(
+        task_id = 'pull_historical',
+        python_callable = historical_upsert,
+        dag=dag,
+        op_args=[conn, {{ ds }}]
+    )
