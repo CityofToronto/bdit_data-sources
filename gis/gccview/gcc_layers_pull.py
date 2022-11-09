@@ -23,11 +23,13 @@ def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
             :red_circle: Task Failed. 
+            *Hostname*: {hostname}  
             *Task*: {task}  
             *Dag*: {dag} 
             *Execution Time*: {exec_date}  
             *Log Url*: {log_url} 
             """.format(
+            hostname=context.get('task_instance').hostname,
             task=context.get('task_instance').task_id,
             dag=context.get('task_instance').dag_id,
             ti=context.get('task_instance'),
