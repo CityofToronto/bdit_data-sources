@@ -79,7 +79,7 @@ def insert_weather(conn, weather_df):
 
 
 #if __name__ == '__main__':
-def prediction_upsert(conn, date):
+def prediction_upsert(conn):
     #Get current date to pull
     today = datetime.date.today()
     pull_date = today + datetime.timedelta(days=1)
