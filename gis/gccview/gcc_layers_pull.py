@@ -19,15 +19,20 @@ bigdata_cred = PostgresHook("gcc_bot_bigdata")
 morbius_cred = PostgresHook("gcc_bot")
 
 SLACK_CONN_ID = 'slack_data_pipeline'
+# Slack IDs of data pipeline admins
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
             :red_circle: Task Failed. 
-            *Hostname*: {hostname}  
-            *Task*: {task}  
-            *Dag*: {dag} 
-            *Execution Time*: {exec_date}  
-            *Log Url*: {log_url} 
+            *Hostname*: {hostname}
+            *Task*: {task}
+            *Dag*: {dag}
+            *Execution Time*: {exec_date}
+            *Log Url*: {log_url}
+            {slack_name} please check.
             """.format(
             hostname=context.get('task_instance').hostname,
             task=context.get('task_instance').task_id,
@@ -35,6 +40,7 @@ def task_fail_slack_alert(context):
             ti=context.get('task_instance'),
             exec_date=context.get('execution_date'),
             log_url=context.get('task_instance').log_url,
+            slack_name=list_names
         )
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
