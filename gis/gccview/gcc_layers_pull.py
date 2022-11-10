@@ -13,9 +13,9 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 
 # Credentials - to be passed through PythonOperator
 from airflow.hooks.postgres_hook import PostgresHook
-# EC2 connection credentials
-ec2_cred = PostgresHook("gcc_bot_bigdata")
-# Morbius connection credentials
+# bigdata connection credentials
+bigdata_cred = PostgresHook("gcc_bot_bigdata")
+# On-prem server connection credentials
 morbius_cred = PostgresHook("gcc_bot")
 
 SLACK_CONN_ID = 'slack_data_pipeline'
@@ -56,7 +56,7 @@ DEFAULT_ARGS = {
 }
 
 #-------------------------------------------------------------------------------------------------------
-ec2_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
+bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "centreline": [0, 2, 'gis_core', False], # VFH Layers
               "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
               "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
@@ -117,16 +117,16 @@ with DAG(
     schedule_interval='@daily'
 ) as gcc_layers_dag:
 
-    for layer in ec2_layers:
-        pull_ec2_layer = PythonOperator(
-            task_id = 'EC2_Task_'+ str(layer),
+    for layer in bigdata_layers:
+        pull_bigdata_layer = PythonOperator(
+            task_id = 'bigdata_task_'+ str(layer),
             python_callable = get_layer,
-            op_args = ec2_layers[layer] + [ec2_cred]
+            op_args = bigdata_layers[layer] + [bigdata_cred]
         )
 
     for layer in morbius_layers:
         pull_morbius_layer = PythonOperator(
-            task_id = 'Morbius_Task_'+ str(layer),
+            task_id = 'VFH_task_'+ str(layer),
             python_callable = get_layer,
             op_args = morbius_layers[layer] + [morbius_cred]
         )
