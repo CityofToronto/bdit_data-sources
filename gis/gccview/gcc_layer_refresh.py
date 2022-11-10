@@ -151,7 +151,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
         Primary key for this layer, returned from dictionary pk_dict
     
     con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
+        Could be the connection to bigdata or to on-prem server
 
     Returns
     --------
@@ -212,7 +212,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
         The schema in which the table will be inserted into
     
     con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
+        Could be the connection to bigdata or to on-prem server
 
     Returns
     --------
@@ -404,7 +404,7 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
         The schema in which the table will be inserted into
     
     con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
+        Could be the connection to bigdata or to on-prem server
     """
     rows = []
     features = return_json['features']
@@ -451,7 +451,7 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
         The schema in which the table will be inserted into
     
     con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
+        Could be the connection to bigdata or to on-prem server
     """   
     
     today_string = datetime.date.today().strftime('%Y-%m-%d')
@@ -505,9 +505,17 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
         The schema in which the table will be inserted into
     
     con: Airflow Connection
-        Could be the connection to EC2 or to Morbius
-    """
+        Could be the connection to bigdata or to on-prem server
     
+    Returns
+    --------
+    successful_execution : Boolean
+        whether any error had occured during UPSERT process
+    """
+
+    # Boolean to return, whether any error had occured during UPSERT process
+    successful_execution = True
+
     # Name the temporary table '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
@@ -542,6 +550,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     logging.exception("Failed to UPSERT")
                     # rollback the previous transaction before starting another
                     con.rollback()
+                    successful_execution = False
             
             # if table does not exist -> create a new one and add to audit list
             else:
@@ -556,11 +565,12 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     logging.exception("Failed to create new table")
                     # rollback the previous transaction before starting another
                     con.rollback()
+                    successful_execution = False
             
             # And then drop the temp table (if exists)
             cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
                                                                                          temp_table = sql.Identifier(temp_table_name)))
-
+    return successful_execution
 #-------------------------------------------------------------------------------------------------------
 '''
 @click.command()
@@ -591,7 +601,8 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     cred: Airflow PostgresHook
         Contains credentials to enable a connection to a database
     """
-    
+    successful_task_run = True
+
     con = cred.get_conn()
     mapserver = mapserver_name(mapserver_n)
     output_table = get_tablename(mapserver, layer_id)
@@ -639,7 +650,12 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
                 LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
     
     if is_audited:
-        update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
+        successful_task_run = update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
+
+    return successful_task_run
+
+
+
 '''
 if __name__ == '__main__':
     get_layer()
