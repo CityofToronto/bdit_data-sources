@@ -7,7 +7,7 @@
 import asyncio
 from types import coroutine
 import env_canada
-from env_canada import ECHistoricalRange, get_historical_stations
+#from env_canada import ECHistoricalRange, get_historical_stations
 
 #other packages
 import os
@@ -33,7 +33,22 @@ def pull_weather(today):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(ec_en.update())
 
-    return ec_en.conditions
+    curr_weather = ec_en.conditions
+    
+    weather_dict = {
+        "date": today,
+        "max_temp_yday": curr_weather['high_temp_yesterday'['value']],
+        "min_temp_yday": curr_weather['low_temp_yesterday'['value']],
+        "total_precip_yday": curr_weather['precip_yesterday'['value']],
+        "humidity": curr_weather['humidity'['value']],
+        "wind_speed": curr_weather['wind_speed'['value']],
+        "condition": curr_weather['condition'['value']],
+        "text_summary": curr_weather['text_summary'['value']],
+        "date_pulled": today
+    }
+    
+    
+    return weather_dict
 
 def pull_weather_df(today):
     coord = ['43.74', '-79.37']
@@ -46,32 +61,24 @@ def pull_weather_df(today):
     return ec.csv
 
 def insert_weather(conn, weather_df):
-    weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
+    weather_fields = ['date', 'max_temp_yday', 'min_temp_yday', 'total_precip_yday', 'humidity', 'wind_speed', 'condition', 'text_summary', 'date_pulled']
     with conn:
         with conn.cursor() as cur:
             insert_sql = '''INSERT INTO weather.historical_daily(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
-#if __name__ == '__main__':
-def historical_upsert(conn, date):
+if __name__ == '__main__':
+#def historical_upsert(conn):
    #Get current date to pull
+    
+    print("process start")
     today = datetime.date.today()
     forecast = pull_weather(today)
     print(forecast)
 
-    weather_csv = pull_weather_df(today)
-    print(weather_csv)
+    #weather_csv = pull_weather_df(today)
+    #print(weather_csv)
    
-
-    weather_df = pd.read_excel(weather_file)
-    weather_df = (weather_df.rename(columns={
-        'Date/Time': 'date',
-        'Max Temp (°C)': 'max_temp',
-        'Min Temp (°C)': 'min_temp',
-        'Mean Temp (°C)': 'mean_temp',
-        'Total Rain (mm)': 'total_rain',
-        'Total Snow (cm)': 'total_snow',
-        'Total Precip (mm)': 'total_precip'})
-        .replace({np.nan: None}))
+    weather_df = pd.DataFrame.from_dict(forecast)
 
     insert_weather(conn, weather_df)
