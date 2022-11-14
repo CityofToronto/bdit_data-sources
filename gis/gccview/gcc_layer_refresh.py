@@ -7,7 +7,8 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 import logging
 from time import sleep
-import click
+from airflow.exceptions import AirflowFailException
+#import click
 
 """The following provides information about the code when it is running and prints out the log messages 
 if they are of logging level equal to or greater than INFO"""
@@ -652,8 +653,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     if is_audited:
         successful_task_run = update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
 
-    return successful_task_run
-
+    # Raise error if UPSERT failed
+    if not successful_task_run:
+        raise AirflowFailException
 
 
 '''
