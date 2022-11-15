@@ -34,17 +34,26 @@ def pull_weather(today):
     loop.run_until_complete(ec_en.update())
 
     curr_weather = ec_en.conditions
+    yday = today - datetime.timedelta(days=1)
     
-    weather_dict = {
-        "date": today,
-        "max_temp_yday": curr_weather['high_temp_yesterday'['value']],
-        "min_temp_yday": curr_weather['low_temp_yesterday'['value']],
-        "total_precip_yday": curr_weather['precip_yesterday'['value']],
-        "humidity": curr_weather['humidity'['value']],
-        "wind_speed": curr_weather['wind_speed'['value']],
-        "condition": curr_weather['condition'['value']],
-        "text_summary": curr_weather['text_summary'['value']],
-        "date_pulled": today
+    weather_dict = { 
+        "today_dict": {
+            "date": today,
+            "max_temp": None,
+            "min_temp": None,
+            "total_precip": None,
+            "humidity": curr_weather['humidity'['value']],
+            "wind_speed": curr_weather['wind_speed'['value']],
+            "condition": curr_weather['condition'['value']],
+            "text_summary": curr_weather['text_summary'['value']],
+            "date_pulled": today
+        },
+        "yday_dict": {
+            "date": yday,
+            "max_temp_yday": curr_weather['high_temp_yesterday'['value']],
+            "min_temp_yday": curr_weather['low_temp_yesterday'['value']],
+            "total_precip_yday": curr_weather['precip_yesterday'['value']],
+        }
     }
     
     
