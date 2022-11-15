@@ -39,9 +39,6 @@ def pull_weather(today):
     weather_dict = { 
         "today_dict": {
             "date": today,
-            "max_temp": None,
-            "min_temp": None,
-            "total_precip": None,
             "humidity": curr_weather['humidity'['value']],
             "wind_speed": curr_weather['wind_speed'['value']],
             "condition": curr_weather['condition'['value']],
@@ -53,6 +50,7 @@ def pull_weather(today):
             "max_temp_yday": curr_weather['high_temp_yesterday'['value']],
             "min_temp_yday": curr_weather['low_temp_yesterday'['value']],
             "total_precip_yday": curr_weather['precip_yesterday'['value']],
+            "date_pulled": today,
         }
     }
     
@@ -60,7 +58,7 @@ def pull_weather(today):
     return weather_dict
 
 def pull_weather_df(today):
-    coord = ['43.74', '-79.37']
+    #coord = ['43.74', '-79.37']
 
     
     ec = env_canada.ECHistorical(station_id='ON/s0000458', year=2022, month=1, language="english", timeframe='2')
@@ -70,11 +68,24 @@ def pull_weather_df(today):
     return ec.csv
 
 def insert_weather(conn, weather_df):
-    weather_fields = ['date', 'max_temp_yday', 'min_temp_yday', 'total_precip_yday', 'humidity', 'wind_speed', 'condition', 'text_summary', 'date_pulled']
+    weather_fields = ['date', 'humidity', 'wind_speed', 'condition', 'text_summary', 'date_pulled']
     with conn:
         with conn.cursor() as cur:
-            insert_sql = '''INSERT INTO weather.historical_daily(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
+            insert_sql = '''INSERT INTO weather.historical_daily(dt, humidity, wind_speed, condition, text_summary, date_pulled) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
+
+def upsert_weather(conn, weather_df):
+    weather_fields = ['date', 'max_temp_yday', 'min_temp_yday', 'total_precip_yday', 'date_pulled']
+    with conn:
+        with conn.cursor() as cur:
+            upsert_sql = ''' INSERT INTO weather.historical_daily
+                                (dt, temp_max, temp_min, total_precip_mm, date_pulled)
+                            VALUES %s
+                            ON CONFLICT (dt)
+                            DO UPDATE
+                            SET (temp_max, temp_min, total_precip_mm, date_pulled)
+                                = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.total_precip_mm, EXCLUDED.date_pulled); '''
+            execute_values(cur, upsert_sql, weather_df[weather_fields].values)
 
 #if __name__ == '__main__':
 def historical_upsert(cred, run_date):
@@ -85,12 +96,14 @@ def historical_upsert(cred, run_date):
     
     print("process start")
     today = datetime.date.today()
-    forecast = pull_weather(today)
-    print(forecast)
+    weather_dict = pull_weather(today)
 
     #weather_csv = pull_weather_df(today)
     #print(weather_csv)
 
-    weather_df = pd.DataFrame.from_dict(forecast)
+    today_df = pd.DataFrame.from_dict(weather_dict['today_dict'])
+    yday_df = pd.DataFrame.from_dict(weather_dict['yday_dict'])
 
-    insert_weather(conn, weather_df)
+    insert_weather(conn, today_df)
+    upsert_weather(conn, yday_df)
+
