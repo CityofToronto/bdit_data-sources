@@ -12,6 +12,7 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import Variable
+from airlow.operators.latest_only_operator import LatestOnlyOperator
 
 #connection credentials
 cred = PostgresHook("weather_bot")
@@ -75,8 +76,10 @@ default_args = {
 dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily', catchup=False)
 
 #=======================================#
-#dag tasks
+#no backfill
+no_backfill = LatestOnlyOperator(taskid="no_backfill", dag=dag)
 
+#dag tasks
 
 PULL_PREDICTION = PythonOperator(
     task_id = 'pull_prediction',
@@ -91,3 +94,6 @@ PULL_HISTORICAL = PythonOperator(
     dag=dag,
     op_args=[cred, '{{ds}}']
 )
+
+no_backfill >> PULL_PREDICTION
+no_backfill >> PULL_HISTORICAL
