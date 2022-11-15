@@ -68,9 +68,8 @@ def insert_weather(conn, weather_df):
     with conn:
         with conn.cursor() as cur:
             insert_sql = '''INSERT INTO weather.prediction_daily
-                            (
                                 (dt, temp_max, temp_min, precip_prob, text_summary_day, text_summary_night, date_pulled)
-                            ) VALUES %s
+                            VALUES %s
                             ON CONFLICT (dt)
                             DO UPDATE
                             SET (temp_max, temp_min, precip_prob, text_summary_day, text_summary_night, date_pulled)
@@ -79,11 +78,13 @@ def insert_weather(conn, weather_df):
 
 
 #if __name__ == '__main__':
-def prediction_upsert(conn):
+def prediction_upsert(cred):
     #Get current date to pull
     today = datetime.date.today()
     pull_date = today + datetime.timedelta(days=1)
 
+    #verify connection
+    conn = cred.get_conn()
     for i in range(0,5):
         day_forecast = (pull_prediction(today, pull_date))
         weather_df = pd.DataFrame.from_dict([day_forecast])

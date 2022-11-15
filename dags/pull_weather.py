@@ -3,6 +3,7 @@ Pipeline to pull weather prediction data from Envrionment Canada and upsert into
 Then, 
 A Slack notification is raised when the airflow process fails.
 """
+import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -11,14 +12,14 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import Variable
-from dags.pull_wys import SLACK_CONN_ID 
 
 #connection credentials
-ec2_cred = PostgresHook("weather_bot")
+cred = PostgresHook("weather_bot")
 
 #import python scripts
 try:
-    sys.path.append('script-path')
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0,os.path.join(repo_path,'weather'))
     from prediction_import import prediction_upsert
     from mrc_import import historical_upsert
 except:
@@ -76,17 +77,17 @@ dag = DAG('pull_weather', default_args=default_args, schedule_interval='@daily',
 #=======================================#
 #dag tasks
 
-with ec2_cred.get_conn() as conn:
-    PULL_PREDICTION = PythonOperator(
-        task_id = 'pull_prediction',
-        python_callable = prediction_upsert,
-        dag=dag,
-        op_args=[conn]
-    )
 
-    PULL_HISTORICAL = PythonOperator(
-        task_id = 'pull_historical',
-        python_callable = historical_upsert,
-        dag=dag,
-        op_args=[conn, {{ ds }}]
-    )
+PULL_PREDICTION = PythonOperator(
+    task_id = 'pull_prediction',
+    python_callable = prediction_upsert,
+    dag=dag,
+    op_args=[cred]
+)
+
+PULL_HISTORICAL = PythonOperator(
+    task_id = 'pull_historical',
+    python_callable = historical_upsert,
+    dag=dag,
+    op_args=[cred, '{{ds}}']
+)

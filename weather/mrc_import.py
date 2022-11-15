@@ -76,9 +76,12 @@ def insert_weather(conn, weather_df):
             insert_sql = '''INSERT INTO weather.historical_daily(dt, max_temp, min_temp, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
-if __name__ == '__main__':
-#def historical_upsert(conn):
-   #Get current date to pull
+#if __name__ == '__main__':
+def historical_upsert(cred, run_date):
+    #Get current date to pull
+
+    #use connection
+    conn =cred.get_conn()
     
     print("process start")
     today = datetime.date.today()
@@ -87,7 +90,7 @@ if __name__ == '__main__':
 
     #weather_csv = pull_weather_df(today)
     #print(weather_csv)
-   
+
     weather_df = pd.DataFrame.from_dict(forecast)
 
     insert_weather(conn, weather_df)
