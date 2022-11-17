@@ -44,21 +44,34 @@ def pull_prediction(today, tmrw):
     loop.run_until_complete(ec_en.update())
 
     forecast = ec_en.daily_forecasts
+    nightflag = 0
     for day in forecast:
         if(day['period'] == tmrw_text):
             daytime_forecast = day
         elif (day['period'] == tmrw_text + ' night'):
             nighttime_forecast = day
+            nightflag = 1
     
-    tmrw_forecast = {
-        "date": tmrw,
-        "max_temp": daytime_forecast['temperature'],
-        "min_temp": nighttime_forecast['temperature'],
-        "precip_prob": daytime_forecast['precip_probability'],
-        "text_summary_day": daytime_forecast['text_summary'],
-        "text_summary_night": nighttime_forecast['text_summary'],
-        "date_pulled": today
-    }
+    if nightflag == 0:
+        tmrw_forecast = {
+            "date": tmrw,
+            "max_temp": daytime_forecast['temperature'],
+            "min_temp": None,
+            "precip_prob": daytime_forecast['precip_probability'],
+            "text_summary_day": daytime_forecast['text_summary'],
+            "text_summary_night": None,
+            "date_pulled": today
+        }
+    else:
+        tmrw_forecast = {
+            "date": tmrw,
+            "max_temp": daytime_forecast['temperature'],
+            "min_temp": nighttime_forecast['temperature'],
+            "precip_prob": daytime_forecast['precip_probability'],
+            "text_summary_day": daytime_forecast['text_summary'],
+            "text_summary_night": nighttime_forecast['text_summary'],
+            "date_pulled": today
+        }
     return tmrw_forecast
     
 
