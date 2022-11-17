@@ -19,10 +19,10 @@ from configparser import ConfigParser
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
 
-CONFIG=ConfigParser()
-CONFIG.read('config/db.cfg') # Change DB Settings in db.cfg
+"""CONFIG=ConfigParser()
+CONFIG.read('config.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
-conn=connect(**dbset)
+conn=connect(**dbset)"""
 
 def pull_weather(today):
     ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
@@ -39,17 +39,17 @@ def pull_weather(today):
     weather_dict = { 
         "today_dict": {
             "date": today,
-            "humidity": curr_weather['humidity'['value']],
-            "wind_speed": curr_weather['wind_speed'['value']],
-            "condition": curr_weather['condition'['value']],
-            "text_summary": curr_weather['text_summary'['value']],
+            "humidity": curr_weather['humidity']['value'],
+            "wind_speed": curr_weather['wind_speed']['value'],
+            "condition": curr_weather['condition']['value'],
+            "text_summary": curr_weather['text_summary']['value'],
             "date_pulled": today
         },
         "yday_dict": {
             "date": yday,
-            "max_temp_yday": curr_weather['high_temp_yesterday'['value']],
-            "min_temp_yday": curr_weather['low_temp_yesterday'['value']],
-            "total_precip_yday": curr_weather['precip_yesterday'['value']],
+            "max_temp_yday": curr_weather['high_temp_yesterday']['value'],
+            "min_temp_yday": curr_weather['low_temp_yesterday']['value'],
+            "total_precip_yday": curr_weather['precip_yesterday']['value'],
             "date_pulled": today,
         }
     }
@@ -101,9 +101,11 @@ def historical_upsert(cred, run_date):
     #weather_csv = pull_weather_df(today)
     #print(weather_csv)
 
-    today_df = pd.DataFrame.from_dict(weather_dict['today_dict'])
-    yday_df = pd.DataFrame.from_dict(weather_dict['yday_dict'])
+    today_df = pd.DataFrame.from_dict([weather_dict['today_dict']])
+    yday_df = pd.DataFrame.from_dict([weather_dict['yday_dict']])
 
     insert_weather(conn, today_df)
     upsert_weather(conn, yday_df)
+    
+    print("Process Complete")
 
