@@ -95,7 +95,8 @@ def historical_upsert(cred, run_date):
     conn = cred.get_conn()
     
     print("process start")
-    today = datetime.datetime.strptime(run_date,'%Y-%m-%d')
+    yday = datetime.datetime.strptime(run_date,'%Y-%m-%d')
+    today = yday + datetime.timedelta(days=1)
     weather_dict = pull_weather(today)
 
     #weather_csv = pull_weather_df(today)
