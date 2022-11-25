@@ -17,7 +17,7 @@ from airflow.hooks.postgres_hook import PostgresHook
 # bigdata connection credentials
 bigdata_cred = PostgresHook("gcc_bot_bigdata")
 # On-prem server connection credentials
-morbius_cred = PostgresHook("gcc_bot")
+ptc_cred = PostgresHook("gcc_bot")
 
 SLACK_CONN_ID = 'slack_data_pipeline'
 # Slack IDs of data pipeline admins
@@ -110,7 +110,7 @@ bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
              }
 
 
-morbius_layers = {"city_ward": [0, 0, 'gis', True],
+ptc_layers = {"city_ward": [0, 0, 'gis', True],
                   "centreline": [0, 2, 'gis', False],
                   "intersection": [12, 42, 'gis', False],
                   "centreline_intersection_point": [0, 19, 'gis', False],
@@ -131,9 +131,9 @@ with DAG(
             op_args = bigdata_layers[layer] + [bigdata_cred]
         )
 
-    for layer in morbius_layers:
-        pull_morbius_layer = PythonOperator(
+    for layer in ptc_layers:
+        pull_ptc_layer = PythonOperator(
             task_id = 'VFH_task_'+ str(layer),
             python_callable = get_layer,
-            op_args = morbius_layers[layer] + [morbius_cred]
+            op_args = ptc_layers[layer] + [ptc_cred]
         )
