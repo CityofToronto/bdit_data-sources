@@ -10,6 +10,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable
 
 # Credentials - to be passed through PythonOperator
 from airflow.hooks.postgres_hook import PostgresHook
