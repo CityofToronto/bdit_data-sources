@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
+import os
 
 import sys
 
@@ -73,7 +74,10 @@ def task_fail_slack_alert(context):
 
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
-    sys.path.append('/etc/airflow/data_scripts/vision_zero/')
+    # absolute path to the repo
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    # path of the python scripts
+    sys.path.insert(0,os.path.join(repo_path,'gis/school_safety_zones'))
     from schools import pull_from_sheet
 except:
     raise ImportError("Cannot import functions to pull school safety zone list")
