@@ -23,6 +23,8 @@ from datetime import datetime
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString, Point
 
+from airflow.exceptions import AirflowFailException
+
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
@@ -183,6 +185,7 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
     IndexError
         If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
     """
+    any_error = False
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
                                 range=spreadsheet['range_name']).execute()
@@ -205,9 +208,11 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
                     LOGGER.debug(row)
                 else:
                     LOGGER.error('An error occurs at %s', ','.join(i)) #double check
+                    any_error = True
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
                 LOGGER.error(err)
+                any_error = True
     
     schema = spreadsheet['schema_name']
     table = spreadsheet['table_name']
@@ -231,6 +236,8 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
             cur.execute(truncate)  
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
+    if any_error:
+        raise AirflowFailException
 
 
 if __name__ == '__main__':
