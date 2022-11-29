@@ -67,24 +67,24 @@ def validate_school_info(con, row):
     
     # School Coordinate (X,Y)
     if not within_toronto(con, row[4]):
-        LOGGER.error('School : outside Toronto')
+        LOGGER.error('Invalid school coordinates "{}"'.format(row[4]))
         ret_val = False
     
     # Final Sign Installation Date
     try:
         row[5] = enforce_date_format(row[5])
     except ValueError:
-        LOGGER.error(row[5]+' cannot be transformed into a date')
+        LOGGER.error('"{}" cannot be transformed into a date'.format(row[5]))
         ret_val = False
     
     # FB Locations (X,Y)
     if not within_toronto(con, row[6]):
-        LOGGER.error('FB : outside Toronto')
+        LOGGER.error('Invalid FB coordinates "{}"'.format(row[6]))
         ret_val = False
     
     # WYS Locations (X,Y)
     if not within_toronto(con, row[7]):
-        LOGGER.error('WYSS : outside Toronto')
+        LOGGER.error('Invalid WYSS coordinates "{}"'.format(row[7]))
         ret_val = False
     
     return ret_val
@@ -207,7 +207,7 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
                     LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
                     LOGGER.debug(row)
                 else:
-                    LOGGER.error('An error occurs at %s', ','.join(i)) #double check
+                    LOGGER.error('on row: [%s]', ','.join(i)) #double check
                     any_error = True
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurs at %s', row)
@@ -237,7 +237,7 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
     if any_error:
-        raise AirflowFailException
+        raise AirflowFailException('Invalid rows found. See errors documented above.')
 
 
 if __name__ == '__main__':
