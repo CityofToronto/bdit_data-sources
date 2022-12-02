@@ -58,8 +58,16 @@ sheets = {
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     # print this task_msg and tag these users
-    task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,) 
+    invalid_rows = context.get('task_instance').xcom_pull(task_ids=context.get('task_instance').task_id, 
+                                                            key='invalid_rows')
+    if invalid_rows:
+        task_msg = """The Task vz_google_sheets (ssz):{task} failed.
+                    Found one or more invalid records. {slack_name} please email David Tang """.format(
+            task=context.get('task_instance').task_id, slack_name = list_names,) 
+    else:
+        task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
+            task=context.get('task_instance').task_id, slack_name = list_names,) 
+    
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
             log_url=context.get('task_instance').log_url,)
@@ -100,6 +108,7 @@ DEFAULT_ARGS = {
     'start_date': datetime(2019, 9, 30),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
+    'provide_context':True,
     'on_failure_callback': task_fail_slack_alert
 }
 

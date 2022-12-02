@@ -153,7 +153,7 @@ def is_int(n):
 
 #--------------------------------------------------------------------------------------------------
 
-def pull_from_sheet(con, service, year, spreadsheet, *args):
+def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
     Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
@@ -195,10 +195,11 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
     if not values:
         LOGGER.warning('No data found.')
     else:
-        for row in values:           
+        for row, ind in zip(values, range(1,len(values)+1)):           
             try:                   
                 if len(row) < 28:
                     # skip incomplete rows
+                    LOGGER.warning('Skipping incomplete row #%i: %s', ind, row)
                     continue
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
@@ -210,7 +211,7 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
                     LOGGER.error('on row: [%s]', ','.join(i)) #double check
                     any_error = True
             except (IndexError, KeyError) as err:
-                LOGGER.error('An error occurs at %s', row)
+                LOGGER.error('An error occurred at row %i: %s', ind, row)
                 LOGGER.error(err)
                 any_error = True
     
@@ -236,8 +237,15 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
             cur.execute(truncate)  
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
+    task_instance = kwargs['task_instance']
     if any_error:
+        # Custom slack message upon finding some (not all) invalid records
+        # `invalid_rows` is being pulled in the failure callback method (slack notification)
+        task_instance.xcom_push('invalid_rows', True)
         raise AirflowFailException('Invalid rows found. See errors documented above.')
+    else:
+        task_instance.xcom_push('invalid_rows', False)
+    
 
 
 if __name__ == '__main__':
