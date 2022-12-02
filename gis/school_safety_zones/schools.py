@@ -118,7 +118,7 @@ def within_toronto(con, coords):
                 if not to_boundary.contains(point)[0]:
                     return False
             return True
-        except ValueError:
+        except:
             return False
 
 def enforce_date_format(date, fuzzy=False):
