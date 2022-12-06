@@ -102,7 +102,7 @@ con = vz_api_bot.get_conn()
 DEFAULT_ARGS = {
     'owner': 'cnangini',
     'depends_on_past' : False,
-    'email': ['cathy.nangini@toronto.ca'],
+    'email': ['islam.taha@toronto.ca'],
     'email_on_failure': True,
     'email_on_retry': True,
     'start_date': datetime(2019, 9, 30),
