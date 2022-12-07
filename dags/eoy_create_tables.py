@@ -89,7 +89,7 @@ miovision_bot = PostgresHook('miovision_api_bot')
 wys_bot = PostgresHook('wys_bot')
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/here/traffic/')
+    sys.path.append('/etc/airflow/dev_scripts/here/traffic/')
     from here_eoy_create_tables import create_here_ta_tables
 except:
     raise ImportError("Cannot import functions for end of year HERE maintenance")
