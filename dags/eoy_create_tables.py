@@ -64,6 +64,12 @@ def insert_holidays(dt):
             name = name.replace('Observed', 'obs')
             cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
         
+def congestion_create_table(dt):
+    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
+    year = str(next_year.year)
+    congestion_bot = PostgresHook('congestion_bot')
+    with congestion_bot.get_conn() as con, con.cursor() as cur:
+        cur.execute('SELECT congestion.create_yearly_tables(%s);', (year))        
 
 
 default_args = {'owner':'rdumas',
@@ -71,10 +77,10 @@ default_args = {'owner':'rdumas',
                 'start_date': datetime(2021, 12, 1),
                 'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
-                 'email_on_success': False,
-                 'retries': 0,
-                 'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_slack_alert
+                'email_on_success': False,
+                'retries': 0,
+                'retry_delay': timedelta(minutes=5),
+                'on_failure_callback': task_fail_slack_alert
                 }
 
 here_admin_bot = PostgresHook('here_admin_bot')
@@ -108,7 +114,7 @@ except:
 
 
 dag = DAG('eoy_table_create', default_args=default_args,
-        schedule_interval='5 9 14-21 12 1') #9:05 on the 3rd Monday of the month
+        schedule_interval='5 9 14-21 12 1') #9:05 on the 3rd Monday of the December
 
 here_create_tables = PythonOperator(task_id='here_create_tables',
                                     python_callable = create_here_ta_tables,
@@ -157,6 +163,11 @@ wys_replace_trigger = PythonOperator(task_id='wys_replace_trigger',
                                     op_kwargs = {'pg_hook': wys_bot,
                                                  'dt': '{{ ds }}'})
 
+congestion_create_table = PythonOperator(task_id='congestion_create_table',
+                                         python_callable = congestion_create_table,
+                                         dag = dag,
+                                         op_args = ['{{ ds }}'])
+
 success_alert = SlackWebhookOperator(
                                     task_id='success_msg',
                                     http_conn_id='slack',
@@ -170,4 +181,5 @@ here_create_tables >> here_sql_trigger_slack >> success_alert
 bt_create_tables >> bt_replace_trigger >> success_alert
 miovision_create_table >> miovision_replace_trigger >> success_alert
 wys_create_table >> wys_replace_trigger >> success_alert
+congestion_create_table >> success_alert
 insert_holidays >> success_alert
