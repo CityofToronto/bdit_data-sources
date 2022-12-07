@@ -177,7 +177,7 @@ success_alert = SlackWebhookOperator(
                                     dag=dag)                                            
 
 
-here_create_tables >> here_sql_trigger_slack >> success_alert
+here_create_tables >> success_alert
 bt_create_tables >> bt_replace_trigger >> success_alert
 miovision_create_table >> miovision_replace_trigger >> success_alert
 wys_create_table >> wys_replace_trigger >> success_alert
