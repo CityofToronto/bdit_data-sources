@@ -84,7 +84,7 @@ wys_bot = PostgresHook('wys_bot')
 
 try:
     sys.path.append('/etc/airflow/data_scripts/here/traffic/')
-    from here_eoy_create_tables import create_here_ta_tables, create_sql_for_trigger
+    from here_eoy_create_tables import create_here_ta_tables
 except:
     raise ImportError("Cannot import functions for end of year HERE maintenance")
 
@@ -116,11 +116,6 @@ here_create_tables = PythonOperator(task_id='here_create_tables',
                                     op_kwargs = {'pg_hook': here_admin_bot,
                                                  'dt': '{{ ds }}'}
                                     )
-here_sql_trigger_slack = PythonOperator(task_id='here_sql_trigger_slack',
-                                    python_callable = create_sql_for_trigger,
-                                    dag = dag,
-                                    op_args = ['{{ ds }}'],
-                                    on_success_callback=slack_here_trigger_sql)
 
 bt_create_tables = PythonOperator(task_id='bt_create_tables',
                                     python_callable = create_bt_obs_tables,
