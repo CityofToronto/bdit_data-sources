@@ -195,23 +195,23 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     if not values:
         LOGGER.warning('No data found.')
     else:
-        for ind, row in enumerate(values):           
+        for ind, row in enumerate(values, 1):           
             try:                   
                 if len(row) < 28:
                     # skip incomplete rows
-                    LOGGER.warning('Skipping incomplete row #%i (zero indexed): %s', ind, row)
+                    LOGGER.warning('Skipping incomplete row #%i: %s', ind, row)
                     continue
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
                 if validate_school_info(con, i): # return true or false
                     rows.append(i)
-                    LOGGER.info('Reading row #%i (zero indexed)', ind)
+                    LOGGER.info('Reading row #%i', ind)
                     LOGGER.debug(row)
                 else:
                     LOGGER.error('on row: [%s]', ','.join(i)) #double check
                     any_error = True
             except (IndexError, KeyError) as err:
-                LOGGER.error('An error occurred at row #%i (zero indexed): %s', ind, row)
+                LOGGER.error('An error occurred at row #%i: %s', ind, row)
                 LOGGER.error(err)
                 any_error = True
     
