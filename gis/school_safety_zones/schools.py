@@ -118,7 +118,8 @@ def within_toronto(con, coords):
                 if not to_boundary.contains(point)[0]:
                     return False
             return True
-        except:
+        except Exception as e:
+            LOGGER.error(e)
             return False
 
 def enforce_date_format(date, fuzzy=False):
@@ -208,7 +209,7 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
                     LOGGER.info('Reading row #%i', ind)
                     LOGGER.debug(row)
                 else:
-                    LOGGER.error('on row: [%s]', ','.join(i)) #double check
+                    LOGGER.error('at row #%i: %s', ind, row)
                     any_error = True
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurred at row #%i: %s', ind, row)
