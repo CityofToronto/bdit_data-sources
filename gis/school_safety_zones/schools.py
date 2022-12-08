@@ -247,29 +247,3 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     else:
         task_instance.xcom_push('invalid_rows', False)
     
-
-
-if __name__ == '__main__':
-    """The following connects to the database, establishes connection to the sheets 
-    and executes function based on the year of data required.
-    Note: this part is not run by airflow.
-
-    """
-
-    SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
-
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'/home/cnangini/googlesheets_db.cfg')
-    dbset = CONFIG['DBSETTINGS']
-    con = connect(**dbset)
-
-    service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
-
-    pull_from_sheet(con, service, 2018)
-    pull_from_sheet(con, service, 2019)
-    pull_from_sheet(con, service, 2020)
-    pull_from_sheet(con, service, 2021)
-    pull_from_sheet(con, service, 2022)
