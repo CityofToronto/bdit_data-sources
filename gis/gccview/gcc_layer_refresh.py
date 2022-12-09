@@ -588,7 +588,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     Parameters
     ----------
     mapserver : int
-        The name of the mapserver that host the desire layer
+        The name of the mapserver that host the desired layer
 
     layer_id : int
         The id of desired layer
