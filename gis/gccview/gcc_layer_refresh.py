@@ -235,6 +235,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     # Date format _YYYYMMDD, to be attached at the end of output_table name
     date_attachment = datetime.date.today().strftime('_%Y%m%d')
     output_table_with_date = output_table + date_attachment
+    index_name = output_table_with_date + '_idx'
     
     with con:
         with con.cursor() as cur:
@@ -242,9 +243,12 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
             create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{child_table} PARTITION OF {schema}.{parent_table} FOR VALUES IN (%s)").format(child_table = sql.Identifier(output_table_with_date),
                                                                                                                                             schema = sql.Identifier(schema_name),
                                                                                                                                             parent_table = sql.Identifier(output_table))
-            
-            
             cur.execute(create_sql, (today_string, ))
+
+            index_sql = sql.SQL("CREATE INDEX {idx_name} ON {schema}.{child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
+                                                                                                                child_table=sql.Identifier(output_table_with_date),
+                                                                                                                schema = sql.Identifier(schema_name))
+            cur.execute(index_sql)
             
     return insert_column, output_table_with_date
 
