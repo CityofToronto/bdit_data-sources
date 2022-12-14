@@ -69,7 +69,7 @@ def congestion_create_table(dt):
     year = str(next_year.year)
     congestion_bot = PostgresHook('congestion_bot')
     with congestion_bot.get_conn() as con, con.cursor() as cur:
-        cur.execute('SELECT congestion.create_yearly_tables(%s);', (year))        
+        cur.execute('SELECT congestion.create_yearly_tables(%s);', (year,))        
 
 
 default_args = {'owner':'rdumas',
