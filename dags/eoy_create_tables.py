@@ -132,7 +132,7 @@ bt_create_tables = PythonOperator(task_id='bt_create_tables',
 bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                     python_callable = replace_bt_trigger,
                                     dag = dag,
-                                    op_kwargs = {'pg_hook': miovision_bot,
+                                    op_kwargs = {'pg_hook': bt_bot,
                                                  'dt': '{{ ds }}'})
 
 miovision_create_table = PythonOperator(task_id='miovision_create_table',
