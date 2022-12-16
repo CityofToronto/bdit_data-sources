@@ -96,25 +96,32 @@ try:
     from here_eoy_create_tables import create_here_ta_tables
 except ImportError:
     LOGGER.error('Cannot import functions for end of year HERE maintenance')
-
+except Exception as exc:
+    LOGGER.error('Unknown error, %s', exc)
+    
 try:
     sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/') 
     from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
 except ImportError:
     LOGGER.error("Cannot import functions for end of year bluetooth maintenance")
+except Exception as exc:
+    LOGGER.error('Unknown error, %s', exc)
 
 try:
     sys.path.append('/etc/airflow/data_scripts/volumes/miovision/sql/')
     from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
 except ImportError:
     LOGGER.error("Cannot import functions for end of year Miovision maintenance")
-
+except Exception as exc:
+    LOGGER.error('Unknown error, %s', exc)
+    
 try:
     sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
     from wys_eoy_create_table import create_wys_raw_data_table, replace_wys_raw_data_trigger
 except ImportError:
     LOGGER.error("Cannot import functions for end of year Miovision maintenance")
-
+except Exception as exc:
+    LOGGER.error('Unknown error, %s', exc)
 
 dag = DAG('eoy_table_create', default_args=default_args,
         schedule_interval='5 9 1 12 *') #9:05 on December 1st of every year
