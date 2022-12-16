@@ -103,6 +103,36 @@ def location_id(api_key):
             raise WYS_APIException(str(e))
     logger.info('location_id done')
 
+def get_statistics_hourly(location, start_date, hr, api_key):
+    headers={'Content-Type':'application/json','x-api-key':api_key}
+    response=session.get(url+statistics_url+str(location)+'/date/'+
+                        str(start_date)+'/from/'+str(hr).zfill(2)+
+                        ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
+                        headers=headers)
+    # Error handling
+    if response.status_code==200:
+        statistics=response.json()
+        return statistics
+    elif response.status_code==204:
+        error=response.json()
+        logger.error('204 error    '+error['error_message'])
+    elif response.status_code==404:
+        error=response.json()
+        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+    elif response.status_code==401:
+        error=response.json()
+        logger.error('401 error    '+error['error_message'])
+    elif response.status_code==405:
+        error=response.json()
+        logger.error('405 error    '+error['error_message'])        
+    elif response.status_code==504:
+        error=response.json()
+        logger.error('504 timeout pulling sign %s for hour %s', 
+                     location, hr)
+        raise TimeoutException('Error'+str(response.status_code))
+    else:
+        raise WYS_APIException('Error'+str(response.status_code))
+
 def get_statistics(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
@@ -209,33 +239,56 @@ def get_data_for_date(start_date, signs_iterator, api_key):
         List of active sign locations to be inserted into wys.locations
     '''
     speed_counts, sign_locations = [], []
-    for sign in signs_iterator:
-        api_id=sign[0]
-        name=sign[1]
-        logger.debug(str(name))
-        
-        for attempt in range(3):
-            try:
-                statistics=get_statistics(api_id, start_date, api_key)
-                raw_data=statistics['LocInfo']
-                raw_records=raw_data['raw_records']
-                spd_cnts = parse_counts_for_location(api_id, raw_records)
-                speed_counts.extend(spd_cnts)
-                sign_location = parse_location(api_id, start_date, raw_data['Location'])
-                sign_locations.append(sign_location)
-                
-            except TimeoutException:
-                sleep(180)
-            except exceptions.ProxyError as prox:
-                logger.error(prox)
-                logger.warning('Retrying in 2 minutes')
-                sleep(120)
-            except exceptions.RequestException as err:
-                logger.error(err)
-                sleep(75)
-
-            else:
-                break
+    # for each api_id: tuple of sign data and 24 hours to process
+    sign_hr_iterator = {int(i[0]):[i,list(range(24))] for i in signs_iterator}
+    # to assure each sign's location is only added once
+    sign_locations_list = []
+    for attempt in range(3):
+        if attempt > 0:
+            logger.info('Attempt %d, %d signs remaining',
+                        attempt + 1,
+                        len(sign_hr_iterator) )
+        for sign in sign_hr_iterator.values():
+            api_id=sign[0][0]
+            name=sign[0][1]
+            logger.debug(str(name))
+            hr_iterator = sign[1]
+            processed_hr = []
+            for hr in hr_iterator:
+                try:
+                    statistics=get_statistics_hourly(api_id, start_date, hr, api_key)
+                    raw_data=statistics['LocInfo']
+                    raw_records=raw_data['raw_records']
+                    spd_cnts = parse_counts_for_location(api_id, raw_records)
+                    speed_counts.extend(spd_cnts)
+                    if api_id not in sign_locations_list:
+                        sign_location = parse_location(api_id, start_date, raw_data['Location'])
+                        sign_locations.append(sign_location)
+                        sign_locations_list.append(api_id)
+                except TimeoutException:
+                    sleep(180)
+                except exceptions.ProxyError as prox:
+                    logger.error(prox)
+                    logger.warning('Retrying in 2 minutes')
+                    sleep(120)
+                except exceptions.RequestException as err:
+                    logger.error(err)
+                    sleep(75)
+                else:
+                   # keep track of processed intervals
+                   processed_hr.append(hr) 
+            # only keep intervals with no data
+            sign[1] = [h for h in sign[1] if h not in processed_hr]
+        # only keep signs with missing data
+        sign_hr_iterator = {i:sign_hr_iterator[i] for i in sign_hr_iterator if len(sign_hr_iterator[i][1]) > 0}
+        # return if already got all requested data
+        if sign_hr_iterator == {}:
+            return speed_counts, sign_locations
+    # log failures (if any)
+    for api_id in sign_hr_iterator:
+        logger.error('Failed to extract the data of sign #{} on {} for {} hours ({})'.format(
+                    api_id, start_date, len(sign_hr_iterator[api_id][1]), 
+                    ','.join(map(str,sign_hr_iterator[api_id][1]))))
     return speed_counts, sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -357,46 +410,59 @@ def update_locations(conn, loc_table):
                 sign_name text,
                 dir text,
                 start_date date,
-                loc text);
+                loc text,
+                geom geometry);
         """
         cur.execute(create_temp_table)
         execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
+        calc_geom_temp_table = """
+            UPDATE daily_intersections
+            SET geom = ST_Transform(ST_SetSRID(ST_MakePoint(split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 2)::double precision, 
+                                                            split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 1)::double precision), 
+                                               4326),
+                                    2952);
+            """
+        cur.execute(calc_geom_temp_table)
         update_locations_sql="""
             WITH locations AS (
-                SELECT api_id, address, sign_name, dir, loc, max(start_date)
+                SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom, id
                 FROM wys.locations 
-                GROUP BY api_id, address, sign_name, loc, dir
+                ORDER BY api_id, start_date DESC
             ),
             differences AS (
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
-                       a.loc 
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
+                       a.loc, a.geom 
+                FROM daily_intersections A
+                JOIN locations B ON (A.api_id = B.api_id
+                                      AND (st_distance(A.geom, B.geom) > 100
+                                           OR A.dir <> B.dir))
+                                      OR A.api_id NOT IN (SELECT api_id FROM locations)
+            ), 
+            new_signs AS (
+                INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
+                SELECT * FROM differences
+            ),
+            updated_signs AS (
+                SELECT a.api_id, a.address, a.sign_name, a.dir, a.loc, a.start_date, 
+                       a.geom, b.id 
                 FROM daily_intersections A
                 LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND A.sign_name = B.sign_name 
-                WHERE B.sign_name IS NULL 
-                
-                UNION
-                
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date,     
-                       a.loc 
-                FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND B.address = A.address
-                WHERE B.address IS NULL
-                
-                UNION 
-                
-                SELECT a.api_id, a.address, a.sign_name, a.dir, start_date, 
-                       a.loc
-                FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND B.loc = A.loc
-                WHERE B.loc IS NULL
-            
+                                      AND st_distance(A.geom, B.geom) < 100
+                                      AND A.dir = B.dir
+                                      AND (A.sign_name <> B.sign_name
+                                        OR A.address <> B.address)
             )
-            
-            INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc) 
-            SELECT * FROM differences
+            UPDATE wys.locations 
+                SET api_id = b.api_id,
+                    address = b.address,
+                    sign_name = b.sign_name,
+                    dir = b.dir,
+                    start_date = b.start_date,
+                    loc = b.loc,
+                    id = b.id,
+                    geom = b.geom
+                FROM updated_signs b
+                WHERE locations.id = b.id            
         """
         cur.execute(update_locations_sql)
 
