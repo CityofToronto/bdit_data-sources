@@ -2,6 +2,9 @@ import sys
 
 from airflow import DAG
 from datetime import datetime, timedelta
+import logging
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.postgres_hook import PostgresHook
@@ -91,26 +94,26 @@ wys_bot = PostgresHook('wys_bot')
 try:
     sys.path.append('/etc/airflow/data_scripts/here/traffic/')
     from here_eoy_create_tables import create_here_ta_tables
-except:
-    raise ImportError("Cannot import functions for end of year HERE maintenance")
+except ImportError:
+    LOGGER.error('Cannot import functions for end of year HERE maintenance')
 
 try:
     sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/') 
     from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
-except:
-    raise ImportError("Cannot import functions for end of year bluetooth maintenance")
+except ImportError:
+    LOGGER.error("Cannot import functions for end of year bluetooth maintenance")
 
 try:
     sys.path.append('/etc/airflow/data_scripts/volumes/miovision/sql/')
     from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
-except:
-    raise ImportError("Cannot import functions for end of year Miovision maintenance")
+except ImportError:
+    LOGGER.error("Cannot import functions for end of year Miovision maintenance")
 
 try:
     sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
     from wys_eoy_create_table import create_wys_raw_data_table, replace_wys_raw_data_trigger
-except:
-    raise ImportError("Cannot import functions for end of year Miovision maintenance")
+except ImportError:
+    LOGGER.error("Cannot import functions for end of year Miovision maintenance")
 
 
 dag = DAG('eoy_table_create', default_args=default_args,
