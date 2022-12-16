@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 import psycopg2
 
 def _get_year_from_dt(dt):
-    next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    next_dt = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
     return str(next_dt.year)
 
 def create_here_ta_tables(pg_hook = None, dt = None):

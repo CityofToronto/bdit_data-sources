@@ -23,7 +23,7 @@ $BODY$;
 '''
 
 def _get_year_from_dt(dt):
-    next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    next_dt = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
     return str(next_dt.year)
 
 def create_bt_obs_tables(pg_hook = None, dt = None):

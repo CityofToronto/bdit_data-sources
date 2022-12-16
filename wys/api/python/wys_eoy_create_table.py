@@ -4,26 +4,26 @@ from dateutil.relativedelta import relativedelta
 import psycopg2
 
 trigger_sql_preamble='''CREATE OR REPLACE FUNCTION wys.insert_trigger()
-RETURNS trigger
-LANGUAGE 'plpgsql'
-COST 100
-VOLATILE NOT LEAKPROOF SECURITY DEFINER
-AS $BODY$
-BEGIN
-'''
+                        RETURNS trigger
+                        LANGUAGE 'plpgsql'
+                        COST 100
+                        VOLATILE NOT LEAKPROOF SECURITY DEFINER
+                        AS $BODY$
+                        BEGIN
+                        '''
 trigger_sql_logic='''IF (new.datetime_bin >= '{year}-01-01' AND new.datetime_bin < '{year}-01-01'::DATE + INTERVAL '1 year') THEN 
-        INSERT INTO wys.raw_data_{year} VALUES (NEW.api_id, NEW.datetime_bin, NEW.speed, NEW.count) ON CONFLICT DO NOTHING;'''
+                    INSERT INTO wys.raw_data_{year} VALUES (NEW.api_id, NEW.datetime_bin, NEW.speed, NEW.count) ON CONFLICT DO NOTHING;'''
 #Starts with an E because there's got to be "ELS" prepended to this 
 trigger_sql_end='''E 
-    RAISE EXCEPTION 'Datetime_bin out of range.  Fix the wys.insert_trigger() function!';
-	END IF;
-	RETURN NULL;
-END;
-$BODY$;
-'''
+                RAISE EXCEPTION 'Datetime_bin out of range.  Fix the wys.insert_trigger() function!';
+                END IF;
+                RETURN NULL;
+                END;
+                $BODY$;
+                '''
 
 def _get_year_from_dt(dt):
-    next_dt = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    next_dt = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
     return str(next_dt.year)
 
 def create_wys_raw_data_table(pg_hook = None, dt = None):

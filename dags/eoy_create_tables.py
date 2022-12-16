@@ -56,7 +56,7 @@ def slack_here_trigger_sql(context):
     return success_alert.execute(context=context)
 
 def insert_holidays(dt):
-    next_year = datetime.strptime(dt,  "%Y-%m-%d") + relativedelta(years=1)
+    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
     holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
     ref_bot = PostgresHook('ref_bot')
     with ref_bot.get_conn() as con, con.cursor() as cur:
