@@ -89,25 +89,25 @@ miovision_bot = PostgresHook('miovision_api_bot')
 wys_bot = PostgresHook('wys_bot')
 
 try:
-    sys.path.append('/etc/airflow/dev_scripts/here/traffic/')
+    sys.path.append('/etc/airflow/data_scripts/here/traffic/')
     from here_eoy_create_tables import create_here_ta_tables
 except:
     raise ImportError("Cannot import functions for end of year HERE maintenance")
 
 try:
-    sys.path.append('/etc/airflow/dev_scripts/bluetooth/sql/') 
+    sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/') 
     from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
 except:
     raise ImportError("Cannot import functions for end of year bluetooth maintenance")
 
 try:
-    sys.path.append('/etc/airflow/dev_scripts/volumes/miovision/sql/')
+    sys.path.append('/etc/airflow/data_scripts/volumes/miovision/sql/')
     from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
 except:
     raise ImportError("Cannot import functions for end of year Miovision maintenance")
 
 try:
-    sys.path.append('/etc/airflow/dev_scripts/wys/api/python/')
+    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
     from wys_eoy_create_table import create_wys_raw_data_table, replace_wys_raw_data_trigger
 except:
     raise ImportError("Cannot import functions for end of year Miovision maintenance")
