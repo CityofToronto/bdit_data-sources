@@ -538,7 +538,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             
                 try:
                     # Delete rows that no longer exists in the new table
-                    cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} = (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
+                    cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} IN (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
 
                     # And then upsert stuff
                     upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
