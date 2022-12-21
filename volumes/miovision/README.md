@@ -65,7 +65,8 @@ classification|text|Textual description of mode|Bicycles|
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
-Here is a description of the classification_uids and corresponding types:
+Here is a description of the classification_uids and corresponding types. 
+Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
 
 **classification_uid**|**classification**|**definition**|
 :-----|:-----|:-----|
