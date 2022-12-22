@@ -1,10 +1,6 @@
-# ActiveTO - Multimodal Volumes
+# Bicycle Volume Seasonality Model
 
-## Overview
-
-[to be filled in later]
-
-## Seasonality
+## Building the Seasonality Model
 
 ### Model
 A linear regression model is currently employed to estimate daily correction factors for cyclists. This model was estimated using available weather and sunlight data (see below) and cycling data in 2019 from the permanent count station located at Bloor and Huron. Two seperate models were estimated: one for weekdays, and one for weekends and holidays.
@@ -31,9 +27,6 @@ Daily correction factors are estimated for each day of the year based on two dis
 - **Weather Data**: . This data is currently stored in `activeto.weather` and needs to be updated periodically from Environment Canada's historical weather dataset for Toronto City Centre, located [here](https://climate.weather.gc.ca/climate_data/daily_data_e.html?StationID=48549). A CSV file for maintaining this data (and uploading to the RDS) is located [in this branch](/cycling_corridors/volumes/seasonality/_lookups).
 - **Sunlight Data**: This data is currently stored in `activeto.sunlight` and needs to be updated periodically from [Weather Stats](https://weather-stats.com/canada/toronto/sun).  A CSV file for maintaining this data (and uploading to the RDS) is located [in this branch](/cycling_corridors/volumes/seasonality/_lookups).
 
-
-### Past Work
-Previously, these adjustment factors were generated using observed volume data at Bloor and Huron, with the assumption that a combination of a seasonality curve (based on 2019 data), and localized increases or drops at the station, could be transferrable to other locations in the network. This station has been down as of February 2021. Attempts were made to replicate this work using Miovision stations across the City, but these were found to be unreliable.
 
 ## Applying the Seasonality Model
 
