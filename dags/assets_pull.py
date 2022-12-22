@@ -97,10 +97,10 @@ def pull_rlc():
     rows = []
     
     # column names in the PG table
-    col_names = ['rlc','tcs','loc','additional_info','main','side1','side2','mid_block','private_access','x','y','district','ward1','ward2','ward3','ward4','police_division_1','police_division_2','police_division_3','date_installed','longitude','latitude'] 
+    col_names = ['rlc','tcs','loc','additional_info','main','side1','side2','mid_block','private_access','district','ward1','ward2','ward3','ward4','police_division_1','police_division_2','police_division_3','date_installed','longitude','latitude'] 
 
     # attribute names in JSON dict
-    att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','X','Y','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
+    att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
 
     # each "info" is all the properties of one RLC, including its coords
     for info in rlcs:
