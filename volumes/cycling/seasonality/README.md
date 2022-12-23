@@ -24,8 +24,8 @@ The parameters above are currently hard coded into the view used to generate sea
 
 Daily correction factors are estimated for each day of the year based on two distinct datasets:
 
-- **Weather Data**: . This data is currently stored in `activeto.weather` and needs to be updated periodically from Environment Canada's historical weather dataset for Toronto City Centre, located [here](https://climate.weather.gc.ca/climate_data/daily_data_e.html?StationID=48549). A CSV file for maintaining this data (and uploading to the RDS) is located [in this branch](/cycling_corridors/volumes/seasonality/_lookups).
-- **Sunlight Data**: This data is currently stored in `activeto.sunlight` and needs to be updated periodically from [Weather Stats](https://weather-stats.com/canada/toronto/sun).  A CSV file for maintaining this data (and uploading to the RDS) is located [in this branch](/cycling_corridors/volumes/seasonality/_lookups).
+- **Weather Data**: . This data is currently stored in `activeto.weather` and needs to be updated periodically from Environment Canada's historical weather dataset for Toronto City Centre, located [here](https://climate.weather.gc.ca/climate_data/daily_data_e.html?StationID=48549). A CSV file for maintaining this data (and uploading to the RDS) is located [in the `_lookups/` folder](_lookups/).
+- **Sunlight Data**: This data is currently stored in `activeto.sunlight` and needs to be updated periodically from [Weather Stats](https://weather-stats.com/canada/toronto/sun).  A CSV file for maintaining this data (and uploading to the RDS) is located [in the `_lookups/` folder](_lookups/).
 
 
 ## Applying the Seasonality Model
