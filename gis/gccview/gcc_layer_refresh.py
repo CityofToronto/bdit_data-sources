@@ -45,7 +45,7 @@ pk_dict = {
     "aboriginal_organization": "id",
     "attraction": "objectid",
     "dropin": "objectid",
-    "early_years_centre": "objectid",
+    "early_years_centre": "id",
     "family_resource_centre": "objectid",
     "food_bank": "objectid",
     "longterm_care": "id",
