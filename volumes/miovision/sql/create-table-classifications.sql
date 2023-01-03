@@ -9,3 +9,4 @@ WITH (
     OIDS = FALSE
 )
 TABLESPACE pg_default;
+ALTER TABLE miovision_api.classifications OWNER TO miovision_admins;
