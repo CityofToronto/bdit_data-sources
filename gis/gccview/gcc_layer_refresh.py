@@ -188,6 +188,11 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
                                                                       columns = col_list_string)
             
             cur.execute(create_sql)
+
+            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema}.{table} OWNER to {owner}").format(schema = sql.Identifier(schema_name),
+                                                                      table = sql.Identifier(temp_table_name),
+                                                                      owner = 'gis_admins')
+            cur.execute(owner_sql)
     
     # Add a pk
     with con:
@@ -420,6 +425,8 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
         row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
+        
+        row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDouble' or feature['attributes'][trial[0]] == None else int(feature['attributes'][trial[0]]) for trial in trials]
         row.append(geometry)
         
         rows.append(row)
@@ -562,8 +569,11 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                 try:
                     cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
 
-                    cur.execute(sql.SQL("select {schema}.audit_table({schema}.{tablename})").format(schema = sql.Identifier(schema_name),
-                                                                                                     tablename = sql.Identifier(output_table)))
+                    
+                    # Make schema_name and output_table into a single string
+                    target_audit_table = sql.Literal(schema_name + '.' + output_table)
+                    cur.execute(sql.SQL("select {schema}.audit_table({schematable})").format(schema = sql.Identifier(schema_name), 
+                                                                                            schematable = target_audit_table))
                     LOGGER.info('New table %s created and added to audit table list', output_table)
                 except Exception:
                     # pass exception to function
