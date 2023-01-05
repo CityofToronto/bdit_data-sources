@@ -199,3 +199,19 @@ BEGIN
 	END IF;
 END;
 $BODY$;
+
+
+
+ALTER FUNCTION here.aggregate_corridor(text, text, text, date, date, boolean)
+    OWNER TO here_admins;
+
+GRANT EXECUTE ON FUNCTION here.aggregate_corridor(text, text, text, date, date, boolean) TO bdit_humans;
+
+COMMENT ON FUNCTION here.aggregate_corridor(text, text, text, date, date, boolean)
+    IS 'It takes in date range, time range, corridor definition defined by the user, 
+	and aggregates HERE data using the congestion daily segment tables. 
+	Returning a table containing corridor level period data for each analysis period. 
+	e.g. Yonge street from Eglinton to St Clair from November to December 2022 (analysis period) 
+	for each peak periods (AM Peak, PM Peak).
+	User will need to define date range, time range, and corridor in a standardize format prior to using this function, 
+	there are no default values.';
