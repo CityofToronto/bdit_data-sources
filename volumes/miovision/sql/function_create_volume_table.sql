@@ -29,6 +29,7 @@ EXECUTE format($$CREATE TABLE miovision_api.%I
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I USING brin(datetime_bin) $$, _tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I (volume_15min_mvt_uid) $$, _tablename);
       EXECUTE format($$ CREATE INDEX ON miovision_api.%I (intersection_uid) $$, _tablename);
+      EXECUTE format($$ GRANT INSERT, SELECT ON TABLE miovision_api.%I TO miovision_api_bot $$, _tablename);
 END;
 $BODY$;
 
