@@ -184,21 +184,18 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
             col_list_string = sql.SQL(',').join(col_list)
             
             LOGGER.info(col_list_string.as_string(con))
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{table} ({columns})").format(schema = sql.Identifier(schema_name),
-                                                                      table = sql.Identifier(temp_table_name),
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
                                                                       columns = col_list_string)
             LOGGER.info(create_sql.as_string(con))
             cur.execute(create_sql)
 
-            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema}.{table} OWNER to gis_admins").format(schema = sql.Identifier(schema_name),
-                                                                      table = sql.Identifier(temp_table_name))
+            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema_table} OWNER to gis_admins").format(schema_table = sql.Identifier(schema_name, temp_table_name))
             cur.execute(owner_sql)
     
     # Add a pk
     with con:
         with con.cursor() as cur:
-            cur.execute(sql.SQL("ALTER TABLE {schema}.{table} ADD PRIMARY KEY ({pk})").format(schema = sql.Identifier(schema_name),
-                                                                                               table = sql.Identifier(temp_table_name),
+            cur.execute(sql.SQL("ALTER TABLE {schema_table} ADD PRIMARY KEY ({pk})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
                                                                                                pk = sql.Identifier(primary_key)))
     return insert_column, excluded_column
 
@@ -440,9 +437,8 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
     # Since this is a temporary table, name it '_table' as opposed to 'table' for now (for audited tables)
     temp_table_name = '_' + output_table
     
-    insert=sql.SQL("INSERT INTO {schema}.{table} ({columns}) VALUES %s").format(
-        schema = sql.Identifier(schema_name), 
-        table = sql.Identifier(temp_table_name), 
+    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
+        schema_table = sql.Identifier(schema_name, temp_table_name), 
         columns = insert_column
     )
     with con:
@@ -496,9 +492,8 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
         rows.append(row)
 
     
-    insert=sql.SQL("INSERT INTO {schema}.{table} ({columns}) VALUES %s").format(
-        schema = sql.Identifier(schema_name), 
-        table = sql.Identifier(output_table_with_date), 
+    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
+        schema_table = sql.Identifier(schema_name, output_table_with_date), 
         columns = insert_column
     )
     with con:
