@@ -421,12 +421,6 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
 
-    '''
-    with con:
-        with con.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS gis._school;")
-    '''
-
     for feature in features:
         geom = feature['geometry']
         geometry_type = return_json['geometryType']
