@@ -183,15 +183,15 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
             col_list.append(sql.Identifier('geom') + sql.SQL(' ') + sql.SQL('geometry'))
             col_list_string = sql.SQL(',').join(col_list)
             
+            LOGGER.info(col_list_string.as_string(con))
             create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{table} ({columns})").format(schema = sql.Identifier(schema_name),
                                                                       table = sql.Identifier(temp_table_name),
                                                                       columns = col_list_string)
-            
+            LOGGER.info(create_sql.as_string(con))
             cur.execute(create_sql)
 
-            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema}.{table} OWNER to {owner}").format(schema = sql.Identifier(schema_name),
-                                                                      table = sql.Identifier(temp_table_name),
-                                                                      owner = 'gis_admins')
+            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema}.{table} OWNER to gis_admins").format(schema = sql.Identifier(schema_name),
+                                                                      table = sql.Identifier(temp_table_name))
             cur.execute(owner_sql)
     
     # Add a pk
@@ -420,13 +420,19 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
     features = return_json['features']
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
+
+    '''
+    with con:
+        with con.cursor() as cur:
+            cur.execute("DROP TABLE IF EXISTS gis._school;")
+    '''
+
     for feature in features:
         geom = feature['geometry']
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
         row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
         
-        row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDouble' or feature['attributes'][trial[0]] == None else int(feature['attributes'][trial[0]]) for trial in trials]
         row.append(geometry)
         
         rows.append(row)
@@ -548,7 +554,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} IN (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
 
                     # And then upsert stuff
-                    upsert_string = "insert into {schema}.{tablename} select * from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
+                    upsert_string = "insert into {schema}.{tablename} ({cols}) select {cols} from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
                     cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
                                                               tablename = sql.Identifier(output_table),
                                                               temp_table = sql.Identifier(temp_table_name),
