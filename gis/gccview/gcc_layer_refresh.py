@@ -495,7 +495,7 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
                 row.append(to_time(feature['attributes'][trial[0]]))
             else:
                 row.append(feature['attributes'][trial[0]])
-        
+
         row.insert(0, today_string)
         row.append(geometry)
         
@@ -556,17 +556,17 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     with con:
         with con.cursor() as cur:
             
-            cur.execute(sql.SQL("select count(1) from information_schema.tables where table_schema = %s and table_name = %s"), (schema_name, output_table))
+            cur.execute(sql.SQL("SELECT COUNT(1) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s"), (schema_name, output_table))
             result = cur.fetchone()
             # If table exists
             if result[0] == 1:
             
                 try:
-                    # Delete rows that no longer exists in the new table
-                    cur.execute(sql.SQL("delete from {schema}.{tablename} where {pk} IN (select {pk} from {schema}.{tablename} except select {pk} from {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
+                    # Delete rows that no longer exist in the new table
+                    cur.execute(sql.SQL("DELETE FROM {schema}.{tablename} WHERE {pk} IN (SELECT {pk} FROM {schema}.{tablename} EXCEPT SELECT {pk} FROM {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
 
                     # And then upsert stuff
-                    upsert_string = "insert into {schema}.{tablename} ({cols}) select {cols} from {schema}.{temp_table} on conflict ({pk}) do update set ({cols}) = ({excl_cols}); comment on table {schema}.{tablename} is 'last updated: {date}'"
+                    upsert_string = "INSERT INTO {schema}.{tablename} ({cols}) SELECT {cols} FROM {schema}.{temp_table} ON CONFLICT ({pk}) DO UPDATE SET ({cols}) = ({excl_cols}); COMMENT ON TABLE {schema}.{tablename} IS 'last updated: {date}'"
                     cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
                                                               tablename = sql.Identifier(output_table),
                                                               temp_table = sql.Identifier(temp_table_name),
@@ -585,12 +585,12 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             # if table does not exist -> create a new one and add to audit list
             else:
                 try:
-                    cur.execute(sql.SQL("alter table {schema}.{temp_table} rename to {tablename}; comment on table {schema}.{tablename} is 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
+                    cur.execute(sql.SQL("ALTER TABLE {schema}.{temp_table} RENAME TO {tablename}; COMMENT ON TABLE {schema}.{tablename} IS 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
 
                     
                     # Make schema_name and output_table into a single string
                     target_audit_table = sql.Literal(schema_name + '.' + output_table)
-                    cur.execute(sql.SQL("select {schema}.audit_table({schematable})").format(schema = sql.Identifier(schema_name), 
+                    cur.execute(sql.SQL("SELECT {schema}.audit_table({schematable})").format(schema = sql.Identifier(schema_name), 
                                                                                             schematable = target_audit_table))
                     LOGGER.info('New table %s created and added to audit table list', output_table)
                 except Exception:
@@ -601,7 +601,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     successful_execution = False
             
             # And then drop the temp table (if exists)
-            cur.execute(sql.SQL("drop table if exists {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
+            cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
                                                                                          temp_table = sql.Identifier(temp_table_name)))
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
