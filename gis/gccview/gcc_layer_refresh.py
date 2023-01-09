@@ -431,8 +431,14 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
         geom = feature['geometry']
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
-        row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
         
+        row = []
+        for trial in trials:
+            if trial[1] == 'esriFieldTypeDate' and feature['attributes'][trial[0]] != None:
+                row.append(to_time(feature['attributes'][trial[0]]))
+            else:
+                row.append(feature['attributes'][trial[0]])
+
         row.append(geometry)
         
         rows.append(row)
@@ -482,7 +488,13 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
         geom = feature['geometry']
         geometry_type = return_json['geometryType']
         geometry = get_geometry(geometry_type, geom)
-        row = [feature['attributes'][trial[0]] if trial[1] != 'esriFieldTypeDate' or feature['attributes'][trial[0]] == None else to_time(feature['attributes'][trial[0]]) for trial in trials]
+        
+        row = []
+        for trial in trials:
+            if trial[1] == 'esriFieldTypeDate' and feature['attributes'][trial[0]] != None:
+                row.append(to_time(feature['attributes'][trial[0]]))
+            else:
+                row.append(feature['attributes'][trial[0]])
         
         row.insert(0, today_string)
         row.append(geometry)
