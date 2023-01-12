@@ -46,7 +46,7 @@ The City collects traffic data from strategically placed sensors at intersection
 
 #### Live Feed
 
-The live feed can be accessed at [this url](https://bliptracktor.bliptrack.net:4443/blipzones/api/rest/public/display?displayId=PUBLIC), ironically, due to its non-standard port number `4443`, this can't actually be accessed behind the City's firewall. The feed is an xml for all the route reports configured to be published publically and is updated every five minutes.
+The live feed hasn't been available for a while due to networking issues. ~The feed is an xml for all the route reports configured to be published publically and is updated every five minutes.~
 
 **Field Name**|**Description**|**Example**
 :-----:|:-----:|:-----:

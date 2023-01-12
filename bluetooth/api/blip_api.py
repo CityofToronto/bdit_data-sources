@@ -1,9 +1,6 @@
 """blip_api.py
-
 Script to pull Bluetooth data from the Blip api. 
-
 main defaults to getting the previous day's data 
-
 """
 
 import argparse
@@ -12,8 +9,12 @@ import datetime
 import logging
 import os
 import sys
+#from syslog import LOG_DEBUG
 import time
 import traceback
+import json
+import psycopg2
+from psycopg2 import connect, sql, InternalError, IntegrityError, DatabaseError
 from datetime import date
 from itertools import product
 from typing import List
@@ -21,7 +22,7 @@ from typing import List
 import urllib3
 import zeep
 from dateutil.relativedelta import relativedelta
-from pg import DB, InternalError, DatabaseError, IntegrityError
+from psycopg2.extras import Json, execute_values
 from requests import RequestException, Session
 from tenacity import retry, before_sleep_log, wait_exponential, retry_if_exception_type, RetryError
 from zeep import Client
@@ -46,17 +47,17 @@ def parse_args(args, prog=None, usage=None):
                         "previous day. ",
                         metavar=('YYYYMMDD', 'YYYYMMDD'))
     parser.add_argument("-a", "--analysis", action='append', type= int,
-                        help="Analysis ID to pull. Add more flags for multiple IDs")
+                        help="Analysis ID to pull. Add more flags for multiple IDs. Otherwise pulls all routes.")
     parser.add_argument("-d", "--dbsetting",
                         default='config.cfg',
                         help="Filename with connection settings to the database "
                         "(default: opens %(default)s)")
     parser.add_argument("--direct",
                         action='store_true',
-                        help="Use DIRECT proxy if using from workstation")
+                        help="Use this flag to use the proxy if using from workstation. Do not use if running from terminal server")
     parser.add_argument("--live",
                         action='store_true',
-                        help="Pull most recent clock hour of live data")
+                        help="Pull most recent clock hour of live data, for King Street Pilot")
 
     return parser.parse_args(args)
 
@@ -87,21 +88,20 @@ def get_data_for_config(blip, un: str, pw: str, config):
         data = blip.service.exportPerUserData(un, pw, config)
     return data
 
-@retry(retry=retry_if_exception_type(InternalError),
+@retry(retry=retry_if_exception_type(psycopg2.InternalError),
        wait=wait_exponential(multiplier=15, max=900), before_sleep=before_sleep_log(LOGGER, logging.ERROR))
 def _get_db(dbset):
-    '''Create a pygresql DB object and retry for up to 15 minutes if the connection is unsuccessful'''
-    return DB(**dbset)
+    '''Create a psycopg2 DB object and retry for up to 15 minutes if the connection is unsuccessful'''
+    return connect(**dbset)
 
 
 def insert_data(data: list, dbset: dict, live: bool):
     '''
     Upload data to the database
-
     :param data:
         List of dictionaries, gets converted to list of tuples
     :param dbset:
-        DB settings passed to Pygresql to create a connection 
+        DB settings passed to psycopg2 to create a connection 
     '''
     num_rows = len(data)
     if num_rows > 0:
@@ -120,16 +120,22 @@ def insert_data(data: list, dbset: dict, live: bool):
                dic["deviceClass"])
         to_insert.append(row)
     try:
-        db = _get_db(dbset)
+        conn = _get_db(dbset)
     except RetryError as retry_err:
         LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
         retry_err.reraise()
         sys.exit(1)
     if live:
-        db.inserttable('king_pilot.daily_raw_bt', to_insert)
+        sql='INSERT INTO king_pilot.daily_raw_bt VALUES %s'
+        with conn:
+            with conn.cursor() as cur:
+                   execute_values(cur, sql, to_insert)  
     else:
-        db.inserttable('bluetooth.raw_data', to_insert)
-    db.close()
+        sql='INSERT INTO bluetooth.raw_data VALUES %s'
+        with conn:
+            with conn.cursor() as cur:
+                   execute_values(cur, sql, to_insert)  
+    conn.close()
 
 
 def get_wsdl_client(wsdlfile, direct=None, live=False):
@@ -165,7 +171,6 @@ def get_wsdl_client(wsdlfile, direct=None, live=False):
             config[key] = zeep.xsd.SkipValue
     return blip, config
 
-
 def update_configs(all_analyses, dbset):
     '''
     Syncs configs from blip server with database and returns configs to pull 
@@ -177,70 +182,101 @@ def update_configs(all_analyses, dbset):
     '''
 
     try:
-        db = _get_db(dbset)
+        conn = _get_db(dbset)
     except RetryError as retry_err:
         LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
         retry_err.reraise()
-    db.begin()
-    db.query('''TRUNCATE bluetooth.all_analyses_day_old;
-    INSERT INTO bluetooth.all_analyses_day_old SELECT * FROM bluetooth.all_analyses;''')
-    db.commit()
+    with conn:
+        with conn.cursor() as curs:
+            curs.execute('''TRUNCATE bluetooth.all_analyses_day_old;
+                            INSERT INTO bluetooth.all_analyses_day_old 
+							SELECT * FROM bluetooth.all_analyses;''')
+        
     analyses_pull_data = {}
     for report in all_analyses:
-        report.outcomes = [outcome.__json__() for outcome in report.outcomes]
-        report.routePoints = [route_point.__json__()
-                              for route_point in report.routePoints]
+        outcomes_arr = json.dumps([i.__dict__ for i in report.outcomes])
+        routePoints_arr = json.dumps([i.__dict__ for i in report.routePoints])
+
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,
-                   minimum_point_completed=db.encode_json(
-                       report.minimumPointCompleted.__json__()),
-                   outcomes=report.outcomes,
+                   minimum_point_completed=json.dumps(
+                        report.minimumPointCompleted.__json__()),
+                   outcomes= outcomes_arr,
                    report_id=report.reportId,
                    report_name=report.reportName,
                    route_id=report.routeId,
                    route_name=report.routeName,
-                   route_points=report.routePoints)
+                   route_points=routePoints_arr)
+
         #If upsert fails, log error and continue, don't add analysis to analyses to pull
         try:
-            upserted = db.upsert('bluetooth.all_analyses', row,
-                                 pull_data='included.pull_data')
-            analyses_pull_data[upserted['analysis_id']] = {'pull_data': upserted['pull_data'],
-                                                           'report_name': upserted['report_name']}
+            upsert_sql = '''INSERT INTO bluetooth.all_analyses (device_class_set_name, analysis_id, 
+                                                                minimum_point_completed, outcomes, report_id, report_name, 
+                                                                route_id, route_name, route_points)
+                            VALUES (%(device_class_set_name)s, %(analysis_id)s, %(minimum_point_completed)s, %(outcomes)s, %(report_id)s, %(report_name)s, %(route_id)s, %(route_name)s, %(route_points)s)
+                            ON CONFLICT (analysis_id)
+                            DO UPDATE SET (device_class_set_name, minimum_point_completed, outcomes, report_id, report_name, route_id, route_name, route_points)
+                                            = (EXCLUDED.device_class_set_name,
+                                               EXCLUDED.minimum_point_completed,
+                                               EXCLUDED.outcomes ,
+                                               EXCLUDED.report_id,
+                                               EXCLUDED.report_name,
+                                               EXCLUDED.route_id ,
+                                               EXCLUDED.route_name ,
+                                               EXCLUDED.route_points)
+                            RETURNING analysis_id, report_name, pull_data; 
+                        '''
+            with conn:
+                with conn.cursor() as cur:  
+                    cur.execute(upsert_sql, row)
+                    upserted = cur.fetchone()
+            analyses_pull_data[upserted[0]] = {'pull_data': upserted[2],
+                                                           'report_name': upserted[1]}
         except IntegrityError as err:
             LOGGER.error(err)
 
-    db.close()
-
+    conn.close()
     analyses_to_pull = {analysis_id: analysis for (
-        analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
+                                                analysis_id, analysis) in analyses_pull_data.items() if analysis['pull_data']}
+
     return analyses_to_pull
 
 def move_data(dbset):
     try:
         try:
-            db = _get_db(dbset)
+            conn = _get_db(dbset)
         except RetryError as retry_err:
             LOGGER.critical('Number of retries exceeded to connect to DB with the error:')
             retry_err.reraise()
-        db.begin()
-        query = db.query("SELECT bluetooth.move_raw_data();")
-        if query.getresult()[0][0] != 1:
-            db.rollback()
-            raise DatabaseError('bluetooth.move_raw_data did not complete successfully')
-        query = db.query("SELECT king_pilot.load_bt_data();")
-        if query.getresult()[0][0] != 1:
-            db.rollback()
-            raise DatabaseError('king_pilot.load_bt_data did not complete successfully')
-        query = db.query("TRUNCATE bluetooth.raw_data;")
-        db.query('DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;')
-        db.commit()
+        ## BT move raw data
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT bluetooth.move_raw_data();")
+                query = cur.fetchone()
+        if query[0] != 1:
+            conn.rollback()
+            raise DatabaseError('bluetooth.move_raw_data did not complete successfully') 
+        ## King pilot 
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT king_pilot.load_bt_data();")
+                query = cur.fetchone()    
+        if query[0] != 1:
+            conn.rollback()
+            raise DatabaseError('king_pilot.load_bt_data did not complete successfully') 
+        ## Truncate and delete if successful 
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE bluetooth.raw_data;")
+                cur.execute("DELETE FROM king_pilot.daily_raw_bt WHERE measured_timestamp < now()::DATE;")
+                
     except DatabaseError as dberr:
         LOGGER.error(dberr)
-        db.rollback()
+        conn.rollback()
     except IntegrityError:
         LOGGER.critical('Moving data failed due to violation of a constraint. Data will have to be moved manually')
     finally:
-        db.close()
+        conn.close()
 
 def load_config(dbsetting):
     config = configparser.ConfigParser()
@@ -267,22 +303,23 @@ def main(dbsetting: 'path/to/config.cfg' = None,
 
     dbset, api_settings = load_config(dbsetting)
 
-    # Access the API using zeep
+    # Access the API using zeep (Why do we need to sleep the connection when that function exist)
     LOGGER.info('Fetching config from blip server')
     blip, config = get_wsdl_client(api_settings['WSDLfile'], direct, live)
 
-    try:
-        db = DB(**dbset)
-    except InternalError as _:
-        LOGGER.error('Connection error to RDS, sleeping for ten minutes')
-        sleep(60 * 10)
-        db = DB(**dbset)
+    try: 
+        conn = _get_db(dbset) 
+    except RetryError as retry_err: 
+        LOGGER.critical('Number of retries exceeded to connect to DB with the error:') 
+        retry_err.reraise() 
+        sys.exit(1) 
 
     if live:
-        
-        
-        query = db.query("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
-        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
+        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+
     else:
         #Querying data that's been further processed overnight
         if not analysis:
@@ -291,12 +328,16 @@ def main(dbsetting: 'path/to/config.cfg' = None,
                                                             api_settings['pw'])
             LOGGER.info('Updating route configs')
             routes_to_pull = update_configs(all_analyses, dbset)
+
         else:
             LOGGER.info('Fetching info on the following analyses from the database: %s', analysis)
             sql = '''WITH analyses AS (SELECT unnest(%(analysis)s::bigint[]) AS analysis_id)
                     SELECT analysis_id, report_name FROM bluetooth.all_analyses INNER JOIN analyses USING(analysis_id)'''
-            query = db.query_formatted(sql, {'analysis':analysis})
-            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in query.getresult()}
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, {'analysis':analysis})
+            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+
         date_to_process = None
 
     if years is None and live:

@@ -1,8 +1,87 @@
-﻿CREATE OR REPLACE FUNCTION bluetooth.observations_insert_trigger()
-  RETURNS trigger AS
-$BODY$
+-- FUNCTION: bluetooth.observations_insert_trigger()
+
+-- DROP FUNCTION bluetooth.observations_insert_trigger();
+
+CREATE OR REPLACE FUNCTION bluetooth.observations_insert_trigger()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
 BEGIN
-    IF ( NEW.measured_timestamp > DATE '2014-01-01' AND
+	IF ( NEW.measured_timestamp > DATE '2021-01-01' AND
+         NEW.measured_timestamp <= DATE '2021-02-01' ) THEN
+        INSERT INTO bluetooth.observations_202101 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-02-01' AND
+         NEW.measured_timestamp <= DATE '2021-03-01' ) THEN
+        INSERT INTO bluetooth.observations_202102 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-03-01' AND
+         NEW.measured_timestamp <= DATE '2021-04-01' ) THEN
+        INSERT INTO bluetooth.observations_202103 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-04-01' AND
+         NEW.measured_timestamp <= DATE '2021-05-01' ) THEN
+        INSERT INTO bluetooth.observations_202104 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-05-01' AND
+         NEW.measured_timestamp <= DATE '2021-06-01' ) THEN
+        INSERT INTO bluetooth.observations_202105 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-06-01' AND
+         NEW.measured_timestamp <= DATE '2021-07-01' ) THEN
+        INSERT INTO bluetooth.observations_202106 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-07-01' AND
+         NEW.measured_timestamp <= DATE '2021-08-01' ) THEN
+        INSERT INTO bluetooth.observations_202107 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-08-01' AND
+         NEW.measured_timestamp <= DATE '2021-09-01' ) THEN
+        INSERT INTO bluetooth.observations_202108 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-09-01' AND
+         NEW.measured_timestamp <= DATE '2021-10-01' ) THEN
+        INSERT INTO bluetooth.observations_202109 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-10-01' AND
+         NEW.measured_timestamp <= DATE '2021-11-01' ) THEN
+        INSERT INTO bluetooth.observations_202110 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-11-01' AND
+         NEW.measured_timestamp <= DATE '2021-12-01' ) THEN
+        INSERT INTO bluetooth.observations_202111 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2021-12-01' AND
+         NEW.measured_timestamp <= DATE '2021-12-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_202112 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-01-01' AND
+         NEW.measured_timestamp <= DATE '2020-02-01' ) THEN
+        INSERT INTO bluetooth.observations_202001 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-02-01' AND
+         NEW.measured_timestamp <= DATE '2020-03-01' ) THEN
+        INSERT INTO bluetooth.observations_202002 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-03-01' AND
+         NEW.measured_timestamp <= DATE '2020-04-01' ) THEN
+        INSERT INTO bluetooth.observations_202003 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-04-01' AND
+         NEW.measured_timestamp <= DATE '2020-05-01' ) THEN
+        INSERT INTO bluetooth.observations_202004 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-05-01' AND
+         NEW.measured_timestamp <= DATE '2020-06-01' ) THEN
+        INSERT INTO bluetooth.observations_202005 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-06-01' AND
+         NEW.measured_timestamp <= DATE '2020-07-01' ) THEN
+        INSERT INTO bluetooth.observations_202006 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-07-01' AND
+         NEW.measured_timestamp <= DATE '2020-08-01' ) THEN
+        INSERT INTO bluetooth.observations_202007 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-08-01' AND
+         NEW.measured_timestamp <= DATE '2020-09-01' ) THEN
+        INSERT INTO bluetooth.observations_202008 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-09-01' AND
+         NEW.measured_timestamp <= DATE '2020-10-01' ) THEN
+        INSERT INTO bluetooth.observations_202009 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-10-01' AND
+         NEW.measured_timestamp <= DATE '2020-11-01' ) THEN
+        INSERT INTO bluetooth.observations_202010 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-11-01' AND
+         NEW.measured_timestamp <= DATE '2020-12-01' ) THEN
+        INSERT INTO bluetooth.observations_202011 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2020-12-01' AND
+         NEW.measured_timestamp <= DATE '2020-12-01' + INTERVAL '1 month' ) THEN
+        INSERT INTO bluetooth.observations_202012 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    ELSIF ( NEW.measured_timestamp > DATE '2014-01-01' AND
          NEW.measured_timestamp <= DATE '2014-02-01' ) THEN
         INSERT INTO bluetooth.observations_201401 VALUES (NEW.*) ON CONFLICT DO NOTHING;
     ELSIF ( NEW.measured_timestamp > DATE '2014-02-01' AND
@@ -207,8 +286,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
+$BODY$;
+
 ALTER FUNCTION bluetooth.observations_insert_trigger()
-  OWNER TO bt_admins;
+    OWNER TO bt_admins;

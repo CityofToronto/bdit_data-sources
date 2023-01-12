@@ -5,7 +5,7 @@ psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.calendar_dates(service_id, d
 psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.routes(route_id, agency_id, route_short_name, route_long_name, route_desc, route_type, route_url, route_color, route_text_color) FROM 'routes.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
 psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.shapes(shape_id, shape_pt_lat, shape_pt_lon, shape_pt_sequence, shape_dist_traveled) FROM 'shapes.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
 psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.stop_times(trip_id, arrival_time, departure_time, stop_id, stop_sequence, stop_headsign, pickup_type, drop_off_type, shape_dist_traveled) FROM 'stop_times.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
-psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.stops(stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, parent_station, wheelchair_boarding) FROM 'stops.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
+psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.stops(stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, parent_station, stop_timezone, wheelchair_boarding) FROM 'stops.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
 psql -h 10.160.12.47 -d bigdata -c "\COPY gtfs_raph.trips(route_id, service_id, trip_id, trip_headsign, trip_short_name, direction_id, block_id, shape_id, bikes_allowed, wheelchair_accessible) FROM 'trips.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
 psql -h 10.160.12.47 -d bigdata -c "UPDATE gtfs_raph.calendar SET feed_id = $feed_id WHERE feed_id IS NULL;"
 psql -h 10.160.12.47 -d bigdata -c "UPDATE gtfs_raph.calendar_dates SET feed_id = $feed_id WHERE feed_id IS NULL;"
