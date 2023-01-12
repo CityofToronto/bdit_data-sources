@@ -121,7 +121,7 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
 with DAG(
     'pull_gcc_layers',
     default_args=DEFAULT_ARGS,
-    schedule_interval='0 0 15 3,6,9,12 *'
+    schedule_interval='0 0 0 3,6,9,12 *'
 ) as gcc_layers_dag:
 
     for layer in bigdata_layers:
