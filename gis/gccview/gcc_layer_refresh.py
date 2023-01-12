@@ -242,14 +242,12 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     with con:
         with con.cursor() as cur:
             
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema}.{child_table} PARTITION OF {schema}.{parent_table} FOR VALUES IN (%s)").format(child_table = sql.Identifier(output_table_with_date),
-                                                                                                                                            schema = sql.Identifier(schema_name),
-                                                                                                                                            parent_table = sql.Identifier(output_table))
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)").format(schema_child_table = sql.Identifier(schema_name, output_table_with_date),
+                                                                                                                                            schema_parent_table = sql.Identifier(schema_name, output_table))
             cur.execute(create_sql, (today_string, ))
 
-            index_sql = sql.SQL("CREATE INDEX {idx_name} ON {schema}.{child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
-                                                                                                                child_table=sql.Identifier(output_table_with_date),
-                                                                                                                schema = sql.Identifier(schema_name))
+            index_sql = sql.SQL("CREATE INDEX {idx_name} ON {schema_child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
+                                                                                                                schema_child_table=sql.Identifier(schema_name, output_table_with_date))
             cur.execute(index_sql)
             
     return insert_column, output_table_with_date
@@ -552,13 +550,15 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             
                 try:
                     # Delete rows that no longer exist in the new table
-                    cur.execute(sql.SQL("DELETE FROM {schema}.{tablename} WHERE {pk} IN (SELECT {pk} FROM {schema}.{tablename} EXCEPT SELECT {pk} FROM {schema}.{temp_table})").format(schema = sql.Identifier(schema_name), tablename = sql.Identifier(output_table), pk = sql.Identifier(primary_key), temp_table = sql.Identifier(temp_table_name)))
+                    cur.execute(sql.SQL("DELETE FROM {schema_tablename} WHERE {pk} IN (SELECT {pk} FROM {schema_tablename} EXCEPT SELECT {pk} FROM {schema_temp_table})").format(
+                                                                                schema_tablename = sql.Identifier(schema_name, output_table), 
+                                                                                pk = sql.Identifier(primary_key), 
+                                                                                schema_temp_table = sql.Identifier(schema_name, temp_table_name)))
 
                     # And then upsert stuff
-                    upsert_string = "INSERT INTO {schema}.{tablename} ({cols}) SELECT {cols} FROM {schema}.{temp_table} ON CONFLICT ({pk}) DO UPDATE SET ({cols}) = ({excl_cols}); COMMENT ON TABLE {schema}.{tablename} IS 'last updated: {date}'"
-                    cur.execute(sql.SQL(upsert_string).format(schema = sql.Identifier(schema_name),
-                                                              tablename = sql.Identifier(output_table),
-                                                              temp_table = sql.Identifier(temp_table_name),
+                    upsert_string = "INSERT INTO {schema_tablename} ({cols}) SELECT {cols} FROM {schema_temp_table} ON CONFLICT ({pk}) DO UPDATE SET ({cols}) = ({excl_cols}); COMMENT ON TABLE {schema_tablename} IS 'last updated: {date}'"
+                    cur.execute(sql.SQL(upsert_string).format(schema_tablename = sql.Identifier(schema_name, output_table),
+                                                              schema_temp_table = sql.Identifier(schema_name, temp_table_name),
                                                               pk = sql.Identifier(primary_key),
                                                               cols = insert_column,
                                                               excl_cols = excluded_column,
@@ -574,7 +574,10 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             # if table does not exist -> create a new one and add to audit list
             else:
                 try:
-                    cur.execute(sql.SQL("ALTER TABLE {schema}.{temp_table} RENAME TO {tablename}; COMMENT ON TABLE {schema}.{tablename} IS 'last updated: {date}'").format(schema = sql.Identifier(schema_name), temp_table = sql.Identifier(temp_table_name), tablename = sql.Identifier(output_table), date = sql.Identifier(date)))
+                    cur.execute(sql.SQL("ALTER TABLE {schema_temp_table} RENAME TO {tablename}; COMMENT ON TABLE {schema_tablename} IS 'last updated: {date}'").format(
+                                                schema_temp_table = sql.Identifier(schema_name, temp_table_name), 
+                                                schema_tablename = sql.Identifier(schema_name, output_table), 
+                                                date = sql.Identifier(date)))
 
                     
                     # Make schema_name and output_table into a single string
@@ -590,8 +593,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     successful_execution = False
             
             # And then drop the temp table (if exists)
-            cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{temp_table}").format(schema = sql.Identifier(schema_name),
-                                                                                         temp_table = sql.Identifier(temp_table_name)))
+            cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema_temp_table}").format(schema_temp_table = sql.Identifier(schema_name, temp_table_name)))
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 '''
