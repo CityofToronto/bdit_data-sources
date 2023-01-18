@@ -8,7 +8,8 @@ from psycopg2.extras import execute_values
 import logging
 from time import sleep
 from airflow.exceptions import AirflowFailException
-#import click
+import click
+CONFIG = configparser.ConfigParser()
 
 """The following provides information about the code when it is running and prints out the log messages 
 if they are of logging level equal to or greater than INFO"""
@@ -596,15 +597,20 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema_temp_table}").format(schema_temp_table = sql.Identifier(schema_name, temp_table_name)))
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
-'''
-@click.command()
-@click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int)
-@click.option('--layer_id', '-ly', help = 'Layer id', type = int)
-@click.option('--schema_name', '-s', help = 'Name of destination schema', type = str)
-@click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool)
-'''
-#-------------------------------------------------------------------------------------------------------
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
+def manual_get_layer(func):
+    """
+    This decorator converts the filepath string into a con that can be passed into get_layer
+    """
+    def inner(mapserver_n, layer_id, schema_name, is_audited, filepath):
+        CONFIG.read(filepath)
+        dbset = CONFIG['DBSETTINGS']
+        con = connect(**dbset)
+        # get_layer function
+        func(mapserver_n, layer_id, schema_name, is_audited, con)
+    return inner
+
+# base main function, also compatible with Airflow
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -624,10 +630,23 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     
     cred: Airflow PostgresHook
         Contains credentials to enable a connection to a database
+        Expects a valid cred input when running Airflow DAG
+    
+    con: connection to database
+        Connection object that can connect to a particular database
+        Expects a valid con object if using command prompt
     """
     successful_task_run = True
 
-    con = cred.get_conn()
+    # For Airflow DAG
+    if cred is not None:
+        con = cred.get_conn()
+    
+    # At this point, there should must be a con now
+    if con is None:
+        LOGGER.error("Unable to establish connection to the database, please pass in a valid con")
+        return
+    
     mapserver = mapserver_name(mapserver_n)
     output_table = get_tablename(mapserver, layer_id)
     #--------------------------------
@@ -676,12 +695,19 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
     if is_audited:
         successful_task_run = update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
 
+    '''
     # Raise error if UPSERT failed
     if not successful_task_run:
         raise AirflowFailException
+    '''
 
+@click.command()
+@click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int, required = True)
+@click.option('--layer_id', '-ly', help = 'Layer id', type = int, required = True)
+@click.option('--schema_name', '-s', help = 'Name of destination schema', type = str, required = True)
+@click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool, required = True)
+@click.option('--cred', '-c', help = 'Enter the path to the credential config file', type = str, required = True)
+get_layer_manual = manual_get_layer(get_layer)
 
-'''
 if __name__ == '__main__':
-    get_layer()
-'''
+    get_layer_manual()
