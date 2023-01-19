@@ -597,18 +597,6 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
             cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema_temp_table}").format(schema_temp_table = sql.Identifier(schema_name, temp_table_name)))
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
-def manual_get_layer(func):
-    """
-    This decorator converts the filepath string into a con that can be passed into get_layer
-    """
-    def inner(mapserver_n, layer_id, schema_name, is_audited, filepath):
-        CONFIG.read(filepath)
-        dbset = CONFIG['DBSETTINGS']
-        con = connect(**dbset)
-        # get_layer function
-        func(mapserver_n, layer_id, schema_name, is_audited, con)
-    return inner
-
 # base main function, also compatible with Airflow
 def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None):
     """
@@ -707,7 +695,12 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
 @click.option('--schema_name', '-s', help = 'Name of destination schema', type = str, required = True)
 @click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool, required = True)
 @click.option('--cred', '-c', help = 'Enter the path to the credential config file', type = str, required = True)
-get_layer_manual = manual_get_layer(get_layer)
+def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
+    CONFIG.read(filepath)
+    dbset = CONFIG['DBSETTINGS']
+    con = connect(**dbset)
+    # get_layer function
+    get_layer(mapserver_n, layer_id, schema_name, is_audited, con=con)
 
 if __name__ == '__main__':
-    get_layer_manual()
+    manual_get_layer()
