@@ -2,8 +2,8 @@
 import sys
 import os
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0,os.path.join(repo_path,'gccview'))
-from gcc_layer_refresh import get_layer
+sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
+from gcc_puller_functions import get_layer
 
 from datetime import datetime
 from airflow import DAG
@@ -121,7 +121,7 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
 with DAG(
     'pull_gcc_layers',
     default_args=DEFAULT_ARGS,
-    schedule_interval='0 0 0 3,6,9,12 *'
+    schedule_interval='0 0 15 3,6,9,12 *'
 ) as gcc_layers_dag:
 
     for layer in bigdata_layers:
