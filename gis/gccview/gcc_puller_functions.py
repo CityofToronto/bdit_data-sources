@@ -577,6 +577,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                 try:
                     cur.execute(sql.SQL("ALTER TABLE {schema_temp_table} RENAME TO {tablename}; COMMENT ON TABLE {schema_tablename} IS 'last updated: {date}'").format(
                                                 schema_temp_table = sql.Identifier(schema_name, temp_table_name), 
+                                                tablename = sql.Identifier(output_table),
                                                 schema_tablename = sql.Identifier(schema_name, output_table), 
                                                 date = sql.Identifier(date)))
 
