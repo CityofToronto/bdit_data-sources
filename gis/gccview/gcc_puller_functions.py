@@ -567,7 +567,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     LOGGER.info('Updated table %s', output_table)
                 except Exception:
                     # pass exception to function
-                    logging.exception("Failed to UPSERT")
+                    LOGGER.exception("Failed to UPSERT")
                     # rollback the previous transaction before starting another
                     con.rollback()
                     successful_execution = False
@@ -588,7 +588,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
                     LOGGER.info('New table %s created and added to audit table list', output_table)
                 except Exception:
                     # pass exception to function
-                    logging.exception("Failed to create new table")
+                    LOGGER.exception("Failed to create new table")
                     # rollback the previous transaction before starting another
                     con.rollback()
                     successful_execution = False
