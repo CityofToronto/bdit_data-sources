@@ -695,9 +695,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
 @click.option('--layer_id', '-ly', help = 'Layer id', type = int, required = True)
 @click.option('--schema_name', '-s', help = 'Name of destination schema', type = str, required = True)
 @click.option('--is_audited', '-a', help = 'Whether the table is supposed to be audited (T) or partitioned (F)', type = bool, required = True)
-@click.option('--cred', '-c', help = 'Enter the path to the credential config file', type = str, required = True)
-def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, cred):
-    CONFIG.read(filepath)
+@click.option('--con', '-c', help = 'The path to the credential config file', type = str, required = True)
+def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, cfg_str):
+    CONFIG.read(cfg_str)
     dbset = CONFIG['DBSETTINGS']
     con = connect(**dbset)
     # get_layer function
