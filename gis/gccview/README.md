@@ -2,7 +2,7 @@
 
 ## Overview
 
-The GCC (Geospatial Competency Centre) offers a number of spatial products on their arcgis rest api. They host 26 map servers and has over [300 layers](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/available_layers.md) from different divisions within the City of Toronto. To ensure the geospatial layers we use are the most up to date at a regular basis, we are creating a data pipeline to automate the process of retrieving layers from gccview to our postgresql database and conflate street networks through sharedstreets.
+The GCC (Geospatial Competency Centre) offers a number of spatial products on their arcgis rest api. They host 26 map servers and has over [300 layers](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/available_layers.md) from different divisions within the City of Toronto (note that `available_layers.md` might be outdated). To ensure the geospatial layers we use are the most up to date at a regular basis, we are creating a data pipeline to automate the process of retrieving layers from gccview to our postgresql database and conflate street networks through sharedstreets.
 
 Since we can't access the GCC rest API outside the City's firewall, the pipeline has to run in the on-premise server (Morbius / Bancroft) environment, using Airflow 2.1.4.
 
@@ -74,19 +74,39 @@ The GCC pipeline will be pulling layers we want into the `gis_core` and `gis` sc
 
 ## How the script works
 
-The pipeline consists of two files, `gcc_layer_refresh.py` for the functions and `gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
+The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
 
 - mapserver_n (int): ID of the mapserver that host the desired layer
 - layer_id (int): ID of the layer within the particular mapserver
 - schema_name (string): name of destination schema
 - is_audited (Boolean): True if the layer will be in a table that is audited, False if the layer will be inserted as a child table part of a parent table
-- cred (Airflow PostgresHook): the credentials to enable a connection to a particular database
+- cred (Airflow PostgresHook): the Airflow PostgresHook that directs to credentials to enable a connection to a particular database
 
-In the DAG file, the arguments for each layer is stored in a dictionary called "bigdata_layers" or "morbius_layers", in the order of the parameters above. The DAG will be executed once every XXX days. 
+In the DAG file, the arguments for each layer are stored in dictionaries called "bigdata_layers" and "ptc_layers", in the order above. The DAG will be executed once every 3 months, particularly on the 15th of every March, June, September, and December every year.
 
+## Manually fetch layers - Using Jupyter Notebook
 
-## Manually fetch layers
+One option is to use [this notebook](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/get_layer_gccview.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
 
-Currently you can use [this notebook](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/get_layer_gccview.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
+To use the Jupyter notebook:
+1. Know the name of the layer you want to fetch. 
+2. Look for the mapserver that host the layer, and the layer id using the tables above.
+3. Determine the schema of where you want the downloaded table to be.
+4. Enter the .cfg file path at the 'Config' code block.
+5. Enter the variables using the pre-existing template code block provided at the end of the notebook file.
+6. Execute the code blocks from top to bottom.
+7. Open pgAdmin, go to the specified schema and check if the layer's information had been pulled correctly.
 
-Look for the mapserver that host the layer, and the layer id from the tables above to find the layer you want. Set the variables accordingly.
+Note that if you want to pull a partitioned child table into your personal schema, you need to set up the parent table first. Refer to the .sql files in `/gis/gccview/sql`.
+
+## Manually fetch layers - Using Click in command prompt
+
+The second option is to execute `gcc_puller_functions.py` in command prompt (or venv in Morbius or other servers).
+
+There are 5 inputs that need to be entered, which are very similar to the ones listed above for function `get_layer`. The only difference is that the last parameter now needs to be a string that contains the path to your .cfg file.
+
+Run the following line to see the details of how to enter each parameter with Click.
+
+```python3 {FULL_PATH_TO_gcc_puller_functions.py} --help```
+
+Note that if the script doesn't work, one reason might be because your credentials don't have access to the GCC API.
