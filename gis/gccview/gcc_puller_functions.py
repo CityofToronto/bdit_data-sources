@@ -699,9 +699,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
 def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, cfg_str):
     CONFIG.read(cfg_str)
     dbset = CONFIG['DBSETTINGS']
-    con = connect(**dbset)
+    connection_obj = connect(**dbset)
     # get_layer function
-    get_layer(mapserver_n, layer_id, schema_name, is_audited, con=con)
+    get_layer(mapserver_n, layer_id, schema_name, is_audited, con=connection_obj)
 
 if __name__ == '__main__':
     manual_get_layer()
