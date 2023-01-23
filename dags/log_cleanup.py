@@ -19,6 +19,25 @@ AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 from airflow.configuration import conf
 from airflow.operators.bash_operator import BashOperator
 
+# Slack alert
+SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
+def task_fail_slack_alert(context):
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+    task_msg = ':broom: {slack_name}.  {task_id} in log clean up DAG failed.'.format(task_id=context.get('task_instance').task_id, slack_name = list_names)   
+    slack_msg = task_msg + """(<{log_url}|log>)""".format(
+            log_url=context.get('task_instance').log_url,)
+    failed_alert = SlackWebhookOperator(
+        task_id='slack_test',
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username='airflow',
+        )
+    return failed_alert.execute(context=context)
+
 def create_dag(filepath, doc, start_date, schedule_interval):
     """
     Creates an Airflow DAG with our default parameters.
@@ -36,7 +55,8 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       # This isn't ideal for our use case, so we disable it here.
       'depends_on_past': False,
       'owner': 'rdumas',
-      'start_date': start_date
+      'start_date': start_date,
+      'on_failure_callback': task_fail_slack_alert
     }
   
     # Auto-infer DAG ID from filename.
