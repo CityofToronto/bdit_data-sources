@@ -8,7 +8,6 @@ to avoid those getting too big.
 from datetime import datetime
 import os
 import sys
-
 from airflow import DAG
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -18,6 +17,9 @@ AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
 from airflow.operators.bash_operator import BashOperator
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable 
 
 # Slack alert
 SLACK_CONN_ID = 'slack_data_pipeline'
