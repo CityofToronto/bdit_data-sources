@@ -697,6 +697,15 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
 @click.option('--is_audited', '-a', is_flag=True, show_default=True, default=False, help = 'Whether the table is supposed to be audited (T) or partitioned (F)')
 @click.option('--con', '-c', help = 'The path to the credential config file', type = str, required = True)
 def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, con):
+    """
+    This script pulls a GIS layer from GCC servers into the databases of
+    the Data and Analytics Unit.
+    
+    Example:
+
+    python gcc_puller_functions.py --mapserver_n 28 --layer_id 28
+    --schema_name gis --is_audited --con db.cfg
+    """
     CONFIG.read(con)
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
