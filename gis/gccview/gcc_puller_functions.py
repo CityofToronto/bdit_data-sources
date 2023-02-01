@@ -691,26 +691,31 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
     '''
 
 @click.command()
-@click.option('--mapserver_n', '-ms', help = 'Mapserver number, e.g. cotgeospatial_2 will be 2', type = int, required = True)
-@click.option('--layer_id', '-ly', help = 'Layer id', type = int, required = True)
-@click.option('--schema_name', '-s', help = 'Name of destination schema', type = str, required = True)
-@click.option('--is_audited', '-a', is_flag=True, show_default=True, default=False, help = 'Whether the table is supposed to be audited (T) or partitioned (F)')
-@click.option('--con', '-c', help = 'The path to the credential config file', type = str, required = True)
-def manual_get_layer(mapserver_n, layer_id, schema_name, is_audited, con):
+@click.option('--mapserver', '-ms', type = int, required = True, 
+                help = 'Mapserver number, e.g. cotgeospatial_2 will be 2')
+@click.option('--layer-id', '-ly', type = int, required = True
+                , help = 'Layer id')
+@click.option('--schema-name', '-s', type = str, required = True
+                , help = 'Name of destination schema')
+@click.option('--is-audited', '-a', is_flag=True, show_default=True, default=False, 
+                help = 'Whether the table is supposed to be audited (T) or partitioned (F)')
+@click.option('--con', '-c', type = str, required = True, 
+                help = 'The path to the credential config file')
+def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
     """
     This script pulls a GIS layer from GCC servers into the databases of
     the Data and Analytics Unit.
     
     Example:
 
-    python gcc_puller_functions.py --mapserver_n 28 --layer_id 28
-    --schema_name gis --is_audited --con db.cfg
+    python gcc_puller_functions.py --mapserver 28 --layer-id 28
+    --schema-name gis --is-audited --con db.cfg
     """
     CONFIG.read(con)
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
     # get_layer function
-    get_layer(mapserver_n, layer_id, schema_name, is_audited, con=connection_obj)
+    get_layer(mapserver, layer_id, schema_name, is_audited, con=connection_obj)
 
 if __name__ == '__main__':
     manual_get_layer()
