@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.providers.postgres.hooks.postgres.PostgresHook import PostgresHook
+from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 
