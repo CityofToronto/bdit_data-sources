@@ -235,11 +235,17 @@ class MiovPuller:
             #TODO: Add Log
             record_ped_error(conn, row)
 
-            raise ValueError("vehicle class {0} not recognized!"
-                             .format(row['class']))
+            #raise ValueError("vehicle class {0} not recognized!"
+            #                 .format(row['class']))
 
-    def record_ped_error(conn, row):
+    def record_ped_error(self, conn, row):
+        row_df = row
 
+        row_fields = ['intersection_uid', 'datetime_bin', 'volume']
+        with conn:
+            with conn.cursor() as cur:
+                insert_sql = '''INSERT INTO jmok.miov_pederr('intersection_uid', 'datetime_bin', 'volume') VALUES %s'''
+                execute_values(cur, insert_sql, row_df[row_fields].values)
 
 
 
