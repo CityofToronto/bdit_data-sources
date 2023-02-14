@@ -32,7 +32,7 @@ from dateutil.parser import parse
 from datetime import datetime
 
 # Credentials
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
 #vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
 

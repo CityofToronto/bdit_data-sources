@@ -3,7 +3,7 @@
 # Operators; we need this to operate!
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.postgres_operator import PostgresOperator 
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 SLACK_CONN_ID = 'slack_data_pipeline'
