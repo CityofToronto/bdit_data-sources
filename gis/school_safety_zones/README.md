@@ -6,7 +6,7 @@ This folder contains scripts to read Vision Zero google spreadsheets and put the
 - A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
 
 ## 1. Data source
-The School Safety Zone data are read in from separate Google Sheets for 2018, 2019, 2020 and 2021 which are maintained internally.
+The School Safety Zone data are read in from separate Google Sheets for 2018, 2019, 2020, 2021, and 2022 which are maintained internally.
 
 ## 2. Get started
 In order to get started, a few things have to be done first.
@@ -60,12 +60,13 @@ In Airflow is already defined a dictionary containing key-value pairs to store t
 
 
 ### 3.3 Edit script that reads in the spreadsheets
-The `id` for each sheet is then called in `schools.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
+The `id` for each sheet is then called in `vz_google_sheets.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
 
 ```
 from airflow.models import Variable
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
 ssz2018 = dag_config['ssz2018']
+...
 sszyyyy = dag_config['sszyyyy']
 ```
 
@@ -77,6 +78,7 @@ sheets = {
                   'range_name' : 'Master List!A4:AC180',
                   'schema_name': 'vz_safety_programs_staging',
                   'table_name' : 'school_safety_zone_2018_raw'},
+                  ...
            yyyy: {'spreadsheet_id' : sszyyyy,
                   'range_name' : 'Master Sheet!A3:AC180',
                   'schema_name': 'vz_safety_programs_staging',
@@ -97,11 +99,11 @@ Add a new task in `bdit_data-sources/dags/vz_google_sheets.py`:
 e.g.:
 
 ```
-task4 = PythonOperator(
+task<number> = PythonOperator(
     task_id='yyyy',
     python_callable=pull_from_sheet,
     dag=dag,
-    op_args=[con, service, yyyy]
+    op_args=[con, service, yyyy, sheets[yyyy]]
     )
 ```
 

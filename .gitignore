@@ -203,3 +203,5 @@ rescu/connect/*
 rescu/data/*
 rescu/detector_inventory.csv
 
+parking/tickets/data/*
+parking/tickets/connect/connect.R
