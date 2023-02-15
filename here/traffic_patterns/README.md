@@ -97,9 +97,11 @@ For example, `json_build_object('isodow',0,'pattern_id', u)`, creates a row like
 Next using [`json_build_array()`](https://devdocs.io/postgresql~9.6/functions-json#json_build_array) to create an array of those objects, example:
 
 ```sql
-SELECT json_build_array(
-        json_build_object('isodow',0,'pattern_id', u),
-        json_build_object('isodow',1,'pattern_id', m))
+SELECT
+    json_build_array(
+        json_build_object('isodow', 0, 'pattern_id', u),
+        json_build_object('isodow', 1, 'pattern_id', m)
+    )
 FROM here.traffic_pattern_18_ref
 LIMIT 1
 -- [{'isodow':0, 'pattern_id': 8},
