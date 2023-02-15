@@ -22,7 +22,7 @@ All Traffic Analytics speed data are stored in partitioned tables under the pare
 
 `here.ta_view`
 
-This is a simple view created to redirect data to `here.ta` using triggers. Other an additional column `epoch_min` and the lack of columns `dt` and `tod`, it has all the columns in `here.ta`. An trigger with `INSTEAD OF INSERT` statement is created to redirect data received from psql command `/COPY` to `here.ta` along with transformation of `tx` (timestamp) to `dt` (date) and `tod` (time).
+This is a simple view created to redirect data to `here.ta` using triggers. Other than additional column `epoch_min` and the lack of columns `dt` and `tod`, it has all the columns in `here.ta`. An trigger with `INSTEAD OF INSERT` statement is created to redirect data received from psql command `/COPY` to `here.ta` along with transformation of `tx` (timestamp) to `dt` (date) and `tod` (time).
 
 `here.ta_yyyymm`
 
