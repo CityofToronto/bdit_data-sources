@@ -14,7 +14,7 @@
 
 ## What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls aggregated speed data in 5-minute bins for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index. 
 
 *Travel Time Index: is the ratio of the average travel time and free-flow speeds. For example, a TTI of 1.3 indicates a 20-minute free-flow trip requires 26 minutes.*
 
@@ -28,22 +28,25 @@ This is the coverage of the congestion network.
 
 ## Traffic Data
 
-Historical data acquired through the Traffic Analytics download portal. Data goes back to 2012-01-01 and is aggregated in 5-minute bins. In our database the data is stored in partitioned tables under `here.ta`. Have a look at the [procedure for loading new data](traffic#loading-new-data) for that including using [`data_utils`](../data_utils/), which has been extended to partition (add check constraints) and index this data.
+Historical data is acquired through the Traffic Analytics download portal. Data goes back to `2012-01-01` and is aggregated in 5-minute bins. In our database the data is stored in partitioned tables under `here.ta`. Have a look at the [procedure for loading new data](traffic#loading-new-data) for that including using [`data_utils`](../data_utils/), which has been extended to partition (add check constraints) and index this data.
 
-### Data Schema
+### Data Schema for `here.ta`
 
-|column|type|notes|
-|------|----|-----|
-|link_dir|text| Unique link id |
-|tx|timestamp| Timestamp of obersevation (5-min bin)|
-|epoch_min|integer| Minutes of the day|
-|length|integer| Link length (m)|
-|mean|numeric| Observed mean speed|
-|stddev|numeric| Observed speed standard deviation|
-|min_spd|integer| Observed min speed|
-|max_spd|integer| Observed max speed|
-|confidence|integer| [10-40] degree to which observation depends on historical data (higher is better)|
-|pct_x|integer| Speed at the x percentile in 5% bins|
+| column | type | indexed | description |
+| ------ | ---- | ------- | ----------- |
+| link_dir | text | ✓ | Unique link id, per direction |
+| tx | timestamp | | Timestamp of _start_ of 5-minute observation bin |
+| dt | date | ✓ | Date of 5-minute observation bin; matches `tx` |
+| tod | time | ✓ | Time of 5-minute observation bin; matches `tx` |
+| length | integer | | Link length in meters, rounded to integer |
+| mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
+| stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
+| min_spd | integer | | Observed minimum speed |
+| max_spd | integer | | Observed maximum speed |
+| pct_50 | integer | | Observed median speed |
+| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins |
+| confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
+| sample_size | integer | | the number of probe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
 
 For an exploratory description of the data check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb)
 
