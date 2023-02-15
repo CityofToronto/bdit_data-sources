@@ -44,9 +44,9 @@ Historical data is acquired through the Traffic Analytics download portal. Data 
 | min_spd | integer | | Observed minimum speed |
 | max_spd | integer | | Observed maximum speed |
 | pct_50 | integer | | Observed median speed |
-| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes are very small in 5-minute bins |
+| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins |
 | confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
-| sample_size | integer | | the number of vprobe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
+| sample_size | integer | | the number of probe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
 
 For an exploratory description of the data check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb)
 
