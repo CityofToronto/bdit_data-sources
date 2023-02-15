@@ -111,14 +111,22 @@ LIMIT 1
 And finally [`json_to_recordset(json)`](https://devdocs.io/postgresql~9.6/functions-json#json_to_recordset) converts the array into a set of defined rows, for example, the below converts each row into 7 rows of `(isodow, pattern_id)` records, linked to the original `link_dir`
 
 ```sql
-SELECT link_pvid || travel_direction AS link_dir,isodow, pattern_id
+SELECT 
+    link_pvid || travel_direction AS link_dir,
+    isodow,
+    pattern_id
 INTO here.traffic_pattern_18_ref_narrow
 FROM here.traffic_pattern_18_ref,
-LATERAL json_to_recordset(json_build_array(
-    json_build_object('isodow',0,'pattern_id', u),
---      ...
-    json_build_object('isodow',6,'pattern_id', s)))
-AS smth(isodow int, pattern_id int);
+LATERAL ( 
+    SELECT 
+        isodow,
+        pattern_id
+    FROM json_to_recordset( json_build_array(
+        json_build_object('isodow',0,'pattern_id', u),
+        -- ...
+        json_build_object('isodow',6,'pattern_id', s)
+    ) )
+);
 ```
 ## Sad news
 For top secret contract reasons, we are no longer receiving traffic patterns data. As of writing this (in August 2022) the latest (and last) traffic patterns dataset that we received is from 2019. As time goes by, and the street network evolves, traffic patterns will cease to be useful...
