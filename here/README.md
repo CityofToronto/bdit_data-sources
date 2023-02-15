@@ -52,9 +52,7 @@ HERE Technologies provides us with a few different datasets, such as:
 - [many GIS layers](#gis-data) of streets, intersections, points of interest, trails, rail corridors and water features.
 
 ## HERE Data: dates and time periods
-As stated above, the traffic analytics table (here.ta) is updated daily. 
-
-Other products are generally updated quarterly, though this schedule has been somewhat disrupted due to the pandemic.
+As stated above, the traffic analytics table (`here.ta`) is updated daily. Other data products are generally updated quarterly.
 
 There are also aggregated tables or views specific to certain modes (like trucks or cars) or time periods (like weekends or night-time).
 
@@ -66,10 +64,10 @@ Though data are reported at 5-minute intervals, on any given link (aka road segm
 
 The Question       | The Answer     |
 :----------------- | :---------------
-What is the HERE dataset used for? | To calculate travel times and monitor congestion (mostly)
+What is the HERE dataset used for? | To calculate average travel times and monitor congestion (mostly)
 Where is the HERE dataset from? | HERE Technologies, via an agreement with Transport Canada
 Is it available on Open Data? | No
-What area does the HERE dataset represent? | All of Toronto; the co-ordinate system is EPSG: 4326
+What area does the HERE dataset represent? | All of Toronto; the coordinate system is EPSG: 4326
 Where is it stored? | On an internal postgres database called bigdata; in several schema (here, here_analysis, here_eval and here_gis)
 Are there any naming conventions? | If you see `_##_#` at the end of a table name (like `streets_21_1`) the first number is the year, and the second number is the revision (which usually corresponds to the quarter).
 How often is it updated? | Probe data are updated every day; reference files are usually updated quarterly
@@ -85,7 +83,7 @@ Who can I contact about HERE data? | Email us at transportationdata@toronto.ca
 
 ## Traffic data
 
-Historical data are acquired through the Traffic Analytics download portal. Data goes back to `2012-01-01` and are aggregated in 5-minute bins.In our database the data points are stored in partitioned tables under `here.ta` (fun fact: the "ta" stands for traffic analytics)! Data are loaded on a daily basis using the python command line application described [here](traffic/README.md).
+Historical data are acquired through the Traffic Analytics download portal. Data goes back to `2012-01-01` and are aggregated in 5-minute bins. In our database the data points are stored in partitioned tables under `here.ta` (fun fact: the "ta" stands for traffic analytics)! Data are loaded on a daily basis using the python command line application described [here](traffic/README.md).
 
 ### Data Schema for `here.ta`
 
@@ -105,7 +103,7 @@ Historical data are acquired through the Traffic Analytics download portal. Data
 | confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
 | sample_size | integer | | the number of probe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
 
-For an exploratory description of coverage (or how much probe data there is) for our roads, check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb).
+For an exploratory description of coverage (or how much probe data there is) for our roads, check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb) (now quite dated).
 
 #### Getting link attributes
 
@@ -142,7 +140,7 @@ arbitrary point to another arbitrary point using traffic data **at that point
 in time**. Since our data are already in a database, this can be accomplished
 using the [`pgRouting`](http://pgrouting.org/) PostgreSQL extension. It is
 necessary to have [traffic patterns](#traffic-patterns-traffic-models) loaded
-to fill in gaps in traffic data in time.
+to fill in temporal gaps in traffic data.
 
 The following views prepare the HERE data for routing (code found
 [here](traffic/sql/create_here_routing.sql)):
