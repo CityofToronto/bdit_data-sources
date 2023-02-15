@@ -4,7 +4,7 @@
 
 ### blip_api
 
-Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
+Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data (currently disabled) for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
 
 #### Installation
 
@@ -82,3 +82,16 @@ formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(message)s',
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 ```
+### Backfilling on the terminal server
+
+1) Log on to the terminal sever
+2) Navigate to the window task scheduler 
+3) Select `Properties` for task `blip_backfill`
+4) Navigate to the `Actions` tab and click `Edit` on the action.
+5) In the `Add arguments` block, edit the `-y` parameter. The first YYYMMDD represents the start date and the second YYYYMMDD represents the end date. 
+For example, for pulling data from June 25 to July 7 (not inclusive):
+```
+/c env\Scripts\python.exe blip_api\blip_api.py --dbsetting blip_api\config.cfg -y 20220625 20220707 >> blip_api\blip_backfill.log 2>&1
+```
+6) Save and enter your novel password when prompted
+7) Right click on the task and click `Run` 
