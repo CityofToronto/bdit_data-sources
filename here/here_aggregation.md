@@ -185,7 +185,7 @@ SELECT
     sum(length) AS total_length, -- calculate the total length of each corridor
     count(links) AS num_seg -- the number of segments in each segment
 FROM data_requests.input_table -- input table
-GROUP BY input_table.uid ;
+GROUP BY input_table.uid;
 ```
 
 **Step 2**: Aggregate link level travel time from 5 minutes to an hour
