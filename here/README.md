@@ -1,7 +1,6 @@
 # HERE Data
-
-- [Basic Info](#basic-info)
-    - [Description: What is HERE data?](#description-what-is-here-data)
+- Overview
+    - [What is HERE data?](#what-is-here-data)
     - [Uses for HERE data](#uses-for-here-data)
     - [Types of HERE data products](#types-of-here-data-products)
     - [HERE Data: dates and time periods](#here-data-dates-and-time-periods)
