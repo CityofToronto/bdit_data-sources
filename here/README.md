@@ -34,19 +34,19 @@ Historical data acquired through the Traffic Analytics download portal. Data goe
 
 | column | type | indexed | description |
 | ------ | ---- | ------- | ----------- |
-| link_dir | text | yes | Unique link id, per direction |
-| tx | timestamp | | Timestamp of start of 5-minute observation bin |
-| dt | date | yes | Date of 5-minute observation bin; matches `tx` |
-| tod | time | yes | Time of 5-minute observation bin; matches `tx` |
-| length | integer | | Link length in meters, rounded to integer |
-| mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
-| stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
-| min_spd | integer | | Observed minimum speed |
-| max_spd | integer | | Observed maximum speed |
-| pct_50 | integer | | Observed median speed |
-| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes are very small in 5-minute bins |
-| confidence | integer | | ??? |
-| sample_size | integer | | ??? |
+| link_dir | text | ✓ | Unique link id, per direction |
+| tx | timestamp | x | Timestamp of start of 5-minute observation bin |
+| dt | date | ✓ | Date of 5-minute observation bin; matches `tx` |
+| tod | time | ✓ | Time of 5-minute observation bin; matches `tx` |
+| length | integer | x | Link length in meters, rounded to integer |
+| mean | numeric(4,1) | x | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
+| stddev | numeric(4,1) | x | standard deviation of the observed speed(s) |
+| min_spd | integer | x | Observed minimum speed |
+| max_spd | integer | x | Observed maximum speed |
+| pct_50 | integer | x | Observed median speed |
+| pct_85 | integer | x | Observed 85th percentile speed - use with caution as sample sizes are very small in 5-minute bins |
+| confidence | integer | x | ??? |
+| sample_size | integer | x | ??? |
 
 For an exploratory description of the data check out [this notebook](https://github.com/CityofToronto/bdit_team_wiki/blob/here_evaluation/here_evaluation/Descriptive_eval.ipynb)
 
