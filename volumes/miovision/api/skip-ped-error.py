@@ -12,6 +12,7 @@ import logging
 import configparser
 import click
 import traceback
+import pandas as pd
 from time import sleep
 from collections import namedtuple
 
@@ -233,18 +234,27 @@ class MiovPuller:
             return self.roaduser_class[ru_class]
         except KeyError:
             #TODO: Add Log
-            record_ped_error(conn, row)
+            print(row)
+            self.record_ped_error(conn, row)
 
             #raise ValueError("vehicle class {0} not recognized!"
             #                 .format(row['class']))
 
     def record_ped_error(self, conn, row):
-        row_df = row
+        row_dict = {
+            "intersection_uid": 65,
+            "timestamp": row['timestamp'],
+            "class": row['class'],
+            "entrance": row['entrance'],
+            "exit": row['exit'],
+            "volume": row['qty']
+        }
+        row_df = pd.DataFrame.from_dict([row_dict])
 
-        row_fields = ['intersection_uid', 'datetime_bin', 'volume']
+        row_fields = ['intersection_uid', 'timestamp', 'class', 'entrance', 'exit', 'volume']
         with conn:
             with conn.cursor() as cur:
-                insert_sql = '''INSERT INTO jmok.miov_pederr('intersection_uid', 'datetime_bin', 'volume') VALUES %s'''
+                insert_sql = '''INSERT INTO jmok.miov_pederr(intersection_uid, timestamp, class, entrance, exit, volume) VALUES %s'''
                 execute_values(cur, insert_sql, row_df[row_fields].values)
 
 
