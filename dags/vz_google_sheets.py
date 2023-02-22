@@ -4,7 +4,7 @@ Pipeline for pulling two vz google sheets data and putting them into postgres ta
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from googleapiclient.discovery import build
