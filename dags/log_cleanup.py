@@ -84,7 +84,7 @@ START_DATE = datetime(2020, 2, 25)
 SCHEDULE_INTERVAL = '@daily'
 DAG = create_dag(__file__, __doc__, START_DATE, SCHEDULE_INTERVAL)
 
-BASE_LOG_FOLDER = conf.get("core", "BASE_LOG_FOLDER")
+BASE_LOG_FOLDER = conf.get("logging", "BASE_LOG_FOLDER")
 MAX_LOG_AGE_IN_DAYS = 30    # Number of days to retain the log files
 ENABLE_DELETE = True
 
