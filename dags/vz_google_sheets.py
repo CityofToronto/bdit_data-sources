@@ -100,7 +100,7 @@ vz_api_bot = PostgresHook("vz_api_bot")
 con = vz_api_bot.get_conn()
 
 DEFAULT_ARGS = {
-    'owner': 'cnangini',
+    'owner': 'itaha',
     'depends_on_past' : False,
     'email': ['islam.taha@toronto.ca'],
     'email_on_failure': True,
