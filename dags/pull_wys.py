@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
@@ -16,7 +16,8 @@ from googleapiclient.discovery import build
 from dateutil.relativedelta import relativedelta
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0,os.path.join(repo_path,'wys/api/python'))
     from wys_api import api_main
     from wys_google_sheet import read_masterlist
 except:
