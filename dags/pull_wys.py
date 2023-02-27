@@ -2,6 +2,7 @@
 Pipeline to pull Watch Your Speed sign data data and put them into the wys.raw_data table using Python Operator.
 A Slack notification is raised when the airflow process fails.
 """
+import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
