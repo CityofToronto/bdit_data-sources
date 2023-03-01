@@ -134,3 +134,8 @@ Fields (all values in the csv are quoted)
 |speed| numeric | Avg: 4.81 so probably km/h?  |
 |hort_accuracy| numeric | probably meters |
 |vert_accuracy| numeric | probably meters |
+
+## Published research using this data
+* [Where we ride faster? Examining cycling speed using smartphone GPS data](https://www.sciencedirect.com/science/article/abs/pii/S2210670718304682)
+* [Route Choice Modeling of Cyclists in Toronto](https://www.proquest.com/openview/c5af56249e852e5b566161f16f642eb0/1?cbl=18750&pq-origsite=gscholar&parentSessionId=Y3fgSTaX69g8U9I7KA%2FxaxlW0PjXRPL%2FDxN5wPQLDgs%3D)
+* [Cycling in Toronto, Ontario, Canada: Route Choice Behavior and Implications for Infrastructure Planning](https://journals.sagepub.com/doi/abs/10.3141/2662-05)
