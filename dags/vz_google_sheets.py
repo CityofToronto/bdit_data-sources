@@ -4,13 +4,14 @@ Pipeline for pulling two vz google sheets data and putting them into postgres ta
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from googleapiclient.discovery import build
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
+import os
 
 import sys
 
@@ -57,8 +58,16 @@ sheets = {
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     # print this task_msg and tag these users
-    task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,) 
+    invalid_rows = context.get('task_instance').xcom_pull(task_ids=context.get('task_instance').task_id, 
+                                                            key='invalid_rows')
+    if invalid_rows:
+        task_msg = """The Task vz_google_sheets (ssz):{task} failed.
+                    Found one or more invalid records. {slack_name} please email David Tang """.format(
+            task=context.get('task_instance').task_id, slack_name = list_names,) 
+    else:
+        task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
+            task=context.get('task_instance').task_id, slack_name = list_names,) 
+    
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
             log_url=context.get('task_instance').log_url,)
@@ -73,7 +82,10 @@ def task_fail_slack_alert(context):
 
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
-    sys.path.append('/etc/airflow/data_scripts/vision_zero/')
+    # absolute path to the repo
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    # path of the python scripts
+    sys.path.insert(0,os.path.join(repo_path,'gis/school_safety_zones'))
     from schools import pull_from_sheet
 except:
     raise ImportError("Cannot import functions to pull school safety zone list")
@@ -88,14 +100,15 @@ vz_api_bot = PostgresHook("vz_api_bot")
 con = vz_api_bot.get_conn()
 
 DEFAULT_ARGS = {
-    'owner': 'cnangini',
+    'owner': 'itaha',
     'depends_on_past' : False,
-    'email': ['cathy.nangini@toronto.ca'],
+    'email': ['islam.taha@toronto.ca'],
     'email_on_failure': True,
     'email_on_retry': True,
     'start_date': datetime(2019, 9, 30),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
+    'provide_context':True,
     'on_failure_callback': task_fail_slack_alert
 }
 
