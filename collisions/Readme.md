@@ -178,12 +178,12 @@ time_last_edited | TS | Time of last edit from Transportation Services |
 
 ## Data Replication Process
 
-Currently, `pull_acc_script.py` is used to manually refresh the data. In the
+Currently, [`pull_acc_script.py`](./pull_acc_script.py) is used to manually refresh the data. In the
 future `collisions_replicator.ACC` will be directly mirrored from the MOVE server.
 
 `pull_acc_script.py` performs the following steps:
 1. Obtain a copy of `ACC.dat` (a dump of the ACC table from the Oracle server).
-2. `TRUNCACTE` the current `collisions_replicator.ACC` table on the BDITTO Postgres, then
+2. `TRUNCATE` the current `collisions_replicator.ACC` table on the BDITTO Postgres, then
    replace it using `ACC.dat`.
 3. Refresh `collisions_replicator.collision_no`, `collisions_replicator.events` and
    `collisions_replicator.involved` materialized views.
