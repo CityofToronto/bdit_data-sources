@@ -23,6 +23,8 @@ from datetime import datetime
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString, Point
 
+from airflow.exceptions import AirflowFailException
+
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
 
@@ -65,24 +67,24 @@ def validate_school_info(con, row):
     
     # School Coordinate (X,Y)
     if not within_toronto(con, row[4]):
-        LOGGER.error('School : outside Toronto')
+        LOGGER.error('Invalid school coordinates "{}"'.format(row[4]))
         ret_val = False
     
     # Final Sign Installation Date
     try:
         row[5] = enforce_date_format(row[5])
     except ValueError:
-        LOGGER.error(row[5]+' cannot be transformed into a date')
+        LOGGER.error('"{}" cannot be transformed into a date'.format(row[5]))
         ret_val = False
     
     # FB Locations (X,Y)
     if not within_toronto(con, row[6]):
-        LOGGER.error('FB : outside Toronto')
+        LOGGER.error('Invalid FB coordinates "{}"'.format(row[6]))
         ret_val = False
     
     # WYS Locations (X,Y)
     if not within_toronto(con, row[7]):
-        LOGGER.error('WYSS : outside Toronto')
+        LOGGER.error('Invalid WYSS coordinates "{}"'.format(row[7]))
         ret_val = False
     
     return ret_val
@@ -116,7 +118,8 @@ def within_toronto(con, coords):
                 if not to_boundary.contains(point)[0]:
                     return False
             return True
-        except ValueError:
+        except Exception as e:
+            LOGGER.error(e)
             return False
 
 def enforce_date_format(date, fuzzy=False):
@@ -151,7 +154,7 @@ def is_int(n):
 
 #--------------------------------------------------------------------------------------------------
 
-def pull_from_sheet(con, service, year, spreadsheet, *args):
+def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
     Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
@@ -183,6 +186,7 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
     IndexError
         If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
     """
+    any_error = False
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
                                 range=spreadsheet['range_name']).execute()
@@ -192,22 +196,25 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
     if not values:
         LOGGER.warning('No data found.')
     else:
-        for row in values:           
+        for ind, row in enumerate(values, 1):           
             try:                   
                 if len(row) < 28:
                     # skip incomplete rows
+                    LOGGER.warning('Skipping incomplete row #%i: %s', ind, row)
                     continue
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
                 if validate_school_info(con, i): # return true or false
                     rows.append(i)
-                    LOGGER.info('Reading %s columns of data from Google Sheet', len(row))
+                    LOGGER.info('Reading row #%i', ind)
                     LOGGER.debug(row)
                 else:
-                    LOGGER.error('An error occurs at %s', ','.join(i)) #double check
+                    LOGGER.error('at row #%i: %s', ind, row)
+                    any_error = True
             except (IndexError, KeyError) as err:
-                LOGGER.error('An error occurs at %s', row)
+                LOGGER.error('An error occurred at row #%i: %s', ind, row)
                 LOGGER.error(err)
+                any_error = True
     
     schema = spreadsheet['schema_name']
     table = spreadsheet['table_name']
@@ -231,29 +238,12 @@ def pull_from_sheet(con, service, year, spreadsheet, *args):
             cur.execute(truncate)  
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
-
-
-if __name__ == '__main__':
-    """The following connects to the database, establishes connection to the sheets 
-    and executes function based on the year of data required.
-    Note: this part is not run by airflow.
-
-    """
-
-    SERVICE_ACCOUNT_FILE = '/home/jchew/bdit_data-sources/vision_zero/key.json' 
-
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)   
-
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(r'/home/cnangini/googlesheets_db.cfg')
-    dbset = CONFIG['DBSETTINGS']
-    con = connect(**dbset)
-
-    service = build('sheets', 'v4', credentials=credentials, cache_discovery=False)
-
-    pull_from_sheet(con, service, 2018)
-    pull_from_sheet(con, service, 2019)
-    pull_from_sheet(con, service, 2020)
-    pull_from_sheet(con, service, 2021)
-    pull_from_sheet(con, service, 2022)
+    task_instance = kwargs['task_instance']
+    if any_error:
+        # Custom slack message upon finding some (not all) invalid records
+        # `invalid_rows` is being pulled in the failure callback method (slack notification)
+        task_instance.xcom_push('invalid_rows', True)
+        raise AirflowFailException('Invalid rows found. See errors documented above.')
+    else:
+        task_instance.xcom_push('invalid_rows', False)
+    
