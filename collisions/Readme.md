@@ -31,7 +31,7 @@ are owned by `collision_admins`.
 
 ### `ACC`
 
-The raw dataset is `collisions.ACC`, a direct mirror of the same table on the
+The raw dataset is `collisions_replicator.ACC`, a direct mirror of the same table on the
 MOVE server. The data dictionary for `ACC`
 is maintained jointly with MOVE and found on [Notion here](
 https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
@@ -107,7 +107,7 @@ generate three derived tables:
 
 The derived tables use a different naming scheme for columns:
 
-#### `collisions_eplicator.events`
+#### `collisions_replicator.events`
 
 Event   Column | Equivalent ACC Column | Definition | Notes
 -- | -- | -- | --
@@ -140,7 +140,7 @@ traffic_control | TRAFFICTL | Type of traffic control |  
 traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
 on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
 description | DESCRIPTION | Long-form comments |  
-data_source | | Source of data | See properties of `collisions.acc`, above, for details
+data_source | | Source of data | See properties of `collisions_replicator.ACC`, above, for details
 
 
 #### `collisions_replicator.involved`
