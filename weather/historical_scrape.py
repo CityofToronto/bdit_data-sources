@@ -1,0 +1,179 @@
+######  mrc_import.py  ######
+# Pulls daily weather forecast from Environment Canada.
+# 
+# Original script from https://github.com/Toronto-Big-Data-Innovation-Team/activeto/blob/jasonlee/weekend_closures/scripts/import_weather.py
+
+#Environment Canada imports
+import asyncio
+from types import coroutine
+import env_canada
+#from env_canada import ECHistoricalRange, get_historical_stations
+
+#website scraping
+import requests
+from requests import exceptions
+from pathlib import Path
+from bs4 import BeautifulSoup
+
+#logger
+import logging
+from logging import exception
+
+#sql
+from psycopg2 import connect, sql
+from psycopg2.extras import execute_values
+
+#other packages
+import os
+import sys
+import datetime
+import pandas as pd
+import numpy as np
+import click
+from configparser import ConfigParser
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level = logging.INFO)
+
+
+"""CONFIG=ConfigParser()
+CONFIG.read('config.cfg') # Change DB Settings in db.cfg
+dbset=CONFIG['DBSETTINGS']
+conn=connect(**dbset)"""
+
+
+def request_url(url):
+    '''
+    Request content from Weather Canada website
+    '''
+    try:
+        logger.info('Scraping data from Weather Canada for %s...', str(date.today()))
+        r = requests.get(url)
+        soup = BeautifulSoup(r.content, 'html.parser')
+        return soup
+    except Exception as e:
+        logger.error('Failed to request url. Exception: %s', str(e))
+
+def pull_weather(today):
+    
+    '''
+    ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
+
+    #for python 3.7+ ONLY:
+    # asyncio.run(ec_en.update())
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(ec_en.update())
+    curr_weather = ec_en.conditions
+    '''
+
+    month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
+    try:
+        weather_context = request_url(url)
+        today_date = date.today().strftime("%Y-%m-%d")
+        tmr_date = (date.today()+ datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # Scrap detailed forecast table
+        long_forecast_table = weather_context.find_all("table", class_="table mrgn-bttm-md mrgn-tp-sm textforecast")
+        today_day_forecast, today_night_forecast, tmr_day_forecast, tmr_night_forecast, tomorrow_date = scrap_detailed_info(long_forecast_table)
+        
+        # Scrap summary forecast table
+        short_forecast_table = weather_context.find_all("div", class_="div-table")
+        today_day_temp, today_day_prep, today_night_temp, today_night_prep, tmr_day_temp, tmr_day_prep, tmr_night_temp, tmr_night_prep = scrap_summary_info(short_forecast_table)
+        
+        logger.info('''\nToday %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight:\nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s 
+                        \Tomorrow %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s ''', 
+                        str(date.today().strftime("%a, %d %b")), 
+                        today_day_forecast, today_day_temp, today_day_prep,
+                        today_night_forecast, today_night_temp, today_night_prep, 
+                        tomorrow_date, 
+                        tmr_day_forecast, tmr_day_temp, tmr_day_prep,
+                        tmr_night_forecast, tmr_night_temp, tmr_night_prep)
+            
+
+    except Exception as e:
+        logger.error('Failed to collect forecast data. Exception: %s', str(e))
+
+
+
+
+    yday = today - datetime.timedelta(days=1)
+    
+    weather_dict = { 
+        "today_dict": {
+            "date": today,
+            "humidity": curr_weather['humidity']['value'],
+            "wind_speed": curr_weather['wind_speed']['value'],
+            "condition": curr_weather['condition']['value'],
+            "text_summary": curr_weather['text_summary']['value'],
+            "date_pulled": today
+        },
+        "yday_dict": {
+            "date": yday,
+            "max_temp_yday": curr_weather['high_temp_yesterday']['value'],
+            "min_temp_yday": curr_weather['low_temp_yesterday']['value'],
+            "total_precip_yday": curr_weather['precip_yesterday']['value'],
+            "date_pulled": today,
+        }
+    }
+    
+    
+    return weather_dict
+
+def scrape_month(table_detail):
+    return
+
+
+def pull_weather_df(today):
+    #coord = ['43.74', '-79.37']
+
+    
+    ec = env_canada.ECHistorical(station_id='ON/s0000458', year=2022, month=1, language="english", timeframe='2')
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(ec.update())
+
+    return ec.csv
+
+def insert_weather(conn, weather_df):
+    weather_fields = ['date', 'humidity', 'wind_speed', 'condition', 'text_summary', 'date_pulled']
+    with conn:
+        with conn.cursor() as cur:
+            insert_sql = '''INSERT INTO weather.historical_daily(dt, humidity, wind_speed, condition, text_summary, date_pulled) VALUES %s'''
+            execute_values(cur, insert_sql, weather_df[weather_fields].values)
+
+def upsert_weather(conn, weather_df):
+    weather_fields = ['date', 'max_temp_yday', 'min_temp_yday', 'total_precip_yday', 'date_pulled']
+    with conn:
+        with conn.cursor() as cur:
+            upsert_sql = ''' INSERT INTO weather.historical_daily
+                                (dt, temp_max, temp_min, total_precip_mm, date_pulled)
+                            VALUES %s
+                            ON CONFLICT (dt)
+                            DO UPDATE
+                            SET (temp_max, temp_min, total_precip_mm, date_pulled)
+                                = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.total_precip_mm, EXCLUDED.date_pulled); '''
+            execute_values(cur, upsert_sql, weather_df[weather_fields].values)
+
+#if __name__ == '__main__':
+def historical_upsert(cred, run_date):
+    #Get current date to pull
+
+    #use connection
+    conn = cred.get_conn()
+    
+    print("process start")
+    yday = datetime.datetime.strptime(run_date,'%Y-%m-%d')
+    today = yday + datetime.timedelta(days=1)
+    weather_dict = pull_weather(today)
+
+    #weather_csv = pull_weather_df(today)
+    #print(weather_csv)
+
+    today_df = pd.DataFrame.from_dict([weather_dict['today_dict']])
+    yday_df = pd.DataFrame.from_dict([weather_dict['yday_dict']])
+
+    insert_weather(conn, today_df)
+    upsert_weather(conn, yday_df)
+    
+    print("Process Complete")
+
