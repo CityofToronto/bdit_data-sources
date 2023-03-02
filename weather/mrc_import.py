@@ -9,12 +9,23 @@ from types import coroutine
 import env_canada
 #from env_canada import ECHistoricalRange, get_historical_stations
 
+#website scraping
+import requests
+from requests import exceptions
+from pathlib import Path
+from bs4 import BeautifulSoup
+
+#logger
+import logging
+from logging import exception
+
 #other packages
 import os
 import sys
 import datetime
 import pandas as pd
 import numpy as np
+import click
 from configparser import ConfigParser
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
