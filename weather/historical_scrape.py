@@ -42,13 +42,13 @@ dbset=CONFIG['DBSETTINGS']
 conn=connect(**dbset)"""
 
 
-def request_url(url):
+def request_url(url, payload):
     '''
     Request content from Weather Canada website
     '''
     try:
         logger.info('Scraping data from Weather Canada for %s...', str(date.today()))
-        r = requests.get(url)
+        r = requests.get(url, params=payload)
         soup = BeautifulSoup(r.content, 'html.parser')
         return soup
     except Exception as e:
@@ -66,10 +66,24 @@ def pull_weather(today):
     loop.run_until_complete(ec_en.update())
     curr_weather = ec_en.conditions
     '''
+    url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
+    payload ={
+        'StationID': 54239,
+        'Prov': 'ON',
+        'StartYear': 1840,
+        'EndYear': 2023,
+        'selRowPerPage': 25,
+        'Line': 0,
+        'searchMethod': 'contains',
+        'Month': 3,
+        'Day': 1,
+        'txtStationName': 'Toronto',
+        'timeframe': 1,
+        'Year': 2023}
 
-    month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
+    #month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
     try:
-        weather_context = request_url(url)
+        weather_context = request_url(url, payload)
         today_date = date.today().strftime("%Y-%m-%d")
         tmr_date = (date.today()+ datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
