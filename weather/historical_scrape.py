@@ -135,23 +135,23 @@ def pull_weather_df(today):
     return ec.csv
 
 def insert_weather(conn, weather_df):
-    weather_fields = ['date', 'humidity', 'wind_speed', 'condition', 'text_summary', 'date_pulled']
+    weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
     with conn:
         with conn.cursor() as cur:
             insert_sql = '''INSERT INTO weather.historical_daily(dt, humidity, wind_speed, condition, text_summary, date_pulled) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 def upsert_weather(conn, weather_df):
-    weather_fields = ['date', 'max_temp_yday', 'min_temp_yday', 'total_precip_yday', 'date_pulled']
+    weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
     with conn:
         with conn.cursor() as cur:
-            upsert_sql = ''' INSERT INTO weather.historical_daily
-                                (dt, temp_max, temp_min, total_precip_mm, date_pulled)
+            upsert_sql = ''' INSERT INTO weather.historical_daily_city
+                                (dt, temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip)
                             VALUES %s
                             ON CONFLICT (dt)
                             DO UPDATE
-                            SET (temp_max, temp_min, total_precip_mm, date_pulled)
-                                = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.total_precip_mm, EXCLUDED.date_pulled); '''
+                            SET (temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip)
+                                = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.mean_temp, EXCLUDED.total_rain, EXCLUDED.total_snow, EXCLUDED.total_precip); '''
             execute_values(cur, upsert_sql, weather_df[weather_fields].values)
 
 #if __name__ == '__main__':
