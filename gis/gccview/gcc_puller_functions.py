@@ -118,10 +118,7 @@ def get_tablename(mapserver, layer_id):
         for layer in layers:
             if layer['id'] == layer_id:
                 output_name = (layer['name'].lower()).replace(' ', '_')
-            else:
-                continue
-
-    return output_name
+        return output_name
 
 def get_fieldtype(field):
     if field == 'esriFieldTypeInteger' or field == 'esriFieldTypeSingle' or field == 'esriFieldTypeInteger' or field=='esriFieldTypeOID' or field == 'esriFieldTypeSmallInteger' or field =='esriFieldGlobalID':
@@ -638,6 +635,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
     
     mapserver = mapserver_name(mapserver_n)
     output_table = get_tablename(mapserver, layer_id)
+    if output_table is None:
+        LOGGER.error("Invalid mapserver and/or layer Id")
+        return
     #--------------------------------
     if is_audited:
         primary_key = pk_dict.get(output_table)
