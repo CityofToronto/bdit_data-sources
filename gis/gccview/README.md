@@ -4,11 +4,11 @@
 
 The GCC (Geospatial Competency Centre) offers a number of spatial products on their arcgis rest api. They host 26 map servers and has over [300 layers](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/available_layers.md) from different divisions within the City of Toronto (note that `available_layers.md` might be outdated). To ensure the geospatial layers we use are the most up to date at a regular basis, we are creating a data pipeline to automate the process of retrieving layers from gccview to our postgresql database and conflate street networks through sharedstreets.
 
-Since we can't access the GCC rest API outside the City's firewall, the pipeline has to run in the on-premise server (Morbius / Bancroft) environment, using Airflow 2.1.4.
+Since there are layers that cannot be accessed from the GCC's external REST API, the pipeline has to run on premises, e.g., Morbius and/or Bancroft.
 
 ## Where the layers are pulled
 
-The GCC pipeline will be pulling layers we want into the `gis_core` and `gis` schemas in the EC2 `bigdata` database, as well as the `gis` schema in the Bancroft `ptc` database.
+The GCC pipeline will be pulling multiple layers into the `gis_core` and `gis` schemas in the `bigdata` database hosted by Amazon RDS, as well as the `gis` schema in `ptc` database hosted on the on-prem server, Bancroft.
 
 ### gis (on-prem)
 
@@ -86,7 +86,7 @@ In the DAG file, the arguments for each layer are stored in dictionaries called 
 
 ## Manually fetch layers - Using Jupyter Notebook
 
-One option is to use [this notebook](https://github.com/CityofToronto/bdit_data-sources/blob/gcc_view/gis/gccview/get_layer_gccview.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
+One option is to use [this notebook](./gcc_puller.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
 
 To use the Jupyter notebook:
 1. Know the name of the layer you want to fetch. 
