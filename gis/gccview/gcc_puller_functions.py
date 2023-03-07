@@ -310,7 +310,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     return_json : json
         Resulted json response from calling the GCCView rest api
     """
-    
+    return_json = None
     base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
     
     # If the data we want to get is centreline
@@ -347,7 +347,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
              "resultRecordCount": "{}".format(record_max),
              "f":"json"}
     
-    while True:
+    for retry in range(3):
         try:
             r = requests.get(base_url, params = query, verify = False, timeout = 300)
             r.raise_for_status()
@@ -356,7 +356,6 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
         except requests.exceptions.ConnectionError as err_c:
             LOGGER.error("Network problem: ", err_c)
             sleep(10)
-            continue
         except requests.exceptions.Timeout as err_t:
             LOGGER.error("Timeout: ", err_t)
         except requests.exceptions.RequestException as err:
