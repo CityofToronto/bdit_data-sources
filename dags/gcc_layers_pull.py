@@ -118,10 +118,11 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
                   "ibms_district": [11, 23, 'gis', True]
                  }
 
+# the DAG runs at 7 am on the first day of March, June, September, and December
 with DAG(
     'pull_gcc_layers',
     default_args=DEFAULT_ARGS,
-    schedule_interval='0 7 15 */3 *' #'@quarterly'
+    schedule_interval='0 7 1 */3 *' #'@quarterly'
 ) as gcc_layers_dag:
 
     for layer in bigdata_layers:
