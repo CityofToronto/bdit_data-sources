@@ -96,4 +96,3 @@ PULL_HISTORICAL = PythonOperator(
 )
 
 no_backfill >> PULL_PREDICTION
-no_backfill >> PULL_HISTORICAL
