@@ -47,14 +47,14 @@ def request_url(url, payload):
     Request content from Weather Canada website
     '''
     try:
-        logger.info('Scraping data from Weather Canada for %s...', str(date.today()))
+        logger.info('Scraping data from Weather Canada for %s...', str(run_date))
         r = requests.get(url, params=payload)
         soup = BeautifulSoup(r.content, 'html.parser')
         return soup
     except Exception as e:
         logger.error('Failed to request url. Exception: %s', str(e))
 
-def pull_weather(today):
+def pull_weather(run_date):
     
     '''
     ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
@@ -84,8 +84,7 @@ def pull_weather(today):
     #month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
     try:
         weather_context = request_url(url, payload)
-        today_date = date.today().strftime("%Y-%m-%d")
-        tmr_date = (date.today()+ datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        tmr_date = (run_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
         # Scrap detailed forecast table
         long_forecast_table = weather_context.find_all("table", class_="table mrgn-bttm-md mrgn-tp-sm textforecast")
@@ -97,7 +96,7 @@ def pull_weather(today):
         
         logger.info('''\nToday %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight:\nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s 
                         \Tomorrow %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s ''', 
-                        str(date.today().strftime("%a, %d %b")), 
+                        str(run_date), 
                         today_day_forecast, today_day_temp, today_day_prep,
                         today_night_forecast, today_night_temp, today_night_prep, 
                         tomorrow_date, 
@@ -106,7 +105,7 @@ def pull_weather(today):
             
 
     except Exception as e:
-        logger.error('Failed to collect forecast data. Exception: %s', str(e))
+        logger.error('Failed to collect historical data. Exception: %s', str(e))
 
 
 
@@ -176,9 +175,7 @@ def historical_upsert(cred, run_date):
     conn = cred.get_conn()
     
     print("process start")
-    yday = datetime.datetime.strptime(run_date,'%Y-%m-%d')
-    today = yday + datetime.timedelta(days=1)
-    weather_dict = pull_weather(today)
+    weather_dict = pull_weather(run_date)
 
     #weather_csv = pull_weather_df(today)
     #print(weather_csv)
