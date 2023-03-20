@@ -37,10 +37,11 @@ Example of a CTE:
 ```sql
 -- Define time range in a CTE
 WITH time_ranges(period, time_range, dow) AS (
-   VALUES ('AM Long Peak'::text, '[07:00:00,10:00:00)'::timerange,'[2,5)'::int4range),
-          ('AM Short Peak'::text,'[08:00:00,09:00:00)'::timerange,'[2,5)'::int4range),
-          ('PM Long Peak'::text, '[15:00:00,18:00:00)'::timerange,'[2,5)'::int4range),
-          ('PM Short Peak'::text,'[16:00:00,17:00:00)'::timerange,'[2,5)'::int4range)
+    VALUES
+    ('AM Long Peak', '[07:00:00,10:00:00)'::timerange, '[2,5)'::int4range),
+    ('AM Short Peak', '[08:00:00,09:00:00)'::timerange, '[2,5)'::int4range),
+    ('PM Long Peak', '[15:00:00,18:00:00)'::timerange, '[2,5)'::int4range),
+    ('PM Short Peak', '[16:00:00,17:00:00)'::timerange, '[2,5)'::int4range)
 )
 ```
 Example of a table (from `activeto.analysis_periods`):
@@ -56,6 +57,7 @@ Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHER
 
 Example of filtering date ranges in the `WHERE` clause (not using `between`):
 ```sql
+
 FROM    here.ta -- speed data table
 
 LEFT JOIN ref.holiday holiday ON ta.tx::date = holiday.dt
@@ -63,14 +65,16 @@ LEFT JOIN ref.holiday holiday ON ta.tx::date = holiday.dt
 WHERE   
     (ta.dt >= '2019-01-01'::date AND ta.dt < '2019-02-18'::date)  -- filter date ranges
     AND holiday.dt IS NULL -- excluding holiday
+
 ```
 
 Example of defining date ranges in a `CTE`:
 ```sql
 WITH date_period(obs_period, date_range) AS (
-   VALUES ('Before'::text,'[2020-09-08,2020-10-10)'::daterange),
-          ('Installation'::text,'[2019-09-16,2019-12-07)'::daterange),
-          ('After'::text,'[2020-11-23,2020-12-22)'::daterange)
+    VALUES
+    ('Before', '[2020-09-08,2020-10-10)'::daterange),
+    ('Installation', '[2019-09-16,2019-12-07)'::daterange),
+    ('After', '[2020-11-23,2020-12-22)'::daterange)
 )
 ```
 
@@ -191,15 +195,14 @@ Example of `congestion.segments_tti_weekly`:
 
 ```sql
 -- Calculate corridor length and number of links, as well as the sum of baseline travel time
-
 SELECT
-   corridor_id,
-   sum(length) AS total_length, -- calculate the total length of each corridor
-   count(segment_id) AS num_seg, -- the number of segments in each segment
-   sum(tt_baseline) AS corr_baseline -- the baseline travel time of each corridor
+    corridor_id,
+    sum(length) AS total_length, -- calculate the total length of each corridor
+    count(segment_id) AS num_seg, -- the number of segments in each segment
+    sum(tt_baseline) AS corr_baseline -- the baseline travel time of each corridor
 FROM data_requests.input_table -- input table
 INNER JOIN baseline_segments_tt using (segment_id) -- baseline table
-GROUP BY input_table.uid 
+GROUP BY input_table.uid;
 ```
 
 **Step 2**: Aggregate segment level travel time index to the defined time period
@@ -211,25 +214,36 @@ SELECT
     time_range,
     week,
     avg(tti) AS tti
-FROM segment_lookup 
-JOIN segments_tti_weekly  USING (segment_id)
+FROM segment_lookup
+JOIN segments_tti_weekly USING (segment_id)
 JOIN analysis_periods USING (day_type)
-WHERE week <@ date_range AND time_bin <@ time_range 
-GROUP BY segment_id, analysis_period, time_range, week
-```       
-**Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80\% of the segment (by distance) has observations at the corridor level
+WHERE week <@ date_range AND time_bin <@ time_range
+GROUP BY 
+    segment_id,
+    analysis_period,
+    time_range,
+    week;
+```
+
+**Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80% of the segment (by distance) has observations at the corridor level
+
 
 ```sql
 SELECT
-   corridor_id,
-   analysis_period,
-   time_period,
-   week,
-   sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
-   sum(tti * tt_baseline) / sum(tt_baseline) * corr_baseline AS tt
+    corridor_id,
+    analysis_period,
+    time_period,
+    week,
+    sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
+    sum(tti * tt_baseline) / sum(tt_baseline) * corr_baseline AS tt
 FROM segment_tt 
-GROUP BY corridor_id, analysis_period, time_period, week, corr_baseline
-HAVING sum(segment_length) > (0.80 * corridor_length)::double precision
+GROUP BY 
+    corridor_id,
+    analysis_period,
+    time_period,
+    week,
+    corr_baseline
+HAVING sum(segment_length) > (0.80 * corridor_length);
 ```
 
 ### Using the raw speed table `here.ta`
@@ -240,13 +254,12 @@ If the congestion tables are not suitable for your study, you can aggregate here
 
 ```sql
 -- Calculate segment length and number of links
-
 SELECT
-   uid,
-   sum(length) AS total_length, -- calculate the total length of each corridor
-   count(links) AS num_seg -- the number of segments in each segment
+    uid,
+    sum(length) AS total_length, -- calculate the total length of each corridor
+    count(links) AS num_seg -- the number of segments in each segment
 FROM data_requests.input_table -- input table
-GROUP BY input_table.uid 
+GROUP BY input_table.uid;
 ```
 
 **Step 2**: Aggregate link level travel time from 5 minutes to an hour
@@ -254,15 +267,13 @@ GROUP BY input_table.uid
 ```sql
 -- Aggregate link travel times up to an hour 
 SELECT
-   input_table.uid,
-   input_table.link_dir,
-   datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
-   avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
+    input_table.uid,
+    input_table.link_dir,
+    datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
+    avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
 FROM data_requests.input_table
 JOIN here.ta USING (link_dir) -- speed data table
-
-CROSS JOIN 	time_ranges -- CTE with define time range
-
+CROSS JOIN time_ranges -- CTE with define time range
 WHERE 
    ( -- define date range
       dt >= '2019-01-01'::date
@@ -272,6 +283,7 @@ WHERE
    AND date_part('isodow'::text, a.dt)::integer <@ time_ranges.dow
 
 GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
+
 ```
 
 **Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80\% of the corridor (by distance) has observations
@@ -279,13 +291,17 @@ GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length
 ```sql
 -- Aggregate link level hourly travel time to corridor level
 SELECT
-   uid,
-   link_hourly.datetime_bin,
-   corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
+    uid,
+    link_hourly.datetime_bin,
+    corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
 FROM link_hourly
 INNER JOIN corridor_detail USING (uid)
-GROUP BY link_hourly.datetime_bin, uid, corridor_detail.total_length, period
-HAVING sum(link_hourly.here_length) >= (total_length * 0.8) -- where at least 80% of links have data
+GROUP BY
+    link_hourly.datetime_bin,
+    uid,
+    corridor_detail.total_length,
+    period
+HAVING sum(link_hourly.here_length) >= (total_length * 0.8); -- where at least 80% of links have data
 ```
 
 **Step 4**: Aggregate corridor level hourly travel time up to each defined time periods for each day
@@ -293,22 +309,27 @@ HAVING sum(link_hourly.here_length) >= (total_length * 0.8) -- where at least 80
 ```sql
 -- Aggregate corridor level hourly travel time to time periods	
 SELECT
-   uid,
-   period,
-   avg(corr_tt) AS corr_mean_tt
+    uid,
+    period,
+    avg(corr_tt) AS corr_mean_tt
 FROM corridor_hourly
-GROUP BY period, uid, total_length
+GROUP BY
+    period,
+    uid,
+    total_length;
 ```
 
 **Step 5**: Produces estimates of the minimum, average and maximum travel time for each time period by corridors
 
 ```sql
 SELECT
-   uid,
-   period,
-   min(corr_mean_tt) AS min_tt,
-   avg(corr_mean_tt) AS mean_tt,
-   max(corr_mean_tt) AS max_tt
+    uid,
+    period,
+    min(corr_mean_tt) AS min_tt,
+    avg(corr_mean_tt) AS mean_tt,
+    max(corr_mean_tt) AS max_tt
 FROM corridor_agg
-GROUP BY uid, period
+GROUP BY 
+    uid,
+    period;
 ```
