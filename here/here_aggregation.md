@@ -1,12 +1,15 @@
 # Table of Contents  
-- [Input Parameters](#input-parameters)
-    - [Geometry](#Geometry)
-    - [Time Range](#time-range)
-    - [Date Range](#date-range)
-- [Output Parameters](#output-parameters)
-- [Aggregation](#aggregation)
-    - [Using congestion tables](#using-congestion-tables)
-    - [Using raw speed table](#using-raw-speed-table)
+- [Table of Contents](#table-of-contents)
+  - [Input Parameters](#input-parameters)
+    - [Geometry](#geometry)
+    - [Time range](#time-range)
+    - [Date range](#date-range)
+  - [Output Parameters](#output-parameters)
+    - [Important things to note:](#important-things-to-note)
+  - [Aggregation](#aggregation)
+    - [Using congestion tables (version 2.0)](#using-congestion-tables-version-20)
+    - [Using congestion weekly tables (not supported, to be deprecated)](#using-congestion-weekly-tables-not-supported-to-be-deprecated)
+    - [Using the raw speed table `here.ta`](#using-the-raw-speed-table-hereta)
 
 ## Input Parameters
 
