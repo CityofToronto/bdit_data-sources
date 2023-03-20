@@ -176,7 +176,7 @@ GROUP BY
 ```
 
 
-### Using congestion weekly tables (not supported, to be depreciated)
+### Using congestion weekly tables (not supported, to be deprecated)
 
 Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
 
