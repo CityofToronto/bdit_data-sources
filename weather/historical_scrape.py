@@ -54,6 +54,25 @@ def request_url(url, payload):
     except Exception as e:
         logger.error('Failed to request url. Exception: %s', str(e))
 
+def get_payload(run_date):
+    
+    
+    payload = {
+    'StationID': 54239,
+    'Prov': 'ON',
+    'StartYear': 1840,
+    'EndYear': 2023,
+    'selRowPerPage': 25,
+    'Line': 0,
+    'searchMethod': 'contains',
+    'Month': 3,
+    'Day': 1,
+    'txtStationName': 'Toronto',
+    'timeframe': 1,
+    'Year': 2023}
+
+    return payload
+
 def pull_weather(run_date):
     
     '''
@@ -67,19 +86,8 @@ def pull_weather(run_date):
     curr_weather = ec_en.conditions
     '''
     url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
-    payload ={
-        'StationID': 54239,
-        'Prov': 'ON',
-        'StartYear': 1840,
-        'EndYear': 2023,
-        'selRowPerPage': 25,
-        'Line': 0,
-        'searchMethod': 'contains',
-        'Month': 3,
-        'Day': 1,
-        'txtStationName': 'Toronto',
-        'timeframe': 1,
-        'Year': 2023}
+    payload = get_payload(run_date)
+
 
     #month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
     try:
