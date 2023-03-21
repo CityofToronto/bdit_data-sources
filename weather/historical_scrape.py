@@ -103,14 +103,33 @@ def pull_weather(run_date, station):
         weather_context = request_url(url, payload)
         tmr_date = (run_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-        # Scrap detailed forecast table
-        long_forecast_table = weather_context.find_all("table", class_="table mrgn-bttm-md mrgn-tp-sm textforecast")
-        today_day_forecast, today_night_forecast, tmr_day_forecast, tmr_night_forecast, tomorrow_date = scrap_detailed_info(long_forecast_table)
+        date_query = run_date.strftime("")
+        #find day in weather table
+        values = []
+        abbr_contents = forecast.find_all("abbr")
+        # first element is Tonight without "abbr" 
+        values.append(abbr_contents[0].text)
+        # Use list slicing to get the rest of the elements and filter by "abbr"
+        for i in abbr_contents[1:]:
+            if i.find(title=date_query):
+                    # i.text gives "Wed, 6 Oct", so we split by `,` 
+                    # and print first element
+                values.append(i.text.split(',')[0])
+
         
-        # Scrap summary forecast table
-        short_forecast_table = weather_context.find_all("div", class_="div-table")
-        today_day_temp, today_day_prep, today_night_temp, today_night_prep, tmr_day_temp, tmr_day_prep, tmr_night_temp, tmr_night_prep = scrap_summary_info(short_forecast_table)
-        
+        weather_dict = { 
+            "today_dict": {
+                "date": today,
+                "max_temp": curr_weather['humidity']['value'],
+                "min_temp": curr_weather['wind_speed']['value'],
+                "mean_temp": curr_weather['condition']['value'],
+                "total_rain": curr_weather['text_summary']['value'],
+                "total_snow": 'snow'
+                "total_precip": 'precip'
+                "date_pulled": today
+        }
+    }
+
         logger.info('''\nToday %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight:\nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s 
                         \Tomorrow %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s ''', 
                         str(run_date), 
@@ -124,27 +143,7 @@ def pull_weather(run_date, station):
     except Exception as e:
         logger.error('Failed to collect historical data. Exception: %s', str(e))
 
-
-
-
-    yday = today - datetime.timedelta(days=1)
-    
-    weather_dict = { 
-        "today_dict": {
-            "date": today,
-            "humidity": curr_weather['humidity']['value'],
-            "wind_speed": curr_weather['wind_speed']['value'],
-            "condition": curr_weather['condition']['value'],
-            "text_summary": curr_weather['text_summary']['value'],
-            "date_pulled": today
-        }
-    }
-    
-    
     return weather_dict
-
-def scrape_month(table_detail):
-    return
 
 
 def pull_weather_df(today):
