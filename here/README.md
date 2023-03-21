@@ -119,7 +119,7 @@ HERE updates their maps on an annual basis (usually) to keep up with Toronto's e
 
 #### Functional classes
 
-HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 4).
+HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 5). HERE also includes typically non-road routes like park paths and laneways in functional class 5 - now you know!
 
 Functional class 5 contains a little bit of everything that doesn't fall into the other classes. Currently exclude
 
