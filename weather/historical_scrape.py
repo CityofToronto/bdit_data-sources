@@ -82,7 +82,7 @@ def get_payload(run_date, station):
 
     return payload
 
-def pull_weather(run_date):
+def pull_weather(run_date, station):
     
     '''
     ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
@@ -95,7 +95,7 @@ def pull_weather(run_date):
     curr_weather = ec_en.conditions
     '''
     url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
-    payload = get_payload(run_date)
+    payload = get_payload(run_date, station)
 
 
     #month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
@@ -137,13 +137,6 @@ def pull_weather(run_date):
             "condition": curr_weather['condition']['value'],
             "text_summary": curr_weather['text_summary']['value'],
             "date_pulled": today
-        },
-        "yday_dict": {
-            "date": yday,
-            "max_temp_yday": curr_weather['high_temp_yesterday']['value'],
-            "min_temp_yday": curr_weather['low_temp_yesterday']['value'],
-            "total_precip_yday": curr_weather['precip_yesterday']['value'],
-            "date_pulled": today,
         }
     }
     
@@ -192,15 +185,12 @@ def historical_upsert(cred, run_date):
     conn = cred.get_conn()
     
     print("process start")
-    weather_dict = pull_weather(run_date)
+    weather_dict = pull_weather(run_date, station = 1)
 
     #weather_csv = pull_weather_df(today)
     #print(weather_csv)
 
     today_df = pd.DataFrame.from_dict([weather_dict['today_dict']])
-    yday_df = pd.DataFrame.from_dict([weather_dict['yday_dict']])
-
-    insert_weather(conn, today_df)
     upsert_weather(conn, yday_df)
     
     print("Process Complete")
