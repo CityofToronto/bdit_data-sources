@@ -54,22 +54,31 @@ def request_url(url, payload):
     except Exception as e:
         logger.error('Failed to request url. Exception: %s', str(e))
 
-def get_payload(run_date):
-    
+def get_payload(run_date, station):
+    year = run_date.strftime("%Y")
+    month = run_date.strftime("%m")
+    day = run_date.strftime("%d")
+
+    if station == 1:
+        stationid = 54239
+        stationname = 'Toronto'
+    else:
+        stationid = 51459
+        stationname = 'YYZ'
     
     payload = {
     'StationID': 54239,
     'Prov': 'ON',
-    'StartYear': 1840,
-    'EndYear': 2023,
+    'StartYear': 2019,
+    'EndYear': year,
     'selRowPerPage': 25,
     'Line': 0,
     'searchMethod': 'contains',
-    'Month': 3,
-    'Day': 1,
+    'Month': month,
+    'Day': day,
     'txtStationName': 'Toronto',
     'timeframe': 1,
-    'Year': 2023}
+    'Year': year}
 
     return payload
 
