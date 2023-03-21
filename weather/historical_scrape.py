@@ -105,27 +105,28 @@ def pull_weather(run_date, station):
 
         date_query = run_date.strftime("")
         #find day in weather table
-        values = []
-        abbr_contents = forecast.find_all("abbr")
-        # first element is Tonight without "abbr" 
-        values.append(abbr_contents[0].text)
-        # Use list slicing to get the rest of the elements and filter by "abbr"
-        for i in abbr_contents[1:]:
-            if i.find(title=date_query):
-                    # i.text gives "Wed, 6 Oct", so we split by `,` 
-                    # and print first element
-                values.append(i.text.split(',')[0])
+        days = []
+        abbr_contents = weather_context.find_all("abbr")
+        days.append(abbr_contents[0].text)
 
-        
+        for i in abbr_contents[1:]:
+            data = []
+            if day_contents = i.find(title=date_query):
+                #add all <td> elements into data[]
+                td_contents = day_contents.find_all("td")
+                data.append(td_contents[0].text)
+
+
+                
         weather_dict = { 
             "today_dict": {
                 "date": today,
-                "max_temp": curr_weather['humidity']['value'],
-                "min_temp": curr_weather['wind_speed']['value'],
-                "mean_temp": curr_weather['condition']['value'],
-                "total_rain": curr_weather['text_summary']['value'],
-                "total_snow": 'snow'
-                "total_precip": 'precip'
+                "max_temp": data[0],
+                "min_temp": data[1],
+                "mean_temp": data[2],
+                "total_rain": data[5],
+                "total_snow": data[6],
+                "total_precip": data[7],
                 "date_pulled": today
         }
     }
