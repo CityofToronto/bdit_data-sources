@@ -131,14 +131,12 @@ def pull_weather(run_date, station):
         }
     }
 
-        logger.info('''\nToday %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight:\nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s 
-                        \Tomorrow %s: \nMorning: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s \nNight: \nForecast: %s, \nTemperature: %s, \nChance of Precipitation: %s ''', 
-                        str(run_date), 
-                        today_day_forecast, today_day_temp, today_day_prep,
-                        today_night_forecast, today_night_temp, today_night_prep, 
-                        tomorrow_date, 
-                        tmr_day_forecast, tmr_day_temp, tmr_day_prep,
-                        tmr_night_forecast, tmr_night_temp, tmr_night_prep)
+        logger.info('''\nToday %s: \nMaxTemp: \nMinTemp: %s, \nMeanTemp: %s''', 
+                        str(run_date),
+                        weather_dict['max_temp'],
+                        weather_dict['min_temp'],
+                        weather_dict['mean_temp'] 
+                        )
             
 
     except Exception as e:
@@ -161,7 +159,7 @@ def insert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
     with conn:
         with conn.cursor() as cur:
-            insert_sql = '''INSERT INTO weather.historical_daily(dt, humidity, wind_speed, condition, text_summary, date_pulled) VALUES %s'''
+            insert_sql = '''INSERT INTO weather.historical_daily_city(dt, temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
             execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 def upsert_weather(conn, weather_df):
