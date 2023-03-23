@@ -98,7 +98,6 @@ def pull_weather(run_date, station):
     payload = get_payload(run_date, station)
 
 
-    #month_url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html?hlyRange=2013-06-11%7C2023-02-22&dlyRange=2013-06-13%7C2023-02-22&mlyRange=%7C&StationID=51459&Prov=ON&urlExtension=_e.html&searchType=stnName&optLimit=yearRange&StartYear=2020&EndYear=2023&selRowPerPage=25&Line=3&searchMethod=contains&Month=2&Day=22&txtStationName=toronto&timeframe=2&Year=2023'
     try:
         weather_context = request_url(url, payload)
         tmr_date = (run_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -126,17 +125,11 @@ def pull_weather(run_date, station):
                 "mean_temp": data[2],
                 "total_rain": data[5],
                 "total_snow": data[6],
-                "total_precip": data[7],
-                "date_pulled": today
+                "total_precip": data[7]
         }
     }
 
-        logger.info('''\nToday %s: \nMaxTemp: \nMinTemp: %s, \nMeanTemp: %s''', 
-                        str(run_date),
-                        weather_dict['max_temp'],
-                        weather_dict['min_temp'],
-                        weather_dict['mean_temp'] 
-                        )
+        logger.info("Data inserted!")
             
 
     except Exception as e:
@@ -145,22 +138,6 @@ def pull_weather(run_date, station):
     return weather_dict
 
 
-def pull_weather_df(today):
-    #coord = ['43.74', '-79.37']
-
-    
-    ec = env_canada.ECHistorical(station_id='ON/s0000458', year=2022, month=1, language="english", timeframe='2')
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(ec.update())
-
-    return ec.csv
-
-def insert_weather(conn, weather_df):
-    weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
-    with conn:
-        with conn.cursor() as cur:
-            insert_sql = '''INSERT INTO weather.historical_daily_city(dt, temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip) VALUES %s'''
-            execute_values(cur, insert_sql, weather_df[weather_fields].values)
 
 def upsert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
