@@ -22,7 +22,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'weather'))
     from prediction_import import prediction_upsert
-    from mrc_import import historical_upsert
+    from historical_scrape import historical_upsert
 except:
     raise ImportError("script import failed")
 
@@ -76,7 +76,7 @@ default_args = {
 dag = DAG('pull_weather', default_args=default_args, schedule_interval='30 23 * * *', catchup=False)
 
 #=======================================#
-#no backfill
+#Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill.
 no_backfill = LatestOnlyOperator(task_id="no_backfill", dag=dag)
 
 #dag tasks

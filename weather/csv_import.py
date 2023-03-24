@@ -1,3 +1,10 @@
+###################
+#csv_import.py
+####################
+#Takes downloaded csv files of historical weather data
+# from Environment Canada and inserts them into the historical
+# data table.
+
 import os
 import pandas as pd
 import numpy as np
