@@ -197,4 +197,4 @@ END;
 $BODY$;
 
 ALTER FUNCTION gis._centreline_case1(text, text, text, double precision)
-    OWNER TO jchew;
+    OWNER TO gis_admins;
