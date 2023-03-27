@@ -14,8 +14,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-		- [Data Elements](#data-elements-2)
-		- [Notes](#notes-1)
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
 		- [Data Elements](#data-elements-3)
 	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
@@ -117,30 +115,6 @@ SampleCount|the number of devices completing the route from start to end in the 
 ### Miovision - Multi-modal Permanent Video Counters
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
-
-#### Data Elements
-
-Field Name|Description|Type
-----------|-----------|----
-volume_uid|unique identifier for table|integer
-intersection_uid|unique identifier for each intersection|integer
-datetime_bin|date and time|timestamp without time zone
-classification_uid|classify types of vehicles or pedestrians or cyclists|integer
-leg|entry leg of movement|text
-movement_uid|classify how the vehicles/pedestrians/cyclists cross the intersection, eg: straight/turn left/turn right etc|integer
-volume|volume|integer
-volume_15min_tmc_uid|unique identifier to link to table `miovision_api.volumes_15min_tmc`|integer
-
-#### Notes
-
-* Data entry via Airflow that runs Miovision API daily
-* `volume_uid` in the table is not in the right sequence due to different time of inserting data into table
-* Although Miovision API data has been available circa Summer'18 but the data is only more reliable May 2019 onwards?
-* `miovision_api` schema currently have data from Jan 2019 onwards but data prior to May 2019 contains many invalid movements
-* Duplicates might also happen at the Miovision side (happened once thus far)
-* Quality control activities:
-    1. unique constraint in `miovision_api` volumes tables
-    2. raise a warning flag when try to insert duplicates data into the table
 
 ### RESCU - Loop Detectors
 Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
