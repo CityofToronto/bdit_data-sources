@@ -115,13 +115,13 @@ JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numer
 
 #### Matching maps and data
 
-HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. For 2019 to August 2022, the `here.ta` table corresponds to the `here.routing_streets_21_1` layer. You can check to see if the `here.ta` layer corresponds to any given map layer by joining the attributes using the `link_dir` field and examining the results.
+HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. 
+
+Since August 2022, the `here.ta` table corresponds to the `here.routing_streets_22_2` layer. You can check to see if the `here.ta` layer corresponds to any given map layer by joining the attributes using the `link_dir` field and examining the results.
 
 #### Functional classes
 
-HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 5). HERE also includes typically non-road routes like park paths and laneways in functional class 5 - now you know!
-
-Functional class 5 contains a little bit of everything that doesn't fall into the other classes. Currently exclude
+HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 5). HERE also includes typically non-road routes like park paths and laneways in functional class 5 - now you know! You can exclude non-roads using:
 
 `"paved"  = 'Y' AND "poiaccess" =  'N' AND "ar_auto" = 'Y' AND "ar_traff" = 'Y'`
 
