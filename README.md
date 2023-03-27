@@ -60,12 +60,6 @@ The City collects traffic data from strategically placed sensors at intersection
 
 ## Volume Data
 
-`volumes/` contains code and documentation on our many volume datasources:
-
-- [`miovision`](#miovision---multi-modal-permanent-video-counters): Multi-modal permanent turning movement counts
-- [`rescu`](#rescu---loop-detectors): ATR data from loop detectors
-- [FLOW Data](volumes/#flow-data): A database of short-term ATR and TMCs
-
 ### Miovision - Multi-modal Permanent Video Counters
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
