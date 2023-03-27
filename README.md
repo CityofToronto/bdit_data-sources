@@ -57,46 +57,7 @@ For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has relea
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## BlipTrack Bluetooth Detectors
-
-### Data Elements
-
-#### Historical Data
-
-Field Name|Description|Type
-----------|-----------|----
-TimeStamp|timestamp|datetime
-StartPointName|startpoint name of segment|string
-EndPointName|endpoint name of segment |string
-MinMeasuredTime|min waiting time of users completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
-MaxMeasuredTime|max waiting time of users completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
-AvgMeasuredTime|average waiting time of users completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
-MedianMeasuredTime|median waiting time of users completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
-SampleCount|the number of devices completing the route from start to end in the timeframe timestamp-resolution to timestamp|int
-
-### Retrieval
-
-* Interfaces for retrieving data
-	1. Export from Bliptrack GUI at g4apps.bliptrack.net
-	2. Display API: REST-based interface returns live data as JSON or xml in a HTTP(S) response
-	3. WebService API: SOAP-based for programmatic access to the system.
-* Functions that web service includes:
-	- getAvailableDisplayIds() – returns a list of available Public Displays;
-	- getDisplayInfo() – returns detailed information for a Public Display for a given display ID;
-	- getPublicDisplayData() – used to get Public Display data (current result set) for a given display ID;
-	- getDisplayData() – used to get Public Display data (current result set) for a given display ID (for displays with Restricted Access enabled);
-	- getExportableAnalyses() – returns a list of analyses, each with all required information for export;
-	- getExportableLiveAnalyses() – returns a list of live analyses, each with all required;
-	- information for export;
-	- getFilteredAnalyses() – returns a list of analyses matching a specified filter, each with all required information for export;
-	- exportDwelltimeReport() – used to export Measured Time data;
-	- exportLiveDwelltimeReport() – used to export Live Measured Time data;
-	- exportKPIReport() – used to export KPI data;
-	- exportQuarterlyReport() – used to export Quarterly KPI data;
-	- exportCounterReport() – used to export Counter Reports;
-	- getCurrentDwellTime() – used to get current dwell time for a live analysis;
-	- getCurrentDwellTimes() – used to get current dwell time for a list of live analyses in a single call;
-	- exportPerUserData() – used to export individual dwell time measurements for an analysis; and
-	- getCustomCurrentDwellTime() – used to get current dwell time for a live analysis with custom parameters.
+The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated.
 
 ## GIS - Geographic Information System
 
