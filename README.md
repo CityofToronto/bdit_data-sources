@@ -1,13 +1,11 @@
 ﻿# BDIT Data Sources <!-- omit in toc -->
 
-This is a master repo for all of the data sources that we use. Each folder is for a different data source and contains an explanation of what the data source is and how it can be used, a sample of the data, and scripts to import the data into the PostgreSQL database.
+This is a master repo for all of the data sources that we use. Each folder is for a different data source and contains an explanation of what the data source is, how it can be used, a sample of the data, and scripts to import the data into the PostgreSQL database.
 
 ## Table of Contents <!-- omit in toc -->
 
 - [Open Data Releases](#open-data-releases)
 - [INRIX](#inrix)
-	- [Data Elements](#data-elements)
-	- [Notes](#notes)
 - [BlipTrack Bluetooth Detectors](#bliptrack-bluetooth-detectors)
 	- [Data Elements](#data-elements-1)
 		- [Historical Data](#historical-data)
@@ -60,24 +58,7 @@ For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has relea
 - [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data. The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/). See the [Miovision Open Data](miovision#open-data) section for more info.
 
 ## INRIX
-
-### Data Elements
-
-Field Name|Description|Type
-----------|-----------|----
-RoadName/Number|Road names or numbers|string
-tx|Date and time|datetime
-tmc|TMC Link ID|string
-spd|Link speed estimate|double
-count|Sample Size Used|int
-score|Quality Indicator|10/20/30
-
-### Notes
-
-* INRIX vehicles disproportionately include heavy vehicles.
-* There's additional sampling bias in that the heavy vehicles do not reflect the general travel patterns.
-* Two sections of freeway(the southernmost sections of 427 and 404) have no available data. These approaches may be imssing due to the idiosyncratic geometries of TMCs near the major freeway-to-freeway interchanges.
-* In any given 15 minute interval between 5am and 10pm, 88.7% of freeway links and 48% of arterial links have observations.
+Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## BlipTrack Bluetooth Detectors
 

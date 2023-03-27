@@ -18,12 +18,6 @@ You can create sample data (like [`sampledata.csv`](sampledata.csv)) using the [
 
 ## Table Partitioning
 
-Since the dataset is so massive, it's better not to have it all in one massive table. 
-
->Partitioning refers to splitting what is logically one large table into smaller physical pieces. Partitioning can provide several benefits
-
-See [the documentation](https://www.postgresql.org/docs/current/static/ddl-partitioning.htm) for more details on the benefits.
-
 Data are stored in partitioned monthly tables that inherit from  one master table which is empty. Partitioning is enabled by having a check constraint on the timestamp of each monthly table, so the query planner knows where to look for data:
 ```sql
 CHECK (tx >= DATE '2014-01-01' AND tx < DATE '2014-01-01' + INTERVAL '1 month')
@@ -70,10 +64,18 @@ WITH examples AS(
 SELECT 
 ex_time AS "Example Time", 
 (ex_time AT TIME ZONE 'UTC') AT TIME ZONE 'America/Toronto' AS "Converted Time"
-FROM examples```
+FROM examples
+```
 
 By chaining the [`AT TIME ZONE`](https://www.postgresql.org/docs/9.5/static/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT) command the above query converts the *timestamp without timezone* to one **with** at `UTC` and then back to a *timestamp without timezone* at `America/Toronto` time.
 
 This is fully implemented in the python script [`update_timezone.py`](python/update_timezone.py)
 
 Running a speed test on my local machine, the timestamp update should have been combined in the `COPY` transaction. First `COPY` to a `TEMP TABLE` then `INSERT INTO` with a `SELECT fix_timestamp(tx), ...` rather than `COPY` followed by `UPDATE`. The latter was nearly 50% slower (67 minutes vs 46).
+
+### Miscellaneous Notes
+
+* INRIX vehicles disproportionately include heavy vehicles.
+* There's additional sampling bias in that the heavy vehicles do not reflect the general travel patterns.
+* Two sections of freeway(the southernmost sections of 427 and 404) have no available data. These approaches may be imssing due to the idiosyncratic geometries of TMCs near the major freeway-to-freeway interchanges.
+* In any given 15 minute interval between 5am and 10pm, 88.7% of freeway links and 48% of arterial links have observations.
