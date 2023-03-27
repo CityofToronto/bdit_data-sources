@@ -11,7 +11,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
-		- [Data Elements](#data-elements-3)
 	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
 		- [Data Elements](#data-elements-4)
 		- [Notes](#notes-2)
@@ -72,18 +71,9 @@ The City collects traffic data from strategically placed sensors at intersection
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
 
 ### RESCU - Loop Detectors
-Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
-
-Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`.
-	
-#### Data Elements
-Field Name|Description|Type
-----------|-----------|----
-volume_uid|unique identifier for table|integer
-detector_id|unique identifier for each detector|text
-datetime_bin|date and time|timestamp
-volume_15min|volume|integer
-artery_code|artery code|integer
+Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
+More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
+or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
 
 ### Turning Movement Counts (TMC)
 
