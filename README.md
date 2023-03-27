@@ -152,34 +152,7 @@ A number of different features of traffic signals (Leading Pedestrian Intervals,
 
 ### Red Light Cameras
 
-Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in `assets/rlc` for details about this process.  The final table is made up of the following elements:  
-
-
-#### Data Elements
-Field Name|Description|Type
-----------|-----------|----
-rlc|ID number of camera |integer
-tcs|?|integer
-loc|name of intersection|text
-additional_info| notes |text
-main|name of main street in intersection|text
-side1|name of intersecting street|text
-side2|name of intersecting street if it e.g. changes after intersection |text
-mid_block|currently all NULL|text
-privateAccess|name of private access street|text
-latitude|latitude|numeric
-longitude|longitude|numeric
-x|?|numeric
-y|?|numeric
-district|name of district|text
-ward1|?|text
-ward2|?|text
-ward3|?|text
-ward4|?|text
-policeDivision1|?|text
-policeDivision2|?|text
-policeDivision3	|?|text
-date_installed|date installed|date  
+Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in [`assets/rlc`](assets/rlc/) for details about this process.
 
 ## Vision Zero - Google Sheets API
 
