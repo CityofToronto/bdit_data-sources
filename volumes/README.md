@@ -235,7 +235,7 @@ Field Name|Type|Description
 count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
 arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
 count_date|date|date on which the count was conducted
-day_no|bigint|day of the week
+day_no|bigint|day of the week 1= Sunday, 7 = Saturday
 category_id|int|ID number linked to [category](#category) table containing the source of the count
 
 #### cnt_det
