@@ -7,8 +7,7 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Open Data Releases](#open-data-releases)
 - [INRIX](#inrix)
 - [BlipTrack Bluetooth Detectors](#bliptrack-bluetooth-detectors)
-- [GIS - Geographic Information System](#gis---geographic-information-system)
-	- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
+- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
@@ -56,11 +55,9 @@ Data collected from a variety of traffic probes from 2007 to 2016 for major stre
 ## BlipTrack Bluetooth Detectors
 The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated.
 
-## GIS - Geographic Information System
+## Text Description to Centreline Geometry Automation
 
-### Text Description to Centreline Geometry Automation
-
-[`gis/text_to_centreline/`](gis/text_to_centreline) contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use. 
+[`gis/text_to_centreline/`](gis/text_to_centreline) contains sql used to transform text description of street (in bylaws) into centreline geometries. See the [README](gis/text_to_centreline) for details on how to use.
 
 ## Volume Data
 
