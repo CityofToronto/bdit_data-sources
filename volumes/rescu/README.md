@@ -1,6 +1,6 @@
 # RESCU - Loop Detectors
 
-Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. 
+Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
 More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
 
