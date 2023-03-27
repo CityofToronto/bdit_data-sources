@@ -4,7 +4,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 
 ## Table of Contents <!-- omit in toc -->
 
-- [Open Data Releases](#open-data-releases)
 - [INRIX](#inrix)
 - [BlipTrack Bluetooth Detectors](#bliptrack-bluetooth-detectors)
 - [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
@@ -29,20 +28,7 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Notes](#notes-7)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
-- [`wys`: Watch Your Speed Signs](#wys-watch-your-speed-signs)
-
-## Open Data Releases
-
-- [Travel Times - Bluetooth](https://open.toronto.ca/dataset/travel-times-bluetooth/) contains data for all the bluetooth segments collected by the city. The travel times are 5 minute average travel times. The real-time feed is currently not operational. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
-- [Watch Your Speed Signs](#wys-watch-your-speed-signs) give feedback to drivers to encourage them to slow down, they also record speed of vehicles passing by the sign. Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly.
-
-For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has released the following datasets, which are typically a subset of larger datasets specific to the pilot:
-
-- [King St. Transit Pilot - Detailed Bluetooth Travel Time](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-bluetooth-travel-time/) contains travel times collected during the King Street Pilot in the same format as the above data set. Data is collected on segments found in the [King St. Transit Pilot – Bluetooth Travel Time Segments](https://open.toronto.ca/dataset/king-st-transit-pilot-bluetooth-travel-time-segments/) map layer. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
-- [King St. Transit Pilot – Bluetooth Travel Time Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-bluetooth-travel-time-summary/) contains monthly averages of corridor-level travel times by time periods. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
-- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://open.toronto.ca/dataset/king-st-transit-pilot-2015-king-street-traffic-counts/) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. See the [Volumes Open Data King Street Pilot](volumes#king-street-pilot) section for more info.
-- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated TMC data collected from Miovision cameras during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area. See the [Miovision Open Data](miovision#open-data) section for more info.
-- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data. The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/). See the [Miovision Open Data](miovision#open-data) section for more info.
+- [Watch Your Speed Signs](#watch-your-speed-signs)
 
 ## INRIX
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
