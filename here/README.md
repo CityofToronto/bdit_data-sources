@@ -117,7 +117,7 @@ JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numer
 
 HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. 
 
-Since August 2022, the `here.ta` table corresponds to the `here.routing_streets_22_2` layer. You can check to see if the `here.ta` layer corresponds to any given map layer by joining the attributes using the `link_dir` field and examining the results.
+Please refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh.
 
 #### Functional classes
 
