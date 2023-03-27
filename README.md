@@ -41,8 +41,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
 - [`wys`: Watch Your Speed Signs](#wys-watch-your-speed-signs)
-	- [Data Elements](#data-elements-11)
-	- [WYS Open Data](#wys-open-data)
 
 ## Open Data Releases
 
