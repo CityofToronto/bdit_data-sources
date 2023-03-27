@@ -148,37 +148,7 @@ The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_te
 
 ### Traffic Signals
 
-A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to the database, extract the data needed, and store to our RDS Postgres database. See the README file in `assets/traffic_signals` for details about the source datasets and how they are combined into a final table made up of the following data elements.   
-
-#### Data Elements
-Field Name|Description|Type
-----------|-----------|----
-asset_type|type of indicator|text
-px|?? | integer
-main_street|name of main street|text
-midblock_route|location details e.g. "26m SOUTH OF" |text
-side1_street|name of intersecting street |text
-side2_street|name of intersecting street if it e.g. changes after intersection |text
-latitude|latitude|numeric
-longitude|longitude|numeric
-activation_date|date installed |date
-details|currently NULL |text  
-
-#### Notes  
-For the final layer `vz_safety_programs.points_traffic_signals`, the `asset_type` column is populated with text `Traffic Signals`, and the other columns are renamed:  
-
-```
-'Traffic Signals'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1routef AS side1_street,
-   a.side2route AS side2_street,
-   b.latitude,
-   b.longitude,
-   b.activation_date AS activation_date,
-   NULL::text AS details
-```
+A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). See the README file in [`assets/traffic_signals`](assets/traffic_signals/) for details about the source datasets and how they are combined into a final table made up of the following data elements.
 
 ### Red Light Cameras
 
