@@ -20,8 +20,7 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
 	- [Data Elements](#data-elements-6)
 	- [Notes](#notes-4)
-- [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
-	- [Data Elements](#data-elements-10)
+- [School Safety Zones](#school-safety-zones)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
 
 ## Assets
@@ -105,23 +104,10 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
   1. data gap verification
   2. partial data records flagged for manual verification/correction
 
-## Vision Zero - Google Sheets API
+## School Safety Zones
+[`gis/school_safety_zones/`](gis/school_safety_zones/)
 
-This dataset comes from Google Sheets tracking progress on implementation of safety improvements in school zones. \
-Data Available in `vz_safety_programs_staging.school_safety_zone_2018_raw` and `vz_safety_programs_staging.school_safety_zone_2019_raw`
-
-### Data Elements
-
-Field Name|Description|Type
-----------|-----------|----
-school_name|name of school|text
-address|address of school|text
-work_order_fb|work order of flashing beacon|text
-work_order_wyss|work order of watch your speed sign|text
-locations_zone|coordinate of school|text
-final_sign_installation|final sign installation date|text
-locations_fb|location of flashing beacon|text
-locations_wyss|location of watch your speed sign|text
+This dataset comes from Vision Zero which uses Google Sheets to track progress on the implementation of safety improvements in school zones.
 
 ## Watch Your Speed signs
 [`wys/`](wys/)
