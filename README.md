@@ -15,8 +15,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
-	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
-	- [Permanent Count Stations and Automated Traffic Recorder (ATR)](#permanent-count-stations-and-automated-traffic-recorder-atr)
 - [School Safety Zones](#school-safety-zones)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
 
@@ -76,10 +74,6 @@ AKA Vehicle Detector Station (VDS)
 Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
 More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
-
-### Turning Movement Counts (TMC)
-
-### Automated Traffic Recorder (ATR) and Permanent Count Stations
 
 ## School Safety Zones
 [`gis/school_safety_zones/`](gis/school_safety_zones/)
