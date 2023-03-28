@@ -4,7 +4,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 
 ## Table of Contents <!-- omit in toc -->
 
-- [INRIX](#inrix)
 - [BlipTrack Bluetooth Detectors](#bliptrack-bluetooth-detectors)
 - [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
 - [Volume Data](#volume-data)
@@ -16,20 +15,14 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [Data Elements](#data-elements-6)
 	- [Notes](#notes-4)
 - [Incidents](#incidents)
-	- [Data Elements](#data-elements-7)
-	- [Notes](#notes-5)
+- [INRIX](#inrix)
 - [Assets](#Assets)
   - [Traffic Signals](#Traffic-Signals)
   - [Red Light Cameras](#Red-light-cameras)
-- [CRASH - Motor Vehicle Accident Report](#motor-vehicle-collisions)
+- [Motor Vehicle Collisions](#motor-vehicle-collisions)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
-
-## INRIX
-[`inrix/`](inrix/)
-
-Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## BlipTrack Bluetooth Detectors
 [`bluetooth/`](bluetooth/)
@@ -84,21 +77,12 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
   2. partial data records flagged for manual verification/correction
 
 ## Incidents
+See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
 
-### Data Elements
-* Unique system (ROdb) identifier
-* Location
-* DTO district
-* Incident start and end times
-* Incident description free form
-* Incident status and timestamps
-* Police activities and timestamps
-* RESCU operator shift information
+## INRIX
+[`inrix/`](inrix/)
 
-### Notes
-* Manual data entry
-* Location description from a dropdown list
-* Manual location selection on a map based on location description
+Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## Motor Vehicle Collisions
 
