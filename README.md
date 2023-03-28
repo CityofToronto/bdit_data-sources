@@ -18,9 +18,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Incidents](#incidents)
 	- [Data Elements](#data-elements-7)
 	- [Notes](#notes-5)
-- [Road Disruption Activity (RoDARS)](#road-disruption-activity-rodars)
-	- [Data Elements](#data-elements-8)
-	- [Notes](#notes-6)
 - [Assets](#Assets)
   - [Traffic Signals](#Traffic-Signals)
   - [Red Light Cameras](#Red-light-cameras)
@@ -102,37 +99,6 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 * Manual data entry
 * Location description from a dropdown list
 * Manual location selection on a map based on location description
-
-## Road Disruption Activity (RoDARS)
-Data available in `city.restrictions`
-
-### Data Elements
-
-Field Name|Description|Type
-----------|-----------|----
-id|Unique system identifier|string
-description|project description freeform (direction and number of lanes affected and reason)|string
-name|location description|string
-road|road of disruption|string
-atroad|road at cross if disruption zone is an intersection|string
-fromroad|start crossroad if disruption zone is a segment|string
-toroad|end crossroad if disruption zone is a segment|stirng
-latitude/longitude|geo-information (not always occupied)|double
-district|district of location|string(from dropdown list)
-roadclass|road types|string(from dropdown list)
-expired|event status|0:ongoing;1:expired
-starttime|start time(may not be accurate)|timestamp
-endtime|end time(may not be accurate)|timestamp
-workperiod|Daily/Continuous/Weekdays/Weekends(not always occupied)|string
-contractor|contractor name(not always occupied)|string(from dropdown list)
-workeventtype|work event types(not always occupied)|string(from dropdown list)
-
-### Notes
-* Information is collected via applicant submission of RoDARS notification form
-* Data entry into ROdb via dropdown list of values
-* No system integration with special events and filming departmental systems
-* Crucial elements of information are in free-form such as lane blockage/closure
-* Roadway names from a dropdown list that conforms to SLSN
 
 ## Motor Vehicle Collisions
 
