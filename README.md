@@ -126,23 +126,8 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * Crucial elements of information are in free-form such as lane blockage/closure
 * Roadway names from a dropdown list that conforms to SLSN
 
-## CRASH - Motor Vehicle Accident Report
-### Data Elements
-* Unique MVAR identifier (externally assigned by Toronto Police Service)
-* Accident Date & Time
-* Type of collision
-* Accident location: street name(s), distance offset, municipality, county, etc.
-* Description of accident and diagram
-* Involved persons:
-	- Motorist/passenger/pedestrian/cyclist
-	- Person age
-	- Gender
-	- Injuries and Fatalities
-
-### Notes
-* No real-time data integration
-* Manual data integration with TPS and CRC via XML file exchange (not reliable or consistent)
-
+## Motor Vehicle Collisions
+The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
 
 ## Assets
 The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
