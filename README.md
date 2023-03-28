@@ -4,8 +4,14 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 
 ## Table of Contents <!-- omit in toc -->
 
-- [BlipTrack Bluetooth Detectors](#bliptrack-bluetooth-detectors)
-- [Text Description to Centreline Geometry Automation](#text-description-to-centreline-geometry-automation)
+- [Assets](#Assets)
+  - [Red Light Cameras](#Red-light-cameras)
+  - [Traffic Signals](#Traffic-Signals)
+- [Bluetooth Detectors](#bluetooth-detectors)
+- [Collisions](#collisions)
+- [Incidents](#incidents)
+- [INRIX](#inrix)
+- [Street Centreline Geocoding](#street-centreline-geocoding)
 - [Volume Data](#volume-data)
 	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
@@ -14,22 +20,45 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
 	- [Data Elements](#data-elements-6)
 	- [Notes](#notes-4)
-- [Incidents](#incidents)
-- [INRIX](#inrix)
-- [Assets](#Assets)
-  - [Traffic Signals](#Traffic-Signals)
-  - [Red Light Cameras](#Red-light-cameras)
-- [Motor Vehicle Collisions](#motor-vehicle-collisions)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
 
-## BlipTrack Bluetooth Detectors
+## Assets
+[`assets/`](assets/)
+
+The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
+
+### Red Light Cameras
+[`assets/rlc/`](assets/rlc/)
+
+Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in [`assets/rlc`](assets/rlc/) for details about this process.
+
+### Traffic Signals
+[`assets/traffic_signals/`](assets/traffic_signals/)
+
+A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). See the README file in [`assets/traffic_signals`](assets/traffic_signals/) for details about the source datasets and how they are combined into a final table made up of the following data elements.
+
+## Bluetooth Detectors
 [`bluetooth/`](bluetooth/)
 
 The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated.
 
-## Text Description to Centreline Geometry Automation
+## Collisions
+
+[`collisions/`](collisions/)
+
+The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
+
+## Incidents
+See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
+
+## INRIX
+[`inrix/`](inrix/)
+
+Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
+
+## Street Centreline Geocoding
 [`gis/text_to_centreline/`](gis/text_to_centreline/)
 
 Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
@@ -75,35 +104,6 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 * Quality control activities:  
   1. data gap verification
   2. partial data records flagged for manual verification/correction
-
-## Incidents
-See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
-
-## INRIX
-[`inrix/`](inrix/)
-
-Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
-
-## Motor Vehicle Collisions
-
-[`collisions/`](collisions/)
-
-The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
-
-## Assets
-[`assets/`](assets/)
-
-The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
-
-### Traffic Signals
-[`assets/traffic_signals/`](assets/traffic_signals/)
-
-A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). See the README file in [`assets/traffic_signals`](assets/traffic_signals/) for details about the source datasets and how they are combined into a final table made up of the following data elements.
-
-### Red Light Cameras
-[`assets/rlc/`](assets/rlc/)
-
-Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in [`assets/rlc`](assets/rlc/) for details about this process.
 
 ## Vision Zero - Google Sheets API
 
