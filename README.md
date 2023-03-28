@@ -24,14 +24,14 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 - [Assets](#Assets)
   - [Traffic Signals](#Traffic-Signals)
   - [Red Light Cameras](#Red-light-cameras)
-- [CRASH - Motor Vehicle Accident Report](#crash---motor-vehicle-accident-report)
-	- [Data Elements](#data-elements-9)
-	- [Notes](#notes-7)
+- [CRASH - Motor Vehicle Accident Report](#motor-vehicle-collisions)
 - [Vision Zero - Google Sheets API](#vision-zero---google-sheets-api)
 	- [Data Elements](#data-elements-10)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
 
 ## INRIX
+[`inrix/`](inrix/)
+
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## BlipTrack Bluetooth Detectors
@@ -127,9 +127,14 @@ workeventtype|work event types(not always occupied)|string(from dropdown list)
 * Roadway names from a dropdown list that conforms to SLSN
 
 ## Motor Vehicle Collisions
+
+[`collisions/`](collisions/)
+
 The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
 
 ## Assets
+[`assets/`](assets/)
+
 The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
 
 ### Traffic Signals
