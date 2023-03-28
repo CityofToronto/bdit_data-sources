@@ -17,9 +17,6 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 	- [RESCU - Loop Detectors](#rescu---loop-detectors)
 	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
 	- [Permanent Count Stations and Automated Traffic Recorder (ATR)](#permanent-count-stations-and-automated-traffic-recorder-atr)
-- [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
-	- [Data Elements](#data-elements-6)
-	- [Notes](#notes-4)
 - [School Safety Zones](#school-safety-zones)
 - [Watch Your Speed Signs](#watch-your-speed-signs)
 
@@ -74,6 +71,8 @@ Miovision currently provides volume counts gathered by cameras installed at spec
 ### RESCU - Loop Detectors
 [`volumes/rescu/`](volumes/rescu/)
 
+AKA Vehicle Detector Station (VDS)
+
 Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
 More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
@@ -81,28 +80,6 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 ### Turning Movement Counts (TMC)
 
 ### Automated Traffic Recorder (ATR) and Permanent Count Stations
-
-## Vehicle Detector Station (VDS)
-
-### Data Elements
-
-* Location Identifier (SLSN Link ID)
-* Count Type
-* Roadway Names
-* Lane Number
-* 15 min aggregated interval times
-* 15 min aggregated volume, occupancy, and speed
-
-### Notes
-
-* Raw 20sec interval VDS data is available on the processing server, not loaded into FLOW
-* VDS device health/communication statuses are not recorded.
-* Asset information managed in Excel spreadsheets
-* Automated daily import but no real-time integration
-* Strictly conforms to FLOW LOADER data file structure
-* Quality control activities:  
-  1. data gap verification
-  2. partial data records flagged for manual verification/correction
 
 ## School Safety Zones
 [`gis/school_safety_zones/`](gis/school_safety_zones/)
