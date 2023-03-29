@@ -99,21 +99,22 @@ Common output parameters:
 ## Important things to note:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.
+- Harmonic mean: Harmonic mean should be used when averaging speed over a particular `link_dir`, or we can average travel time or travel time index with the arithmetic mean. For averaging speed across multiple `link_dir`s (with differing lengths) you'll need to use a weighted harmonic mean.
 - Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) have observations. 
 
 # Aggregation
 
 ## Using congestion tables (version 2.0)
 
-Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin linklevel data up to hourly segment level bins, creating segment hourly travel time summaries that contains daily, hourly travel times for each segment.
+Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin link-level data up to hourly segment level bins, creating segment hourly travel time summaries that contains daily, hourly travel times for each segment.
 
 When to use congestion summary tables:
 
 - Spatial check
-    - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains minor arterial roads and above, and thes are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
+    - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains minor arterial roads and above, and these are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
 - Temporal check
     - Does your time range need finer resolution than 1 hour bins? This summary table only consist of hourly data. If you are looking for finer resolution, aggregate directly from the raw `here.ta` table.
-    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly form the `here.ta` table.   
+    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly from the `here.ta` table.   
 
 **Step 1**: Specify both time range and date range using CTE.
 ```sql
@@ -174,6 +175,9 @@ FROM period_avg
 GROUP BY 
     range_name,
     period_name
+HAVING count(segment_id) = (
+    SELECT COUNT(DISTINCT segment_id) FROM data_requests.input_table
+)
 ```
 
 ## Using congestion weekly tables (not supported, to be deprecated)
