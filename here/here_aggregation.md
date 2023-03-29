@@ -81,20 +81,20 @@ WHERE
 Example of a table (from `activeto.analysis_ranges`):
 
 | analysis_range_id | project | analysis_range_name | date_range |
-| --- | --- | --- | --- |
-| 1 | KQQR | Fall 2019 | [2019-09-16,2019-12-09) |
-| 2 | KQQR | Before | [2021-02-01,2021-04-05) |
-| 3 | KQQR | Closure | [2021-04-05,2022-05-10) |
+| ----------------- | ------- | ------------------- | ---------- |
+| 1 | KQQR | Fall 2019 | `'[2019-09-16,2019-12-09)'` |
+| 2 | KQQR | Before    | `'[2021-02-01,2021-04-05)'` |
+| 3 | KQQR | Closure   | `'[2021-04-05,2022-05-10)'` |
 
 # Output Parameters
-We typically provide average, minimum, and maximum travel time for data requests. For project analysis, output parameters are project specific, we typically estimate average travel time and travel time index for each corridor.
+We typically provide only an average travel time but sometimes also a range of travel times for data requests. For project analysis, output parameters are project specific; we typically estimate average travel time and travel time index for each corridor.
 
 Common output parameters:
-- average speed / travel time
-- min speed / travel time
-- max speed / travel time
-- 85th percentile speed
-- average travel time index
+- **mean travel time**
+- min travel time
+- max travel time
+- 85th percentile travel time
+- travel time index
 
 ## Important things to note:
 
