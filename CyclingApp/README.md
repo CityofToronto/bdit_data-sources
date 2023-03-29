@@ -1,6 +1,6 @@
 # Cycling App Data
 
-Transportation Services commissioned the [Toronto Cycling App](http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=5c555cb1e7506410VgnVCM10000071d60f89RCRD&vgnextchannel=6f65970aa08c1410VgnVCM10000071d60f89RCRD&appInstanceName=default) by Brisk Synergies in 2014. The App allows cyclists to record their cycling routes and provide this data to the City. This data was used to inform the development of the [new Cycling Plan](https://static1.squarespace.com/static/574710fe2fe131d4ab0794d8/t/5762e8cc46c3c4824d561a75/1466099934772/4.2) (pdf) and also assists in the ongoing monitoring of cycling patterns over time as cycling infrastructure is improved and expanded. 
+Transportation Services commissioned the [Toronto Cycling App](https://web.archive.org/web/20150818205341/http://www1.toronto.ca/wps/portal/contentonly?vgnextoid=5c555cb1e7506410VgnVCM10000071d60f89RCRD&vgnextchannel=6f65970aa08c1410VgnVCM10000071d60f89RCRD&appInstanceName=default) by Brisk Synergies in 2014. The App allows cyclists to record their cycling routes and provide this data to the City. This data was used to inform the development of the new Cycling Plan and also assists in the ongoing monitoring of cycling patterns over time as cycling infrastructure is improved and expanded. 
 
 The following data dumps are available from Brisk's analytics portal. 
 ```
@@ -134,3 +134,8 @@ Fields (all values in the csv are quoted)
 |speed| numeric | Avg: 4.81 so probably km/h?  |
 |hort_accuracy| numeric | probably meters |
 |vert_accuracy| numeric | probably meters |
+
+## Published research using this data
+* [Where we ride faster? Examining cycling speed using smartphone GPS data](https://www.sciencedirect.com/science/article/abs/pii/S2210670718304682)
+* [Route Choice Modeling of Cyclists in Toronto](https://www.proquest.com/openview/c5af56249e852e5b566161f16f642eb0/1?cbl=18750&pq-origsite=gscholar&parentSessionId=Y3fgSTaX69g8U9I7KA%2FxaxlW0PjXRPL%2FDxN5wPQLDgs%3D)
+* [Cycling in Toronto, Ontario, Canada: Route Choice Behavior and Implications for Infrastructure Planning](https://journals.sagepub.com/doi/abs/10.3141/2662-05)

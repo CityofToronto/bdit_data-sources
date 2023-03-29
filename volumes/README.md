@@ -235,7 +235,7 @@ Field Name|Type|Description
 count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
 arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
 count_date|date|date on which the count was conducted
-day_no|bigint|day of the week
+day_no|bigint|day of the week 1= Sunday, 7 = Saturday
 category_id|int|ID number linked to [category](#category) table containing the source of the count
 
 #### cnt_det
@@ -287,6 +287,6 @@ category_name|text|name of the data source
 
 For the King Street Transit Pilot, the below volume datasets were released. The first is [ATR counts](#automated-traffic-recorders-atrs) from before the start of the pilot, tagged to the City's Centreline layer, while the other two are from [Miovision](miovision) permanent count cameras and are georeferenced by intersection:
 
-- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#23c0a4a8-12f6-5ca7-9710-a5cf29a0a3e7) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. [Here](sql/open_data-ksp_atr_2015.sql) is the SQL that generated that table.
-- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#55a44849-90eb-ed1e-fbca-a7ad6b1025e3) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
-- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://www.toronto.ca/city-government/data-research-maps/open-data/open-data-catalogue/#dfd63698-5d0e-3d24-0732-9d1fea58523c) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
+- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://open.toronto.ca/dataset/king-st-transit-pilot-2015-king-street-traffic-counts/) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. [Here](sql/open_data-ksp_atr_2015.sql) is the SQL that generated that table.
+- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
+- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)

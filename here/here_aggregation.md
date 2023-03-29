@@ -1,12 +1,15 @@
 # Table of Contents  
-- [Input Parameters](#input-parameters)
-    - [Geometry](#Geometry)
-    - [Time Range](#time-range)
-    - [Date Range](#date-range)
-- [Output Parameters](#output-parameters)
-- [Aggregation](#aggregation)
-    - [Using congestion tables](#using-congestion-tables)
-    - [Using raw speed table](#using-raw-speed-table)
+- [Table of Contents](#table-of-contents)
+  - [Input Parameters](#input-parameters)
+    - [Geometry](#geometry)
+    - [Time range](#time-range)
+    - [Date range](#date-range)
+  - [Output Parameters](#output-parameters)
+    - [Important things to note:](#important-things-to-note)
+  - [Aggregation](#aggregation)
+    - [Using congestion tables (version 2.0)](#using-congestion-tables-version-20)
+    - [Using congestion weekly tables (not supported, to be deprecated)](#using-congestion-weekly-tables-not-supported-to-be-deprecated)
+    - [Using the raw speed table `here.ta`](#using-the-raw-speed-table-hereta)
 
 ## Input Parameters
 
@@ -37,10 +40,11 @@ Example of a CTE:
 ```sql
 -- Define time range in a CTE
 WITH time_ranges(period, time_range, dow) AS (
-   VALUES ('AM Long Peak'::text, '[07:00:00,10:00:00)'::timerange,'[2,5)'::int4range),
-          ('AM Short Peak'::text,'[08:00:00,09:00:00)'::timerange,'[2,5)'::int4range),
-          ('PM Long Peak'::text, '[15:00:00,18:00:00)'::timerange,'[2,5)'::int4range),
-          ('PM Short Peak'::text,'[16:00:00,17:00:00)'::timerange,'[2,5)'::int4range)
+    VALUES
+    ('AM Long Peak', '[07:00:00,10:00:00)'::timerange, '[2,5)'::int4range),
+    ('AM Short Peak', '[08:00:00,09:00:00)'::timerange, '[2,5)'::int4range),
+    ('PM Long Peak', '[15:00:00,18:00:00)'::timerange, '[2,5)'::int4range),
+    ('PM Short Peak', '[16:00:00,17:00:00)'::timerange, '[2,5)'::int4range)
 )
 ```
 Example of a table (from `activeto.analysis_periods`):
@@ -56,21 +60,24 @@ Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHER
 
 Example of filtering date ranges in the `WHERE` clause (not using `between`):
 ```sql
-FROM      here.ta -- speed data table
+
+FROM    here.ta -- speed data table
 
 LEFT JOIN ref.holiday holiday ON ta.tx::date = holiday.dt
 
-WHERE     (ta.tx >= '2019-01-01 00:00:00'::timestamp without time zone AND 
-          ta.tx < '2019-02-18 00:00:00'::timestamp without time zone) AND -- filter date ranges
-          holiday.dt IS NULL -- excluding holiday
+WHERE   
+    (ta.dt >= '2019-01-01'::date AND ta.dt < '2019-02-18'::date)  -- filter date ranges
+    AND holiday.dt IS NULL -- excluding holiday
+
 ```
 
 Example of defining date ranges in a `CTE`:
 ```sql
 WITH date_period(obs_period, date_range) AS (
-   VALUES ('Before'::text,'[2020-09-08,2020-10-10)'::daterange),
-          ('Installation'::text,'[2019-09-16,2019-12-07)'::daterange),
-          ('After'::text,'[2020-11-23,2020-12-22)'::daterange)
+    VALUES
+    ('Before', '[2020-09-08,2020-10-10)'::daterange),
+    ('Installation', '[2019-09-16,2019-12-07)'::daterange),
+    ('After', '[2020-11-23,2020-12-22)'::daterange)
 )
 ```
 
@@ -96,13 +103,85 @@ Common output parameters:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.
 - Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
-- Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) has observations.
+- Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) have observations. 
 
 ## Aggregation
 
-### Using congestion tables
+### Using congestion tables (version 2.0)
 
-Congestions summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
+Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment daily travel time summaries that contains daily thourly travel times for each segment.
+
+When to use congestion summary tables:
+
+- Spatial check
+    - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains road classes that are minor arterial and above, and are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
+- Temporal check
+    - Does your time range need finer resolution than 1 hour bins? This summary table only consist of hourly data. If you are looking for finer resolution, aggregate directly from the raw here.ta table.
+    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly form the raw here.ta table.   
+
+**Step 1**: Specify both time range and date range using CTE.
+```sql
+WITH period_def(period_name, time_range, dow) AS (
+    VALUES
+    ('AM Peak Period'::text, '[7,10)'::numrange, '[1,5]'::int4range),
+    ('PM Peak Period'::text, '[16,19)'::numrange, '[1,5]'::int4range),
+    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,7]'::int4range))
+
+-- Date range definition
+, date_def(range_name, date_range) AS (
+    VALUES
+    ('Spring 2020'::text, '[2020-03-20, 2020-06-21)'::Daterange),
+    ('Fall 2020'::text, '[2020-09-23, 2020-12-21)'::Daterange),
+    ('Summer 2020'::text, '[2020-06-21, 2020-09-23)'::Daterange))
+```
+**Step 2**: Calculate daily average travel time where at least 80% of the segment has data at the link level. 
+
+```sql
+period_avg AS (
+    SELECT
+        routed.segment_id,
+        cnd.dt, 
+        period_def.period_name,
+        date_def.range_name,
+        ROUND(AVG(cnd.tt), 1) AS avg_tt
+    FROM congestion.network_segments_daily AS cnd
+    INNER JOIN data_requests.input_table AS routed USING (segment_id)
+    CROSS JOIN period_def
+    CROSS JOIN date_def
+    LEFT JOIN ref.holiday USING (dt)
+    WHERE 
+        holiday.dt IS NULL -- Exclude Holiday
+        AND cnd.is_valid IS TRUE -- Where segment has at least 80% length with data
+        AND cnd.hr <@ period_def.time_range
+        AND cnd.dt <@ date_def.date_range
+        AND EXTRACT(DOW FROM cnd.dt)::int <@ period_def.dow
+    GROUP BY 
+        routed.segment_id,
+        date_def.range_name,
+        cnd.dt,
+        period_def.period_name
+)
+```
+**Step 3**: Aggregate segment level travel time to the defined date period
+
+```sql
+SELECT
+    period_avg.segment_id,
+    period_avg.period_name,
+    period_avg.range_name,
+    ROUND(AVG(period_avg.avg_tt), 1) AS avg_tt,
+    COUNT(period_avg.dt) AS days_w_data
+FROM period_avg
+GROUP BY
+    period_avg.segment_id,
+    period_avg.range_name,
+    period_avg.period_name
+```
+
+
+### Using congestion weekly tables (not supported, to be deprecated)
+
+Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
 
 When to use congestion summary tables:
 
@@ -119,47 +198,55 @@ Example of `congestion.segments_tti_weekly`:
 
 ```sql
 -- Calculate corridor length and number of links, as well as the sum of baseline travel time
-
 SELECT
-   corridor_id,
-   sum(length) AS total_length, -- calculate the total length of each corridor
-   count(segment_id) AS num_seg, -- the number of segments in each segment
-   sum(tt_baseline) AS corr_baseline -- the baseline travel time of each corridor
+    corridor_id,
+    sum(length) AS total_length, -- calculate the total length of each corridor
+    count(segment_id) AS num_seg, -- the number of segments in each segment
+    sum(tt_baseline) AS corr_baseline -- the baseline travel time of each corridor
 FROM data_requests.input_table -- input table
 INNER JOIN baseline_segments_tt using (segment_id) -- baseline table
-GROUP BY input_table.uid 
+GROUP BY input_table.uid;
 ```
 
 **Step 2**: Aggregate segment level travel time index to the defined time period
 
 ```sql
 SELECT
-   segment_id,
-   analysis_period,
-   time_range,
-   week,
-   avg(tti) AS tti
-FROM segment_lookup 
+    segment_id,
+    analysis_period,
+    time_range,
+    week,
+    avg(tti) AS tti
+FROM segment_lookup
 JOIN segments_tti_weekly USING (segment_id)
 JOIN analysis_periods USING (day_type)
-
 WHERE week <@ date_range AND time_bin <@ time_range
-GROUP BY segment_id, analysis_period, time_range, week
+GROUP BY 
+    segment_id,
+    analysis_period,
+    time_range,
+    week;
 ```
 
 **Step 3**: Produces estimates of the average travel time and travel time index for each analysis period, each time period by corridors on a weekly basis, where at least 80% of the segment (by distance) has observations at the corridor level
 
+
 ```sql
 SELECT
-   corridor_id,
-   analysis_period,
-   time_period,
-   week,
-   sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
-   sum(tti * tt_baseline) / sum(tt_baseline) * corr_baseline AS tt
+    corridor_id,
+    analysis_period,
+    time_period,
+    week,
+    sum(tti * tt_baseline) / sum(tt_baseline) AS tti,
+    sum(tti * tt_baseline) / sum(tt_baseline) * corr_baseline AS tt
 FROM segment_tt 
-GROUP BY corridor_id, analysis_period, time_period, week, corr_baseline
-HAVING sum(segment_length) > (0.80 * corridor_length)::double precision
+GROUP BY 
+    corridor_id,
+    analysis_period,
+    time_period,
+    week,
+    corr_baseline
+HAVING sum(segment_length) > (0.80 * corridor_length);
 ```
 
 ### Using the raw speed table `here.ta`
@@ -170,13 +257,12 @@ If the congestion tables are not suitable for your study, you can aggregate here
 
 ```sql
 -- Calculate segment length and number of links
-
 SELECT
-   uid,
-   sum(length) AS total_length, -- calculate the total length of each corridor
-   count(links) AS num_seg -- the number of segments in each segment
+    uid,
+    sum(length) AS total_length, -- calculate the total length of each corridor
+    count(links) AS num_seg -- the number of segments in each segment
 FROM data_requests.input_table -- input table
-GROUP BY input_table.uid 
+GROUP BY input_table.uid;
 ```
 
 **Step 2**: Aggregate link level travel time from 5 minutes to an hour
@@ -184,38 +270,41 @@ GROUP BY input_table.uid
 ```sql
 -- Aggregate link travel times up to an hour 
 SELECT
-   input_table.uid,
-   input_table.link_dir,
-   datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
-   avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
+    input_table.uid,
+    input_table.link_dir,
+    datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
+    avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
 FROM data_requests.input_table
 JOIN here.ta USING (link_dir) -- speed data table
-
-CROSS JOIN 	time_ranges -- CTE with define time range
-
+CROSS JOIN time_ranges -- CTE with define time range
 WHERE 
    ( -- define date range
-      tx >= '2019-01-01 00:00:00'::timestamp without time zone
-      AND tx < '2019-02-18 00:00:00'::timestamp without time zone
+      dt >= '2019-01-01'::date
+      AND dt < '2019-02-18'::date
    )
-   AND tx::time without time zone <@ time_ranges.time_range 
-   AND date_part('isodow'::text, a.tx)::integer <@ time_ranges.dow
+   AND tod <@ time_ranges.time_range 
+   AND date_part('isodow'::text, a.dt)::integer <@ time_ranges.dow
 
 GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
+
 ```
 
-**Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80% of the corridor (by distance) has observations
+**Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80\% of the corridor (by distance) has observations
 
 ```sql
 -- Aggregate link level hourly travel time to corridor level
 SELECT
-   uid,
-   link_hourly.datetime_bin,
-   corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
+    uid,
+    link_hourly.datetime_bin,
+    corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
 FROM link_hourly
 INNER JOIN corridor_detail USING (uid)
-GROUP BY link_hourly.datetime_bin, uid, corridor_detail.total_length, period
-HAVING sum(link_hourly.here_length) >= (total_length * 0.8) -- where at least 80% of links have data
+GROUP BY
+    link_hourly.datetime_bin,
+    uid,
+    corridor_detail.total_length,
+    period
+HAVING sum(link_hourly.here_length) >= (total_length * 0.8); -- where at least 80% of links have data
 ```
 
 **Step 4**: Aggregate corridor level hourly travel time up to each defined time periods for each day
@@ -223,22 +312,27 @@ HAVING sum(link_hourly.here_length) >= (total_length * 0.8) -- where at least 80
 ```sql
 -- Aggregate corridor level hourly travel time to time periods	
 SELECT
-   uid,
-   period,
-   avg(corr_tt) AS corr_mean_tt
+    uid,
+    period,
+    avg(corr_tt) AS corr_mean_tt
 FROM corridor_hourly
-GROUP BY period, uid, total_length
+GROUP BY
+    period,
+    uid,
+    total_length;
 ```
 
 **Step 5**: Produces estimates of the minimum, average and maximum travel time for each time period by corridors
 
 ```sql
 SELECT
-   uid,
-   period,
-   min(corr_mean_tt) AS min_tt,
-   avg(corr_mean_tt) AS mean_tt,
-   max(corr_mean_tt) AS max_tt
+    uid,
+    period,
+    min(corr_mean_tt) AS min_tt,
+    avg(corr_mean_tt) AS mean_tt,
+    max(corr_mean_tt) AS max_tt
 FROM corridor_agg
-GROUP BY uid, period
+GROUP BY 
+    uid,
+    period;
 ```
