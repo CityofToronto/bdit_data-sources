@@ -105,75 +105,59 @@ Common output parameters:
 
 ## Using congestion tables (version 2.0)
 
-Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment daily travel time summaries that contains daily thourly travel times for each segment.
+Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin linklevel data up to hourly segment level bins, creating segment hourly travel time summaries that contains daily, hourly travel times for each segment.
 
 When to use congestion summary tables:
 
 - Spatial check
-    - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains road classes that are minor arterial and above, and are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
+    - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains minor arterial roads and above, and thes are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
 - Temporal check
-    - Does your time range need finer resolution than 1 hour bins? This summary table only consist of hourly data. If you are looking for finer resolution, aggregate directly from the raw here.ta table.
-    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly form the raw here.ta table.   
+    - Does your time range need finer resolution than 1 hour bins? This summary table only consist of hourly data. If you are looking for finer resolution, aggregate directly from the raw `here.ta` table.
+    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly form the `here.ta` table.   
 
 **Step 1**: Specify both time range and date range using CTE.
 ```sql
-WITH period_def(period_name, time_range, dow) AS (
+WITH periods(period_name, time_range, dow) AS (
     VALUES
     ('AM Peak Period'::text, '[7,10)'::numrange, '[1,5]'::int4range),
     ('PM Peak Period'::text, '[16,19)'::numrange, '[1,5]'::int4range),
-    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,7]'::int4range))
+    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,7]'::int4range)
+),
 
 -- Date range definition
-, date_def(range_name, date_range) AS (
+dates(range_name, date_range) AS (
     VALUES
     ('Spring 2020'::text, '[2020-03-20, 2020-06-21)'::Daterange),
     ('Fall 2020'::text, '[2020-09-23, 2020-12-21)'::Daterange),
-    ('Summer 2020'::text, '[2020-06-21, 2020-09-23)'::Daterange))
+    ('Summer 2020'::text, '[2020-06-21, 2020-09-23)'::Daterange)
+)
 ```
-**Step 2**: Calculate daily average travel time where at least 80% of the segment has data at the link level. 
+**Step 2**: Average travel times for the congestion network's daily/hourly bins to the new time/date periods where at least 80% of the segment has data at the link level.
 
 ```sql
 period_avg AS (
     SELECT
         routed.segment_id,
-        cnd.dt, 
-        period_def.period_name,
-        date_def.range_name,
-        ROUND(AVG(cnd.tt), 1) AS avg_tt
-    FROM congestion.network_segments_daily AS cnd
+        periods.period_name,
+        dates.range_name,
+        AVG(cnsd.tt) AS avg_tt,
+        COUNT(DISTINCT cnsd.dt) AS days_w_data
+    FROM congestion.network_segments_daily AS cnsd
     INNER JOIN data_requests.input_table AS routed USING (segment_id)
-    CROSS JOIN period_def
-    CROSS JOIN date_def
-    LEFT JOIN ref.holiday USING (dt)
+    CROSS JOIN periods
+    CROSS JOIN dates
     WHERE 
-        holiday.dt IS NULL -- Exclude Holiday
-        AND cnd.is_valid IS TRUE -- Where segment has at least 80% length with data
-        AND cnd.hr <@ period_def.time_range
-        AND cnd.dt <@ date_def.date_range
-        AND EXTRACT(DOW FROM cnd.dt)::int <@ period_def.dow
+        NOT EXISTS ( SELECT * FROM ref.holiday WHERE cnsd.dt = holiday.dt )
+        AND cnsd.is_valid IS TRUE -- Where segment has at least 80% length with data
+        AND cnsd.hr <@ periods.time_range
+        AND cnsd.dt <@ dates.date_range
+        AND EXTRACT(DOW FROM cnsd.dt)::int <@ periods.dow
     GROUP BY 
         routed.segment_id,
-        date_def.range_name,
-        cnd.dt,
-        period_def.period_name
+        dates.range_name,
+        periods.period_name
 )
 ```
-**Step 3**: Aggregate segment level travel time to the defined date period
-
-```sql
-SELECT
-    period_avg.segment_id,
-    period_avg.period_name,
-    period_avg.range_name,
-    ROUND(AVG(period_avg.avg_tt), 1) AS avg_tt,
-    COUNT(period_avg.dt) AS days_w_data
-FROM period_avg
-GROUP BY
-    period_avg.segment_id,
-    period_avg.range_name,
-    period_avg.period_name
-```
-
 
 ## Using congestion weekly tables (not supported, to be deprecated)
 
