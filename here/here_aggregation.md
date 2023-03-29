@@ -99,7 +99,6 @@ Common output parameters:
 ## Important things to note:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.
-- Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
 - Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) have observations. 
 
 # Aggregation
