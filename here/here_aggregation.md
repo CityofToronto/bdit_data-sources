@@ -1,17 +1,16 @@
 # Table of Contents  
-- [Table of Contents](#table-of-contents)
-  - [Input Parameters](#input-parameters)
+- [Input Parameters](#input-parameters)
     - [Geometry](#geometry)
     - [Time range](#time-range)
     - [Date range](#date-range)
-  - [Output Parameters](#output-parameters)
+- [Output Parameters](#output-parameters)
     - [Important things to note:](#important-things-to-note)
-  - [Aggregation](#aggregation)
+- [Aggregation](#aggregation)
     - [Using congestion tables (version 2.0)](#using-congestion-tables-version-20)
     - [Using congestion weekly tables (not supported, to be deprecated)](#using-congestion-weekly-tables-not-supported-to-be-deprecated)
     - [Using the raw speed table `here.ta`](#using-the-raw-speed-table-hereta)
 
-## Input Parameters
+# Input Parameters
 
 - Geometry
     - The spatial extent of the study area
@@ -22,7 +21,7 @@
     - Day of week, weekday or weekend
     - Including or excluding holidays
 
-### Geometry
+## Geometry
 
 Geometries can come in a couple of different formats. Check this [guide](https://github.com/Toronto-Big-Data-Innovation-Team/bdit_data_requests/tree/master#how-to-generate-geometries-for-requests) to learn how to generate geometries. The goal is to get segments definition and their equivalent link dir lookup in the following format. 
 
@@ -32,7 +31,7 @@ Geometries can come in a couple of different formats. Check this [guide](https:/
 | Lakeshore Blvd | Park Lawn Rd | York St | WB | 1239875T | 65 |
 
 
-### Time range
+## Time range
 
 We typically aggregate speed data up to different periods, for example AM Peak and PM Peak. For data requests, we usually define them in a common table expression (CTE) for straight-forward modification in future data requests. For project analysis, we typically define time ranges in a table, which allows us to join directly to a table instead of repeating the same CTE in every query (and you will only need to modify one table if time ranges change!).
 
@@ -54,7 +53,7 @@ Example of a table (from `activeto.analysis_periods`):
 | 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
 | 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
 
-### Date range
+## Date range
 
 Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHERE` clause for data requests and in a table for project analysis. Date ranges are often project specific. For example in before and after studies, we would define different date ranges for periods such as `before`, `installation`, and `after`. In program monitoring projects, we might want to aggregate data up to a daily, weekly or monthly averages.
 
@@ -89,7 +88,7 @@ Example of a table (from `activeto.analysis_ranges`):
 | 2 | KQQR | Before | [2021-02-01,2021-04-05) |
 | 3 | KQQR | Closure | [2021-04-05,2022-05-10) |
 
-## Output Parameters
+# Output Parameters
 We typically provide average, minimum, and maximum travel time for data requests. For project analysis, output parameters are project specific, we typically estimate average travel time and travel time index for each corridor.
 
 Common output parameters:
@@ -99,15 +98,15 @@ Common output parameters:
 - 85th percentile speed
 - average travel time index
 
-### Important things to note:
+## Important things to note:
 
 - Minimum sample size: Depending on the extent of the study area and the time range requests, we have to ensure we are aggregating enough data to estimate travel times, usually a minimum of a month of data.
 - Harmonic mean: Harmonic mean has to be used when averaging speed, or we can average travel time or travel time index with the arithmetic mean.
 - Links without data: To estimate segment level travel time when some links don't have data, we only include segments where at least 80% of links (by distance) have observations. 
 
-## Aggregation
+# Aggregation
 
-### Using congestion tables (version 2.0)
+## Using congestion tables (version 2.0)
 
 Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_congestion/blob/network_agg/dags/generate_congestion_agg.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment daily travel time summaries that contains daily thourly travel times for each segment.
 
@@ -179,7 +178,7 @@ GROUP BY
 ```
 
 
-### Using congestion weekly tables (not supported, to be deprecated)
+## Using congestion weekly tables (not supported, to be deprecated)
 
 Congestion summary tables are updated by an [airflow pipeline](https://github.com/CityofToronto/bdit_data-sources/blob/secret_dags/dags/congestion_refresh.py) that runs every day and aggregates 5-min bin link level data up to segment level, creating segment weekly travel time index.
 
@@ -249,7 +248,7 @@ GROUP BY
 HAVING sum(segment_length) > (0.80 * corridor_length);
 ```
 
-### Using the raw speed table `here.ta`
+## Using the raw speed table `here.ta`
 
 If the congestion tables are not suitable for your study, you can aggregate here data from the raw speed table. 
 
