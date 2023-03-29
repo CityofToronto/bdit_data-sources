@@ -131,10 +131,12 @@ dates(range_name, date_range) AS (
     ('Fall 2020'::text, '[2020-09-23, 2020-12-21)'::Daterange),
     ('Summer 2020'::text, '[2020-06-21, 2020-09-23)'::Daterange)
 )
+...
 ```
 **Step 2**: Average travel times for the congestion network's daily/hourly bins to the new time/date periods where at least 80% of the segment has data at the link level.
 
 ```sql
+...
 period_avg AS (
     SELECT
         routed.segment_id,
@@ -157,6 +159,20 @@ period_avg AS (
         dates.range_name,
         periods.period_name
 )
+...
+```
+
+**Step 3**: Sum the average travel times across all segments in the study corridor, assuming it is longer than one segment.
+```sql
+SELECT
+    range_name,
+    period_name,
+    SUM(avg_tt) AS avg_tt,
+    AVG(days_w_data) AS days_w_data
+FROM period_avg
+GROUP BY 
+    range_name,
+    period_name
 ```
 
 ## Using congestion weekly tables (not supported, to be deprecated)
