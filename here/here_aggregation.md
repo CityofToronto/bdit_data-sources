@@ -164,6 +164,7 @@ period_avg AS (
 
 **Step 3**: Sum the average travel times across all segments in the study corridor, assuming it is longer than one segment.
 ```sql
+...
 SELECT
     range_name,
     period_name,
