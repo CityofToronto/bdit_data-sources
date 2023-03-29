@@ -49,7 +49,7 @@ WITH time_ranges(period, time_range, dow) AS (
 Example of a table (from `activeto.analysis_periods`):
 
 | analysis_period | time_period | time_range | dow_range | day_type |
-| --- | --- | --- | --- | --- |
+| --------------- | ----------- | ---------- | --------- | -------- |
 | 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
 | 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
 
@@ -57,20 +57,7 @@ Example of a table (from `activeto.analysis_periods`):
 
 Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHERE` clause for data requests and in a table for project analysis. Date ranges are often project specific. For example in before and after studies, we would define different date ranges for periods such as `before`, `installation`, and `after`. In program monitoring projects, we might want to aggregate data up to a daily, weekly or monthly averages.
 
-Example of filtering date ranges in the `WHERE` clause (not using `between`):
-```sql
-
-FROM    here.ta -- speed data table
-
-LEFT JOIN ref.holiday holiday ON ta.tx::date = holiday.dt
-
-WHERE   
-    (ta.dt >= '2019-01-01'::date AND ta.dt < '2019-02-18'::date)  -- filter date ranges
-    AND holiday.dt IS NULL -- excluding holiday
-
-```
-
-Example of defining date ranges in a `CTE`:
+Example of defining date ranges in a CTE:
 ```sql
 WITH date_period(obs_period, date_range) AS (
     VALUES
@@ -78,6 +65,17 @@ WITH date_period(obs_period, date_range) AS (
     ('Installation', '[2019-09-16,2019-12-07)'::daterange),
     ('After', '[2020-11-23,2020-12-22)'::daterange)
 )
+```
+Example of filtering date ranges in the `WHERE` clause (not using `BETWEEN`):
+```sql
+FROM here.ta -- speed data table
+WHERE
+    (ta.dt >= '2019-01-01' AND ta.dt < '2019-02-18') -- filter date ranges
+    AND NOT EXISTS ( -- exclude holidays
+        SELECT * 
+        FROM ref.holiday
+        WHERE ta.dt = holiday.dt
+    )
 ```
 
 Example of a table (from `activeto.analysis_ranges`):
