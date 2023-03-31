@@ -2,8 +2,12 @@
 
 
 ## Table of Contents
-1. [Description of Project Problem](#description-of-project-problem)
-2. [Methodology](#Methodology)
+- [Description of Project Problem](#description-of-project-problem)
+- [Methodology](#Methodology)
+  - [How Well Does This Work](#How-Well-Does-This-Work)
+  - [How to Create the Speed Limit Layer from Bylaws](#How-to-Create-the-Speed-Limit-Layer-from-Bylaws)
+  - [How to Measure Success Rates](#How-to-Measure-Success-Rates)
+- [Where did the bylaws fail](#Where-did-the-bylaws-fail)
 3. [Information on Subfolders](#Information-on-Subfolders)
 
 ## Description of Project Problem
@@ -135,7 +139,7 @@ Bylaw we recevied do not include expressways, and their speed limit is greater t
 
 *Note that there is still uncertainty of ramp speeds and they are now assumed to have the same speed limit as the expressways.*
 
-#### How to Measure Success Rates
+### How to Measure Success Rates
 
 The steps below summarize how we find the case type for all bylaws from the table `gis.bylaws_2020` which is the bylaws information gotten directly via email. Some cleaning needs to be done to only include bylaws that are not deleted aka need to be processed as well as removing those that are weird (those that got repealed but not deleted & those that were not cleaned nicely.) The first query below is to clean up the bylaws to find out the components/variables from the bylaws text which are to be used in later process and to be used to categorize them into different case type. The second query then only include all bylaws that has to be processed to centrelines. The third query shows how I find out the bylaws that fall into different categories. In short, I will list out the tables used in sequence right here.
 
