@@ -114,7 +114,7 @@ When to use congestion summary tables:
     - Check to see if your corridor is avaliable in `congestion.network_segments`. This network table only contains minor arterial roads and above, and these are segmented by major intersections + traffic signals. Make sure the corridor exists in this table before using the summary. 
 - Temporal check
     - Does your time range need finer resolution than 1 hour bins? This summary table only consist of hourly data. If you are looking for finer resolution, aggregate directly from the raw `here.ta` table.
-    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly from the `here.ta` table.   
+    - Are you looking for data prior to September 2017? This table only contains aggregated data starting September 1st, 2017, if you are looking for any data prior to this date, aggregate directly from the `here.ta` table.
 
 **Step 1**: Specify both time range and date range using CTE.
 ```sql
@@ -252,9 +252,9 @@ HAVING sum(segment_length) > (0.80 * corridor_length);
 
 ## Using the raw speed table `here.ta`
 
-If the congestion tables are not suitable for your study, you can aggregate here data from the raw speed table. 
+If the congestion tables are not suitable for your study, you can aggregate HERE data directly from the raw speed table. 
 
-**Step 1**: Calculate corridor's total length and the number of links that make up the corridor. Knowing the total length and the total number of links can allow us to filter corridors that does not have enough data for aggregation. 
+**Step 1**: Calculate the corridor's total length and the number of links that make up the corridor. Knowing the total length and the total number of links can allow us to filter corridors that do not have enough data for aggregation. 
 
 ```sql
 -- Calculate segment length and number of links
@@ -262,8 +262,8 @@ SELECT
     uid,
     sum(length) AS total_length, -- calculate the total length of each corridor
     count(links) AS num_seg -- the number of segments in each segment
-FROM data_requests.input_table -- input table
-GROUP BY input_table.uid;
+FROM data_requests.input_table -- _your_ input table
+GROUP BY uid;
 ```
 
 **Step 2**: Aggregate link level travel time from 5 minutes to an hour
@@ -273,24 +273,27 @@ GROUP BY input_table.uid;
 SELECT
     input_table.uid,
     input_table.link_dir,
-    datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
-    avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
+    datetime_bin(ta.tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
+    avg(here_length * 0.001/ ta.mean * 3600) AS mean_tt, -- harmonic mean
 FROM data_requests.input_table
-JOIN here.ta USING (link_dir) -- speed data table
+JOIN here.ta USING (link_dir) -- raw speed data table
 CROSS JOIN time_ranges -- CTE with define time range
 WHERE 
-   ( -- define date range
-      dt >= '2019-01-01'::date
-      AND dt < '2019-02-18'::date
-   )
-   AND tod <@ time_ranges.time_range 
-   AND date_part('isodow'::text, a.dt)::integer <@ time_ranges.dow
-
-GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
-
+    ( -- define date range
+        dt >= '2019-01-01'
+        AND dt < '2019-02-18'
+    )
+    AND tod <@ time_ranges.time_range 
+    AND date_part('isodow', a.dt)::integer <@ time_ranges.dow
+GROUP BY 
+    input_table.uid,
+    input_table.link_dir,
+    datetime_bin,
+    input_table.length,
+    period
 ```
 
-**Step 3**: Aggregate link level hourly travel time up to corridor level, where at least 80\% of the corridor (by distance) has observations
+**Step 3**: Aggregate link-level hourly travel time up to corridor-level, where at least 80\% of the corridor (by distance) has observations
 
 ```sql
 -- Aggregate link level hourly travel time to corridor level
@@ -308,7 +311,7 @@ GROUP BY
 HAVING sum(link_hourly.here_length) >= (total_length * 0.8); -- where at least 80% of links have data
 ```
 
-**Step 4**: Aggregate corridor level hourly travel time up to each defined time periods for each day
+**Step 4**: Aggregate corridor level hourly travel time up to each defined time period for each day
 
 ```sql
 -- Aggregate corridor level hourly travel time to time periods	
@@ -323,17 +326,17 @@ GROUP BY
     total_length;
 ```
 
-**Step 5**: Produces estimates of the minimum, average and maximum travel time for each time period by corridors
+**Step 5**: Produce estimates of the minimum, average and maximum travel time for each time period by corridors
 
 ```sql
 SELECT
     uid,
     period,
-    min(corr_mean_tt) AS min_tt,
+    min(corr_mean_tt) AS min_tt, -- min binned hourly average
     avg(corr_mean_tt) AS mean_tt,
-    max(corr_mean_tt) AS max_tt
+    max(corr_mean_tt) AS max_tt -- max binned hourly average
 FROM corridor_agg
-GROUP BY 
+GROUP BY
     uid,
     period;
 ```
