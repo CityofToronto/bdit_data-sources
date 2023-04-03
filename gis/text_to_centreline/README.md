@@ -38,11 +38,11 @@
 
 ## Intro
 
-This is a `README` for the text to centreline function, which is written in `postgresql`. The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. This function was originally written for automating bylaw's geometries [!!!see project], thus most example and variable name are based on bylaw. 
+This is a `README` for the text to centreline function, which is written in `postgresql`. The general purpose of this function is to take an input text description of a street location in the City of Toronto, and return an output of centreline segments that match this description. This function was originally written for [automating bylaw's geometries](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/speed_limit), thus most example and variable name are based on bylaw. 
 The input typically takes 1) the street, and 2) the two intersection where the street begins and ends. For example, you could use the function to get the centreline segments of Bloor Street from Royal York Road to St George Street. 
 
 Depending on your use case, there are two functions you could use:
-- `gis.text_to_centreline`
+- [`gis.text_to_centreline`](sql/function-text_to_centreline.sql)
 
     - If you are only interested in *all* centreline information, including geo_id, road class, street name, intersection id, etc
 
@@ -135,7 +135,8 @@ The function takes four inputs:
 ```sql
 SELECT gis.text_to_centreline_geom('Bloor Street', 'Yonge Street', 'Parliament Street')
 ```
-Returns:
+Returns one single line of geometry on Bloor Street from Yonge to Parliament.
+
 ![image](https://user-images.githubusercontent.com/46324452/229189145-c5a0dc84-367e-4d22-9941-556b13f27691.png)
 
 # How the Function Works
