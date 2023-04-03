@@ -8,7 +8,7 @@
   - [How to Create the Speed Limit Layer from Bylaws](#How-to-Create-the-Speed-Limit-Layer-from-Bylaws)
   - [How to Measure Success Rates](#How-to-Measure-Success-Rates)
 - [Where did the bylaws fail](#Where-did-the-bylaws-fail)
-3. [Information on Subfolders](#Information-on-Subfolders)
+- [Information on Subfolders](#Information-on-Subfolders)
 
 ## Description of Project Problem
 
@@ -24,12 +24,9 @@ The final speed limit layer is in `gis.bylaws_speed_limit_layer`, however, it do
 
 ## Methodology 
 
-See the [text to centreline](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline) documentation for information on our algorithm that matches bylaw text descriptions to centreline street segment geometries. 
+See the [text to centreline](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline/README.md) documentation for information on our algorithm that matches bylaw text descriptions to centreline street segment geometries. 
 
-The function was mainly created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/speed_limit) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. Any limitations that we are currently aware of will be discussed in the [Outstanding Work](#Outstanding-Work) area of the document. It should also be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot correctly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return an error.
-
-The folder named `manual` includes past work on transforming bylaws into centreline segments, including python code to transform the xml bylaws on Open Data into Postgresql to process. More on that can be found at this [README](manual/README.md).
-
+The function was created to process the City of Toronto's [transportation bylaw data](https://open.toronto.ca/dataset/traffic-and-parking-by-law-schedules/). We have already used previous versions of this process for [posted speed limits](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/speed_limit) on streets in the City, locations of [community safety zones](https://github.com/CityofToronto/bdit_vz_programs/tree/master/safety_zones/commuity_safety_zone_bylaws), [turn restrictions](https://github.com/CityofToronto/bdit_vz_programs/blob/master/notebooks/Turn%20Restrictions.ipynb), etc. The function can handle most bylaws, even more advanced cases. It should also be noted that some bylaws are incorrect (for many reasons, such as a described intersection not existing), and our function cannot correctly match a lot of these bylaws, since the data is incorrect. Sometimes the function will match the bylaws incorrectly and other times it will return an error.
 
 ### How Well Does This Work
 
@@ -95,15 +92,15 @@ This query may seem long but it is technically just handling the bylaws in a few
 
 Some explanation on the long code:
 
-i) [L25](sql/mat-view-bylaws_centreline_categorized.sql#L25): `AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'` is used here as some geom produced from the function returns "unreadable" geom as the centreline is not involved in the bylaws but is found between the two given intersections. It normally happens for bylaws that are in case 1 or case 2.
+i) [L25](sql/mat-view-bylaws_speed_limit_layer.sql#L25): `AND ST_AsText(bylaws.line_geom) != 'GEOMETRYCOLLECTION EMPTY'` is used here as some geom produced from the function returns "unreadable" geom as the centreline is not involved in the bylaws but is found between the two given intersections. It normally happens for bylaws that are in case 1 or case 2.
 
-ii) [L65](sql/mat-view-bylaws_centreline_categorized.sql#L65): ` (centreline.fcode_desc::text = ANY (ARRAY['Collector'::character varying, ...` is used here to only include relevant centrelines from `gis.centreline`.
+ii) [L65](sql/mat-view-bylaws_speed_limit_layer.sql#L65): ` (centreline.fcode_desc::text = ANY (ARRAY['Collector'::character varying, ...` is used here to only include relevant centrelines from `gis.centreline`.
 
-iii) [L84](sql/mat-view-bylaws_centreline_categorized.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
+iii) [L84](sql/mat-view-bylaws_speed_limit_layer.sql#L84) `WHERE whole_added.section IS NOT NULL AND whole_added.section <> '[0,1]'::numrange` is used to find centrelines where bylaws are only applied to a part of it.
 
-iv) [L123](sql/mat-view-bylaws_centreline_categorized.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the `date_added`. Since not all bylaws have `date_added`, the `id` is used instead with larger values representing more recently applied bylaws.
+iv) [L123](sql/mat-view-bylaws_speed_limit_layer.sql#L123) `WHERE bylaws.geo_id = one.geo_id AND (bylaws.date_added < one.date_added OR bylaws.id < one.bylaw_id)` is used to find the previous bylaws according to the `date_added`. Since not all bylaws have `date_added`, the `id` is used instead with larger values representing more recently applied bylaws.
 
-v) [L135](sql/mat-view-bylaws_centreline_categorized.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference needs st_buffer (a really small buffer) here to work properly or else st_difference will not return any results. This may be due to the fact that the geometry might not be exactly the same after the unioning and trimming.
+v) [L135](sql/mat-view-bylaws_speed_limit_layer.sql#L135) `st_difference(next_bylaw.geom, st_buffer(part_one.geom, 0.00001::double precision)) AS geom,` is used to find the difference between the current and previous bylaw centrelines for part two cases. Note that st_difference needs st_buffer (a really small buffer) here to work properly or else st_difference will not return any results. This may be due to the fact that the geometry might not be exactly the same after the unioning and trimming.
 
 vi) The following few lines which occurred at the UNION part for the CTE next_bylaw, part_two, part_one_without_bylaw, part_two_without_bylaw is there to ensure that the geom is exactly the same as the geom from `gis.centreline`. This geom is more accurate as it does not involve any st_buffer, st_difference, st_union etc.
 
@@ -215,7 +212,7 @@ In order to produce the results from the table in [How Well Does This Work](#How
 
 A check was done to find out at which stage the bylaws failed. Using the function `gis.text_to_centreline`, there are still 207 bylaws out of 5163 cleaned bylaws (or 211 bylaws out of 5167 bylaws that are not repealed and not cleaned) that need to be processed that fail to be converted into centrelines. If one would like to find the differences of the results found between using the old and new text_to_centreline process, go to this [issue #293](https://github.com/CityofToronto/bdit_data-sources/issues/293) but note that the number there might not reflect the latest results. Whereas more details about how the failed bylaws look like and why exactly do they fail, go to this [issue #298](https://github.com/CityofToronto/bdit_data-sources/issues/298). 
 
-Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](#how-the-function-works) for a better picture. The csv dump [here](csv/failed_bylaws.csv) (also in table `gis.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
+Below shows a table on exactly how many bylaws failed at different stage. Please refer to the flow chart [here](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#How-the-Function-Works) for a better picture. The csv dump [here](csv/failed_bylaws.csv) (also in table `gis.failed_bylaws`) contains all bylaws that failed to be converted into centrelines and also the reason behind. There are, in total, 211 bylaws that do not get processed (note that these are all bylaws where deleted = false).
 
 |failed_reason|function|stage |# of bylaws that failed here|
 |--|--|--|--|
@@ -233,9 +230,9 @@ Below shows a table on exactly how many bylaws failed at different stage. Please
 **Note (Reasons of failing):** 
 - The fact that failed_reason = 6 has 0 failed bylaws does not mean that no case1 failed. It just means that case1 failed at other stage before even reaching the function `gis._centreline_case1()`.
 - For failed_reason = 1 or 2, it is due to the way the bylaws text was written.
-- For failed_reason = 3 or 4, the 150 bylaws in total that failed at that stage are due to [Direction stated on bylaws is not taken into account](#Direction-stated-on-bylaws-is-not-taken-into-account), [Levenshtein distance can fail for streets that have E / W](#Levenshtein-distance-can-fail-for-streets-that-have-E--W), [Duplicate street name and former municipality element ignored](#Duplicate-street-name-and-former-municipality-element-ignored) and [Tackle Cases with "an intersection and two offsets"](#Tackle-Cases-with-an-intersection-and-two-offsets) .
-- For failed_reason = 5, [pgRouting returns the shortest path but street name different from highway](#pgRouting-returns-the-shortest-path-but-street-name-different-from-highway) is the main reason that they are failing.
-- For failed_reason = 6 or 7 or 8 or 9 or 10, look at the messages returned in the [section Tackle cases with known geom error](#Tackle-cases-with-known-geom-error) to find out more. They are mainly due to an error at `line_locate_point` or `line_interpolate_point`.
+- For failed_reason = 3 or 4, the 150 bylaws in total that failed at that stage are due to [Direction stated on bylaws is not taken into account](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#direction-stated-on-bylaws-is-not-taken-into-account), [Levenshtein distance can fail for streets that have E / W](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#levenshtein-distance-can-fail-for-streets-that-have-e--w), [Duplicate street name and former municipality element ignored](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#duplicate-street-name-and-former-municipality-element-ignored) and [Tackle Cases with "an intersection and two offsets"](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#tackle-cases-with-an-intersection-and-two-offsets) .
+- For failed_reason = 5, [pgRouting returns the shortest path but street name different from highway](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#pgrouting-returns-the-shortest-path-but-street-name-different-from-highway) is the main reason that they are failing.
+- For failed_reason = 6 or 7 or 8 or 9 or 10, look at the messages returned in the [section Tackle cases with known geom error](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline#tackle-cases-with-known-geom-error) to find out more. They are mainly due to an error at `line_locate_point` or `line_interpolate_point`.
 
 Query used to get the above results are
 ```sql
@@ -276,9 +273,9 @@ Using tables continued from [section Usage - How to Measure Success Rates](#how-
 
 i) `gis.bylaws_to_route` - Table with bylaws that need to be routed.
 
-ii) `gis.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](sql/helper_functions/function-bylaws_get_id_to_route.sql) 
+ii) `gis.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql 
 
-iii) `gis.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](sql/helper_functions/function-bylaws_route_id.sql)
+iii) `gis.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/text_to_centreline/sql/helper_functions/function-bylaws_route_id.sql)
 
 *Note that the code in gis.bylaws_get_id_to_route() and gis.bylaws_route_id() are pretty much the same as that in gis._get_intersection_geom and gis._get_lines_btwn_interxn except that the output is slightly modified to enable further investigation on the failed bylaws.
 
