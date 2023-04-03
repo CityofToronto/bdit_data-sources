@@ -18,7 +18,7 @@ WITH (
   OIDS=FALSE
 );
 ALTER TABLE wys.raw_data
-  OWNER TO rdumas;
+  OWNER TO wys_admins;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.raw_data TO bdit_humans WITH GRANT OPTION;
 -- Trigger: insert_raw_data_trigger on wys.raw_data
 
