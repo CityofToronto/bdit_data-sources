@@ -51,89 +51,99 @@ This is a one-off task done in pgAdmin. First, create a database called `traffic
 Next, created a View called `signals_cart` in `traffic_signals.public.Views` using the following PostgreSQL query on the foreign tables:  
 
 ```sql
-SELECT 'Traffic Signals'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1routef AS side1_street,
-   a.side2route AS side2_street,
-   b.latitude,
-   b.longitude,
-   b.activation_date AS activation_date,
-   NULL::text AS details
-  FROM sgmaingeneral a
-    JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
- WHERE a.id::integer < 5000 AND b.activation_date IS NOT NULL AND b.removaldate IS NULL
+SELECT
+    'Traffic Signals' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1routef AS side1_street,
+    a.side2route AS side2_street,
+    b.latitude,
+    b.longitude,
+    b.activation_date AS activation_date,
+    NULL::text AS details
+FROM sgmaingeneral AS a
+JOIN sgpxgenmaingeneral AS b ON a.sgmaingeneraloid = b.sgmaingeneraloid
+WHERE a.id::integer < 5000 AND b.activation_date IS NOT NULL AND b.removaldate IS NULL
 UNION ALL
-SELECT 'Pedestrian Crossovers'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1routef AS side1_street,
-   a.side2route AS side2_street,
-   b.latitude,
-   b.longitude,
-   b.activation_date AS activation_date,
-   NULL::text AS details
-  FROM sgmaingeneral a
-    JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
- WHERE a.id::integer >= 5000 AND a.id::integer < 7000 AND b.activation_date IS NOT NULL AND b.removaldate IS NULL
+SELECT
+    'Pedestrian Crossovers' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1routef AS side1_street,
+    a.side2route AS side2_street,
+    b.latitude,
+    b.longitude,
+    b.activation_date AS activation_date,
+    NULL::text AS details
+FROM sgmaingeneral a
+JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
+WHERE 
+    a.id::integer >= 5000 
+    AND a.id::integer < 7000 
+    AND b.activation_date IS NOT NULL 
+    AND b.removaldate IS NULL
 UNION ALL
-SELECT 'Audible Pedestrian Signals'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1routef AS side1_street,
-   a.side2route AS side2_street,
-   b.latitude,
-   b.longitude,
-   c.apsactivation_date AS activation_date,
-   NULL::text AS details
-  FROM sgmaingeneral a
-    JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
-    JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
- WHERE c.apsactivation_date IS NOT NULL
+SELECT
+    'Audible Pedestrian Signals' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1routef AS side1_street,
+    a.side2route AS side2_street,
+    b.latitude,
+    b.longitude,
+    c.apsactivation_date AS activation_date,
+    NULL::text AS details
+FROM sgmaingeneral a
+JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
+JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
+WHERE c.apsactivation_date IS NOT NULL
 UNION ALL
-SELECT 'Uninterruptable Power Supply'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1route AS side1_street,
-   a.side2route AS side2_street,
-   a.latitude::numeric AS latitude,
-   a.longitude::numeric AS longitude,
-   a.activation_date AS activation_date,
-   NULL::text AS details
-  FROM upsmaingeneral a
- WHERE a.activation_date IS NOT NULL
+SELECT 
+    'Uninterruptable Power Supply' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1route AS side1_street,
+    a.side2route AS side2_street,
+    a.latitude::numeric AS latitude,
+    a.longitude::numeric AS longitude,
+    a.activation_date AS activation_date,
+    NULL::text AS details
+FROM upsmaingeneral a
+WHERE a.activation_date IS NOT NULL
 UNION ALL
-SELECT 'Leading Pedestrian Intervals'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1routef AS side1_street,
-   a.side2route AS side2_street,
-   b.latitude,
-   b.longitude,
-   c.lpiactivation_date AS activation_date,
-   NULL::text AS details
-  FROM sgmaingeneral a
-    JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
-    JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
- WHERE c.lpiactivation_date IS NOT NULL
+SELECT
+    'Leading Pedestrian Intervals' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1routef AS side1_street,
+    a.side2route AS side2_street,
+    b.latitude,
+    b.longitude,
+    c.lpiactivation_date AS activation_date,
+    NULL::text AS details
+FROM sgmaingeneral a
+JOIN sgpxgenmaingeneral b ON a.sgmaingeneraloid = b.sgmaingeneraloid
+JOIN sgsimaingeneral c ON a.sgmaingeneraloid = c.sgmaingeneraloid
+WHERE c.lpiactivation_date IS NOT NULL
 UNION ALL
-SELECT 'LED Blankout Signs'::text AS asset_type,
-   a.id::integer AS px,
-   a.streetname AS main_street,
-   a.midblockroute AS midblock_route,
-   a.side1route AS side1_street,
-   a.side2route AS side2_street,
-   a.latitude::numeric AS latitude,
-   a.longitude::numeric AS longitude,
-   a.activation_date AS activation_date,
-   (a.lboapproach::text || ' '::text) || a.lborestrictioin::text AS details
-  FROM lbomaingeneral a
- ORDER BY 1, 9;
+SELECT
+    'LED Blankout Signs' AS asset_type,
+    a.id::integer AS px,
+    a.streetname AS main_street,
+    a.midblockroute AS midblock_route,
+    a.side1route AS side1_street,
+    a.side2route AS side2_street,
+    a.latitude::numeric AS latitude,
+    a.longitude::numeric AS longitude,
+    a.activation_date AS activation_date,
+    (a.lboapproach::text || ' '::text) || a.lborestrictioin::text AS details
+FROM lbomaingeneral a
+ORDER BY 1, 9;
 ```
 
 ## 2. Create airflow process to copy view into bigdata RDS  
