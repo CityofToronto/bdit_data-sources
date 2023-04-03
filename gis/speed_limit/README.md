@@ -273,7 +273,7 @@ Using tables continued from [section Usage - How to Measure Success Rates](#how-
 
 i) `gis.bylaws_to_route` - Table with bylaws that need to be routed.
 
-ii) `gis.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql 
+ii) `gis.bylaws_found_id` - Tables with found id using function [`gis.bylaws_get_id_to_route()`](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/text_to_centreline/sql/helper_functions/function-bylaws_get_id_to_route.sql)
 
 iii) `gis.bylaws_found_routes` - Tables with found routes using function [`gis.bylaws_route_id()`](https://github.com/CityofToronto/bdit_data-sources/blob/master/gis/text_to_centreline/sql/helper_functions/function-bylaws_route_id.sql)
 
