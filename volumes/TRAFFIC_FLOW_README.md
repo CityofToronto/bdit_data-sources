@@ -38,14 +38,7 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
 	- [5. Useful Views](#5-useful-views)
 - [Open Data](#open-data)
 	- [King Street Pilot](#king-street-pilot)
-
-## `rescu`: Loop Detector Data
-
-Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. 
-More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
-or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
-
-Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`. Data are pulled daily.
+.
 
 ## FLOW Data
 
