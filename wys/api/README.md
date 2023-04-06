@@ -44,7 +44,7 @@ The script uses the `click` module like the `miovision` and `here` data to defin
 3. The script will check all the signs if they have data by using the `statistics` call in `get_location()` and returning a string of the output. If theres no data, possible outputs may be a `403` error or an `HTML` code snippet. The script will create a table of all valid locations.
 4. The script will again call the `statistics` call in `get_statistics()` to grab the counts and speed.
 5. The script will insert the data to postgreSQL.
-6. The script will check to see if there are new `api_id` not in `wys.locations`. If so, it will retrieve information about these signs using `get_location`, parse the data into a suitable format, and insert it to `wys.locations`.
+6. The script will add new `api_id` (not in `wys.locations`) and update any ones whose direction or location (moved more than 100 meters) was modified to `wys.locations`. The data of new/updated signs are retrieved using `get_location`, parsed into a suitable format, and eventually inserted it to `wys.locations`.
 7. The script will call the 2 aggregation functions in postgreSQL and refresh the views.
 
 ## PostgreSQL Processing
@@ -56,7 +56,7 @@ The data is inserted into `wys.raw_data`. Data from the API is already pre-aggre
 |Field name|Data type|Description|Example|
 |------|------|-------|------|
 `raw_data_uid`|integer|A unique identifier for the `raw_data` table|2655075
-`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
+`api_id`|integer|ID used for the API, and unique for individual signs, which could be moved between different locations, i.e., some `api_id`s could exist more than once in the `locations` table|1967
 `datetime_bin`|timestamp|Start time of the bin|2018-10-29 10:00:00
 `speed`|integer|Exact speed of the number of vehicles in `count`|47
 `count`|integer|Number of vehicles in datetime_bin/api_id/speed combination|2
