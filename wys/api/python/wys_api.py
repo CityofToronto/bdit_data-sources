@@ -433,7 +433,7 @@ def update_locations(conn, loc_table):
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc, a.geom 
                 FROM daily_intersections A
-                JOIN locations B ON (A.api_id = B.api_id
+                LEFT JOIN locations B ON (A.api_id = B.api_id
                                       AND (st_distance(A.geom, B.geom) > 100
                                            OR A.dir <> B.dir))
                                       OR A.api_id NOT IN (SELECT api_id FROM locations)
