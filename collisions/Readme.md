@@ -1,14 +1,6 @@
 # Collisions
 
-The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though some historical collisions are included).
-
-## Data Sources and Ingestion Pipeline
-
-The data comes from the Toronto Police Services (TPS) Versadex and the Collision Reporting Centre (CRC) database, and is combined by a Data Collections team in Transportation Services Policy & Innovation, currently led by David McElroy.
-
-Data are transferred to a Transportation Services file server from TPS on a weekly basis, as a set of XML files, and from the CRC on a monthly basis as a single CSV file. A set of scripts (managed by Jim Millington) read in these raw data into the Transportation Services Oracle database table. This table is manually validated by Data Collections, and edits are made using legacy software from the 1990s.
-
-The collisions table is copied into the MOVE postgres data platform (`flashcrow`) and the `bigdata` postgres data platform on a daily basis. Several derived materialized views are subsequently updated on the `bigdata` postgres database to make querying fun, easy, and exciting! 
+The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though some historical collisions are included). Most of the information in this document pertains to collision data stored in the `bigdata` postgres database.
 
 ## Table Structure on the `bigdata` Postgres Database
 
@@ -16,7 +8,7 @@ The `collisions_replicator` schema houses raw and derived collision data tables.
 
 ### `ACC` and `acc_safe_copy`
 
-The raw dataset is `collisions_replicator.ACC`, a direct mirror of the same table on the MOVE server. `collisions_replicator.acc_safe_copy` is a copy of `collisions_replicator.ACC`. The data dictionary for `ACC` is maintained jointly with MOVE and found on [Notion here](https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
+The raw dataset is `collisions_replicator.ACC`, a direct mirror of the same table on the MOVE server. `collisions_replicator.acc_safe_copy` is a copy of `collisions_replicator.ACC`. The data dictionary for `ACC` is maintained jointly with MOVE and found on [Notion here](https://www.notion.so/bditto/Collision-Data-Dictionary-adc798de04fb47edaf129d9a6316eddf?pvs=4).
 
 The guides that define values and categories for most columns can be found in the [Manuals page on Notion](https://www.notion.so/bditto/ca4e026b4f20474cbb32ccfeecf9dd76?v=a9428dc0fb3447e5b9c1427f8868e7c8).
 In particular see the Collision Coding Manual, Motor Vehicle Collision Report 2015, and Motor Vehicle Accident Codes Ver. 1.
@@ -39,76 +31,7 @@ As stated above, there are three materialzed views that are generated based on `
 - `collisions_replicator.events`: all collision event-level data for collisions between 1985-01-01 and present. Columns have proper data types and categorical columns contain text descriptions rather than numerical codes.
 - `collisions_replicator.involved`: all collision individual-level data for collisions between 1985-01-01 and present, with data type and categorical variable refinements similar to `collisions_replicator.events`.
 
-The derived tables use a the following naming scheme for columns:
-
-#### Fields in `collisions_replicator.events`
-
-Event Column | Equivalent `acc_safe_copy` Column | Definition | Notes
--- | -- | -- | --
-collision_no | (not a thing) | Collision event unique identifier |  
-accnb | ACCNB | Original Oracle data UID | Restarted each year before 1996; use collision_no as a unique ID instead
-accyear | Derived from ACCDATE | Year of collision |  
-acctime | ACCTIME | Time of collision |  
-longitude | LONGITUDE + 0.00021 | Longitude |  
-latitude | LATITUDE + 0.000045 | Latitude |  
-geom | Derived from longitude and latitude |  Point geometry of collision  |  Coordinate reference system is EPSG:4326
-stname1 | STNAME1 | Street name or address | For intersections, the largest road is recorded under stname1
-streetype1 | STREETYPE1 | Street type (Drive, Ave, Blvd, etc.) |  
-dir1 | DIR1 | Direction in street name | Eg. W if street is St. Clair W; NOT the street direction of travel!
-stname2 | STNAME2 | Cross street name |  
-streetype2 | STREETYPE2 | Cross street type |  
-dir2 | DIR2 | Cross street direction |  
-stname3 | STNAME3 | Additional street name, offset distance, or address |  
-streetype3 | STREETYPE3 | Additional street type |  
-dir3 | DIR3 | Additional street direction |  
-road_class | ROAD_CLASS | Road class |  
-location_type | ACCLOC | Detailed collision location classification |  
-location_class | LOCCOORD | Simplified collision location classification | Simplified location_type. ⚠️Only exists for validated collisions, exercise caution in using.
-collision_type | ACCLASS | Ontario Ministry of Transportation collision class |  
-impact_type | IMPACTYPE | Impact type (eg. rear end, sideswipe) |  
-visibility | VISIBLE | Visibility (usually due to inclement weather) |  
-light | LIGHT | Road lighting conditions |  
-road_surface_cond | RDSFCOND | Road surface conditions |  
-px | PX | Signalized intersection PX number |  
-traffic_control | TRAFFICTL | Type of traffic control |  
-traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
-on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
-description | DESCRIPTION | Long-form comments |  
-data_source | (not a thing) | Source of data | Either TPS or CRC; see properties of `collisions_replicator.ACC`, below, for details
-
-
-#### Fields in `collisions_replicator.involved`
-
-Involved   Column | Equivalent ACC Column | Definition | Notes
--- | -- | -- | --
-collision_no | (not a thing) | Collision event unique identifier |  
-person_no | PER_NO | Person identifier for individual collision event |  
-vehicle_no | VEH_NO | Vehicle identifier for individual collision event |  
-vehicle_class | VEHTYPE | Vehicle class |  
-initial_dir | INITDIR | Initial direction of travel |  
-impact_location | IMPLOC | Location of impact on road |  
-event1 | EVENT1 | First event that occurred for involved |  
-event2 | EVENT2 | Second event |  
-event3 | EVENT3 | Third event |  
-involved_class | INVTYPE | Class of road user (eg. driver, passenger, pedestrian)
-involved_age | INVAGE or BIRTHDATE | Age of involved | Selects from whichever is available/more accurate
-involved_injury_class | INJURY | Level of injury |  
-safety_equip_used | SAFEQUIP | Safety equipment used (eg. seat belt) |  
-driver_action | DRIVACT | Driver action |  
-driver_condition | DRIVCOND | Driver condition (eg. impaired) |  
-pedestrian_action | PEDACT | Pedestrian action |  
-pedestrian_condition | PEDCOND | Pedestrian condition |  
-pedestrian_collision_type | PEDTYPE | Pedestrian collision type (eg. pedestrian hit on sidewalk or shoulder)
-cyclist_action | CYCACT | Cyclist action |  
-cyclist_condition | CYCCOND | Cyclist condition |  
-cyclist_collision_type | CYCLISTYPE | Cyclist collision type (eg. cyclist struck in parking lot)
-manoeuver | MANOEUVER | Vehicle manoeuver |  
-posted_speed | POSTED_SPEED | Posted speed limit |  
-actual_speed | ACTUAL_SPEED | Speed of vehicle |  
-failed_to_remain | FAILTOREM | Whether the involved fled the scene of the crash |  
-validation_userid | USERID | ID of last Transportation Services staff member to validate this involved |  
-time_last_edited | TS | Time of last edit from Transportation Services |  
-
+A list of fields and definitions for the `collisions_replicator.events` and `collisions_replicator.involved` materialized views can be found on Notion [here](https://www.notion.so/bditto/Collision-Data-Dictionary-adc798de04fb47edaf129d9a6316eddf?pvs=4).
 
 #### Properties of `collisions_replicator.acc_safe_copy`
 
@@ -132,7 +55,16 @@ Even though `collisions_replicator.acc_safe_copy` should not be directly queried
 - TPS and CRC send collision records once they are reported and entered into their respective databases, which often leads to collisions being reported months, or even years, after they occurred. 
 - TPS and CRC will also send changes to existing collision records (using the same XML/CSV pipeline described above) to correct data entry errors or update the health status of an injured individual. 
 - Moreover, staff at Data & Analytics are constantly validating collision records, writing these changes directly to the Oracle database. Therefore, one **cannot compare** historical control totals on eg. the number of individuals involved with recently-generated ones.
+- Speaking of validating collision records... a value of `1` or `-1` (anything other than `0`) in `acc_safe_copy.CHANGED` means that a record has... been... changed... 
 
 ### Collision Factors
 
 Categorical data codes are stored in the `collision_factors` schema as tables. Each table name corresponds to the categorical column in `collisions_replicator.acc_safe_copy`. These are joined against `collisions_replicator.acc_safe_copy` to produce the derived materialized views.
+
+## Data Sources and Ingestion Pipeline
+
+The data comes from the Toronto Police Services (TPS) Versadex and the Collision Reporting Centre (CRC) database, and is combined by a Data Collections team in Transportation Services Policy & Innovation, currently led by David McElroy.
+
+Data are transferred to a Transportation Services file server from TPS on a weekly basis, as a set of XML files, and from the CRC on a monthly basis as a single CSV file. A set of scripts (managed by Jim Millington) read in these raw data into the Transportation Services Oracle database table. This table is manually validated by Data Collections, and edits are made using legacy software from the 1990s.
+
+The collisions table is copied into the MOVE postgres data platform (`flashcrow`) and the `bigdata` postgres data platform on a daily basis. Several derived materialized views are subsequently updated on the `bigdata` postgres database to make querying fun, easy, and exciting! 
