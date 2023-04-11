@@ -58,10 +58,15 @@ method to collect turning movement count data
 - You can see the current locations of Miovision cameras on this map (need to update the link).
 - Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents. 
 - Miovision sata collection is coordinated and managed by (need to insert)
-- More information can be found on the city's website or [Miovision Readme](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/README.md)
+- More information can be found on [Miovision Readme](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/README.md)
 
 ### Watch Your Speed (WYS)
-To be added
+- The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit.
+- Installation of the sign was done as part of 3 programs: 
+  - the normal watch your speed sign program,
+  - mobile watch your speed which has signs mounted on trailers that move to a different location every few weeks, 
+  - and school watch your speed which has signs installed at high priority schools. As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
+- More information can be found on  [WYS Readme](https://github.com/CityofToronto/bdit_data-sources//wys/readme.md).
 ### **Other methods**
 
 ## **What do we use this for**
