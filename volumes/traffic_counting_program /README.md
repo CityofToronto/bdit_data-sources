@@ -5,7 +5,6 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-- [`rescu`: Loop Detector Data](#rescu-loop-detector-data)
 - [FLOW Data](#flow-data)
 	- [1. Loading Data](#1-loading-data)
 	- [2. Schema Overview](#2-schema-overview)
