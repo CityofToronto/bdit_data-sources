@@ -1,15 +1,14 @@
 # Getting Started with Collision Data
 
-Welcome to the tutorial on query collision data! This tutorial assumes you are familiar with Postgres and PostGIS. If you'd like resources on those, please see the Data & Analytics Postgres onboarding documentation [here](https://www.notion.so/bditto/PostgreSQL-Exercises-322493ab085b442f96bfdb77b039cfca).
+Welcome to the tutorial on querying collision data! This tutorial assumes you are familiar with Postgres and PostGIS. If you'd like resources on those, please see the Data & Analytics Postgres onboarding documentation [here](https://www.notion.so/bditto/PostgreSQL-Exercises-322493ab085b442f96bfdb77b039cfca).
 
 ## Layout
 
-`collisions_replicator.acc_safe_copy` is a direct mirror of the table on the MOVE server, and has not been processed to eg. convert category codes into text. It could be used for analysis, but is typically only examined for diagnostic purposes.
+`collisions_replicator.events` is a table of all data related to the collision event, such as its location and time of day, as opposed to data related to involved individuals, such as injury or manoeuver. 
 
-`collisions.events` is a table of all data related to the collision event, such as its location and time of day, as opposed to data related to involved
-individuals, such as injury or manoeuver. 
+`collisions_replicator.involved` includes data for all individuals involved in collisions - "involved data" for short.
 
-`collisions.involved` includes data for all individuals involved in collisions - "involved data" for short.
+`collisions_replicator.acc_safe_copy` is a direct mirror of the table on the MOVE server, and has not been processed - the category codes are all numbers - not text. It should not be used for analysis - use the `events` and `involved` tables instead. `acc_safe_copy` is typically only examined for diagnostic purposes.
 
 ## Joining Events and Involved
 
@@ -27,10 +26,7 @@ This will return *every* record available, so typically we also append a `WHERE`
 
 ## Counting Events and Involved
 
-One common query is for the total number of collision events, or the total
-number of individuals involved in collisions, aggregated to the month, or year.
-If we, for example, wanted the number of collision events and involved from
-2015-2019 inclusive, we'd do:
+One common query is for the total number of collision events, or the total number of individuals involved in collisions, aggregated to the month, or year. If we, for example, wanted the number of collision events and involved from 2015-2019 inclusive, we'd do:
 
 ```sql
 SELECT 
@@ -58,8 +54,7 @@ accyear | n_collisions | n_involved
 
 but be aware that due to the ever-refreshing nature of collisions mentioned in `Readme.md`, these numbers will surely change by small amounts with time.
 
-The `events.data_source` column lists whether the collision event comes from TPS or CRC (or cannot be deduced from the `ACCNB`). `involved.validation_userid` gives the name of Data & Analytics staff member who most recently validated the involved (sometimes only some individals from a collision event are validated). If we want the number of events, involved and validated involved from the data
-subdivided by year and data source, we'd do:
+The `events.data_source` column lists whether the collision event comes from TPS or CRC (or cannot be deduced from the `ACCNB`). `involved.validation_userid` gives the name of Data & Analytics staff member who most recently validated the involved (sometimes only some individals from a collision event are validated). If we want the number of events, involved and validated involved from the data subdivided by year and data source, we'd do:
 
 ```sql
 SELECT 
@@ -77,7 +72,7 @@ GROUP BY ev.accyear, ev.data_source
 ORDER BY 1, 2;
 ```
 
-As of 2021-07-05, the output looks like:
+As of 2023-04-11, the output looks like:
 
 accyear | data_source | n_collisions | n_involved | n_valid_involved
 -- | -- | -- | -- | --
@@ -118,7 +113,7 @@ FROM collisions_replicator.events AS ev
 LEFT JOIN collisions_replicator.involved AS inv USING (collision_no)
 WHERE ev.accyear = 2015
 GROUP BY ev.collision_no, ev.accdate
-HAVING COUNT(inv.*) FILTER (WHERE inv.involved_age < 18) > 0 AND COUNT(inv.*) FILTER (WHERE involved_injury_class IN ('MAJOR', 'FATAL')) > 0
+HAVING COUNT(inv.*) FILTER (WHERE inv.involved_age < 18) > 0 AND COUNT(inv.*) FILTER (WHERE inv.involved_injury_class IN ('MAJOR', 'FATAL')) > 0
 ORDER BY 1, 2;
 ```
 
@@ -134,7 +129,7 @@ collision_no | accdate | n_involved | n_involved_ksi
 
 ## Geospatial Transformations of Collisions
 
-`collisions.events` includes a `geom` column (SRID 4326) based off of the `latitude` and `longitude` columns. No attempt has been made to clean bad lon-lats (in particular, those where `latitude` or `longitude` are close to zero, rather than 43 and -79, respectively), so they'll need to be cleaned either by removing latitudes and longitudes nowhere near Toronto, or by joining with another geometry. The latter is often done for data requests.
+`collisions_replicator.events` includes a `geom` column (SRID 4326) based off of the `latitude` and `longitude` columns. No attempt has been made to clean bad lon-lats (in particular, those where `latitude` or `longitude` are close to zero, rather than 43 and -79, respectively), so they'll need to be cleaned either by removing latitudes and longitudes nowhere near Toronto, or by joining with another geometry. The latter is often done for data requests.
 
 Let's say we wanted to associate all 2015-2019 inclusive collisions that occurred along Yonge St. between Bloor and Dundas. We can generate a street geometry using the `gis.text_to_centreline_geom` function (documented [here](https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline)),
 and then buffer the geometry to spatially join with the collisions.
@@ -180,9 +175,9 @@ Notice that we transformed the street geometry back to SRID 4326 prior to spatia
 
 ### Spatial Joining
 
-You may have noticed that we used a 20 m buffer in the previous example, and may be wondering if this is a standard definition used when joining street and collision geometries together; it is not. Indeed, *there is currently no standard practice for spatially associating collisions with other geometries*. Instead, you are expected to either define a buffer - with the help of clients for data requests - or perform sensitivity testing to ensure that an acceptable minority of collisions are being left out of the join. 20 m is typical of arterial streets, but larger numbers should be used for exceptionally wide streets like St. Clair West, or for highways, while smaller values may be used for local roads.
+You may have noticed that we used a 20 meter buffer in the previous example, and may be wondering if this is a standard definition used when joining street and collision geometries together; it is not. Indeed, *there is currently no standard practice for spatially associating collisions with other geometries*. Instead, you are expected to either define a buffer - with the help of clients for data requests - or perform sensitivity testing to ensure that an acceptable minority of collisions are being left out of the join. 20 meters is typical of arterial streets, but larger numbers should be used for exceptionally wide streets like St. Clair West, or for highways, while smaller values may be used for local roads.
 
-When joining collisions with a network of buffered streets, the team typically uses a single buffer width for all streets, and performs sensitivity testing to make sure that the buffer width is wide enough that an acceptable minority of collisions are left out, but narrow enough that collisions not on the street
+When joining collisions with a network of buffered streets, we typically use a single buffer width for all streets, and performs sensitivity testing to make sure that the buffer width is wide enough that an acceptable minority of collisions are left out, but narrow enough that collisions not on the street
 network are being spuriously associated.
 
 You may be required to produce a one-to-one association between collision and road network (i.e. a collision can only be assigned to one road segment in the
@@ -202,7 +197,7 @@ There are a large number of columns that encode collision location in some way (
 Here are a few factors to consider:
 - Geolocation (lon/lat) is usually assumed to take precedence over other quantities, though it is possible for a collision to be mis-geocoded either in the original TPS/CRC report, or during validation.
 - `stname1` is the dominant road the collision, and `stname2` the cross-road. For midblocks `stname2` is `NULL`. For intersections, `stname1` is the name of the road with the higher functional class (eg. for a collision at the intersection of arterial road Eglinton Ave W. and local road Maxwell Ave, `stname1` will be `EGLINTON` and `stname2` will be `MAXWELL`).
-- `location_type` (named `ACCLOC` in `collisions.acc`) comes from the original TPS and CRC reports. `location_class` (`LOCOORD` in `collisions.acc`) is a simplified version that conforms to Transportation Services standards. Notably `LOCOORD` is not defined in the collision coding manual. You should be careful when using either to select for collisions at intersections or along midblocks. For example, `location_class` may be labeled `MID-BLOCK` if a crash occurs just after a vehicle clears the intersection but is still only a few metres away. These ambiguities need to be better documented than they are now (since some of the details appear to be passed down orally from staff member to staff member).
+- `location_type` (named `ACCLOC` in `collisions_replicator.acc_safe_copy`) comes from the original TPS and CRC reports. `location_class` (`LOCOORD` in `collisions_replicator.acc`) is a simplified version that conforms to Transportation Services standards. Notably `LOCOORD` is not defined in the collision coding manual. You should be careful when using either to select for collisions at intersections or along midblocks. For example, `location_class` may be labeled `MID-BLOCK` if a crash occurs just after a vehicle clears the intersection but is still only a few metres away. These ambiguities need to be better documented than they are now (since some of the details appear to be passed down orally from staff member to staff member).
 - `traffic_control` lists the traffic control system most relevant to the collision (though does not need to be a factor of the collision itself). For example, if at a signalized intersection, a vehicle is exiting a driveway (30 metres within) and strikes a cyclist on the sidewalk, the control is `NO CONTROL`.
 - `px` indicates the geographic association between a collision and a signalized intersection (so collisions with a non-null `px` may have `traffic_control = NO CONTROL`). If a client is interested in all collisions geographically close to signalized intersections (regardless if they were being controlled by the signal), it is better to query using `px` than `traffic_control`.
 
