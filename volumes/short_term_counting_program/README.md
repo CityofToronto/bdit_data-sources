@@ -1,6 +1,6 @@
-# Traffic Volumes
+# Short Term Traffic Volumes
 
-Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
+Short-term Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
 
 ## Table of Contents
 
