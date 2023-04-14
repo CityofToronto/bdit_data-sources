@@ -4,34 +4,21 @@ This is a master repo for all of the data sources that we use. Each folder is fo
 
 ## Table of Contents <!-- omit in toc -->
 
-- [Assets](#Assets)
-  - [Red Light Cameras](#Red-light-cameras)
-  - [Traffic Signals](#Traffic-Signals)
 - [Bluetooth Detectors](#bluetooth-detectors)
 - [Collisions](#collisions)
+- [GIS - Geographic Data](#gis---geographic-data)
+  - [Assets](#assets)
+    - [Red Light Cameras](#red-light-cameras)
+    - [Traffic Signals](#traffic-signals)
+  - [School Safety Zones](#school-safety-zones)
+  - [Street Centreline Geocoding](#street-centreline-geocoding)
 - [Incidents](#incidents)
 - [INRIX](#inrix)
-- [Street Centreline Geocoding](#street-centreline-geocoding)
 - [Volume Data](#volume-data)
-	- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-	- [RESCU - Loop Detectors](#rescu---loop-detectors)
-- [School Safety Zones](#school-safety-zones)
-- [Watch Your Speed Signs](#watch-your-speed-signs)
-
-## Assets
-[`assets/`](assets/)
-
-The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
-
-### Red Light Cameras
-[`assets/rlc/`](assets/rlc/)
-
-Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in [`assets/rlc`](assets/rlc/) for details about this process.
-
-### Traffic Signals
-[`assets/traffic_signals/`](assets/traffic_signals/)
-
-A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). See the README file in [`assets/traffic_signals`](assets/traffic_signals/) for details about the source datasets and how they are combined into a final table made up of the following data elements.
+  - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
+  - [RESCU - Loop Detectors](#rescu---loop-detectors)
+- [Watch Your Speed signs](#watch-your-speed-signs)
+- [Open Data Releases](#open-data-releases)
 
 ## Bluetooth Detectors
 [`bluetooth/`](bluetooth/)
@@ -44,6 +31,38 @@ The City collects traffic data from strategically placed sensors at intersection
 
 The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
 
+## GIS - Geographic Data
+
+
+
+### Assets
+[`assets/`](gis/assets/)
+
+The `assets` directory stores [airflow](https://github.com/CityofToronto/bdit_team_wiki/blob/master/install_instructions/airflow.md) processes related to various assets that we help manage, such as datasets related to Vision Zero.  Below are the assets that we have automated so far.  
+
+#### Red Light Cameras
+[`assets/rlc/`](gis/assets/rlc/)
+
+Red Light Camera data are obtained from Open Data and are also indicators that are displayed on the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). We have developed a process using Airflow to automatically connect to [Open Data](https://open.toronto.ca/dataset/red-light-cameras/) and store the data to our RDS Postgres database. See the README file in [`assets/rlc`](assets/rlc/) for details about this process.
+
+#### Traffic Signals
+[`assets/traffic_signals/`](gis/assets/traffic_signals/)
+
+A number of different features of traffic signals (Leading Pedestrian Intervals, Audible Pedestrian Signals, Pedestrian Crossovers, Traffic Signals) are periodically pulled from [OpenData](https://open.toronto.ca/dataset/traffic-signals-tabular/) . These indicators are used to populate the [Vision Zero Map](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-measures-and-mapping/) and [Dashboard](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/vision-zero-dashboard/). See the README file in [`assets/traffic_signals`](assets/traffic_signals/) for details about the source datasets and how they are combined into a final table made up of the following data elements.
+
+### School Safety Zones
+
+[`gis/school_safety_zones/`](gis/school_safety_zones/)
+
+This dataset comes from Vision Zero which uses Google Sheets to track progress on the implementation of safety improvements in school zones.
+
+
+### Street Centreline Geocoding
+
+[`gis/text_to_centreline/`](gis/text_to_centreline/)
+
+Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
+
 ## Incidents
 See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
 
@@ -51,11 +70,6 @@ See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_inciden
 [`inrix/`](inrix/)
 
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
-
-## Street Centreline Geocoding
-[`gis/text_to_centreline/`](gis/text_to_centreline/)
-
-Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
 
 ## Volume Data
 [`volumes/`](volumes/)
@@ -75,12 +89,20 @@ Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on
 More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
 
-## School Safety Zones
-[`gis/school_safety_zones/`](gis/school_safety_zones/)
-
-This dataset comes from Vision Zero which uses Google Sheets to track progress on the implementation of safety improvements in school zones.
-
 ## Watch Your Speed signs
 [`wys/`](wys/)
 
-The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 3 programs: the normal watch your speed sign program, mobile watch your speed which has signs mounted on trailers that move to a different location every few weeks, and school watch your speed which has signs installed at high priority schools. As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
+The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 programs: the mobile watch your speed which has signs mounted on existing poles, moved every few weeks, and school watch your speed which has signs installed at high priority schools. The signs also collect continuous speed data.
+
+## Open Data Releases
+
+- [Travel Times - Bluetooth](https://open.toronto.ca/dataset/travel-times-bluetooth/) contains data for all the bluetooth segments collected by the city. The travel times are 5 minute average travel times. The real-time feed is currently not operational. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
+- [Watch Your Speed Signs](#watch-your-speed-signs) give feedback to drivers to encourage them to slow down, they also record speed of vehicles passing by the sign. Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly.  [see the WYS README for links to these datasets](wys/#open-data)
+
+For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has released the following datasets, which are typically a subset of larger datasets specific to the pilot:
+
+- [King St. Transit Pilot - Detailed Bluetooth Travel Time](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-bluetooth-travel-time/) contains travel times collected during the King Street Pilot in the same format as the above data set. Data is collected on segments found in the [King St. Transit Pilot – Bluetooth Travel Time Segments](https://open.toronto.ca/dataset/king-st-transit-pilot-bluetooth-travel-time-segments/) map layer. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
+- [King St. Transit Pilot – Bluetooth Travel Time Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-bluetooth-travel-time-summary/) contains monthly averages of corridor-level travel times by time periods. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
+- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://open.toronto.ca/dataset/king-st-transit-pilot-2015-king-street-traffic-counts/) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. See the [Volumes Open Data King Street Pilot](volumes#king-street-pilot) section for more info.
+- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated TMC data collected from Miovision cameras during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area. See the [Miovision Open Data](miovision#open-data) section for more info.
+- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data. The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/). See the [Miovision Open Data](miovision#open-data) section for more info.
