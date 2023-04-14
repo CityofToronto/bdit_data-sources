@@ -5,10 +5,10 @@ CREATE TABLE here.street_valid_range AS
 
 WITH street_v(street_version, valid_range) AS (
 	VALUES 
-	('18_3', daterange('2014-01-01', '2017-01-01')),
-	('19_4_tc', daterange('2017-01-01', '2017-09-01')),
-	('21_1', daterange('2017-09-01', '2022-08-15')),
-	('22_2', daterange('2022-08-15', 'infinity'))
+	('18_3', '["2014-01-01","2017-01-01")'::daterange),
+	('19_4_tc', '["2017-01-01","2017-09-01")'::daterange),
+	('21_1', '["2017-09-01","2022-08-15")'::daterange),
+	('22_2', '["2022-08-15",)'::daterange)
 )
 
 SELECT 
