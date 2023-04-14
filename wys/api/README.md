@@ -54,16 +54,15 @@ The main function in the puller script `api_main` do the following steps:
 
 ### Data Tables
 
-The data is inserted into `wys.raw_data`. Data from the API is already pre-aggregated into roughly 5 minute bins.
+The data in `wys.raw_data` table is pre-aggregated into roughly 5 minute bins, and the table has the following columns:
 
-|Field name|Data type|Description|Example|
+|Field name|Type|Description|Example|
 |------|------|-------|------|
-`raw_data_uid`|integer|A unique identifier for the `raw_data` table|2655075
-`api_id`|integer|ID used for the API, and unique for individual signs, which could be moved between different locations, i.e., some `api_id`s could exist more than once in the `locations` table|1967
-`datetime_bin`|timestamp|Start time of the bin|2018-10-29 10:00:00
-`speed`|integer|Exact speed of the number of vehicles in `count`|47
-`count`|integer|Number of vehicles in datetime_bin/api_id/speed combination|2
-`speed_count_uid`|integer|A unique identifier for `speed_counts_agg_5kph` table. Indicates if the data has already been processed or not.|150102
+|`api_id`|integer|ID used for the API, and unique for individual signs, which could be moved between different locations (for mobile signs), i.e., some `api_id`s could exist more than once in the `locations` table|1967|
+|`datetime_bin`|timestamp|Start time of the bin|2018-10-29 10:00:00|
+|`speed`|integer|Exact speed of the number of vehicles in `count`|47|
+|`count`|integer|Number of vehicles in (datetime_bin,api_id,speed) combination|2|
+|`speed_count_uid`|integer|A unique identifier for `speed_counts_agg_5kph` table. Indicates if the data has already been processed or not.|150102|
 
 `wys.speed_counts_agg_5kph` has data aggregated to 1-hour and 5 km/h bins using the `aggregate_speed_counts_one_hour_5kph()` function. Values for the speed bins are replaced by lookup table IDs.
 
