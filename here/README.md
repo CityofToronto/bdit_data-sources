@@ -64,7 +64,7 @@ Though data are reported at 5-minute intervals, on any given link (aka road segm
 
 HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. This only applies when you're using the raw table `here.ta`.
 
-Refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh.
+Refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh, when we receive new `here_gis.streets_##_#` and `here_gis.streets_att_##_#` tables.
 
 For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`.
 
