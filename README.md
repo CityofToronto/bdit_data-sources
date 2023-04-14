@@ -1,6 +1,13 @@
 ﻿# BDIT Data Sources <!-- omit in toc -->
 
-This is a master repo for all of the data sources that we use. Each folder is for a different data source and contains an explanation of what the data source is, how it can be used, a sample of the data, and scripts to import the data into the PostgreSQL database.
+This is the primary repository for code and documentation for most the data sources the Data & Analytics Unit uses.
+
+Each folder is for a different data source (or category of related data sources). They contain:
+* an explanation of what the data source is,
+* how it can be used, and
+* the Python and SQL necessary for our Extract, Load, Transform, and Validate processes into our PostgreSQL database.
+
+For those curious about what data we manage is released on OpenData, see the [Open Data Releases](#open-data-releases).
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -19,6 +26,10 @@ This is a master repo for all of the data sources that we use. Each folder is fo
   - [RESCU - Loop Detectors](#rescu---loop-detectors)
 - [Watch Your Speed signs](#watch-your-speed-signs)
 - [Open Data Releases](#open-data-releases)
+
+## Airflow DAGS
+
+The [`dag`](dag/) folder contains the DAG Python files for our Airflow orchestration that dictate the logic and schedule for data pipeline tasks.
 
 ## Bluetooth Detectors
 [`bluetooth/`](bluetooth/)
