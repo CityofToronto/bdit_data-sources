@@ -96,17 +96,6 @@ As described above, `wys.speed_counts_agg_5kph` has data aggregated to 1-hour an
 |`id`|integer|Unique ID and primary key of the table|1|
 |`geom`|geometry|The location of the sign calculated from `loc`||
 
-### Views
-
-`report_dates` contains the list of days, for each sign, where there is more than 10 hours of data between 6:00 and 22:00.
-
-|Field name|Data type|Description|Example|
-|------|------|-------|------|
-`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
-`period`|text|Month the data is in|Nov 2018
-`dt`|date|Date where there is more than 10 hours of data|2018-11-03
-`dow`|integer|Day of the week. Sunday is 0, and Saturday is 6|4
-
 ## Quality Checks
 
 ### NULL rows in API data
