@@ -76,21 +76,25 @@ As described above, `wys.speed_counts_agg_5kph` has data aggregated to 1-hour an
 
 ### Lookup Tables
 
-`speed_bins` is a lookup table containing all the 5km/h speed bin. Bin number 25 contains any speed over 120km/h.
+`speed_bins_old` is a lookup table containing all the 5km/h speed bin. Bin number 21 contains any speed over 100km/h.
 
-|Field name|Data type|Description|Example|
+|Field name|Type|Description|Example|
 |------|------|-------|------|
 `speed_id`|integer|A unique identifier for the `speed_bins` table|5
 `speed_bin`|integer range|Range of speeds for each speed bin. The upper limit is not inclusive.|[10-25)
 
-`locations` contains each ID used for the API, direction of traffic the sign is gathering data for, address and name of the sign. Some signs may have information missing from any one of the fields.
+`locations` contains each ID used for the API, direction of traffic along which the sign is collecting data, and address and name of the sign. Some signs may have information missing from any one of the fields.
 
-|Field name|Data type|Description|Example|
+|Field name|Type|Description|Example|
 |------|------|-------|------|
-`api_id`|integer|ID used for the API, and unique identifier for the `locations` table|1967
-`address`|text|Address of the sign|1577 Bloor Street West
-`sign_name`|text|Name of the sign. May include address + serial number, the ward name for the Mobile WYSP, or school name for Schools WYSP|Dundas St W SB 16101191
-`dir`|text|Direction of the flow of traffic|NB
+|`api_id`|integer|ID used for the API, and unique for each sign (most mobile signs change locations every three weeks)|1967|
+|`address`|text|Address of the sign|1577 Bloor Street West|
+|`sign_name`|text|Name of the sign. May include address + serial number, the ward name for the Mobile WYSP, or school name for Schools WYSP|Dundas St W SB 16101191|
+|`dir`|text|Direction of the flow of traffic|NB|
+|`start_date`|date|First date of valid data|2018-11-28|
+|`loc`|text|The coordinates of the sign|(43.666115,-79.370164)
+|`id`|integer|Unique ID and primary key of the table|1|
+|`geom`|geometry|The location of the sign calculated from `loc`||
 
 ### Views
 
