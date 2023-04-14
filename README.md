@@ -11,16 +11,22 @@ For those curious about what data we manage is released on OpenData, see the [Op
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Airflow DAGS](#airflow-dags)
 - [Bluetooth Detectors](#bluetooth-detectors)
 - [Collisions](#collisions)
+- [Cycling App (inactive)](#cycling-app-inactive)
+- [Events (inactive)](#events-inactive)
 - [GIS - Geographic Data](#gis---geographic-data)
   - [Assets](#assets)
     - [Red Light Cameras](#red-light-cameras)
     - [Traffic Signals](#traffic-signals)
   - [School Safety Zones](#school-safety-zones)
   - [Street Centreline Geocoding](#street-centreline-geocoding)
-- [Incidents](#incidents)
-- [INRIX](#inrix)
+- [Incidents (inactive)](#incidents-inactive)
+- [INRIX (inactive)](#inrix-inactive)
+- [Parking (inactive)](#parking-inactive)
+- [Road Closure (inactive)](#road-closure-inactive)
+- [TTC (inactive)](#ttc-inactive)
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
   - [RESCU - Loop Detectors](#rescu---loop-detectors)
@@ -41,6 +47,14 @@ The City collects traffic data from strategically placed sensors at intersection
 [`collisions/`](collisions/)
 
 The collisions dataset consists of data on individuals involved in traffic collisions from approximately 1985 to the present day (though there are some historical collisions from even earlier included).
+
+## Cycling App (inactive)
+
+The [`cycling_app`](cycling_app) collected OD and trip data until 2016.
+
+## Events (inactive)
+
+How do special [`events`](events/) impact traffic in the city? Data sources include the City's Open Data and TicketMaster. 
 
 ## GIS - Geographic Data
 
@@ -74,13 +88,27 @@ This dataset comes from Vision Zero which uses Google Sheets to track progress o
 
 Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
 
-## Incidents
+## Incidents (inactive)
+
 See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
 
-## INRIX
+## INRIX (inactive)
+
 [`inrix/`](inrix/)
 
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
+
+## Parking (inactive)
+
+The [`parking`](parking/) contains R files and SQL files for parking lots and parking tickets. They might be useful but haven't been documented or automated.
+
+## Road Closure (inactive)
+
+[`road_closure`](road_closure/) contains a Python file to pull and parse the XML feed of road closures. This process hasn't been automated (and more recent versions of the API use JSON).
+
+## TTC (inactive)
+
+[`ttc`](ttc/) contains some valiant attempts at transforming CIS vehicle location data provided to us by the TTC on streetcar locations as well as an automated process for pulling in GTFS schedule data.
 
 ## Volume Data
 [`volumes/`](volumes/)
