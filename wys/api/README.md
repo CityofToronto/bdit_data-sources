@@ -26,16 +26,16 @@ The API provides data on non-regular (but uniform) 5 minute bins, i.e., at 3:44,
 
 ## Calls and Input Parameters
 
-The script uses the `get statistics` call to get the volume and speed data. It will return the count of vehicles for each speed recorded by the sign in roughly 5 minute aggregate bins.
+The WYS data puller script is called by an Airflow DAG that runs daily. It collects the count of vehicles for each speed recorded by the sign in roughly 5 minute aggregate bins.
 
-The script uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, for example: `python wys_api.py run_api` will start the script without any input parameters.
+The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, e.g., `python wys_api.py run_api`. It .
 
-|Option|Format|Description|Example|Default|
-|-----|------|-------|-----|-----|
-`--minutes`|integer|The amount of minutes to pull data for|`30`|`1473`
-|`--pull_time`|`HH:mm`|The time when the script will pull data. Since the API does not support pulling data for specific datetimes at the moment, this should be coordinated with `--minutes` to ensure the right amount of data is pulled. It is recommended this time be at least 3 minutes in the future if this is specified.|`15:25`|`0:01`
-`--path`|directory|Specifies the directory where the `config.cfg` file is|`C:\Users\rliu4\Documents\GitHub\bdit_data-sources\wys\api`|`config.cfg` (same directory as python script)
-`--location_flag`|integer|The location ID used by the API to pull data from a specific intersection|`1967`|`0` (Will pull all the data at all intersecitons available)
+|Option|Type|Format|Description|Example|Default|
+|-----|------|------|-------|-----|-----|
+|`start_date`|str|`"YYYY-MM-DD"`|The start date of pulled data|`"2023-01-31"`|previous day date|
+|`end_date`|str|`"YYYY-MM-DD"`|The end date of pulled data|`"2023-01-31"`|previous day date|
+|`path`|str||The path of the configuration file|`/home/wys/api/config.cfg`|`config.cfg` (int the current directory)|
+|`location_flag`|integer||The location ID used by the API to pull data from a specific intersection|`1967`|`0` (to pull all available data)|
 
 ## Process
 
