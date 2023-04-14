@@ -39,13 +39,16 @@ The WYS data puller script can also run independent of Airflow for specific date
 
 ## Process
 
-1. The script parses the `config.cfg` file and any input parameters.
-2. The script will retrieve the list of all signs by using the `signs` call in `get_signs()` function.
-3. The script will check all the signs if they have data by using the `statistics` call in `get_location()` and returning a string of the output. If theres no data, possible outputs may be a `403` error or an `HTML` code snippet. The script will create a table of all valid locations.
-4. The script will again call the `statistics` call in `get_statistics()` to grab the counts and speed.
-5. The script will insert the data to postgreSQL.
-6. The script will add new `api_id` (not in `wys.locations`) and update any ones whose direction or location (moved more than 100 meters) was modified to `wys.locations`. The data of new/updated signs are retrieved using `get_location`, parsed into a suitable format, and eventually inserted it to `wys.locations`.
-7. The script will call the 2 aggregation functions in postgreSQL and refresh the views.
+The main function in the puller script `api_main` do the following steps:
+
+1. Parse the `config.cfg` file (for API key and database credentials) and any input parameters.
+2. Retrieve the list of all signs by calling `location_id()` function, if `location_flag` is `0`.
+3. For every day in the parsed date range (defined as `[start_date, end_date]`):
+   1. Collect daily data by calling `get_data_for_date()`, which attempts to pull hourly statistics for each location up to three trials before marking this (sign, hour) pair as failed.
+   2. Insert the collected data into the appropriate `raw_data` table, e.g., `wys.raw_data_2023` for 2023 data
+   3. Aggregate speed counts by calling the `plpgsql` function `wys.aggregate_speed_counts_one_hour_5kph()`
+4. Update the `wys.locations` table with the changes in the direction and/or location (moved for more than 100 meters) of any existing sign and insert the locations of the new signs as well.
+5. Update the `wys.sign_schedules_list` table, if needed
 
 ## PostgreSQL Processing
 
