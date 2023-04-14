@@ -1,4 +1,8 @@
-# Watch Your Speed
+# Watch Your Speed <!-- omit in toc -->
+
+- [How to Access the Data](#how-to-access-the-data)
+- [Open Data](#open-data)
+
 
 !['A sign mounted on a pole with the words "Your Speed" and underneath a digital sign displaying "31"'](https://www.toronto.ca/wp-content/uploads/2018/09/9878-landscape-mwysp2-e1538064432616-1024x338.jpg)
 
