@@ -22,7 +22,7 @@ The number of signs sending data is not a constant number and changes every day.
 
 ### Inconsistent time bins
 
-The API only gives data on non-regular (but uniform) 5 minute bins, meaning data is given at 3:44, 3:49 etc. This change has been accomodated in the tables, and for the 15 minute aggregation tables.
+The API provides data on non-regular (but uniform) 5 minute bins, i.e., at 3:44, 3:49, etc. This change has been accomodated in the tables, and for the 15 minute aggregation tables.
 
 ## Calls and Input Parameters
 
