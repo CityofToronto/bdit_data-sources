@@ -5,7 +5,7 @@ This is one of the [datasets managed by the Traffic Control group](https://githu
 - Red Light Cameras: https://open.toronto.ca/dataset/red-light-cameras/
 - Other traffic signals: https://open.toronto.ca/dataset/traffic-signals-tabular/
 
-Here, we set up an airflow process to automatically extract Traffic Signals data from OpenAPI and update the relevant tables in the bigdata RDS. The pipeline is in `pull_traffic_signals.py` and it pulls multiple types of traffic signals to tables `vz_safety_programs_staging.rlc`, `vz_safety_programs_staging.signals_cart`, and `gis.traffic_signal`.
+Here, we set up an [airflow process](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/assets_pull.py) to automatically extract Traffic Signals data from OpenAPI and update the relevant tables in the bigdata RDS. The pipeline is in `pull_traffic_signals.py` and it pulls multiple types of traffic signals to tables `vz_safety_programs_staging.rlc`, `vz_safety_programs_staging.signals_cart`, and `gis.traffic_signal`.
 
 ## Where does each type of traffic signal get sent?
 
