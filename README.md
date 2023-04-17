@@ -35,7 +35,9 @@ For those curious about what data we manage is released on OpenData, see the [Op
 
 ## Airflow DAGS
 
-The [`dag`](dag/) folder contains the DAG Python files for our Airflow orchestration that dictate the logic and schedule for data pipeline tasks.
+[`dag/`](dag/)
+
+This folder contains the DAG Python files for our Airflow orchestration that dictate the logic and schedule for data pipeline tasks.
 
 ## Bluetooth Detectors
 [`bluetooth/`](bluetooth/)
@@ -50,15 +52,17 @@ The collisions dataset consists of data on individuals involved in traffic colli
 
 ## Cycling App (inactive)
 
-The [`cycling_app`](cycling_app) collected OD and trip data until 2016.
+[`cycling_app/`](cycling_app/)
+
+The Cycling App collected OD and trip data until 2016.
 
 ## Events (inactive)
 
-How do special [`events`](events/) impact traffic in the city? Data sources include the City's Open Data and TicketMaster. 
+[`events/`](events/)
+
+How do special events impact traffic in the city? Data sources include the City's Open Data and TicketMaster.
 
 ## GIS - Geographic Data
-
-
 
 ### Assets
 [`assets/`](gis/assets/)
@@ -99,16 +103,19 @@ See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_inciden
 Data collected from a variety of traffic probes from 2007 to 2016 for major streets and arterials.
 
 ## Parking (inactive)
+[`parking/`](parking/)
 
-The [`parking`](parking/) contains R files and SQL files for parking lots and parking tickets. They might be useful but haven't been documented or automated.
+This contains R and SQL files for pulling parking lots and parking tickets from Open Data. They might be useful but haven't been documented or automated.
 
 ## Road Closure (inactive)
+[`road_closure/`](road_closure/)
 
-[`road_closure`](road_closure/) contains a Python file to pull and parse the XML feed of road closures. This process hasn't been automated (and more recent versions of the API use JSON).
+This directory contains a Python file to pull and parse the XML feed of road closures. This process hasn't been automated (and more recent versions of the API use JSON).
 
 ## TTC (inactive)
+[`ttc/`](ttc/) 
 
-[`ttc`](ttc/) contains some valiant attempts at transforming CIS vehicle location data provided to us by the TTC on streetcar locations as well as an automated process for pulling in GTFS schedule data.
+This contains some valiant attempts at transforming CIS vehicle location data provided to us by the TTC on streetcar locations as well as an automated process for pulling in GTFS schedule data.
 
 ## Volume Data
 [`volumes/`](volumes/)
