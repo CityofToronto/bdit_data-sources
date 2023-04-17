@@ -124,13 +124,15 @@ with DAG(
     default_args=DEFAULT_ARGS,
     schedule_interval='0 7 1 */3 *' #'@quarterly'
 ) as gcc_layers_dag:
+    deployment = os.environ.get("DEPLOYMENT", "PROD")
 
-    for layer in bigdata_layers:
-        pull_bigdata_layer = PythonOperator(
-            task_id = 'bigdata_task_'+ str(layer),
-            python_callable = get_layer,
-            op_args = bigdata_layers[layer] + [bigdata_cred]
-        )
+    if deployment == "DEV":
+        for layer in bigdata_layers:
+            pull_bigdata_layer = PythonOperator(
+                task_id = 'bigdata_task_'+ str(layer),
+                python_callable = get_layer,
+                op_args = bigdata_layers[layer] + [bigdata_cred]
+            )
 
     for layer in ptc_layers:
         pull_ptc_layer = PythonOperator(
