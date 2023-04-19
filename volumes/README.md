@@ -4,7 +4,6 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
 - [`rescu`: Loop Detector Data](#rescu-loop-detector-data)
 - [FLOW Data](#flow-data)
 	- [1. Loading Data](#1-loading-data)
@@ -235,7 +234,7 @@ Field Name|Type|Description
 count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
 arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
 count_date|date|date on which the count was conducted
-day_no|bigint|day of the week
+day_no|bigint|day of the week 1= Sunday, 7 = Saturday
 category_id|int|ID number linked to [category](#category) table containing the source of the count
 
 #### cnt_det

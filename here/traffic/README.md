@@ -1,5 +1,8 @@
 # Traffic Analytics Data
 
+- [Data Pipeline](#data-pipeline)
+    - [Important Tables](#important-tables)
+    - [Maintenance](#maintenance)
 - [here_api.py](#here_apipy)
   - [Setup](#setup)
   - [Using the script](#using-the-script)
@@ -7,6 +10,27 @@
     - [upload](#upload)
 - [Loading New Data (Old Method)](#loading-new-data-old-method)
 
+## Data Pipeline 
+
+The HERE data pipeline pulls traffic data everyday at 4PM. There is a daily automated airflow pipeline that uses a BashOpertor to run [`here_api.py`](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) on the scheduled time. It sends a request specifying the output and data resolution to the HERE API, unzips the file, pipes the output to `psql`, and runs the `/COPY` command to send the output to a simple view `here.ta_view`. The simple view has an insert trigger that executes the function [`here.here_insert_trigger`](https://github.com/CityofToronto/bdit_data-sources/blob/here_declarative/here/traffic/sql/trigger_here_insert.sql) for each row to redirect and transform input data to the parent `here.ta` table which will then insert into the corresponding partitioned table based on the input date.
+
+### Important Tables
+
+`here.ta`
+
+All Traffic Analytics speed data are stored in partitioned tables under the parent `here.ta`. As we upgraded to PostGreSQL version 10, we were able to transition from inheritance based partitioning to declarative partitioning, see [this PR](https://github.com/CityofToronto/bdit_data-sources/pull/497) for more details on the transitioning process. Declarative partitioning allows for an easier setup and requires less maintenance. `here.ta` use range partitioning and the partition key is `dt`. Data is then partitioned by month by specifying the date range bounds.   
+
+`here.ta_view`
+
+This is a simple view created to redirect data to `here.ta` using triggers. Other than additional column `epoch_min` and the lack of columns `dt` and `tod`, it has all the columns in `here.ta`. An trigger with `INSTEAD OF INSERT` statement is created to redirect data received from psql command `/COPY` to `here.ta` along with transformation of `tx` (timestamp) to `dt` (date) and `tod` (time).
+
+`here.ta_yyyymm`
+
+These are partitioned tables of `here.ta`, named with the suffix of  `_yyyymm` (e.g. Data for August 2020 will be in table `here.ta_202008`). 
+
+## Maintenance
+
+After we transition to declarative partitioning, we would only need to create new monthly tables once every year. The function [`create_yearly_tables(yyyy text)`](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/traffic/sql/function_create_yearly_tables.sql) was created for creating monthly partition tables for the input year. There is an [end of year airflow DAG](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/eoy_create_tables.py) dedicated for all our yearly maintenance which runs this function among others once a year.   
 ## here_api.py
 
 ### Setup
@@ -63,15 +87,22 @@ Options:
   --help  Show this message and exit.
 ```
 
-## Loading New Data (Old Method)
+## Manually Load Data from Traffic Analytics Link
 
 Data prior to 2017 was downloaded from links provided by Here. After 2017 we use the trafficanalytics portal to query the data and receive a download link for a gzipped csv. These can be downloaded directly onto the EC2 with `curl` or `wget`.
 
-1. Check the table for the months in question exists, if not create one using the relevant part of the loop in the [`sql/create_tables.sql`](sql/create_tables.sql) script. This will create a partitioned table for the specified month and also create a rule to insert data into this partition.
-2. Load the data. It's possible to stream decompression to a PostgreSQL COPY operation without writing the uncompressed data to disk, so [do that](https://github.com/CityofToronto/bdit_team_wiki/wiki/PostgreSQL#copying-from-compressed-files). Since [rules aren't triggered](https://github.com/CityofToronto/bdit_team_wiki/wiki/PostgreSQL#table-partitioning) by COPY commands data must first be transferred to a staging table and then `INSERT`ed into `here.ta`. A full data loading command is:
+1. Check the table for the year in question exists, if not create one using the function [`sql/function_create_yearly_tables.sql`](sql/function_create_yearly_tables.sql). This will create one partitioned table per month, along with indices for the specified year under `here.ta`.
+2. Load the data. It's possible to stream decompression to a PostgreSQL COPY operation without writing the uncompressed data to disk. 
+
+Since columns cannot be reorder by COPY commands data must first be transferred to a simple staging view and then `INSERT` into `here.ta`. A full data loading command is:
 ```shell
-gunzip -c data.csv.gz | psql -h rds.ip -d bigdata -c "\COPY here.ta_staging FROM STDIN WITH (FORMAT csv, HEADER TRUE); INSERT INTO here.ta SELECT * FROM here.ta_staging; TRUNCATE here.ta_staging;" >> bulk_load.log &
+# Unzip csv.gz and pipe output to psql
+
+gunzip -c data.csv.gz | psql -h rds.ip -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" >> bulk_load.log &
+
+# Use curl and gunzip to directly pipe output from url to psql without downloading the file
+
+curl -o - "{url}" | gunzip | psql -h rds.ip -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" >> bulk_load.log &
 ```
 
-3. Add check constraints. [`data_util`](../../data_util) works with HERE data. So a command for one table would be `./data_util.py -p -d db.cfg -y 201701 201701 -s here -t ta_`
-4. Add indexes using `data_util`. Relevant command is `./data_util.py -i -d db.cfg -y 201701 201703 --idx link_id --idx timestamp --schema here --tablename ta_`
+
