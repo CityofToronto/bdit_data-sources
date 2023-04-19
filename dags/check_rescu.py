@@ -1,9 +1,10 @@
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable 
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -33,15 +34,18 @@ def check_rescu(con, date_to_pull):
         if raw_num == 0 or raw_num < volume_num or volume_num < 7000:
             raise Exception ('There is a PROBLEM here. There is no raw data OR raw_data is less than volume_15min OR volumes_15min is less than 7000 which is way too low')
 
-SLACK_CONN_ID = 'slack'
+SLACK_CONN_ID = 'slack_data_pipeline'
+dag_config = Variable.get('slack_member_id', deserialize_json=True)
+list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
     # print this task_msg and tag these users
     task_msg = """The Task {task} failed, the total volume is too low. 
         Either a lot of loop detectors are down or there's a problem in the pipeline.
-        <@U1XGLNWG2> <@UG60NMTPC> <@U1XFV23D4> please fix it :thanks_japanese: """.format(
-        task=context.get('task_instance').task_id,)    
+        {slack_name} please fix it :thanks_japanese: """.format(
+        task=context.get('task_instance').task_id, slack_name = list_names,)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
