@@ -1,6 +1,6 @@
 ﻿-- Materialized View: bluetooth.aggr_5min_i95
 
-DROP MATERIALIZED VIEW bluetooth.aggr_5min_i95;
+DROP MATERIALIZED VIEW bluetooth.aggr_5min_i95; 
 
 CREATE MATERIALIZED VIEW bluetooth.aggr_5min_i95 AS 
  WITH temp_aggr AS (
