@@ -1,0 +1,5 @@
+name: lint
+on: pull_request
+jobs:
+  apply-SQL-linter:
+    uses: Toronto-Big-Data-Innovation-Team/.github/.github/workflows/annotate-modified-SQL.yml@main
