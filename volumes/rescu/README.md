@@ -2,8 +2,7 @@
 
 This readme file was generated on 2023-04-04 by Shahrzad Borjian.
 
-This readme file was Updated on [YYYY-MM-DD] by [NAME] with [changes keywords].
-
+This readme file was Updated on 2023-04-21 by Shahrzad Borjian
 
 
 # GENERAL INFORMATION
@@ -13,9 +12,9 @@ This readme file was Updated on [YYYY-MM-DD] by [NAME] with [changes keywords].
 
 
 ## **Traffic RESCU**
-Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. More information can be found [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
 
-Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`.
+Processed 15-min data is available in `rescu.volumes_15min`.
 
 ![image](https://user-images.githubusercontent.com/98347176/228930515-3f38a7a0-d2be-444b-b70d-1a6eb79ad74a.png)
 
@@ -25,9 +24,13 @@ Raw data is available in `rescu.raw_15min` whereas processed 15-min data is avai
 ## What do we use this for/ data usage:
 	
 ### 1- What is the purpose of using the data? (Primary or secondary)	
->Real time data reporting as a primary use for Traffic Management Centre (TMC). Analytics as fulfilled by data specialists as part of data requests. 
+>Real time data reporting as a primary use for Traffic Management Centre (TMC).
+<br> Analytics as fulfilled by data specialists as part of data requests. 
+<br> Despite data quality concerns (usually due to malfunctioning detectors) RESCU data are the only source of volume counts for highways within Toronto's jurisdiction (the Allen Expressway, the Gardiner Expressway and the Don Valley Parkway).
+
+
 ### 2- Who uses this data within D&A?  What tasks is data used for?	
->Data specialists. Used for data requests (mostly staff asking for volumes on highways).   
+>Data specialists and research analysts. Used for data requests (mostly staff asking for volumes on highways).   
 
 ### 3- Who uses this data outside D&A? 
 > TMC. Only used for real time data reporting. 
@@ -36,48 +39,45 @@ Raw data is available in `rescu.raw_15min` whereas processed 15-min data is avai
 >Data gaps make data unreliable for data requests.  
 
 ### 5- Does this data get published?	
->No. Data could be published but at this current point it is not. 
+>No. Data could be published but at this current point it is not due to data quality concerns.
+
 
 
 ## **Contact information**:
 ### 1- Who is the internal contact (within D&A) to reach out to with questions/concerns?
-> Unclear. Staff who created pipeline are no longer with the team and there has been no official handover to another individual. May potentially fall under the purview of specialists within Data Operations.
+><!--- Unclear. Staff who created pipeline are no longer with the team and there has been no official handover to another individual. May potentially fall under the purview of specialists within Data Operations.--->
+D&A Management staff should be consulted prior to releasing this data due to data quality concerns.
 
 ### 2- Who is the external contact (outside D&A) to reach out to with questions/concerns?	
-> Active Traffic Management.  ATM also redirects inquires to Jim and previously to Steven Bon. 
+> Active Traffic Management. ATM also redirects inquires to Jim and previously to Steven Bon. 
 
 
 
 
 ## **Date of data collection**: 
 
-> ongoing: data availble since
-
-> regular updates
+> Data collection is ongoing: data available since Jan 2017 and is regularly updated.
 
 
 
-## **Geographic location of data collection**:
->Loations can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
-
-> Provide CRS/SRID (e.g. WGS84/EPSG:4326)
+<!---## **Geographic location of data collection**:
+>to be added --->
 
 ## **Data Ownership**
 	
 #### 1- Who is responsible for this data within D&A?
->Jesse. 
+>Jesse Coleman. 
 
 ### 2- Who is responsible for this data outside D&A?
->TMC. Active Traffic Management. As ITS Central is becoming of more use (as field servers are no longer working and ITS Central is the replacement) then responsibility may shift to Transnomis. 
+>TMC- Active Traffic Management. As ITS Central is becoming of more use (as field servers are no longer working and ITS Central is the replacement) then responsibility may shift to Transnomis. 
 
 ### 3- Is data housed with external contractors or consultants?
 > Real time data use is accessed through ITS Central and thus data is housed with Transnomis.  
 
-## Support for data collection
-> information about who supported the collection of the data (program/unit): 
+<!---## Support for data collection
+>TBA---
 
-
-# SHARING/ACCESS INFORMATION
+<!---# SHARING/ACCESS INFORMATION
 ## Restrictions placed on the data: 
 > list any restrictions on data access (public data, internal data (team, unit, division, the City, a specific group pf people))
 
@@ -99,16 +99,16 @@ server name, schema, database, version, admin,
 
 
 ## Limitation of the data
->Data gaps make data unreliable for data requests. 
+>Data gaps make data unreliable for data requests.
 
 
 
-## Links to any use the data: 
->TBA
+<!---## Links to any use the data: 
+>TBA--->
 
 
 
-## Links to other publicly accessible locations of the data: 
+<!---## Links to other publicly accessible locations of the data: 
 >TBA
 
 
@@ -121,12 +121,12 @@ server name, schema, database, version, admin,
 
 
 ## Do you expect citation for this dataset: 
-> TBA
+> TBA--->
 
 
 
 
-# DATA & FILE OVERVIEW
+<!---# DATA & FILE OVERVIEW
 ## List files
 > if the dataset or a version of it is stored in other places, list them here and provide information versioning information
 
@@ -156,7 +156,7 @@ server name, schema, database, version, admin,
 3. When was the file updated? 
 
 > use a table formatting (version id, created at, changes)
-
+--->
 
 
 # METHODOLOGICAL INFORMATION
@@ -170,11 +170,11 @@ Radar detectors (which function the same way as loop detectors) placed on the ro
 >Volume data at specific highway locations
 
 ### 3- Is there an up to date map for this data? If yes, who should be updating the map?      
->- No, there is an internal web app [Created by D&A] but it is not helpful as it only shows locations of loop detectors and volume range by date but cannot be manipulated. There also significant data gaps which reduce the usability of this web app.
+>- A new map by D&A is underway
 >- Electrical contractor provides data feed which included latitude and longitude, however there are locational errors. The overall accuracy of the spatial data provided is questionable. 
 >- TPIM (Traffic Plant / Installation and Maintenance) would be responsible for updating this map as it falls within their purview. 
 ### 4- How often is the data updated?	
->Raw data feeds into oracle every 20 seconds. Data (Jim's aggregation) pushed into Oracle daily. Data Pipeline Flow and Transformation – 
+>Raw data feeds into oracle every 20 seconds. Data (Jim's aggregation) pushed into Oracle daily. Data Pipeline Flow and Transformation
 ## **Methods for processing the data: Data Pipeline Flow and Transformation- How does the data move/transform through the organization?**
 	
 ### 1- How is the data organized and aggregated? 	
@@ -188,9 +188,9 @@ Within ITS Central it is stored in Postgres database but we are unsure as to how
 
 ### 4- Where is the data stored?	
 >Pulling data from databases into Postgres. Windows task scheduler is responsible for pulling the data from \\tssrv. 
->Refer to [readme_pull](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/rescu/README_PULL.md) for more information
+>Refer to [README_PIPELINE](rescu/README_PULL.md) for more information
 
-### 5- How is the data stored?	
+<!---### 5- How is the data stored?	
 >Unsure.   
 
 
@@ -207,7 +207,7 @@ Within ITS Central it is stored in Postgres database but we are unsure as to how
 
 
 ## Environmental/experimental conditions: 
-> N/A- to be added 
+> N/A- to be added --->
 
 
 
@@ -215,26 +215,26 @@ Within ITS Central it is stored in Postgres database but we are unsure as to how
 
 ### 1- Are there known data gaps/incomplete data? 	
 >Yes, there are many data gaps.
-### 2- What are they gaps?	
+### 2- What are the gaps?	
 >Missing volumes due to detector issues. Data reports sent to D&A out of Oracle contain specific lane-level data. This may help isolate detectors that are down and help in closing gaps and validating data.
 
 ### 3- How are data gaps/incomplete data addressed? 
 >Currently within D&A and for the purpose of Data Requests, requesters tell requestees that data is not available.  
 
-### 3- Who is responsible for addressing data gaps/incomplete data?
->Unsure. By default it is D&A.
+### 4- Who is responsible for addressing data gaps/incomplete data?
+>Not Clear but D&A can be contacted for the time being. 
 
-#### 4- Are there data quality assessment processes for the data?
->Yes, there is a pipeline check but it regularly fails so it may not a sufficient form of quality assessment.No upstream validation processes identified.
+### 5- Are there data quality assessment processes for the data?
+>Yes, there is a pipeline check but it needs to be updated to add upstream validation process.
 
-#### 5- How often are data quality assessment processes for the data undertaken? 
+### 6- How often are data quality assessment processes for the data undertaken? 
 >D&A process done daily. QA process counts the number of rows that have data with 7000 rows being the threshold.   
  
-#### 6- Are external contractors or consultants responsible for checking data quality?
+<!---#### 6- Are external contractors or consultants responsible for checking data quality?
 > Unsure. 
 
 
-## Data Validity- Is the data truly representative of the real world? 
+<!---## Data Validity- Is the data truly representative of the real world? 
 	
 ### 1- Who is responsible for checking the validity of the data?	
 >Unsure. 
@@ -248,13 +248,14 @@ It appears that validation is only done once data reaches D&A. Unclear is there 
 >N/A
 ### 5- Are external contractors or consultants responsible for checking data validity? Who is the City staff contact who works for that vendor?	
 >N/A
-
+--->
 ## Data Maintainance 
 ## Maintenance - 
 - (Hardware/Software)
-	Hardware
-	ITS Central
-	Oracle Data 	
+  - Hardware
+  - ITS Central
+   - Oracle Data
+   
 The following questions need to be answered in each stage in the data flow diagram:	
 ### 1- Who is responsible for the status of data functionality and the overall maintenance of the data collection? 	
 >-  Hardware: TPIM is responsible. Typically Jim troubleshoots the problem first. 
@@ -262,49 +263,79 @@ The following questions need to be answered in each stage in the data flow diagr
 >- ITS Central: Transnomis (Simon) via Black/Mac is responsible.
 >- Oracle DB Server: Jim is responsible as he functions as the owner of the dataset.
 
-### 2- How often is data maintained? Are there monitoring mechanisms when parts of the data flow is not working?	
+<!---### 2- How often is data maintained? Are there monitoring mechanisms when parts of the data flow is not working?	
 >Unsure. 
 ### 3- Is there a chain/process for when equipment goes wrong/breaks?	
 > Unsure.
-### 4- What is the process that needs to be undertaken when equipment goes wrong/breaks? 	> Unsure.
-### 5-Who should be notified if something goes wrong/ there are changes to data? 	
->Data specialists within D&A. Data users within TMC. 
+### 4- What is the process that needs to be undertaken when equipment goes wrong/breaks? 	
+> Unsure.--->
+### 2-Who should be notified if something goes wrong/ there are changes to data? 	
+>Data specialists and research analysts within D&A. Data users within TMC. 
 
-### 5- Are external contractors or consultants responsible for maintenance? Who is the City staff contact who works for that vendor?	
->ATM is leased to a contractor in the traffic control room. Contractor runs and manages the work orders. 
+<!---### 5- Are external contractors or consultants responsible for maintenance? Who is the City staff contact who works for that vendor?	
+>ATM is leased to a contractor in the traffic control room. Contractor runs and manages the work orders.--->
  
 
 
 
-# DATA-SPECIFIC INFORMATION FOR:
+# DATA-SPECIFIC INFORMATION FOR RESCU:
 ## Schema
-Data is stored in RESCU schema.
+> - Data is stored in RESCU schema.
+> - Previously, Data Collection team was manually loading rescu data into the FLOW application, which feeds into the Traffic schema, but the process has been stopped.
+> - Data in RESCU schema should be used for any analysis.
+
 ## Number of variables: 
+>`detector_inventory` table: 
+This table contains list and details of RESCU detectors in the City. Please note this table needs to be udpated.
+Latitutde and longitude  and arterycode can be used keys to join the data with centreline and other traffic counts.
+><br>Column names:
+> - "detector_id",
+>- "number_of_lanes",
+>- "latitude",
+>- "longitude",
+>- "det_group": "ALLEN" (Allen road), "FGG/LAKE" (Gardiner Expressway and Lakeshore ramps) , "FGG" (Gardiner Expressway), "DVP" (Don Valley Parkway), "LAKE" (Lakeshore),
+>- "road_class",
+>- "primary_road",
+>- "direction",
+>- "offset_distance",
+>- "offset_direction",
+>- "cross_road",
+>- "district",
+>- "ward",
+>- "vds_type",
+>- "total_loops",
+>- "sequence_number",
+>- "data_range_low",
+>- "data_range_high",
+>- "historical_count",
+>- "arterycode": Reference table for Artery Codes (internal reference for intersections and segments)
 
 
->`raw_20sec` table:
-"datetime_bin",
-"detector_id",
-"lane_no",
-"volume",
-"occupancy",
-"speed",
-"uid"
+>`raw_20sec` table: the table includes the raw number of counts recorded by the detector during that 20-second interval.
+><br>Column names:
+>- "datetime_bin",
+>- "detector_id",
+>- "lane_no",
+>- "volume",
+>- "occupancy",
+>- "speed",
+>- "uid"
 
->`raw_15min` table:
-"dt", 
-"raw_info", 
-"raw_uid"
+>`raw_15min` table:The table includes  aggregated raw counts over 15 min interval.
+><br>Column names:
+>- "raw_info", 
+>- "raw_uid"
 
->`volumes_15min` table:
-"detector_id",
-"datetime_bin",
-"volume_15min",
-"arterycode",
-"volume_uid",
+>`volumes_15min` table: This table includes processed 15 min counts.
+><br>Column names:
+>- "detector_id",
+>- "datetime_bin",
+>- "volume_15min",
+>- "arterycode",
+>- "volume_uid",
 
 
-## Missing data: 
+<!---## Missing data: 
 > TBA
 
 
@@ -313,4 +344,4 @@ Data is stored in RESCU schema.
 >TBA
 
 ## Other
-> if there are information worth sharing but have not considered in this template, please list them here
+> if there are information worth sharing but have not considered in this template, please list them here--->
