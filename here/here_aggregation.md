@@ -51,19 +51,19 @@ Example of a table (from `activeto.analysis_periods`):
 
 | analysis_period | time_period | time_range | dow_range | day_type |
 | --- | --- | --- | --- | --- |
-| 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,5] | Weekday |
-| 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,5] | Weekday |
+| 1 | Weekday- Daily | [00:00:00,24:00:00) | [1,6) | Weekday |
+| 2 | Weekday- AM Peak | [07:00:00,10:00:00) | [1,6) | Weekday |
 
 ### Date range
 
 Similar to time range, date ranges are defined in a `CTE` or filtered in a `WHERE` clause for data requests and in a table for project analysis. Date ranges are often project specific. For example in before and after studies, we would define different date ranges for periods such as `before`, `installation`, and `after`. In program monitoring projects, we might want to aggregate data up to a daily, weekly or monthly averages.
 
-Example of filtering date ranges in the `WHERE` clause (not using `between`):
+Example of filtering date ranges in the `WHERE` clause (NOT using `between`):
 ```sql
 
 FROM    here.ta -- speed data table
 
-LEFT JOIN ref.holiday holiday ON ta.tx::date = holiday.dt
+LEFT JOIN ref.holiday holiday ON ta.dt = holiday.dt
 
 WHERE   
     (ta.dt >= '2019-01-01'::date AND ta.dt < '2019-02-18'::date)  -- filter date ranges
@@ -121,11 +121,12 @@ When to use congestion summary tables:
 
 **Step 1**: Specify both time range and date range using CTE.
 ```sql
+-- Time range definition
 WITH period_def(period_name, time_range, dow) AS (
     VALUES
-    ('AM Peak Period'::text, '[7,10)'::numrange, '[1,5]'::int4range),
-    ('PM Peak Period'::text, '[16,19)'::numrange, '[1,5]'::int4range),
-    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,7]'::int4range))
+    ('AM Peak Period'::text, '[7,10)'::numrange, '[1,6)'::int4range),
+    ('PM Peak Period'::text, '[16,19)'::numrange, '[1,6)'::int4range),
+    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,8)'::int4range))
 
 -- Date range definition
 , date_def(range_name, date_range) AS (
@@ -143,11 +144,11 @@ period_avg AS (
         cnd.dt, 
         period_def.period_name,
         date_def.range_name,
-        ROUND(AVG(cnd.tt), 1) AS avg_tt
+        AVG(cnd.tt) AS avg_tt
     FROM congestion.network_segments_daily AS cnd
-    INNER JOIN data_requests.input_table AS routed USING (segment_id)
-    CROSS JOIN period_def
-    CROSS JOIN date_def
+    INNER JOIN data_requests.input_table AS routed USING (segment_id) -- geometry definition table
+    CROSS JOIN period_def -- joining to time period definition table
+    CROSS JOIN date_def -- joining to date period definition table
     LEFT JOIN ref.holiday USING (dt)
     WHERE 
         holiday.dt IS NULL -- Exclude Holiday
@@ -253,6 +254,16 @@ HAVING sum(segment_length) > (0.80 * corridor_length);
 
 If the congestion tables are not suitable for your study, you can aggregate here data from the raw speed table. 
 
+Specify your tiue period definition, simliar to congestion network method.
+
+```sql
+WITH period_def(period_name, time_range, dow) AS (
+    VALUES
+    ('AM Peak Period'::text, '[7,10)'::numrange, '[1,5]'::int4range),
+    ('PM Peak Period'::text, '[16,19)'::numrange, '[1,5]'::int4range),
+    ('Weekend Midday'::text, '[12,19)'::numrange, '[6,7]'::int4range))
+```
+
 **Step 1**: Calculate corridor's total length and the number of links that make up the corridor. Knowing the total length and the total number of links can allow us to filter corridors that does not have enough data for aggregation. 
 
 ```sql
@@ -272,20 +283,21 @@ GROUP BY input_table.uid;
 SELECT
     input_table.uid,
     input_table.link_dir,
+    dt, 
     datetime_bin(tx, 60) AS datetime_bin, -- aggregate time from 5 min to an hour
-    avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- harmonic mean
+    avg(here_length * 0.001/ mean * 3600) AS mean_tt, -- convert speed to travel time then average 
 FROM data_requests.input_table
 JOIN here.ta USING (link_dir) -- speed data table
 CROSS JOIN time_ranges -- CTE with define time range
 WHERE 
-   ( -- define date range
+   ( -- another way of defining date range directly in the where clause
       dt >= '2019-01-01'::date
       AND dt < '2019-02-18'::date
    )
    AND tod <@ time_ranges.time_range 
    AND date_part('isodow'::text, a.dt)::integer <@ time_ranges.dow
 
-GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length, period
+GROUP BY input_table.uid, input_table.link_dir, dt, datetime_bin, input_table.length, period
 
 ```
 
@@ -295,11 +307,13 @@ GROUP BY input_table.uid, input_table.link_dir, datetime_bin, input_table.length
 -- Aggregate link level hourly travel time to corridor level
 SELECT
     uid,
+    link_hourly.dt, 
     link_hourly.datetime_bin,
     corridor_detail.total_length / (sum(link_hourly.here_length) / sum(link_hourly.mean_tt)) AS corr_tt
 FROM link_hourly
 INNER JOIN corridor_detail USING (uid)
 GROUP BY
+    link_hourly.dt, 
     link_hourly.datetime_bin,
     uid,
     corridor_detail.total_length,
@@ -313,11 +327,13 @@ HAVING sum(link_hourly.here_length) >= (total_length * 0.8); -- where at least 8
 -- Aggregate corridor level hourly travel time to time periods	
 SELECT
     uid,
+    dt,
     period,
     avg(corr_tt) AS corr_mean_tt
 FROM corridor_hourly
 GROUP BY
     period,
+    dt, 
     uid,
     total_length;
 ```
