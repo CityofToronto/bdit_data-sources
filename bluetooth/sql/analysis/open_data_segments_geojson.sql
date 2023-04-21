@@ -1,21 +1,29 @@
 --Select "Download as CSV" on this query.
 
-select row_to_json(fc)
-from (
-    select
-        'FeatureCollection' as "type",
-        array_to_json(array_agg(f)) as "features"
-    from (
-        select
-            'Feature' as "type",
-            ST_AsGeoJSON(ST_Transform(geom, 4326), 6) :: json as "geometry",
+SELECT row_to_json(fc)
+FROM (
+    SELECT
+        'FeatureCollection' AS "type",
+        array_to_json(array_agg(f)) AS "features"
+    FROM (
+        SELECT
+            'Feature' AS "type",
+            ST_AsGeoJSON(ST_Transform(geom, 4326), 6)::json AS "geometry",
             (
-                select json_strip_nulls(row_to_json(t))
-                from (
-                    select
-                        "resultId", start_street, direction, start_cross_street, end_street, end_cross_street, start_date, end_date, length
-                ) t
-            ) as "properties"
-        from open_data.bluetooth_segments
-    ) as f
-) as fc;
+                SELECT json_strip_nulls(row_to_json(t))
+                FROM (
+                    SELECT
+                        "resultId",
+                        start_street,
+                        direction,
+                        start_cross_street,
+                        end_street,
+                        end_cross_street,
+                        start_date,
+                        end_date,
+                        length
+                ) AS t
+            ) AS "properties"
+        FROM open_data.bluetooth_segments
+    ) AS f
+) AS fc;

@@ -1,13 +1,14 @@
-DROP FUNCTION  IF EXISTS bluetooth.create_obs_tables(text);
+DROP FUNCTION IF EXISTS bluetooth.create_obs_tables(text);
 
 CREATE OR REPLACE FUNCTION bluetooth.create_obs_tables(
-	_yyyy text)
-    RETURNS VOID
-    LANGUAGE 'plpgsql'
+    _yyyy text
+)
+RETURNS void
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE STRICT 
-    SECURITY DEFINER
+COST 100
+VOLATILE STRICT
+SECURITY DEFINER
 AS $BODY$
 
 DECLARE
@@ -42,7 +43,9 @@ BEGIN
 END;
 $BODY$;
 
-GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables(text) TO bt_admins;
-GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables(text) TO bt_bot;
+GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables (text) TO bt_admins;
+GRANT EXECUTE ON FUNCTION bluetooth.create_obs_tables (text) TO bt_bot;
 
-COMMENT ON FUNCTION bluetooth.create_obs_tables(text) IS 'Loops through the months of the provided year to create a partitioned table for each month';
+COMMENT ON FUNCTION bluetooth.create_obs_tables(
+    text
+) IS 'Loops through the months of the provided year to create a partitioned table for each month';

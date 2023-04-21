@@ -1,5 +1,95 @@
-CREATE VIEW open_data.bluetooth_2014 AS (SELECT segment_name AS "resultId", tt::INT as "timeInSeconds", obs as count, REPLACE(to_char( (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'), 'YYYY-MM-DD HH24:MI:SSOF'), ' ', 'T') as updated FROM bluetooth.aggr_5min INNER JOIN bluetooth.ref_segments USING (analysis_id) INNER JOIN bluetooth.public_routes USING (segment_name) WHERE EXTRACT(year from datetime_bin) = '2014' ); GRANT SELECT ON open_data.bluetooth_2014 TO opendata;
-CREATE VIEW open_data.bluetooth_2015 AS (SELECT segment_name AS "resultId", tt::INT as "timeInSeconds", obs as count, REPLACE(to_char( (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'), 'YYYY-MM-DD HH24:MI:SSOF'), ' ', 'T') as updated FROM bluetooth.aggr_5min INNER JOIN bluetooth.ref_segments USING (analysis_id) INNER JOIN bluetooth.public_routes USING (segment_name) WHERE EXTRACT(year from datetime_bin) = '2015' ); GRANT SELECT ON open_data.bluetooth_2015 TO opendata;
-CREATE VIEW open_data.bluetooth_2016 AS (SELECT segment_name AS "resultId", tt::INT as "timeInSeconds", obs as count, REPLACE(to_char( (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'), 'YYYY-MM-DD HH24:MI:SSOF'), ' ', 'T') as updated FROM bluetooth.aggr_5min INNER JOIN bluetooth.ref_segments USING (analysis_id) INNER JOIN bluetooth.public_routes USING (segment_name) WHERE EXTRACT(year from datetime_bin) = '2016' ); GRANT SELECT ON open_data.bluetooth_2016 TO opendata;
-CREATE VIEW open_data.bluetooth_2017 AS (SELECT segment_name AS "resultId", tt::INT as "timeInSeconds", obs as count, REPLACE(to_char( (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'), 'YYYY-MM-DD HH24:MI:SSOF'), ' ', 'T') as updated FROM bluetooth.aggr_5min INNER JOIN bluetooth.ref_segments USING (analysis_id) INNER JOIN bluetooth.public_routes USING (segment_name) WHERE EXTRACT(year from datetime_bin) = '2017' ); GRANT SELECT ON open_data.bluetooth_2017 TO opendata;
-CREATE VIEW open_data.bluetooth_2018 AS (SELECT segment_name AS "resultId", tt::INT as "timeInSeconds", obs as count, REPLACE(to_char( (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'), 'YYYY-MM-DD HH24:MI:SSOF'), ' ', 'T') as updated FROM bluetooth.aggr_5min INNER JOIN bluetooth.ref_segments USING (analysis_id) INNER JOIN bluetooth.public_routes USING (segment_name) WHERE EXTRACT(year from datetime_bin) = '2018' ); GRANT SELECT ON open_data.bluetooth_2018 TO opendata;
+CREATE VIEW open_data.bluetooth_2014 AS (
+    SELECT
+        segment_name AS "resultId",
+        tt::int AS "timeInSeconds",
+        obs AS count,
+        REPLACE(
+            to_char(
+                (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'),
+                'YYYY-MM-DD HH24:MI:SSOF'
+            ),
+            ' ',
+            'T'
+        ) AS updated
+    FROM bluetooth.aggr_5min
+    INNER JOIN bluetooth.ref_segments USING (analysis_id)
+    INNER JOIN bluetooth.public_routes USING (segment_name)
+    WHERE EXTRACT(YEAR FROM datetime_bin) = '2014'
+);
+GRANT SELECT ON open_data.bluetooth_2014 TO opendata;
+CREATE VIEW open_data.bluetooth_2015 AS (
+    SELECT
+        segment_name AS "resultId",
+        tt::int AS "timeInSeconds",
+        obs AS count,
+        REPLACE(
+            to_char(
+                (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'),
+                'YYYY-MM-DD HH24:MI:SSOF'
+            ),
+            ' ',
+            'T'
+        ) AS updated
+    FROM bluetooth.aggr_5min
+    INNER JOIN bluetooth.ref_segments USING (analysis_id)
+    INNER JOIN bluetooth.public_routes USING (segment_name)
+    WHERE EXTRACT(YEAR FROM datetime_bin) = '2015'
+);
+GRANT SELECT ON open_data.bluetooth_2015 TO opendata;
+CREATE VIEW open_data.bluetooth_2016 AS (
+    SELECT
+        segment_name AS "resultId",
+        tt::int AS "timeInSeconds",
+        obs AS count,
+        REPLACE(
+            to_char(
+                (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'),
+                'YYYY-MM-DD HH24:MI:SSOF'
+            ),
+            ' ',
+            'T'
+        ) AS updated
+    FROM bluetooth.aggr_5min
+    INNER JOIN bluetooth.ref_segments USING (analysis_id)
+    INNER JOIN bluetooth.public_routes USING (segment_name)
+    WHERE EXTRACT(YEAR FROM datetime_bin) = '2016'
+);
+GRANT SELECT ON open_data.bluetooth_2016 TO opendata;
+CREATE VIEW open_data.bluetooth_2017 AS (
+    SELECT
+        segment_name AS "resultId",
+        tt::int AS "timeInSeconds",
+        obs AS count,
+        REPLACE(
+            to_char(
+                (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'),
+                'YYYY-MM-DD HH24:MI:SSOF'
+            ),
+            ' ',
+            'T'
+        ) AS updated
+    FROM bluetooth.aggr_5min
+    INNER JOIN bluetooth.ref_segments USING (analysis_id)
+    INNER JOIN bluetooth.public_routes USING (segment_name)
+    WHERE EXTRACT(YEAR FROM datetime_bin) = '2017'
+);
+GRANT SELECT ON open_data.bluetooth_2017 TO opendata;
+CREATE VIEW open_data.bluetooth_2018 AS (
+    SELECT
+        segment_name AS "resultId",
+        tt::int AS "timeInSeconds",
+        obs AS count,
+        REPLACE(
+            to_char(
+                (datetime_bin AT TIME ZONE 'America/Toronto' + interval '5 minutes'),
+                'YYYY-MM-DD HH24:MI:SSOF'
+            ),
+            ' ',
+            'T'
+        ) AS updated
+    FROM bluetooth.aggr_5min
+    INNER JOIN bluetooth.ref_segments USING (analysis_id)
+    INNER JOIN bluetooth.public_routes USING (segment_name)
+    WHERE EXTRACT(YEAR FROM datetime_bin) = '2018'
+);
+GRANT SELECT ON open_data.bluetooth_2018 TO opendata;
