@@ -29,7 +29,7 @@ In particular see the Collision Coding Manual, Motor Vehicle Collision Report 20
 
 Use the `collisions_replicator.events` and `collisions_replicator.involved` materialized views for queries instead of `collisions_replicator.acc_safe_copy`. These materialized views contain human-readable categories instead of obscure numeric codes.
 
-#### Fun Facts About `collisions_replicator.acc_safe_copy`
+#### Important Limitations and Caveats About `collisions_replicator.acc_safe_copy` 
 
 Even though `collisions_replicator.acc_safe_copy` should not be directly queried (has that been mentioned yet?) this information may be useful if you're trying to solve a collision data mystery:
 - Each row represents one individual involved in a collision, so some data is repeated between rows. The data dictionary indicates which values are at the **event** level, and which at the individual **involved** level.

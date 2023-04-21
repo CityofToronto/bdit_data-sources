@@ -52,7 +52,7 @@ accyear | n_collisions | n_involved
 2018 | 62354 | 108209
 2019 | 64343 | 108340
 
-but be aware that due to the ever-refreshing nature of collisions mentioned in `Readme.md`, these numbers will surely change by small amounts with time.
+but be aware that due to the ever-refreshing nature of collisions mentioned in the [Readme.md](Readme.md), these numbers will surely change by small amounts with time.
 
 The `events.data_source` column lists whether the collision event comes from TPS or CRC (or cannot be deduced from the `ACCNB`). `involved.validation_userid` gives the name of Data & Analytics staff member who most recently validated the involved (sometimes only some individals from a collision event are validated). If we want the number of events, involved and validated involved from the data subdivided by year and data source, we'd do:
 
@@ -62,7 +62,7 @@ SELECT
     ev.data_source,
     COUNT(DISTINCT ev.collision_no) AS n_collisions, -- Number of collision **events**
     COUNT(inv.*) AS n_involved, -- Number of people **involved**
-	COUNT(*) FILTER (WHERE inv.validation_userid IS NOT NULL) AS n_valid_involved -- Number of people **involved** whose data has been validated
+    COUNT(*) FILTER (WHERE inv.validation_userid IS NOT NULL) AS n_valid_involved -- Number of people **involved** whose data has been validated
 FROM collisions_replicator.events AS ev
 LEFT JOIN collisions_replicator.involved AS inv USING (collision_no)
 WHERE 
@@ -108,7 +108,7 @@ SELECT
     ev.collision_no,
     ev.accdate,
     COUNT(inv.*) AS n_involved,
-	COUNT(inv.*) FILTER (WHERE involved_injury_class IN ('MAJOR', 'FATAL')) AS n_involved_ksi
+    COUNT(inv.*) FILTER (WHERE involved_injury_class IN ('MAJOR', 'FATAL')) AS n_involved_ksi
 FROM collisions_replicator.events AS ev
 LEFT JOIN collisions_replicator.involved AS inv USING (collision_no)
 WHERE ev.accyear = 2015
