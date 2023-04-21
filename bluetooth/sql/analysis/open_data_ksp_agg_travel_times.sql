@@ -30,7 +30,7 @@ WITH valid_corridors AS (
     LEFT JOIN
         king_pilot.bt_corridors_exceptions AS t
         ON t.corridor_id_old = y.corridor_id AND x.dt <@ t.excluded_datetime
-    WHERE y.corridor_id <> ALL(ARRAY[7, 8, 9])
+    WHERE y.corridor_id != ALL(ARRAY[7, 8, 9])
     ORDER BY x.period_id, x.day_type, x.dt
 ),
 
@@ -92,7 +92,7 @@ baseline AS (
     GROUP BY a.bt_id, a.day_type, b.period_name, b.period_range) AS x
     JOIN king_pilot.bt_corridor_segments USING (bt_id)
     JOIN king_pilot.bt_corridors AS z USING (corridor_id)
-    WHERE z.corridor_id <> ALL(ARRAY[8, 9])
+    WHERE z.corridor_id != ALL(ARRAY[8, 9])
     GROUP BY
         z.corridor_id,
         z.corridor_name,
@@ -109,14 +109,14 @@ baseline AS (
 )
 
 SELECT
-    to_char(
-        date_trunc('month'::text, pilot.dt::timestamp with time zone), 'Mon ''YY'::text
-    ) AS month,
     pilot.street,
     pilot.direction,
     baseline.from_intersection,
     baseline.to_intersection,
     pilot.day_type,
+    to_char(
+        date_trunc('month'::text, pilot.dt::timestamp with time zone), 'Mon ''YY'::text
+    ) AS month,
     (pilot.period || ' '::text) || baseline.period_range AS time_period,
     round(baseline.tt, 1) AS baseline_travel_time,
     round(avg(pilot.tt), 1) AS average_travel_time

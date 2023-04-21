@@ -25,19 +25,19 @@ CREATE TABLE bluetooth.segments AS (
         SELECT
             seg.segment_name, -- Original tables
             seg.analysis_id,
-            CASE
-                WHEN
-                    seg.start_road <> seg.end_road
-                    THEN seg.start_road || '/' || seg.end_road
-                ELSE seg.start_road
-            END AS street,
             seg.direction,
             seg.start_crossstreet,
             seg.end_crossstreet,
             routes.length_m,
             TRUE AS bluetooth,
             TRUE AS wifi,
-            routes.geom
+            routes.geom,
+            CASE
+                WHEN
+                    seg.start_road != seg.end_road
+                    THEN seg.start_road || '/' || seg.end_road
+                ELSE seg.start_road
+            END AS street
 
         FROM gis.bluetooth_routes AS routes
         INNER JOIN bluetooth.ref_segments AS seg ON (seg.segment_name = routes.resultid)
