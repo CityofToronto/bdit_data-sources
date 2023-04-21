@@ -19,7 +19,7 @@ To join the two tables together, we use:
 ```sql
 SELECT *
 FROM collisions_replicator.events
-LEFT JOIN collisions_replicator.involved USING (collision_no);
+LEFT JOIN collisions_replicator.involved USING (collision_id);
 ```
 
 This will return *every* record available, so typically we also append a `WHERE` clause to restrict the query by time and place. 
@@ -30,27 +30,27 @@ One common query is for the total number of collision events, or the total numbe
 
 ```sql
 SELECT 
-    ev.accyear,
-    COUNT(DISTINCT ev.collision_no) AS n_collisions, -- Number of collision **events**
+    EXTRACT('year' from ev.accdate) AS yr,
+    COUNT(DISTINCT ev.collision_id) AS n_collisions, -- Number of collision **events**
     COUNT(inv.*) AS n_involved -- Number of people **involved**
 FROM collisions_replicator.events AS ev
-LEFT JOIN collisions_replicator.involved AS inv USING (collision_no)
+LEFT JOIN collisions_replicator.involved AS inv USING (collision_id)
 WHERE 
-    ev.accyear >= 2015 
-    AND ev.accyear < 2020
-GROUP BY ev.accyear
+    ev.accdate::date >= '2015-01-01' 
+    AND ev.accdate::date < '2020-01-01'
+GROUP BY extract('year' from ev.accdate)
 ORDER BY 1;
 ```
 
-As of 2023-04-11, the output looks like:
+As of 2023-04-21, the output looks like:
 
 accyear | n_collisions | n_involved
 -- | -- | --
-2015 | 50863 | 124230
-2016 | 55632 | 108298
-2017 | 58906 | 105704
-2018 | 62354 | 108209
-2019 | 64343 | 108340
+2015 | 50851 | 124210
+2016 | 55624 | 108283
+2017 | 58887 | 105666
+2018 | 62323 | 108142
+2019 | 64209 | 107997
 
 but be aware that due to the ever-refreshing nature of collisions mentioned in the [Readme.md](Readme.md), these numbers will surely change by small amounts with time.
 
