@@ -1,5 +1,5 @@
-CREATE OR REPLACE FUNCTION inrix.agg_extract_hour (yyyymm TEXT)
-RETURNS INTEGER
+CREATE OR REPLACE FUNCTION inrix.agg_extract_hour(yyyymm text)
+RETURNS integer
 AS $$
 DECLARE
     rawtable TEXT := 'raw_data'||yyyymm;
@@ -20,10 +20,10 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour (TEXT) TO rdumas_py;
+GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour (text) TO rdumas_py;
 
-CREATE OR REPLACE FUNCTION inrix.agg_extract_hour_alldata (yyyymm TEXT)
-RETURNS INTEGER
+CREATE OR REPLACE FUNCTION inrix.agg_extract_hour_alldata(yyyymm text)
+RETURNS integer
 AS $$
 DECLARE
     rawtable TEXT := 'raw_data'||yyyymm;
@@ -43,10 +43,12 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour_alldata (TEXT) TO rdumas_py;
+GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour_alldata (text) TO rdumas_py;
 
-CREATE OR REPLACE FUNCTION inrix.agg_extract_hour_alldata (yyyymm TEXT, tmcschema TEXT, tmctable TEXT)
-RETURNS INTEGER
+CREATE OR REPLACE FUNCTION inrix.agg_extract_hour_alldata(
+    yyyymm text, tmcschema text, tmctable text
+)
+RETURNS integer
 AS $$
 DECLARE
     rawtable TEXT := 'raw_data'||yyyymm;
@@ -87,5 +89,5 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour_alldata (TEXT, TEXT, TEXT) TO rdumas_py;
+GRANT EXECUTE ON FUNCTION inrix.agg_extract_hour_alldata (text, text, text) TO rdumas_py;
 

@@ -10,10 +10,10 @@ CREATE OR REPLACE VIEW collisions.alldata AS (
 );
 
 ALTER TABLE collisions.alldata
-    OWNER TO collision_admins;
+OWNER TO collision_admins;
 
 COMMENT ON VIEW collisions.alldata
-    IS 'View linking collisions.events and collisions.involved together through collision_no.';
+IS 'View linking collisions.events and collisions.involved together through collision_no.';
 
 GRANT SELECT ON TABLE collisions.alldata TO bdit_humans;
 GRANT SELECT ON TABLE collisions.alldata TO rsaunders;

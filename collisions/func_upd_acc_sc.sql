@@ -3,11 +3,11 @@
 -- DROP FUNCTION IF EXISTS collisions_replicator.update_acc_safe_copy();
 
 CREATE OR REPLACE FUNCTION collisions_replicator.update_acc_safe_copy(
-	)
-    RETURNS void
-    LANGUAGE 'sql'
-    COST 100
-    VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+)
+RETURNS void
+LANGUAGE 'sql'
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
 
     insert into collisions_replicator.acc_safe_copy (
@@ -128,10 +128,10 @@ Delete from collisions_replicator.acc_safe_copy where "REC_ID" in (SELECT "REC_I
 $BODY$;
 
 ALTER FUNCTION collisions_replicator.update_acc_safe_copy()
-    OWNER TO scannon;
+OWNER TO scannon;
 
-GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy() TO collisions_bot;
+GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy () TO collisions_bot;
 
-GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy() TO scannon;
+GRANT EXECUTE ON FUNCTION collisions_replicator.update_acc_safe_copy () TO scannon;
 
-REVOKE ALL ON FUNCTION collisions_replicator.update_acc_safe_copy() FROM PUBLIC;
+REVOKE ALL ON FUNCTION collisions_replicator.update_acc_safe_copy () FROM public;

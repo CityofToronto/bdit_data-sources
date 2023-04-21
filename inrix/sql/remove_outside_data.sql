@@ -1,5 +1,5 @@
 ﻿CREATE OR REPLACE FUNCTION inrix.removeoutsidedata(yyyymm text)
-  RETURNS integer AS
+RETURNS integer AS
 $BODY$
 DECLARE
     rawtable TEXT := 'raw_data'||yyyymm;
@@ -20,9 +20,9 @@ BEGIN
     RETURN 1;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
+LANGUAGE plpgsql VOLATILE
+COST 100;
 ALTER FUNCTION inrix.removeoutsidedata(text)
-  OWNER TO rdumas;
-GRANT EXECUTE ON FUNCTION inrix.removeoutsidedata(text) TO rdumas;
-GRANT EXECUTE ON FUNCTION inrix.removeoutsidedata(text) TO rdumas_py;
+OWNER TO rdumas;
+GRANT EXECUTE ON FUNCTION inrix.removeoutsidedata (text) TO rdumas;
+GRANT EXECUTE ON FUNCTION inrix.removeoutsidedata (text) TO rdumas_py;

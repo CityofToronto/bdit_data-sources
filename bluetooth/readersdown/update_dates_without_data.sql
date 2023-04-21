@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION bluetooth.update_dates_wo_data(dt DATE)
+CREATE OR REPLACE FUNCTION bluetooth.update_dates_wo_data(dt date)
 RETURNS void AS
 $BODY$
 BEGIN
@@ -17,16 +17,18 @@ BEGIN
     HAVING COUNT(obs.analysis_id) =0;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
-  ALTER FUNCTION bluetooth.update_dates_wo_data(DATE)
-  OWNER TO bt_admins;
-   GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE) TO aharpal;
-   GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE) TO bt_insert_bot;
-GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE) TO bt_admins;
-COMMENT ON FUNCTION bluetooth.update_dates_wo_data(DATE) IS 'Update the dates_without_data table for dt ONLY';
+LANGUAGE plpgsql VOLATILE
+COST 100;
+ALTER FUNCTION bluetooth.update_dates_wo_data(date)
+OWNER TO bt_admins;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date) TO aharpal;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date) TO bt_insert_bot;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date) TO bt_admins;
+COMMENT ON FUNCTION bluetooth.update_dates_wo_data(
+    date
+) IS 'Update the dates_without_data table for dt ONLY';
 
-CREATE OR REPLACE FUNCTION bluetooth.update_dates_wo_data(startdate DATE, enddate DATE)
+CREATE OR REPLACE FUNCTION bluetooth.update_dates_wo_data(startdate date, enddate date)
 RETURNS void AS
 $BODY$
 BEGIN
@@ -52,11 +54,13 @@ BEGIN
     HAVING COUNT(obs.analysis_id) =0;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
-  ALTER FUNCTION bluetooth.update_dates_wo_data(DATE, DATE)
-  OWNER TO bt_admins;
-   GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE, DATE) TO aharpal;
-   GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE, DATE) TO bt_insert_bot;
-GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data(DATE, DATE) TO bt_admins;
-COMMENT ON FUNCTION bluetooth.update_dates_wo_data(DATE, DATE) IS 'Update the dates_without_data table from start date to end date INCLUSIVELY';
+LANGUAGE plpgsql VOLATILE
+COST 100;
+ALTER FUNCTION bluetooth.update_dates_wo_data(date, date)
+OWNER TO bt_admins;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date, date) TO aharpal;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date, date) TO bt_insert_bot;
+GRANT EXECUTE ON FUNCTION bluetooth.update_dates_wo_data (date, date) TO bt_admins;
+COMMENT ON FUNCTION bluetooth.update_dates_wo_data(
+    date, date
+) IS 'Update the dates_without_data table from start date to end date INCLUSIVELY';

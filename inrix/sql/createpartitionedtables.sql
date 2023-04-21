@@ -4,16 +4,16 @@ DROP TABLE inrix.raw_data CASCADE;
 
 CREATE TABLE inrix.raw_data
 (
-  tx timestamp without time zone NOT NULL,
-  tmc char(9) NOT NULL,
-  speed integer NOt NULL,
-  score smallint not null
- )
+    tx timestamp without time zone NOT NULL,
+    tmc char(9) NOT NULL,
+    speed integer NOT NULL,
+    score smallint NOT NULL
+)
 WITH (
-  OIDS=FALSE
+    oids = FALSE
 );
 ALTER TABLE inrix.raw_data
-  OWNER TO rdumas;
+OWNER TO rdumas;
 
 
 
@@ -72,5 +72,5 @@ BEGIN
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
-	
-		
+
+

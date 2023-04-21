@@ -1,4 +1,4 @@
-﻿INSERT INTO cycling.survey_keys 
+﻿INSERT INTO cycling.survey_keys
 VALUES ('{"cyclingfreq": {
         "0": "Less than once a month",
         "1": "Several times a month",

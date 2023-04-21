@@ -54,5 +54,4 @@ BEGIN
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
-	
-		
+

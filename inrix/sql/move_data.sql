@@ -1,5 +1,5 @@
 ﻿CREATE OR REPLACE FUNCTION inrix.movedata(yyyymm text)
-  RETURNS integer AS
+RETURNS integer AS
 $BODY$
 DECLARE
     rawtable TEXT := 'raw_data'||yyyymm;
@@ -13,10 +13,10 @@ BEGIN
     RETURN 1;
 END;
 $BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
+LANGUAGE plpgsql VOLATILE
+COST 100;
 ALTER FUNCTION inrix.movedata(text)
-  OWNER TO rdumas;
-GRANT EXECUTE ON FUNCTION inrix.movedata(text) TO public;
-GRANT EXECUTE ON FUNCTION inrix.movedata(text) TO rdumas;
-GRANT EXECUTE ON FUNCTION inrix.movedata(text) TO rdumas_py;
+OWNER TO rdumas;
+GRANT EXECUTE ON FUNCTION inrix.movedata (text) TO public;
+GRANT EXECUTE ON FUNCTION inrix.movedata (text) TO rdumas;
+GRANT EXECUTE ON FUNCTION inrix.movedata (text) TO rdumas_py;

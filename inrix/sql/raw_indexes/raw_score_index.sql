@@ -1,5 +1,5 @@
-CREATE OR REPLACE FUNCTION inrix.create_raw_score_idx (tablename TEXT)
-RETURNS INTEGER
+CREATE OR REPLACE FUNCTION inrix.create_raw_score_idx(tablename text)
+RETURNS integer
 AS $$
 BEGIN
     EXECUTE format('CREATE INDEX ON inrix.%I (score);', tablename);
@@ -7,4 +7,4 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION inrix.create_raw_score_idx (TEXT) TO rdumas_py;
+GRANT EXECUTE ON FUNCTION inrix.create_raw_score_idx (text) TO rdumas_py;

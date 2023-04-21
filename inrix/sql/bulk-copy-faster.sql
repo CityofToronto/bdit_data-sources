@@ -68,5 +68,4 @@ SET LOCAL commit_delay = 80000;
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
-	
-		
+
