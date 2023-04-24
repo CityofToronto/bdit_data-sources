@@ -2,7 +2,7 @@
 
 This readme file was generated on 2023-04-04 by Shahrzad Borjian.
 
-This readme file was Updated on 2023-04-21 by Shahrzad Borjian
+This readme file was Updated on 2023-04-24 by Shahrzad Borjian
 
 
 # GENERAL INFORMATION
@@ -16,7 +16,8 @@ Road Emergency Services Communication Unit (RESCU) track traffic volume on expre
 
 Processed 15-min data is available in `rescu.volumes_15min`.
 
-![image](https://user-images.githubusercontent.com/98347176/228930515-3f38a7a0-d2be-444b-b70d-1a6eb79ad74a.png)
+
+![image](https://user-images.githubusercontent.com/98347176/234096587-6d24aa38-15c2-4ec1-ae33-7da5ea4ebf90.png)
 
 ## **Description**:
 
@@ -29,7 +30,7 @@ Processed 15-min data is available in `rescu.volumes_15min`.
 <br> Despite data quality concerns (usually due to malfunctioning detectors) RESCU data are the only source of volume counts for highways within Toronto's jurisdiction (the Allen Expressway, the Gardiner Expressway and the Don Valley Parkway).
 
 
-### 2- Who uses this data within D&A?  What tasks is data used for?	
+### 2- Who uses this data within Data & Analytics unit (D&A) ?  What tasks is data used for?	
 >Data specialists and research analysts. Used for data requests (mostly staff asking for volumes on highways).   
 
 ### 3- Who uses this data outside D&A? 
@@ -49,14 +50,14 @@ Processed 15-min data is available in `rescu.volumes_15min`.
 D&A Management staff should be consulted prior to releasing this data due to data quality concerns.
 
 ### 2- Who is the external contact (outside D&A) to reach out to with questions/concerns?	
-> Active Traffic Management. ATM also redirects inquires to Jim and previously to Steven Bon. 
+> Active Traffic Management (ATM). ATM also redirects inquires to Jim Millington and previously to Steven Bon. 
 
 
 
 
 ## **Date of data collection**: 
 
-> Data collection is ongoing: data available since Jan 2017 and is regularly updated.
+> Though data from RESCU detectors has been available since January 2017 and is updated daily, there are many gaps in the data and humans seeking to use this dataset should check the data availability and quality for their required dates and locations.
 
 
 
@@ -166,29 +167,26 @@ server name, schema, database, version, admin,
 > Loop detectors installed on the ground of the road surface.
 Radar detectors (which function the same way as loop detectors) placed on the roadside. 
 
-### 2- What are the properties of the data? 	
->Volume data at specific highway locations
-
-### 3- Is there an up to date map for this data? If yes, who should be updating the map?      
+<!--- ### 2- Is there an up to date map for this data? If yes, who should be updating the map?      
 >- A new map by D&A is underway
 >- Electrical contractor provides data feed which included latitude and longitude, however there are locational errors. The overall accuracy of the spatial data provided is questionable. 
->- TPIM (Traffic Plant / Installation and Maintenance) would be responsible for updating this map as it falls within their purview. 
-### 4- How often is the data updated?	
->Raw data feeds into oracle every 20 seconds. Data (Jim's aggregation) pushed into Oracle daily. Data Pipeline Flow and Transformation
-## **Methods for processing the data: Data Pipeline Flow and Transformation- How does the data move/transform through the organization?**
+>- TPIM (Traffic Plant / Installation and Maintenance) would be responsible for updating this map as it falls within their purview. --->
+### 2- How often is the data updated?	
+>Raw data is fed into Oracle every 20 seconds. These volume counts are aggregated to 15 minute bins and stored in the rescu schema of the postgres bigdata database via an airflow pipeline on a daily basis. You can read the python script [here](rescu_pull.py).
+## **Methods for processing the data: How does the data move/transform through the organization?**
 	
 ### 1- How is the data organized and aggregated? 	
-> Raw data is recorded in 20 second increments. Data handled by D&A is aggregated to 15 minute increments and produced as reports out of Oracle. Data is matched to arterycode (directional).Loop detectors, radar detectors have coordinates. 
+> Raw data is recorded in 20 second increments. Data handled by D&A is aggregated to 15 minute increments and produced as reports out of Oracle. Data is matched to arterycode (directional). Loop detectors, radar detectors have coordinates. 
 
 ### 2- Where is the raw data stored?	   	
->Raw data is stored in Oracle and ITS Central. 
+>Raw data is stored in ITS Central and Oracle. 
 Within ITS Central it is stored in Postgres database but we are unsure as to how much data is being stored in the system.
 ### 3- How is the raw data stored?	
 > Unsure—particularly now that there are two streams (one in ITS Central and one in Oracle).
 
 ### 4- Where is the data stored?	
 >Pulling data from databases into Postgres. Windows task scheduler is responsible for pulling the data from \\tssrv. 
->Refer to [README_PIPELINE](rescu/README_PULL.md) for more information
+>Refer to [README_PIPELINE](README_PIPELINE.md) for more information
 
 <!---### 5- How is the data stored?	
 >Unsure.   
@@ -222,11 +220,10 @@ Within ITS Central it is stored in Postgres database but we are unsure as to how
 >Currently within D&A and for the purpose of Data Requests, requesters tell requestees that data is not available.  
 
 ### 4- Who is responsible for addressing data gaps/incomplete data?
->Not Clear but D&A can be contacted for the time being. 
+>Gaps are handled / addressed using a variety of strategies, depending on the intended use of the data and the nature of the gap. D&A can be contacted for gaps  handled by them.
 
 ### 5- Are there data quality assessment processes for the data?
->Yes, there is a pipeline check but it needs to be updated to add upstream validation process.
-
+>The pipeline checks to see if a threshold of data points is met - if there are not enough data points to meet this threshold, data are not loaded into postgres
 ### 6- How often are data quality assessment processes for the data undertaken? 
 >D&A process done daily. QA process counts the number of rows that have data with 7000 rows being the threshold.   
  
@@ -250,18 +247,12 @@ It appears that validation is only done once data reaches D&A. Unclear is there 
 >N/A
 --->
 ## Data Maintainance 
-## Maintenance - 
-- (Hardware/Software)
-  - Hardware
-  - ITS Central
-   - Oracle Data
-   
-The following questions need to be answered in each stage in the data flow diagram:	
+
 ### 1- Who is responsible for the status of data functionality and the overall maintenance of the data collection? 	
->-  Hardware: TPIM is responsible. Typically Jim troubleshoots the problem first. 
->- ATM Active Traffic Management team uses the data but they do not deal with the hardware or functionality of the data. 
->- ITS Central: Transnomis (Simon) via Black/Mac is responsible.
->- Oracle DB Server: Jim is responsible as he functions as the owner of the dataset.
+>-  Hardware: Traffic Plant / Installation and Maintenance (TPIM) is responsible. Typically Jim Millington troubleshoots the problem first. 
+>- ATM team uses the data but they do not deal with the hardware or functionality of the data. 
+>- ITS Central: Transnomis (Simon Foo) via Black/Mac is responsible.
+>- Oracle DB Server: Jim Millington is responsible as he functions as the owner of the dataset.
 
 <!---### 2- How often is data maintained? Are there monitoring mechanisms when parts of the data flow is not working?	
 >Unsure. 
@@ -270,7 +261,8 @@ The following questions need to be answered in each stage in the data flow diagr
 ### 4- What is the process that needs to be undertaken when equipment goes wrong/breaks? 	
 > Unsure.--->
 ### 2-Who should be notified if something goes wrong/ there are changes to data? 	
->Data specialists and research analysts within D&A. Data users within TMC. 
+>- Data specialists and research analysts within D&A. 
+>- Data users within TMC. 
 
 <!---### 5- Are external contractors or consultants responsible for maintenance? Who is the City staff contact who works for that vendor?	
 >ATM is leased to a contractor in the traffic control room. Contractor runs and manages the work orders.--->
@@ -283,6 +275,7 @@ The following questions need to be answered in each stage in the data flow diagr
 > - Data is stored in RESCU schema.
 > - Previously, Data Collection team was manually loading rescu data into the FLOW application, which feeds into the Traffic schema, but the process has been stopped.
 > - Data in RESCU schema should be used for any analysis.
+>- The main tables are listed below. Please note that `rescu.volumes_15min` is the table that should be used for querying.
 
 ## Number of variables: 
 >`detector_inventory` table: 
