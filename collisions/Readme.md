@@ -8,9 +8,8 @@ The `collisions_replicator` schema houses raw and derived collision data tables.
 
 ### Query This: Events and Involved Materialized Views
 
-There are three materialzed views that are generated based on `collisions_replicator.acc_safe_copy`:
+There are two materialzed views that are generated based on `collisions_replicator.acc_safe_copy`:
 
-- `collisions_replicator.collision_no`: assigns a UID to each collision between 1985-01-01 and the most recent data refresh date. This is really just a materialized view of ids - there's no juicy collision data here - but generating the `collisions_no` id is essential for building the other two materialized views.
 - `collisions_replicator.events`: all collision event-level data for collisions between 1985-01-01 and present. Columns have proper data types and the categorical columns contain text descriptions rather than numerical codes.
 - `collisions_replicator.involved`: all collision data for individuals involved in collisions from 1985-01-01 to the present, with data type and categorical variable refinements similar to `collisions_replicator.events`.
 
@@ -20,10 +19,9 @@ A list of fields and definitions for the `collisions_replicator.events` and `col
 
 The table `collisions_replicator.ACC` is a direct mirror of the same table on the MOVE server. It's updated every night. `collisions_replicator.acc_safe_copy` is a copy of `collisions_replicator.ACC`. 
 
-The data dictionary for `ACC`  and `acc_safe_copy` is maintained jointly with MOVE and found on [Notion here](https://www.notion.so/bditto/Collision-Data-Dictionary-adc798de04fb47edaf129d9a6316eddf?pvs=4).
+The data dictionary for `ACC`  and `acc_safe_copy` is maintained jointly by Data Collection and MOVE. It is found on [Notion here](https://www.notion.so/bditto/Collision-Data-Dictionary-adc798de04fb47edaf129d9a6316eddf?pvs=4).
 
-The guides that define values and categories for most columns can be found in the [Manuals page on Notion](https://www.notion.so/bditto/ca4e026b4f20474cbb32ccfeecf9dd76?v=a9428dc0fb3447e5b9c1427f8868e7c8).
-In particular see the Collision Coding Manual, Motor Vehicle Collision Report 2015, and Motor Vehicle Accident Codes Ver. 1.
+The guides that define values and categories for most columns can be found in the [Manuals page on Notion](https://www.notion.so/bditto/ca4e026b4f20474cbb32ccfeecf9dd76?v=a9428dc0fb3447e5b9c1427f8868e7c8). In particular see the Collision Coding Manual, Motor Vehicle Collision Report 2015, and Motor Vehicle Accident Codes Ver. 1.
 
 **Please note:** `collisions_replicator.ACC` should never be queried directly, because any dependent views or tables would prevent `collisions_replicator.ACC` from being dropped and replaced (which would essentially freeze the whole pipeline). 
 
