@@ -15,7 +15,6 @@
 	- [Disaggregate Data](#disaggregate-data)
 		- [`volumes`](#volumes)
 	- [Aggregated Data](#aggregated-data)
-		- [`volumes_15min_tmc`](#volumes_15min_tmc)
 		- [`unacceptable_gaps`](#unacceptable_gaps)
 		- [`volumes_15min`](#volumes_15min)
 		- [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
@@ -178,7 +177,7 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 1-minute volume|12|
-volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_tmc)|14524|
+volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt)|14524|
 
 Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year the data were recorded.
 
