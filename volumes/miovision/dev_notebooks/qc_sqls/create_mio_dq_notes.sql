@@ -27,13 +27,14 @@ CREATE TABLE scannon.mio_dq_notes AS (
             bw.bad_week,
             z.car_ct,
             CASE
-                WHEN z.car_ct = 0 then 'car count = 0'
+                WHEN z.car_ct = 0 THEN 'car count = 0'
                 ELSE 'low car count - investigate'
             END AS notes
         FROM scannon.miovision_bad_weeks AS bw
-        LEFT JOIN zero_weeks AS z 
-            ON bw.bad_week = z.mon 
-            AND bw.intersection_uid = z.intersection_uid
+        LEFT JOIN zero_weeks AS z
+            ON
+                bw.bad_week = z.mon
+                AND bw.intersection_uid = z.intersection_uid
     ),
 
     -- find consecutive weeks with the same low + no car classifications for the same intersection_uid
@@ -52,7 +53,7 @@ CREATE TABLE scannon.mio_dq_notes AS (
                 ELSE 1
             END AS cnsc_wk
         FROM car_count AS cc
-),
+    ),
 
     -- some intersection_uids have two non-continuous periods that suck - group the consecutive weeks
     weekly_groups AS (
@@ -80,7 +81,7 @@ CREATE TABLE scannon.mio_dq_notes AS (
         tsrange(MIN(wg.bad_week), (MAX(wg.bad_week) + interval '7 days')::date, '[)') AS excl_range,
         wg.notes
     FROM weekly_groups AS wg
-    GROUP BY 
+    GROUP BY
         wg.intersection_uid,
         wg.intersection_name,
         wg.week_group,

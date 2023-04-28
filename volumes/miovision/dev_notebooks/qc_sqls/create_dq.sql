@@ -1,4 +1,4 @@
--- make a table to store time ranges with bad data
+-- make a table to store time ranges with bad/questionable/susicious data
 CREATE TABLE scannon.miovision_qc (
     intersection_uid smallint REFERENCES miovision_api.intersections (intersection_uid),
     intersection_name text,
@@ -9,7 +9,7 @@ CREATE TABLE scannon.miovision_qc (
     UNIQUE (intersection_uid, classification_uid, time_range)
 );
 
--- this table was populated using data from mio_dq_notes thusly:
+-- this table was initially populated using data from mio_dq_notes thusly:
 INSERT INTO scannon.miovision_qc
 SELECT
     mn.intersection_uid::bigint,
