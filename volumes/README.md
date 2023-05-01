@@ -1,6 +1,6 @@
 
 
-[**Table of Contents**](#--general-information--)
+[**Table of Contents**]
 - [**Traffic Volume Counts**](#--traffic-volume-counts--)
   * [**Description**](#--description--)
   * [**Short Term Counts**](#--short-term-counts--)
@@ -10,11 +10,10 @@
   * [**Permanent Counts**](#--permanent-counts--)
     + [**Loop Detectors RESCU**](#--loop-detectors-rescu--)
     + [**Miovision-Cameras**](#--miovision-cameras--)
-    + [**Watch Your Speed (WYS)**](#watch-your-speed--wys-)
-  * [**What Do We Use This For**](#--what-do-we-use-this-for--)
-  * [**Open Data**](#open-data)
-    - [**King Street Pilot**](#king-street-pilot)
-
+    + [**Watch Your Speed (WYS)**](#--watch-your-speed--wys---)
+  * [**What The data Is Used For**](#--what-the-data-is-used-for--)
+  * [**Open Data**](#--open-data--)
+    + [**King Street Pilot**](#--king-street-pilot--)
 
 
 
@@ -29,7 +28,7 @@ Short term traffic count programs are traffic monitoring programs that collect t
 ### **Automatic Traffic Recorder (ATR) Counts**
 
 - **Description:** ATR counts are primarily used to capture the volume of vehicles that travel on a roadway over a given period of time.
-- **Data collection method:** ATR counts have traditionally been collected on ad hoc basis using road tubes, which use pneumatic technology to capture data that is later analyzed to estimate the count. As data collection methods continue to evolve, more firms and cities are choosing safer and more reliable tools to collect this type of data. - Automated counters are used to gather various types of vehicular traffic data such as total vehicle volume, classification (type, size), and speed.
+- **Data collection method:** ATR counts have traditionally been collected on ad hoc basis using road tubes, which use pneumatic technology to capture data that is later analyzed to estimate the count. As data collection methods continue to evolve, more firms and cities are choosing safer and more reliable tools to collect this type of data. Automated counters are used to gather various types of vehicular traffic data such as total vehicle volume, classification (type, size), and speed.
 - **Collected data:** Vehicle class, volume and other data collection characteristics can be customized based on the survey requirements.
 - Collected in 24-hour increments, from 1 day to 2 weeks
 - Usually 72 hours (3 days) or 168 hours (7 days)
@@ -60,9 +59,10 @@ Short term traffic count programs are traffic monitoring programs that collect t
 - **Format available:** CSV or PDF
 - **Data management and access:** TMC  data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
 - Data is available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) to the public and also are available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors. 
-- For complete 14-hour count data, please contact TrafficData@toronto.ca.Detailed data are available in Traffic schema to internal users
+- For complete 14-hour count data, please contact TrafficData@toronto.ca. 
+- Detailed data are available in Traffic schema to internal users
 - More detailed data is available in Traffic Schema.  
-- Refer to  [Short Term Count Readme](short_term_counting_program/README.md) for more details  for more details  
+- Refer to  [Short Term Count Readme](short_term_counting_program/README.md) for more details
 
 ### **Other Methods**
 Here are some examples of other short term traffic counting programs conducted by the City which are less commonly used.
@@ -70,7 +70,7 @@ Here are some examples of other short term traffic counting programs conducted b
 - **Pedestrian Crossover Observation Study (PXO):** This study observes the behaviour of pedestrians using a crosswalk.
 
 ## **Permanent Counts**
-
+Permanent traffic counts refer to the process of continuously monitoring and recording the volume and characteristics of vehicular traffic on a particular road, highway or at intersection using a permanent automated counting system. These systems typically consist of sensors, cameras, or other devices that are installed along the roadway or at intersections to collect data on traffic volumes, speed, classification, and other parameters.
 ### **Loop Detectors RESCU**
 - **Description:** Road Emergency Services Communication Unit (RESCU) track traffic volume mostly on expressways using loop detectors. 
 - **Data collection method:** Loop detectors installed on the ground of the road surface.
@@ -81,23 +81,24 @@ Here are some examples of other short term traffic counting programs conducted b
   - **Modes:** Vehicular traffic is detected by RESCU.
  - **Date range and updates:** January 2017 to present; daily updates
 - **Geographic coverage:** Highways and Expressways managed by the City of Toronto
-- **Format available:** Custom Data Extract in CSV
-- **Data management and access:** Data is managed and coordinated by ITS Central.  Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
-- Please contact   transportationdata@toronto.ca
+- **Format available:** Custom data extract in CSV
+- **Data management and access:** Data is managed and coordinated by ITS Central.
+- Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
+- Please contact transportationdata@toronto.ca to reach Data & Analytics
 - Aggregated data is available in rescu schema.
 - More information can be found on [RESCU Readme](rescu/README.md)
 
 
 ### **Miovision-Cameras**
-- **Description:**  Miovision cameras are installed at selected locations across the City. Camera feeds are converted to turning movement count volumes for many modes (truck, bus, car,   pedestrian, bicycle. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins
+- **Description:**  Miovision cameras are installed at selected intersections across the City. Camera feeds are converted to turning movement count volumes for different modes (truck, bus, car,   pedestrian, bicycle). Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins
 - **Data collection method:** Data is collected using Permanent counters - Miovision cameras
 - **Collected data:**
 -  24/7 volume data at these locations are available on an ongoing basis
    - **Bins**: Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents.
-   - **Modes:** truck, bus, car,   pedestrian, bicycle), although bicycle volumes are less accurate, and are actively being improved. 
+   - **Modes:** truck, bus, car, pedestrian, bicycle, although bicycle volumes are less accurate, and are actively being improved. 
 - **Date range and updates:** January 2019 to present; daily updates
 - **Geographic coverage:** Limited permanent counter locations (60 active locations as of April 24, 2023) 
-- **Format available:** Custom Data Extract in CSV
+- **Format available:** Custom data extract in CSV
 - **Data management and access:** 
 - Miovision data collection is coordinated and managed by Data and Analytics unit. 
 - Please contact TransportationData@toronto.ca.
@@ -116,11 +117,11 @@ Here are some examples of other short term traffic counting programs conducted b
   - **Modes:** Vehicular traffic (e.g. cars, trucks, buses, motorcycles).The signs are generally not designed to detect bicycles or pedestrians but they can be triggered by and detect these passing road users. 
 - **Date range and updates:** Data is available at some locations since January 2016 
 - **Geographic coverage:** City Wide- permanent signs are mostly in school zones. The number of mobile signs varies 
-- **Format available:** Custom Data Extract in CSV
+- **Format available:** Custom data extract in CSV
 - **Data management and access:** 
 - Please contact  transportationdata@toronto.ca
 - More information can be found on  [WYS Readme](../wys/readme.md).
-## **What the data is used for**
+## **What The data Is Used For**
 Traffic count data is used for a variety of purposes, including but not limited to:
 - **Annual Average Daily Traffic (AADT)** : Traffic counts provide the source data used to calculate AADT, which is the common indicator used to represent traffic volume. 
   - An AADT count identifies the average vehicle volumes in a 24-hour period. That value is produced by dividing the total vehicle volume for one year by 365 days. AADT counts are a good indicator of how busy a road is and is often used for evaluating, selecting or designing a new facility or territory. AADT values can be calculated from short duration counts using a method described in the FHWA Traffic Monitoring Guide.
