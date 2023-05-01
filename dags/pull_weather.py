@@ -34,20 +34,12 @@ list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_confi
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-
-    if context.get('task_instance').task_id == 'pull_prediction':
-        task_msg = """:cat_shock: The Task {task} in Pull Weather dag failed, 
-			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)
-    
-    else:
-        task_msg = """ :eyes: The Task {task} in Pull Weather dag failed, 
-			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)    
+    task_msg = """:cat_shock: The Task {task} in Pull Weather dag failed, 
+			{slack_name} please check.""".format(task=context.get('task_instance').task_id, slack_name = list_names,)
         
     # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
+    slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,)
+
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
@@ -56,8 +48,6 @@ def task_fail_slack_alert(context):
         username='airflow',
         )
     return failed_alert.execute(context=context)
-
-
 
 #DAG
  
@@ -79,8 +69,9 @@ dag = DAG('pull_weather', default_args=default_args, schedule_interval='30 23 * 
 #Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill.
 no_backfill = LatestOnlyOperator(task_id="no_backfill", dag=dag)
 
-#dag tasks
+# TASKS
 
+## Pull weather forcast for 5 days ahead of run date
 PULL_PREDICTION = PythonOperator(
     task_id = 'pull_prediction',
     python_callable = prediction_upsert,
@@ -88,11 +79,21 @@ PULL_PREDICTION = PythonOperator(
     op_args=[cred]
 )
 
-PULL_HISTORICAL = PythonOperator(
+## Pull yesterday's historical data for Toronto city centre
+PULL_HISTORICAL_CITY = PythonOperator(
     task_id = 'pull_historical',
     python_callable = historical_upsert,
     dag=dag,
-    op_args=[cred, '{{ds}}']
+    op_args=[cred, '{{ds}}', 1]
+)
+## Pull yesterday's historical data for Toronto Peason Airport
+PULL_HISTORICAL_AIRPORT = PythonOperator(
+    task_id = 'pull_historical',
+    python_callable = historical_upsert,
+    dag=dag,
+    op_args=[cred, '{{ds}}', 2]
 )
 
 no_backfill >> PULL_PREDICTION
+PULL_HISTORICAL_CITY
+PULL_HISTORICAL_AIRPORT
