@@ -1,6 +1,6 @@
 
 
-[**Table of Contents**]
+**Table of Contents**
 - [**Traffic Volume Counts**](#--traffic-volume-counts--)
   * [**Description**](#--description--)
   * [**Short Term Counts**](#--short-term-counts--)
