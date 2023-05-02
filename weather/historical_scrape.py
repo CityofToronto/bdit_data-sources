@@ -26,15 +26,15 @@ from configparser import ConfigParser
 logger = logging.getLogger(__name__)
 logging.basicConfig(level = logging.INFO)
 
-'''
+
 # Uncomment when running script directly
 CONFIG=ConfigParser()
 CONFIG.read(str(Path.home().joinpath('db.cfg')))
 dbset = CONFIG['DBSETTINGS']
 conn = connect(**dbset)
-'''
 
-def request_url(url, payload):
+
+def request_url(url, payload, run_date_ds):
     '''
     Request content from Weather Canada website
 
@@ -42,7 +42,7 @@ def request_url(url, payload):
     payload: additional options applied to the url to specify what data we want to pull 
     '''
     try:
-        logger.info('Scraping data from Weather Canada for %s...', str(run_date))
+        logger.info('Scraping data from Weather Canada for %s...', str(run_date_ds))
         r = requests.get(url, params=payload)
         soup = BeautifulSoup(r.content, 'html.parser')
         return soup
@@ -86,7 +86,7 @@ def get_payload(run_date, station):
 
     return payload
 
-def pull_weather(run_date, station):
+def pull_weather(run_date_ds, station):
     '''
     Pull weather data for specified run_date and station
 
@@ -94,23 +94,25 @@ def pull_weather(run_date, station):
     station: station id to specify which station to pull weather data from
     '''
     # Format Date
-    run_date = datetime.datetime.strptime(run_date, '%Y-%m-%d')
+    run_date = datetime.datetime.strptime(run_date_ds, '%Y-%m-%d')
     url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
     # Use payload to query for specific day and station
     payload = get_payload(run_date, station)
 
     try:
-        weather_context = request_url(url, payload)
+        weather_context = request_url(url, payload, run_date_ds)
+
         # Construct date structure to e.g. January 1, 2017
         # to find row for specific run_date within the monthly table
         date_query = run_date.strftime("%B %-d, %Y")
+
         page_detail = weather_context.find(title=date_query)
         # Grab table contents for specific day
         table_content = page_detail.parent.parent.find_all("td")
         # Construct dict with values we want     
         weather_dict = { 
             "today_dict": {
-                        "date": run_date,
+                        "date": run_date_ds,
                         "max_temp": table_content[0].get_text(strip=True), # strip to get rid of white space
                         "min_temp": table_content[1].get_text(strip=True),
                         "mean_temp": table_content[2].get_text(strip=True),
@@ -118,13 +120,12 @@ def pull_weather(run_date, station):
                         "total_snow": table_content[6].get_text(strip=True),
                         "total_precip": table_content[7].get_text(strip=True)}
         }
-
-        weather_dict = pd.DataFrame.from_dict([weather_dict['today_dict']]).replace({'': None})
+        weather_data = pd.DataFrame.from_dict([weather_dict['today_dict']]).replace({'': None})
 
     except Exception as e:
         logger.error('Failed to collect historical data. Exception: %s', str(e))
 
-    return weather_dict
+    return weather_data
 
 def upsert_weather(conn, weather_df, station):
 
