@@ -81,14 +81,14 @@ PULL_PREDICTION = PythonOperator(
 
 ## Pull yesterday's historical data for Toronto city centre
 PULL_HISTORICAL_CITY = PythonOperator(
-    task_id = 'pull_historical',
+    task_id = 'pull_historical_city',
     python_callable = historical_upsert,
     dag=dag,
     op_args=[cred, '{{ds}}', 1]
 )
 ## Pull yesterday's historical data for Toronto Peason Airport
 PULL_HISTORICAL_AIRPORT = PythonOperator(
-    task_id = 'pull_historical',
+    task_id = 'pull_historical_airport',
     python_callable = historical_upsert,
     dag=dag,
     op_args=[cred, '{{ds}}', 2]
