@@ -8,7 +8,6 @@
 
 #Environment Canada imports
 import asyncio
-import nest_asyncio
 from types import coroutine
 import env_canada
 
@@ -42,7 +41,6 @@ def pull_prediction(today, forecast_day):
     # Station_id is Toronto, determined by looking up the csv in 
     # https://pypi.org/project/env-canada/
     ec_en = env_canada.ECWeather(station_id='ON/s0000458', language='english')
-    nest_asyncio.apply()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(ec_en.update())
 

@@ -150,8 +150,9 @@ def upsert_weather(conn, weather_df, station):
             execute_values(cur, upsert_sql, weather_df[weather_fields].values)
 
 #if __name__ == '__main__':
-def historical_upsert(conn, run_date, station_id):
-    #Get current date to pull
+def historical_upsert(cred, run_date, station_id):
+    #verify connection
+    conn = cred.get_conn()
 
     weather_dict = pull_weather(run_date, station = station_id)
 
