@@ -93,6 +93,8 @@ def pull_weather(run_date, station):
     run_date: Day of interested weather data
     station: station id to specify which station to pull weather data from
     '''
+    # Format Date
+    run_date = datetime.datetime.strptime(run_date, '%Y-%m-%d')
     url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
     # Use payload to query for specific day and station
     payload = get_payload(run_date, station)
