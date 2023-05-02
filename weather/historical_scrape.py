@@ -28,11 +28,10 @@ logging.basicConfig(level = logging.INFO)
 
 
 # Uncomment when running script directly
-CONFIG=ConfigParser()
-CONFIG.read(str(Path.home().joinpath('db.cfg')))
-dbset = CONFIG['DBSETTINGS']
-conn = connect(**dbset)
-
+#CONFIG=ConfigParser()
+#CONFIG.read(str(Path.home().joinpath('db.cfg')))
+#dbset = CONFIG['DBSETTINGS']
+#conn = connect(**dbset)
 
 def request_url(url, payload, run_date_ds):
     '''
@@ -155,7 +154,6 @@ def upsert_weather(conn, weather_df, station):
 #if __name__ == '__main__':
 def historical_upsert(cred, run_date, station_id):
     #verify connection
-    conn = cred.get_conn()
 
     weather_dict = pull_weather(run_date, station = station_id)
 
