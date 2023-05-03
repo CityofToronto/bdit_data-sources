@@ -59,10 +59,10 @@ Runs script `prediction_import.py` which uses package `env_canada` to pull City 
 
 2) `pull_historical_city`
 
-Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for City of toronto. Execution day's data will be pulled and inserted into `weather.historical_daily_city`.
+Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for City of toronto. The day before execution date's data will be pulled and inserted into `weather.historical_daily_city`.
 
 
 3) `pull_historical_airport`
 
-Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. Execution day's data will be pulled and inserted into `weather.historical_daily_airport`.
+Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. The day before execution date's data will be pulled and inserted into `weather.historical_daily_airport`.
 
