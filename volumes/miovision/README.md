@@ -2,27 +2,33 @@
 
 ## Table of Contents
 
-- [1. Overview](#1-overview)
-    - [Folder Structure](#folder-structure)
-- [2. Table Structure](#2-table-structure)
-    - [Reference Tables](#reference-tables)
+- [1. Overview](#1_overview)
+    - [Folder Structure](#Folder_Structure)
+- [2. Table Structure](#2_table_structure)
+    - [Reference Tables](#reference_tables)
         - [`classifications`](#classifications)
         - [`intersections`](#intersections)
         - [`movements`](#movements)
         - [`movement_map`](#movement_map)
         - [`periods`](#periods)
         - [`intersection_movements`](#intersection_movements)
+    - [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
+        - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
+        - [Pedestrian Movement](#pedestrian_movement)
+        - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
     - [Disaggregate Data](#disaggregate-data)
         - [`volumes`](#volumes)
     - [Aggregated Data](#aggregated-data)
-        - [`volumes_15min_mvt`](#volumes_15min_mvt)
-        - [`unacceptable_gaps`](#unacceptable_gaps)
-        - [`volumes_15min`](#volumes_15min)
-        - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
+        - [`volumes_15min_mvt`](#volumes-15min-mvt)
+        - [`unacceptable_gaps`](#unacceptable-gaps)
+        - [`volumes_15min`](#volumes-15min)
+        - [`volumes_mvt_atr_xover`](#volumes-mvt-atr-xover)
     - [Primary and Foreign Keys](#primary-and-foreign-keys)
         - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
     - [Important Views](#important-views)
-- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+- [3. Finding Suspiciously Low Volumes](#3-finding_suspiciously_low_volumes)
+    - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
+    - [Identifying Weeks with Low or No Volume](#identifying-weeks-with-low-or-no-volume)
 - [4. Repulling data](#4-repulling-data)
     - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
@@ -76,7 +82,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 6|Pedestrian|A walker. May or may not include zombies...|
 8|WorkVan|A van used for commercial purposes|
 9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
-10|Bicycle|A bicycle - this classification_uid is used to track bicycle approaches (entrances and exits)|
+10|Bicycle|A bicycle - this classification_uid is used to track bicycle entrances and exits. At the time of writing, there are no exits in aggregated tables.|
 
 #### `intersections`
 
@@ -162,6 +168,55 @@ Since this reference table must be updated every time a new intersection is adde
  classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
  leg| text | Entry leg of movement|E|
  movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
+
+
+### Understanding Legs, Movement and Direction of Travel (dir)
+
+The Miovision data table that we receive tracks information about:
+1. where the vehicle / pedestrian / cyclist entered the intersection, 
+2. mode used (see the classification table), and, 
+3. how the vehicle / pedestrian / cyclist moved through the intersection (see the movements table).
+
+Movement is tracked differently for vehicles (including bicycles) and pedestrians.
+
+#### Vehicle Movement (Including Bicycles)
+
+Vehicle movement is quite straightforward - upon approaching an intersection, a vehicle may proceed straight through, turn left, turn right or perform a U-turn (aka the Uno Reverse Card of driving).
+
+Here is a diagram that shows the all vehicle movements from the eastern leg of an intersection:
+<img src = "img/mio_mvt.png" alt= "Legs and Vehicle Movements from the East Leg" width = "500" height = "500" title = "Legs and Vehicle Movements from the East Leg">
+
+You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits. These values are populated in the raw, disaggregated data but are not currently transformed into the aggregate data - stay tuned for exciting developments!
+
+#### Pedestrian Movement
+
+Pedestrian movements are measured less intuitively than vehicle movements. The leg on which pedestrians' movement is tracked is the leg they are crossing. Their movement is tracked using clockwise ("cw") or counterclockwise ("ccw") directions (POV: you're in freefall above the intersection, looking down at it). So, a pedestrian crossing the eastern leg of an intersection in the clockwise direction would be walking south.
+
+Here is a diagram that shows the pedestrian movements at an intersection:
+<img src = "img/mio_ped_mvt.png" alt= "Legs and Pedestrian Movements" width = "500" height = "500" title = "Legs and Pedestrian Movements">
+
+#### From Movement Counts to Segment Counts
+
+We are able to transform vehicle movements into segment volume counts, which are commonly referred to as "Across The Road" or ATR counts. The full process is described below. Conceptually:
+- the movement tables track volume at a point in the centre of an intersection, while,
+- the ATR table tracks volume as it crosses a line. A typical "t" intersection has 4 lines - one for each of the road segments that lead to and from an intersection.
+
+To complicate matters even more, the 4 lines across the road segments leading to and from an intersection are further subdivided by direction - so the east leg of an intersection has an eastbound direction and a westbound direction.
+
+Here's a diagram to visualize all of those directions and legs:
+<img src = "img/mio_atr.png" alt= "Measuring vehicles as they cross the road" width = "500" height = "500" title = "Measuring vehicles as they cross the road">
+
+Vehicles crossing the line on the east leg, while travelling west, are entering the intersection.
+
+Vehicles crossing the line on the east leg, while travelling east, are exiting the intersection. They may be:
+- travelling straight through the intersection from the west leg,
+- turning left onto the east leg from the north leg,
+- turning right onto the east leg from the south leg,
+- u-turning from the east leg right back onto that east leg.
+
+Still fuzzy? Here's a diagram to help you picture it perfectly:
+<img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
+
 
 ### Disaggregated Data
 
@@ -386,7 +441,11 @@ The tables below are produced using functions explained in the [API Puller](api#
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
-## 3. Finding Gaps and Malfunctioning Camera
+## 3. Finding Suspiciously Low Volumes
+                                                           
+There are currently two ways that we identify and process suspiciously low volumes - by finding gaps in the 1-minute data, and by examining weekly volume totals in the `volumes_15min` table.
+
+### Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
@@ -401,6 +460,16 @@ The following process is used to determine the gap sizes assigned to an intersec
 
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
+                                                           
+### Identifying Weeks with Low or No Volumes
+
+Some cameras appear to be working just fine, but they are recording weird data! This can happen when a camera is knocked off of its normal orientation or because of a road closure. We have plotted weekly volumes for `lights` (aka passenger vehicles) and identified weeks where there is 
+- no volume recorded
+- low volume recorded.
+                           
+Weeks where no volume has been recorded should not be used. Weeks where low volumes have been recorded should be investigated further since there may be days within the weeks that have normal volumes. The weeks with no or no volumes are stored in a table on the `miovision_api` schema called `miovision_qc`.
+
+This is a work in progress. We are intending to automate this process.
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
