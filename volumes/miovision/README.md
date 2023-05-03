@@ -29,9 +29,11 @@
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Important Tables](#other-important-tables)
-- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+- [3. Finding Suspiciously Low Volumes](#3-finding-suspiciously-low-volumes)
+  - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
+  - [Identifying Weeks with Low or No Volumes](#identifying-weeks-with-low-or-no-volumes)
 - [4. Repulling data](#4-repulling-data)
   - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
@@ -449,7 +451,11 @@ The tables below are produced using functions explained in the [API Puller](api#
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
-## 3. Finding Gaps and Malfunctioning Camera
+## 3. Finding Suspiciously Low Volumes
+                                                           
+There are currently two ways that we identify and process suspiciously low volumes - by finding gaps in the 1-minute data, and by examining weekly volume totals in the `volumes_15min` table.
+
+### Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
@@ -464,6 +470,16 @@ The following process is used to determine the gap sizes assigned to an intersec
 
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
+                                                           
+### Identifying Weeks with Low or No Volumes
+
+Some cameras appear to be working just fine, but they are recording weird data! This can happen when a camera is knocked off of its normal orientation or because of a road closure. We have plotted weekly volumes for `lights` (aka passenger vehicles) and identified weeks where there is 
+- no volume recorded
+- low volume recorded.
+                           
+Weeks where no volume has been recorded should not be used. Weeks where low volumes have been recorded should be investigated further since there may be days within the weeks that have normal volumes. The weeks with no or no volumes are stored in a table on the `miovision_api` schema called `miovision_qc`.
+
+This is a work in progress. We are intending to automate this process.
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
