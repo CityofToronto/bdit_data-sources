@@ -57,10 +57,10 @@ Short term traffic count programs are traffic monitoring programs that collect t
  - **Date range and updates:** January 5, 1993 to present; ad hoc updates
 - **Geographic coverage:** city-wide, where ad hoc counts have been conducted. See [MOVE](https://move.intra.prod-toronto.ca/view/) for available dates and locations.
 - **Format available:** CSV or PDF
-- **Data management and access:** TMC  data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
-- Data is available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) to the public and also are available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors. 
+- **Data management and access:** TMC data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
+- 8-hour count data is available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) to the public and also are available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors. 
 - For complete 14-hour count data, please contact TrafficData@toronto.ca. 
-- Detailed data are available in Traffic schema to internal users
+- 8-hour data is also available in Traffic schema to internal users
 - More detailed data is available in Traffic Schema.  
 - Refer to  [Short Term Count Readme](short_term_counting_program/README.md) for more details
 
