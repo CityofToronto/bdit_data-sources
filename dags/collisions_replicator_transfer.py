@@ -12,8 +12,12 @@ SLACK_CONN_ID = 'slack_data_pipeline'
 #This script does things with those operators:
 #1) uses ACC to update acc_safe_copy
 #2) updates the mat view called collisions_no, which generates ids needed to...
-#3) update the events and involved mat views 
-#4) throws a sassy slack alert message when it fails
+#3) updates the events_cursed and involved_cursed mat views
+#4) updates the MOVE "raw" events and involved mat views
+#5) updates the MOVE "norm" events and involved mat views
+#6) updates the MOVE involved mat view
+#7) updates the MOVE events mat view
+#8) throws a sassy slack alert message when it fails
 
 def task_fail_sassy_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -65,5 +69,29 @@ with DAG('collisions_replicator_transfer', # going waaaaaayyyyy out on a limb of
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
-    )     
-    update_acc_sc >> refresh_col_no >> refresh_events_involved
+    )
+    refresh_raw_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_raw_fields_mv()',
+				task_id = 'refresh_raw_move_matviews',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    refresh_norm_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_norm_mv()',
+				task_id = 'refresh_norm_move_matviews',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    refresh_inv_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_inv_mv()',
+				task_id = 'refresh_inv_move_matview',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    refresh_ev_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_ev_mv()',
+				task_id = 'refresh_ev_move_matview',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    update_acc_sc >> refresh_col_no >> refresh_events_involved >> refresh_raw_move_matviews >> refresh_norm_move_matviews >> refresh_inv_move_matview >> refresh_ev_move_matview
