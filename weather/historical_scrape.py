@@ -118,13 +118,18 @@ def pull_weather(run_date_ds, station):
                         "total_rain": table_content[5].get_text(strip=True),
                         "total_snow": table_content[6].get_text(strip=True),
                         "total_precip": table_content[7].get_text(strip=True)}
-        }
-        weather_data = pd.DataFrame.from_dict([weather_dict['today_dict']]).replace({'': None})
+                        }
+        
+        rundate_data = pd.DataFrame.from_dict([weather_dict['today_dict']])
+        # Replace other attributes (e.g. LegendTT, LegendMM) to empty string
+        rundate_data.replace(to_replace='Legend..', value='', regex=True, inplace=True)
+        # Replace empty string to None
+        rundate_data = rundate_data.replace({'': None})
 
     except Exception as e:
         logger.error('Failed to collect historical data. Exception: %s', str(e))
 
-    return weather_data
+    return rundate_data
 
 def upsert_weather(conn, weather_df, station):
 
