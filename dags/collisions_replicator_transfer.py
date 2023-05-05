@@ -57,41 +57,46 @@ with DAG('collisions_replicator_transfer', # going waaaaaayyyyy out on a limb of
 				autocommit = True,
 				retries = 0
     )
-                                 
-    refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()',
-				task_id = 'refresh_col_no',
-				postgres_conn_id = 'collisions_bot',
-				autocommit = True,
-				retries = 0
-    )
-    refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()',
-				task_id = 'refresh_ev_inv_mvs',
-				postgres_conn_id = 'collisions_bot',
-				autocommit = True,
-				retries = 0
-    )
     refresh_raw_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_raw_fields_mv()',
 				task_id = 'refresh_raw_move_matviews',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
+    
     refresh_norm_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_norm_mv()',
 				task_id = 'refresh_norm_move_matviews',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
+    
     refresh_inv_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_inv_mv()',
 				task_id = 'refresh_inv_move_matview',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
+    
     refresh_ev_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_ev_mv()',
 				task_id = 'refresh_ev_move_matview',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
-    update_acc_sc >> refresh_col_no >> refresh_events_involved >> refresh_raw_move_matviews >> refresh_norm_move_matviews >> refresh_inv_move_matview >> refresh_ev_move_matview
+    
+    refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()',
+				task_id = 'refresh_col_no',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
+    refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()',
+				task_id = 'refresh_ev_inv_mvs',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
+    update_acc_sc >> refresh_raw_move_matviews >> refresh_norm_move_matviews >> refresh_inv_move_matview >> refresh_ev_move_matview >> refresh_col_no >> refresh_events_involved
