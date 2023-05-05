@@ -14,6 +14,9 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 
+# DAG Information
+dag_name = 'pull_weather'
+
 #connection credentials
 cred = PostgresHook("weather_bot")
 
@@ -26,16 +29,20 @@ try:
 except:
     raise ImportError("script import failed")
 
-
+# Define slack connections    
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_msg = """:cat_shock: The Task {task} in Pull Weather dag failed, 
-			{slack_name} please check.""".format(task=context.get('task_instance').task_id, slack_name = list_names,)
+			{slack_name} please check.""".format(task=context.get('task_instance').task_id, slack_name=' '.join(list_names),)
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,)
@@ -63,10 +70,14 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-dag = DAG('pull_weather', default_args=default_args, schedule_interval='30 23 * * *', catchup=False)
+dag = DAG(
+    dag_id = dag_name, 
+    default_args=default_args, 
+    schedule_interval='30 23 * * *', 
+    catchup=False)
 
 #=======================================#
-#Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill.
+# Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill.
 no_backfill = LatestOnlyOperator(task_id="no_backfill", dag=dag)
 
 # TASKS
