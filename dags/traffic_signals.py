@@ -11,6 +11,7 @@ import sys
 import psycopg2
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
+from airflow.models import Variable 
 
 # ------------------------------------------------------------------------------
 # Credentials
@@ -23,16 +24,29 @@ vz_pg_uri = vz_cred.get_uri()
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+dag_name = 'traffic_dag'
+
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+
 SLACK_CONN_ID = 'slack'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
             :red_circle: Task Failed / Tâche échouée. LOCALHOST AIFRLOW
+            {slack_name} please check.
             *Task*: {task}
             *Dag*: {dag}
             *Execution Time*: {exec_date}
             *Log Url*: {log_url}
             """.format(
+            slack_name = ' '.join(list_names),
             task=context.get('task_instance').task_id,
             dag=context.get('task_instance').dag_id,
             ti=context.get('task_instance'),
@@ -55,10 +69,9 @@ AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
 AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')
 
 DEFAULT_ARGS = {
-    'email': ['Cathy.Nangini@toronto.ca'],
-    'email_on_failure': True,
-    'email_on_retry': True,
-    'owner': 'airflow',
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'owner': names, 
     'start_date': datetime(2019, 7, 9), # YYYY, MM, DD
     'task_concurrency': 1,
     'on_failure_callback': task_fail_slack_alert
@@ -66,7 +79,7 @@ DEFAULT_ARGS = {
 
 # ------------------------------------------------------------------------------
 TRAFFIC_DAG = DAG(
-    'traffic_dag',
+    dag_id = dag_name,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks')],

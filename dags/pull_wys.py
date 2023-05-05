@@ -24,24 +24,33 @@ try:
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
+dag_name = 'pull_wys'
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
     if context.get('task_instance').task_id == 't1':
-        task_msg = """:cat_shock: The Task {task} in Pull WYS dag failed, 
+        task_msg = """:cat_shocked: The Task {task} in Pull WYS dag failed, 
 			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),)
     
     # else other msg for task2
     else:
         task_msg = """ :eyes: The Task {task} in Pull WYS dag failed, 
 			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)    
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -65,10 +74,9 @@ wys_postgres = PostgresHook("wys_bot")
 connection = BaseHook.get_connection('wys_api_key')
 api_key = connection.password
 
-default_args = {'owner':'rdumas',
+default_args = {'owner': names,
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 1),
-                'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -76,7 +84,7 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_wys',default_args=default_args, schedule_interval='0 15 * * *')
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 * * *')
 # Run at 3 PM local time every day
 
 with wys_postgres.get_conn() as con:

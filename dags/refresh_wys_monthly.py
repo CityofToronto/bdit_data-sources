@@ -10,16 +10,23 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable 
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
-from airflow.models import Variable 
+
+dag_name = 'wys_monthly_summary'
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_msg = 'The {task} in Refreshing the WYS Open Data failed, {slack_name} go fix it meow :meow_headache: '.format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)    
+            task=context.get('task_instance').task_id, slack_name = ' '.join(list_names),)    
         
     slack_msg = task_msg + """(<{log_url}|log>)""".format(
             log_url=context.get('task_instance').log_url,)
@@ -32,10 +39,9 @@ def task_fail_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
-default_args = {'owner':'rdumas',
+default_args = {'owner': names,
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 30),
-                'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -49,7 +55,7 @@ def last_month(ds):
     # the monthly scheduling 
     return (dt - relativedelta(day=1)).strftime("%Y-%m-%d")
 
-with DAG('wys_monthly_summary',
+with DAG(dag_id = dag_name,
          default_args=default_args,
          user_defined_macros={
             'last_month' : last_month
