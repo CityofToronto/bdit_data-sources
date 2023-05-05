@@ -6,6 +6,7 @@
 - [Forecast Data](#forecast-data)
     - [Table Structure](#table-structure)
 - [Data Pipeline](#data-pipeline)
+- [Backfill Data](#backfill-data)
 
 ## Overview
 Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and forecast data of City of Toronto. These data is stored in the `weather.schema`, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
@@ -66,3 +67,16 @@ Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://w
 
 Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. The day before execution date's data will be pulled and inserted into `weather.historical_daily_airport`.
 
+## Backfill Data
+
+As mentioned before, only historical data can be backfilled. Other than backfilling from airflow's cli, you can also use the script `backfill_historical.py` for when you backfill a lot of dates (since you will have to backfill day by day in airflow). Note: Make sure you have a `db.cfg` in your home folder, and you have `weather_admins` permissions.
+
+Input Params:
+1) `start_dt`: The start date of the date range you want to backfill historical data, inclusive. 
+2) `end_dt`: The end date of the date range you want to backfill historical data, exclusive.
+3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 1 and Pearson Airport is station_id = 2
+
+For example, if you want to backfill the entire month of 2022 March for Pearson Airport, you would run:
+```
+python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 2
+```
