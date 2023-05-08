@@ -115,10 +115,12 @@ def pull_rlc():
         # append the values in the same order as in the table
         for attr in att_names:
             one_rlc.append(properties[attr])
-        if isinstance(coords[0], list):
+        if isinstance(coords[0], list) \
+            and isinstance(coords[0][0], float) \
+            and isinstance(coords[0][1], float):
             one_rlc += coords[0]
-        elif len(coords) == 2 and isinstance(coords[0], float) and isinstance(coords[1], float):
-            one_rlc += coords
+        # elif len(coords) == 2 and isinstance(coords[0], float) and isinstance(coords[1], float):
+        #     one_rlc += coords
         else:
             raise TypeError(f'Invalid coordinates type at row {row_no}: {coords}')
 
