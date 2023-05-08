@@ -103,7 +103,7 @@ def pull_rlc():
     att_names = ['RLC','TCS','NAME','ADDITIONAL_INFO','MAIN','SIDE1','SIDE2','MID_BLOCK','PRIVATE_ACCESS','DISTRICT','WARD_1','WARD_2','WARD_3','WARD_4','POLICE_DIVISION_1','POLICE_DIVISION_2','POLICE_DIVISION_3','ACTIVATION_DATE'] 
 
     # each "info" is all the properties of one RLC, including its coords
-    for info in rlcs:
+    for row_no, info in enumerate(rlcs, 1):
         # temporary list of properties of one RLC to be appended into the rows list
         one_rlc = []
 
@@ -115,7 +115,12 @@ def pull_rlc():
         # append the values in the same order as in the table
         for attr in att_names:
             one_rlc.append(properties[attr])
-        one_rlc += coords # or just coords if it's already a list of just these two elements
+        if isinstance(coords[0], list):
+            one_rlc += coords[0]
+        elif len(coords) == 2 and isinstance(coords[0], float) and isinstance(coords[1], float):
+            one_rlc += coords
+        else:
+            raise TypeError(f'Invalid coordinates type at row {row_no}: {coords}')
 
         rows.append(tuple(one_rlc))
     
