@@ -7,6 +7,7 @@ ALTER TABLE nwessel.qc_investigation_levels SET SCHEMA miovision_api;
 ALTER TABLE nwessel.qc_problem_levels SET SCHEMA miovision_api;
 */
 CREATE TABLE scannon.miovision_qc (
+    uid serial PRIMARY KEY,
     intersection_uid smallint REFERENCES miovision_api.intersections (intersection_uid),
     intersection_name text,
     classification_uid smallint REFERENCES miovision_api.classifications (classification_uid),
