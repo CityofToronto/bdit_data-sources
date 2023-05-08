@@ -4,7 +4,7 @@
 
 This readme file was generated on 2023-04-04 by [@ShahrzadBorjian2](https://github.com/ShahrzadBorjian2).
 
-This readme file was Updated on 2023-05-08 by [@scann0n](https://github.com/scann0n).
+This readme file was updated on 2023-05-08 by [@scann0n](https://github.com/scann0n).
 
 
 - [RESCU Vehicle Detector Stations](#rescu-vehicle-detector-stations)
@@ -362,7 +362,9 @@ Refer to [How the data are loaded](#How the data are loaded) below for more info
 
 > RESCU data were then extracted for the detectors and dates that met these thresholds.
 
-> The code used to complete these checks can be found in the [date_evaluation folder](#date_evaluation).
+> The code used to complete these checks can be found in the [date_evaluation folder](date_evaluation).
+
+> This will process will be automated in the near future.
 
 <!---#### 6- Are external contractors or consultants responsible for checking data quality?
 > Unsure. 
