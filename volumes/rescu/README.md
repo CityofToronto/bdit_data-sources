@@ -6,7 +6,10 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 
 Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`.
 
+
 ## `rescu_pull.py`
+
+This readme file was Updated on 2023-05-08 by [@scann0n](https://github.com/scann0n).
 
 This [script](rescu_pull.py) is located in the terminal server and takes in three variables which are `start_date`, `end_date` (exclusive) and `path`. It is a job that runs on a daily basis in the morning and imports the latest 15-minute volume file from a particular drive into our RDS. By default, the `start_date` and `end_date` are the beginning and the end of the day before (today - 1 day and 12:00 today respectively). However, the user can also specify the date range from which the data should be pulled to ensure that this process can be used for other applications too. This script is automated to run daily on the terminal server to ingest a day worth of data collected from the day before. The steps are as followed:
 
@@ -43,3 +46,27 @@ WHERE dt = '2020-09-03'::date --change to the date that you would like to invest
 AND nullif(TRIM(SUBSTRING(raw_info, 27, 10)),'')::int < 0
 ```
 If the column `volume_15min` is `-1`, that means that there is something wrong with the data from the source end and we have to notify the person in charge as this is not something that we can fix. 
+
+### 6- How often are data quality assessment processes for the data undertaken? 
+D&A process done daily. QA process counts the number of rows that have data with 7000 rows being the threshold.   
+ 
+There have also been analyses completed to check which non-ramp detectors were recording valid data in 2021 using the following methodology:
+1. Count the daily bins per detector. Filter out detectors with fewer than 96 15-minute bins in a 24 hour period (since they must be missing data)
+2. Calculate daily volume counts for the valid detectors
+3. Calculate the median weekday and weekend daily volume count per detector
+4. Group the median weekday daily volumes by corridor and graph them
+5. Visually determine a minimum threshold based on the graphs.
+
+ The 2021 minimum thresholds were as follows:
+ - Allen Expressway - Weekday: 4000 per lane
+ - Allen Expressway - Weekend: 3000 per lane
+ - Don Valley Parkway - Weekday: 15000 per lane
+ - Don Valley Parkway - Weekend: 10000 per lane
+ - Gardiner Expressway - Weekday: 10000 per lane
+ - Gardiner Expressway - Weekend: 10000 per lane
+ - Lakeshore Boulevard - Weekday: 2000 per lane
+ - Lakeshore Boulevard - Weekend: 2000 per lane
+
+RESCU data were then extracted for the detectors and dates that met these thresholds.
+
+The code used to complete these checks can be found in the [date_evaluation folder](#date_evaluation).
