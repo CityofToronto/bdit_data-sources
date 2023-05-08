@@ -14,8 +14,8 @@ CREATE TABLE scannon.miovision_qc (
     last_updated timestamp DEFAULT NOW(),
     time_range tsrange NOT NULL,
     notes text,
-    investigation_level text REFERENCES nwessel.qa_investigation_levels (uid),
-    problem_level text REFERENCES nwessel.qa_problem_levels (uid),
+    investigation_level text NOT NULL REFERENCES nwessel.qa_investigation_levels (uid),
+    problem_level text NOT NULL REFERENCES nwessel.qa_problem_levels (uid),
     UNIQUE (intersection_uid, classification_uid, time_range)
 );
 
