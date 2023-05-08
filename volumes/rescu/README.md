@@ -4,7 +4,7 @@
 
 This readme file was generated on 2023-04-04 by [@ShahrzadBorjian2](https://github.com/ShahrzadBorjian2).
 
-This readme file was Updated on 2023-04-24 by [@ShahrzadBorjian2](https://github.com/ShahrzadBorjian2).
+This readme file was Updated on 2023-05-08 by [@scann0n](https://github.com/scann0n).
 
 
 - [RESCU Vehicle Detector Stations](#rescu-vehicle-detector-stations)
@@ -327,6 +327,7 @@ Refer to [How the data are loaded](#How the data are loaded) below for more info
 
 ### 1- Are there known data gaps/incomplete data? 	
 >Yes, there are many data gaps.
+
 ### 2- What are the gaps?	
 >Missing volumes due to detector issues. Data reports sent to D&A out of Oracle contain specific lane-level data. This may help isolate detectors that are down and help in closing gaps and validating data.
 
@@ -334,13 +335,35 @@ Refer to [How the data are loaded](#How the data are loaded) below for more info
 >Currently within D&A and for the purpose of Data Requests, requesters tell requestees that data is not available.  
 
 ### 4- Who is responsible for addressing data gaps/incomplete data?
->Gaps are handled / addressed using a variety of strategies, depending on the intended use of the data and the nature of the gap. D&A can be contacted for gaps  handled by them.
+>Gaps are handled / addressed using a variety of strategies, depending on the intended use of the data and the nature of the gap. D&A can be contacted for gaps handled by them.
 
 ### 5- Are there data quality assessment processes for the data?
->The pipeline checks to see if a threshold of data points is met - if there are not enough data points to meet this threshold, data are not loaded into postgres
+>The pipeline checks to see if a threshold of data points is met - if there are not enough data points to meet this threshold, data are not loaded into postgres.
+
 ### 6- How often are data quality assessment processes for the data undertaken? 
 >D&A process done daily. QA process counts the number of rows that have data with 7000 rows being the threshold.   
  
+>There have also been analyses completed to check which non-ramp detectors were recording valid data in 2021 using the following methodology:
+> 1. Count the daily bins per detector. Filter out detectors with fewer than 96 15-minute bins in a 24 hour period (since they must be missing data)
+> 2. Calculate daily volume counts for the valid detectors
+> 3. Calculate the median weekday and weekend daily volume count per detector
+> 4. Group the median weekday daily volumes by corridor and graph them
+> 5. Visually determine a minimum threshold based on the graphs.
+
+> The 2021 minimum thresholds were as follows:
+> - Allen Expressway - Weekday: 4000 per lane
+> - Allen Expressway - Weekend: 3000 per lane
+> - Don Valley Parkway - Weekday: 15000 per lane
+> - Don Valley Parkway - Weekend: 10000 per lane
+> - Gardiner Expressway - Weekday: 10000 per lane
+> - Gardiner Expressway - Weekend: 10000 per lane
+> - Lakeshore Boulevard - Weekday: 2000 per lane
+> - Lakeshore Boulevard - Weekend: 2000 per lane
+
+> RESCU data were then extracted for the detectors and dates that met these thresholds.
+
+> The code used to complete these checks can be found in the [date_evaluation folder](#date_evaluation).
+
 <!---#### 6- Are external contractors or consultants responsible for checking data quality?
 > Unsure. 
 
