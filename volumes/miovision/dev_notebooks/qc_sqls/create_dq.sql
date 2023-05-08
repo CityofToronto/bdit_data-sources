@@ -24,14 +24,14 @@ CREATE TABLE nwessel.qa_investigation_levels (
     description text UNIQUE NOT NULL
 );
 COMMENT ON TABLE nwessel.qa_investigation_levels
-    IS 'Indicates the furthest degree to which the movision QA issue has been investigated. Is this only a suspicion? Or has the issue been fully confirmed/resolved?';
+IS 'Indicates the furthest degree to which the movision QA issue has been investigated. Is this only a suspicion? Or has the issue been fully confirmed/resolved?';
 
 CREATE TABLE nwessel.qa_problem_levels (
     uid text PRIMARY KEY,
     description text UNIQUE NOT NULL
 );
 COMMENT ON TABLE nwessel.qa_problem_levels
-    IS 'What is the nature of the problem indicated for the given subset of miovision data?';
+IS 'What is the nature of the problem indicated for the given subset of miovision data?';
 
 -- this table was initially populated using data from mio_dq_notes thusly:
 /*

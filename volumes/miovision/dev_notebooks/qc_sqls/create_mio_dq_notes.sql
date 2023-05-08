@@ -11,7 +11,7 @@ CREATE TABLE scannon.mio_dq_notes AS (
         FROM miovision_api.volumes_15min AS v
         LEFT JOIN miovision_api.intersections AS i USING (intersection_uid)
         WHERE 
-            classification_uid = 1
+            v.classification_uid = 1
         GROUP BY 
             v.intersection_uid, 
             i.intersection_name, 
@@ -71,15 +71,15 @@ CREATE TABLE scannon.mio_dq_notes AS (
                 END) OVER (ORDER BY cw.row_num) AS week_group
         FROM cnsc_weeks AS cw
     )
-    
+
     -- final table showing ranges of weeks with bad data by intersection_uid
     SELECT
         wg.intersection_uid,
         wg.intersection_name,
+        wg.notes,
         MIN(wg.bad_week)::timestamp AS excl_start,
         (MAX(wg.bad_week) + interval '7 days')::timestamp AS excl_end, -- since the ranges are by week I need to add 7 days to represent all the days in that week
-        tsrange(MIN(wg.bad_week), (MAX(wg.bad_week) + interval '7 days')::date, '[)') AS excl_range,
-        wg.notes
+        tsrange(MIN(wg.bad_week), (MAX(wg.bad_week) + interval '7 days')::date, '[)') AS excl_range
     FROM weekly_groups AS wg
     GROUP BY
         wg.intersection_uid,
