@@ -45,6 +45,10 @@ SELECT
     lag(loc.start_date) OVER w AS prev_start,
     loc.geom
 FROM distinctish_signs loc
+JOIN gis.toronto_boundary AS tor ON 
+    st_intersects(
+        st_buffer(tor.geom::geography, 20), 
+        loc.geom::geography)
 WINDOW w AS (
     PARTITION BY loc.api_id 
     ORDER BY start_date);
