@@ -1,31 +1,29 @@
+# Traffic Volume <!-- omit in toc -->
 
-
-**Table of Contents**
-- [**Traffic Volume Counts**](#--traffic-volume-counts--)
-  * [**Description**](#--description--)
-  * [**Short Term Counts**](#--short-term-counts--)
-    + [**Automatic Traffic Recorder (ATR) Counts**](#--automatic-traffic-recorder--atr--counts--)
-    + [**Turning Movement Counts (TMC)**](#--turning-movement-counts--tmc---)
-    + [**Other Methods**](#--other-methods--)
-  * [**Permanent Counts**](#--permanent-counts--)
-    + [**Loop Detectors RESCU**](#--loop-detectors-rescu--)
-    + [**Miovision-Cameras**](#--miovision-cameras--)
-    + [**Watch Your Speed (WYS)**](#--watch-your-speed--wys---)
-  * [**What The data Is Used For**](#--what-the-data-is-used-for--)
-  * [**Open Data**](#--open-data--)
-    + [**King Street Pilot**](#--king-street-pilot--)
-
-
-
-# **Traffic Volume Counts**
-
-## **Description**
- Traffic count is a count of traffic by different modes which is conducted along a particular road, path, or intersection. A traffic count is commonly undertaken either automatically (with the installation of a temporary or permanent electronic traffic recording device), or manually. The most common traffic volume counts are either temporary  or permanent. The short term data counts are either collected continuously or in different intervals.
+Traffic volumes count different modes of traffic (bicycles, pedestrians, vehicles) typically conducted along a particular road, path, or at an intersection. A traffic count is commonly undertaken either automatically (with the installation of a temporary or permanent electronic traffic recording device), or manually. The short term data counts are either collected continuously or in different intervals.
  
-<br> The catalogue of the datasets owned, managed, and used by Transportation Data & Analytics is also available on the [intranet page](http://insideto.toronto.ca/transportation/data-analytics.htm#traffic-volumes) to the City staff.
- ## **Short Term Counts**
+The catalogue of the volume datasets owned, managed, and used by Transportation Data & Analytics is also available on the [intranet page](http://insideto.toronto.ca/transportation/data-analytics.htm#traffic-volumes) for City staff.
+
+## Table of Contents <!-- omit in toc -->
+
+- [Short Term Counts](#short-term-counts)
+  - [Automatic Traffic Recorder (ATR) Counts](#automatic-traffic-recorder-atr-counts)
+  - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
+  - [Other Methods](#other-methods)
+- [Permanent Sources of Volume Data](#permanent-sources-of-volume-data)
+  - [RESCU Vehicle Detection Stations](#rescu-vehicle-detection-stations)
+  - [Miovision Cameras](#miovision-cameras)
+  - [Watch Your Speed (WYS) Signs](#watch-your-speed-wys-signs)
+- [What the Data are Used For](#what-the-data-are-used-for)
+- [Open Data](#open-data)
+  - [King Street Pilot](#king-street-pilot)
+  - [Short Term Counts](#short-term-counts-1)
+
+## Short Term Counts
+
 Short term traffic count programs are traffic monitoring programs that collect traffic data for a short period of time, typically ranging from a few hours to several days. These programs use various methods to count and analyze vehicle traffic on a particular roadway or intersection.
-### **Automatic Traffic Recorder (ATR) Counts**
+
+### Automatic Traffic Recorder (ATR) Counts
 
 - **Description:** ATR counts are primarily used to capture the volume of vehicles that travel on a roadway over a given period of time.
 - **Data collection method:** ATR counts have traditionally been collected on ad hoc basis using road tubes, which use pneumatic technology to capture data that is later analyzed to estimate the count. As data collection methods continue to evolve, more firms and cities are choosing safer and more reliable tools to collect this type of data. Automated counters are used to gather various types of vehicular traffic data such as total vehicle volume, classification (type, size), and speed.
@@ -37,17 +35,16 @@ Short term traffic count programs are traffic monitoring programs that collect t
   - **Speed:** the number of vehicles crossing the pneumatic tubes, separated into a matrix of speed bins (1-19kph, 20-25kph, 26-30kph, 31-35kph, etc.)
   - **Mode/ vehicle classification:** the number of vehicles crossing the pneumatic tubes, separated by vehicle classification (usually cars and trucks), according to the FHWA classification
 - **Date range and updates:** January 5, 1993 to present; ad hoc updates
-- **Geographic coverage:** city-wide, where ad hoc counts have been conducted. See [MOVE](https://move.intra.prod-toronto.ca/view/) for available dates and locations.
+- **Geographic coverage:** city-wide, where ad hoc counts have been conducted. See the internal application [MOVE](https://move.intra.prod-toronto.ca/view/) for available dates and locations.
 - **Format available:** CSV or PDF
-- **Data management and access:** ATR  data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
+- **Data management and access:** ATR  data collection is coordinated and managed by Data and Analytics- Data Collection team. 
 - Data is available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors.
-- More detailed data is available in Traffic Schema.
+- More detailed data is available in the `traffic` Schema.
 - Refer to [Short Term Count Readme](short_term_counting_program/README.md) for more details 
 
 
+### Turning Movement Counts (TMC)
 
-
-### **Turning Movement Counts (TMC)**
 - **Description:** One of the most sought-after traffic data types is the TMC, also known as an Intersection Count. In a TMC, vehicle movements (e.g., left, through, and right turns) and volumes for all legs of the intersection are captured, for a specific period of time.
 - **Data collection method:** Turning movement counts traditionally were conducted using person-recorders that manually observe and record the data or by deploying technology such a cameras. Now, they are collected using video-based collection.
 - The use of any technology or innovative methods should be tested for accuracy prior to being an acceptable method to collect turning movement count data
@@ -59,20 +56,22 @@ Short term traffic count programs are traffic monitoring programs that collect t
 - **Format available:** CSV or PDF
 - **Data management and access:** TMC data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
 - 8-hour count data is available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) to the public and also are available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors. 
-- For complete 14-hour count data, please contact TrafficData@toronto.ca. 
-- 8-hour data is also available in Traffic schema to internal users
-- More detailed data is available in Traffic Schema.  
+- 8-hour data are also available in the `traffic` schema to internal users
 - Refer to  [Short Term Count Readme](short_term_counting_program/README.md) for more details
 
-### **Other Methods**
+### Other Methods
+
 Here are some examples of other short term traffic counting programs conducted by the City which are less commonly used.
 - **Pedestrian Delay and Classification Study:** Through manual observation, this study captures pedestrians crossing a road within defined zones.
 - **Pedestrian Crossover Observation Study (PXO):** This study observes the behaviour of pedestrians using a crosswalk.
 
-## **Permanent Counts**
+## Permanent Sources of Volume Data
+
 Permanent traffic counts refer to the process of continuously monitoring and recording the volume and characteristics of vehicular traffic on a particular road, highway or at intersection using a permanent automated counting system. These systems typically consist of sensors, cameras, or other devices that are installed along the roadway or at intersections to collect data on traffic volumes, speed, classification, and other parameters.
-### **Loop Detectors RESCU**
-- **Description:** Road Emergency Services Communication Unit (RESCU) track traffic volume mostly on expressways using loop detectors. 
+
+### RESCU Vehicle Detection Stations
+
+- **Description:** Road Emergency Services Communication Unit (RESCU) track traffic volume mostly on expressways using loop detectors and radar. 
 - **Data collection method:** Loop detectors installed on the ground of the road surface.
 - Radar detectors (which function the same way as loop detectors) placed on the roadside. 
 - The city data is collected using loop detector
@@ -84,12 +83,12 @@ Permanent traffic counts refer to the process of continuously monitoring and rec
 - **Format available:** Custom data extract in CSV
 - **Data management and access:** Data is managed and coordinated by ITS Central.
 - Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
-- Please contact transportationdata@toronto.ca to reach Data & Analytics
 - Aggregated data is available in rescu schema.
 - More information can be found on [RESCU Readme](rescu/README.md)
 
 
-### **Miovision-Cameras**
+### Miovision Cameras
+
 - **Description:**  Miovision cameras are installed at selected intersections across the City. Camera feeds are converted to turning movement count volumes for different modes (truck, bus, car,   pedestrian, bicycle). Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins
 - **Data collection method:** Data is collected using Permanent counters - Miovision cameras
 - **Collected data:**
@@ -101,12 +100,11 @@ Permanent traffic counts refer to the process of continuously monitoring and rec
 - **Format available:** Custom data extract in CSV
 - **Data management and access:** 
 - Miovision data collection is coordinated and managed by Data and Analytics unit. 
-- Please contact TransportationData@toronto.ca.
-- Detailed data is in Miovision schema available to internal users- 
 - More information can be found on [Miovision Readme](miovision/README.md)
 
-### **Watch Your Speed (WYS)**
-- **Description:**  The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. The signs also collect volume and speed data.The signs uses devices called speed display signs or driver feedback signs which contain a radar speed detection device and an LED display. Processed data aggregated to   1-hour and 5 km/h bins using the
+### Watch Your Speed (WYS) Signs
+
+- **Description:**  The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that use a radar speed detection device and an LED display to  display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. The signs collect these speed observations and send them to the cloud. Processed data aggregated to 1-hour and 5 km/h bins
 - Installation of the sign was done as part of 2 programs: 
   - The permanent watch your speed sign program including school watch your speed which has signs installed at high priority schools. As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
   - Mobile watch your speed which has signs mounted on trailers that move to a different location every few weeks, 
@@ -118,10 +116,10 @@ Permanent traffic counts refer to the process of continuously monitoring and rec
 - **Date range and updates:** Data is available at some locations since January 2016 
 - **Geographic coverage:** City Wide- permanent signs are mostly in school zones. The number of mobile signs varies 
 - **Format available:** Custom data extract in CSV
-- **Data management and access:** 
-- Please contact  transportationdata@toronto.ca
 - More information can be found on  [WYS Readme](../wys/readme.md).
-## **What The data Is Used For**
+
+## What the Data are Used For
+
 Traffic count data is used for a variety of purposes, including but not limited to:
 - **Annual Average Daily Traffic (AADT)** : Traffic counts provide the source data used to calculate AADT, which is the common indicator used to represent traffic volume. 
   - An AADT count identifies the average vehicle volumes in a 24-hour period. That value is produced by dividing the total vehicle volume for one year by 365 days. AADT counts are a good indicator of how busy a road is and is often used for evaluating, selecting or designing a new facility or territory. AADT values can be calculated from short duration counts using a method described in the FHWA Traffic Monitoring Guide.
@@ -129,16 +127,16 @@ Traffic count data is used for a variety of purposes, including but not limited 
 - **Safety analysis**: 
   - Traffic count data can be used to identify crash rates, and help safety engineers develop countermeasures to improve safety on the roadway.
   - Traffic counts that include speeds are used in speed limit enforcement efforts, highlighting peak speeding periods to optimise speed camera use and educational efforts and traffic safety analysis.
-  - The use of nonmotorized travel data and information supports analysis regarding the impacts to the transportation network (on volumes and safety) resulting from the use of bicycles as an alternative travel method
+  - The use of non-motorized travel data and information supports analysis regarding the impacts to the transportation network (on volumes and safety) resulting from the use of bicycles as an alternative travel method
 - **Environmental impact analysis**: Traffic count data can be used to estimate emissions from vehicles, and assess the impact of transportation on air quality and noise pollution.
 - **Economic analysis**: Traffic count data can be used to estimate the economic impact of transportation on a region, such as the number of jobs supported by transportation infrastructure or the amount of revenue generated by transportation-related businesses.
 - **Traffic management**: TMC data is also collected to find the intersection’s level of service. TMC data is used in other types of analysis related to the overall performance of an intersection too. It can be used to optimize traffic signal timings, manage traffic flow during special events or emergencies, and plan detours for road construction projects
 - **Land use planning** : Traffic count data can be used to help city planners make decisions about zoning and land use patterns, such as determining the appropriate mix of commercial and residential development.
 - **Other uses of traffic data** include project and resource allocation programming;operations and emergency evacuation; capacity and congestion analysis; traffic forecasts; project evaluation; pavement design;  cost allocation studies; estimating the economic benefits of highways; preparing vehicle size and weight enforcement plans; freight movement activities; pavement and bridge management systems, etc.
 
-## **Open Data**
+## Open Data
 
-### **King Street Pilot**
+### King Street Pilot
 
 For the King Street Transit Pilot, the below volume datasets were released. The first is [ATR counts](#automated-traffic-recorders-atrs) from before the start of the pilot, tagged to the City's Centreline layer, while the other two are from [Miovision](miovision) permanent count cameras and are georeferenced by intersection:
 
@@ -146,3 +144,6 @@ For the King Street Transit Pilot, the below volume datasets were released. The 
 - [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
 - [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
 
+### Short Term Counts
+
+- 8-hour count data [Turning Movement Count](#turning-movement-counts-tmc) data are available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) 
