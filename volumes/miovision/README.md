@@ -34,7 +34,7 @@ The data described in this readme.md are stored in the bigdata RDS, in a schema 
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of Miovision cameras [on this map.](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/geojson/mio_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/mio_intersections.geojson)
 
 ### Folder Structure
 
