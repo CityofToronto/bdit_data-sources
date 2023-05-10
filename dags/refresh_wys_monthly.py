@@ -55,36 +55,48 @@ with DAG('wys_monthly_summary',
             'last_month' : last_month
           },
          schedule_interval='0 3 2 * *') as monthly_summary:
-    wys_view_stat_signs = PostgresOperator(sql='SELECT wys.refresh_mat_view_stationary_signs()',
+    wys_view_stat_signs = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/mat-view-stationary-signs.sql
+                            sql='SELECT wys.refresh_mat_view_stationary_signs()',
                             task_id='wys_view_stat_signs',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
-    wys_view_mobile_api_id = PostgresOperator(sql='SELECT wys.refresh_mat_view_mobile_api_id()',
+    wys_view_mobile_api_id = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/function-refresh_mat_view_mobile_api_id.sql
+                            #sql in bdit_data-sources/wys/api/sql/create-view-mobile_api_id.sql
+                            sql='SELECT wys.refresh_mat_view_mobile_api_id()', 
                             task_id='wys_view_mobile_api_id',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
-    od_wys_view = PostgresOperator(sql='SELECT wys.refresh_od_mat_view()',
+    od_wys_view = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/open_data/mat-view-stationary-locations.sql
+                            sql='SELECT wys.refresh_od_mat_view()',
                             task_id='od_wys_view',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
-    wys_mobile_summary = PostgresOperator(sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
+    wys_mobile_summary = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
+                            sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
                             task_id='wys_mobile_summary',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
-    wys_stat_summary = PostgresOperator(sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')",
+    wys_stat_summary = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/function-stationary-sign-summary.sql
+                            sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')", 
                             task_id='wys_stat_summary',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
+
     # Stationary signs
     wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
     # Mobile signs
