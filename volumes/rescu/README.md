@@ -1,6 +1,8 @@
+
 # RESCU Vehicle Detector Stations <!-- omit in toc -->
 
-> Please each time that you change or add a piece of information, mention the time of update and add keywords about changes. 
+Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
+Some more information can be found on r [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
 
 This README file was created on 2023-04-04 by [@ShahrzadBorjian2](https://github.com/ShahrzadBorjian2).
 

@@ -24,14 +24,14 @@ the [MOVE platform](https://github.com/CityofToronto/bdit_flashcrow).
 
 ## Table Structure
 
-The `collisions` schema houses raw and derived collision data tables. The
+The `collisions_replicator` schema houses raw and derived collision data tables. The
 `collision_factors` schema houses tables to convert raw Motor Vehicle Accident
 (MVA) report codes to human-readable categories (discussed further below). Both
 are owned by `collision_admins`.
 
-### `acc`
+### `ACC`
 
-The raw dataset is `collisions.acc`, a direct mirror of the same table on the
+The raw dataset is `collisions_replicator.ACC`, a direct mirror of the same table on the
 MOVE server. The data dictionary for `ACC`
 is maintained jointly with MOVE and found on [Notion here](
 https://www.notion.so/bditto/5cf7a4b3ee7d40de8557ac77c1cd2e69?v=56499d5d41e04f2097750ca3267f44bc).
@@ -40,13 +40,13 @@ the [Manuals page on Notion](https://www.notion.so/bditto/ca4e026b4f20474cbb32cc
 In particular see the Colliion Coding Manual, Motor Vehicle Collision Report
 2015, and Motor Vehicle Accident Codes Ver. 1.
 
-Properties of `collisions.acc`:
+Properties of `collisions_replicator.ACC`:
 - Each row represents one individual involved in a collision, so some data is
   repeated between rows. The data dictionary indicates which values are at the
   **event** level, and which at the individual **involved** level.
 - There is no UID. `ACCNB` serves as one starting in 2013, but prior to that the
   number would reset annually. Derived tables use `collision_no`, defined in
-  `collisions.collision_no`.
+  `collisions_replicator.collision_no`.
   - `ACCNB` [is
     generated from TPS and CRC counterparts](https://github.com/CityofToronto/bdit_data-sources/pull/349#issuecomment-803133700)
     when data is loaded into the Oracle database. It can only be 10 characters
@@ -58,14 +58,14 @@ Properties of `collisions.acc`:
     first CRC number be `8000000` (then the next `8000001`, etc.). To convert
     these to `ACCNB`s, the last two digits of the year are added to the front
     (eg. `8000285` reported in 2019 is converted to `198000285`). The format of
-    each `ACCNB` is reverse engineered to determine the source of the data for
-    the `data_source` column in `collisions.events`.
+    each `ACNB` is reverse engineered to determine the source of the data for
+    the `data_source` column in `collisions_replicator.events`.
   - To keep the dataset current, particularly for fatal collisions, Data
     Collections will occasionally manually enter collisions using information
     directly obtained from TPS, or from public media. These entries may not
-    follow ACCNB naming conventions. When formal data is transferred from TPS,
+    follow `ACCNB` naming conventions. When formal data is transferred from TPS,
     they are manually merged with these human-generated entries.
-  - The date the collision was reported is not included in `acc`.
+  - The date the collision was reported is not included in `ACC`.
 - Some rows are derived from other rows by the Data & Analytics team; for
   example `LOCCOORD` is a simplified version of `ACCLOC`.
 - Categorical data is coded using numbers. These numbers come from the Motor
@@ -87,27 +87,27 @@ Properties of `collisions.acc`:
 ### Collision Factors
 
 Categorical data codes are in the `collision_factors` schema as tables. Each
-table name corresponds to the categorical column in `collisions.acc`. These are
-joined against `collisions.acc` to produce the derived tables.
+table name corresponds to the categorical column in `collisions_replicator.ACC`. These are
+joined against `collisions_replicator.ACC` to produce the derived tables.
 
 ### Derived Tables
 
-Because `collisions.acc` in its raw form is somewhat difficult to use, we
+Because `collisions_replicator.ACC` in its raw form is somewhat difficult to use, we
 generate three derived tables:
 
-- `collisions.collision_no`: assigns a UID to each collision between 1985-01-01
+- `collisions_replicator.collision_no`: assigns a UID to each collision between 1985-01-01
   and the most recent data refresh date.
-- `collisions.events`: all collision event-level data for collisions between
+- `collisions_replicator.events`: all collision event-level data for collisions between
   1985-01-01 and present. Columns have proper data types (rather than all
-  integers like in `collisions.acc`) and categorical columns use their text
+  integers like in `collisions_replicator.ACC`) and categorical columns use their text
   descriptions rather than numerical codes.
-- `collisions.involved`: all collision individual-level data for collisions
+- `collisions_replicator.involved`: all collision individual-level data for collisions
   between 1985-01-01 and present, with refinements similar to
-  `collisions.events`.
+  `collisions_replicator.events`.
 
 The derived tables use a different naming scheme for columns:
 
-#### `collision.events`
+#### `collisions_replicator.events`
 
 Event   Column | Equivalent ACC Column | Definition | Notes
 -- | -- | -- | --
@@ -140,10 +140,10 @@ traffic_control | TRAFFICTL | Type of traffic control |  
 traffic_control_cond | TRAFCTLCOND | Status of traffic control |  
 on_private_property | PRIVATE_PROPERTY | Whether collision is on private property |  
 description | DESCRIPTION | Long-form comments |  
-data_source | | Source of data | See properties of `collisions.acc`, above, for details
+data_source | | Source of data | See properties of `collisions_replicator.ACC`, above, for details
 
 
-#### `collisions.involved`
+#### `collisions_replicator.involved`
 
 Involved   Column | Equivalent ACC Column | Definition | Notes
 -- | -- | -- | --
@@ -178,15 +178,15 @@ time_last_edited | TS | Time of last edit from Transportation Services |
 
 ## Data Replication Process
 
-Currently, `pull_acc_script.py` is used to manually refresh the data. In the
-future `collisions.acc` will be directly mirrored from the MOVE server.
+Currently, [`pull_acc_script.py`](./pull_acc_script.py) is used to manually refresh the data. In the
+future `collisions_replicator.ACC` will be directly mirrored from the MOVE server.
 
 `pull_acc_script.py` performs the following steps:
 1. Obtain a copy of `ACC.dat` (a dump of the ACC table from the Oracle server).
-2. `TRUCACTE` the current `collisions.acc` table on the BDITTO Postgres, then
+2. `TRUNCATE` the current `collisions_replicator.ACC` table on the BDITTO Postgres, then
    replace it using `ACC.dat`.
-3. Refresh `collisions.collision_no`, `collisions.events` and
-   `collisions.involved` materialized views.
+3. Refresh `collisions_replicator.collision_no`, `collisions_replicator.events` and
+   `collisions_replicator.involved` materialized views.
 4. Perform simple consistency checks to ensure all data were properly copied.
 
 `pull_acc_script.py` requires:

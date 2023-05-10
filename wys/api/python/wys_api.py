@@ -13,8 +13,10 @@ import traceback
 from time import sleep
 
 import click
+import json
 import dateutil.parser
 import psycopg2
+from psycopg2 import sql
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
@@ -86,7 +88,7 @@ def location_id(api_key):
                 if statistics[4:11] == 'LocInfo':
                     temp=[location, sign_name, address]
                     location_id.append(temp)
-            logger.debug(str(len(location_id))+' locations have data')
+            logger.info(str(len(location_id))+' locations have data')
             return location_id
         except TimeoutException as exc_504:
             logger.exception(exc_504)
@@ -109,24 +111,24 @@ def get_statistics_hourly(location, start_date, hr, api_key):
                         str(start_date)+'/from/'+str(hr).zfill(2)+
                         ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
                         headers=headers)
+    try:
+        res = response.json()
+    except json.decoder.JSONDecodeError as err:
+        # catching invalid json responses `json.decoder.JSONDecodeError`
+        logger.error(err + response)
+        raise
     # Error handling
     if response.status_code==200:
-        statistics=response.json()
-        return statistics
+        return res
     elif response.status_code==204:
-        error=response.json()
-        logger.error('204 error    '+error['error_message'])
+        logger.error('204 error '+res['error_message'])
     elif response.status_code==404:
-        error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+        logger.error('404 error for location %s, ' +res['error_message']+' or request duration invalid', location)
     elif response.status_code==401:
-        error=response.json()
-        logger.error('401 error    '+error['error_message'])
+        logger.error('401 error    '+res['error_message'])
     elif response.status_code==405:
-        error=response.json()
-        logger.error('405 error    '+error['error_message'])        
+        logger.error('405 error    '+res['error_message'])        
     elif response.status_code==504:
-        error=response.json()
         logger.error('504 timeout pulling sign %s for hour %s', 
                      location, hr)
         raise TimeoutException('Error'+str(response.status_code))
@@ -274,6 +276,8 @@ def get_data_for_date(start_date, signs_iterator, api_key):
                 except exceptions.RequestException as err:
                     logger.error(err)
                     sleep(75)
+                except Exception as err:
+                    logger.error(err)
                 else:
                    # keep track of processed intervals
                    processed_hr.append(hr) 
@@ -335,26 +339,22 @@ def api_main(start_date=default_start,
         logger.info('Pulling '+str(start_date))
         table, loc_table = get_data_for_date(start_date, signs_list, api_key)
 
-        
-        
         try:    
             with conn.cursor() as cur:
-                logger.debug('Inserting '+str(len(table))+' rows of data')
+                logger.info('Inserting '+str(len(table))+' rows of data. Note: Insert gets roll back on error.')
                 yr = start_date.year
-                insert_sql = '''
-                    INSERT INTO wys.raw_data_'''+str(yr)+''' (api_id, datetime_bin, speed, count) 
-                    VALUES %s
-                    ON CONFLICT DO NOTHING
-                '''
+                table_name = 'raw_data_'+str(yr)
+                insert_sql = sql.SQL("INSERT INTO wys.{table} VALUES %s ON CONFLICT DO NOTHING").format(table=sql.Identifier(table_name))                                  
                 execute_values(cur, insert_sql, table)
+                
         except psycopg2.Error as exc:
             logger.critical('Error inserting speed count data')
             logger.critical(exc)
             sys.exit(1)
-    
+
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph();")
+                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, start_date + datetime.timedelta(days=1)))
                 logger.info('Aggregated Speed Count Data')
         except psycopg2.Error as exc:
             logger.critical('Error aggregating data to 1-hour bins')

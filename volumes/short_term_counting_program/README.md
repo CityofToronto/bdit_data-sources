@@ -1,11 +1,9 @@
-# Traffic Volumes
+# Short Term Traffic Volumes <!-- omit in toc -->
 
-Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
+Short-term Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [Table of Contents](#table-of-contents)
-- [`rescu`: Loop Detector Data](#rescu-loop-detector-data)
 - [FLOW Data](#flow-data)
 	- [1. Loading Data](#1-loading-data)
 	- [2. Schema Overview](#2-schema-overview)
@@ -36,8 +34,7 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
 			- [Content](#content-5)
 			- [Table Structure](#table-structure-4)
 	- [5. Useful Views](#5-useful-views)
-- [Open Data](#open-data)
-	- [King Street Pilot](#king-street-pilot)
+
 .
 
 ## FLOW Data
@@ -56,7 +53,7 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
     - countinfomics
     - det
     - nodes
-- We audit some of these tables (in traffic.logged_actions) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
+- We audit some of these tables (in `traffic.logged_actions`) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
     - arc_link
     - arterydata
     - category
@@ -64,26 +61,11 @@ Traffic volume data (traffic counts and turning movements) from the FLOW databas
     - countinfomics
     - nodes
 
-**And now back to your regularly scheduled documentation...**
-
-The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
-
-In a SQL window, create the `TRAFFIC` tablespace for import.
-```sql
-CREATE TABLESPACE TRAFFIC DATAFILE 'traffic.dbf' SIZE 10600M ONLINE;
-```
-And then to import tables
-```shell
-impdp system/pw tables=(traffic.det, traffic.cal) directory=flow_data dumpfile=flow_traffic_data.dmp logfile=flow_traffic_data.log table_exists_action=truncate
-```
-For one really large table (larger than the 11GB max database size for Oracle Express) it was necessary to [filter rows in the table](https://dba.stackexchange.com/questions/152326/how-can-i-restore-a-10-91g-table-in-oracle-express).
-
-Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
-
 ### 2. Schema Overview
-The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
+The following is an overview of tables relevant to traffic volume counts housed in FLOW, a database maintained by the Data Collection team within Transportation Services' Data & Analytics Unit. The relationships between the relevant tables are illustrated below.
 
-!['flow_tables_relationship'](img/flow_tables_relationship.png)
+!['flow_tables_relationship'](../img/flow_tables_relationship.png)
+
 
 The database is structured around three types of tables: Turning Movement Counts (TMC), Automatic Traffic Recorder (ATR) counts, and other reference tables that provide additional spatial or temporal information.
 
@@ -274,12 +256,4 @@ category_name|text|name of the data source
 
 - `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
-## Open Data
 
-### King Street Pilot
-
-For the King Street Transit Pilot, the below volume datasets were released. The first is [ATR counts](#automated-traffic-recorders-atrs) from before the start of the pilot, tagged to the City's Centreline layer, while the other two are from [Miovision](miovision) permanent count cameras and are georeferenced by intersection:
-
-- [King St. Transit Pilot - 2015 King Street Traffic Counts](https://open.toronto.ca/dataset/king-st-transit-pilot-2015-king-street-traffic-counts/) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. [Here](sql/open_data-ksp_atr_2015.sql) is the SQL that generated that table.
-- [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
-- [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)

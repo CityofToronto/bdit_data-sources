@@ -1,6 +1,6 @@
 ﻿CREATE TABLE miovision_api.intersections
 (
-    intersection_uid integer,
+    intersection_uid integer PRIMARY KEY,
     id text COLLATE pg_catalog."default",
     intersection_name text COLLATE pg_catalog."default",
     date_installed date,
