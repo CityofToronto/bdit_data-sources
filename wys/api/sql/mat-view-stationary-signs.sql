@@ -47,11 +47,13 @@ SELECT
 FROM distinctish_signs loc
 JOIN gis.toronto_boundary AS tor ON 
     st_intersects(
+        --20m buffer around toronto boundary to include signs on border (eg. Steeles)
         st_buffer(tor.geom::geography, 20), 
         loc.geom::geography)
 WINDOW w AS (
     PARTITION BY loc.api_id 
-    ORDER BY start_date);
+    ORDER BY start_date
+);
 
 CREATE INDEX ON wys.stationary_signs USING gist(geom);
 ANALYZE wys.stationary_signs;
