@@ -1,27 +1,47 @@
 DROP MATERIALIZED VIEW open_data.wys_stationary_locations CASCADE;
 CREATE MATERIALIZED VIEW open_data.wys_stationary_locations AS
 
-SELECT area_short::INT as ward_no, sign_id, address, sign_name, dir, schedule, 
-    min_speed, 
-    speed_limit, 
-    flash_speed, 
-    strobe_speed, 
-	CASE WHEN prev_start IS NOT NULL THEN start_date ELSE MIN(datetime_bin) END AS start_date,
-	CASE WHEN max(datetime_bin) < date_trunc('month'::text, now()) - INTERVAL '1 day'
-		 THEN LEAST(next_start::timestamp without time zone, 
-		            max(datetime_bin))
-		END AS end_date,
-	geom
-	FROM wys.stationary_signs
-	LEFT JOIN wys.sign_schedules_list USING (api_id)
-        LEFT JOIN wys.sign_schedules_clean USING (schedule_name)
-	 JOIN wys.speed_counts_agg_5kph USING (api_id) 
-     LEFT JOIN gis.wards2018 ON ST_Contains(wkb_geometry, geom)
-	 GROUP BY ward_no, sign_id, address, sign_name, dir, schedule, 
-            min_speed, 
-            speed_limit, prev_start,next_start, start_date,
-            flash_speed, 
-            strobe_speed, geom;
+SELECT 
+    wrd.area_short::INT as ward_no, 
+    ss.sign_id,
+    ss.address,
+    ss.sign_name,
+    ss.dir,
+    ssc.schedule,
+    ssc.min_speed,
+    ssc.speed_limit,
+    ssc.flash_speed, 
+    ssc.strobe_speed,
+	CASE
+        WHEN ss.prev_start IS NOT NULL THEN ss.start_date 
+        ELSE MIN(agg.datetime_bin) 
+    END AS start_date,
+	CASE 
+        WHEN MAX(agg.datetime_bin) < date_trunc('month'::text, now()) - INTERVAL '1 day'
+		    THEN LEAST(next_start::timestamp without time zone, MAX(agg.datetime_bin))
+	END AS end_date,
+	ss.geom
+FROM wys.stationary_signs AS ss
+JOIN wys.sign_schedules_list AS ssl USING (api_id)
+LEFT JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
+JOIN wys.speed_counts_agg_5kph AS agg USING (api_id)
+LEFT JOIN gis.wards2018 wrd ON ST_Contains(wrd.wkb_geometry, ss.geom)
+GROUP BY
+    wrd.area_short,
+    ss.sign_id, 
+    ss.address,
+    ss.sign_name,
+    ss.dir,
+    ssc.schedule,
+    ssc.min_speed,
+    ssc.speed_limit,
+    ss.prev_start,
+    ss.next_start,
+    ss.start_date,
+    ssc.flash_speed,
+    ssc.strobe_speed,
+    ss.geom;
+    
 CREATE UNIQUE INDEX ON open_data.wys_stationary_locations (sign_id);
 
 CREATE FUNCTION wys.refresh_od_mat_view() 
