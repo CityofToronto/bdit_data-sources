@@ -1,10 +1,9 @@
-# Short Term Traffic Volumes
+# Short Term Traffic Volumes <!-- omit in toc -->
 
 Short-term Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [Table of Contents](#table-of-contents)
 - [FLOW Data](#flow-data)
 	- [1. Loading Data](#1-loading-data)
 	- [2. Schema Overview](#2-schema-overview)
@@ -54,7 +53,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
     - countinfomics
     - det
     - nodes
-- We audit some of these tables (in traffic.logged_actions) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
+- We audit some of these tables (in `traffic.logged_actions`) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
     - arc_link
     - arterydata
     - category
