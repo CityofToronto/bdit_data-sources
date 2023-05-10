@@ -5,8 +5,9 @@ A Slack notification is raised when the airflow process fails.
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.postgres_operator import PostgresOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable 
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable 
@@ -54,8 +55,14 @@ with DAG('wys_monthly_summary',
             'last_month' : last_month
           },
          schedule_interval='0 3 2 * *') as monthly_summary:
-    wys_views = PostgresOperator(sql='SELECT wys.refresh_mat_views()',
-                            task_id='wys_views',
+    wys_view_stat_signs = PostgresOperator(sql='SELECT wys.refresh_mat_view_stationary_signs()',
+                            task_id='wys_view_stat_signs',
+                            postgres_conn_id='wys_bot',
+                            autocommit=True,
+                            retries = 0,
+                            dag=monthly_summary)
+    wys_view_mobile_api_id = PostgresOperator(sql='SELECT wys.refresh_mat_view_mobile_api_id()',
+                            task_id='wys_view_mobile_api_id',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0,
@@ -78,4 +85,7 @@ with DAG('wys_monthly_summary',
                             autocommit=True,
                             retries = 0,
                             dag=monthly_summary)
-    wys_views >> [wys_mobile_summary, wys_stat_summary, od_wys_view]
+    # Stationary signs
+    wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
+    # Mobile signs
+    wys_view_mobile_api_id >> wys_mobile_summary
