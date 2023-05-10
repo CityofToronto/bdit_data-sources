@@ -194,8 +194,8 @@ def update_configs(all_analyses, dbset):
         
     analyses_pull_data = {}
     for report in all_analyses:
-        outcomes_arr = json.dumps([i.__dict__ for i in report.outcomes])
-        routePoints_arr = json.dumps([i.__dict__ for i in report.routePoints])
+        outcomes_arr = json.dumps([outcome.__json__() for outcome in report.outcomes])
+        routePoints_arr = json.dumps([route_point.__json__() for route_point in report.routePoints])
 
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,

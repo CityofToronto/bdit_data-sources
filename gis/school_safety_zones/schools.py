@@ -130,6 +130,7 @@ def enforce_date_format(date, fuzzy=False):
     :param date: str, string to check for date
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
+    date = date.strip()
     if date is '':
         return date
     else:
