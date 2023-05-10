@@ -15,10 +15,14 @@ SELECT *,
 FROM wys.mobile_sign_installations
 ) a 
 LEFT JOIN 
-(SELECT DISTINCT(api_id), sign_name
+(SELECT DISTINCT api_id, sign_name, start_date,
+                 lead(start_date) OVER w AS next_start,
+                 lag(start_date) OVER w AS prev_start
 FROM wys.locations
 WHERE sign_name LIKE 'Ward%'
-ORDER BY sign_name) b
-ON a.combined = b.sign_name;
+WINDOW w AS (PARTITION BY sign_name ORDER BY start_date)) b
+ON a.combined = b.sign_name
+   AND (b.prev_start IS NULL OR installation_date >= b.prev_start)
+   AND (b.next_start IS NULL OR installation_date < b.start_date);
 
 CREATE UNIQUE INDEX ON  wys.mobile_api_id (location_id);
