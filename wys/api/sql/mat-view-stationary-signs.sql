@@ -43,7 +43,7 @@ SELECT
     loc.serial_num,
     loc.geom,
     lead(loc.start_date) OVER w AS next_start,
-    lag(loc.start_date) OVER w AS prev_start,
+    lag(loc.start_date) OVER w AS prev_start
 FROM distinctish_signs AS loc
 JOIN gis.toronto_boundary AS tor ON 
     st_intersects(
