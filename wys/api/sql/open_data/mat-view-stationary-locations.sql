@@ -18,8 +18,8 @@ SELECT
         ELSE MIN(agg.datetime_bin)
     END AS start_date,
     CASE
-        WHEN MAX(agg.datetime_bin) < date_trunc('month'::text, now()) - INTERVAL '1 day'
-        THEN LEAST(ss.next_start::timestamp without time zone, MAX(agg.datetime_bin))
+        WHEN MAX(agg.datetime_bin) < date_trunc('month'::text, now()) - interval '1 day'
+            THEN LEAST(ss.next_start::timestamp without time zone, MAX(agg.datetime_bin))
     END AS end_date
 FROM wys.stationary_signs AS ss
 --JOIN wys.sign_schedules_list AS ssl USING (api_id) --never used in SELECT statement

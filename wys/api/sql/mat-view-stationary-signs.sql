@@ -41,7 +41,7 @@ SELECT
     loc.dir,
     loc.start_date,
     loc.serial_num,
-    loc.geom
+    loc.geom,
     lead(loc.start_date) OVER w AS next_start,
     lag(loc.start_date) OVER w AS prev_start,
 FROM distinctish_signs AS loc
