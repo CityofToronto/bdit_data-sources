@@ -6,33 +6,33 @@ AS
 WITH distinctish_signs AS (
     SELECT DISTINCT ON (
         loc.api_id, 
-        (regexp_replace(loc.sign_name, '([0-9]{5,8})'::text, ''::text))
-    ) 
+        regexp_replace(loc.sign_name, '([0-9]{5,8})'::text, ''::text)
+    )
         loc.api_id,
         loc.address,
-        regexp_replace(loc.sign_name, '([0-9]{5,8})'::text, ''::text) AS sign_name,
         loc.id AS sign_id,
         loc.dir,
         loc.start_date,
-        substring(loc.sign_name from '([0-9]{5,8})'::text) AS serial_num,
+        regexp_replace(loc.sign_name, '([0-9]{5,8})'::text, ''::text) AS sign_name,
+        substring(loc.sign_name FROM '([0-9]{5,8})'::text) AS serial_num,
         st_setsrid(
             st_makepoint(
                 split_part(
-                    regexp_replace(loc.loc, '[()]'::text, ''::text, 'g'::text), 
+                    regexp_replace(loc.loc, '[()]'::text, ''::text, 'g'::text),
                     ','::text, 2)::double precision, 
                 split_part(
-                    regexp_replace(loc.loc, '[()]'::text, ''::text, 'g'::text), 
+                    regexp_replace(loc.loc, '[()]'::text, ''::text, 'g'::text),
                     ','::text, 1)::double precision
             ), 
             4326) AS geom
-    FROM wys.locations loc
+    FROM wys.locations AS loc
     WHERE length("substring"(reverse(loc.sign_name), '([0-9]{1,8})'::text)) > 3
     ORDER BY 
         loc.api_id, 
         (regexp_replace(loc.sign_name, '([0-9]{5,8})'::text, ''::text)),
         loc.start_date
 )
- 
+
 SELECT 
     loc.api_id,
     loc.sign_id,
@@ -40,11 +40,11 @@ SELECT
     loc.sign_name,
     loc.dir,
     loc.start_date,
-	loc.serial_num,
+    loc.serial_num,
+    loc.geom
     lead(loc.start_date) OVER w AS next_start,
     lag(loc.start_date) OVER w AS prev_start,
-    loc.geom
-FROM distinctish_signs loc
+FROM distinctish_signs AS loc
 JOIN gis.toronto_boundary AS tor ON 
     st_intersects(
         --20m buffer around toronto boundary to include signs on border (eg. Steeles)
