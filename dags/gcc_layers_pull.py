@@ -73,7 +73,8 @@ bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
               "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
               
-              "bikeway": [2, 2, 'gis', True],
+              #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
+              "cycling_infrastructure": [2, 49, 'gis', True], 
               "traffic_camera": [2, 3, 'gis', True],
               "permit_parking_area": [2, 11, 'gis', True],
               "prai_transit_shelter": [2, 35, 'gis', True],
