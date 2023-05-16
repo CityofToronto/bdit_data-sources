@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW aduyves.artery_objectid_pavement_asset
+CREATE OR REPLACE VIEW traffic.artery_objectid_pavement_asset
 AS
 WITH cp18 AS ( 
     SELECT cp.geo_id, 
@@ -10,15 +10,18 @@ SELECT ad.arterycode,
 	ac.centreline_id, 
 	cp18.objectid
 FROM traffic.arterydata AS ad
-JOIN aduyves.arteries_centreline AS ac USING (arterycode)
+JOIN traffic.arteries_centreline AS ac USING (arterycode)
 JOIN cp18 ON cp18.geo_id = ac.centreline_id AND cp18.rownum = 1
 
 
-COMMENT ON VIEW aduyves.artery_objectid_pavement_asset IS 'Lookup between artery codes and objectid (to retrieve pavement asset data)';
-GRANT SELECT ON TABLE aduyves.artery_objectid_pavement_asset TO bdit_humans;
+COMMENT ON VIEW traffic.artery_objectid_pavement_asset IS 'Lookup between artery codes and objectid (to join pavement asset data in e.g. vz_analysis.gcc_pavement_asset)';
+ALTER TABLE IF EXISTS traffic.artery_objectid_pavement_asset
+    OWNER TO traffic_admins;
+
+GRANT ALL ON TABLE traffic.artery_objectid_pavement_asset TO bdit_humans;
+GRANT ALL ON TABLE traffic.artery_objectid_pavement_asset TO traffic_admins;
 
 
--- col arteries_centreline.centreline_id is equivalent to col arterydata.geo_id.
--- counts.arteries_centreline in FLASHCROW database was copied to user schema
--- aduyves.arteries_centreline for working (I do not have access to flashcrow db).
--- window function on gis_shared_streets.centreline_pavement_180430 is used to remove duplicates, keeping arterycode unique in the final table.
+-- flashcrow.counts.arteries_centreline must be migrated to the bigdata.traffic schema and copied over regularly
+-- column arteries_centreline.centreline_id links to column centreline_pavement_180430.geo_id.
+-- window function on gis_shared_streets.centreline_pavement_180430 is used to remove duplicates, keeping arterycode unique in the lookup table.
