@@ -256,4 +256,4 @@ category_name|text|name of the data source
 
 - `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
-- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid, created using joins with tables: `gis_shared_streets.centreline_pavement_180430`(bigdata) and `count.arteries_centreline`(flashcrow database)
+- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link pavement assest information in vz_analysis.gcc_pavement_asset
