@@ -1,4 +1,12 @@
 # GCCVIEW pipeline
+  * [Overview](#overview)
+  * [Where the layers are pulled](#where-the-layers-are-pulled)
+  * [How the script works](#how-the-script-works)
+  * [Adding new layers to GCC Puller DAG](#adding-new-layers-to-gcc-puller-dag)
+  * [Manually fetch layers - Using Jupyter Notebook](#manually-fetch-layers---using-jupyter-notebook)
+  * [Manually fetch layers - Using Click in command prompt](#manually-fetch-layers---using-click-in-command-prompt)
+
+
 
 ## Overview
 
@@ -37,7 +45,7 @@ The GCC pipeline will be pulling multiple layers into the `gis_core` and `gis` s
 
 |Layer Name|Mapserver ID|Layer ID|
 |-|-|-|
-|bikeway|2|2|
+|cycling_infrastructure|2|49|
 |traffic_camera|2|3|
 |permit_parking_area|2|11|
 |prai_transit_shelter|2|35|
@@ -83,6 +91,11 @@ The pipeline consists of two files, `gcc_puller_functions.py` for the functions 
 - cred (Airflow PostgresHook): the Airflow PostgresHook that directs to credentials to enable a connection to a particular database
 
 In the DAG file, the arguments for each layer are stored in dictionaries called "bigdata_layers" and "ptc_layers", in the order above. The DAG will be executed once every 3 months, particularly on the 15th of every March, June, September, and December every year.
+
+## Adding new layers to GCC Puller DAG
+1. Identify the mapserver_n and layer_id for the layer you wish to add. You can find COT transportation layers here: https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial2/FeatureServer, where mapserver_n is 2 and the layer_id is in brackets after the layer name.
+2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in [gcc_layers_pull.py](/dags/gcc_layers_pull.py) depending on the destination database. 
+3. If is_audited = True, you must also add a primary key for the new layer to "pk_dict" in [gcc_puller_functions.py](gcc_puller_functions.py).
 
 ## Manually fetch layers - Using Jupyter Notebook
 
