@@ -134,6 +134,8 @@ Traffic count data is used for a variety of purposes, including but not limited 
 - **Land use planning** : Traffic count data can be used to help city planners make decisions about zoning and land use patterns, such as determining the appropriate mix of commercial and residential development.
 - **Other uses of traffic data** include project and resource allocation programming;operations and emergency evacuation; capacity and congestion analysis; traffic forecasts; project evaluation; pavement design;  cost allocation studies; estimating the economic benefits of highways; preparing vehicle size and weight enforcement plans; freight movement activities; pavement and bridge management systems, etc.
 
+- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid, created using joins with tables: `gis_shared_streets.centreline_pavement_180430`(bigdata) and `count.arteries_centreline`(flashcrow database)
+
 ## Open Data
 
 ### King Street Pilot
