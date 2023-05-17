@@ -48,7 +48,7 @@ def request_url(url, payload, run_date_ds):
     except Exception as e:
         logger.error('Failed to request url. Exception: %s', str(e))
 
-def get_payload(run_date, station):
+def get_payload(run_date, stationid):
     '''
     Construct payload for url 
 
@@ -60,14 +60,14 @@ def get_payload(run_date, station):
     month = run_date.strftime("%-m")
     day = run_date.strftime("%-d")
 
-    if station == 1:
+    if stationid == 31688:
         # Toronto City Centre
-        stationid = 31688
         stationname = 'Toronto City'
-    else:
+    elif stationid == 51459:
         # Airport
-        stationid = 51459
         stationname = 'Toronto INTL A'
+    else:
+        raise ValueError('Invalid Station ID. This function only supports pulling stationid 31688 and 51459')        
     
     payload = {
     'StationID': stationid,
@@ -85,7 +85,7 @@ def get_payload(run_date, station):
 
     return payload
 
-def pull_weather(run_date_ds, station):
+def pull_weather(run_date_ds, stationid):
     '''
     Pull weather data for specified run_date and station
 
@@ -96,7 +96,7 @@ def pull_weather(run_date_ds, station):
     run_date = datetime.datetime.strptime(run_date_ds, '%Y-%m-%d')
     url = 'https://climate.weather.gc.ca/climate_data/daily_data_e.html'
     # Use payload to query for specific day and station
-    payload = get_payload(run_date, station)
+    payload = get_payload(run_date, stationid)
 
     try:
         weather_context = request_url(url, payload, run_date_ds)
@@ -131,17 +131,19 @@ def pull_weather(run_date_ds, station):
 
     return rundate_data
 
-def upsert_weather(conn, weather_df, station):
+def upsert_weather(conn, weather_df, stationid):
 
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
 
     # Define schema and table name for upsert 
     schema_name = 'weather'
 
-    if station == 1:
+    if stationid == 31688:
         station_table_name = 'historical_daily_city'
-    elif station == 2:
+    elif stationid == 51459:
         station_table_name = 'historical_daily_airport' 
+    else:
+        raise ValueError('Invalid Station ID. This function only supports pulling stationid 31688 and 51459') 
 
     with conn:
         with conn.cursor() as cur:
