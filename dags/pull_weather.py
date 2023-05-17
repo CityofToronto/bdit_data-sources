@@ -95,14 +95,14 @@ PULL_HISTORICAL_CITY = PythonOperator(
     task_id = 'pull_historical_city',
     python_callable = historical_upsert,
     dag=dag,
-    op_args=[cred, '{{ yesterday_ds }}', 1]
+    op_args=[cred, '{{ yesterday_ds }}', 31688]
 )
 ## Pull yesterday's historical data for Toronto Peason Airport
 PULL_HISTORICAL_AIRPORT = PythonOperator(
     task_id = 'pull_historical_airport',
     python_callable = historical_upsert,
     dag=dag,
-    op_args=[cred, '{{ yesterday_ds }}', 2]
+    op_args=[cred, '{{ yesterday_ds }}', 51459]
 )
 
 no_backfill >> PULL_PREDICTION

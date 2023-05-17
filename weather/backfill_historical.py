@@ -23,7 +23,7 @@ conn = connect(**dbset)
 @click.option('--end_dt', '-e', type = str, required = True
                 , help = '''End date (text), exclusive lower bound. e.g. '2019-02-01' ''')
 @click.option('--station_id', '-i', type = int, required = True
-                , help = 'Station Id')
+                , help = 'Station Id, toronto city centre = 31688, airport = 51459')
 def backfill_historical(start_dt, end_dt, station_id):
     start_date = datetime.strptime(start_dt, '%Y-%m-%d')
     end_date = datetime.strptime(end_dt, '%Y-%m-%d')  - timedelta(days=1) ## Exclusive upper bound
