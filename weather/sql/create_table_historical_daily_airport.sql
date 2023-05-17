@@ -1,6 +1,6 @@
 -- Table containing max, min, mean temperature of the day,
 -- as well as total rain, snow and precip 
--- of Toronto City Centre, station_id = 31688
+-- of Toronto Pearson Airport, station_id = 51459
 -- Updated daily from government of canada's historical weather data
 -- run by DAG `pull_weather.py`.
 
@@ -28,4 +28,4 @@ GRANT ALL ON TABLE weather.historical_daily_airport TO weather_admins;
 GRANT INSERT, SELECT, UPDATE ON TABLE weather.historical_daily_airport TO weather_bot;
 
 COMMENT ON TABLE weather.historical_daily_airport
-    IS 'Contains daily weather data around Toronto Pearson Airport. Data pulled daily from https://climate.weather.gc.ca/. Station_id = 5097. ';
+    IS 'Contains daily weather data around Toronto Pearson Airport. Data pulled daily from https://climate.weather.gc.ca/. Station_id = 51459. ';
