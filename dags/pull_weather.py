@@ -59,10 +59,9 @@ def task_fail_slack_alert(context):
 #DAG
  
 default_args = {
-    'owner':'rdumas',
+    'owner':names,
     'depends_on_past':False,
     'start_date': datetime(2022, 11, 8),
-    'email': ['raphael.dumas@toronto.ca'],
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
