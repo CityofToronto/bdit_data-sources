@@ -41,7 +41,7 @@ for name in names:
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = """:cat_shock: The Task {task} in Pull Weather dag failed, 
+    task_msg = """:cat_shocked: The Task {task} in Pull Weather dag failed, 
 			{slack_name} please check.""".format(task=context.get('task_instance').task_id, slack_name=' '.join(list_names),)
         
     # this adds the error log url at the end of the msg
