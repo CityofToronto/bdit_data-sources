@@ -33,7 +33,7 @@ except:
 SLACK_CONN_ID = 'slack_data_pipeline'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = dag_owners.get(dag_name, ['pull_weather']) #find dag owners w/default = Unknown    
 
 list_names = []
 for name in names:
