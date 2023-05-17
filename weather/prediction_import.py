@@ -28,15 +28,10 @@ CONFIG.read('config.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
 conn=connect(**dbset)"""
 
-
-#### pull_prediction(tmrw) ####
-#
-# Pulls a week forecast from environment canada, returns forecast dict for the day after the current date
-# Params:
-#     tmrwy: a valid datetime object of the day after the current date to be used in match w/ Env. Canada forecast
-#
 def pull_prediction(today, forecast_day):
-
+    '''
+    Pulls a week forecast from environment canada, returns forecast dict for the day after the current date
+    '''
     forecast_dow_text = forecast_day.strftime("%A")
     # Station_id is Toronto, determined by looking up the csv in 
     # https://pypi.org/project/env-canada/
@@ -65,6 +60,9 @@ def pull_prediction(today, forecast_day):
     return day_forecast
     
 def insert_weather(conn, weather_df):
+    '''
+    Inserts forecase weather to the prediction_daily table in weather schema
+    '''
     weather_fields = ['date', 'max_temp', 'min_temp', 'precip_prob_day', 'precip_prob_night', 'text_summary_day', 'text_summary_night', 'date_pulled']
     with conn:
         with conn.cursor() as cur:
