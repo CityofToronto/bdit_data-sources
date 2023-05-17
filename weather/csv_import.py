@@ -1,9 +1,12 @@
 ###################
 #csv_import.py
 ####################
-#Takes downloaded csv files of historical weather data
-# from Environment Canada and inserts them into the historical
+# Takes downloaded csv files of historical weather data
+# from Environment Canada and inserts them into the historical airport
 # data table.
+# Link to download: https://climate.weather.gc.ca/historical_data/search_historic_data_e.html 
+
+# MODIFY THE DESTINATION TABLE WHEN IMPORTING ANOTHER DATASET
 
 import os
 import pandas as pd
@@ -19,8 +22,6 @@ conn=connect(**dbset)
 
 # Weather file path (In Excel format)
 DIRECTORY = "weather_csv"
-
-
 
 def insert_weather(conn, weather_df):
     weather_fields = ['date', 'max_temp', 'min_temp', 'mean_temp', 'total_rain', 'total_snow', 'total_precip']
