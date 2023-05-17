@@ -74,9 +74,9 @@ As mentioned before, only historical data can be backfilled. Other than backfill
 Input Params:
 1) `start_dt`: The start date of the date range you want to backfill historical data, inclusive. 
 2) `end_dt`: The end date of the date range you want to backfill historical data, exclusive.
-3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 1 and Pearson Airport is station_id = 2
+3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 31688 and Pearson Airport is station_id = 51459
 
 For example, if you want to backfill the entire month of 2022 March for Pearson Airport, you would run:
 ```
-python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 2
+python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 51459
 ```
