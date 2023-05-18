@@ -162,7 +162,7 @@ def upsert_weather(conn, weather_df, stationid):
 def historical_upsert(cred, run_date, station_id):
     #verify connection
     conn = cred.get_conn()
-    weather_dict = pull_weather(run_date, station = station_id)
+    weather_dict = pull_weather(run_date, station_id)
 
     upsert_weather(conn, weather_dict, station_id)
     
