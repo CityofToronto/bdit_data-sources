@@ -52,7 +52,7 @@ def task_fail_slack_alert(context):
 #DAG
  
 default_args = {
-    'owner':names,
+    'owner': 'Natalie',
     'depends_on_past':False,
     'start_date': datetime(2022, 11, 8),
     'email_on_failure': False,
