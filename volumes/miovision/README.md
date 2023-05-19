@@ -63,20 +63,19 @@ classification|text|Textual description of mode|Bicycles|
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
-Here is a description of the classification_uids and corresponding types. 
-Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
+Here is a description of the `classification_uid`s and corresponding types. For more information, see [Miovision's documentation on this topic](https://help.miovision.com/s/article/North-American-Classification-Guide). Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
 
-**classification_uid**|**classification**|**definition**|
-:-----|:-----|:-----|
-1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
-2|Bicycle|A bicycle - this classification_uid is used to track bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans|
-4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
-5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
-6|Pedestrian|A walker. May or may not include zombies...|
-8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
-10|Bicycle|A bicycle - this classification_uid is used to track bicycle approaches (entrances and exits)|
+| classification_uid | classification | definition |
+| ------------------ | -------------- | ---------- |
+1 | Light | Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
+2 | Bicycle | A bicycle - this classification_uid is used to track bicycle turning movements |
+3 | Bus | A large vehicle that provides transportation for many humans. This includes buses *and streetcars* |
+4 | SingleUnitTruck | A truck that has a non-detachable cab and trailer system |
+5 | ArticulatedTruck | A truck that has a detachable cab and trailer system |
+6 | Pedestrian | A walker. May or may not include zombies... |
+8 | WorkVan | A van used for commercial purposes |
+9 | MotorizedVehicle | miscellaneous vehicles |
+10 | Bicycle | A bicycle - this classification_uid is used to track bicycle approaches (entrances and exits) |
 
 #### `intersections`
 
