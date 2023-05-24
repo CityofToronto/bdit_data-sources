@@ -73,7 +73,7 @@ default_args = {'owner':'rdumas',
                  'email_on_success': False,
                  'retries': 3,
                  'retry_delay': timedelta(minutes=5),
-                 'retry_exponential_backoff' = True,
+                 'retry_exponential_backoff': True,
                  'on_failure_callback': task_fail_slack_alert
                 }
 
