@@ -1,4 +1,4 @@
-DROP VIEW wys.mobile_api_id CASCADE;
+DROP MATERIALIZED VIEW wys.mobile_api_id;
 
 CREATE MATERIALIZED VIEW wys.mobile_api_id AS
 
