@@ -1,4 +1,4 @@
-DROP MATERIALIZED VIEW open_data.wys_stationary_locations CASCADE;
+DROP MATERIALIZED VIEW open_data.wys_stationary_locations;
 CREATE MATERIALIZED VIEW open_data.wys_stationary_locations AS
 
 SELECT 
