@@ -52,8 +52,8 @@ SELECT
     msi.combined,
     b.api_id
 FROM mobile_installations AS msi
-LEFT JOIN sign_locations AS b
-    ON msi.combined = b.sign_name
+LEFT JOIN sign_locations AS b ON 
+    msi.combined = b.sign_name
     AND (b.prev_start IS NULL OR msi.installation_date >= b.prev_start)
     AND (b.next_start IS NULL OR msi.installation_date < b.start_date);
 
