@@ -12,9 +12,9 @@ SELECT
     bins.speed_bin::text AS speed_bin,
     agg.volume
 FROM open_data.wys_stationary_locations AS od
-JOIN wys.stationary_signs loc USING (sign_id)
+JOIN wys.stationary_signs AS loc USING (sign_id)
 JOIN wys.speed_counts_agg_5kph AS agg ON 
-    loc.api_id = agg.api_id 
+    loc.api_id = agg.api_id
     AND agg.datetime_bin >= od.start_date 
     AND (od.end_date IS NULL 
         OR agg.datetime_bin < od.end_date)
