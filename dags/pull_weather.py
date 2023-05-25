@@ -35,7 +35,7 @@ SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     task_msg = """:cat_shocked: The Task {task} in Pull Weather dag failed, 
-			@UF4RQFQ11 please check.""".format(task=context.get('task_instance').task_id,)
+			<@UF4RQFQ11> please check.""".format(task=context.get('task_instance').task_id,)
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,)
