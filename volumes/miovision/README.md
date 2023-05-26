@@ -2,31 +2,29 @@
 
 ## Table of Contents
 
-- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-	- [Table of Contents](#table-of-contents)
-	- [1. Overview](#1-overview)
-		- [Folder Structure](#folder-structure)
-	- [2. Table Structure](#2-table-structure)
-		- [Reference Tables](#reference-tables)
-			- [`classifications`](#classifications)
-			- [`intersections`](#intersections)
-			- [`movements`](#movements)
-			- [`movement_map`](#movement_map)
-			- [`periods`](#periods)
-			- [`intersection_movements`](#intersection_movements)
-		- [Disaggregate Data](#disaggregate-data)
-			- [`volumes`](#volumes)
-		- [Aggregated Data](#aggregated-data)
-			- [`volumes_15min_tmc`](#volumes_15min_tmc)
-			- [`unacceptable_gaps`](#unacceptable_gaps)
-			- [`volumes_15min`](#volumes_15min)
-			- [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-		- [Primary and Foreign Keys](#primary-and-foreign-keys)
-			- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-		- [Important Views](#important-views)
-	- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-	- [4. Repulling data](#4-repulling-data)
-		- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+- [1. Overview](#1-overview)
+	- [Folder Structure](#folder-structure)
+- [2. Table Structure](#2-table-structure)
+	- [Reference Tables](#reference-tables)
+		- [`classifications`](#classifications)
+		- [`intersections`](#intersections)
+		- [`movements`](#movements)
+		- [`movement_map`](#movement_map)
+		- [`periods`](#periods)
+		- [`intersection_movements`](#intersection_movements)
+	- [Disaggregate Data](#disaggregate-data)
+		- [`volumes`](#volumes)
+	- [Aggregated Data](#aggregated-data)
+		- [`volumes_15min_tmc`](#volumes_15min_tmc)
+		- [`unacceptable_gaps`](#unacceptable_gaps)
+		- [`volumes_15min`](#volumes_15min)
+		- [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
+	- [Primary and Foreign Keys](#primary-and-foreign-keys)
+		- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
+	- [Important Views](#important-views)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+- [4. Repulling data](#4-repulling-data)
+	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
 ## 1. Overview
 
@@ -34,7 +32,7 @@ The data described in this readme.md are stored in the bigdata RDS, in a schema 
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
-You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/mio_intersections.geojson)
 
 ### Folder Structure
 
@@ -65,7 +63,8 @@ classification|text|Textual description of mode|Bicycles|
 location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
-Here is a description of the classification_uids and corresponding types:
+Here is a description of the classification_uids and corresponding types. 
+Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
 
 **classification_uid**|**classification**|**definition**|
 :-----|:-----|:-----|
@@ -394,7 +393,7 @@ In order to better determine if a camera is still working, we have decided to us
 **Part I - Unacceptable Gaps**
 The following process is used to determine the gap sizes assigned to an intersection at different time and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
 
-1. The materialized view [`miovision_api.gapsize_lookup`](sql/create-mat-view-gapsize_lookup.sql) is refreshed/updated daily to find out the daily average volume for each intersection_uid, period and time_bin in the past 60 days. Based on the average volume, an acceptable gap_size is assigned to that intersection. 
+1. The materialized view [`miovision_api.gapsize_lookup`] (sql/create-mat-view-gapsize_lookup.sql) (**note: this table does not exist- please check**) is refreshed/updated daily to find out the daily average volume for each intersection_uid, period and time_bin in the past 60 days. Based on the average volume, an acceptable gap_size is assigned to that intersection. 
 2. The set of acceptable gap_size implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
 3. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) is used to find all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the materialized view above.
 4. Gaps that are equal to or exceed the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
