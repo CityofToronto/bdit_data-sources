@@ -12,7 +12,6 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 - `/etc/airflow/dags`: for DAGs. In order for them to be synced to their files in `git`, it is preferable to symbolically link from this folder to the respective `dags` folder in the following two folders. For ex: while in `/etc/airflow/dags` run `ln -sf /etc/airflow/data_scripts/dags/pull_here.py .`
 - `/etc/airflow/data_scripts`: a copy of this repository at the `master` branch
-- `/etc/airflow/dev_scripts`: a copy of this repository on its own branch, into which users `git pull` their development branches. **Never ever ever ever `git push` from this folder**
 
 ## Common Tasks
 
@@ -24,23 +23,25 @@ Our instance of Airflow runs as its own user `airflow` which resides in `/etc/ai
 
 3) Commit and push to GitHub.
 
-4) Navigate to `/etc/airflow/dev_scripts` and pull your testing branch into `dev_scripts` using: 
+4) Give `airflow` user access to your home folder by entering this command in the EC2 terminal:
 
 ```
-git pull origin your_branch_name
+setfacl -m u:airflow:rwx <REPLACE-WITH-YOUR-HOME-FOLDER>
 ```
 
-**DO NOT PUSH ANYTHING IN THIS BRANCH**.
+5) Give `airflow` access to the repo and all of its contents (including the DAG folder and any other helper files) by entering this command in the EC2 terminal:
 
-5) Navigate to `/etc/airflow/dag` 
+```
+setfacl -R -m u:airflow:rwx <REPLACE-WITH-THE-REPO-FOLDER>
+``` 
 
 6) Create a new symbolic link using:
 
 ```
-ln -s /etc/airflow/dev_scripts/dags/your_dag.py your_dag.py
+ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> airflow/dags/<DAG-FILE>
 ```
 
-7) In a new browser tab, go to https://10.160.2.198/airflow/admin/ and enter your Airflow credentials.
+7) In a new browser tab, go to https://`EC2 IP address`/airflow/ and enter your Airflow credentials.
 
 **Note that the IP address is the address for the EC2 server (so if the EC2's IP address changes, the link will need to change too).**
 
