@@ -4,8 +4,8 @@ WITH clpav18 AS (
     SELECT 
         clpav.geo_id, 
         clpav.objectid, 
-            row_number() OVER (PARTITION BY clpav.geo_id ORDER BY (SELECT clpav.geo_id)) AS rownumber
-        FROM gis_shared_streets.centreline_pavement_180430 AS clpav
+        row_number() OVER (PARTITION BY clpav.geo_id ORDER BY (SELECT clpav.geo_id)) AS rownumber
+    FROM gis_shared_streets.centreline_pavement_180430 AS clpav
 )
 
 SELECT 
