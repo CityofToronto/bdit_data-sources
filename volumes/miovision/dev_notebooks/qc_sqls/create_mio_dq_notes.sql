@@ -11,7 +11,7 @@ CREATE TABLE scannon.mio_dq_notes AS (
         FROM miovision_api.volumes_15min AS v
         LEFT JOIN miovision_api.intersections AS i USING (intersection_uid)
         WHERE 
-            classification_uid = 1
+            v.classification_uid = 1
         GROUP BY 
             v.intersection_uid, 
             i.intersection_name, 
@@ -27,13 +27,14 @@ CREATE TABLE scannon.mio_dq_notes AS (
             bw.bad_week,
             z.car_ct,
             CASE
-                WHEN z.car_ct = 0 then 'car count = 0'
+                WHEN z.car_ct = 0 THEN 'car count = 0'
                 ELSE 'low car count - investigate'
             END AS notes
         FROM scannon.miovision_bad_weeks AS bw
-        LEFT JOIN zero_weeks AS z 
-            ON bw.bad_week = z.mon 
-            AND bw.intersection_uid = z.intersection_uid
+        LEFT JOIN zero_weeks AS z
+            ON
+                bw.bad_week = z.mon
+                AND bw.intersection_uid = z.intersection_uid
     ),
 
     -- find consecutive weeks with the same low + no car classifications for the same intersection_uid
@@ -52,7 +53,7 @@ CREATE TABLE scannon.mio_dq_notes AS (
                 ELSE 1
             END AS cnsc_wk
         FROM car_count AS cc
-),
+    ),
 
     -- some intersection_uids have two non-continuous periods that suck - group the consecutive weeks
     weekly_groups AS (
@@ -70,17 +71,17 @@ CREATE TABLE scannon.mio_dq_notes AS (
                 END) OVER (ORDER BY cw.row_num) AS week_group
         FROM cnsc_weeks AS cw
     )
-    
+
     -- final table showing ranges of weeks with bad data by intersection_uid
     SELECT
         wg.intersection_uid,
         wg.intersection_name,
+        wg.notes,
         MIN(wg.bad_week)::timestamp AS excl_start,
         (MAX(wg.bad_week) + interval '7 days')::timestamp AS excl_end, -- since the ranges are by week I need to add 7 days to represent all the days in that week
-        tsrange(MIN(wg.bad_week), (MAX(wg.bad_week) + interval '7 days')::date, '[)') AS excl_range,
-        wg.notes
+        tsrange(MIN(wg.bad_week), (MAX(wg.bad_week) + interval '7 days')::date, '[)') AS excl_range
     FROM weekly_groups AS wg
-    GROUP BY 
+    GROUP BY
         wg.intersection_uid,
         wg.intersection_name,
         wg.week_group,
