@@ -24,3 +24,4 @@ This folder contains Jupyter Notebooks used for developing API access and data p
   `06 - Bike Approach Sandbox.ipynb`.
 - `intersection_tmc_notebook06test.py` - copy of `intersection_tmc.py` from commit [74a239](https://github.com/CityofToronto/bdit_data-sources/commit/74a2392491bb8098c12bc779d63ea10277d4505c) used by 
   `06 - Bike Approach Sandbox.ipynb` to compare legacy and new API pullers.
+- `lousy_dates.ipynb` contains line graphs of light vehicle volumes. The aim is to visually inspect and identify unusually low (or high) volumes. This notebook evaluates data from January 2019 to March 2023. It directly queries the `bigdata` postgres database to grab monthly and weekly miovision volumes for light vehicles.
