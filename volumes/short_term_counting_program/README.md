@@ -256,4 +256,4 @@ category_name|text|name of the data source
 
 - `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
-- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement assest information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [620] (https://github.com/CityofToronto/bdit_data-sources/issues/620) 
+- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement assest information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [620](https://github.com/CityofToronto/bdit_data-sources/issues/620) 
