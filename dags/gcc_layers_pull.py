@@ -1,19 +1,20 @@
 # The official new GCC puller DAG file
 import sys
 import os
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
-from gcc_puller_functions import get_layer
-
 from datetime import datetime
+from psycopg2 import sql
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
-
-# Credentials - to be passed through PythonOperator
 from airflow.hooks.postgres_hook import PostgresHook
+
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
+from gcc_puller_functions import get_layer
+# Credentials - to be passed through PythonOperator
 # bigdata connection credentials
 bigdata_cred = PostgresHook("gcc_bot_bigdata")
 # On-prem server connection credentials
@@ -122,6 +123,7 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
 # the DAG runs at 7 am on the first day of March, June, September, and December
 with DAG(
     'pull_gcc_layers',
+    catchup=False,
     default_args=DEFAULT_ARGS,
     schedule_interval='0 7 1 */3 *' #'@quarterly'
 ) as gcc_layers_dag:
@@ -141,3 +143,14 @@ with DAG(
             python_callable = get_layer,
             op_args = ptc_layers[layer] + [ptc_cred]
         )
+
+        if layer in ['centreline', 'intersection']:
+            sql_refresh_mat_view = sql.SQL("SELECT {function_name}()").format(
+                function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
+            )
+            refresh_mat_view = PythonOperator(
+                                    python_callable=lambda:ptc_cred.get_conn().cursor().execute(sql_refresh_mat_view),
+                                    task_id=f'refresh_{layer}_version_date',
+                                    retries = 0)
+            
+            pull_ptc_layer >> refresh_mat_view
