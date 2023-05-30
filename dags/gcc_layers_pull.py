@@ -68,12 +68,10 @@ bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "centreline": [0, 2, 'gis_core', False], # VFH Layers
               "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
               "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
-              
               #"intersection": [12, 42, 'gis_core', False],
               "census_tract": [26, 7, 'gis_core', True],
               "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
               "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
-              
               #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
               "cycling_infrastructure": [2, 49, 'gis', True], 
               "traffic_camera": [2, 3, 'gis', True],
@@ -120,7 +118,7 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
                   "ibms_district": [11, 23, 'gis', True]
                  }
 
-# the DAG runs at 7 am on the first day of March, June, September, and December
+# the DAG runs at 7 am on the first day of January, April, July, and October
 with DAG(
     'pull_gcc_layers',
     catchup=False,
@@ -130,18 +128,18 @@ with DAG(
     deployment = os.environ.get("DEPLOYMENT", "PROD")
 
     if deployment == "DEV":
-        for layer in bigdata_layers:
+        for layer, attributes in bigdata_layers.items():
             pull_bigdata_layer = PythonOperator(
                 task_id = 'bigdata_task_'+ str(layer),
                 python_callable = get_layer,
-                op_args = bigdata_layers[layer] + [bigdata_cred]
+                op_args = attributes + [bigdata_cred]
             )
 
-    for layer in ptc_layers:
+    for layer, attributes in ptc_layers.items():
         pull_ptc_layer = PythonOperator(
             task_id = 'VFH_task_'+ str(layer),
             python_callable = get_layer,
-            op_args = ptc_layers[layer] + [ptc_cred]
+            op_args = attributes + [ptc_cred]
         )
 
         if layer in ['centreline', 'intersection']:
@@ -149,8 +147,9 @@ with DAG(
                 function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
             )
             refresh_mat_view = PythonOperator(
-                                    python_callable=lambda:ptc_cred.get_conn().cursor().execute(sql_refresh_mat_view),
-                                    task_id=f'refresh_{layer}_version_date',
-                                    retries = 0)
-            
+                python_callable=lambda:ptc_cred.get_conn().cursor().execute(sql_refresh_mat_view),
+                task_id=f'refresh_{layer}_version_date',
+                retries = 0
+            )
+
             pull_ptc_layer >> refresh_mat_view
