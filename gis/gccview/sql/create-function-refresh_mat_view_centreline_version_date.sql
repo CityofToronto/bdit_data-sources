@@ -22,6 +22,6 @@ REVOKE ALL ON FUNCTION gis.refresh_mat_view_centreline_version_date() FROM PUBLI
 
 GRANT EXECUTE ON FUNCTION gis.refresh_mat_view_centreline_version_date() TO gis_admins;
 
-GRANT EXECUTE ON FUNCTION gis.refresh_mat_view_centreline_version_date() TO ptc_airflow_bot;
+GRANT EXECUTE ON FUNCTION gis.refresh_mat_view_centreline_version_date() TO gcc_bot;
 
 GRANT EXECUTE ON FUNCTION gis.refresh_mat_view_centreline_version_date() TO ptc_humans;
