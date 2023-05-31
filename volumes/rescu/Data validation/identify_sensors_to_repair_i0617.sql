@@ -1,4 +1,8 @@
---this query can be used to map detectors
+--this query can be used to identify detectors for repair requests.
+    --recommend opening in qgis and styling based on 'classify'. Look for geographical gaps with bad/inactive sensors. 
+    --designate a set of `time_bins` (ie. current year) to get exact % active bins 
+    --includes inactive sensors that don't have any records during the designated `time_bins`
+--runs in 20s for 2023-01--2023-05
 
 DROP TABLE gwolofs.i0617_rescu_sensor_eval;
 
