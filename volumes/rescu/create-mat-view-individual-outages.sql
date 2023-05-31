@@ -8,7 +8,16 @@ AS
 --runs in 2 minutes for all of rescu.volumes15min
 --doesn't include outages that end after last data point (by detector)
 
-WITH bin_gaps AS (
+WITH non_zero_bins AS (
+    SELECT
+        detector_id,
+        datetime_bin,
+        volume_15min
+    FROM rescu.volumes_15min
+    WHERE COALESCE(volume_15min, 0) > 0
+),
+
+bin_gaps AS (
     SELECT
         detector_id,
         datetime_bin,
@@ -29,14 +38,7 @@ WITH bin_gaps AS (
         datetime_bin - LAG(
             datetime_bin, 1
         ) OVER (PARTITION BY detector_id ORDER BY datetime_bin) AS bin_gap
-    FROM (
-        SELECT
-            detector_id,
-            datetime_bin,
-            volume_15min
-        FROM rescu.volumes_15min
-        WHERE COALESCE(volume_15min, 0) > 0
-    ) AS v15_remove_zeros
+    FROM non_zero_bins
 --WHERE datetime_bin >= '2023-05-01'
 ),
 
@@ -46,7 +48,7 @@ joined_outages AS (
         bt.detector_id,
         bt.gap_start AS time_start,
         bt.gap_end AS time_end,
-        ro.time_start AS nwout_start,
+        ro.time_start AS nwout_start, --network outage start
         ro.time_end AS nwout_end,
         tsrange(bt.gap_start, bt.gap_end, '[]') AS time_range,
         (bt.gap_start)::DATE AS date_start,
@@ -57,12 +59,12 @@ joined_outages AS (
         ) / 86400 AS duration_days
     FROM bin_gaps AS bt
     LEFT JOIN gwolofs.network_outages AS ro ON
-        --left join to network wide outages, include WHERE ro.time_range is null
+        --left join to network wide outages
         tsrange(bt.gap_start, bt.gap_end, '[]') @> ro.time_range
     WHERE
         bt.bin_break = 1
         AND bt.bin_gap IS NOT NULL
-        --Start and end are inclusive so interval 15 minutes implies a gap of 2 bins or 30 minutes.  
+        --Start and end are inclusive so interval 15 minutes implies a gap of 2 bins or 30 minutes
         AND bt.gap_end - bt.gap_start >= INTERVAL '15 MINUTES'
     ORDER BY bt.gap_start
 )
