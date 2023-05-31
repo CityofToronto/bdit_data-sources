@@ -1,3 +1,5 @@
+--this query can be used to map detectors
+
 DROP TABLE gwolofs.i0617_rescu_sensor_eval;
 
 CREATE TABLE gwolofs.i0617_rescu_sensor_eval(
@@ -28,6 +30,7 @@ INSERT INTO gwolofs.i0617_rescu_sensor_eval (
     classify
 )
 
+--select all time bins in order to get a true % active count
 WITH time_bins AS (
     SELECT generate_series(
         '2023-01-01 00:00'::TIMESTAMP,
@@ -35,6 +38,7 @@ WITH time_bins AS (
         '15 minutes') AS time_bin
 ),
 
+--exclude network outages from time bins so not to penalize all detectors for network issue. 
 tbins_omit_outages AS (
     SELECT tb.time_bin
     FROM time_bins AS tb
@@ -42,8 +46,7 @@ tbins_omit_outages AS (
     WHERE ro.time_range IS NULL
 ),
 
---add number of outages from individual_outages to summary?
-
+--determine volume by detectors
 sensor_volumes AS (
     SELECT
         v1.detector_id,
@@ -61,7 +64,7 @@ sensor_volumes AS (
     ORDER BY 3
 )
 
---active sensors during period 'time_bins'
+--active detectors during period 'time_bins'
 SELECT
     di.detector_id,
     di.number_of_lanes,
@@ -85,7 +88,7 @@ WHERE di.primary_road NOT LIKE 'RAMP%'
 
 UNION
 
---inactive sensors:
+--inactive detectors (not active during time_bins)
 SELECT
     di.detector_id,
     di.number_of_lanes,
