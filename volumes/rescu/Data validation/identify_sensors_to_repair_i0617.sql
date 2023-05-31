@@ -38,7 +38,7 @@ INSERT INTO gwolofs.i0617_rescu_sensor_eval (
 WITH time_bins AS (
     SELECT generate_series(
         '2023-01-01 00:00'::TIMESTAMP,
-        '2023-05-29 23:45',
+        '2023-05-15 14:30',
         '15 minutes') AS time_bin
 ),
 
@@ -82,9 +82,9 @@ SELECT
     ST_SetSRID(ST_MakePoint(di.longitude, di.latitude), 4326) AS geom,
     CASE
         WHEN sv.last_active >= '2023-05-15'
-            AND sv.bins_active_percent >= 0.7 THEN 'good'
+            AND sv.bins_active_percent >= 0.6 THEN 'good'
         WHEN sv.last_active < '2023-05-15' --the most recent day with data
-            OR sv.bins_active_percent < 0.7 THEN 'bad' --<70% of days have data
+            OR sv.bins_active_percent < 0.6 THEN 'bad' --<60% of days have data
     END AS classify
 FROM sensor_volumes AS sv
 JOIN rescu.detector_inventory AS di ON di.detector_id = sv.detector_id
