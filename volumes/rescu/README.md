@@ -54,7 +54,7 @@ Road Emergency Services Communication Unit (RESCU) track traffic volume on expre
 ## Schema
 
 - Data is stored in the `rescu` schema.
-- The main tables are listed below. Please note that `rescu.volumes_15min` is the table that should be used for querying.
+- The main tables are listed below. Please note that `rescu.volumes_15min` and `rescu.detector_inventory` are the tables that should be used for querying.
 
 ### Data Dictionary:
 
@@ -64,7 +64,7 @@ Arterycode can be used used to join the data with `traffic.artery_data`
 
 | column_name      | data_type         | sample                | Description  
 |:-----------------|:------------------|:----------------------|
-| detector_id      | text              | DW0040DEL             |
+| detector_id      | text              | DW0040DEL             | You can quickly tell the direction via the second last letter. 
 | number_of_lanes  | smallint          | 3                     |
 | latitude         | numeric           | 43.635944             |
 | longitude        | numeric           | -79.401186            |
@@ -123,7 +123,7 @@ rescu.volumes_15min
 ### 1- What is the purpose of using the data? (Primary or secondary)	
 
 Analytics as fulfilled by data specialists as part of data requests. 
-Despite data quality concerns (usually due to malfunctioning detectors) RESCU data are the only source of volume counts for highways within Toronto's jurisdiction (the Allen Expressway, the Gardiner Expressway and the Don Valley Parkway).
+Despite data quality concerns (usually due to malfunctioning detectors) RESCU data are the only source of volume counts for highways within Toronto's jurisdiction (the Allen Expressway (*As at May 2023, there is no data on the Allen Expressway since 2021-10*), the Gardiner Expressway and the Don Valley Parkway).
 
 
 ### 2- Who uses this data within Data & Analytics unit (D&A)?  What tasks is data used for?	
@@ -135,9 +135,9 @@ Data specialists and research analysts. Used for data requests (mostly staff ask
 
 ### 4- What are the limitations with using this data based the above uses?	
 
-Data gaps make data unreliable for data requests. 
-In 2022 and 2023 we have identified significant network wide outages that span days to weeks meaning data availability is very sparse. 
-There is a once a year opportunity to repair sensors  
+-Data gaps make data unreliable for data requests. 
+-In 2022 and 2023 (as of May) we have identified significant network wide outages that span days to weeks meaning data availability is very sparse. 
+-There are rare opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/ 
 
 ### 5- Does this data get published?	
 
