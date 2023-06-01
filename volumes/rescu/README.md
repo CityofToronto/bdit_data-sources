@@ -54,69 +54,68 @@ Road Emergency Services Communication Unit (RESCU) track traffic volume on expre
 ## Schema
 
 - Data is stored in the `rescu` schema.
-- 
 - The main tables are listed below. Please note that `rescu.volumes_15min` is the table that should be used for querying.
 
 ### Data Dictionary:
 
-`detector_inventory` table: 
+`rescu.detector_inventory` table: 
 This table contains list and details of RESCU detectors in the City. Please note this table needs to be updated.
 Arterycode can be used used to join the data with `traffic.artery_data` 
 
-|Column Name | Type | Description|
-|------------|------|------------|
-"detector_id"| |
-"number_of_lanes"| |
-"latitude"| |
-"longitude"| |
-"det_group"| | "ALLEN" (Allen road), "FGG/LAKE" (Gardiner Expressway and Lakeshore ramps) , "FGG" (Gardiner Expressway), "DVP" (Don Valley Parkway), "LAKE" (Lakeshore),
-"road_class"| |
-"primary_road"| |
-"direction"| |
-"offset_distance"| |
-"offset_direction"| |
-"cross_road"| |
-"district"| |
-"ward"| |
-"vds_type"| |
-"total_loops"| |
-"sequence_number"| |
-"data_range_low"| |
-"data_range_high"| |
-"historical_count"| |
-"arterycode"| | Reference table for Artery Codes (internal reference for intersections and segments)
+| column_name      | data_type         | sample                | Description  
+|:-----------------|:------------------|:----------------------|
+| detector_id      | text              | DW0040DEL             |
+| number_of_lanes  | smallint          | 3                     |
+| latitude         | numeric           | 43.635944             |
+| longitude        | numeric           | -79.401186            |
+| det_group        | text              | LAKE                  | "ALLEN" (Allen road), "FGG/LAKE" (Gardiner Expressway and Lakeshore ramps) , "FGG" (Gardiner Expressway), "DVP" (Don Valley Parkway), "LAKE" (Lakeshore)
+| road_class       | text              | Major Arterial        |
+| primary_road     | text              | Lake Shore Blvd W     |
+| direction        | character varying | E                     |
+| offset_distance  | integer           |                       |
+| offset_direction | text              | W of                  |
+| cross_road       | text              | BATHURST STREET       |
+| district         | text              | Toronto and East York |
+| ward             | text              | Trinity-Spadina (20)  |
+| vds_type         | text              | inductive_loop        |
+| total_loops      | smallint          | 6                     |
+| sequence_number  | text              | LAKE173               |
+| data_range_low   | integer           | 20000                 |
+| data_range_high  | integer           | 30000                 |
+| historical_count | integer           | 9700                  |
+| arterycode       | integer           | 826                   | Reference table for Artery Codes (internal reference for intersections and segments)
 
+`rescu.raw_20sec` table: the table includes the raw number of counts recorded by the detector during that 20-second interval. **This table only has data for 7 days, the last being 2020-04-08.**
 
-`raw_20sec` table: the table includes the raw number of counts recorded by the detector during that 20-second interval.
+| column_name   | data_type                   | sample              |
+|:--------------|:----------------------------|:--------------------|
+| datetime_bin  | timestamp without time zone | 2020-04-08 00:00:00 |
+| detector_id   | text                        | DE0010DEG           |
+| lane_no       | integer                     | 1                   |
+| volume        | integer                     | 0                   |
+| occupancy     | numeric                     | 0.0                 |
+| speed         | numeric                     | 0.0                 |
+| uid           | integer                     | 1                   |
 
-|Column Name | Type | Description|
-|------------|------|------------|
-"datetime_bin" | |
-"detector_id" | |
-"lane_no" | |
-"volume" | |
-"occupancy" | |
-"speed" | |
-"uid | |
+`rescu.raw_15min` table: The table includes aggregated raw counts over 15 min interval. This table is used to insert rows into `rescu.volumes_15min` via `/home/gwolofs/bdit_data-sources/volumes/rescu/create-trigger-function-populate_volumes_15min.sql`.
 
-`raw_15min` table:The table includes  aggregated raw counts over 15 min interval.
+rescu.raw_15min
+| column_name   | data_type   | sample                     | Description 
+|:--------------|:------------|:---------------------------|
+| dt            | date        | 2020-01-13                 |
+| raw_info      | text        | 0000 - 0015 de0010der   -1 | Format "hhmm - hhmm detector volume". If volume is -1 that means the detector is down and the row is not inserted into volumes_15min. 
+| raw_uid       | integer     | 1                          |
 
-|Column Name | Type | Description|
-|------------|------|------------|
-"raw_info" | | 
-"raw_uid" | |
+`rescu.volumes_15min` table: This table includes processed 15 min counts.
 
-
-`volumes_15min` table: This table includes processed 15 min counts.
-
-|Column Name | Type | Description|
-|------------|------|------------|
-"detector_id"| |
-"datetime_bin"| |
-"volume_15min"| | if this is -1 that means the detector is down
-"arterycode"| |
-"volume_uid"| |
-
+rescu.volumes_15min
+| column_name   | data_type                   | sample              |
+|:--------------|:----------------------------|:--------------------|
+| detector_id   | text                        | DE0010DER           |
+| datetime_bin  | timestamp without time zone | 2019-01-02 00:00:00 |
+| volume_15min  | integer                     | 29                  | 
+| arterycode    | integer                     | 3272                |
+| volume_uid    | integer                     | 5234941             |
 
 
 ## What do we use this for:
@@ -136,7 +135,9 @@ Data specialists and research analysts. Used for data requests (mostly staff ask
 
 ### 4- What are the limitations with using this data based the above uses?	
 
-Data gaps make data unreliable for data requests.  
+Data gaps make data unreliable for data requests. 
+In 2022 and 2023 we have identified significant network wide outages that span days to weeks meaning data availability is very sparse. 
+There is a once a year opportunity to repair sensors  
 
 ### 5- Does this data get published?	
 
