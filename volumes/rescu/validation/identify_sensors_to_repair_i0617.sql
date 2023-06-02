@@ -15,7 +15,7 @@ CREATE TABLE gwolofs.i0617_rescu_sensor_eval(
     total_volume bigint,
     bins_active_percent numeric,
     bins_active bigint,
-    last_active TIMESTAMP,
+    last_active timestamp,
     geom geometry,
     classify text
 );
@@ -37,7 +37,7 @@ INSERT INTO gwolofs.i0617_rescu_sensor_eval (
 --select all time bins in order to get a true % active count
 WITH time_bins AS (
     SELECT generate_series(
-        '2023-01-01 00:00'::TIMESTAMP,
+        '2023-01-01 00:00'::timestamp,
         '2023-05-15 14:30',
         '15 minutes') AS time_bin
 ),
@@ -66,6 +66,17 @@ sensor_volumes AS (
     LEFT JOIN rescu.volumes_15min AS v1 ON v1.datetime_bin = tboo.time_bin
     GROUP BY 1
     ORDER BY 3
+),
+
+--no volumes during time_bins period. Get last active date from volumes.
+inactive_sensors AS (
+    SELECT
+        v1.detector_id,
+        MAX(v1.datetime_bin) AS last_active
+    FROM rescu.volumes_15min AS v1
+    LEFT JOIN sensor_volumes AS sv ON v1.detector_id = sv.detector_id
+    WHERE sv.detector_id IS NULL
+    GROUP BY 1
 )
 
 --active detectors during period 'time_bins'
@@ -105,15 +116,7 @@ SELECT
     inactive.last_active,
     ST_SetSRID(ST_MakePoint(di.longitude, di.latitude), 4326) AS geom,
     'inactive' AS classify
-FROM (
-    SELECT
-        v1.detector_id,
-        MAX(v1.datetime_bin) AS last_active
-    FROM rescu.volumes_15min AS v1
-    LEFT JOIN sensor_volumes AS sv ON v1.detector_id = sv.detector_id
-    WHERE sv.detector_id IS NULL
-    GROUP BY 1
-) AS inactive
+FROM inactive_sensors AS inactive
 LEFT JOIN rescu.detector_inventory AS di ON di.detector_id = inactive.detector_id
 WHERE di.primary_road NOT LIKE 'RAMP%'
 ORDER BY di.detector_id
