@@ -21,14 +21,14 @@ bin_gaps AS (
     SELECT
         datetime_bin,
         volume,
-        datetime_bin - INTERVAL '15 minutes' AS gap_end,
+        datetime_bin - interval '15 MINUTES' AS gap_end,
         CASE
             WHEN
                 datetime_bin - LAG(datetime_bin, 1) OVER (ORDER BY datetime_bin) = '00:15:00' THEN 0
             ELSE 1
         END AS bin_break,
         datetime_bin - LAG(datetime_bin, 1) OVER (ORDER BY datetime_bin) AS bin_gap,
-        LAG(datetime_bin, 1) OVER (ORDER BY datetime_bin) + INTERVAL '15 minutes' AS gap_start
+        LAG(datetime_bin, 1) OVER (ORDER BY datetime_bin) + interval '15 MINUTES' AS gap_start
     FROM rescu_summary
 )
 
@@ -36,12 +36,12 @@ bin_gaps AS (
 SELECT
     gap_start AS time_start,
     gap_end AS time_end,
+    (gap_start)::date AS date_start,
+    (gap_end)::date AS date_end,
     tsrange(gap_start, gap_end, '[]') AS time_range,
-    (gap_start)::DATE AS date_start,
-    (gap_end)::DATE AS date_end,
-    daterange((gap_start)::DATE, (gap_end)::DATE, '[]') AS date_range,
+    daterange((gap_start)::date, (gap_end)::date, '[]') AS date_range,
     --no minimum duration for a network wide outage
-    EXTRACT(epoch FROM gap_end - gap_start) / 86400 AS duration_days
+    EXTRACT(EPOCH FROM gap_end - gap_start) / 86400 AS duration_days
 FROM bin_gaps
 WHERE
     bin_break = 1
