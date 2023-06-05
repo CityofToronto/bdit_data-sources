@@ -57,7 +57,8 @@ The City's Road Emergency Services Communication Unit (RESCU) tracks and manages
 ### Data Dictionary:
 
 `rescu.detector_inventory` table: 
-This table contains list and details of RESCU detectors in the City. Please note this table needs to be updated.
+This table contains details of RESCU VDS in the City. Its origin has been lost to time and it is not being automatically updated, so details may be out of date
+.
 Arterycode can be used used to join the data with `traffic.artery_data` 
 
 | column_name      | data_type         | sample                | Description  
