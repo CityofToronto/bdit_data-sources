@@ -1,47 +1,52 @@
-﻿# Traffic Signals
+# Assets
 
-This is one of the [datasets managed by the Traffic Control group](https://github.com/CityofToronto/bdit_vz_programs#datasets-and-their-owners). Data is updated by pulling GeoJSON files from City of Toronto Open Data.
+An [airflow process](../../../dags/assets_pull.py) to automatically extract Open Data on assets by pulling GeoJSON files from City of Toronto Open Data. Currently pulling two datasets
 
 - Red Light Cameras: https://open.toronto.ca/dataset/red-light-cameras/
-- Other traffic signals: https://open.toronto.ca/dataset/traffic-signals-tabular/
+- Traffic signals: https://open.toronto.ca/dataset/traffic-signals-tabular/
 
-Here, we set up an [airflow process](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/assets_pull.py) to automatically extract Traffic Signals data from OpenAPI and update the relevant tables in the bigdata RDS. The pipeline is in `pull_traffic_signals.py` and it pulls multiple types of traffic signals to tables `vz_safety_programs_staging.rlc`, `vz_safety_programs_staging.signals_cart`, and `gis.traffic_signal`.
+## Where does each type of asset data get sent?
 
-## Where does each type of traffic signal get sent?
+`gis.traffic_signal` (audited table): stores the traffic signal data in the wide format from Open Data
 
-vz_safety_programs_staging.rlc
-- Red Light Cameras (RLC)
+- [`pull_traffic_signal()`](#traffic-signal-data): Traffic Signals
 
-vz_safety_programs_staging.signals_cart
-- Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
-- Accessible Pedestrian Signals (APS)
-- Pedestrian Crossovers (PXO)
-- Traffic Signals
+`vz_safety_programs_staging.rlc`
 
-gis.traffic_signal (audited table)
-- Traffic Signals
+- [`pull_rlc()`](#rlc): Red Light Cameras (RLC)
+
+`vz_safety_programs_staging.signals_cart`: stores data by traffic signal asset type for the purposes of the Vision Zero Map & Dashboard. Instead of the wide format from Open Data, each of the below types has its own row.
+
+- [`pull_lpi()`](#aps-and-lpi): Pedestrian Head Start Signals/Leading Pedestrian Intervals (LPI)
+- [`pull_aps()`](#aps-and-lpi): Accessible Pedestrian Signals (APS)
+- [`pull_pxo()`](#pxo): Pedestrian Crossovers (PXO)
+- [`pull_traffic_signal()`](#traffic-signal-data): Traffic Signals
 
 ## RLC
+
 https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/9fcff3e1-3737-43cf-b410-05acd615e27b/resource/7e4ac806-4e7a-49d3-81e1-7a14375c9025/download/Red%20Light%20Cameras%20Data.geojson
 
 Every time a new version of RLC dataset is pulled, table `vz_safety_programs_staging.rlc` would get truncated beforehand.
 
-## APS and LPI
+## Traffic Signal Data
+
 https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
 
-The script loops through each traffic signal record in the URL json and would only pull those that are indicated to have APS/LPI installed. Then, existing APS/LPI records in `vz_safety_programs_staging.signals_cart` would be deleted to clear space for a new version of dataset.
+This is one of the [datasets managed by the Traffic Control group](https://github.com/CityofToronto/bdit_vz_programs#datasets-and-their-owners). 
+ Traffic Signals data from Open and update the relevant tables in the bigdata RDS. 
+
+Every record from this URL will end up in `gis.traffic_signal` and `vz_safety_programs_staging.signals_cart`. For `signals_cart`, existing records of traffic signals will first be deleted and then new ones inserted. For `traffic_signal`, the script will perform upsert instead so that the changes could be audited.
+
+### APS and LPI
+
+The `pull_lpi()` and `pull_aps()` functions loop through each traffic signal record in the JSON and only pull those that are indicated to have APS/LPI installed. Then, existing APS/LPI records in `vz_safety_programs_staging.signals_cart` are deleted to clear space for a new version of dataset.
 
 ## PXO
 https://secure.toronto.ca/opendata/cart/pedestrian_crossovers/v2?format=json
 
-Similar to APS & LPI, just that the URL is different.
+Similar to [APS & LPI](#aps-and-lpi), but this pulls from a different dataset.
 
-## Traffic Signals (general)
-https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
-
-Every record from this URL will end up in `gis.traffic_signal` and `vz_safety_programs_staging.signals_cart`. For `signals_cart`, existing records of traffic signals will first be deleted and then new ones inserted. For `traffic_signal`, the script will perform upsert instead so that the changes could be audited.
-
-# Alternate version
+# Locally pulling from Oracle (archive)
 
 Data is updated by automatic feed in Traffic Control and stored in their Oracle database. Here, we set up an airflow process to automatically extract Traffic Signal data from the Oracle database using Foreign Data Wrappers and update the table in the bigdata RDS. The pipeline consists of the following steps:  
 
