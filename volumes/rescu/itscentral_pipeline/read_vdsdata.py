@@ -94,3 +94,7 @@ final = df[['divisionid','datetime','vdsid']].merge(
     lane_data_df, how = 'left', left_index = True, right_on = 'join_col')
 
 print(final.head(20))
+
+#todo: remove empty rows prior to processing
+#time to improve speed further
+#what is total volume?
