@@ -69,13 +69,15 @@ Here is a description of the `classification_uid`s and corresponding types. For 
 | ------------------ | -------------- | ---------- |
 1 | Light | Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2 | Bicycle | A bicycle - this classification_uid is used to track bicycle turning movements |
-3 | Bus | A large vehicle that provides transportation for many humans. This includes buses *and streetcars* |
+3<sup>1</sup> | Bus | A large vehicle that provides transportation for many humans. This currently includes buses *and streetcars*, though this wasn't always the case. |
 4 | SingleUnitTruck | A truck that has a non-detachable cab and trailer system |
 5 | ArticulatedTruck | A truck that has a detachable cab and trailer system |
 6 | Pedestrian | A walker. May or may not include zombies... |
 8 | WorkVan | A van used for commercial purposes |
-9 | MotorizedVehicle | miscellaneous vehicles |
+9<sup>1</sup> | MotorizedVehicle | Miscellaneous vehicles. This category originally included streetcars but now does not. |
 10 | Bicycle | A bicycle - this classification_uid is used to track bicycle approaches (entrances and exits) |
+
+1. Streetcars were for some time classified as MotorizedVehicle, though they now fall in the Bus category. The suspected date for this change is circa 2019-08-01 though this has not been fully confirmed and may vary betseen intersections.
 
 #### `intersections`
 
