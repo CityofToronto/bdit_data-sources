@@ -10,11 +10,13 @@ CONFIG.read(str(Path.home().joinpath('db.cfg'))) #Creates a path to your db.cfg 
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
-date_start = datetime.timestamp(datetime.fromisoformat('2023-05-24'))
+date_start = datetime.timestamp(datetime.fromisoformat('2023-05-16'))
 sql = f"SELECT * FROM public.vdsdata WHERE timestamputc >= {date_start} AND timestamputc < {date_start} + 86400"
 
 with con: 
     df = pd.read_sql(sql, con)
+
+print(f"Number of rows: {df.shape[0]}")
 
 # Parse lane data
 def parse_lane_data(laneData):
@@ -28,7 +30,7 @@ def parse_lane_data(laneData):
 
             # Get speed
             #Stored in km/h * 100. 65535 for null value. Convert 0 to null to maintain backward compatibility
-            speed = struct.unpack('<H', mv[index + 1] + mv[index + 2])[0] #<H denotes stored in little-endian format 
+            speed = struct.unpack('<H', mv[index + 1] + mv[index + 2])[0] #>H denotes stored in big-endian format (PostGreSQL uses big-endian)
             speedKmh = None if speed == 65535 or speed == 0 else speed / 100.0
 
             # Get volume
@@ -64,11 +66,10 @@ def parse_lane_data(laneData):
 
 #for vdslatestdata
 #try #is none
-df[df['lanedata'] is None]
-empty_rows = df[df['lanedata'] == '\\x']
-print(f'Empty rows discarded: {empty_rows.shape[0]}')
-
-df.drop(empty_rows.index, inplace = True) #remove empty rows
+#df[df['lanedata'] is None]
+#empty_rows = df[df['lanedata'] == '\\x']
+#print(f'Empty rows discarded: {empty_rows.shape[0]}')
+#df.drop(empty_rows.index, inplace = True) #remove empty rows
 
 df['datetime'] = df['timestamputc'].map(lambda x: datetime.fromtimestamp(x))
 
@@ -76,16 +77,20 @@ df['datetime'] = df['timestamputc'].map(lambda x: datetime.fromtimestamp(x))
 
 #parse each column entry 
 lane_data = df['lanedata'].map(parse_lane_data)
+n_rows = lane_data.map(len)
 
-#convert each entry to a dataframe 
-cols = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent', 'volumePassengerVehiclesPerHour', 'volumeSingleUnitTrucksPerHour', 'volumeComboTrucksPerHour', 'volumeMultiTrailerTrucksPerHour']
-df['lanedata'] = df['lanedata'].map(lambda a: pd.DataFrame(a, columns = cols))
+lane_data_flat = []
+for sublist in lane_data:
+    for item in sublist:
+        lane_data_flat.append(item)
+
+lane_data_df = pd.DataFrame(lane_data_flat, 
+                         columns = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent', 'volumePassengerVehiclesPerHour', 'volumeSingleUnitTrucksPerHour', 'volumeComboTrucksPerHour', 'volumeMultiTrailerTrucksPerHour'])
 
 #expand rows 
-lane_data = pd.concat(df.lanedata.values)
-lane_data['join_col'] = df.index.repeat(df.lanedata.str.len()) #use original index as a join column
+lane_data_df['join_col'] = df.index.repeat(n_rows) #use original index as a join column
 
 final = df[['divisionid','datetime','vdsid']].merge(
-    lane_data, how = 'left', left_index = True, right_on = 'join_col')
+    lane_data_df, how = 'left', left_index = True, right_on = 'join_col')
 
-
+print(final.head(20))
