@@ -46,8 +46,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gis.traffic_signal
-    OWNER to gis_admins;
+ALTER TABLE IF EXISTS gis.traffic_signal OWNER TO gis_admins;
 
 GRANT SELECT ON TABLE gis.traffic_signal TO bdit_humans;
 
@@ -55,33 +54,30 @@ GRANT ALL ON TABLE gis.traffic_signal TO gis_admins;
 
 GRANT ALL ON TABLE gis.traffic_signal TO vz_api_bot;
 
-COMMENT ON TABLE gis.traffic_signal
-    IS 'last updated: 2022517';
+COMMENT ON TABLE gis.traffic_signal IS 'last updated: 2022517';
 -- Index: traffic_signal_gix
 
 -- DROP INDEX IF EXISTS gis.traffic_signal_gix;
 
-CREATE INDEX IF NOT EXISTS traffic_signal_gix
-    ON gis.traffic_signal USING gist
-    (geom)
-    TABLESPACE pg_default;
+CREATE INDEX IF NOT EXISTS traffic_signal_gix ON gis.traffic_signal USING gist (geom) 
+TABLESPACE pg_default;
 
 -- Trigger: audit_trigger_row
 
 -- DROP TRIGGER IF EXISTS audit_trigger_row ON gis.traffic_signal;
 
 CREATE TRIGGER audit_trigger_row
-    AFTER INSERT OR DELETE OR UPDATE 
-    ON gis.traffic_signal
-    FOR EACH ROW
-    EXECUTE PROCEDURE gis.if_modified_func('true');
+AFTER INSERT OR DELETE OR UPDATE 
+ON gis.traffic_signal
+FOR EACH ROW
+EXECUTE PROCEDURE gis.if_modified_func('true');
 
 -- Trigger: audit_trigger_stm
 
 -- DROP TRIGGER IF EXISTS audit_trigger_stm ON gis.traffic_signal;
 
 CREATE TRIGGER audit_trigger_stm
-    AFTER TRUNCATE
-    ON gis.traffic_signal
-    FOR EACH STATEMENT
-    EXECUTE PROCEDURE gis.if_modified_func('true');
+AFTER TRUNCATE
+ON gis.traffic_signal
+FOR EACH STATEMENT
+EXECUTE PROCEDURE gis.if_modified_func('true');
