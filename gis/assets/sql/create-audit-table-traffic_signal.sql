@@ -59,7 +59,7 @@ COMMENT ON TABLE gis.traffic_signal IS 'last updated: 2022517';
 
 -- DROP INDEX IF EXISTS gis.traffic_signal_gix;
 
-CREATE INDEX IF NOT EXISTS traffic_signal_gix ON gis.traffic_signal USING gist (geom) 
+CREATE INDEX IF NOT EXISTS traffic_signal_gix ON gis.traffic_signal USING gist(geom)
 TABLESPACE pg_default;
 
 -- Trigger: audit_trigger_row
