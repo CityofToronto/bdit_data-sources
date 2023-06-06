@@ -60,10 +60,10 @@ var volumeMultiTrailerTrucksPerHour = multiTrailerTrucksVolume == UInt16.MaxValu
 
 public.vdsconfig
 --'VdsConfig has the sourceid which is the name of the VDS.'
-          column_name                    data_type                  sample
+          column_name                    data_type                  sample  Comment
 0          divisionid                     smallint                    8001
 1               vdsid                      integer                 5462004
-2            sourceid            character varying           PX1408-Det019
+2            sourceid            character varying           PX1408-Det019  This column matches our detector_id. Convert both to uppercase. 
 3   starttimestamputc  timestamp without time zone     2022-09-26 13:04:41
 4     endtimestamputc  timestamp without time zone                    None
 5               lanes                     smallint                       1
