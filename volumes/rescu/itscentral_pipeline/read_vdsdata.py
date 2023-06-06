@@ -10,8 +10,19 @@ CONFIG.read(str(Path.home().joinpath('db.cfg'))) #Creates a path to your db.cfg 
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
-date_start = datetime.timestamp(datetime.fromisoformat('2021-05-16'))
-sql = f"SELECT * FROM public.vdsdata WHERE timestamputc >= {date_start} AND timestamputc < {date_start} + 86400"
+date_start = datetime.timestamp(datetime.fromisoformat('2023-05-17'))
+sql = f'''SELECT d.divisionid, d.timestamputc, d.vdsid, d.lanedata
+FROM public.vdsdata AS d
+WHERE timestamputc >= {date_start} 
+    AND timestamputc < {date_start} + 86400'''
+
+#for testing
+single_sensor_sql = f'''SELECT d.divisionid, d.timestamputc, d.vdsid, d.lanedata 
+FROM public.vdsdata AS d
+JOIN public.vdsconfig AS c ON d.vdsid = c.vdsid
+WHERE timestamputc >= {date_start} 
+  AND timestamputc < {date_start} + 86400
+  AND sourceid = 'de0020dwg';'''
 
 with con: 
     df = pd.read_sql(sql, con)
@@ -45,77 +56,86 @@ def parse_lane_data(laneData):
 
             # Get volume by vehicle lengths - these columns are empty 
             #Each class stored in vehicles per hour. 65535 for null value.
-            passengerVolume = struct.unpack('<H', mv[index + 7] + mv[index + 8])[0]
-            volumePassengerVehiclesPerHour = None if passengerVolume == 65535 else passengerVolume
-            singleUnitTrucksVolume = struct.unpack('<H', mv[index + 9] + mv[index + 10])[0]
-            volumeSingleUnitTrucksPerHour = None if singleUnitTrucksVolume == 65535 else singleUnitTrucksVolume
-            comboTrucksVolume = struct.unpack('<H', mv[index + 11] + mv[index + 12])[0]
-            volumeComboTrucksPerHour = None if comboTrucksVolume == 65535 else comboTrucksVolume
-            multiTrailerTrucksVolume = struct.unpack('<H', mv[index + 13] + mv[index + 14])[0]
-            volumeMultiTrailerTrucksPerHour = None if multiTrailerTrucksVolume == 65535 else multiTrailerTrucksVolume
+            #passengerVolume = struct.unpack('<H', mv[index + 7] + mv[index + 8])[0]
+            #volumePassengerVehiclesPerHour = None if passengerVolume == 65535 else passengerVolume
+            #singleUnitTrucksVolume = struct.unpack('<H', mv[index + 9] + mv[index + 10])[0]
+            #volumeSingleUnitTrucksPerHour = None if singleUnitTrucksVolume == 65535 else singleUnitTrucksVolume
+            #comboTrucksVolume = struct.unpack('<H', mv[index + 11] + mv[index + 12])[0]
+            #volumeComboTrucksPerHour = None if comboTrucksVolume == 65535 else comboTrucksVolume
+            #multiTrailerTrucksVolume = struct.unpack('<H', mv[index + 13] + mv[index + 14])[0]
+            #volumeMultiTrailerTrucksPerHour = None if multiTrailerTrucksVolume == 65535 else multiTrailerTrucksVolume
 
             # Increment index by 15 to move to the next lane
             index += 15
 
-            result.append([lane, speedKmh, volumeVehiclesPerHour, occupancyPercent, volumePassengerVehiclesPerHour, volumeSingleUnitTrucksPerHour, volumeComboTrucksPerHour, volumeMultiTrailerTrucksPerHour])
+            result.append([lane, speedKmh, volumeVehiclesPerHour, occupancyPercent]) #, volumePassengerVehiclesPerHour, volumeSingleUnitTrucksPerHour, volumeComboTrucksPerHour, volumeMultiTrailerTrucksPerHour])
             
     return result
 
-#for vdslatestdata
-#try #is none
-
 #get number of lanes in the binary data stream for each row
-row_lengths = list(map(lambda x: len(x) / 15, df.lanedata.values)) 
+row_lengths = df['lanedata'].map(len)
+empty_rows = df[row_lengths == 0]
 
-empty_rows = df[[x == 0 for x in row_lengths]]
-print(f'Empty rows discarded: {empty_rows.shape[0]}')
+if empty_rows.empty is False:
+    print(f'Rows with empty lanedata discarded: {empty_rows.shape[0]}')
+else: 
+    print(f'No empty rows discarded.')
 
 df.drop(empty_rows.index, inplace = True) #remove empty rows
 
-df['datetime'] = df['timestamputc'].map(lambda x: datetime.fromtimestamp(x))
+df['datetime'] = df['timestamputc'].map(datetime.fromtimestamp)
 
-#parse each column entry 
+#parse each `lanedata` column entry 
 lane_data = df['lanedata'].map(parse_lane_data)
 
-
+#flatten the nested list structure
 lane_data_flat = []
 for sublist in lane_data:
     for item in sublist:
         lane_data_flat.append(item)
 
+#convert list structure to df
 lane_data_df = pd.DataFrame(lane_data_flat, 
-                         columns = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent', 'volumePassengerVehiclesPerHour', 'volumeSingleUnitTrucksPerHour', 'volumeComboTrucksPerHour', 'volumeMultiTrailerTrucksPerHour'])
+                         columns = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent']) 
+#removed columns:, 'volumePassengerVehiclesPerHour', 'volumeSingleUnitTrucksPerHour', 'volumeComboTrucksPerHour', 'volumeMultiTrailerTrucksPerHour'])
 
-#expand rows 
+#repeat original index based on number of rows in result as a join column
 n_rows = lane_data.map(len)
-lane_data_df['join_col'] = df.index.repeat(n_rows) #use original index as a join column
+lane_data_df['join_col'] = df.index.repeat(n_rows) 
 
+#join with other columns
 final = df[['divisionid','datetime','vdsid']].merge(
-    lane_data_df, how = 'left', left_index = True, right_on = 'join_col')
+    right = lane_data_df, how = 'left', left_index = True, right_on = 'join_col')
+final.drop('join_col', inplace = True, axis = 1)
 
 print(final.head(20))
+
+final['datetime_bin'] = [x.floor(freq='15T') for x in final['datetime']] #pandas timestamp.floor 15T = 15 minutes
 
 #todo: remove empty rows prior to processing
 #time to improve speed further
 #what is total volume?
 
 #there are 28823 rows when groupped by datetime. The records can happen at any second, not just every 15 minutes. I guess it's rounded?
-final.groupby('datetime').agg({
-    'volumeVehiclesPerHour':'sum', 
-    'occupancyPercent':'sum', 
-    'volumePassengerVehiclesPerHour':'sum', 
-    'volumeSingleUnitTrucksPerHour':'sum', 
-    'volumeComboTrucksPerHour':'sum', 
-    'volumeMultiTrailerTrucksPerHour':'sum'}).sort_values()
+#each record represents 20sec, so find the average then divide by 4 to find 15 minute volume?
 
-#what about a single sensor?
-final[final['vdsid']==3].groupby(['datetime', 'vdsid']).agg({'volumeVehiclesPerHour':'sum'}).to_csv('/home/gwolofs/rescu_itscentral/one_sensor_sample.csv')
 
-#only volumeVehiclesPerHour and occupancyPercent have any data. 
+#this method of aggregation assumes missing bins are zeros. 
+def rate_to_volume(x): 
+    return x.sum() / 4 / 45 #/4 is for hourly to 15 minute volume. /45 is for 45 20sec bins per 15 minutes (assumes missing bins are zeros).   
+
+summary = final.groupby('datetime_bin').agg(
+        volume_15min = ('volumeVehiclesPerHour', rate_to_volume),
+        bin_count = ('datetime_bin', 'count'))
+
+with pd.option_context("display.max_rows", 1000): 
+    print(summary)
+
+""" #only volumeVehiclesPerHour and occupancyPercent have any data. 
 final.agg({
     'volumeVehiclesPerHour':'sum', 
     'occupancyPercent':'sum', 
     'volumePassengerVehiclesPerHour':'sum', 
     'volumeSingleUnitTrucksPerHour':'sum', 
     'volumeComboTrucksPerHour':'sum', 
-    'volumeMultiTrailerTrucksPerHour':'sum'})
+    'volumeMultiTrailerTrucksPerHour':'sum'}) """
