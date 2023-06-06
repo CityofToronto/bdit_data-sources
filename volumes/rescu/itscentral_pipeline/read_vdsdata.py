@@ -61,23 +61,22 @@ def parse_lane_data(laneData):
             
     return result
 
-# Get the column data from your source (e.g., a list or a NumPy array)
-#df = pd.read_csv('/home/gwolofs/rescu_itscentral/vdsdata_sample.csv')
-
 #for vdslatestdata
 #try #is none
-#df[df['lanedata'] is None]
-#empty_rows = df[df['lanedata'] == '\\x']
-#print(f'Empty rows discarded: {empty_rows.shape[0]}')
-#df.drop(empty_rows.index, inplace = True) #remove empty rows
+
+#get number of lanes in the binary data stream for each row
+row_lengths = list(map(lambda x: len(x) / 15, df.lanedata.values)) 
+
+empty_rows = df[[x == 0 for x in row_lengths]]
+print(f'Empty rows discarded: {empty_rows.shape[0]}')
+
+df.drop(empty_rows.index, inplace = True) #remove empty rows
 
 df['datetime'] = df['timestamputc'].map(lambda x: datetime.fromtimestamp(x))
 
-#df['lanedata'] = df['lanedata'].map(lambda a: bytes.fromhex(a[2:]))
-
 #parse each column entry 
 lane_data = df['lanedata'].map(parse_lane_data)
-n_rows = lane_data.map(len)
+
 
 lane_data_flat = []
 for sublist in lane_data:
@@ -88,6 +87,7 @@ lane_data_df = pd.DataFrame(lane_data_flat,
                          columns = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent', 'volumePassengerVehiclesPerHour', 'volumeSingleUnitTrucksPerHour', 'volumeComboTrucksPerHour', 'volumeMultiTrailerTrucksPerHour'])
 
 #expand rows 
+n_rows = lane_data.map(len)
 lane_data_df['join_col'] = df.index.repeat(n_rows) #use original index as a join column
 
 final = df[['divisionid','datetime','vdsid']].merge(
