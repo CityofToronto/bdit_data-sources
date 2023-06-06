@@ -8,7 +8,7 @@ CREATE TEMP TABLE distinct_locations AS (
     FROM wys.locations
 );
 
-TRUNCATE wys.wys_locations;
+TRUNCATE wys.locations;
 
-INSERT INTO wys.wys_locations
+INSERT INTO wys.locations
 SELECT * FROM distinct_locations;
