@@ -10,7 +10,7 @@ CONFIG.read(str(Path.home().joinpath('db.cfg'))) #Creates a path to your db.cfg 
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
-date_start = datetime.timestamp(datetime.fromisoformat('2023-05-16'))
+date_start = datetime.timestamp(datetime.fromisoformat('2021-05-16'))
 sql = f"SELECT * FROM public.vdsdata WHERE timestamputc >= {date_start} AND timestamputc < {date_start} + 86400"
 
 with con: 
@@ -43,7 +43,7 @@ def parse_lane_data(laneData):
             occupancy = struct.unpack('<H', mv[index + 5] + mv[index + 6])[0]
             occupancyPercent = None if occupancy == 65535 else occupancy / 100.0
 
-            # Get volume by vehicle lengths
+            # Get volume by vehicle lengths - these columns are empty 
             #Each class stored in vehicles per hour. 65535 for null value.
             passengerVolume = struct.unpack('<H', mv[index + 7] + mv[index + 8])[0]
             volumePassengerVehiclesPerHour = None if passengerVolume == 65535 else passengerVolume
@@ -98,3 +98,24 @@ print(final.head(20))
 #todo: remove empty rows prior to processing
 #time to improve speed further
 #what is total volume?
+
+#there are 28823 rows when groupped by datetime. The records can happen at any second, not just every 15 minutes. I guess it's rounded?
+final.groupby('datetime').agg({
+    'volumeVehiclesPerHour':'sum', 
+    'occupancyPercent':'sum', 
+    'volumePassengerVehiclesPerHour':'sum', 
+    'volumeSingleUnitTrucksPerHour':'sum', 
+    'volumeComboTrucksPerHour':'sum', 
+    'volumeMultiTrailerTrucksPerHour':'sum'}).sort_values()
+
+#what about a single sensor?
+final[final['vdsid']==3].groupby(['datetime', 'vdsid']).agg({'volumeVehiclesPerHour':'sum'}).to_csv('/home/gwolofs/rescu_itscentral/one_sensor_sample.csv')
+
+#only volumeVehiclesPerHour and occupancyPercent have any data. 
+final.agg({
+    'volumeVehiclesPerHour':'sum', 
+    'occupancyPercent':'sum', 
+    'volumePassengerVehiclesPerHour':'sum', 
+    'volumeSingleUnitTrucksPerHour':'sum', 
+    'volumeComboTrucksPerHour':'sum', 
+    'volumeMultiTrailerTrucksPerHour':'sum'})
