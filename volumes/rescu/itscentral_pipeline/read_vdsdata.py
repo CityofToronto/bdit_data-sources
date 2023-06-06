@@ -10,20 +10,16 @@ CONFIG.read(str(Path.home().joinpath('db.cfg'))) #Creates a path to your db.cfg 
 dbset = CONFIG['DBSETTINGS']
 con = connect(**dbset)
 
-date_start = datetime.timestamp(datetime.fromisoformat('2023-05-17'))
-sql = f'''SELECT d.divisionid, d.timestamputc, d.vdsid, d.lanedata
+date_start = datetime.timestamp(datetime.fromisoformat('2023-05-10'))
+sql = f'''SELECT c.sourceid AS detector_id, d.divisionid, d.timestamputc, d.vdsid, d.lanedata 
 FROM public.vdsdata AS d
+JOIN public.vdsconfig AS c ON 
+    d.vdsid = c.vdsid 
+    AND d.divisionid = c.divisionid --necessary?
 WHERE timestamputc >= {date_start} 
-    AND timestamputc < {date_start} + 86400'''
-
-#for testing
-single_sensor_sql = f'''SELECT d.divisionid, d.timestamputc, d.vdsid, d.lanedata 
-FROM public.vdsdata AS d
-JOIN public.vdsconfig AS c ON d.vdsid = c.vdsid
-WHERE timestamputc >= {date_start} 
-  AND timestamputc < {date_start} + 86400
-  AND sourceid = 'de0020dwg';'''
-
+  AND timestamputc < {date_start} + 86400;'''
+# AND sourceid = 'de0020dwg';''' #for testing
+ 
 with con: 
     df = pd.read_sql(sql, con)
 
@@ -104,7 +100,7 @@ n_rows = lane_data.map(len)
 lane_data_df['join_col'] = df.index.repeat(n_rows) 
 
 #join with other columns
-final = df[['divisionid','datetime','vdsid']].merge(
+final = df[['detector_id', 'divisionid','datetime','vdsid']].merge(
     right = lane_data_df, how = 'left', left_index = True, right_on = 'join_col')
 final.drop('join_col', inplace = True, axis = 1)
 
@@ -112,14 +108,7 @@ print(final.head(20))
 
 final['datetime_bin'] = [x.floor(freq='15T') for x in final['datetime']] #pandas timestamp.floor 15T = 15 minutes
 
-#todo: remove empty rows prior to processing
-#time to improve speed further
-#what is total volume?
-
-#there are 28823 rows when groupped by datetime. The records can happen at any second, not just every 15 minutes. I guess it's rounded?
-#each record represents 20sec, so find the average then divide by 4 to find 15 minute volume?
-
-
+#aggregate from 20s hourly rate to 15 minute volume
 #this method of aggregation assumes missing bins are zeros. 
 def rate_to_volume(x): 
     return x.sum() / 4 / 45 #/4 is for hourly to 15 minute volume. /45 is for 45 20sec bins per 15 minutes (assumes missing bins are zeros).   
@@ -130,6 +119,13 @@ summary = final.groupby('datetime_bin').agg(
 
 with pd.option_context("display.max_rows", 1000): 
     print(summary)
+
+print(f"Total daily volume: {summary['volume_15min'].sum():.0f}")
+
+volumes_15min = final.groupby(['detector_id', 'datetime_bin']).agg(
+        volume_15min = ('volumeVehiclesPerHour', rate_to_volume),
+        bin_count = ('datetime_bin', 'count'))
+
 
 """ #only volumeVehiclesPerHour and occupancyPercent have any data. 
 final.agg({
