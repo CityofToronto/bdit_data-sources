@@ -4,8 +4,8 @@ Can we publish this to bdit_data-sources?**
 public.vdsdatalatest
 --'VdsDataLatest (only the latest data for each VDS)'
 --'I guess this coudld be used for streaming? It only has the latest 1 record for each VDS'
-    column_name data_type      sample
-0    divisionid  smallint           2
+    column_name data_type      sample   Comments
+0    divisionid  smallint           2   Always 2 or 8001 in this table.
 1  timestamputc   integer  1661663420
 2         vdsid   integer          50
 3      lanedata     bytea          []
