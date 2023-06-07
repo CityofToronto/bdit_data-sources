@@ -26,6 +26,7 @@
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
+  - [Identifying Dates with Poor Data Quality](#identifying-dates-with-poor-data-quality)
 - [4. Repulling data](#4-repulling-data)
   - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
@@ -351,6 +352,19 @@ The following process is used to determine the gap sizes assigned to an intersec
 
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
+
+### Identifying Dates with Poor Data Quality 
+
+In Spring 2023, staff examined data from each Miovision camera to identify date ranges with questionable volumes. Here is a description of the process:
+1) Weekly volumes for 'lights' were graphed. There was one graph for each intersection.
+2) The line graphs were visually inspected. Weeks with lower-than-typical volumes were recorded in Excel.
+3) The Excel table was imported into a postgres table.
+4) In postgres, data from the initial table was augmented via [this sql](sql/create_dq.sql) to:
+    a) convert dates identifying bad weeks into date ranges using the gaps and islands approach
+    b) add a field that describes the severity of the data quality issue
+    c) add a field that describes the results of any investigations that have taken place.
+
+The resulting table is called `miovision_api.bad_data_ranges` - please consult this table to ensure that all Miovision data used to complete requests or other work is of good quality.
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
