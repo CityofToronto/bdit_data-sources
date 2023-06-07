@@ -20,21 +20,21 @@ FOR EACH ROW
 EXECUTE PROCEDURE miovision_api.update_qa_last_updated_ts();
 */
 
-CREATE TABLE nwessel.qa_investigation_levels (
+CREATE TABLE miovision_api.qa_investigation_levels (
     uid text PRIMARY KEY,
     description text UNIQUE NOT NULL
 );
 COMMENT ON TABLE nwessel.qa_investigation_levels
 IS 'Indicates the furthest degree to which the movision QA issue has been investigated. Is this only a suspicion? Or has the issue been fully confirmed/resolved?';
 
-CREATE TABLE nwessel.qa_problem_levels (
+CREATE TABLE miovision_api.qa_problem_levels (
     uid text PRIMARY KEY,
     description text UNIQUE NOT NULL
 );
 COMMENT ON TABLE nwessel.qa_problem_levels
 IS 'What is the nature of the problem indicated for the given subset of miovision data?';
 
-CREATE TABLE scannon.miovision_qc (
+CREATE TABLE miovision_api.bad_data_ranges (
     uid serial PRIMARY KEY,
     intersection_uid smallint REFERENCES miovision_api.intersections (intersection_uid),
     intersection_name text,
