@@ -2,32 +2,31 @@
 
 ## Table of Contents
 
-- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-	- [Table of Contents](#table-of-contents)
-	- [1. Overview](#1-overview)
-		- [Folder Structure](#folder-structure)
-	- [2. Table Structure](#2-table-structure)
-		- [Reference Tables](#reference-tables)
-			- [`classifications`](#classifications)
-			- [`intersections`](#intersections)
-			- [`movements`](#movements)
-			- [`movement_map`](#movement_map)
-			- [`periods`](#periods)
-			- [`intersection_movements`](#intersection_movements)
-		- [Disaggregate Data](#disaggregate-data)
-			- [`volumes`](#volumes)
-		- [Aggregated Data](#aggregated-data)
-			- [`volumes_15min_tmc`](#volumes_15min_tmc)
-			- [`unacceptable_gaps`](#unacceptable_gaps)
-			- [`volumes_15min`](#volumes_15min)
-			- [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-		- [Primary and Foreign Keys](#primary-and-foreign-keys)
-			- [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-		- [Important Views](#important-views)
-	- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-        - [Identifying Dates with Poor Data Quality](#identifying-dates-with-poor-data-quality)
-	- [4. Repulling data](#4-repulling-data)
-		- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+
+- [1. Overview](#1.-Overview)
+	- [Folder Structure](#Folder-Structure)
+- [2. Table Structure](#2.-Table-Structure)
+	- [Reference Tables](#Reference-Tables)
+		- [`classifications`](#classifications)
+		- [`intersections`](#intersections)
+		- [`movements`](#movements)
+		- [`movement_map`](#movement_map)
+		- [`periods`](#periods)
+		- [`intersection_movements`](#intersection_movements)
+	- [Disaggregated Data](#Disaggregated-Data)
+		- [`volumes`](#volumes)
+	- [Aggregated Data](#Aggregated-Data)
+		- [`volumes_15min_tmc`](#volumes_15min_tmc)
+		- [`unacceptable_gaps`](#unacceptable_gaps)
+		- [`volumes_15min`](#volumes_15min)
+		- [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
+	- [Primary and Foreign Keys](#Primary-and-Foreign-Keys)
+		- [List of primary and foreign keys](#List-of-primary-and-foreign-keys)
+	- [Important Tables](#Important-Tables)
+- [3. Finding Gaps and Malfunctioning Camera](#3.-Finding-Gaps-and-Malfunctioning-Camera)
+    - [Identifying Dates with Poor Data Quality](#Identifying-Dates-with-Poor-Data-Quality)
+- [4. Repulling data](#4.-Repulling-data)
+	- [Deleting data to re-run the process](#Deleting-data-to-re-run-the-process)
         
 ## 1. Overview
 
@@ -399,7 +398,7 @@ The following process is used to determine the gap sizes assigned to an intersec
 2. The set of acceptable gap_size implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
 3. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) is used to find all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the materialized view above.
 4. Gaps that are equal to or exceed the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
-5. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within the unacceptable_gaps's `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
+5. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within the unacceptable_gaps' `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
 
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
@@ -415,7 +414,11 @@ In Spring 2023, staff examined data from each Miovision camera to identify date 
     b) add a field that describes the severity of the data quality issue
     c) add a field that describes the results of any investigations that have taken place.
 
-The resulting table is called `miovision_api.bad_data_ranges` - please consult this table to ensure that all Miovision data used to complete requests or other work is of good quality.
+**The resulting table is called `miovision_api.bad_data_ranges` - please consult this table to ensure that all Miovision data used to complete requests or other work is of good quality.**
+                                                           
+**`miovision_api.bad_data_ranges` currently evaluates cameras up to the end of March 2023, so additional data quality evaluations should be completed for more recent dates.**
+                                                           
+There are plans to flag weeks with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
 ## 4. Repulling data
 ### Deleting data to re-run the process

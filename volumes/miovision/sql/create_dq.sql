@@ -24,14 +24,14 @@ CREATE TABLE miovision_api.qa_investigation_levels (
     uid text PRIMARY KEY,
     description text UNIQUE NOT NULL
 );
-COMMENT ON TABLE nwessel.qa_investigation_levels
+COMMENT ON TABLE miovision_api.qa_investigation_levels
 IS 'Indicates the furthest degree to which the movision QA issue has been investigated. Is this only a suspicion? Or has the issue been fully confirmed/resolved?';
 
 CREATE TABLE miovision_api.qa_problem_levels (
     uid text PRIMARY KEY,
     description text UNIQUE NOT NULL
 );
-COMMENT ON TABLE nwessel.qa_problem_levels
+COMMENT ON TABLE miovision_api.qa_problem_levels
 IS 'What is the nature of the problem indicated for the given subset of miovision data?';
 
 CREATE TABLE miovision_api.bad_data_ranges (
