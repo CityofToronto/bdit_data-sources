@@ -24,4 +24,9 @@ This folder contains Jupyter Notebooks used for developing API access and data p
 
 - `intersection_tmc_notebook06test.py` - copy of `intersection_tmc.py` from commit [74a239](https://github.com/CityofToronto/bdit_data-sources/commit/74a2392491bb8098c12bc779d63ea10277d4505c) used by `06 - Bike Approach Sandbox.ipynb` to compare legacy and new API pullers.
 
-- `lousy_dates.ipynb` contains monthly and weekly line graphs of light vehicle volumes. The aim is to visually inspect and identify unusually low (or high) volumes. This notebook evaluates data from January 2019 to March 2023. It directly queries the `bigdata` postgres database to grab monthly and weekly miovision volume counts for light vehicles only. The weekly graphs were used to identify dates with low or no volumes which were then used to populate `miovision_api.miovision_bad_weeks` (the script for which can be found [here](../sql/create_x_weeks.sql).
+- `lousy_dates.ipynb` contains monthly and weekly line graphs of light vehicle volumes. The aim is to visually inspect and identify unusually low (or high) volumes. This notebook evaluates data from January 2019 to March 2023. It directly queries the `bigdata` postgres database to grab monthly and weekly miovision volume counts for light vehicles only. The weekly graphs were used to identify dates with low or no volumes which were then used to populate `miovision_api.miovision_bad_weeks` (the script for which can be found [here](../sql/create_dq.sql)).
+
+- The folder `qc_sqls` contains the scripts that were used to generate the `miovision_api.bad_date_ranges` table. For a more detailed description of this methodology, please see the main [Miovision README.md](../README.md)
+  `qc_sqls` contains the following scripts:
+    - `t1_create_x_weeks.sql`: a `CREATE TABLE` script to store the 'bad dates' initially recorded in Excel
+    - `t2_create_mio_dq_notes`: a script that uses the gaps and islands approach to group contiguous bad weeks into date ranges and that differentiates between weeks with low or no volume.
