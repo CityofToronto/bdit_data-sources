@@ -71,7 +71,7 @@ AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/traffic_signals/airflow/tasks
 DEFAULT_ARGS = {
     'email_on_failure': False,
     'email_on_retry': False,
-    'owner': names, 
+    'owner': ','.join(names), 
     'start_date': datetime(2019, 7, 9), # YYYY, MM, DD
     'task_concurrency': 1,
     'on_failure_callback': task_fail_slack_alert

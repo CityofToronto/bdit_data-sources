@@ -74,7 +74,7 @@ wys_postgres = PostgresHook("wys_bot")
 connection = BaseHook.get_connection('wys_api_key')
 api_key = connection.password
 
-default_args = {'owner': names,
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 1),
                 'email_on_failure': False,

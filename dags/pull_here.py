@@ -44,7 +44,7 @@ def task_fail_slack_alert(context):
 here_postgres = PostgresHook("here_bot")
 rds_con = here_postgres.get_uri()
 
-default_args = {'owner': names,
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2020, 1, 5),
                 'email_on_failure': False,

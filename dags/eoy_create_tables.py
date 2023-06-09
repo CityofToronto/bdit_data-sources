@@ -84,7 +84,7 @@ def congestion_create_table(dt):
         cur.execute('SELECT congestion.create_yearly_tables(%s);', (year,))        
 
 
-default_args = {'owner': names, 
+default_args = {'owner': ','.join(names), 
                 'depends_on_past':False,
                 'start_date': datetime(2021, 12, 1),
                 'email_on_failure': False,

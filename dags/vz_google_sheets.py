@@ -108,7 +108,7 @@ vz_api_bot = PostgresHook("vz_api_bot")
 con = vz_api_bot.get_conn()
 
 DEFAULT_ARGS = {
-    'owner': names,
+    'owner': ','.join(names),
     'depends_on_past' : False,
     'email_on_failure': False,
     'email_on_retry': False,
