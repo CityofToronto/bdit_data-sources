@@ -67,7 +67,7 @@ def task_fail_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
-default_args = {'owner': names,
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 17),
                 'email_on_failure': False,

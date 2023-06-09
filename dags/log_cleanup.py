@@ -66,7 +66,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       # When on, `depends_on_past` freezes progress if a previous run failed.
       # This isn't ideal for our use case, so we disable it here.
       'depends_on_past': False,
-      'owner': names,
+      'owner': ','.join(names),
       'start_date': start_date,
       'on_failure_callback': task_fail_slack_alert
     }
