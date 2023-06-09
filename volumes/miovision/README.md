@@ -26,9 +26,7 @@
     - [Primary and Foreign Keys](#primary-and-foreign-keys)
         - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
     - [Important Views](#important-views)
-- [3. Finding Suspiciously Low Volumes](#3-finding_suspiciously_low_volumes)
-    - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
-    - [Identifying Weeks with Low or No Volume](#identifying-weeks-with-low-or-no-volume)
+- [3. Finding Gaps and Malfunctioning Camera](#3.-Finding-Gaps-and-Malfunctioning-Camera)
 - [4. Repulling data](#4-repulling-data)
     - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
@@ -214,6 +212,7 @@ Vehicles crossing the line on the east leg, while travelling east, are exiting t
 - turning right onto the east leg from the south leg,
 - u-turning from the east leg right back onto that east leg.
 
+##### All the East Leg Crossings!
 Still fuzzy? Here's a diagram to help you picture it perfectly:
 <img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
 
@@ -247,24 +246,19 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
 
 #### `volumes_15min_mvt`
 
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
-make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
+`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data
-could either mean there was no volume, or that the camera malfunctioned. Because
-we have continuous data from these counters, we no longer try to interpolate
-data during gaps. When our heuristics identify `unacceptable_gaps`, then the
-entire hour of data is thrown out and the volume is set to `NULL` to imply that
-the data has been processed for this hour, but the results have been discarded.
+The 1-min data do not identify if a camera is malfunctioning, so gaps in data could either mean there was no volume, or that the camera malfunctioned. Because we have continuous data from these counters, we no longer try to interpolate data during gaps. When our heuristics identify `unacceptable_gaps`, then the entire hour of data is thrown out and the volume is set to `NULL` to imply that the data has been processed for this hour, but the results have been discarded.
 
-A `0` value implies the process identifies the camera was working, but there was
-no volume for that mode. Only volumes for pedestrians, cyclists and light
-vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the
-modes we report on more frequently. Other modes are not filled because they have
-much lower volumes, so the 0s would expand the size of the dataset considerably.
+A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
-The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)) The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
+The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
+
+**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
+
+Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
+
+Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrial movements.
 
 `volumes_15min_mvt` is a table with all possible times and movements for active intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, otherwise the volume is set to sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. 
 
@@ -303,57 +297,37 @@ accept|boolean|Stating whether this gap is acceptable or not|false|
 
 #### `volumes_15min`
 
-Data table storing ATR versions of the 15-minute turning movement data. Data in
-`volumes` is stored in TMC format, so must be converted to ATR to be included in
-`volumes_15min`.
+Data table storing ATR versions of the 15-minute turning movement data. Data in `volumes` is stored in TMC format, so must be converted to ATR to be included in `volumes_15min`.
 
-TMC movements are described in `miovision_api.movements`. **TMC legs indicate
-the approach direction of traffic**, and there are **four possible vehicle
-movements encoded using `movement_uid`: `1` - thru; `2` - left turn; `3` - right
-turn; and `4` - u-turn**. For example, the image below shows the `W`-leg in red and the
-four possible movements from `W`-leg as yellow lines.  For a fully working
-intersection, there will be 16 possible TMC combinations since there are 4 directions and 4
-legs in each direction for TMC.
+TMC movements are described in `miovision_api.movements`. **TMC legs indicate the approach direction of vehicles (including bicycles)**, and there are **four possible movements encoded using `movement_uid`: `1` - thru; `2` - left turn; `3` - right turn; and `4` - u-turn**. For a typical 't' intersection, there will be 16 possible TMC combinations (since there are 4 directions and 4 legs in each direction for TMC).
                                                            
-(Note: movements described by `movement_uid IN (5,6)` are for pedestrians and are discussed below).
+If you are having trouble picturing it, check out [this diagram](#Vehicle-Movement-(Including-Bicycles)).
+                                                           
+**ATR movements define leg as the approach direction of vehicles (like TMCs)**, and **direction as the cardinal direction of traffic travelling through that side of the intersection**. For a typical 't' intersection, there will be 8 possible ATR since there are 4 directions and 2 legs in each direction for ATR.
 
-![TMC movements](img/intersection_tmc.png)
+If you are having trouble picturing it, check out [this diagram](#From-Movement-Counts-to-Segment-Counts).
 
-**ATR movements, on the other hand, define leg as the side of the intersection**,
-and **direction as the cardinal direction of traffic travelling through that side
-of the intersection**. For example, in this figure the blue line represents
-the `E`-leg whereas yellow arrows represent EB and WB directions. For a fully
-working intersection, there will be 8 possible ATR since there are 4 directions
-and 2 legs in each direction for ATR.
+`miovision_api.movement_map` is used to convert the TMC data to the ATR data. Here are some example rows from the table:
 
-![ATR movements](img/intersection_atr1.png)
-
-`miovision_api.movement_map` is used to convert the TMC data to the ATR data.
-Here are some example rows from the table:
-
-|leg_new|dir|leg_old|movement_uid|
-|-------|---|-------|------------|
-| E | EB | E | 4 |
-| E | EB | S | 3 |
-| E | EB | W | 1 |
-| E | EB | N | 2 |
+|leg_new|dir|leg_old|movement_uid|description of movement|
+|-------|---|-------|------------|-----------------------|
+| E | EB | E | 4 | Approached intersection from the east leg, u-turned, exited intersection from the east leg
+| E | EB | S | 3 | Approached intersection from the south leg, turned right, exited intersection from the east leg
+| E | EB | W | 1 | Approached intersection from the west leg, proceeded straight ahead, exited intersection from the east leg
+| E | EB | N | 2 | Approached intersection from the north leg, turned left, exited intersection from the east leg
 
 - `leg_new` (leg for ATR) - anything that crosses that side of the intersection
 - `dir` - heading of traffic crossing `leg_new`
 - `leg_old` (leg for TMC) - direction the vehicles approach into intersection
 - `movement_uid` - turning movement stored in `movements`
 
-The example above represents a mapping from TMC to ATR `E` leg and `EB`
-direction. Below is a diagram of this mapping. The blue line represents `leg_new
-= E`. To obtain the `dir = EB` volume, we sum up the traffic performing the
-relevant `movement_uid`, shown as yellow lines, coming from the `leg_old`, shown
-as red lines.
+The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
 
-![Mapping movements](img/intersection_atr2.png)
+#### Comparing TMC and ATR Counts
 
-For light vehicles at King / Bay on 2020-10-15 9:00-9:15 (`intersection_uid =
-17`, `datetime_bin = '2020-10-15 09:00:00'`, `classification_uid = 1`), the TMC
-and ATR movements are:
+The following example illustrates the differences between the TMC counts found in `volumes_15min_mvt` and `volumes_15min`.
+
+For light vehicles at King / Bay on 2020-10-15 9:00-9:15 (`intersection_uid = 17`, `datetime_bin = '2020-10-15 09:00:00'`, `classification_uid = 1`), the TMC and ATR movements are:
 
 |leg(tmc)|movement_uid|volume|
 |--------|------------|------|
@@ -383,16 +357,15 @@ and ATR movements are:
 | W | WB | 14  |
 | | |total volume = 536|
 
-The ATR table exactly double-counts the number of vehicles travelling through
-intersections, since, for example, `leg(atr) = E` and `dir = EB` represents
-vehicles moving away from the intersection, and `leg(atr) = E` and `dir = WB`
-represents vehicles moving toward it.
+The ATR table exactly double-counts the number of vehicles travelling through intersections, since it counts vehicles approaching and exiting the intersection. For example, `leg(atr) = E` and `dir = EB` represents vehicles exiting the intersection, and `leg(atr) = E` and `dir = WB` represents vehicles approaching the intersection.
 
-> However, the above is not applicable to pedestrian counts which are
-> `classification_uid` = 6 and `movement_uid` = 5, 6. Pedestrian counts in the
-> TMC and ATR tables have an equal number of rows and equal total volume.
+**It is important to note that pedestrian counts (`classification_uid` = 6 and `movement_uid` IN (5, 6)) in the TMC and ATR tables have an equal number of rows and equal total volume - they are not double counted like vehicles (including bicycles).**
 
-- **For pedestrian counts**, the `leg` represents the side of crosswalk the pedestrians are at whereas `dir` represents which direction they are walking towards. So, if leg = N and dir = EB means that the pedestrian is at the North crosswalk crossing from the west side to the east side.
+**In the TMC table (aka `volumes_15min_mvt`)**
+The `leg` represents the side of the intersection that the pedestrian is crossing. Pedestrian movements are tracked using `movement_uid` 5 or 6 (clockwise or counterclockwise, respectively). [This diagram](#Pedestrian-Movement) will help you visualize the clockwise and counterclockwise movements.
+
+**In the ATR table (aka `volumes_15min`)** 
+The `leg` represents the side of the intersection that the pedestrian is crossing. The `dir` represents which direction they are walking towards. So, if leg = N and dir = EB means that the pedestrian is at the North crosswalk crossing from the west side to the east side.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -441,11 +414,7 @@ The tables below are produced using functions explained in the [API Puller](api#
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
-## 3. Finding Suspiciously Low Volumes
-                                                           
-There are currently two ways that we identify and process suspiciously low volumes - by finding gaps in the 1-minute data, and by examining weekly volume totals in the `volumes_15min` table.
-
-### Finding Gaps and Malfunctioning Camera
+## 3. Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
@@ -460,16 +429,6 @@ The following process is used to determine the gap sizes assigned to an intersec
 
 **Part II - Working Machine**
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
-                                                           
-### Identifying Weeks with Low or No Volumes
-
-Some cameras appear to be working just fine, but they are recording weird data! This can happen when a camera is knocked off of its normal orientation or because of a road closure. We have plotted weekly volumes for `lights` (aka passenger vehicles) and identified weeks where there is 
-- no volume recorded
-- low volume recorded.
-                           
-Weeks where no volume has been recorded should not be used. Weeks where low volumes have been recorded should be investigated further since there may be days within the weeks that have normal volumes. The weeks with no or no volumes are stored in a table on the `miovision_api` schema called `miovision_qc`.
-
-This is a work in progress. We are intending to automate this process.
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
