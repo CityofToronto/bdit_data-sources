@@ -184,7 +184,7 @@ You may have noticed that we used a 20 meter buffer in the previous example, and
 
 When joining collisions with a network of buffered streets, we typically use a single buffer width for all streets, and performs sensitivity testing to make sure that the buffer width is wide enough that an acceptable minority of collisions are left out, but narrow enough that collisions not on the streetnetwork are being spuriously associated.
 
-You may be required to produce a one-to-one association between collision and road network (i.e. a collision can only be assigned to one road segment in thenetwork). In that case, consider a multi-step process:
+You may be required to produce a one-to-one association between collision and road network (i.e. a collision can only be assigned to one road segment in the network). In that case, consider a multi-step process:
 - First, associate collisions with buffered street segments.
 - Then, calculate the orthogonal distance between the collision and *unbuffered*
   street segments.
