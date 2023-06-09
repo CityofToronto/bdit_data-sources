@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Miovision - Multi-modal Permanent Video Counters <!-- omit in toc -->
 
 ## Table of Contents <!-- omit in toc -->
@@ -8,96 +7,33 @@
 - [2. Table Structure](#2-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
   - [Aggregated Data](#aggregated-data)
-=======
-# Miovision - Multi-modal Permanent Video Counters 
-
-## Table of Contents
-
-- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-  - [Table of Contents](#table-of-contents)
-  - [1. Overview](#1-overview)
-    - [Folder Structure](#folder-structure)
-  - [2. Table Structure](#2-table-structure)
-    - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
-    - [Aggregated Data](#aggregated-data)
-      - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
-        - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
-        - [Pedestrian Movement](#pedestrian-movement)
-        - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-          - [All the East Leg Crossings!](#all-the-east-leg-crossings)
-      - [`volumes_15min_mvt`](#volumes_15min_mvt)
-      - [`unacceptable_gaps`](#unacceptable_gaps)
-      - [`volumes_15min`](#volumes_15min)
-      - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
-      - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-    - [Reference Tables](#reference-tables)
-      - [`classifications`](#classifications)
-      - [`intersections`](#intersections)
-      - [`movements`](#movements)
-      - [`movement_map`](#movement_map)
-      - [`periods`](#periods)
-      - [`intersection_movements`](#intersection_movements)
-    - [Disaggregated Data](#disaggregated-data)
-      - [`volumes`](#volumes)
-    - [Primary and Foreign Keys](#primary-and-foreign-keys)
-      - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-    - [Other Important Tables](#other-important-tables)
-  - [3. Finding Suspiciously Low Volumes](#3-finding-suspiciously-low-volumes)
-    - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
-    - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-    - [Part II - Working Machine](#part-ii---working-machine)
-    - [Identifying Weeks with Low or No Volumes](#identifying-weeks-with-low-or-no-volumes)
-  - [4. Repulling data](#4-repulling-data)
-    - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
->>>>>>> #591 bad bicycles!
     - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
       - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
       - [Pedestrian Movement](#pedestrian-movement)
       - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-<<<<<<< HEAD
-        - [All the East Leg Crossings!](#all-the-east-leg-crossings)
+      - [All the East Leg Crossings!](#all-the-east-leg-crossings)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`volumes_15min`](#volumes_15min)
     - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
     - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-- [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-  - [Table of Contents](#table-of-contents)
-  - [1. Overview](#1-overview)
-    - [Folder Structure](#folder-structure)
-  - [2. Table Structure](#2-table-structure)
-    - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
-    - [Aggregated Data](#aggregated-data)
-      - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
-        - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
-        - [Pedestrian Movement](#pedestrian-movement)
-        - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-          - [All the East Leg Crossings!](#all-the-east-leg-crossings)
-      - [`volumes_15min_mvt`](#volumes_15min_mvt)
-      - [`unacceptable_gaps`](#unacceptable_gaps)
-      - [`volumes_15min`](#volumes_15min)
-      - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
-      - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-    - [Reference Tables](#reference-tables)
-      - [`classifications`](#classifications)
-      - [`intersections`](#intersections)
-      - [`movements`](#movements)
-      - [`movement_map`](#movement_map)
-      - [`periods`](#periods)
-      - [`intersection_movements`](#intersection_movements)
-    - [Disaggregated Data](#disaggregated-data)
-      - [`volumes`](#volumes)
-    - [Primary and Foreign Keys](#primary-and-foreign-keys)
-      - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-    - [Other Important Tables](#other-important-tables)
-  - [3. Finding Suspiciously Low Volumes](#3-finding-suspiciously-low-volumes)
-    - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
-    - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-    - [Part II - Working Machine](#part-ii---working-machine)
-    - [Identifying Weeks with Low or No Volumes](#identifying-weeks-with-low-or-no-volumes)
-  - [4. Repulling data](#4-repulling-data)
-    - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
->>>>>>> #591 bad bicycles!
+  - [Reference Tables](#reference-tables)
+    - [`classifications`](#classifications)
+    - [`intersections`](#intersections)
+    - [`movements`](#movements)
+    - [`movement_map`](#movement_map)
+    - [`periods`](#periods)
+    - [`intersection_movements`](#intersection_movements)
+  - [Disaggregated Data](#disaggregated-data)
+    - [`volumes`](#volumes)
+  - [Primary and Foreign Keys](#primary-and-foreign-keys)
+    - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
+  - [Other Important Tables](#other-important-tables)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+  - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
+  - [Part II - Working Machine](#part-ii---working-machine)
+- [4. Repulling data](#4-repulling-data)
+  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
 ## 1. Overview
 
@@ -172,47 +108,25 @@ Vehicles crossing the line on the east leg, while travelling east, are exiting t
 - turning right onto the east leg from the south leg,
 - u-turning from the east leg right back onto that east leg.
 
-###### All the East Leg Crossings!
+##### All the East Leg Crossings!
 Still fuzzy? Here's a diagram to help you picture it perfectly:
 <img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
 
 #### `volumes_15min_mvt`
 
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
-make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
-bicycles (classifications 2 and 10) and pedestrians).
+`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data
-could either mean there was no volume, or that the camera malfunctioned. Because
-we have continuous data from these counters, we no longer try to interpolate
-data during gaps. When our heuristics identify `unacceptable_gaps`, then the
-entire hour of data is thrown out and the volume is set to `NULL` to imply that
-the data has been processed for this hour, but the results have been discarded.
+The 1-min data do not identify if a camera is malfunctioning, so gaps in data could either mean there was no volume, or that the camera malfunctioned. Because we have continuous data from these counters, we no longer try to interpolate data during gaps. When our heuristics identify `unacceptable_gaps`, then the entire hour of data is thrown out and the volume is set to `NULL` to imply that the data has been processed for this hour, but the results have been discarded.
 
-A `0` value implies the process identifies the camera was working, but there was
-no volume for that mode. Only volumes for pedestrians, cyclists and light
-vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are
-the modes we report on more frequently. Other modes are not filled because they
-have much lower volumes, so the 0s would expand the size of the dataset
-considerably.
+A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
-The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql)
-function performs zero-filling by cross-joining a table containing all possible
-movements described in ([`intersection_movements`](#intersection_movements)).
-The only type of movement tracked in the 1-minute volume data, but not the
-aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid =
-8`). The vendor recommended that bicycle exits not be used due to data quality
-concerns.
+The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
 
-**Please note that movements for vehicles (including bicycles) are different
-than those for pedestrians.**
+**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
 
-Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a
-visualization of turning movements for vehicles (including bicycles).
+Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
 
-Please see [this diagram](#Pedestrian-Movement) for a visualization of
-pedestrian movements.
+Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrial movements.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -268,8 +182,7 @@ possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
 If you are having trouble picturing it, check out [this
 diagram](#From-Movement-Counts-to-Segment-Counts).
 
-`miovision_api.movement_map` is used to convert the TMC data to the ATR data.
-Here are some example rows from the table:
+`miovision_api.movement_map` is used to convert the TMC data to the ATR data. Here are some example rows from the table:
 
 |leg_new|dir|leg_old|movement_uid|description of movement|
 |-------|---|-------|------------|-----------------------|
@@ -513,11 +426,7 @@ The tables below are produced using functions explained in the [API Puller](api#
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
-## 3. Finding Suspiciously Low Volumes
-                                                           
-There are currently two ways that we identify and process suspiciously low volumes - by finding gaps in the 1-minute data, and by examining weekly volume totals in the `volumes_15min` table.
-
-### Finding Gaps and Malfunctioning Camera
+## 3. Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
@@ -532,16 +441,6 @@ The following process is used to determine the gap sizes assigned to an intersec
 
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
-                                                           
-### Identifying Weeks with Low or No Volumes
-
-Some cameras appear to be working just fine, but they are recording weird data! This can happen when a camera is knocked off of its normal orientation or because of a road closure. We have plotted weekly volumes for `lights` (aka passenger vehicles) and identified weeks where there is 
-- no volume recorded
-- low volume recorded.
-                           
-Weeks where no volume has been recorded should not be used. Weeks where low volumes have been recorded should be investigated further since there may be days within the weeks that have normal volumes. The weeks with no or no volumes are stored in a table on the `miovision_api` schema called `miovision_qc`.
-
-This is a work in progress. We are intending to automate this process.
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
