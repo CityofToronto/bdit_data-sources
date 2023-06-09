@@ -44,7 +44,7 @@ def task_fail_sassy_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
-default_args = {'owner': names,
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2022, 5, 26), #start this Thursday, why not?
                 'email_on_failure': False,
