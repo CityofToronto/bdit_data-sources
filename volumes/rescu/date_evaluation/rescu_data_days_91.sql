@@ -7,16 +7,16 @@ CREATE TABLE scannon.rescu_data_days_91 AS (
             v.arterycode,
             v.detector_id,
             date_trunc('day', v.datetime_bin)::date AS dt,
-            COUNT (datetime_bin) as bin_ct
+            COUNT(v.datetime_bin) AS bin_ct
         FROM rescu.volumes_15min AS v
         WHERE 
-            datetime_bin >= '2021-01-01' 
-            AND datetime_bin < '2022-01-01'
+            v.datetime_bin >= '2021-01-01'
+            AND v.datetime_bin < '2022-01-01'
         GROUP BY 
             v.arterycode,
             v.detector_id,
             date_trunc('day', v.datetime_bin)::date
-        HAVING COUNT (datetime_bin) >= 91
+        HAVING COUNT(v.datetime_bin) >= 91
 )
 
     -- here's a table of those detectors with helpful attribute info including location
@@ -27,10 +27,10 @@ CREATE TABLE scannon.rescu_data_days_91 AS (
         di.number_of_lanes,
         di.primary_road || ' and ' || di.cross_road AS gen_loc,
         ST_SETSRID(ST_MakePoint(di.longitude, di.latitude), 4326) AS geom,
-        COUNT(dt) AS good_data_days,
+        COUNT(bc.dt) AS good_data_days,
         '2022-01-01'::date - '2021-01-01'::date AS total_days
     FROM bin_ct AS bc
-    LEFT JOIN rescu.detector_inventory di USING (detector_id)
+    LEFT JOIN rescu.detector_inventory AS di USING (detector_id)
     WHERE ST_SETSRID(ST_MakePoint(di.longitude, di.latitude), 4326) IS NOT NULL
     GROUP BY
         bc.arterycode,
@@ -40,5 +40,5 @@ CREATE TABLE scannon.rescu_data_days_91 AS (
         di.primary_road || ' and ' || di.cross_road,
         ST_SETSRID(ST_MakePoint(di.longitude, di.latitude), 4326)
     ORDER BY
-        COUNT(dt) DESC
+        COUNT(bc.dt) DESC
 );
