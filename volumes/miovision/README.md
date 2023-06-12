@@ -6,15 +6,6 @@
   - [Folder Structure](#folder-structure)
 - [2. Table Structure](#2-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
-  - [Reference Tables](#reference-tables)
-    - [`classifications`](#classifications)
-    - [`intersections`](#intersections)
-    - [`movements`](#movements)
-    - [`movement_map`](#movement_map)
-    - [`periods`](#periods)
-    - [`intersection_movements`](#intersection_movements)
-  - [Disaggregated Data](#disaggregated-data)
-    - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
     - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
       - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
@@ -26,9 +17,18 @@
     - [`volumes_15min`](#volumes_15min)
     - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
     - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
+  - [Reference Tables](#reference-tables)
+    - [`classifications`](#classifications)
+    - [`intersections`](#intersections)
+    - [`movements`](#movements)
+    - [`movement_map`](#movement_map)
+    - [`periods`](#periods)
+    - [`intersection_movements`](#intersection_movements)
+  - [Disaggregated Data](#disaggregated-data)
+    - [`volumes`](#volumes)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-  - [Important Tables](#important-tables)
+  - [Other Important Tables](#other-important-tables)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
@@ -58,142 +58,6 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 ### Miovision Data Relationships at a Glance
 
 ![Miovision Data Entity Relationship Diagram](img/Mio_ERD.png)
-
-### Reference Tables
-
-#### `classifications`
-
-Reference table for all classifications:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-classification_uid|serial|Unique identifier for table|2|
-classification|text|Textual description of mode|Bicycles|
-location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
-class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
-
-Here is a description of the classification_uids and corresponding types. 
-Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
-
-**classification_uid**|**classification**|**definition**|
-:-----|:-----|:-----|
-1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
-2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans|
-4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
-5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
-6|Pedestrian|A walker. May or may not include zombies...|
-8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. Bicycle data is not great - stay tuned.|
-
-#### `intersections`
-
-Reference table for each unique intersection at which data has been collected:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-intersection_uid|integer|Unique identifier for table|10|
-id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
-date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
-lat|numeric|Latitude of intersection location|43.643945|
-lng|numeric|Longitude of intersection location|-79.402667|
-street_main|text|Name of primary street|King|
-street_cross|text|Name of secondary street|Bathurst|
-int_id|bigint|int_id linked to centrelines|13467722|
-px|integer|px linked to traffic lights|201|
-geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
-n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
-#### `movements`
-
-Reference table for road user movements:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-movement_uid|integer|Identifier representing current turning movement|1|
-movement_name|text|Short description of movement|thru|
-crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
-movement_pretty_name|text|Long description of movement|Through|
-
-
-Here is a description of the movement_uids and corresponding types:
-
-**movement_uid**|**movement_pretty_name**|**definition**|
-:-----|:-----|:-----|
-1|Through|Vehicle drove through the intersection (no turns)|
-2|Left|Vehicle turned left|
-3|Right|Vehicle turned right|
-4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
-5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
-6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
-7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
-8|Bicycle Exit|Used to determine where bicycles exited the intersection|
-
-#### `movement_map`
-
-Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`):
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
-dir|text|Direction on which 15-minute volume will be assigned|EB|
-leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
-movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
-
-#### `periods`
-
-Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-period_id|integer|Unique identifier for table|3|
-day_type|text|Day type for date filter|[Weekday OR Weekend]|
-period_name|text|Textual description of period|14 Hour|
-period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
-report_flag|boolean|Indicates whether the period is used in a report|true|
-
-
-#### `intersection_movements`
-
-This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
-
-Since this reference table must be updated every time a new intersection is added, there are several iterations of it. The earliest is `miovision_api.intersection_movements_20200805`; the latest is `intersection_movements_20210712`. Users should use `intersection_movements` and may find their permissions restricted on the dated versions of this table.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
- intersection_uid| integer | ID for intersection | 1 |
- classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
- leg| text | Entry leg of movement|E|
- movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
-
-### Disaggregated Data
-
-#### `volumes`
-
-Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_uid|serial|Unique identifier for table|5100431|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
-volume|integer|Total 1-minute volume|12|
-volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt)|14524|
-
-Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year the data were recorded.
-
-- *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted. The unique constraint is based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
-
-- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
 
 ### Aggregated Data
 
@@ -426,6 +290,143 @@ A *Unique constraint* was added to the `miovision_api.volumes_15min` table based
 volume_15min_mvt_uid|int|Unique identifier for `volumes_15min_mvt` table|14524|
 volume_15min_uid|serial|Unique identifier for table|12412|
 
+### Reference Tables
+
+#### `classifications`
+
+Reference table for all classifications:
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+classification_uid|serial|Unique identifier for table|2|
+classification|text|Textual description of mode|Bicycles|
+location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
+class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
+
+Here is a description of the classification_uids and corresponding types. 
+Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
+
+**classification_uid**|**classification**|**definition**|
+:-----|:-----|:-----|
+1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
+2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
+3|Bus|A large vehicle that provides transportation for many humans|
+4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
+5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
+6|Pedestrian|A walker. May or may not include zombies...|
+8|WorkVan|A van used for commercial purposes|
+9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
+10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. Bicycle data is not great - stay tuned.|
+
+#### `intersections`
+
+Reference table for each unique intersection at which data has been collected:
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+intersection_uid|integer|Unique identifier for table|10|
+id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
+intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
+date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
+lat|numeric|Latitude of intersection location|43.643945|
+lng|numeric|Longitude of intersection location|-79.402667|
+street_main|text|Name of primary street|King|
+street_cross|text|Name of secondary street|Bathurst|
+int_id|bigint|int_id linked to centrelines|13467722|
+px|integer|px linked to traffic lights|201|
+geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
+n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+
+#### `movements`
+
+Reference table for road user movements:
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+movement_uid|integer|Identifier representing current turning movement|1|
+movement_name|text|Short description of movement|thru|
+crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
+movement_pretty_name|text|Long description of movement|Through|
+
+
+Here is a description of the movement_uids and corresponding types:
+
+**movement_uid**|**movement_pretty_name**|**definition**|
+:-----|:-----|:-----|
+1|Through|Vehicle drove through the intersection (no turns)|
+2|Left|Vehicle turned left|
+3|Right|Vehicle turned right|
+4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
+5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
+6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
+7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
+8|Bicycle Exit|Used to determine where bicycles exited the intersection|
+
+#### `movement_map`
+
+Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`):
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
+dir|text|Direction on which 15-minute volume will be assigned|EB|
+leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
+movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
+
+#### `periods`
+
+Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes:
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+period_id|integer|Unique identifier for table|3|
+day_type|text|Day type for date filter|[Weekday OR Weekend]|
+period_name|text|Textual description of period|14 Hour|
+period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
+report_flag|boolean|Indicates whether the period is used in a report|true|
+
+
+#### `intersection_movements`
+
+This was created using [`create-table-intersection_movements.sql`](sql/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
+
+Since this reference table must be updated every time a new intersection is added, there are several iterations of it. The earliest is `miovision_api.intersection_movements_20200805`; the latest is `intersection_movements_20210712`. Users should use `intersection_movements` and may find their permissions restricted on the dated versions of this table.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+ intersection_uid| integer | ID for intersection | 1 |
+ classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
+ leg| text | Entry leg of movement|E|
+ movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
+
+### Disaggregated Data
+
+#### `volumes`
+
+Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_uid|serial|Unique identifier for table|5100431|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Entry leg of movement|E|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+volume|integer|Total 1-minute volume|12|
+volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt)|14524|
+
+Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year the data were recorded.
+
+- *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted. The unique constraint is based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
+
+- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
+
+
 ### Primary and Foreign Keys
 
 To create explicit relationships between tables, `volumes`, `volume_15min_mvt`, `atr_mvt_uid` and `volume_15min` have primary and foreign keys. Primary keys are unique identifiers for each entry in the table, while foreign keys refer to a primary key in another table and show how an entry is related to that entry.
@@ -438,7 +439,7 @@ To create explicit relationships between tables, `volumes`, `volume_15min_mvt`, 
 
 The current primary purpose for the keys is so that on deletion, the delete cascades through all tables. The keys also indicate whether it is new data if the foreign key is null, and tells the function to aggregate the data if it is new data. The keys can also be used in selecting data.
 
-### Important Tables
+### Other Important Tables
 
 The tables below are produced using functions explained in the [API Puller](api#postgresql-functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting.
 
