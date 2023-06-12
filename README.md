@@ -22,6 +22,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
     - [Traffic Signals](#traffic-signals)
   - [School Safety Zones](#school-safety-zones)
   - [Street Centreline Geocoding](#street-centreline-geocoding)
+- [HERE Travel Time Data](#here-travel-time-data)
 - [Incidents (inactive)](#incidents-inactive)
 - [INRIX (inactive)](#inrix-inactive)
 - [Parking (inactive)](#parking-inactive)
@@ -31,6 +32,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
   - [RESCU - Loop Detectors](#rescu---loop-detectors)
 - [Watch Your Speed signs](#watch-your-speed-signs)
+- [Weather](#weather)
 - [Open Data Releases](#open-data-releases)
 
 ## Airflow DAGS
@@ -92,6 +94,10 @@ This dataset comes from Vision Zero which uses Google Sheets to track progress o
 
 Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
 
+## HERE Travel Time Data
+
+Travel time data provided by HERE Technologies from a mix of vehicle probes. Daily extracts of 5-min aggregated speed data for each link in the city (where data are available).
+
 ## Incidents (inactive)
 
 See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
@@ -139,6 +145,11 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 [`wys/`](wys/)
 
 The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 programs: the mobile watch your speed which has signs mounted on existing poles, moved every few weeks, and school watch your speed which has signs installed at high priority schools. The signs also collect continuous speed data.
+
+## Weather
+[`weather/](weather/)
+
+Daily historical weather conditions and predictions from Environment Canada.
 
 ## Open Data Releases
 
