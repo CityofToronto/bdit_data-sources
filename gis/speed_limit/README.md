@@ -60,16 +60,20 @@ LATERAL gis.text_to_centreline(
     law.id,
     law.highway,
     law.between,
-    NULL) as results
+    NULL
+) as results
 ```
 
 However, the function does not include the `date_added` and `date_repealed`. We will need to join to `gis.bylaws_added_repealed_dates` to retrieve date information.
 
 ```sql
 CREATE TABLE gis.bylaws_routing_dates AS
-SELECT result.*, dates.date_added, dates.date_repealed FROM gis.bylaws_routing result
-LEFT JOIN gis.bylaws_added_repealed_dates dates
-USING (id)
+SELECT
+    result.*,
+    dates.date_added,
+    dates.date_repealed 
+FROM gis.bylaws_routing result
+LEFT JOIN gis.bylaws_added_repealed_dates AS dates USING (id)
 ```
 
 #### Incorporate Centrelines without Bylaws and Cut Centrelines
@@ -105,10 +109,15 @@ v) [L135](sql/mat-view-bylaws_speed_limit_layer.sql#L135) `st_difference(next_by
 vi) The following few lines which occurred at the UNION part for the CTE next_bylaw, part_two, part_one_without_bylaw, part_two_without_bylaw is there to ensure that the geom is exactly the same as the geom from `gis.centreline`. This geom is more accurate as it does not involve any st_buffer, st_difference, st_union etc.
 
 ```sql
-CASE WHEN bylaw.section IS NOT NULL 
-THEN st_linesubstring(cl.geom, lower(bylaw.section)::double precision, upper(bylaw.section)::double precision)
-ELSE cl.geom
-END AS geom,
+CASE
+    WHEN bylaw.section IS NOT NULL
+        THEN st_linesubstring(
+            cl.geom,
+            lower(bylaw.section)::double precision,
+            upper(bylaw.section)::double precision
+        )
+    ELSE cl.geom
+END AS geom
 ```
 
 The final output table will look like this
@@ -156,7 +165,10 @@ Table `gis.bylaws_2020` looks like this.
 ```sql
 CREATE TABLE gis.bylaws_2020_cleaned AS 
 SELECT clean_bylaws.* 
-FROM gis.bylaws_2020, LATERAL gis.clean_bylaws_text(id, highway, between, NULL) AS clean_bylaws
+FROM gis.bylaws_2020,
+LATERAL (
+    SELECT * FROM gis.clean_bylaws_text(id, highway, between, NULL) 
+) AS clean_bylaws
 ```
 
 Table `gis.bylaws_2020_cleaned` looks like this.
@@ -168,42 +180,55 @@ Table `gis.bylaws_2020_cleaned` looks like this.
 CREATE TABLE gis.bylaws_to_update AS
 SELECT law.*
 FROM gis.bylaws_2020 law
-WHERE law.deleted = false 
-AND (law.bylaw_no NOT LIKE '%Repealed%' OR law.bylaw_no IS NULL) 
---to exclude those that got repealed but not deleted (6 of them which are bylaw_id = 4571, 6350, 6477, 6512, 6565, 6566)
-AND law.id IN (SELECT bylaw_id FROM gis.bylaws_2020_cleaned)
---to exclude those not cleaned nicely (4 of them which are bylaw_id = 2207,2208,2830?,6326)
+WHERE
+    law.deleted = false 
+    AND (law.bylaw_no NOT LIKE '%Repealed%' OR law.bylaw_no IS NULL) 
+    -- to exclude those that got repealed but not deleted (6 of them which are bylaw_id = 4571, 6350, 6477, 6512, 6565, 6566)
+    AND law.id IN (SELECT bylaw_id FROM gis.bylaws_2020_cleaned)
+    -- to exclude those not cleaned nicely (4 of them which are bylaw_id = 2207,2208,2830?,6326)
 ```
 
 Table `gis.bylaws_to_update` has the same format and columns as `gis.bylaws_2020`.
 
 ```sql
 WITH entire AS (
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND TRIM(btwn1) ILIKE '%entire length%' 
-AND btwn2 IS NULL
---ENIRE LENGTH (21 ROWS)
+    SELECT *
+    FROM gis.bylaws_2020_cleaned
+    WHERE
+        bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+        AND TRIM(btwn1) ILIKE '%entire length%' 
+        AND btwn2 IS NULL
+        --ENIRE LENGTH (21 ROWS)
 ),
+
 normal AS (
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND COALESCE(metres_btwn1, metres_btwn2) IS NULL 
-AND TRIM(btwn1) NOT ILIKE '%entire length%'
---NORMAL CASES (4815 ROWS)
+    SELECT *
+    FROM gis.bylaws_2020_cleaned
+    WHERE
+        bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+        AND COALESCE(metres_btwn1, metres_btwn2) IS NULL 
+        AND TRIM(btwn1) NOT ILIKE '%entire length%'
+        -- NORMAL CASES (4815 ROWS)
 ),
+
 case1 AS (
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND btwn1 = btwn2 AND COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL 
+    SELECT *
+    FROM gis.bylaws_2020_cleaned
+    WHERE
+        bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+        AND btwn1 = btwn2
+        AND COALESCE(metres_btwn1, metres_btwn2) IS NOT NULL 
 --AN INTERXN AND AN OFFSET(68 ROWS)	
 )
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
-AND bylaw_id NOT IN (SELECT bylaw_id FROM normal)
-AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
---ELSE AKA TWO INTERXN AND AT LEAST ONE OFFSET (259 ROWS)
+
+SELECT *
+FROM gis.bylaws_2020_cleaned
+WHERE
+    bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+    AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
+    AND bylaw_id NOT IN (SELECT bylaw_id FROM normal)
+    AND bylaw_id NOT IN (SELECT bylaw_id FROM case1)
+    --ELSE AKA TWO INTERXN AND AT LEAST ONE OFFSET (259 ROWS)
 ```
 
 In order to produce the results from the table in [How Well Does This Work](#How-Well-Does-This-Work), the query used is exactly the same as above except that this one line is added to the end of each CTE: `AND bylaw_id NOT IN (SELECT DISTINCT id FROM gis.bylaws_routing)` .
@@ -237,34 +262,44 @@ Below shows a table on exactly how many bylaws failed at different stage. Please
 Query used to get the above results are
 ```sql
 --failed_reason = 1
-SELECT * FROM gis.bylaws_2020
-WHERE id NOT IN (SELECT bylaw_id FROM gis.bylaws_2020_cleaned)
-AND deleted = FALSE
+SELECT *
+FROM gis.bylaws_2020
+WHERE
+    id NOT IN (SELECT bylaw_id FROM gis.bylaws_2020_cleaned)
+    AND deleted = FALSE;
 
 --failed_reason = 2
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND TRIM(btwn1) ILIKE '%entire length%' 
-AND btwn2 IS NULL
-AND bylaw_id NOT IN (SELECT id FROM gis.bylaws_routing)
+SELECT *
+FROM gis.bylaws_2020_cleaned
+WHERE
+    bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+    AND TRIM(btwn1) ILIKE '%entire length%' 
+    AND btwn2 IS NULL
+    AND bylaw_id NOT IN (SELECT id FROM gis.bylaws_routing);
 
 --failed_reason = 3
-SELECT * FROM gis.bylaws_found_id
-WHERE int2 IS NULL
-AND int1 IS NOT NULL
+SELECT *
+FROM gis.bylaws_found_id
+WHERE 
+    int2 IS NULL
+    AND int1 IS NOT NULL;
 
 --failed_reason = 4
-SELECT * FROM gis.bylaws_found_id
-WHERE int1 IS NULL
-AND int2 IS NULL
+SELECT *
+FROM gis.bylaws_found_id
+WHERE
+    int1 IS NULL
+    AND int2 IS NULL;
 
 --failed_reason = 5
 --HOWEVER, the following query returns 81 rows, though 55 of them are actually routed but just do not have int1 or int2 aka they are case1
 --THEREFORE, 81 - 55 = 26 cases that failed to be routed
-SELECT * FROM gis.bylaws_found_id
-WHERE int1 IS NOT NULL
-AND int2 IS NOT NULL
-AND id NOT IN (SELECT bylaw_id FROM gis.bylaws_found_routes)
+SELECT *
+FROM gis.bylaws_found_id
+WHERE
+    int1 IS NOT NULL
+    AND int2 IS NOT NULL
+    AND id NOT IN (SELECT bylaw_id FROM gis.bylaws_found_routes);
 ```
 
 In order to know exactly at which stage did they fail, I have to separate out the steps into different parts, namely finding int_id, finding routes, trimming centrelines and see where they fail.
@@ -281,15 +316,20 @@ iii) `gis.bylaws_found_routes` - Tables with found routes using function [`gis.b
 
 ```sql
 CREATE TABLE gis.bylaws_to_route AS
+
 WITH entire AS (
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND TRIM(btwn1) ILIKE '%entire length%' 
-AND btwn2 IS NULL
+    SELECT * FROM gis.bylaws_2020_cleaned
+    WHERE
+        bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+        AND TRIM(btwn1) ILIKE '%entire length%' 
+        AND btwn2 IS NULL
 )
-SELECT * FROM gis.bylaws_2020_cleaned
-WHERE bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
-AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
+
+SELECT *
+FROM gis.bylaws_2020_cleaned
+WHERE
+    bylaw_id IN (SELECT id FROM gis.bylaws_to_update)
+    AND bylaw_id NOT IN (SELECT bylaw_id FROM entire)
 ```
 
 Table `gis.bylaws_to_route` contains 5142 rows of bylaws and looks like this. 
@@ -299,18 +339,25 @@ Table `gis.bylaws_to_route` contains 5142 rows of bylaws and looks like this.
 
 ```sql
 CREATE TABLE gis.bylaws_found_id AS
+
 WITH selection AS (
-SELECT * FROM gis.bylaws_to_update
-WHERE id IN (SELECT bylaw_id FROM gis.bylaws_to_route)
+    SELECT *
+    FROM gis.bylaws_to_update
+    WHERE id IN (SELECT bylaw_id FROM gis.bylaws_to_route)
 )
-SELECT law.*, results.*
+
+SELECT
+    law.*,
+    results.*
 FROM selection law,
-LATERAL gis.bylaws_get_id_to_route(
-law.id,
-law.highway,
-law.between,
-NULL
-) as results
+LATERAL (
+    SELECT * FROM gis.bylaws_get_id_to_route(
+        law.id,
+        law.highway,
+        law.between,
+        NULL
+    )
+ ) as results
 ```
 
 Table `gis.bylaws_found_id` contains 5142 rows and looks like this. 
@@ -321,17 +368,26 @@ Table `gis.bylaws_found_id` contains 5142 rows and looks like this.
 ```sql
 CREATE TABLE gis.bylaws_found_routes AS 
 WITH select_id AS (
-SELECT * FROM gis.bylaws_found_id
-WHERE int1 IS NOT NULL
-AND int2 IS NOT NULL
+    SELECT *
+    FROM gis.bylaws_found_id
+    WHERE
+        int1 IS NOT NULL
+        AND int2 IS NOT NULL
 )
-SELECT ids.highway, ids.between, ids.note, rout.*
+
+SELECT
+    ids.highway,
+    ids.between,
+    ids.note,
+    rout.*
 FROM select_id ids,
-LATERAL gis.bylaws_route_id(
-ids.id,
-ids.highway2,
-ids.int1,
-ids.int2
+LATERAL (
+    SELECT * FROM gis.bylaws_route_id(
+        ids.id,
+        ids.highway2,
+        ids.int1,
+        ids.int2
+    )
 ) AS rout
 ```
 
