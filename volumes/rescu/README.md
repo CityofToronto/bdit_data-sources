@@ -61,8 +61,8 @@ This table contains details of RESCU VDS in the City. Its origin has been lost t
 .
 Arterycode can be used used to join the data with `traffic.artery_data` 
 
-| column_name      | data_type         | sample                | Description  
-|:-----------------|:------------------|:----------------------|
+| column_name      | data_type         | sample                | Description  |
+|:-----------------|:------------------|:----------------------|--------------|
 | detector_id      | text              | DW0040DEL             | You can quickly tell the direction via the second last letter. 
 | number_of_lanes  | smallint          | 3                     |
 | latitude         | numeric           | 43.635944             |
@@ -96,11 +96,11 @@ Arterycode can be used used to join the data with `traffic.artery_data`
 | speed         | numeric                     | 0.0                 |
 | uid           | integer                     | 1                   |
 
-`rescu.raw_15min` table: The table includes aggregated raw counts over 15 min interval. This table is used to insert rows into `rescu.volumes_15min` via `/home/gwolofs/bdit_data-sources/volumes/rescu/create-trigger-function-populate_volumes_15min.sql`.
+`rescu.raw_15min` table: The table includes aggregated raw counts over 15 min interval. This table is used to insert rows into `rescu.volumes_15min` via [`create-trigger-function-populate_volumes_15min.sql`](create-trigger-function-populate_volumes_15min.sql).
 
 rescu.raw_15min
-| column_name   | data_type   | sample                     | Description 
-|:--------------|:------------|:---------------------------|
+| column_name   | data_type   | sample                     | Description |
+|:--------------|:------------|:---------------------------|-------------|
 | dt            | date        | 2020-01-13                 |
 | raw_info      | text        | 0000 - 0015 de0010der   -1 | Format "hhmm - hhmm detector volume". If volume is -1 that means the detector is down and the row is not inserted into volumes_15min. 
 | raw_uid       | integer     | 1                          |
@@ -411,6 +411,7 @@ if raw_num == 0 or raw_num < volume_num or volume_num < 7000:
 ```
 
 When the Slack message is sent, we can run the following check to find out what exactly is wrong with the data pipeline. The Airflow dag only shows us the number of rows in the raw and volumes tables but the reason of failing may still be unclear. Therefore, this query can be used to have a better picture on what is happening with that day of data.
+
 ```sql
 SELECT 
 TRIM(SUBSTRING(raw_info, 15, 12)) AS detector_id,
@@ -420,4 +421,5 @@ FROM rescu.raw_15min
 WHERE dt = '2020-09-03'::date --change to the date that you would like to investigate
 AND nullif(TRIM(SUBSTRING(raw_info, 27, 10)),'')::int < 0
 ```
+
 If the column `volume_15min` is `-1`, that means that there is something wrong with the data from the source end and we have to notify the person in charge as this is not something that we can fix. 
