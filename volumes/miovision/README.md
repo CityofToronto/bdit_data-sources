@@ -1,40 +1,43 @@
-# Miovision - Multi-modal Permanent Video Counters 
+# Miovision - Multi-modal Permanent Video Counters <!-- omit in toc -->
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [1. Overview](#1_overview)
-    - [Folder Structure](#Folder_Structure)
-- [2. Table Structure](#2_table_structure)
-    - [Reference Tables](#reference_tables)
-        - [`classifications`](#classifications)
-        - [`intersections`](#intersections)
-        - [`movements`](#movements)
-        - [`movement_map`](#movement_map)
-        - [`periods`](#periods)
-        - [`intersection_movements`](#intersection_movements)
-    - [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
-        - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
-        - [Pedestrian Movement](#pedestrian_movement)
-        - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-    - [Disaggregate Data](#disaggregate-data)
-        - [`volumes`](#volumes)
-    - [Aggregated Data](#aggregated-data)
-        - [`volumes_15min_mvt`](#volumes-15min-mvt)
-        - [`unacceptable_gaps`](#unacceptable-gaps)
-        - [`volumes_15min`](#volumes-15min)
-        - [`volumes_mvt_atr_xover`](#volumes-mvt-atr-xover)
-    - [Primary and Foreign Keys](#primary-and-foreign-keys)
-        - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-    - [Important Views](#important-views)
-- [3. Finding Gaps and Malfunctioning Camera](#3.-Finding-Gaps-and-Malfunctioning-Camera)
+- [1. Overview](#1-overview)
+  - [Folder Structure](#folder-structure)
+- [2. Table Structure](#2-table-structure)
+  - [Miovision Data at a Glance...(Entity Relationship Diagram)](#miovision-data-at-a-glanceentity-relationship-diagram)
+  - [Reference Tables](#reference-tables)
+    - [`classifications`](#classifications)
+    - [`intersections`](#intersections)
+    - [`movements`](#movements)
+    - [`movement_map`](#movement_map)
+    - [`periods`](#periods)
+    - [`intersection_movements`](#intersection_movements)
+  - [Disaggregated Data](#disaggregated-data)
+    - [`volumes`](#volumes)
+  - [Aggregated Data](#aggregated-data)
+    - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
+      - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
+      - [Pedestrian Movement](#pedestrian-movement)
+      - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
+        - [All the East Leg Crossings!](#all-the-east-leg-crossings)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`unacceptable_gaps`](#unacceptable_gaps)
+    - [`volumes_15min`](#volumes_15min)
+    - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
+    - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
+  - [Primary and Foreign Keys](#primary-and-foreign-keys)
+    - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
+  - [Important Tables](#important-tables)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
 - [4. Repulling data](#4-repulling-data)
-    - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
 ## 1. Overview
 
-The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api`.
-
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
+
+The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api` for data automatically collected since January 2019. Data for the King Street Pilot were collected in batches from up to 21 intersections for a few days per month between October 2017 and August 2018. These can be found in the `miovision_csv` schema, which has a slightly different structure than the API data (see [7. Processing Data from CSV Dumps (NO LONGER IN USE) in `Archive.md`](Archive.md#7-processing-data-from-csv-dumps-no-longer-in-use))
 
 You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
 
@@ -167,56 +170,6 @@ Since this reference table must be updated every time a new intersection is adde
  leg| text | Entry leg of movement|E|
  movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
 
-
-### Understanding Legs, Movement and Direction of Travel (dir)
-
-The Miovision data table that we receive tracks information about:
-1. where the vehicle / pedestrian / cyclist entered the intersection, 
-2. mode used (see the classification table), and, 
-3. how the vehicle / pedestrian / cyclist moved through the intersection (see the movements table).
-
-Movement is tracked differently for vehicles (including bicycles) and pedestrians.
-
-#### Vehicle Movement (Including Bicycles)
-
-Vehicle movement is quite straightforward - upon approaching an intersection, a vehicle may proceed straight through, turn left, turn right or perform a U-turn (aka the Uno Reverse Card of driving).
-
-Here is a diagram that shows the all vehicle movements from the eastern leg of an intersection:
-<img src = "img/mio_mvt.png" alt= "Legs and Vehicle Movements from the East Leg" width = "500" height = "500" title = "Legs and Vehicle Movements from the East Leg">
-
-You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits. These values are populated in the raw, disaggregated data but are not currently transformed into the aggregate data - stay tuned for exciting developments!
-
-#### Pedestrian Movement
-
-Pedestrian movements are measured less intuitively than vehicle movements. The leg on which pedestrians' movement is tracked is the leg they are crossing. Their movement is tracked using clockwise ("cw") or counterclockwise ("ccw") directions (POV: you're in freefall above the intersection, looking down at it). So, a pedestrian crossing the eastern leg of an intersection in the clockwise direction would be walking south.
-
-Here is a diagram that shows the pedestrian movements at an intersection:
-<img src = "img/mio_ped_mvt.png" alt= "Legs and Pedestrian Movements" width = "500" height = "500" title = "Legs and Pedestrian Movements">
-
-#### From Movement Counts to Segment Counts
-
-We are able to transform vehicle movements into segment volume counts, which are commonly referred to as "Across The Road" or ATR counts. The full process is described below. Conceptually:
-- the movement tables track volume at a point in the centre of an intersection, while,
-- the ATR table tracks volume as it crosses a line. A typical "t" intersection has 4 lines - one for each of the road segments that lead to and from an intersection.
-
-To complicate matters even more, the 4 lines across the road segments leading to and from an intersection are further subdivided by direction - so the east leg of an intersection has an eastbound direction and a westbound direction.
-
-Here's a diagram to visualize all of those directions and legs:
-<img src = "img/mio_atr.png" alt= "Measuring vehicles as they cross the road" width = "500" height = "500" title = "Measuring vehicles as they cross the road">
-
-Vehicles crossing the line on the east leg, while travelling west, are entering the intersection.
-
-Vehicles crossing the line on the east leg, while travelling east, are exiting the intersection. They may be:
-- travelling straight through the intersection from the west leg,
-- turning left onto the east leg from the north leg,
-- turning right onto the east leg from the south leg,
-- u-turning from the east leg right back onto that east leg.
-
-##### All the East Leg Crossings!
-Still fuzzy? Here's a diagram to help you picture it perfectly:
-<img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
-
-
 ### Disaggregated Data
 
 #### `volumes`
@@ -242,13 +195,69 @@ Using the trigger function `volumes_insert_trigger()`, the data in `volumes` tab
 
 ### Aggregated Data
 
-Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents. Starting with `volumes` each table has a FOREIGN KEY relationship to the next step of aggregation so that an aggregated record can be traced back to its source data. For example: a row in `volumes_15min` has a unique ID `volumes_15min_uid`, and the foreign key `volumes_15min_mvt.volumes_15min_uid` identifies the row(s) that produced that `volumes_15min` row.
+Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Starting with `volumes` each table has a FOREIGN KEY relationship to the next step of aggregation so that an aggregated record can be traced back to its source data. For example: a row in `volumes_15min` has a unique ID `volumes_15min_uid`, and the foreign key `volumes_15min_mvt.volumes_15min_uid` identifies the row(s) that produced that `volumes_15min` row.
+
+#### Understanding Legs, Movement and Direction of Travel (dir)
+
+The Miovision data table that we receive tracks information about:
+1. where the vehicle / pedestrian / cyclist entered the intersection, 
+2. mode used (see the classification table), and, 
+3. how the vehicle / pedestrian / cyclist moved through the intersection (see the movements table).
+
+Movement is tracked differently for vehicles (including bicycles) and pedestrians.
+
+##### Vehicle Movement (Including Bicycles)
+
+Vehicle movement is quite straightforward - upon approaching an intersection, a vehicle may proceed straight through, turn left, turn right or perform a U-turn (aka the Uno Reverse Card of driving).
+
+Here is a diagram that shows the all vehicle movements from the eastern leg of an intersection:
+<img src = "img/mio_mvt.png" alt= "Legs and Vehicle Movements from the East Leg" width = "500" height = "500" title = "Legs and Vehicle Movements from the East Leg">
+
+You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits. These values are populated in the raw, disaggregated data but are not currently transformed into the aggregate data - stay tuned for exciting developments!
+
+##### Pedestrian Movement
+
+Pedestrian movements are measured less intuitively than vehicle movements. The leg on which pedestrians' movement is tracked is the leg they are crossing. Their movement is tracked using clockwise ("cw") or counterclockwise ("ccw") directions (POV: you're in freefall above the intersection, looking down at it). So, a pedestrian crossing the eastern leg of an intersection in the clockwise direction would be walking south.
+
+Here is a diagram that shows the pedestrian movements at an intersection:
+<img src = "img/mio_ped_mvt.png" alt= "Legs and Pedestrian Movements" width = "500" height = "500" title = "Legs and Pedestrian Movements">
+
+##### From Movement Counts to Segment Counts
+
+We are able to transform vehicle movements into segment volume counts, which are commonly referred to as "Across The Road" or ATR counts. The full process is described below. Conceptually:
+- the movement tables track volume at a point in the centre of an intersection, while,
+- the ATR table tracks volume as it crosses a line. A typical "t" intersection has 4 lines - one for each of the road segments that lead to and from an intersection.
+
+To complicate matters even more, the 4 lines across the road segments leading to and from an intersection are further subdivided by direction - so the east leg of an intersection has an eastbound direction and a westbound direction.
+
+Here's a diagram to visualize all of those directions and legs:
+<img src = "img/mio_atr.png" alt= "Measuring vehicles as they cross the road" width = "500" height = "500" title = "Measuring vehicles as they cross the road">
+
+Vehicles crossing the line on the east leg, while travelling west, are entering the intersection.
+
+Vehicles crossing the line on the east leg, while travelling east, are exiting the intersection. They may be:
+- travelling straight through the intersection from the west leg,
+- turning left onto the east leg from the north leg,
+- turning right onto the east leg from the south leg,
+- u-turning from the east leg right back onto that east leg.
+
+###### All the East Leg Crossings!
+Still fuzzy? Here's a diagram to help you picture it perfectly:
+<img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
 
 #### `volumes_15min_mvt`
 
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
+`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
+make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
+or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
+bicycles (classifications 2 and 10) and pedestrians).
 
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data could either mean there was no volume, or that the camera malfunctioned. Because we have continuous data from these counters, we no longer try to interpolate data during gaps. When our heuristics identify `unacceptable_gaps`, then the entire hour of data is thrown out and the volume is set to `NULL` to imply that the data has been processed for this hour, but the results have been discarded.
+The 1-min data do not identify if a camera is malfunctioning, so gaps in data
+could either mean there was no volume, or that the camera malfunctioned. Because
+we have continuous data from these counters, we no longer try to interpolate
+data during gaps. When our heuristics identify `unacceptable_gaps`, then the
+entire hour of data is thrown out and the volume is set to `NULL` to imply that
+the data has been processed for this hour, but the results have been discarded.
 
 A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
@@ -258,7 +267,7 @@ The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) fun
 
 Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
 
-Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrial movements.
+Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrian movements.
 
 `volumes_15min_mvt` is a table with all possible times and movements for active intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, otherwise the volume is set to sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. 
 
