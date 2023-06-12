@@ -11,7 +11,7 @@
       - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
       - [Pedestrian Movement](#pedestrian-movement)
       - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-      - [All the East Leg Crossings!](#all-the-east-leg-crossings)
+        - [All the East Leg Crossings!](#all-the-east-leg-crossings)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`volumes_15min`](#volumes_15min)
@@ -42,7 +42,6 @@ Miovision currently provides volume counts gathered by cameras installed at spec
 The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api` for data automatically collected since January 2019. Data for the King Street Pilot were collected in batches from up to 21 intersections for a few days per month between October 2017 and August 2018. These can be found in the `miovision_csv` schema, which has a slightly different structure than the API data (see [7. Processing Data from CSV Dumps (NO LONGER IN USE) in `Archive.md`](Archive.md#7-processing-data-from-csv-dumps-no-longer-in-use))
 
 You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
-
 
 ### Folder Structure
 
@@ -108,15 +107,23 @@ Vehicles crossing the line on the east leg, while travelling east, are exiting t
 - turning right onto the east leg from the south leg,
 - u-turning from the east leg right back onto that east leg.
 
-##### All the East Leg Crossings!
+###### All the East Leg Crossings!
 Still fuzzy? Here's a diagram to help you picture it perfectly:
 <img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
 
 #### `volumes_15min_mvt`
 
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
+`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
+make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
+or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
+bicycles (classifications 2 and 10) and pedestrians).
 
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data could either mean there was no volume, or that the camera malfunctioned. Because we have continuous data from these counters, we no longer try to interpolate data during gaps. When our heuristics identify `unacceptable_gaps`, then the entire hour of data is thrown out and the volume is set to `NULL` to imply that the data has been processed for this hour, but the results have been discarded.
+The 1-min data do not identify if a camera is malfunctioning, so gaps in data
+could either mean there was no volume, or that the camera malfunctioned. Because
+we have continuous data from these counters, we no longer try to interpolate
+data during gaps. When our heuristics identify `unacceptable_gaps`, then the
+entire hour of data is thrown out and the volume is set to `NULL` to imply that
+the data has been processed for this hour, but the results have been discarded.
 
 A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
@@ -126,7 +133,7 @@ The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) fun
 
 Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
 
-Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrial movements.
+Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrian movements.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
