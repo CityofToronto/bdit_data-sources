@@ -283,24 +283,6 @@ visualization of turning movements for vehicles (including bicycles).
 Please see [this diagram](#Pedestrian-Movement) for a visualization of
 pedestrian movements.
 
-`volumes_15min_mvt` is a table with all possible times and movements for active
-intersections. Through a left join with
-[`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are
-within the unacceptable gap (technically, within the hour and the hour after),
-if so volume is set to NULL, otherwise the volume is set to sum(volume) as shown
-in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume),
-0)) END AS volume`. 
-
-If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', all 15min
-bins from '15:00:00 to 16:00:00' are set to have volume = NULL OR if there is a
-gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', all 15min bin from
-'15:00:00 to 17:00:00' are set to have volume = NULL. (Not sure if this is
-causing us to exclude way too many time bins, might get back to this later on).
-Through a left join with `volumes`, the query aggregates those 1min bins into
-the 15min bins and exclude those unacceptable ones. Note that those bins fall
-within the unacceptable_gaps time period for that intersection do not get
-aggregated and hence are not assigned with `volume_15min_mvt_uid`.
-
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 volume_15min_mvt_uid|serial|Unique identifier for table|14524|
