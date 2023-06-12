@@ -4,7 +4,8 @@ CREATE MATERIALIZED VIEW gwolofs.rescu_individual_outages
 AS
 
 --make a table of outages by rescu detector.
-    --Outages includes network wide outages. Couldn't resolve overlapping individual and network wide outages. 
+    --Outages includes network wide outages. Couldn't resolve overlapping individual and network wide outages using this method (no longer cross joining timebins and detectors).
+    --could be possible using future range operator: anymultirange - anymultirange → anymultirange ("Computes the difference of the multiranges.")
 --runs in 2 minutes for all of rescu.volumes15min
 --doesn't include outages that end after last data point (by detector)
 
@@ -34,10 +35,10 @@ bin_gaps AS (
                     datetime_bin, 1
                 ) OVER (PARTITION BY detector_id ORDER BY datetime_bin) = '00:15:00' THEN 0
             ELSE 1
-        END AS bin_break,
+        END AS bin_break, --identify non-consecutive bins
         datetime_bin - LAG(
             datetime_bin, 1
-        ) OVER (PARTITION BY detector_id ORDER BY datetime_bin) AS bin_gap
+        ) OVER (PARTITION BY detector_id ORDER BY datetime_bin) AS bin_gap --duration of gap
     FROM non_zero_bins
 )
 
