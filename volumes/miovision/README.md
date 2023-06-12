@@ -159,8 +159,7 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Entry leg of movement|E|
 movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
 volume|integer|Total 15-minute volume|78|
-processed|boolean|**need desc**|true
-<del>volume_15min_uid|<del>integer|<del>Foreign key to [`volumes_15min`](#volumes_15min)|<del>12412| <\del>--currently non-existent
+processed|boolean| Flag if data has been aggregated to `miovision_15min`| TRUE
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
