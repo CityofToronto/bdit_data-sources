@@ -17,7 +17,7 @@ CREATE TABLE scannon.rescu_data_days_91 AS (
             v.detector_id,
             date_trunc('day', v.datetime_bin)::date
         HAVING COUNT(v.datetime_bin) >= 91
-)
+    )
 
     -- here's a table of those detectors with helpful attribute info including location
     SELECT

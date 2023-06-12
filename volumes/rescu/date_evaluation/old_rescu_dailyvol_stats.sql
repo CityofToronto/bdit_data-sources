@@ -11,7 +11,7 @@ CREATE TABLE scannon.rescu_dayvol_stats_a AS (
             CASE
                 WHEN TO_CHAR(v.datetime_bin, 'Day') IN ('Saturday', 'Sunday') THEN 'Weekend'
                 ELSE 'Weekday'
-            END AS day_type
+            END AS day_type,
             date_trunc('day', v.datetime_bin)::date AS dt,
             di.primary_road || ' and ' || di.cross_road AS gen_loc,
         FROM rescu.volumes_15min AS v
@@ -36,7 +36,7 @@ CREATE TABLE scannon.rescu_dayvol_stats_a AS (
             AND dj.dt = v.datetime_bin::date
         WHERE 
             v.datetime_bin >= '2022-01-01'
-            AND v.datetime_bin < '2023-01-01'
+                AND v.datetime_bin < '2023-01-01'
         GROUP BY
             dj.arterycode,
             dj.detector_id,

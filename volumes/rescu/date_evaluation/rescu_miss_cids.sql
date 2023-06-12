@@ -5,10 +5,10 @@ CREATE TABLE scannon.rescu_miss_cid AS (
             da.arterycode,
             ca.centreline_id          
         FROM scannon.rescu_det_art AS da
-        LEFT JOIN scannon.cent_art AS ca USING(arterycode)
-        WHERE da.centreline_id is NULL
+        LEFT JOIN scannon.cent_art AS ca USING (arterycode)
+        WHERE da.centreline_id IS NULL
     )
-    
+
     SELECT 
         mc.* 
     FROM miss_ctrid AS mc
@@ -20,5 +20,5 @@ CREATE TABLE scannon.rescu_miss_cid AS (
         da.arterycode,
         da.centreline_id
     FROM scannon.rescu_det_art AS da
-    WHERE centreline_id is not null
+    WHERE centreline_id IS NOT NULL
 );
