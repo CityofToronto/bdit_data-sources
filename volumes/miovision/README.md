@@ -259,19 +259,47 @@ data during gaps. When our heuristics identify `unacceptable_gaps`, then the
 entire hour of data is thrown out and the volume is set to `NULL` to imply that
 the data has been processed for this hour, but the results have been discarded.
 
-A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
+A `0` value implies the process identifies the camera was working, but there was
+no volume for that mode. Only volumes for pedestrians, cyclists and light
+vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are
+the modes we report on more frequently. Other modes are not filled because they
+have much lower volumes, so the 0s would expand the size of the dataset
+considerably.
 
-The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
+The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql)
+function performs zero-filling by cross-joining a table containing all possible
+movements described in ([`intersection_movements`](#intersection_movements)).
+The only type of movement tracked in the 1-minute volume data, but not the
+aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid =
+8`). The vendor recommended that bicycle exits not be used due to data quality
+concerns.
 
-**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
+**Please note that movements for vehicles (including bicycles) are different
+than those for pedestrians.**
 
-Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
+Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a
+visualization of turning movements for vehicles (including bicycles).
 
-Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrian movements.
+Please see [this diagram](#Pedestrian-Movement) for a visualization of
+pedestrian movements.
 
-`volumes_15min_mvt` is a table with all possible times and movements for active intersections. Through a left join with [`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are within the unacceptable gap (technically, within the hour and the hour after), if so volume is set to NULL, otherwise the volume is set to sum(volume) as shown in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume), 0)) END AS volume`. 
+`volumes_15min_mvt` is a table with all possible times and movements for active
+intersections. Through a left join with
+[`unacceptable_gaps`](#unacceptable_gaps), the query checks if the bins are
+within the unacceptable gap (technically, within the hour and the hour after),
+if so volume is set to NULL, otherwise the volume is set to sum(volume) as shown
+in the line `CASE WHEN un.accept = FALSE THEN NULL ELSE (COALESCE(SUM(A.volume),
+0)) END AS volume`. 
 
-If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', all 15min bins from '15:00:00 to 16:00:00' are set to have volume = NULL OR if there is a gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', all 15min bin from '15:00:00 to 17:00:00' are set to have volume = NULL. (Not sure if this is causing us to exclude way too many time bins, might get back to this later on). Through a left join with `volumes`, the query aggregates those 1min bins into the 15min bins and exclude those unacceptable ones. Note that those bins fall within the unacceptable_gaps time period for that intersection do not get aggregated and hence are not assigned with `volume_15min_mvt_uid`.
+If there is a gap from '2020-06-25 15:38:00' to '2020-06-25 15:54:00', all 15min
+bins from '15:00:00 to 16:00:00' are set to have volume = NULL OR if there is a
+gap from '2020-06-25 15:38:00' to '2020-06-25 16:24:00', all 15min bin from
+'15:00:00 to 17:00:00' are set to have volume = NULL. (Not sure if this is
+causing us to exclude way too many time bins, might get back to this later on).
+Through a left join with `volumes`, the query aggregates those 1min bins into
+the 15min bins and exclude those unacceptable ones. Note that those bins fall
+within the unacceptable_gaps time period for that intersection do not get
+aggregated and hence are not assigned with `volume_15min_mvt_uid`.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -306,17 +334,30 @@ accept|boolean|Stating whether this gap is acceptable or not|false|
 
 #### `volumes_15min`
 
-Data table storing ATR versions of the 15-minute turning movement data. Data in `volumes` is stored in TMC format, so must be converted to ATR to be included in `volumes_15min`.
+Data table storing ATR versions of the 15-minute turning movement data. Data in
+`volumes` is stored in TMC format, so must be converted to ATR to be included in
+`volumes_15min`.
 
-TMC movements are described in `miovision_api.movements`. **TMC legs indicate the approach direction of vehicles (including bicycles)**, and there are **four possible movements encoded using `movement_uid`: `1` - thru; `2` - left turn; `3` - right turn; and `4` - u-turn**. For a typical 't' intersection, there will be 16 possible TMC combinations (since there are 4 directions and 4 legs in each direction for TMC).
+TMC movements are described in `miovision_api.movements`. **TMC legs indicate
+the approach direction of vehicles (including bicycles)**, and there are **four
+possible movements encoded using `movement_uid`: `1` - thru; `2` - left turn;
+`3` - right turn; and `4` - u-turn**. For a typical 't' intersection, there will
+be 16 possible TMC combinations (since there are 4 directions and 4 legs in each
+direction for TMC).
                                                            
-If you are having trouble picturing it, check out [this diagram](#Vehicle-Movement-(Including-Bicycles)).
+If you are having trouble picturing it, check out [this
+diagram](#Vehicle-Movement-(Including-Bicycles)).
                                                            
-**ATR movements define leg as the approach direction of vehicles (like TMCs)**, and **direction as the cardinal direction of traffic travelling through that side of the intersection**. For a typical 't' intersection, there will be 8 possible ATR since there are 4 directions and 2 legs in each direction for ATR.
+**ATR movements define leg as the approach direction of vehicles (like TMCs)**,
+and **direction as the cardinal direction of traffic travelling through that
+side of the intersection**. For a typical 't' intersection, there will be 8
+possible ATR since there are 4 directions and 2 legs in each direction for ATR.
 
-If you are having trouble picturing it, check out [this diagram](#From-Movement-Counts-to-Segment-Counts).
+If you are having trouble picturing it, check out [this
+diagram](#From-Movement-Counts-to-Segment-Counts).
 
-`miovision_api.movement_map` is used to convert the TMC data to the ATR data. Here are some example rows from the table:
+`miovision_api.movement_map` is used to convert the TMC data to the ATR data.
+Here are some example rows from the table:
 
 |leg_new|dir|leg_old|movement_uid|description of movement|
 |-------|---|-------|------------|-----------------------|
