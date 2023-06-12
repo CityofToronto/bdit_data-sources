@@ -1,284 +1,138 @@
-# Traffic Volumes
+# Traffic Volume <!-- omit in toc -->
 
-Traffic volume data (traffic counts and turning movements) from the FLOW database and other data sources.
+Traffic volumes count different modes of traffic (bicycles, pedestrians, vehicles) typically conducted along a particular road, path, or at an intersection. A traffic count is commonly undertaken either automatically (with the installation of a temporary or permanent electronic traffic recording device), or manually. The short term data counts are either collected continuously or in different intervals.
+ 
+The catalogue of the volume datasets owned, managed, and used by Transportation Data & Analytics is also available on the [intranet page](http://insideto.toronto.ca/transportation/data-analytics.htm#traffic-volumes) for City staff.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [`rescu`: Loop Detector Data](#rescu-loop-detector-data)
-- [FLOW Data](#flow-data)
-	- [1. Loading Data](#1-loading-data)
-	- [2. Schema Overview](#2-schema-overview)
-	- [3. Traffic Count Types](#3-traffic-count-types)
-		- [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
-			- [Data Elements](#data-elements)
-			- [Notes](#notes)
-		- [Automated Traffic Recorders (ATRs)](#automated-traffic-recorders-atrs)
-			- [Data Elements](#data-elements-1)
-			- [Notes](#notes-1)
-	- [4. Relevant Tables](#4-relevant-tables)
-		- [arterydata](#arterydata)
-			- [Content](#content)
-			- [Table Structure](#table-structure)
-		- [det](#det)
-			- [Content](#content-1)
-			- [Table Structure](#table-structure-1)
-		- [countinfomics](#countinfomics)
-			- [Content](#content-2)
-			- [Table Structure](#table-structure-2)
-		- [cnt_det](#cnt_det)
-			- [Content](#content-3)
-			- [Table Stucture](#table-stucture)
-		- [countinfo](#countinfo)
-			- [Content](#content-4)
-			- [Table Structure](#table-structure-3)
-		- [category](#category)
-			- [Content](#content-5)
-			- [Table Structure](#table-structure-4)
-	- [5. Useful Views](#5-useful-views)
+- [Short Term Counts](#short-term-counts)
+  - [Automatic Traffic Recorder (ATR) Counts](#automatic-traffic-recorder-atr-counts)
+  - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
+  - [Other Methods](#other-methods)
+- [Permanent Sources of Volume Data](#permanent-sources-of-volume-data)
+  - [RESCU Vehicle Detection Stations](#rescu-vehicle-detection-stations)
+  - [Miovision Cameras](#miovision-cameras)
+  - [Watch Your Speed (WYS) Signs](#watch-your-speed-wys-signs)
+- [What the Data are Used For](#what-the-data-are-used-for)
 - [Open Data](#open-data)
-	- [King Street Pilot](#king-street-pilot)
+  - [King Street Pilot](#king-street-pilot)
+  - [Short Term Counts](#short-term-counts-1)
 
-## `rescu`: Loop Detector Data
+## Short Term Counts
 
-Road Emergency Services Communication Unit (RESCU) track traffic volume on expressways using loop detectors. 
-More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
-or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+Short term traffic count programs are traffic monitoring programs that collect traffic data for a short period of time, typically ranging from a few hours to several days. These programs use various methods to count and analyze vehicle traffic on a particular roadway or intersection.
 
-Raw data is available in `rescu.raw_15min` whereas processed 15-min data is available in `rescu.volumes_15min`. Data are pulled daily.
+### Automatic Traffic Recorder (ATR) Counts
 
-## FLOW Data
+- **Description:** ATR counts are primarily used to capture the volume of vehicles that travel on a roadway over a given period of time.
+- **Data collection method:** ATR counts have traditionally been collected on ad hoc basis using road tubes, which use pneumatic technology to capture data that is later analyzed to estimate the count. As data collection methods continue to evolve, more firms and cities are choosing safer and more reliable tools to collect this type of data. Automated counters are used to gather various types of vehicular traffic data such as total vehicle volume, classification (type, size), and speed.
+- **Collected data:** Vehicle class, volume and other data collection characteristics can be customized based on the survey requirements.
+- Collected in 24-hour increments, from 1 day to 2 weeks
+- Usually 72 hours (3 days) or 168 hours (7 days)
+  - **Bins:** counted in 15-minute increments
+  - **Volume:** the number of vehicles crossing the pneumatic tubes
+  - **Speed:** the number of vehicles crossing the pneumatic tubes, separated into a matrix of speed bins (1-19kph, 20-25kph, 26-30kph, 31-35kph, etc.)
+  - **Mode/ vehicle classification:** the number of vehicles crossing the pneumatic tubes, separated by vehicle classification (usually cars and trucks), according to the FHWA classification
+- **Date range and updates:** January 5, 1993 to present; ad hoc updates
+- **Geographic coverage:** city-wide, where ad hoc counts have been conducted. See the internal application [MOVE](https://move.intra.prod-toronto.ca/view/) for available dates and locations.
+- **Format available:** CSV or PDF
+- **Data management and access:** ATR  data collection is coordinated and managed by Data and Analytics- Data Collection team. 
+- Data is available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors.
+- More detailed data is available in the `traffic` Schema.
+- Refer to [Short Term Count Readme](short_term_counting_program/README.md) for more details 
 
-### 1. Loading Data
 
-**Here is your quick July 2022 loading data update:**
-- Data are loaded into the TRAFFIC_NEW schema on BigData every night
-- For nine tables, data are upserted from TRAFFIC_NEW into traffic. The nine tables are:
-    - arc_link
-    - arterydata
-    - category
-    - cnt_det
-    - cnt_spd
-    - countinfo
-    - countinfomics
-    - det
-    - nodes
-- We audit some of these tables (in traffic.logged_actions) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
-    - arc_link
-    - arterydata
-    - category
-    - countinfo
-    - countinfomics
-    - nodes
+### Turning Movement Counts (TMC)
 
-**And now back to your regularly scheduled documentation...**
+- **Description:** One of the most sought-after traffic data types is the TMC, also known as an Intersection Count. In a TMC, vehicle movements (e.g., left, through, and right turns) and volumes for all legs of the intersection are captured, for a specific period of time.
+- **Data collection method:** Turning movement counts traditionally were conducted using person-recorders that manually observe and record the data or by deploying technology such a cameras. Now, they are collected using video-based collection.
+- The use of any technology or innovative methods should be tested for accuracy prior to being an acceptable method to collect turning movement count data
+- **Collected data**: vehicles and bicycles are counted by their turning movements (left, through, right, u-turn) by direction of approach; pedestrians are counted by the leg of the intersection crossed
+  - **Bins**: counted in 15-minute increments
+  - **Modes**: vehicles (cars, trucks, busses), cyclists, pedestrians, other active transportation modes 
+ - **Date range and updates:** January 5, 1993 to present; ad hoc updates
+- **Geographic coverage:** city-wide, where ad hoc counts have been conducted. See [MOVE](https://move.intra.prod-toronto.ca/view/) for available dates and locations.
+- **Format available:** CSV or PDF
+- **Data management and access:** TMC data collection is coordinated and managed by Data and Analytics- Data Collection team. They can be reached at TrafficData@toronto.ca.
+- 8-hour count data is available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) to the public and also are available on [MOVE](https://move.intra.prod-toronto.ca/view/) internal application to City staff and contractors. 
+- 8-hour data are also available in the `traffic` schema to internal users
+- Refer to  [Short Term Count Readme](short_term_counting_program/README.md) for more details
 
-The data in the schema comes from an image of FLOW Oracle database, which was reconstituted with a free version of [Oracle Database](http://www.oracle.com/technetwork/database/database-technologies/express-edition/downloads/index.html), [Oracle SQL Developer](http://www.oracle.com/technetwork/developer-tools/sql-developer/downloads/index-098778.html) to view the table structures and data. `impdp` was used to import first the full schema, and then select tables of data to import into a local Oracle DB.
+### Other Methods
 
-In a SQL window, create the `TRAFFIC` tablespace for import.
-```sql
-CREATE TABLESPACE TRAFFIC DATAFILE 'traffic.dbf' SIZE 10600M ONLINE;
-```
-And then to import tables
-```shell
-impdp system/pw tables=(traffic.det, traffic.cal) directory=flow_data dumpfile=flow_traffic_data.dmp logfile=flow_traffic_data.log table_exists_action=truncate
-```
-For one really large table (larger than the 11GB max database size for Oracle Express) it was necessary to [filter rows in the table](https://dba.stackexchange.com/questions/152326/how-can-i-restore-a-10-91g-table-in-oracle-express).
+Here are some examples of other short term traffic counting programs conducted by the City which are less commonly used.
+- **Pedestrian Delay and Classification Study:** Through manual observation, this study captures pedestrians crossing a road within defined zones.
+- **Pedestrian Crossover Observation Study (PXO):** This study observes the behaviour of pedestrians using a crosswalk.
 
-Once the data is imported into Oracle, it was dumped to csv + sql file in SQL Developer. The `CREATE TABLE` sql file was converted to PostgreSQL-friendly code with [SQLines](http://www.sqlines.com/home).
+## Permanent Sources of Volume Data
 
-### 2. Schema Overview
-The following is an overview of tables relevant to traffic volume counts housed in FLOW (a database maintained by the City of Toronto's Traffic Management Centre) and that have been migrated to the Big Data Innovation Team's own PostgreSQL database. The relationships between the relevant tables are illustrated below. 
+Permanent traffic counts refer to the process of continuously monitoring and recording the volume and characteristics of vehicular traffic on a particular road, highway or at intersection using a permanent automated counting system. These systems typically consist of sensors, cameras, or other devices that are installed along the roadway or at intersections to collect data on traffic volumes, speed, classification, and other parameters.
 
-!['flow_tables_relationship'](img/flow_tables_relationship.png)
+### RESCU Vehicle Detection Stations
 
-The database is structured around three types of tables: Turning Movement Counts (TMC), Automatic Traffic Recorder (ATR) counts, and other reference tables that provide additional spatial or temporal information.
+- **Description:** Road Emergency Services Communication Unit (RESCU) track traffic volume mostly on expressways using loop detectors and radar. 
+- **Data collection method:** Loop detectors installed on the ground of the road surface.
+- Radar detectors (which function the same way as loop detectors) placed on the roadside. 
+- The city data is collected using loop detector
+-**Collected data:**
+  - **Bins**: Raw data is recorded in 20 second increments. Data handled by D&A is aggregated to 15 minute increments and produced as reports out of Oracle. 
+  - **Modes:** Vehicular traffic is detected by RESCU.
+ - **Date range and updates:** January 2017 to present; daily updates
+- **Geographic coverage:** Highways and Expressways managed by the City of Toronto
+- **Format available:** Custom data extract in CSV
+- **Data management and access:** Data is managed and coordinated by ITS Central.
+- Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
+- Aggregated data is available in rescu schema.
+- More information can be found on [RESCU Readme](rescu/README.md)
 
-Table Name|Description
-----------|-----------
-[arterydata](#arterydata)|Reference table for Artery Codes (internal reference for intersections and segments)
-[det](#det)|Individual Turning Movement Count (TMC) observations
-[countinfomics](#countinfomics)|Intermediate table linking TMC observations to Artery Codes
-[cnt_det](#cnt_det)|Automatic Traffic Recorder (ATR) observations
-[countinfo](#countinfo)|Intermediate table linking ATR observations to Artery Codes
-[category](#category)|Reference table for Category ID (i.e traffic count type)
 
-### 3. Traffic Count Types
+### Miovision Cameras
 
-#### Turning Movement Counts (TMCs)
+- **Description:**  Miovision cameras are installed at selected intersections across the City. Camera feeds are converted to turning movement count volumes for different modes (truck, bus, car,   pedestrian, bicycle). Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins
+- **Data collection method:** Data is collected using Permanent counters - Miovision cameras
+- **Collected data:**
+-  24/7 volume data at these locations are available on an ongoing basis
+   - **Bins**: Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) and Automatic Traffic Recorder (ATR) equivalents.
+   - **Modes:** truck, bus, car, pedestrian, bicycle, although bicycle volumes are less accurate, and are actively being improved. 
+- **Date range and updates:** January 2019 to present; daily updates
+- **Geographic coverage:** Limited permanent counter locations (60 active locations as of April 24, 2023) 
+- **Format available:** Custom data extract in CSV
+- **Data management and access:** 
+- Miovision data collection is coordinated and managed by Data and Analytics unit. 
+- More information can be found on [Miovision Readme](miovision/README.md)
 
-##### Data Elements
-* Location Identifier (SLSN *Node* ID)
-* 15 min aggregated interval time
-* 15 min aggregated volume per movement (turning and approach) by:
-	- vehicle types
-	- cyclists and pedestrian counts are approach only
-	
-##### Notes
-* No regular data load schedule. 
-* Data files collected by 2-3 staff members.
-* Manually geo-reference volume data to an SLSN node during data import process.
-* Data is manually imported into FLOW.
-* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days.
-* Strictly conforms to FLOW LOADER data file structure.
-* If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded.
-* Volumes are available at both signalized and non-signalized intersections
-* Each count station is given a unique identifier to avoid duplicate records.
-* Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents.
+### Watch Your Speed (WYS) Signs
 
-#### Automated Traffic Recorders (ATRs)
+- **Description:**  The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that use a radar speed detection device and an LED display to  display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. The signs collect these speed observations and send them to the cloud. Processed data aggregated to 1-hour and 5 km/h bins
+- Installation of the sign was done as part of 2 programs: 
+  - The permanent watch your speed sign program including school watch your speed which has signs installed at high priority schools. As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
+  - Mobile watch your speed which has signs mounted on trailers that move to a different location every few weeks, 
+.
+- **Data collection method:** The City API script can grab data from each watch your speed sign the city has. It mainly pulls speed and volume data. The API supports more calls including setting/getting the schedule, setting/getting the messages each sign displays and other calls.
+- **Collected data:**
+  - **Bins**: Raw data table is pre-aggregated into 5 minute bin. D&A processes and aggregates data to 1-hour and 5 km/h bins.
+  - **Modes:** Vehicular traffic (e.g. cars, trucks, buses, motorcycles).The signs are generally not designed to detect bicycles or pedestrians but they can be triggered by and detect these passing road users. 
+- **Date range and updates:** Data is available at some locations since January 2016 
+- **Geographic coverage:** City Wide- permanent signs are mostly in school zones. The number of mobile signs varies 
+- **Format available:** Custom data extract in CSV
+- More information can be found on  [WYS Readme](../wys/readme.md).
 
-##### Data Elements
-* Location Identifier (SLSN *Link* ID)
-* Direction
-* 15 min aggregated interval time
-* 15 min volume
-	- typically aggregated by direction, although data may be available by lane
+## What the Data are Used For
 
-##### Notes
-* The counts represent roadway and direction(s), not on a lane-by-lane level
-* No regular data load schedule
-* Manually geo-reference volume data to an SLSN node during data import process
-* Strictly conforms to FLOW LOADER data file structure
-* Typical ATR counts 24h * 3 days at location in either 1 or both directions
-* Each PCS/ATR is given a unique identifier to avoid duplicate records
-
-### 4. Relevant Tables
-
-#### arterydata
-
-##### Content
-
-This table contains the location information of each volume count. 
-
-##### Table Structure
-
-Field Name|Type|Description
-----------|----|-----------
-arterycode|bigint|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
-street1|text|first street name
-street2|text|second street name
-location|text|full description of count location
-apprdir|text|direction of the approach referred to by this arterycode
-sideofint|text|the side of the intersection that the arterycode refers to
-linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
-
-### det 
-#### Content 
-This table contains individual data entries for turning movement counts
-
-#### Table Structure
-Field Name|Type|Description
-----------|----|-----------
-ID|Autonumber|Autonumber function
-COUNT_INFO_ID|number|ID number linked to [countinfomics](#1. countinfomics) table containing higher-level information
-COUNT_TIME|Date/Time|Effective time of counts (**time displayed is the end time period**)
-N_CARS_R|number|S/B cars turning right
-N_CARS_T|number|S/B cars going through
-N_CARS_L|number|S/B cars turning left
-S_CARS_R|number|N/B cars turning right
-S_CARS_T|number|N/B cars going through
-S_CARS_L|number|N/B cars turning left
-E_CARS_R|number|W/B cars turning right
-E_CARS_T|number|W/B cars going through
-E_CARS_L|number|W/B cars turning left
-W_CARS_R|number|E/B cars turning right
-W_CARS_T|number|E/B cars going through
-W_CARS_L|number|E/B cars turning left
-N_TRUCK_R|number|S/B trucks turning right
-N_TRUCK_T|number|S/B trucks going through
-N_TRUCK_L|number|S/B trucks turning left
-S_TRUCK_R|number|N/B trucks turning right
-S_TRUCK_T|number|N/B trucks going through
-S_TRUCK_L|number|N/B trucks turning left
-E_TRUCK_R|number|W/B trucks turning right
-E_TRUCK_T|number|W/B trucks going through
-E_TRUCK_L|number|W/B trucks turning left
-W_TRUCK_R|number|E/B trucks turning right
-W_TRUCK_T|number|E/B trucks going through
-W_TRUCK_L|number|E/B trucks turning left
-N_BUS_R|number|S/B buses turning right
-N_BUS_T|number|S/B buses going through
-N_BUS_L|number|S/B buses turning left
-S_BUS_R|number|N/B buses turning right
-S_BUS_T|number|N/B buses going through
-S_BUS_L|number|N/B buses turning left
-E_BUS_R|number|W/B buses turning right
-E_BUS_T|number|W/B buses going through
-E_BUS_L|number|W/B buses turning left
-W_BUS_R|number|E/B buses turning right
-W_BUS_T|number|E/B buses going through
-W_BUS_L|number|E/B buses turning left
-N_PEDS|number|North side pedestrians
-S_PEDS|number|South side pedestrians
-E_PEDS|number|East side pedestrians
-W_PEDS|number|West side pedestrians
-N_BIKE|number|S/B bicycles from the north side
-S_BIKE|number|N/B bicylcles from the south side
-E_BIKE|number|W/B bicycles from the east side
-W_BIKE|number|E/B bicycles from the west side
-N_OTHER|number|North side  - optional field
-S_OTHER|number|South side - optional field
-E_OTHER|number|East side - optional field
-W_OTHER|number|West side - optional field
-
-#### countinfomics
-
-##### Content
-
-This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
-
-##### Table Structure
-
-Field Name|Type|Description
-----------|----|-----------
-count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
-arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
-count_date|date|date on which the count was conducted
-day_no|bigint|day of the week 1= Sunday, 7 = Saturday
-category_id|int|ID number linked to [category](#category) table containing the source of the count
-
-#### cnt_det
-
-##### Content
-
-This table contains individual data entries from all sources other than turning movement counts.
-
-##### Table Stucture
-
-Field Name|Type|Description
-----------|----|-----------
-count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
-count|bigint|vehicle count
-timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
-
-#### countinfo
-
-##### Content
-
-Similar to [countinfomics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
-
-##### Table Structure
-
-See [countinfomics](#countinfomics)
-
-#### category
-
-##### Content
-
-This is a reference table referencing the data source of each entry.
-
-##### Table Structure
-
-Field Name|Type|Description
-----------|----|-----------
-category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
-category_name|text|name of the data source
-
-### 5. Useful Views
-
-- `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
-
-- `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
+Traffic count data is used for a variety of purposes, including but not limited to:
+- **Annual Average Daily Traffic (AADT)** : Traffic counts provide the source data used to calculate AADT, which is the common indicator used to represent traffic volume. 
+  - An AADT count identifies the average vehicle volumes in a 24-hour period. That value is produced by dividing the total vehicle volume for one year by 365 days. AADT counts are a good indicator of how busy a road is and is often used for evaluating, selecting or designing a new facility or territory. AADT values can be calculated from short duration counts using a method described in the FHWA Traffic Monitoring Guide.
+- **Planning and design of transportation systems**: Traffic data is used to assess current and past volume and performance and to predict future volume and performance on a roadway or at an intersection, which can help transportation planners and engineers design and improve transportation systems.
+- **Safety analysis**: 
+  - Traffic count data can be used to identify crash rates, and help safety engineers develop countermeasures to improve safety on the roadway.
+  - Traffic counts that include speeds are used in speed limit enforcement efforts, highlighting peak speeding periods to optimise speed camera use and educational efforts and traffic safety analysis.
+  - The use of non-motorized travel data and information supports analysis regarding the impacts to the transportation network (on volumes and safety) resulting from the use of bicycles as an alternative travel method
+- **Environmental impact analysis**: Traffic count data can be used to estimate emissions from vehicles, and assess the impact of transportation on air quality and noise pollution.
+- **Economic analysis**: Traffic count data can be used to estimate the economic impact of transportation on a region, such as the number of jobs supported by transportation infrastructure or the amount of revenue generated by transportation-related businesses.
+- **Traffic management**: TMC data is also collected to find the intersection’s level of service. TMC data is used in other types of analysis related to the overall performance of an intersection too. It can be used to optimize traffic signal timings, manage traffic flow during special events or emergencies, and plan detours for road construction projects
+- **Land use planning** : Traffic count data can be used to help city planners make decisions about zoning and land use patterns, such as determining the appropriate mix of commercial and residential development.
+- **Other uses of traffic data** include project and resource allocation programming;operations and emergency evacuation; capacity and congestion analysis; traffic forecasts; project evaluation; pavement design;  cost allocation studies; estimating the economic benefits of highways; preparing vehicle size and weight enforcement plans; freight movement activities; pavement and bridge management systems, etc.
 
 ## Open Data
 
@@ -289,3 +143,7 @@ For the King Street Transit Pilot, the below volume datasets were released. The 
 - [King St. Transit Pilot - 2015 King Street Traffic Counts](https://open.toronto.ca/dataset/king-st-transit-pilot-2015-king-street-traffic-counts/) contains 15 minute aggregated ATR data collected during 2015 of various locations on King Street. [Here](sql/open_data-ksp_atr_2015.sql) is the SQL that generated that table.
 - [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from [Miovision](volumes/miovision) readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
 - [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
+
+### Short Term Counts
+
+- 8-hour count data [Turning Movement Count](#turning-movement-counts-tmc) data are available on [Open Data](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/) 
