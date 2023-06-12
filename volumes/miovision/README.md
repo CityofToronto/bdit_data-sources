@@ -5,7 +5,7 @@
 - [1. Overview](#1-overview)
   - [Folder Structure](#folder-structure)
 - [2. Table Structure](#2-table-structure)
-  - [Miovision Data at a Glance...(Entity Relationship Diagram)](#miovision-data-at-a-glanceentity-relationship-diagram)
+  - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
   - [Reference Tables](#reference-tables)
     - [`classifications`](#classifications)
     - [`intersections`](#intersections)
@@ -55,7 +55,7 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 
 ## 2. Table Structure
 
-### Miovision Data at a Glance...(Entity Relationship Diagram)
+### Miovision Data Relationships at a Glance
 
 ![Miovision Data Entity Relationship Diagram](img/Mio_ERD.png)
 
