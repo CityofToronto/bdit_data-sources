@@ -14,6 +14,12 @@ WITH rescu_summary AS (
     FROM rescu.volumes_15min
     GROUP BY 1
     HAVING COALESCE(SUM(volume_15min), 0) > 0
+    
+    UNION 
+    
+    SELECT --quick way to include ongoing outage
+        now()::timestamp AS datetime_bin, 
+        1 AS volume
     ORDER BY 1
 ),
 
