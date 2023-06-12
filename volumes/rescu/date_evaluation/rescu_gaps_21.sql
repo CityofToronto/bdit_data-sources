@@ -16,16 +16,16 @@ CREATE TABLE scannon.rescu_gaps_21 AS (
             v.datetime_bin::date >= '2021-01-01'
             AND v.datetime_bin::date < '2022-01-01'
     )
-    
+
 -- calculate the start and end times of gaps that are longer than 15 minutes
-SELECT
-    bt.detector_id,
-    bt.datetime_bin::date AS gap_dt,
-    bt.datetime_bin - bt.bin_gap AS gap_start_tx,
-    bt.datetime_bin AS gap_end_tx,
-    bt.bin_gap
-FROM bin_time AS bt
-WHERE 
-    bt.bin_break = 1
-    AND bin_gap IS NOT NULL
+    SELECT
+        bt.detector_id,
+        bt.datetime_bin::date AS gap_dt,
+        bt.datetime_bin - bt.bin_gap AS gap_start_tx,
+        bt.datetime_bin AS gap_end_tx,
+        bt.bin_gap
+    FROM bin_time AS bt
+    WHERE 
+        bt.bin_break = 1
+        AND bt.bin_gap IS NOT NULL
 );

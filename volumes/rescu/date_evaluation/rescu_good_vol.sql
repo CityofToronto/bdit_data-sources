@@ -12,9 +12,9 @@ CREATE TABLE scannon.rescu_good_vol_21 AS (
         v.datetime_bin,
         v.volume_15min
     FROM scannon.rescu_enuf_vol_21 AS ev
-    LEFT JOIN scannon.cent_art AS art USING(arterycode)
-    LEFT JOIN rescu.detector_inventory AS di USING(detector_id)
+    LEFT JOIN scannon.cent_art AS art USING (arterycode)
+    LEFT JOIN rescu.detector_inventory AS di USING (detector_id)
     LEFT JOIN rescu.volumes_15min AS v 
         ON ev.detector_id = v.detector_id
-        AND ev.dt = v.datetime_bin::date
+            AND ev.dt = v.datetime_bin::date
 );

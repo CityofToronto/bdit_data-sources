@@ -10,7 +10,7 @@ CREATE TABLE scannon.rescu_dayvol_stats_21 AS (
             CASE
                 WHEN EXTRACT(ISODOW FROM v.datetime_bin) IN (6, 7) THEN 'Weekend'
                 ELSE 'Weekday'
-            END AS day_type
+            END AS day_type,
             di.primary_road || ' and ' || di.cross_road AS gen_loc,
             date_trunc('day', v.datetime_bin)::date AS dt,
             TO_CHAR(v.datetime_bin, 'Day') AS dow

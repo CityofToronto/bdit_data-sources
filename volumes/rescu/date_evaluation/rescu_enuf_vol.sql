@@ -10,13 +10,13 @@ CREATE TABLE scannon.rescu_enuf_vol AS (
                 ELSE 'check volume'
             END AS vol_check
         FROM scannon.rescu_dayvol_stats_21 AS dv
-        LEFT JOIN rescu.detector_inventory AS di USING(detector_id)
-)
+        LEFT JOIN rescu.detector_inventory AS di USING (detector_id)
+    )
 
-SELECT 
-    va.* 
-FROM vol_asmt AS va
-WHERE va.vol_check = 'enough volume'
+    SELECT 
+        va.* 
+    FROM vol_asmt AS va
+    WHERE va.vol_check = 'enough volume'
 );
     
 COMMENT ON TABLE scannon.rescu_enuf_vol IS 'enough volume for the Gardiner, DVP and Allen is 20000 per day; for Lakeshore the figure is 10000 per day.
