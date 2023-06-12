@@ -332,8 +332,8 @@ diagram](#Vehicle-Movement-(Including-Bicycles)).
                                                            
 **ATR movements define leg as the approach direction of vehicles (like TMCs)**,
 and **direction as the cardinal direction of traffic travelling through that
-side of the intersection**. For a typical 't' intersection, there will be 8
-possible ATR since there are 4 directions and 2 legs in each direction for ATR.
+side of the intersection**. For a typical '+' intersection, there will be 8
+possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
 
 If you are having trouble picturing it, check out [this
 diagram](#From-Movement-Counts-to-Segment-Counts).
