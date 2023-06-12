@@ -1,3 +1,5 @@
+-- Populate centreline_ids for rescu detector stations that were missing this information
+
 CREATE TABLE scannon.rescu_data_21 AS (
     WITH cent_blanks AS (
         SELECT

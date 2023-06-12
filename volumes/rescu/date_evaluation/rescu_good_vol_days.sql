@@ -1,3 +1,5 @@
+-- See how many days have RESCU volume counts that meet daily volume thresholds based on the thresholds in rescu_enuf_vol.sql
+
 CREATE TABLE scannon.rescu_good_vol_days AS (
     SELECT 
         ev.detector_id,
