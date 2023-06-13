@@ -1,16 +1,71 @@
+import os
+import sys
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.postgres_hook import PostgresHook
 from datetime import datetime, timedelta
+from airflow.operators.python_operator import PythonOperator
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.models import Variable 
+
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0,os.path.join(repo_path,'volumes/rescu/itscentral_pipeline'))
+    #from wys_api import api_main
+except:
+    raise ImportError("Cannot import functions from volumes/rescu/itscentral_pipeline.")
+
+dag_name = 'pull_vds'
+
+# Get slack member ids
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+
+SLACK_CONN_ID = 'slack_data_pipeline'
+def task_fail_slack_alert(context):
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+    # print this task_msg and tag these users
+    task_msg = """The Task {task} failed. {slack_name} please check. """.format(
+        task=context.get('task_instance').task_id, 
+        slack_name = ' '.join(list_names),) 
+    
+    # this adds the error log url at the end of the msg
+    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
+            log_url=context.get('task_instance').log_url,)
+    failed_alert = SlackWebhookOperator(
+        task_id='slack_test',
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username='airflow',
+        )
+    return failed_alert.execute(context=context)
+
+#CONNECT TO ITS_CENTRAL 
+#wys_postgres = PostgresHook("wys_bot")
+#connection = BaseHook.get_connection('wys_api_key')
+#api_key = connection.password
+
+#CONNECT TO BIGDATA
+#wys_postgres = PostgresHook("wys_bot")
+#connection = BaseHook.get_connection('wys_api_key')
+#api_key = connection.password
 
 default_args = {
-    'owner': 'airflow',
+    'owner': ','.join(names),
     'depends_on_past': False,
     'start_date': datetime(2023, 6, 12),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=60),
+    'on_failure_callback': task_fail_slack_alert
 }
 
 dag = DAG('data_processing', default_args=default_args, schedule_interval='0 4 * * *') #daily at 4am
@@ -80,51 +135,8 @@ summarize_data_task = PythonOperator(
 
 def pull_detector_inventory():
     # Pull data from the detector_inventory table
-    detector_sql = '''SELECT 
-        c.divisionid,
-        c.vdsid,
-        upper(c.sourceid) AS detector_id,
-        c.starttimestamputc,
-        c.endtimestamputc,
-        c.lanes,
-        c.hasgpsunit,
-        c.managementurl,
-        c.description,
-        c.fssdivisionid,
-        c.fssid,
-        c.rtmsfromzone,
-        c.rtmstozone,
-        c.detectortype,
-        c.createdby,
-        c.createdbystaffid,
-        c.signalid,
-        c.signaldivisionid,
-        c.movement,
-        e.entitytype,                  
-        e.locationtimestamputc,        
-        e.latitude,                    
-        e.longitude,                   
-        e.altitudemetersasl,           
-        e.headingdegrees,              
-        e.speedkmh,                    
-        e.numsatellites,               
-        e.dilutionofprecision,         
-        e.mainroadid,                  
-        e.crossroadid,                 
-        e.secondcrossroadid,           
-        e.mainroadname,                
-        e.crossroadname,               
-        e.secondcrossroadname,         
-        e.streetnumber,                
-        e.offsetdistancemeters,        
-        e.offsetdirectiondegrees,      
-        e.locationsource,              
-        e.locationdescriptionoverwrite
-    FROM vdsconfig AS c 
-    JOIN EntityLocationLatest AS e ON 
-        c.vdsid = e.entityid 
-        AND c.divisionid = e.divisionid 
-    ORDER BY c.vdsid'''
+    with open(repo_path + 'volumes/rescu/itscentral_pipeline/itsc_detector_inventory.sql') as f:
+        detector_sql = f.readlines()  
 
     pg_hook = PostgresHook(postgres_conn_id='your_postgres_conn_id')
     detector_data = pg_hook.get_records(detector_sql)
