@@ -26,7 +26,18 @@ This folder contains Jupyter Notebooks used for developing API access and data p
 
 - `lousy_dates.ipynb` contains monthly and weekly line graphs of light vehicle volumes. The aim is to visually inspect and identify unusually low (or high) volumes. This notebook evaluates data from January 2019 to March 2023. It directly queries the `bigdata` postgres database to grab monthly and weekly miovision volume counts for light vehicles only. The weekly graphs were used to identify dates with low or no volumes which were then used to populate `miovision_api.miovision_bad_weeks` (the script for which can be found [here](../sql/create_dq.sql)).
 
-- The folder `qc_sqls` contains the scripts that were used to generate the `miovision_api.bad_date_ranges` table. For a more detailed description of this methodology, please see the main [Miovision README.md](../README.md)
-  `qc_sqls` contains the following scripts:
-    - `t1_create_x_weeks.sql`: a `CREATE TABLE` script to store the 'bad dates' initially recorded in Excel
-    - `t2_create_mio_dq_notes`: a script that uses the gaps and islands approach to group contiguous bad weeks into date ranges and that differentiates between weeks with low or no volume.
+- The folder `qc_sqls` contains the scripts that were used initially to generate the `miovision_api.anomalous_ranges` table. In Spring 2023, staff examined data from each Miovision camera to identify date ranges with questionable volumes. Here is a description of the process:
+    1) Weekly volumes for 'lights' were graphed. There was one graph for each intersection.
+    2) The line graphs were visually inspected. Weeks with lower-than-typical volumes were recorded in Excel.
+    3) The Excel table was imported into a postgres table.
+    4) In postgres, data from the initial table was augmented to:
+        a) convert dates identifying bad weeks into date ranges using the gaps and islands approach
+        b) add a field that describes the severity of the data quality issue
+        c) add a field that describes the results of any investigations that have taken place.
+
+    - `qc_sqls` contains the following scripts:
+        - `t1_create_x_weeks.sql`: a `CREATE TABLE` script to store the 'bad dates' initially recorded in Excel
+        - `t2_create_mio_dq_notes`: a script that uses the gaps and islands approach to group contiguous bad weeks into date ranges and that differentiates between weeks with low or no volume.
+
+
+
