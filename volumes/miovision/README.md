@@ -353,12 +353,28 @@ The following process is used to determine the gap sizes assigned to an intersec
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
 
-### Identifying Dates with Poor Data Quality
+### Identifying Questionable Data Quality
 
-The resulting table is called `miovision_api.anomalous_ranges` - please consult this table to ensure that all Miovision data used to complete requests or other work is of good quality.
+The table `miovision_api.anomalous_ranges` is used to flag times and places in the data where counts are potentially questionable, suspicious, or irregular. Sometimes counts are clearly not valid or data are missing, and sometimes counts look very weird but have been investigated and confirmed as valid or subject to some specific caveat. This table helps us track the status of these investigations and their results. 
+The basic idea is to identify sections of data (by timerange, intersection, and classification) that have been flagged as suspicious/anomalous for whatever reason, and state what we know about that data-subset in a semi-structured way. This lets us further investigate where that is required and carve out data that has been formally cast into doubt from queries that need only-the-best.
 
-`miovision_api.anomalous_ranges` currently evaluates cameras up to the end of March 2023, so additional data quality evaluations should be completed for more recent dates.
-                                                           
+#### Fields in `miovision_api.anomalous_ranges`
+| Column | Description |
+| ------ | ----------- |
+| uid    | simple incrementing primary key |
+| intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
+| classification_uid | the classification; `NULL` if applies to all classifications e.g. a misaligned camera |
+| time_range | the `tsrange` in question; may be open-ended |
+| notes | as detailed a description of the issue as reasonably possible |
+| qa_level | references `miovision_api.qa_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
+| problem_level | references `miovision_api.qa_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
+
+#### Fields in `miovision_api.qa_investigation_levels` and `miovision_api.qa_problem_levels`
+| Column | Description |
+| ------ | ----------- |
+| uid    | simple incrementing primary key |
+| description | description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
+
 There are plans to flag weeks with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
 ## 4. Repulling data
