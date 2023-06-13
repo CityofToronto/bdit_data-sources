@@ -1,10 +1,28 @@
-# Blip API Pulling Script
+# Blip API Pulling Script <!-- omit in toc -->
 
-## Contents
+Set of python pipelines pulling in data from the Blip server on prem.
+
+1. [`blip_api`](#blip_api): operates nightly on-prem, pulls in data
+2. [`temp_bluetooth_check_readers`](#notify_routes): runs on the EC2 to identify if the pipeline ran successfully. Currently unmerged work in the []`btdag` branch](https://github.com/CityofToronto/bdit_data-sources/pull/381/)
+3. [`blip_space_log`](#blip_space_log): runs on-prem daily and checks if there is sufficient free space on the blip server. Uses corporate notification system on a log file watcher.
+
+- [blip\_api](#blip_api)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Steps](#steps)
+  - [If loading data failed](#if-loading-data-failed)
+- [notify\_routes](#notify_routes)
+- [blip\_space\_log](#blip_space_log)
+  - [TimedRotatingFileHandler](#timedrotatingfilehandler)
+- [Backfilling on the terminal server](#backfilling-on-the-terminal-server)
+
 
 ### blip_api
 
-Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live" data for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
+Script to pull Bluetooth data from the Blip api. Defaults to getting the previous day's data. This script is currently running on a Windows terminal server to access the Blip server. The script runs nightly at 6AM to pull the previous day's "historical" data and hourly to pull "live
+data (currently disabled) for our internal dashboards (see the flags below in [*Usage*](#usage) for more information).
+
+
 
 #### Installation
 
@@ -56,8 +74,12 @@ python blip_api.py -y 20180501 20180512 -a 156435 -a 165375 -d config.cfg
 1. Update route configurations in database
 2. Identify configurations to pull data from
 3. For each configuration pull data from YYYYMMDD to YYYYMMDD, or yesterday. Data is pulled in 4 steps because of a 10,000 row limit on API calls.
-4. Send data for that configuration to Database
-5. Move raw data to the `observations` partitioned table structure and trigger aggregations.
+4. Send data for that configuration to the database.
+5. Run [`move_raw_data()`](../sql/functions/move_raw_data.sql) to move raw data to the `observations` partitioned table structure and perform 5 minute aggregation.
+
+#### If loading data failed
+
+If the blip pipeline failed, log in to the terminal server to check the log. The `observations` and `aggr_5min` tables both have `UNIQUE CONSTRAINT`s and the functions that insert into them will do `ON CONFLICT DO NOTHING`. So have a think but you can probably safely re-run the pipeline without creating duplicate data.
 
 ### notify_routes
 
@@ -82,3 +104,16 @@ formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(message)s',
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 ```
+### Backfilling on the terminal server
+
+1) Log on to the terminal sever
+2) Navigate to the window task scheduler 
+3) Select `Properties` for task `blip_backfill`
+4) Navigate to the `Actions` tab and click `Edit` on the action.
+5) In the `Add arguments` block, edit the `-y` parameter. The first YYYMMDD represents the start date and the second YYYYMMDD represents the end date. 
+For example, for pulling data from June 25 to July 7 (not inclusive):
+```
+/c env\Scripts\python.exe blip_api\blip_api.py --dbsetting blip_api\config.cfg -y 20220625 20220707 >> blip_api\blip_backfill.log 2>&1
+```
+6) Save and enter your novel password when prompted
+7) Right click on the task and click `Run` 

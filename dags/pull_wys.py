@@ -2,13 +2,14 @@
 Pipeline to pull Watch Your Speed sign data data and put them into the wys.raw_data table using Python Operator.
 A Slack notification is raised when the airflow process fails.
 """
+import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
 from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
@@ -16,30 +17,40 @@ from googleapiclient.discovery import build
 from dateutil.relativedelta import relativedelta
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0,os.path.join(repo_path,'wys/api/python'))
     from wys_api import api_main
     from wys_google_sheet import read_masterlist
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
+dag_name = 'pull_wys'
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
     if context.get('task_instance').task_id == 't1':
-        task_msg = """:cat_shock: The Task {task} in Pull WYS dag failed, 
+        task_msg = """:cat_shocked: The Task {task} in Pull WYS dag failed, 
 			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),)
     
     # else other msg for task2
     else:
         task_msg = """ :eyes: The Task {task} in Pull WYS dag failed, 
 			{slack_name} please check.""".format(
-            task=context.get('task_instance').task_id, slack_name = list_names,)    
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -63,18 +74,19 @@ wys_postgres = PostgresHook("wys_bot")
 connection = BaseHook.get_connection('wys_api_key')
 api_key = connection.password
 
-default_args = {'owner':'rdumas',
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 1),
-                'email': ['raphael.dumas@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
-                 'retries': 0,
+                 'retries': 3,
                  'retry_delay': timedelta(minutes=5),
+                 #progressive longer waits between retries
+                 'retry_exponential_backoff': True,
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_wys',default_args=default_args, schedule_interval='0 15 * * *')
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 * * *')
 # Run at 3 PM local time every day
 
 with wys_postgres.get_conn() as con:
