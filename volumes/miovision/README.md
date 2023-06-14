@@ -363,9 +363,9 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 | ------ | ----------- |
 | uid    | simple incrementing primary key |
 | intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
-| classification_uid | the classification; `NULL` if applies to all classifications e.g. a misaligned camera |
-| time_range | the `tsrange` in question; may be open-ended |
-| notes | as detailed a description of the issue as reasonably possible |
+| classification_uid | the classification; `NULL` if applies to all classifications e.g. a badly misaligned camera |
+| time_range | the `tsrange` in question; may be open-ended. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range slightly _past_ the problem area. |
+| notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
 | qa_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
 | problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
 
