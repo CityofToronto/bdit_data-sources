@@ -6,29 +6,23 @@
   - [Folder Structure](#folder-structure)
 - [2. Table Structure](#2-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
-  - [Aggregated Data](#aggregated-data)
-    - [Understanding Legs, Movement and Direction of Travel (dir)](#understanding-legs-movement-and-direction-of-travel-dir)
-      - [Vehicle Movement (Including Bicycles)](#vehicle-movement-including-bicycles)
-      - [Pedestrian Movement](#pedestrian-movement)
-      - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-        - [All the East Leg Crossings!](#all-the-east-leg-crossings)
-    - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`unacceptable_gaps`](#unacceptable_gaps)
-    - [`volumes_15min`](#volumes_15min)
-    - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
-    - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-  - [Reference Tables](#reference-tables)
-    - [`classifications`](#classifications)
+  - [Key Tables](#key-tables)
     - [`intersections`](#intersections)
+    - [`classifications`](#classifications)
     - [`movements`](#movements)
+    - [Aggregated Data](#aggregated-data)
+      - [`volumes_15min_mvt`](#volumes_15min_mvt)
+      - [`volumes_15min`](#volumes_15min)
+      - [`unacceptable_gaps`](#unacceptable_gaps)
+  - [`volumes`](#volumes)
+  - [Reference Tables](#reference-tables)
     - [`movement_map`](#movement_map)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
-  - [Disaggregated Data](#disaggregated-data)
-    - [`volumes`](#volumes)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Important Tables](#other-important-tables)
+    - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
@@ -59,222 +53,39 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 
 ![Miovision Data Entity Relationship Diagram](img/Mio_ERD.png)
 
-### Aggregated Data
+### Key Tables 
 
-Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Starting with `volumes` each table has a FOREIGN KEY relationship to the next step of aggregation so that an aggregated record can be traced back to its source data. For example: a row in `volumes_15min` has a unique ID `volumes_15min_uid`, and the foreign key `volumes_15min_mvt.volumes_15min_uid` identifies the row(s) that produced that `volumes_15min` row.
+- [`intersections`](#intersections)
+- [`classifications`](#classifications)
+- [`movements`](#movements)
+- [Aggregated Data](#aggregated-data)
+  - [`volumes_15min_mvt`](#volumes_15min_mvt): TMC-style 15-minute aggregated data
+  - [`volumes_15min`](#volumes_15min): ATR-style 15-minute aggregated data
+  - [`unacceptable_gaps`](#unacceptable_gaps)
 
-#### Understanding Legs, Movement and Direction of Travel (dir)
+#### `intersections`
 
-The Miovision data table that we receive tracks information about:
-1. where the vehicle / pedestrian / cyclist entered the intersection, 
-2. mode used (see the classification table), and, 
-3. how the vehicle / pedestrian / cyclist moved through the intersection (see the movements table).
-
-Movement is tracked differently for vehicles (including bicycles) and pedestrians.
-
-##### Vehicle Movement (Including Bicycles)
-
-Vehicle movement is quite straightforward - upon approaching an intersection, a vehicle may proceed straight through, turn left, turn right or perform a U-turn (aka the Uno Reverse Card of driving).
-
-Here is a diagram that shows the all vehicle movements from the eastern leg of an intersection:
-<img src = "img/mio_mvt.png" alt= "Legs and Vehicle Movements from the East Leg" width = "500" height = "500" title = "Legs and Vehicle Movements from the East Leg">
-
-You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits. These values are populated in the raw, disaggregated data but are not currently transformed into the aggregate data - stay tuned for exciting developments!
-
-##### Pedestrian Movement
-
-Pedestrian movements are measured less intuitively than vehicle movements. The leg on which pedestrians' movement is tracked is the leg they are crossing. Their movement is tracked using clockwise ("cw") or counterclockwise ("ccw") directions (POV: you're in freefall above the intersection, looking down at it). So, a pedestrian crossing the eastern leg of an intersection in the clockwise direction would be walking south.
-
-Here is a diagram that shows the pedestrian movements at an intersection:
-<img src = "img/mio_ped_mvt.png" alt= "Legs and Pedestrian Movements" width = "500" height = "500" title = "Legs and Pedestrian Movements">
-
-##### From Movement Counts to Segment Counts
-
-We are able to transform vehicle movements into segment volume counts, which are commonly referred to as "Across The Road" or ATR counts. The full process is described below. Conceptually:
-- the movement tables track volume at a point in the centre of an intersection, while,
-- the ATR table tracks volume as it crosses a line. A typical "t" intersection has 4 lines - one for each of the road segments that lead to and from an intersection.
-
-To complicate matters even more, the 4 lines across the road segments leading to and from an intersection are further subdivided by direction - so the east leg of an intersection has an eastbound direction and a westbound direction.
-
-Here's a diagram to visualize all of those directions and legs:
-<img src = "img/mio_atr.png" alt= "Measuring vehicles as they cross the road" width = "500" height = "500" title = "Measuring vehicles as they cross the road">
-
-Vehicles crossing the line on the east leg, while travelling west, are entering the intersection.
-
-Vehicles crossing the line on the east leg, while travelling east, are exiting the intersection. They may be:
-- travelling straight through the intersection from the west leg,
-- turning left onto the east leg from the north leg,
-- turning right onto the east leg from the south leg,
-- u-turning from the east leg right back onto that east leg.
-
-###### All the East Leg Crossings!
-Still fuzzy? Here's a diagram to help you picture it perfectly:
-<img src = "img/mio_atr_zoomin.png" alt= "All The East Leg Crossings" width = "500" height = "500" title = "All The East Leg Crossings">
-
-#### `volumes_15min_mvt`
-
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
-make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
-bicycles (classifications 2 and 10) and pedestrians).
-
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data
-could either mean there was no volume, or that the camera malfunctioned. Because
-we have continuous data from these counters, we no longer try to interpolate
-data during gaps. When our heuristics identify `unacceptable_gaps`, then the
-entire hour of data is thrown out and the volume is set to `NULL` to imply that
-the data has been processed for this hour, but the results have been discarded.
-
-A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
-
-The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
-
-**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
-
-Please see [this diagram](#Vehicle-Movement-(Including-Bicycles)) for a visualization of turning movements for vehicles (including bicycles).
-
-Please see [this diagram](#Pedestrian-Movement) for a visualization of pedestrian movements.
+Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](geojson/miovision_intersections.geojson):
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|serial|Unique identifier for table|14524|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
-volume|integer|Total 15-minute volume|78|
-processed|boolean| Flag if data has been aggregated to `miovision_15min`| TRUE
+intersection_uid|integer|Unique identifier for table|10|
+id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
+intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
+date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
+lat|numeric|Latitude of intersection location|43.643945|
+lng|numeric|Longitude of intersection location|-79.402667|
+street_main|text|Name of primary street|King|
+street_cross|text|Name of secondary street|Bathurst|
+int_id|bigint|int_id linked to centrelines|13467722|
+px|integer|px linked to traffic lights|201|
+geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
+n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 
-- A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
-
-- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:45 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
-#### `unacceptable_gaps`
-
-Data table storing all the unacceptable gaps using a set of gap sizes that are based on the average volumes at that intersection at a certain period of time in the past 60 days. More information can be found at [#3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera) . This table will then be used in the aggregate_15_min_mvt function to aggregate 1-min bin to 15-min bin.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|8|
-gap_start|timestamp without time zone|The timestamp of when the gap starts|2020-05-01 02:53:00|
-gap_end|timestamp without time zone|The timestamp of when the gap ends|2020-05-01 03:08:00|
-gap_minute|integer|Duration of the gap in minute|15|
-allowed_gap|integer|Allowed gap in minute|15|
-accept|boolean|Stating whether this gap is acceptable or not|false|
-
-#### `volumes_15min`
-
-Data table storing ATR versions of the 15-minute turning movement data. Data in
-`volumes` is stored in TMC format, so must be converted to ATR to be included in
-`volumes_15min`.
-
-TMC movements are described in `miovision_api.movements`. **TMC legs indicate
-the approach direction of vehicles (including bicycles)**, and there are **four
-possible movements encoded using `movement_uid`: `1` - thru; `2` - left turn;
-`3` - right turn; and `4` - u-turn**. For a typical 't' intersection, there will
-be 16 possible TMC combinations (since there are 4 directions and 4 legs in each
-direction for TMC).
-                                                           
-If you are having trouble picturing it, check out [this
-diagram](#Vehicle-Movement-(Including-Bicycles)).
-                                                           
-**ATR movements define leg as the approach direction of vehicles (like TMCs)**,
-and **direction as the cardinal direction of traffic travelling through that
-side of the intersection**. For a typical '+' intersection, there will be 8
-possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
-
-If you are having trouble picturing it, check out [this
-diagram](#From-Movement-Counts-to-Segment-Counts).
-
-`miovision_api.movement_map` is used to convert the TMC data to the ATR data. Here are some example rows from the table:
-
-|leg_new|dir|leg_old|movement_uid|description of movement|
-|-------|---|-------|------------|-----------------------|
-| E | EB | E | 4 | Approached intersection from the east leg, u-turned, exited intersection from the east leg
-| E | EB | S | 3 | Approached intersection from the south leg, turned right, exited intersection from the east leg
-| E | EB | W | 1 | Approached intersection from the west leg, proceeded straight ahead, exited intersection from the east leg
-| E | EB | N | 2 | Approached intersection from the north leg, turned left, exited intersection from the east leg
-
-- `leg_new` (leg for ATR) - anything that crosses that side of the intersection
-- `dir` - heading of traffic crossing `leg_new`
-- `leg_old` (leg for TMC) - direction the vehicles approach into intersection
-- `movement_uid` - turning movement stored in `movements`
-
-The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
-
-#### Comparing TMC and ATR Counts
-
-The following example illustrates the differences between the TMC counts found in `volumes_15min_mvt` and `volumes_15min`.
-
-For light vehicles at King / Bay on 2020-10-15 9:00-9:15 (`intersection_uid = 17`, `datetime_bin = '2020-10-15 09:00:00'`, `classification_uid = 1`), the TMC and ATR movements are:
-
-|leg(tmc)|movement_uid|volume|
-|--------|------------|------|
-| E | 1 | 13  |
-| E | 2 | 0   |
-| E | 3 | 5   |
-| N | 1 | 82  |
-| N | 2 | 0   |
-| N | 3 | 1   |
-| S | 1 | 144 |
-| S | 2 | 0   |
-| S | 3 | 0   |
-| W | 1 | 12  |
-| W | 2 | 2   |
-| W | 3 | 9   |
-| | |total volume = 268|
-
-|leg(atr)|dir|volume|
-|--------|---|------|
-| E | EB | 12  |
-| E | WB | 18  |
-| N | NB | 151 |
-| N | SB | 83  |
-| S | NB | 144 |
-| S | SB | 91  |
-| W | EB | 23  |
-| W | WB | 14  |
-| | |total volume = 536|
-
-The ATR table exactly double-counts the number of vehicles travelling through intersections, since it counts vehicles approaching and exiting the intersection. For example, `leg(atr) = E` and `dir = EB` represents vehicles exiting the intersection, and `leg(atr) = E` and `dir = WB` represents vehicles approaching the intersection.
-
-**It is important to note that pedestrian counts (`classification_uid` = 6 and `movement_uid` IN (5, 6)) in the TMC and ATR tables have an equal number of rows and equal total volume - they are not double counted like vehicles (including bicycles).**
-
-**In the TMC table (aka `volumes_15min_mvt`)**
-The `leg` represents the side of the intersection that the pedestrian is crossing. Pedestrian movements are tracked using `movement_uid` 5 or 6 (clockwise or counterclockwise, respectively). [This diagram](#Pedestrian-Movement) will help you visualize the clockwise and counterclockwise movements.
-
-**In the ATR table (aka `volumes_15min`)** 
-The `leg` represents the side of the intersection that the pedestrian is crossing. The `dir` represents which direction they are walking towards. So, if leg = N and dir = EB means that the pedestrian is at the North crosswalk crossing from the west side to the east side.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_uid|serial|Unique identifier for table|12412|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Segment leg of intersection|E|
-dir|text|Direction of traffic on specific leg|EB|
-volume|integer|Total 15-minute volume|107|
-
-A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
-
-- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:45 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
-#### `volumes_mvt_atr_xover`
-
-**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|int|Unique identifier for `volumes_15min_mvt` table|14524|
-volume_15min_uid|serial|Unique identifier for table|12412|
-
-### Reference Tables
 
 #### `classifications`
 
@@ -302,29 +113,6 @@ Note that bicycles are available at both a turning movement level and at an appr
 9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. Bicycle data is not great - stay tuned.|
 
-#### `intersections`
-
-Reference table for each unique intersection at which data has been collected:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-intersection_uid|integer|Unique identifier for table|10|
-id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
-date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
-lat|numeric|Latitude of intersection location|43.643945|
-lng|numeric|Longitude of intersection location|-79.402667|
-street_main|text|Name of primary street|King|
-street_cross|text|Name of secondary street|Bathurst|
-int_id|bigint|int_id linked to centrelines|13467722|
-px|integer|px linked to traffic lights|201|
-geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
-n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
 #### `movements`
 
 Reference table for road user movements:
@@ -350,6 +138,121 @@ Here is a description of the movement_uids and corresponding types:
 7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
 8|Bicycle Exit|Used to determine where bicycles exited the intersection|
 
+
+#### Aggregated Data
+
+Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables.
+
+##### `volumes_15min_mvt`
+
+`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
+make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
+or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
+bicycles (classifications 2 and 10) and pedestrians).
+
+The 1-min data do not identify if a camera is malfunctioning, so gaps in data
+could either mean there was no volume, or that the camera malfunctioned. Because
+we have continuous data from these counters, we no longer try to interpolate
+data during gaps. When our heuristics identify `unacceptable_gaps`, then the
+entire hour of data is thrown out and the volume is set to `NULL` to imply that
+the data has been processed for this hour, but the results have been discarded.
+
+A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
+
+The [`aggregate_15_min_mvt()`](sql/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_mvt_uid|serial|Unique identifier for table|14524|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Entry leg of movement|E|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+volume|integer|Total 15-minute volume|78|
+processed|boolean| Flag if data has been aggregated to `miovision_15min`| TRUE
+
+**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
+
+Please see [this diagram](getting_started.md#Vehicle-Movements) for a visualization of turning movements for vehicles (including bicycles) and [this diagram](getting_started.md#Pedestrian-Movement) for a visualization of pedestrian movements.
+
+- A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
+
+**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
+(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
+22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
+
+##### `volumes_15min`
+
+Data table storing ATR versions of the 15-minute turning movement data. Data in
+`volumes` is stored in TMC format, so must be converted to ATR to be included in
+`volumes_15min`.
+                                                           
+**ATR movements define leg as the approach direction of vehicles (like TMCs)**,
+and **direction as the cardinal direction of traffic travelling through that
+side of the intersection**. For a typical '+' intersection, there will be 8
+possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
+
+If you are having trouble picturing it, check out [this
+diagram](getting_started.md#From-Movement-Counts-to-Segment-Counts).
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_uid|serial|Unique identifier for table|12412|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Segment leg of intersection|E|
+dir|text|Direction of traffic on specific leg|EB|
+volume|integer|Total 15-minute volume|107|
+
+**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
+(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
+22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
+
+
+[`miovision_api.movement_map`](#movement_map) is used to convert the TMC data to the ATR data. 
+
+A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
+
+
+##### `unacceptable_gaps`
+
+Data table storing all the unacceptable gaps using a set of gap sizes that are based on the average volumes at that intersection at a certain period of time in the past 60 days. More information can be found at [#3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera) . This table will then be used in the aggregate_15_min_mvt function to aggregate 1-min bin to 15-min bin.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|8|
+gap_start|timestamp without time zone|The timestamp of when the gap starts|2020-05-01 02:53:00|
+gap_end|timestamp without time zone|The timestamp of when the gap ends|2020-05-01 03:08:00|
+gap_minute|integer|Duration of the gap in minute|15|
+allowed_gap|integer|Allowed gap in minute|15|
+accept|boolean|Stating whether this gap is acceptable or not|false|
+
+### `volumes`
+
+Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_uid|serial|Unique identifier for table|5100431|
+intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
+datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
+classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
+leg|text|Entry leg of movement|E|
+movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
+volume|integer|Total 1-minute volume|12|
+volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt)|14524|
+
+Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year the data were recorded.
+
+- *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted. The unique constraint is based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
+
+- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
+
+
+### Reference Tables
+
 #### `movement_map`
 
 Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`):
@@ -360,6 +263,22 @@ leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
 dir|text|Direction on which 15-minute volume will be assigned|EB|
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
 movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
+
+Here are some example rows from the table:
+
+|leg_new|dir|leg_old|movement_uid|description of movement|
+|-------|---|-------|------------|-----------------------|
+| E | EB | E | 4 | Approached intersection from the east leg, u-turned, exited intersection from the east leg
+| E | EB | S | 3 | Approached intersection from the south leg, turned right, exited intersection from the east leg
+| E | EB | W | 1 | Approached intersection from the west leg, proceeded straight ahead, exited intersection from the east leg
+| E | EB | N | 2 | Approached intersection from the north leg, turned left, exited intersection from the east leg
+
+- `leg_new` (leg for ATR) - anything that crosses that side of the intersection
+- `dir` - heading of traffic crossing `leg_new`
+- `leg_old` (leg for TMC) - direction the vehicles approach into intersection
+- `movement_uid` - turning movement stored in `movements`
+
+The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](getting_started.md#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
 
 #### `periods`
 
@@ -387,29 +306,6 @@ Since this reference table must be updated every time a new intersection is adde
  leg| text | Entry leg of movement|E|
  movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
 
-### Disaggregated Data
-
-#### `volumes`
-
-Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_uid|serial|Unique identifier for table|5100431|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
-volume|integer|Total 1-minute volume|12|
-volume_15min_mvt_uid|serial|Foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt)|14524|
-
-Using the trigger function `volumes_insert_trigger()`, the data in `volumes` table are later put into `volumes_2018`, `volumes_2019` and so on up to `volumes_2022` depending on the year the data were recorded.
-
-- *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted. The unique constraint is based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
-
-- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
-
 
 ### Primary and Foreign Keys
 
@@ -433,6 +329,15 @@ The tables below are produced using functions explained in the [API Puller](api#
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
+
+#### `volumes_mvt_atr_xover`
+
+**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+volume_15min_mvt_uid|int|Unique identifier for `volumes_15min_mvt` table|14524|
+volume_15min_uid|serial|Unique identifier for table|12412|
 ## 3. Finding Gaps and Malfunctioning Camera
 
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
