@@ -428,6 +428,35 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 
 There are loose plans to flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
+#### An applied example
+
+When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
+
+```sql
+SELECT volume_uid
+FROM miovision_api.volumes
+WHERE 
+    NOT EXISTS ( -- this is our one big filter for bad/dubious data
+        SELECT 1
+        FROM miovision_api.anomalous_ranges
+        WHERE
+            anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
+            AND anomalous_ranges.time_range @> volumes.datetime_bin
+            AND (
+                anomalous_ranges.intersection_uid = volumes.intersection_uid
+                OR anomalous_ranges.intersection_uid IS NULL
+            )
+            AND (
+                anomalous_ranges.classification_uid = volumes.classification_uid
+                OR anomalous_ranges.classification_uid IS NULL
+            )
+    )
+    AND NOT EXISTS ( -- also exclude official holidays
+        SELECT 1 FROM ref.holiday WHERE holiday.dt = volumes.datetime_bin::date
+    )
+    AND etc.
+```
+
 ## 4. Repulling data
 ### Deleting data to re-run the process
 
