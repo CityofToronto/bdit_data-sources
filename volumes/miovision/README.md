@@ -248,8 +248,6 @@ Using the trigger function `volumes_insert_trigger()`, the data in `volumes` tab
 
 - *Unique constraint* was added to `miovision_api.volumes` table as well as its children tables (`miovision_api.volumes_2020` etc) since the trigger sends the data to the children table to get inserted. The unique constraint is based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
 
-- **NOTE:** datetime_bin for each day happens from 23:00 the previous day to 22:59 current day.
-
 
 ### Reference Tables
 
