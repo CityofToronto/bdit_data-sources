@@ -426,8 +426,6 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 | uid    | very short descriptive text; primary key |
 | description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
 
-There are loose plans to flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
-
 #### An applied example
 
 When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
@@ -456,6 +454,11 @@ WHERE
     )
     AND etc.
 ```
+
+#### Identifying new anomalies
+While initially populated by a script, currently the `anomalous_ranges` tables is populated/updated manually after usually visual inspection of graphed Miovision data. For write access to the table, please request permissions from your friendly neighborhood sysadmin.
+
+There is an intention to eventually flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
