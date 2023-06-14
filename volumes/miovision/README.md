@@ -366,16 +366,16 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 | classification_uid | the classification; `NULL` if applies to all classifications e.g. a misaligned camera |
 | time_range | the `tsrange` in question; may be open-ended |
 | notes | as detailed a description of the issue as reasonably possible |
-| qa_level | references `miovision_api.qa_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
-| problem_level | references `miovision_api.qa_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
+| qa_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
+| problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
 
-#### Fields in `miovision_api.qa_investigation_levels` and `miovision_api.qa_problem_levels`
+#### Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`
 | Column | Description |
 | ------ | ----------- |
-| uid    | simple incrementing primary key |
-| description | description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
+| uid    | very short descriptive text; primary key |
+| description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
 
-There are plans to flag weeks with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
+There are loose plans to flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
