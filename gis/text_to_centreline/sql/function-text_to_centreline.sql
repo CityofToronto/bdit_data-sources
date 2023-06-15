@@ -140,7 +140,13 @@ END;
 $BODY$;
 
 ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
-    OWNER TO jchew;
+OWNER TO gis_admins;
+
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO bdit_humans;
+
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO gis_admins;
+
+REVOKE ALL ON FUNCTION gis.text_to_centreline(integer, text, text, text) FROM PUBLIC;
 
 COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
     IS '
