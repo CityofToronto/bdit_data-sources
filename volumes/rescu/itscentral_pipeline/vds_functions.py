@@ -1,6 +1,18 @@
-def pull_raw_data():
+def pull_raw_vdsdata():
     # Pull raw data from Postgres database
     raw_sql = f'''SELECT 
+        d.divisionid,
+        d.vdsid,
+        d.timestamputc,
+        d.lanedata
+    FROM vdsdata AS d
+    WHERE 
+        timestamputc >= extract(epoch from timestamptz '{{ds}}')
+        AND timestamputc < extract(epoch from timestamptz '{{ds}}') + 86400
+        --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
+    '''
+
+    old_sql = f'''SELECT 
         d.divisionid,
         d.vdsid,
         d.timestamputc,
@@ -19,9 +31,9 @@ def pull_raw_data():
     WHERE 
         timestamputc >= extract(epoch from timestamptz '{{ds}}')
         AND timestamputc < extract(epoch from timestamptz '{{ds}}') + 86400
-        AND e.entityid IS NOT NULL --we only have locations for these ids
-        AND d.divisionid = 2 --other is 8001 which are traffic signal detectors
-        AND substring(sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors; 
+        --AND e.entityid IS NOT NULL --we only have locations for these ids
+        --AND d.divisionid IN 2 --other is 8001 which are traffic signal detectors
+        --AND substring(sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors; 
     '''
 
     with itsc_postgres as con: 
@@ -37,6 +49,34 @@ def pull_raw_data():
         
         # Insert cleaned data into the database
         insert_query = f"INSERT INTO gwolofs.raw_20sec VALUES {transformed_data}"
+        con.run(insert_query)
+
+def pull_raw_vdsvehicledata(): 
+
+    raw_sql = '''
+    SELECT
+        divisionid,
+        timestamputc, --timestamp without tz
+        vdsid,
+        lane,
+        sensoroccupancyds,
+        speedkmhdiv100,
+        lengthmeterdiv100
+    FROM vdsvehicledata
+    WHERE
+        timestamputc >= '{{ds}}'::timestamptz
+        AND timestamputc < '{{ds}}'::timestamptz + 86400;
+    '''
+    with itsc_postgres as con: 
+        raw_data = con.get_records(raw_sql)
+
+    with rds_postgres as con:     
+        # Drop records for the current date
+        drop_query = f"DELETE FROM gwolofs.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'"
+        con.run(drop_query)
+        
+        # Insert cleaned data into the database
+        insert_query = f"INSERT INTO gwolofs.raw_vdsvehicledata VALUES {raw_data}"
         con.run(insert_query)
 
 def summarize_into_v15():
@@ -57,15 +97,38 @@ def summarize_into_v15():
 
 def pull_detector_inventory():
     # Pull data from the detector_inventory table
-    with open(repo_path + 'volumes/rescu/itscentral_pipeline/itsc_detector_inventory.sql') as f:
-        detector_sql = f.readlines()  
+    detector_sql = '''
+    SELECT 
+        divisionid,
+        vdsid,
+        sourceid,
+        starttimestamputc,
+        endtimestamputc,
+        lanes,
+        hasgpsunit,
+        managementurl,
+        description,
+        fssdivisionid,
+        fssid,
+        rtmsfromzone,
+        rtmstozone,
+        detectortype,
+        createdby,
+        createdbystaffid,
+        signalid,
+        signaldivisionid,
+        movement
+    FROM vdsconfig
+    WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table'''
 
     with itsc_postgres as con:
-        detector_data = con.get_records(detector_sql)
-    
+        vds_config_data = con.get_records(detector_sql)
+
+    print("Number of rows fetched from vdsconfig table: {}".format(vds_config_data.shape[0]))
+
     # upsert data
     upsert_query = '''
-        INSERT INTO detector_inventory (column1, column2, column3)
+        INSERT INTO vdsconfig (column1, column2, column3)
         VALUES %s
         ON CONFLICT (column1) DO UPDATE
         SET column2 = EXCLUDED.column2, column3 = EXCLUDED.column3
@@ -75,7 +138,7 @@ def pull_detector_inventory():
 
 def pull_EntityLocationLatest():
     # Pull data from the detector_inventory table
-    detector_sql = '''
+    entitylocation_sql = '''
     SELECT 
         e.divisionid,
         e.entitytype,
@@ -104,7 +167,7 @@ def pull_EntityLocationLatest():
     '''  
 
     with itsc_postgres as con:
-        entitylocations = con.get_records(detector_sql)
+        entitylocations = con.get_records(entitylocation_sql)
     
     print("Number of rows fetched from entitylocations table: {}".format(entitylocations.shape[0]))
 
@@ -127,12 +190,12 @@ def transform_raw_data(df):
     empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
 
     if empty_rows.empty is False:
-        print(f'Rows with empty lanedata: {empty_rows.shape[0]}')
+        print(f'Rows with empty lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).')
     else: 
         print(f'No empty rows discarded.')
 
-    #drop empty rows
-    df_clean = df.drop(empty_rows.index) #remove empty rows
+    #drop empty rows #keep??? 
+    #df_clean = df.drop(empty_rows.index) #remove empty rows
 
     df_clean['datetime'] = df_clean['timestamputc'].map(datetime.fromtimestamp)
     floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
