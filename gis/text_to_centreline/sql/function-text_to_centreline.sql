@@ -140,7 +140,7 @@ END;
 $BODY$;
 
 ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
-    OWNER TO jchew;
+    OWNER TO gis_admins;
 
 COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
     IS '
