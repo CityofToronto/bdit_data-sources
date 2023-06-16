@@ -12,7 +12,7 @@ AS $BODY$
 $BODY$;
 
 ALTER FUNCTION collisions_replicator.refresh_inv_mv()
-OWNER TO scannon;
+OWNER TO collision_admins;
 
 GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_inv_mv() TO collisions_bot;
 
@@ -22,5 +22,8 @@ REVOKE ALL ON FUNCTION collisions_replicator.refresh_inv_mv() FROM public;
 
 COMMENT ON FUNCTION collisions_replicator.refresh_inv_mv()
 IS '
-Refreshes collisions_replicator.involved mat view with data. Called by a DAG at 3am daily.
+Refreshes collisions_replicator.involved mat view with data. Called by the collisions_replicator_transfer.py DAG at 3am daily.
 ';
+
+
+

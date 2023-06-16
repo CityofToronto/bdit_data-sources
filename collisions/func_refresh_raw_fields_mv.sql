@@ -13,7 +13,7 @@ AS $BODY$
 $BODY$;
 
 ALTER FUNCTION collisions_replicator.refresh_raw_fields_mv()
-OWNER TO scannon;
+OWNER TO collision_admins;
 
 GRANT EXECUTE ON FUNCTION collisions_replicator.refresh_raw_fields_mv() TO collisions_bot;
 
@@ -24,5 +24,5 @@ REVOKE ALL ON FUNCTION collisions_replicator.refresh_raw_fields_mv() FROM public
 COMMENT ON FUNCTION collisions_replicator.refresh_raw_fields_mv()
 IS '
 Refreshes collisions_replicator.events_fields_raw and collisions_replicator.involved_fields_raw mat views with data. 
-Called by a DAG at 3am daily.
+Called by the collisions_replicator_transfer.py DAG at 3am daily.
 ';
