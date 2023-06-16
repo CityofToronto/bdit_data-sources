@@ -1,25 +1,39 @@
 #This script should run after the MOVE dag dumps data into collisions_replicator."ACC"
 #Also I heavily cribbed this off of refresh_wys_monthly.py...
 
-# Operators; we need this to operate!
-from airflow import DAG
-from datetime import datetime, timedelta
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.models import Variable 
-
-dag_name = 'collisions_replicator_transfer'
-
-SLACK_CONN_ID = 'slack_data_pipeline'
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-
 #This script does things with those operators:
 #1) uses ACC to update acc_safe_copy
 #2) updates the mat view called collisions_no, which generates ids needed to...
-#3) update the events and involved mat views 
-#4) throws a sassy slack alert message when it fails
+#3) updates the events_cursed and involved_cursed mat views
+#4) updates the MOVE "raw" events and involved mat views
+#5) updates the MOVE "norm" events and involved mat views
+#6) updates the MOVE involved mat view
+#7) updates the MOVE events mat view
+#8) throws a sassy slack alert message when it fails
+
+# Operators; we need this to operate!
+
+from datetime import datetime, timedelta
+import os
+import sys
+from threading import local
+import psycopg2
+from psycopg2 import sql
+import requests
+from psycopg2.extras import execute_values
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable 
+from dateutil.parser import parse
+
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+
+
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
@@ -27,22 +41,34 @@ list_names = []
 for name in names:
     list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
-def task_fail_sassy_slack_alert(context):
+
+SLACK_CONN_ID = 'slack_data_pipeline'
+def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = 'The {task} in updating collisions failed, {slack_name} go fix it meow :meow_tableflip: '.format(
-            task=context.get('task_instance').task_id, 
-            slack_name = ' '.join(list_names),)
-        
-    slack_msg = task_msg + """(<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
+    slack_msg = """
+            :red_circle: Task Failed / Tâche échouée.
+            {slack_name} please check.
+            *Task*: {task}
+            *Dag*: {dag}
+            *Execution Time*: {exec_date}
+            *Log Url*: {log_url}
+            """.format(
+            slack_name=' '.join(list_names),
+            task=context.get('task_instance').task_id,
+            dag=context.get('task_instance').dag_id,
+            ti=context.get('task_instance'),
+            exec_date=context.get('execution_date'),
+            log_url=context.get('task_instance').log_url,
+        )
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow'
+        username='airflow',
         )
     return failed_alert.execute(context=context)
+
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -51,7 +77,7 @@ default_args = {'owner': ','.join(names),
                  'email_on_success': False,
                  'retries': 0,
                  'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_sassy_slack_alert
+                 'on_failure_callback': task_fail_slack_alert
                 }
 
 
@@ -65,17 +91,46 @@ with DAG(dag_id = dag_name, # going waaaaaayyyyy out on a limb of the magical as
 				autocommit = True,
 				retries = 0
     )
-                                 
+    refresh_raw_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_raw_fields_mv()',
+				task_id = 'refresh_raw_move_matviews',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
+    refresh_norm_move_matviews = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_norm_mv()',
+				task_id = 'refresh_norm_move_matviews',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
+    refresh_inv_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_inv_mv()',
+				task_id = 'refresh_inv_move_matview',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
+    refresh_ev_move_matview = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_ev_mv()',
+				task_id = 'refresh_ev_move_matview',
+				postgres_conn_id = 'collisions_bot',
+				autocommit = True,
+				retries = 0
+    )
+    
     refresh_col_no = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_view_collisions_no()',
 				task_id = 'refresh_col_no',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
     )
+    
     refresh_events_involved = PostgresOperator(sql = 'SELECT collisions_replicator.refresh_mat_views()',
 				task_id = 'refresh_ev_inv_mvs',
 				postgres_conn_id = 'collisions_bot',
 				autocommit = True,
 				retries = 0
-    )     
-    update_acc_sc >> refresh_col_no >> refresh_events_involved
+    )
+    
+    update_acc_sc >> refresh_raw_move_matviews >> refresh_norm_move_matviews >> refresh_inv_move_matview >> refresh_ev_move_matview >> refresh_col_no >> refresh_events_involved
