@@ -12,8 +12,8 @@ def pull_raw_vdsdata(start_date, end_date):
         AND timestamputc < extract(epoch from timestamptz {end_date}) + 86400
         --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
     ''').format(
-        start_date = sql.Literal(start_date + ' 00:00:00'),
-        end_date = sql.Literal(end_date + ' 00:00:00')
+        start_date = sql.Literal(start_date + ' 00:00:00 EST'),
+        end_date = sql.Literal(end_date + ' 00:00:00 EST')
     )
 
     #this old sql was needed to control which sensors to pull data for based 
@@ -67,19 +67,28 @@ def pull_raw_vdsvehicledata(start_date, end_date):
 
     raw_sql = sql.SQL('''
     SELECT
-        divisionid,
-        vdsid,
-        timestamputc, --timestamp without tz
-        lane,
-        sensoroccupancyds,
-        round(speedkmhdiv100 / 100, 1) AS speed_kmh,
-        round(lengthmeterdiv100 / 100, 1) AS length_meter
-    FROM public.vdsvehicledata
+        d.divisionid,
+        d.vdsid,
+        d.timestamputc, --timestamp without tz
+        d.lane,
+        d.sensoroccupancyds,
+        round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
+        round(d.lengthmeterdiv100 / 100, 1) AS length_meter
+    FROM public.vdsvehicledata AS d
+    LEFT JOIN public.vdsconfig AS c ON
+        d.vdsid = c.vdsid
+        AND d.divisionid = c.divisionid
+        AND d.timestamputc >= c.starttimestamputc
+        AND (
+            d.timestamputc <= c.endtimestamputc
+            OR c.endtimestamputc IS NULL) --no end date
     WHERE
-        timestamputc >= {}::timestamp
-        AND timestamputc < {}::timestamp + INTERVAL '1 DAY';
-    ''').format(sql.Literal(start_date + ' 00:00:00'), 
-                sql.Literal(end_date + ' 00:00:00'))
+        d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+        AND d.timestamputc >= {}::timestamp
+        AND d.timestamputc < {}::timestamp + INTERVAL '1 DAY'
+        AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
+    ''').format(sql.Literal(start_date + ' 00:00:00 EST'), 
+                sql.Literal(end_date + ' 00:00:00 EST'))
 
     with itsc_conn.get_conn() as con:
         with con.cursor() as cur:
