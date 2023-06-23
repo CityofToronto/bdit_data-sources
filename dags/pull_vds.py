@@ -11,11 +11,14 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
+from psycopg2 import sql
+from psycopg2.extras import execute_values
 
 try:
-    repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
+    #repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
+    repo_path = '/home/gwolofs/bdit_data-sources'
     sys.path.insert(0,path.join(repo_path,'volumes/rescu/itscentral_pipeline'))
-    from vds_functions import pull_raw_data, summarize_into_v15, pull_detector_inventory
+    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, summarize_into_v15, pull_detector_inventory
 except:
     raise ImportError("Cannot import functions from volumes/rescu/itscentral_pipeline/vds_functions.py.")
 
@@ -52,10 +55,11 @@ def task_fail_slack_alert(context):
 
 #need to create these connections still
 #CONNECT TO ITS_CENTRAL
-itsc_postgres = PostgresHook("itsc_bot")
+itsc_bot = PostgresHook("itsc_postgres")
 
 #CONNECT TO BIGDATA
-rds_postgres = PostgresHook("vds_bot")
+#rescu_bot = PostgresHook("rescu_bot")
+rescu_bot = PostgresHook("gwolofs_postgres")
 
 default_args = {
     'owner': ','.join(names),
@@ -65,25 +69,45 @@ default_args = {
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
-    'on_failure_callback': task_fail_slack_alert,
-    'rds_conn': rds_postgres,
-    'itsc_conn': itsc_postgres,
-    'dt': '{{ ds }}',
+    #'on_failure_callback': task_fail_slack_alert,
+    'rds_conn': rescu_bot, #rds_conn = rescu_bot
+    'itsc_conn': itsc_bot, #itsc_conn = itsc_bot
 }
+
+#start_date = '2023-06-01'
+#end_date = '2023-06-01'
 
 dag = DAG(dag_name, default_args=default_args, schedule_interval='0 4 * * *') #daily at 4am
 
 #this one needs itsc and bdit pg connections
-pull_raw_data_task = PythonOperator(
-    task_id='pull_raw_data',
-    python_callable=pull_raw_data,
-    dag=dag
+pull_raw_vdsdata_task = PythonOperator(
+    task_id='pull_raw_vdsdata',
+    python_callable=pull_raw_vdsdata,
+    dag=dag,
+    op_kwargs = {
+            'start_date':'{{ ds }}', 
+            'end_date':'{{ ds }}'
+            } 
+)
+
+pull_raw_vdsvehicledata_task = PythonOperator(
+    task_id='pull_raw_vdsvehicledata',
+    python_callable=pull_raw_vdsvehicledata,
+    dag=dag,
+    op_kwargs = {
+            'start_date':'{{ ds }}', 
+            'end_date':'{{ ds }}'
+            } 
 )
 
 summarize_data_task = PythonOperator(
     task_id='summarize_data',
     python_callable=summarize_into_v15,
-    dag=dag
+    dag=dag,
+    op_kwargs = {
+            'start_date':'{{ ds }}', 
+            'end_date':'{{ ds }}'
+            } 
 )
 
 pull_detector_inventory_task = PythonOperator(
@@ -92,5 +116,6 @@ pull_detector_inventory_task = PythonOperator(
     dag=dag
 )
 
-pull_raw_data_task >> summarize_data_task
+pull_raw_vdsdata_task >> summarize_data_task
+pull_raw_vdsvehicledata_task
 pull_detector_inventory_task
