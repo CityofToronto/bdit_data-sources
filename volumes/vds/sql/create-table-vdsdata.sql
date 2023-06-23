@@ -1,6 +1,6 @@
---DROP TABLE gwolofs.vds_rawdata; 
+--DROP TABLE gwolofs.raw_vdsdata; 
 
-CREATE TABLE gwolofs.vds_rawdata (
+CREATE TABLE gwolofs.raw_vdsdata (
     divisionid smallint,
     vdsid integer,
     datetime_20sec timestamp without time zone,
@@ -8,8 +8,8 @@ CREATE TABLE gwolofs.vds_rawdata (
     lane integer, 
     speedKmh float, 
     volumeVehiclesPerHour integer
-    occupancyPercent float
-    CONSTRAINT  PRIMARY KEY (divisionid, vdsid, datetime_20sec, lane)
+    occupancyPercent float,
+    PRIMARY KEY (divisionid, vdsid, datetime_20sec, lane)
 ); 
 
---ALTER TABLE gwolofs.vds_rawdata OWNER TO rescu_admins;
+--ALTER TABLE gwolofs.raw_vdsdata OWNER TO rescu_admins;

@@ -19,8 +19,8 @@ CREATE TABLE gwolofs.vdsconfig (
     createdbystaffid uuid,
     signalid integer,
     signaldivisionid smallint,
-    movement smallint
-    CONSTRAINT  PRIMARY KEY (divisionid, vdsid, starttimestamputc)
+    movement smallint,
+    PRIMARY KEY (divisionid, vdsid, starttimestamputc)
 );
 
 --ALTER TABLE gwolofs.vdsconfig OWNER TO rescu_admins;
