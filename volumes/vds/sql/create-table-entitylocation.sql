@@ -22,8 +22,8 @@ CREATE TABLE gwolofs.entitylocation (
     offsetdistancemeters double precision,
     offsetdirectiondegrees double precision,
     locationsource smallint,
-    locationdescriptionoverwrite character varying
-    CONSTRAINT  PRIMARY KEY(divisionid, entityid, locationtimestamputc)
+    locationdescriptionoverwrite character varying,
+    PRIMARY KEY(divisionid, entityid, locationtimestamputc)
 );
 
 --ALTER TABLE rescu.detector_inventory OWNER TO rescu_admins;
