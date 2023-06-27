@@ -7,7 +7,7 @@ CREATE TABLE gwolofs.raw_vdsdata (
     datetime_15min timestamp without time zone,
     lane integer, 
     speedKmh float, 
-    volumeVehiclesPerHour integer
+    volumeVehiclesPerHour integer,
     occupancyPercent float,
     PRIMARY KEY (divisionid, vdsid, datetime_20sec, lane)
 ); 
