@@ -1,9 +1,6 @@
-#need new `vds` schema in bigdata
-#need new `vds_bot` user in bigdata
-#need 
-
 from os import path
 import sys
+import logging
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
@@ -11,8 +8,17 @@ from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from psycopg2 import sql
+import psycopg2
 from psycopg2.extras import execute_values
+
+def logger():
+    #logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    return logger
+
+logger=logger()
+logger.debug('Start')
 
 try:
     #repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
@@ -25,9 +31,11 @@ except:
 dag_name = 'pull_vds'
 
 # Get slack member ids
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+#dag_owners = Variable.get('dag_owners', deserialize_json=True)
+#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = 'gwolofs'
 
+'''
 SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_ids = Variable.get('slack_member_id', deserialize_json=True)
@@ -52,14 +60,15 @@ def task_fail_slack_alert(context):
         username='airflow',
         )
     return failed_alert.execute(context=context)
-
+'''
+    
 #need to create these connections still
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook("itsc_postgres")
 
 #CONNECT TO BIGDATA
 #rescu_bot = PostgresHook("rescu_bot")
-rescu_bot = PostgresHook("gwolofs_postgres")
+vds_bot = PostgresHook("vds_bot")
 
 default_args = {
     'owner': ','.join(names),
@@ -70,11 +79,11 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
     #'on_failure_callback': task_fail_slack_alert,
-    'rds_conn': rescu_bot, #rds_conn = rescu_bot
+    'rds_conn': vds_bot, #rds_conn = vds_bot
     'itsc_conn': itsc_bot, #itsc_conn = itsc_bot
 }
 
-#start_date = '2023-06-01'
+#start_date = '2023-06-27'
 #end_date = '2023-06-01'
 
 dag = DAG(dag_name, default_args=default_args, schedule_interval='0 4 * * *') #daily at 4am
