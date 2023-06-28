@@ -3,7 +3,7 @@
 CREATE TABLE gwolofs.vdsconfig (
     divisionid smallint,
     vdsid integer,
-    sourceid character varying,
+    detector_id character varying,
     starttimestamputc timestamp without time zone,
     endtimestamputc timestamp without time zone,
     lanes smallint,
