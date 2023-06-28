@@ -1,6 +1,6 @@
---DROP TABLE gwolofs.raw_vdsdata; 
+--DROP TABLE vds.raw_vdsdata;
 
-CREATE TABLE gwolofs.raw_vdsdata (
+CREATE TABLE vds.raw_vdsdata (
     divisionid smallint,
     vdsid integer,
     datetime_20sec timestamp without time zone,
@@ -12,4 +12,5 @@ CREATE TABLE gwolofs.raw_vdsdata (
     PRIMARY KEY (divisionid, vdsid, datetime_20sec, lane)
 ); 
 
---ALTER TABLE gwolofs.raw_vdsdata OWNER TO rescu_admins;
+ALTER TABLE vds.raw_vdsdata OWNER TO vds_admins;
+GRANT INSERT ON TABLE vds.raw_vdsdata TO vds_bot;

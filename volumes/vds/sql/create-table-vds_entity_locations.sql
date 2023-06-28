@@ -1,6 +1,6 @@
---DROP TABLE gwolofs.vds_entity_locations; 
+--DROP TABLE vds.entity_locations; 
 
-CREATE TABLE gwolofs.vds_entity_locations (
+CREATE TABLE vds.entity_locations (
     divisionid smallint,
     entitytype smallint,
     entityid integer,
@@ -26,4 +26,5 @@ CREATE TABLE gwolofs.vds_entity_locations (
     PRIMARY KEY(divisionid, entityid, locationtimestamputc)
 );
 
---ALTER TABLE rescu.detector_inventory OWNER TO rescu_admins;
+ALTER TABLE vds.entity_locations OWNER TO vds_admins;
+GRANT INSERT ON TABLE vds.entity_locations TO vds_bot;
