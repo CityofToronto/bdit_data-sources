@@ -1,6 +1,6 @@
---DROP TABLE TABLE gwolofs.entitylocation; 
+--DROP TABLE gwolofs.vds_entity_locations; 
 
-CREATE TABLE gwolofs.entitylocation (
+CREATE TABLE gwolofs.vds_entity_locations (
     divisionid smallint,
     entitytype smallint,
     entityid integer,

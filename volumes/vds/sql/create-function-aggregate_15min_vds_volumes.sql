@@ -10,21 +10,30 @@ AS $BODY$
 BEGIN
 	
     --Aggregated into speed bins and 1 hour bin
-    INSERT INTO gwolofs.vds_volumes_15min (divisionid, vdsid, datetime_bin, volume_15min)
+    INSERT INTO gwolofs.vds_volumes_15min (divisionid, vdsid, detector_id, datetime_bin, volume_15min)
+    
     SELECT 
-        divisionid,
-        vdsid,
-        datetime_15min,
-        SUM(volumeVehiclesPerHour) / 4 / 45 AS volume_15min
-    FROM gwolofs.raw_vdsdata
-    --add join to detector inventory later
+        d.divisionid,
+        d.vdsid,
+        c.detector_id,
+        d.datetime_15min,
+        SUM(d.volumevehiclesperhour) / 4 / 45 AS volume_15min
+    FROM gwolofs.raw_vdsdata AS d
+    JOIN gwolofs.vdsconfig AS c ON
+        d.vdsid = c.vdsid
+        AND d.divisionid = c.divisionid
+        AND d.datetime_15min >= c.starttimestamputc
+        AND (
+            d.datetime_15min <= c.endtimestamputc
+            OR c.endtimestamputc IS NULL) --no end date
     WHERE 
-        datetime_15min >= _start_date 
-        AND datetime_15min < _end_date
+        datetime_15min >= _start_date --'2023-06-01 01:00:00'::timestamp 
+        AND datetime_15min < _end_date --'2023-06-01 02:00:00'::timestamp
     GROUP BY
-        divisionid,
-        vdsid,
-        datetime_15min
+        d.divisionid,
+        d.vdsid,
+        c.detector_id,
+        d.datetime_15min
     ON CONFLICT DO NOTHING;
 
 END;
