@@ -1,23 +1,26 @@
-def pull_raw_vdsdata(start_date, end_date):
+def pull_raw_vdsdata(start_date):
 
+    import pandas as pd
+    from numpy import nan
+    
     # Pull raw data from Postgres database
-    raw_sql = sql.SQL(f'''SELECT 
+    raw_sql = sql.SQL('''SELECT 
         d.divisionid,
         d.vdsid,
-        d.timestamputc,
+        d.timestamputc, --timestamp in UTC as INTEGER
+        to_timestamp(d.timestamputc) AT TIME ZONE 'EST' AS datetime,
         d.lanedata
     FROM public.vdsdata AS d
     WHERE 
-        timestamputc >= extract(epoch from timestamptz {start_date})
-        AND timestamputc < extract(epoch from timestamptz {end_date}) + 86400
+        timestamputc >= extract(epoch from timestamptz {start})
+        AND timestamputc < extract(epoch from timestamptz {end}) + 86400
         --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
     ''').format(
-        start_date = sql.Literal(start_date + ' 00:00:00 EST'),
-        end_date = sql.Literal(end_date + ' 00:00:00 EST')
+        start = sql.Literal(start_date + ' 00:00:00 EST')
     )
 
     #this old sql was needed to control which sensors to pull data for based 
-    # on additional attributes in the vdsconfig and entitylocation tables
+        # on additional attributes in the vdsconfig and entitylocation tables
     old_sql = f'''SELECT 
         d.divisionid,
         d.vdsid,
@@ -43,11 +46,13 @@ def pull_raw_vdsdata(start_date, end_date):
     '''
 
     with itsc_conn.get_conn() as con:
-        with con.cursor() as cur:
-            raw_data = pd.read_sql(con, sql=raw_sql)
+        raw_data = pd.read_sql(raw_sql, con)
     
     # Transform raw data
     transformed_data = transform_raw_data(raw_data)
+    transformed_data = transformed_data.replace(nan, None)
+    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #should investigate validity of sensors with one lane?
+    data_tuples = [tuple(x) for x in transformed_data.to_numpy()]
 
     with rds_conn.get_conn() as con:
         with con.cursor() as cur:
@@ -58,18 +63,16 @@ def pull_raw_vdsdata(start_date, end_date):
             # Insert cleaned data into the database
             insert_query = sql.SQL('''INSERT INTO gwolofs.raw_vdsdata (
                                     divisionid, vdsid, datetime_20sec, datetime_15min, lane, speedKmh, volumeVehiclesPerHour, occupancyPercent
-                                    ) VALUES %s''')
-            con.execute(insert_query)
-            execute_values(cur, insert_query, transformed_data)
+                                    ) VALUES %s;''')
+            execute_values(cur, insert_query, data_tuples)
 
-
-def pull_raw_vdsvehicledata(start_date, end_date): 
+def pull_raw_vdsvehicledata(start_date): 
 
     raw_sql = sql.SQL('''
     SELECT
         d.divisionid,
         d.vdsid,
-        d.timestamputc, --timestamp without tz
+        d.timestamputc::timestamptz AT TIME ZONE 'EST', --convert timestamp (without timezone) at UTC to EST
         d.lane,
         d.sensoroccupancyds,
         round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
@@ -84,17 +87,23 @@ def pull_raw_vdsvehicledata(start_date, end_date):
             OR c.endtimestamputc IS NULL) --no end date
     WHERE
         d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-        AND d.timestamputc >= {}::timestamp
-        AND d.timestamputc < {}::timestamp + INTERVAL '1 DAY'
+        AND d.timestamputc::timestamptz >= {start}::timestamptz
+        AND d.timestamputc::timestamptz < {start}::timestamptz + INTERVAL '1 DAY'
         AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
-    ''').format(sql.Literal(start_date + ' 00:00:00 EST'), 
-                sql.Literal(end_date + ' 00:00:00 EST'))
+    ''').format(
+        start = sql.Literal(start_date + ' 00:00:00 EST')
+    )
 
     with itsc_conn.get_conn() as con:
         with con.cursor() as cur:
             cur.execute(raw_sql)
             raw_data = cur.fetchall()
     
+    test = pd.DataFrame(raw_data)
+    test = test.rename({2:'datetime_bin'}, axis = 1)
+    test['hour'] = test['datetime_bin'].dt.hour
+    test.groupby('hour').size()
+
     print(raw_data[0])
 
     with rds_conn.get_conn() as con: 
@@ -110,7 +119,17 @@ def pull_raw_vdsvehicledata(start_date, end_date):
                                    ) VALUES %s;''')
             execute_values(cur, insert_query, raw_data)
 
-def summarize_into_v15(start_date, end_date):
+    """ try:
+        with rds_conn.cursor() as cur:
+            cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, start_date + datetime.timedelta(days=1)))
+            logger.info('Aggregated Speed Count Data')
+    except psycopg2.Error as exc:
+        #logger.critical('Error aggregating data to 1-hour bins')
+        #logger.critical(exc)
+        conn.close()
+     """
+
+def summarize_into_v15(start_date):
         
     with rds_conn.get_conn() as con:
         with con.cursor() as cur:
@@ -119,18 +138,12 @@ def summarize_into_v15(start_date, end_date):
             #cur.execute(delete_v15)
             
             #add sourceid to this query.
-            insert_v15 = sql.SQL(f'''
-                INSERT INTO gwolofs.vds_volumes_15min (detector_id, datetime_bin, volume_15min)
-                SELECT detector_id, datetime_bin, SUM(volume) AS volume_15min
-                FROM gwolofs.raw_20sec
-                WHERE datetime_bin >= '{dt}'
-                    AND datetime_bin < 
-                GROUP BY detector_id, datetime_bin
+            insert_v15 = sql.SQL('''
+                SELECT gwolofs.aggregate_15min_vds_volumes({start}, {start}::timestamp + INTERVAL '1 DAY')
             ''').format(
-                start_date,
-                end_date
+                start = sql.Literal(start_date + ' 00:00:00')
             )
-            con.execute(insert_v15)
+            cur.execute(insert_v15)
 
 def pull_detector_inventory():
     # Pull data from the detector_inventory table
@@ -138,7 +151,7 @@ def pull_detector_inventory():
     SELECT 
         divisionid,
         vdsid,
-        sourceid,
+        UPPER(sourceid) AS detector_id, --match what we already have
         starttimestamputc,
         endtimestamputc,
         lanes,
@@ -163,23 +176,23 @@ def pull_detector_inventory():
             cur.execute(detector_sql)
             vds_config_data = cur.fetchall()
 
-    print("Number of rows fetched from vdsconfig table: {}".format(vds_config_data.shape[0]))
+    print("Number of rows fetched from vdsconfig table: {}".format(len(vds_config_data)))
 
     # upsert data
     upsert_query = sql.SQL('''
         INSERT INTO gwolofs.vdsconfig (
-            divisionid, vdsid, sourceid, starttimestamputc, endtimestamputc, lanes, hasgpsunit, 
+            divisionid, vdsid, detector_id, starttimestamputc, endtimestamputc, lanes, hasgpsunit, 
             managementurl, description, fssdivisionid, fssid, rtmsfromzone, rtmstozone, detectortype, 
             createdby, createdbystaffid, signalid, signaldivisionid, movement)
         VALUES %s
-        ON CONFLICT (column1) DO UPDATE
-        SET column2 = EXCLUDED.column2, column3 = EXCLUDED.column3
+        ON CONFLICT DO NOTHING;
     ''')
+
     with rds_conn.get_conn() as con:
         with con.cursor() as cur:
-            execute_values(cur, upsert_query, vds_config_data)
+           execute_values(cur, upsert_query, vds_config_data)
 
-def pull_EntityLocationLatest():
+def pull_entity_locations():
     # Pull data from the detector_inventory table
     entitylocation_sql = sql.SQL('''
     SELECT 
@@ -214,62 +227,22 @@ def pull_EntityLocationLatest():
             cur.execute(entitylocation_sql)
             entitylocations = cur.fetchall()
     
-    print("Number of rows fetched from entitylocations table: {}".format(entitylocations.shape[0]))
+    print("Number of rows fetched from entitylocations table: {}".format(len(entitylocations)))
 
     # upsert data
     upsert_query = sql.SQL('''
-        INSERT INTO vds.entitylocation (
+        INSERT INTO gwolofs.vds_entity_locations (
             divisionid, entitytype, entityid, locationtimestamputc, latitude, longitude, altitudemetersasl,
             headingdegrees, speedkmh, numsatellites, dilutionofprecision, mainroadid, crossroadid,
             secondcrossroadid, mainroadname, crossroadname, secondcrossroadname, streetnumber,
             offsetdistancemeters, offsetdirectiondegrees, locationsource, locationdescriptionoverwrite)
         VALUES %s
-        --ON CONFLICT (...) DO UPDATE
-        --SET column2 = EXCLUDED.column2, column3 = EXCLUDED.column3
+        ON CONFLICT DO NOTHING;
     ''')
 
     with rds_conn.get_conn() as con:
         with con.cursor() as cur:
             execute_values(cur, upsert_query, entitylocations)
-
-
-def transform_raw_data(df):
-    import pandas as pd
-    from datetime import datetime
-
-    #get number of lanes in the binary data stream for each row
-    empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
-
-    if empty_rows.empty is False:
-        print(f'Rows with empty lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).')
-    else: 
-        print(f'No empty rows discarded.')
-
-    #drop empty rows #keep??? 
-    #df_clean = df.drop(empty_rows.index) #remove empty rows
-
-    df['datetime'] = df['timestamputc'].map(datetime.fromtimestamp)
-    floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
-    df['datetime_15min'] = df['timestamputc'].map(floor_15).map(datetime.fromtimestamp) 
-
-    #parse each `lanedata` column entry 
-    lane_data = df['lanedata'].map(parse_lane_data)
-    n_rows = lane_data.map(len)
-
-    #flatten the nested list structure
-    lane_data = [item for sublist in lane_data for item in sublist]
-
-    #convert list structure to df
-    cols = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent']
-    lane_data_df = pd.DataFrame(lane_data, columns = cols) 
-
-    #repeat original index based on number of rows in result as a join column
-    lane_data_df.set_index(df.index.repeat(n_rows), inplace=True)
-
-    #join with other columns on index 
-    raw_20sec = df[['divisionid', 'vdsid', 'datetime', 'datetime_15min']].join(lane_data_df)
-    
-    return raw_20sec
 
 # Parse lane data
 def parse_lane_data(laneData):
@@ -315,4 +288,43 @@ def parse_lane_data(laneData):
                     #Extra columns, not used:, volumePassengerVehiclesPerHour, volumeSingleUnitTrucksPerHour, volumeComboTrucksPerHour, volumeMultiTrailerTrucksPerHour])
             
     return result
+
+def transform_raw_data(df):
+    import pandas as pd
+    from datetime import datetime
+
+    #get number of lanes in the binary data stream for each row
+    empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
+
+    if empty_rows.empty is False:
+        print(f'Rows with empty lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).')
+    else: 
+        print(f'No empty rows discarded.')
+
+    #drop empty rows #keep??? 
+    #df_clean = df.drop(empty_rows.index) #remove empty rows
+
+    #df['datetime'] = df['timestamputc'].map(datetime.fromtimestamp) #converting in sql now.
+    floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
+    df['datetime_15min'] = df['timestamputc'].map(floor_15).map(datetime.fromtimestamp) 
+
+    #parse each `lanedata` column entry 
+    lane_data = df['lanedata'].map(parse_lane_data)
+    n_rows = lane_data.map(len)
+
+    #flatten the nested list structure
+    lane_data = [item for sublist in lane_data for item in sublist]
+
+    #convert list structure to df
+    cols = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent']
+    lane_data_df = pd.DataFrame(lane_data, columns = cols) 
+
+    #repeat original index based on number of rows in result as a join column
+    lane_data_df.set_index(df.index.repeat(n_rows), inplace=True)
+
+    #join with other columns on index 
+    raw_20sec = df[['divisionid', 'vdsid', 'datetime', 'datetime_15min']].join(lane_data_df)
+    
+    return raw_20sec
+
 

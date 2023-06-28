@@ -6,9 +6,9 @@ from os import path
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.operators.python import PythonOperator
+from airflow.hooks.base import BaseHook
+from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from psycopg2 import sql
@@ -18,7 +18,7 @@ try:
     #repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
     repo_path = '/home/gwolofs/bdit_data-sources'
     sys.path.insert(0,path.join(repo_path,'volumes/rescu/itscentral_pipeline'))
-    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, summarize_into_v15, pull_detector_inventory
+    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, summarize_into_v15, pull_detector_inventory, pull_entity_locations
 except:
     raise ImportError("Cannot import functions from volumes/rescu/itscentral_pipeline/vds_functions.py.")
 
@@ -85,8 +85,7 @@ pull_raw_vdsdata_task = PythonOperator(
     python_callable=pull_raw_vdsdata,
     dag=dag,
     op_kwargs = {
-            'start_date':'{{ ds }}', 
-            'end_date':'{{ ds }}'
+            'start_date':'{{ ds }}'
             } 
 )
 
@@ -95,8 +94,7 @@ pull_raw_vdsvehicledata_task = PythonOperator(
     python_callable=pull_raw_vdsvehicledata,
     dag=dag,
     op_kwargs = {
-            'start_date':'{{ ds }}', 
-            'end_date':'{{ ds }}'
+            'start_date':'{{ ds }}'
             } 
 )
 
@@ -105,17 +103,24 @@ summarize_data_task = PythonOperator(
     python_callable=summarize_into_v15,
     dag=dag,
     op_kwargs = {
-            'start_date':'{{ ds }}', 
-            'end_date':'{{ ds }}'
+            'start_date':'{{ ds }}'
             } 
 )
 
 pull_detector_inventory_task = PythonOperator(
-    task_id='pull_and_upsert_detector_inventory',
+    task_id='pull_and_insert_detector_inventory',
     python_callable=pull_detector_inventory,
     dag=dag
 )
 
+pull_entity_locations_task = PythonOperator(
+    task_id='pull_and_insert_entitylocations',
+    python_callable=pull_entity_locations,
+    dag=dag
+)
+
+pull_entity_locations_task
+pull_detector_inventory_task
 pull_raw_vdsdata_task >> summarize_data_task
 pull_raw_vdsvehicledata_task
-pull_detector_inventory_task
+
