@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.aggregate_15min_vds_volumes(_start_date timestamp, _end_date timestamp
+CREATE OR REPLACE FUNCTION vds.aggregate_15min_vds_volumes(_start_date timestamp, _end_date timestamp
 	)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -10,7 +10,7 @@ AS $BODY$
 BEGIN
 	
     --Aggregated into speed bins and 1 hour bin
-    INSERT INTO gwolofs.vds_volumes_15min (divisionid, vdsid, detector_id, datetime_bin, volume_15min)
+    INSERT INTO vds.volumes_15min (divisionid, vdsid, detector_id, datetime_bin, volume_15min)
     
     SELECT 
         d.divisionid,
@@ -18,8 +18,8 @@ BEGIN
         c.detector_id,
         d.datetime_15min,
         SUM(d.volumevehiclesperhour) / 4 / 45 AS volume_15min
-    FROM gwolofs.raw_vdsdata AS d
-    JOIN gwolofs.vdsconfig AS c ON
+    FROM vds.raw_vdsdata AS d
+    JOIN vds.vdsconfig AS c ON
         d.vdsid = c.vdsid
         AND d.divisionid = c.divisionid
         AND d.datetime_15min >= c.starttimestamputc
@@ -40,4 +40,4 @@ END;
 
 $BODY$;
 
---GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour() to wys_bot;
+GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_volumes(timestamp, timestamp) to vds_bot;

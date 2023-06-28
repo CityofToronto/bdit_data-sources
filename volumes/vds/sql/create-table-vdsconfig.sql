@@ -1,6 +1,6 @@
---DROP TABLE gwolofs.vdsconfig; 
+--DROP TABLE vds.vdsconfig; 
 
-CREATE TABLE gwolofs.vdsconfig (
+CREATE TABLE vds.vdsconfig (
     divisionid smallint,
     vdsid integer,
     detector_id character varying,
@@ -23,4 +23,5 @@ CREATE TABLE gwolofs.vdsconfig (
     PRIMARY KEY (divisionid, vdsid, starttimestamputc)
 );
 
---ALTER TABLE gwolofs.vdsconfig OWNER TO rescu_admins;
+ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
+GRANT INSERT ON TABLE vds.vdsconfig TO vds_bot;
