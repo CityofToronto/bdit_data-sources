@@ -7,16 +7,15 @@ def pull_raw_vdsdata(start_date):
     raw_sql = sql.SQL('''SELECT 
         d.divisionid,
         d.vdsid,
-        d.timestamputc, --timestamp in UTC as INTEGER
-        to_timestamp(d.timestamputc) AT TIME ZONE 'EST' AS datetime,
+        d.timestamputc, --timestamp in INTEGER (correct tz even though labeled as UTC)
         d.lanedata
     FROM public.vdsdata AS d
-    WHERE 
+    WHERE
         timestamputc >= extract(epoch from timestamptz {start})
-        AND timestamputc < extract(epoch from timestamptz {end}) + 86400
+        AND timestamputc < extract(epoch from timestamptz {start}) + 86400
         --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
     ''').format(
-        start = sql.Literal(start_date + ' 00:00:00 EST')
+        start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
     )
 
     #this old sql was needed to control which sensors to pull data for based 
@@ -45,8 +44,14 @@ def pull_raw_vdsdata(start_date):
         --AND substring(sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors; 
     '''
 
-    with itsc_conn.get_conn() as con:
-        raw_data = pd.read_sql(raw_sql, con)
+    try: 
+        with itsc_conn.get_conn() as con:
+            raw_data = pd.read_sql(raw_sql, con)
+            logger.info('Fetching vdsdata')
+    except psycopg2.Error as exc:
+        logger.critical('Error fetching vdsdata.')
+        logger.critical(exc)
+        con.close()
     
     # Transform raw data
     transformed_data = transform_raw_data(raw_data)
@@ -54,17 +59,23 @@ def pull_raw_vdsdata(start_date):
     transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #should investigate validity of sensors with one lane?
     data_tuples = [tuple(x) for x in transformed_data.to_numpy()]
 
-    with rds_conn.get_conn() as con:
-        with con.cursor() as cur:
-            # Drop records for the current date
-            #drop_query = sql.SQL(f"DELETE FROM gwolofs.raw_vdsdata WHERE datetime_bin::date = '{dt}'")
-            #con.execute(drop_query)
-            
-            # Insert cleaned data into the database
-            insert_query = sql.SQL('''INSERT INTO gwolofs.raw_vdsdata (
-                                    divisionid, vdsid, datetime_20sec, datetime_15min, lane, speedKmh, volumeVehiclesPerHour, occupancyPercent
-                                    ) VALUES %s;''')
-            execute_values(cur, insert_query, data_tuples)
+    try:
+        with rds_conn.get_conn() as con:
+            with con.cursor() as cur:
+                # Drop records for the current date
+                #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsdata WHERE datetime_bin::date = '{dt}'")
+                #con.execute(drop_query)
+                
+                # Insert cleaned data into the database
+                insert_query = sql.SQL('''INSERT INTO vds.raw_vdsdata (
+                                        divisionid, vdsid, datetime_20sec, datetime_15min, lane, speedKmh, volumeVehiclesPerHour, occupancyPercent
+                                        ) VALUES %s;''')
+                execute_values(cur, insert_query, data_tuples)
+                logger.info('Inserting vdsdata into RDS.')
+    except psycopg2.Error as exc:
+        logger.critical('Error inserting vdsdata into RDS.')
+        logger.critical(exc)
+        con.close()
 
 def pull_raw_vdsvehicledata(start_date): 
 
@@ -72,7 +83,7 @@ def pull_raw_vdsvehicledata(start_date):
     SELECT
         d.divisionid,
         d.vdsid,
-        d.timestamputc::timestamptz AT TIME ZONE 'EST', --convert timestamp (without timezone) at UTC to EST
+        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT', --convert timestamp (without timezone) at UTC to EDT/EST
         d.lane,
         d.sensoroccupancyds,
         round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
@@ -87,59 +98,61 @@ def pull_raw_vdsvehicledata(start_date):
             OR c.endtimestamputc IS NULL) --no end date
     WHERE
         d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-        AND d.timestamputc::timestamptz >= {start}::timestamptz
-        AND d.timestamputc::timestamptz < {start}::timestamptz + INTERVAL '1 DAY'
+        AND TIMEZONE('UTC', d.timestamputc) >= {start}::timestamptz
+        AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
         AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
     ''').format(
-        start = sql.Literal(start_date + ' 00:00:00 EST')
+        start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
     )
-
-    with itsc_conn.get_conn() as con:
-        with con.cursor() as cur:
-            cur.execute(raw_sql)
-            raw_data = cur.fetchall()
     
-    test = pd.DataFrame(raw_data)
-    test = test.rename({2:'datetime_bin'}, axis = 1)
-    test['hour'] = test['datetime_bin'].dt.hour
-    test.groupby('hour').size()
+    try:
+        with itsc_conn.get_conn() as con:
+            with con.cursor() as cur:
+                cur.execute(raw_sql)
+                raw_data = cur.fetchall()
+                logger.info('Fetching vdsvehicledata')
+    except psycopg2.Error as exc:
+        logger.critical('Error fetching vdsvehicledata.')
+        logger.critical(exc)
+        con.close()
+    
+    #test = pd.DataFrame(raw_data)
+    #test = test.rename({2:'datetime_bin'}, axis = 1)
+    #test['hour'] = test['datetime_bin'].dt.hour
+    #test.groupby('hour').size()
 
     print(raw_data[0])
-
-    with rds_conn.get_conn() as con: 
-        with con.cursor() as cur:
+    
+    try:
+        with rds_conn.get_conn() as con: 
+            with con.cursor() as cur:
     
             # Drop records for the current date
-            #drop_query = sql.SQL(f"DELETE FROM gwolofs.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'")
+            #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'")
             #cur.execute(drop_query)
             
             # Insert cleaned data into the database
-            insert_query = sql.SQL('''INSERT INTO gwolofs.raw_vdsvehicledata (
-                                   divisionid, vdsid, timestamputc, lane, sensoroccupancyds, speed_kmh, length_meter
-                                   ) VALUES %s;''')
-            execute_values(cur, insert_query, raw_data)
-
-    """ try:
-        with rds_conn.cursor() as cur:
-            cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, start_date + datetime.timedelta(days=1)))
-            logger.info('Aggregated Speed Count Data')
+                insert_query = sql.SQL('''INSERT INTO vds.raw_vdsvehicledata (
+                                    divisionid, vdsid, timestamputc, lane, sensoroccupancyds, speed_kmh, length_meter
+                                    ) VALUES %s;''')
+                execute_values(cur, insert_query, raw_data)           
+                logger.info('Inserting into vds.raw_vdsvehicledata')
     except psycopg2.Error as exc:
-        #logger.critical('Error aggregating data to 1-hour bins')
-        #logger.critical(exc)
-        conn.close()
-     """
+        logger.critical('Error inserting vds.raw_vdsvehicledata.')
+        logger.critical(exc)
+        con.close()
 
 def summarize_into_v15(start_date):
         
     with rds_conn.get_conn() as con:
         with con.cursor() as cur:
 
-            #delete_v15 = sql.SQL(f"DELETE FROM gwolofs.vds_volumes_15min WHERE datetime_bin::date = '{dt}'")
+            #delete_v15 = sql.SQL(f"DELETE FROM vds.vds_volumes_15min WHERE datetime_bin::date = '{dt}'")
             #cur.execute(delete_v15)
             
             #add sourceid to this query.
             insert_v15 = sql.SQL('''
-                SELECT gwolofs.aggregate_15min_vds_volumes({start}, {start}::timestamp + INTERVAL '1 DAY')
+                SELECT vds.aggregate_15min_vds_volumes({start}, {start}::timestamp + INTERVAL '1 DAY')
             ''').format(
                 start = sql.Literal(start_date + ' 00:00:00')
             )
@@ -171,16 +184,22 @@ def pull_detector_inventory():
     FROM public.vdsconfig
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table''')
 
-    with itsc_conn.get_conn() as con:
-        with con.cursor() as cur:
-            cur.execute(detector_sql)
-            vds_config_data = cur.fetchall()
+    try: 
+        with itsc_conn.get_conn() as con:
+            with con.cursor() as cur:
+                cur.execute(detector_sql)
+                vds_config_data = cur.fetchall()
+                logger.info('Fetching vdsconfig')
+    except psycopg2.Error as exc:
+        logger.critical('Error fetching vdsconfig.')
+        logger.critical(exc)
+        con.close()
 
     print("Number of rows fetched from vdsconfig table: {}".format(len(vds_config_data)))
 
     # upsert data
-    upsert_query = sql.SQL('''
-        INSERT INTO gwolofs.vdsconfig (
+    insert_query = sql.SQL('''
+        INSERT INTO vds.vdsconfig (
             divisionid, vdsid, detector_id, starttimestamputc, endtimestamputc, lanes, hasgpsunit, 
             managementurl, description, fssdivisionid, fssid, rtmsfromzone, rtmstozone, detectortype, 
             createdby, createdbystaffid, signalid, signaldivisionid, movement)
@@ -188,9 +207,15 @@ def pull_detector_inventory():
         ON CONFLICT DO NOTHING;
     ''')
 
-    with rds_conn.get_conn() as con:
-        with con.cursor() as cur:
-           execute_values(cur, upsert_query, vds_config_data)
+    try: 
+        with rds_conn.get_conn() as con:
+            with con.cursor() as cur:
+                execute_values(cur, insert_query, vds_config_data)
+                logger.info('Inserting vdsconfig')
+    except psycopg2.Error as exc:
+        logger.critical('Error inserting vdsconfig.')
+        logger.critical(exc)
+        con.close()
 
 def pull_entity_locations():
     # Pull data from the detector_inventory table
@@ -222,16 +247,22 @@ def pull_entity_locations():
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
     ''')
 
-    with itsc_conn.get_conn() as con:
-        with con.cursor() as cur:
-            cur.execute(entitylocation_sql)
-            entitylocations = cur.fetchall()
-    
+    try:
+        with itsc_conn.get_conn() as con:
+            with con.cursor() as cur:
+                cur.execute(entitylocation_sql)
+                entitylocations = cur.fetchall()
+                logger.info('Fetching entitylocation')
+    except psycopg2.Error as exc:
+        logger.critical('Error fetching entitylocation.')
+        logger.critical(exc)
+        con.close()
+
     print("Number of rows fetched from entitylocations table: {}".format(len(entitylocations)))
 
     # upsert data
     upsert_query = sql.SQL('''
-        INSERT INTO gwolofs.vds_entity_locations (
+        INSERT INTO vds.vds_entity_locations (
             divisionid, entitytype, entityid, locationtimestamputc, latitude, longitude, altitudemetersasl,
             headingdegrees, speedkmh, numsatellites, dilutionofprecision, mainroadid, crossroadid,
             secondcrossroadid, mainroadname, crossroadname, secondcrossroadname, streetnumber,
@@ -240,9 +271,15 @@ def pull_entity_locations():
         ON CONFLICT DO NOTHING;
     ''')
 
-    with rds_conn.get_conn() as con:
-        with con.cursor() as cur:
-            execute_values(cur, upsert_query, entitylocations)
+    try:
+        with rds_conn.get_conn() as con:
+            with con.cursor() as cur:
+                execute_values(cur, upsert_query, entitylocations)
+                logger.info('Inserting vds_entity_locations')
+    except psycopg2.Error as exc:
+        logger.critical('Error inserting vds_entity_locations.')
+        logger.critical(exc)
+        con.close()
 
 # Parse lane data
 def parse_lane_data(laneData):
@@ -292,6 +329,7 @@ def parse_lane_data(laneData):
 def transform_raw_data(df):
     import pandas as pd
     from datetime import datetime
+    import pytz
 
     #get number of lanes in the binary data stream for each row
     empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
@@ -303,10 +341,12 @@ def transform_raw_data(df):
 
     #drop empty rows #keep??? 
     #df_clean = df.drop(empty_rows.index) #remove empty rows
+    UTC_to_EDTEST = lambda a: datetime.fromtimestamp(a, tz = pytz.timezone("EST5EDT"))
 
-    #df['datetime'] = df['timestamputc'].map(datetime.fromtimestamp) #converting in sql now.
+    df['datetime'] = df['timestamputc'].map(UTC_to_EDTEST) #convert from integer to timestamp
+    
     floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
-    df['datetime_15min'] = df['timestamputc'].map(floor_15).map(datetime.fromtimestamp) 
+    df['datetime_15min'] = df['timestamputc'].map(floor_15).map(UTC_to_EDTEST) 
 
     #parse each `lanedata` column entry 
     lane_data = df['lanedata'].map(parse_lane_data)
