@@ -9,9 +9,6 @@ from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
-import psycopg2
-from psycopg2 import sql
-from psycopg2.extras import execute_values
 
 def logger():
     #logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
@@ -26,7 +23,7 @@ try:
     #repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
     repo_path = '/home/gwolofs/bdit_data-sources'
     sys.path.insert(0,path.join(repo_path,'volumes/rescu/itscentral_pipeline'))
-    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, summarize_into_v15, pull_detector_inventory, pull_entity_locations
+    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, pull_detector_inventory, pull_entity_locations
 except:
     raise ImportError("Cannot import functions from volumes/rescu/itscentral_pipeline/vds_functions.py.")
 
@@ -110,7 +107,7 @@ pull_raw_vdsvehicledata_task = PythonOperator(
 )
 
 summarize_data_task = PostgresOperator(
-    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}}', '{{ds}}'::timestamp + INTERVAL '1 DAY')'''
+    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}}', '{{ds}}'::timestamp + INTERVAL '1 DAY')''',
     task_id='summarize_data',
     dag=dag,
     postgres_conn_id='vds_bot',

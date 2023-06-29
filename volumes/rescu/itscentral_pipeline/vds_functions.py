@@ -1,8 +1,11 @@
+
 def pull_raw_vdsdata(start_date):
 
     import pandas as pd
     from numpy import nan
-    
+    from psycopg2 import sql, Error
+    from psycopg2.extras import execute_values
+
     # Pull raw data from Postgres database
     raw_sql = sql.SQL('''SELECT 
         d.divisionid,
@@ -48,7 +51,7 @@ def pull_raw_vdsdata(start_date):
         with itsc_conn.get_conn() as con:
             raw_data = pd.read_sql(raw_sql, con)
             logger.info('Fetching vdsdata')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error fetching vdsdata.')
         logger.critical(exc)
         con.close()
@@ -72,13 +75,16 @@ def pull_raw_vdsdata(start_date):
                                         ) VALUES %s;''')
                 execute_values(cur, insert_query, data_tuples)
                 logger.info('Inserting vdsdata into RDS.')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error inserting vdsdata into RDS.')
         logger.critical(exc)
         con.close()
 
 def pull_raw_vdsvehicledata(start_date): 
-
+    
+    from psycopg2 import sql, Error
+    from psycopg2.extras import execute_values
+    
     raw_sql = sql.SQL('''
     SELECT
         d.divisionid,
@@ -111,7 +117,7 @@ def pull_raw_vdsvehicledata(start_date):
                 cur.execute(raw_sql)
                 raw_data = cur.fetchall()
                 logger.info('Fetching vdsvehicledata')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error fetching vdsvehicledata.')
         logger.critical(exc)
         con.close()
@@ -137,12 +143,16 @@ def pull_raw_vdsvehicledata(start_date):
                                     ) VALUES %s;''')
                 execute_values(cur, insert_query, raw_data)           
                 logger.info('Inserting into vds.raw_vdsvehicledata')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error inserting vds.raw_vdsvehicledata.')
         logger.critical(exc)
         con.close()
 
 def pull_detector_inventory():
+    
+    from psycopg2 import sql, Error
+    from psycopg2.extras import execute_values
+
     # Pull data from the detector_inventory table
     detector_sql = sql.SQL('''
     SELECT 
@@ -174,7 +184,7 @@ def pull_detector_inventory():
                 cur.execute(detector_sql)
                 vds_config_data = cur.fetchall()
                 logger.info('Fetching vdsconfig')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error fetching vdsconfig.')
         logger.critical(exc)
         con.close()
@@ -196,12 +206,16 @@ def pull_detector_inventory():
             with con.cursor() as cur:
                 execute_values(cur, insert_query, vds_config_data)
                 logger.info('Inserting vdsconfig')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error inserting vdsconfig.')
         logger.critical(exc)
         con.close()
 
 def pull_entity_locations():
+
+    from psycopg2 import sql, Error
+    from psycopg2.extras import execute_values
+
     # Pull data from the detector_inventory table
     entitylocation_sql = sql.SQL('''
     SELECT 
@@ -237,7 +251,7 @@ def pull_entity_locations():
                 cur.execute(entitylocation_sql)
                 entitylocations = cur.fetchall()
                 logger.info('Fetching entitylocation')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error fetching entitylocation.')
         logger.critical(exc)
         con.close()
@@ -260,7 +274,7 @@ def pull_entity_locations():
             with con.cursor() as cur:
                 execute_values(cur, upsert_query, entitylocations)
                 logger.info('Inserting vds_entity_locations')
-    except psycopg2.Error as exc:
+    except Error as exc:
         logger.critical('Error inserting vds_entity_locations.')
         logger.critical(exc)
         con.close()
