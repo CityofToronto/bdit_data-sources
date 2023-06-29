@@ -7,8 +7,10 @@ from airflow.operators.python import PythonOperator
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 import psycopg2
+from psycopg2 import sql
 from psycopg2.extras import execute_values
 
 def logger():
@@ -33,7 +35,7 @@ dag_name = 'pull_vds'
 # Get slack member ids
 #dag_owners = Variable.get('dag_owners', deserialize_json=True)
 #names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-names = 'gwolofs'
+names = ['gwolofs']
 
 '''
 SLACK_CONN_ID = 'slack_data_pipeline'
@@ -73,7 +75,7 @@ vds_bot = PostgresHook("vds_bot")
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
-    'start_date': datetime(2023, 6, 12),
+    'start_date': datetime(2023, 6, 28),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -107,13 +109,13 @@ pull_raw_vdsvehicledata_task = PythonOperator(
             } 
 )
 
-summarize_data_task = PythonOperator(
+summarize_data_task = PostgresOperator(
+    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}}', '{{ds}}'::timestamp + INTERVAL '1 DAY')'''
     task_id='summarize_data',
-    python_callable=summarize_into_v15,
     dag=dag,
-    op_kwargs = {
-            'start_date':'{{ ds }}'
-            } 
+    postgres_conn_id='vds_bot',
+    autocommit=True,
+    retries=1
 )
 
 pull_detector_inventory_task = PythonOperator(

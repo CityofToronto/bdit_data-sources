@@ -142,22 +142,6 @@ def pull_raw_vdsvehicledata(start_date):
         logger.critical(exc)
         con.close()
 
-def summarize_into_v15(start_date):
-        
-    with rds_conn.get_conn() as con:
-        with con.cursor() as cur:
-
-            #delete_v15 = sql.SQL(f"DELETE FROM vds.vds_volumes_15min WHERE datetime_bin::date = '{dt}'")
-            #cur.execute(delete_v15)
-            
-            #add sourceid to this query.
-            insert_v15 = sql.SQL('''
-                SELECT vds.aggregate_15min_vds_volumes({start}, {start}::timestamp + INTERVAL '1 DAY')
-            ''').format(
-                start = sql.Literal(start_date + ' 00:00:00')
-            )
-            cur.execute(insert_v15)
-
 def pull_detector_inventory():
     # Pull data from the detector_inventory table
     detector_sql = sql.SQL('''
