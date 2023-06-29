@@ -1,5 +1,9 @@
+import logging
 
-def pull_raw_vdsdata(start_date):
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 
     import pandas as pd
     from numpy import nan
@@ -15,7 +19,7 @@ def pull_raw_vdsdata(start_date):
     FROM public.vdsdata AS d
     WHERE
         timestamputc >= extract(epoch from timestamptz {start})
-        AND timestamputc < extract(epoch from timestamptz {start}) + 86400
+        AND timestamputc < extract(epoch from timestamptz {start} + INTERVAL '1 DAY')
         --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
     ''').format(
         start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
@@ -50,10 +54,10 @@ def pull_raw_vdsdata(start_date):
     try: 
         with itsc_conn.get_conn() as con:
             raw_data = pd.read_sql(raw_sql, con)
-            logger.info('Fetching vdsdata')
+            LOGGER.info('Fetching vdsdata')
     except Error as exc:
-        logger.critical('Error fetching vdsdata.')
-        logger.critical(exc)
+        LOGGER.critical('Error fetching vdsdata.')
+        LOGGER.critical(exc)
         con.close()
     
     # Transform raw data
@@ -74,13 +78,13 @@ def pull_raw_vdsdata(start_date):
                                         divisionid, vdsid, datetime_20sec, datetime_15min, lane, speedKmh, volumeVehiclesPerHour, occupancyPercent
                                         ) VALUES %s;''')
                 execute_values(cur, insert_query, data_tuples)
-                logger.info('Inserting vdsdata into RDS.')
+                LOGGER.info('Inserting vdsdata into RDS.')
     except Error as exc:
-        logger.critical('Error inserting vdsdata into RDS.')
-        logger.critical(exc)
+        LOGGER.critical('Error inserting vdsdata into RDS.')
+        LOGGER.critical(exc)
         con.close()
 
-def pull_raw_vdsvehicledata(start_date): 
+def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
     
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
@@ -116,10 +120,10 @@ def pull_raw_vdsvehicledata(start_date):
             with con.cursor() as cur:
                 cur.execute(raw_sql)
                 raw_data = cur.fetchall()
-                logger.info('Fetching vdsvehicledata')
+                LOGGER.info('Fetching vdsvehicledata')
     except Error as exc:
-        logger.critical('Error fetching vdsvehicledata.')
-        logger.critical(exc)
+        LOGGER.critical('Error fetching vdsvehicledata.')
+        LOGGER.critical(exc)
         con.close()
     
     #test = pd.DataFrame(raw_data)
@@ -142,13 +146,13 @@ def pull_raw_vdsvehicledata(start_date):
                                     divisionid, vdsid, timestamputc, lane, sensoroccupancyds, speed_kmh, length_meter
                                     ) VALUES %s;''')
                 execute_values(cur, insert_query, raw_data)           
-                logger.info('Inserting into vds.raw_vdsvehicledata')
+                LOGGER.info('Inserting into vds.raw_vdsvehicledata')
     except Error as exc:
-        logger.critical('Error inserting vds.raw_vdsvehicledata.')
-        logger.critical(exc)
+        LOGGER.critical('Error inserting vds.raw_vdsvehicledata.')
+        LOGGER.critical(exc)
         con.close()
 
-def pull_detector_inventory():
+def pull_detector_inventory(rds_conn, itsc_conn):
     
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
@@ -183,10 +187,10 @@ def pull_detector_inventory():
             with con.cursor() as cur:
                 cur.execute(detector_sql)
                 vds_config_data = cur.fetchall()
-                logger.info('Fetching vdsconfig')
+                LOGGER.info('Fetching vdsconfig')
     except Error as exc:
-        logger.critical('Error fetching vdsconfig.')
-        logger.critical(exc)
+        LOGGER.critical('Error fetching vdsconfig.')
+        LOGGER.critical(exc)
         con.close()
 
     print("Number of rows fetched from vdsconfig table: {}".format(len(vds_config_data)))
@@ -205,13 +209,13 @@ def pull_detector_inventory():
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
                 execute_values(cur, insert_query, vds_config_data)
-                logger.info('Inserting vdsconfig')
+                LOGGER.info('Inserting vdsconfig')
     except Error as exc:
-        logger.critical('Error inserting vdsconfig.')
-        logger.critical(exc)
+        LOGGER.critical('Error inserting vdsconfig.')
+        LOGGER.critical(exc)
         con.close()
 
-def pull_entity_locations():
+def pull_entity_locations(rds_conn, itsc_conn):
 
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
@@ -250,10 +254,10 @@ def pull_entity_locations():
             with con.cursor() as cur:
                 cur.execute(entitylocation_sql)
                 entitylocations = cur.fetchall()
-                logger.info('Fetching entitylocation')
+                LOGGER.info('Fetching entitylocation')
     except Error as exc:
-        logger.critical('Error fetching entitylocation.')
-        logger.critical(exc)
+        LOGGER.critical('Error fetching entitylocation.')
+        LOGGER.critical(exc)
         con.close()
 
     print("Number of rows fetched from entitylocations table: {}".format(len(entitylocations)))
@@ -273,10 +277,10 @@ def pull_entity_locations():
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
                 execute_values(cur, upsert_query, entitylocations)
-                logger.info('Inserting vds_entity_locations')
+                LOGGER.info('Inserting vds_entity_locations')
     except Error as exc:
-        logger.critical('Error inserting vds_entity_locations.')
-        logger.critical(exc)
+        LOGGER.critical('Error inserting vds_entity_locations.')
+        LOGGER.critical(exc)
         con.close()
 
 # Parse lane data
