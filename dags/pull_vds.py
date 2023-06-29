@@ -1,6 +1,5 @@
 from os import path
 import sys
-import logging
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
@@ -10,14 +9,12 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 
-def logger():
-    #logging.basicConfig(format='%(asctime)s line %(lineno)d [%(levelname)s]: %(message)s')
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    return logger
 
-logger=logger()
-logger.debug('Start')
+#CONNECT TO ITS_CENTRAL
+itsc_bot = PostgresHook("itsc_postgres")
+
+#CONNECT TO BIGDATA
+vds_bot = PostgresHook("vds_bot")
 
 try:
     #repo_path = path.abspath(path.dirname(path.dirname(path.realpath(__file__))))
@@ -61,14 +58,6 @@ def task_fail_slack_alert(context):
     return failed_alert.execute(context=context)
 '''
     
-#need to create these connections still
-#CONNECT TO ITS_CENTRAL
-itsc_bot = PostgresHook("itsc_postgres")
-
-#CONNECT TO BIGDATA
-#rescu_bot = PostgresHook("rescu_bot")
-vds_bot = PostgresHook("vds_bot")
-
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
@@ -78,8 +67,6 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
     #'on_failure_callback': task_fail_slack_alert,
-    'rds_conn': vds_bot, #rds_conn = vds_bot
-    'itsc_conn': itsc_bot, #itsc_conn = itsc_bot
 }
 
 #start_date = '2023-06-27'
@@ -93,6 +80,8 @@ pull_raw_vdsdata_task = PythonOperator(
     python_callable=pull_raw_vdsdata,
     dag=dag,
     op_kwargs = {
+            'rds_conn':vds_bot,
+            'itsc_conn':itsc_bot,
             'start_date':'{{ ds }}'
             } 
 )
@@ -102,12 +91,14 @@ pull_raw_vdsvehicledata_task = PythonOperator(
     python_callable=pull_raw_vdsvehicledata,
     dag=dag,
     op_kwargs = {
+            'rds_conn':vds_bot,
+            'itsc_conn':itsc_bot,
             'start_date':'{{ ds }}'
             } 
 )
 
 summarize_data_task = PostgresOperator(
-    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}}', '{{ds}}'::timestamp + INTERVAL '1 DAY')''',
+    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')''',
     task_id='summarize_data',
     dag=dag,
     postgres_conn_id='vds_bot',
@@ -118,13 +109,21 @@ summarize_data_task = PostgresOperator(
 pull_detector_inventory_task = PythonOperator(
     task_id='pull_and_insert_detector_inventory',
     python_callable=pull_detector_inventory,
-    dag=dag
+    dag=dag,
+    op_kwargs = {
+        'rds_conn':vds_bot,
+        'itsc_conn':itsc_bot,
+        },
 )
 
 pull_entity_locations_task = PythonOperator(
     task_id='pull_and_insert_entitylocations',
     python_callable=pull_entity_locations,
-    dag=dag
+    dag=dag,
+    op_kwargs = {
+        'rds_conn':vds_bot,
+        'itsc_conn':itsc_bot,
+        },
 )
 
 pull_entity_locations_task
