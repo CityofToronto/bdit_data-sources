@@ -83,7 +83,7 @@ def pull_raw_vdsvehicledata(start_date):
     SELECT
         d.divisionid,
         d.vdsid,
-        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT', --convert timestamp (without timezone) at UTC to EDT/EST
+        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT' AS timestamputc, --convert timestamp (without timezone) at UTC to EDT/EST
         d.lane,
         d.sensoroccupancyds,
         round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
@@ -165,8 +165,8 @@ def pull_detector_inventory():
         divisionid,
         vdsid,
         UPPER(sourceid) AS detector_id, --match what we already have
-        starttimestamputc,
-        endtimestamputc,
+        TIMEZONE('UTC', starttimestamputc) AT TIME ZONE 'EST5EDT' AS starttimestamputc,
+        TIMEZONE('UTC', endtimestamputc) AT TIME ZONE 'EST5EDT' AS endtimestamputc,
         lanes,
         hasgpsunit,
         managementurl,
@@ -224,7 +224,7 @@ def pull_entity_locations():
          divisionid,
          entitytype,
          entityid,
-         locationtimestamputc,
+         TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamputc,
          latitude,
          longitude,
          altitudemetersasl,
