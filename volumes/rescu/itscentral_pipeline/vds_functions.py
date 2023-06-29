@@ -18,8 +18,8 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         d.lanedata
     FROM public.vdsdata AS d
     WHERE
-        timestamputc >= extract(epoch from timestamptz {start})
-        AND timestamputc < extract(epoch from timestamptz {start} + INTERVAL '1 DAY')
+        timestamputc >= extract(epoch from timestamp with time zone {start})
+        AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY')
         --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
     ''').format(
         start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
@@ -346,9 +346,11 @@ def transform_raw_data(df):
     UTC_to_EDTEST = lambda a: datetime.fromtimestamp(a, tz = pytz.timezone("EST5EDT"))
 
     df['datetime'] = df['timestamputc'].map(UTC_to_EDTEST) #convert from integer to timestamp
-    
+    df['datetime'] = df['datetime'].dt.tz_localize(None) #remove timezone for inserting
+
     floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
     df['datetime_15min'] = df['timestamputc'].map(floor_15).map(UTC_to_EDTEST) 
+    df['datetime_15min'] = df['datetime_15min'].dt.tz_localize(None) #remove timezone for inserting
 
     #parse each `lanedata` column entry 
     lane_data = df['lanedata'].map(parse_lane_data)
