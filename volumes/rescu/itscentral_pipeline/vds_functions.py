@@ -4,6 +4,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
+#pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
 
     import pandas as pd
     from numpy import nan
@@ -14,42 +15,16 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     raw_sql = sql.SQL('''SELECT 
         d.divisionid,
         d.vdsid,
-        d.timestamputc, --timestamp in INTEGER (correct tz even though labeled as UTC)
+        d.timestamputc, --timestamp in INTEGER (UTC)
         d.lanedata
     FROM public.vdsdata AS d
     WHERE
         timestamputc >= extract(epoch from timestamp with time zone {start})
         AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY')
-        --AND d.divisionid IN 2; --other is 8001 which are traffic signal detectors
+        AND d.divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
     ''').format(
         start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
     )
-
-    #this old sql was needed to control which sensors to pull data for based 
-        # on additional attributes in the vdsconfig and entitylocation tables
-    old_sql = f'''SELECT 
-        d.divisionid,
-        d.vdsid,
-        d.timestamputc,
-        d.lanedata
-    FROM public.vdsdata AS d
-    JOIN public.vdsconfig AS c ON
-        d.vdsid = c.vdsid
-        AND d.divisionid = c.divisionid
-        AND to_timestamp(d.timestamputc) >= c.starttimestamputc
-        AND (
-            to_timestamp(d.timestamputc) <= c.endtimestamputc
-            OR c.endtimestamputc IS NULL) --no end date
-    JOIN public.EntityLocation AS e ON
-        c.vdsid = e.entityid
-        AND c.divisionid = e.divisionid
-    WHERE 
-        timestamputc >= extract(epoch from timestamptz '{{ds}}')
-        AND timestamputc < extract(epoch from timestamptz '{{ds}}') + 86400
-        --AND e.entityid IS NOT NULL --we only have locations for these ids
-        --AND d.divisionid IN 2 --other is 8001 which are traffic signal detectors
-        --AND substring(sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors; 
-    '''
 
     try: 
         with itsc_conn.get_conn() as con:
@@ -63,7 +38,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     # Transform raw data
     transformed_data = transform_raw_data(raw_data)
     transformed_data = transformed_data.replace(nan, None)
-    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #should investigate validity of sensors with one lane?
+    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #remove lane is None
     data_tuples = [tuple(x) for x in transformed_data.to_numpy()]
 
     try:
@@ -85,7 +60,9 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         con.close()
 
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
-    
+#pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
+#contains individual vehicle activations from highway sensors (speed, length)
+   
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
     
@@ -126,22 +103,15 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         LOGGER.critical(exc)
         con.close()
     
-    #test = pd.DataFrame(raw_data)
-    #test = test.rename({2:'datetime_bin'}, axis = 1)
-    #test['hour'] = test['datetime_bin'].dt.hour
-    #test.groupby('hour').size()
-
-    print(raw_data[0])
-    
     try:
         with rds_conn.get_conn() as con: 
             with con.cursor() as cur:
     
-            # Drop records for the current date
-            #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'")
-            #cur.execute(drop_query)
+                # Drop records for the current date
+                #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'")
+                #cur.execute(drop_query)
             
-            # Insert cleaned data into the database
+                # Insert cleaned data into the database
                 insert_query = sql.SQL('''INSERT INTO vds.raw_vdsvehicledata (
                                     divisionid, vdsid, timestamputc, lane, sensoroccupancyds, speed_kmh, length_meter
                                     ) VALUES %s;''')
@@ -153,7 +123,9 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         con.close()
 
 def pull_detector_inventory(rds_conn, itsc_conn):
-    
+#pull the detector inventory table (`vdsconfig`) from ITS Central and insert into RDS `vds.vdsconfig` as is. 
+#very small table so OK to pull entire table daily. 
+
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
 
@@ -163,8 +135,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         divisionid,
         vdsid,
         UPPER(sourceid) AS detector_id, --match what we already have
-        TIMEZONE('UTC', starttimestamputc) AT TIME ZONE 'EST5EDT' AS starttimestamputc,
-        TIMEZONE('UTC', endtimestamputc) AT TIME ZONE 'EST5EDT' AS endtimestamputc,
+        TIMEZONE('UTC', starttimestamputc) AT TIME ZONE 'EST5EDT' AS starttimestamp,
+        TIMEZONE('UTC', endtimestamputc) AT TIME ZONE 'EST5EDT' AS endtimestamp,
         lanes,
         hasgpsunit,
         managementurl,
@@ -193,12 +165,12 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         LOGGER.critical(exc)
         con.close()
 
-    print("Number of rows fetched from vdsconfig table: {}".format(len(vds_config_data)))
+    LOGGER.info(f"Number of rows fetched from vdsconfig table: {len(vds_config_data)}")
 
     # upsert data
     insert_query = sql.SQL('''
         INSERT INTO vds.vdsconfig (
-            divisionid, vdsid, detector_id, starttimestamputc, endtimestamputc, lanes, hasgpsunit, 
+            divisionid, vdsid, detector_id, starttimestamp, endtimestamp, lanes, hasgpsunit, 
             managementurl, description, fssdivisionid, fssid, rtmsfromzone, rtmstozone, detectortype, 
             createdby, createdbystaffid, signalid, signaldivisionid, movement)
         VALUES %s
@@ -216,6 +188,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         con.close()
 
 def pull_entity_locations(rds_conn, itsc_conn):
+#pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
+#very small table so OK to pull entire table daily. 
 
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
@@ -226,7 +200,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
          divisionid,
          entitytype,
          entityid,
-         TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamputc,
+         TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamp,
          latitude,
          longitude,
          altitudemetersasl,
@@ -260,12 +234,12 @@ def pull_entity_locations(rds_conn, itsc_conn):
         LOGGER.critical(exc)
         con.close()
 
-    print("Number of rows fetched from entitylocations table: {}".format(len(entitylocations)))
+    LOGGER.info(f"Number of rows fetched from entitylocations table: {len(entitylocations)}")
 
     # upsert data
     upsert_query = sql.SQL('''
         INSERT INTO vds.vds_entity_locations (
-            divisionid, entitytype, entityid, locationtimestamputc, latitude, longitude, altitudemetersasl,
+            divisionid, entitytype, entityid, locationtimestamp, latitude, longitude, altitudemetersasl,
             headingdegrees, speedkmh, numsatellites, dilutionofprecision, mainroadid, crossroadid,
             secondcrossroadid, mainroadname, crossroadname, secondcrossroadname, streetnumber,
             offsetdistancemeters, offsetdirectiondegrees, locationsource, locationdescriptionoverwrite)
@@ -283,8 +257,10 @@ def pull_entity_locations(rds_conn, itsc_conn):
         LOGGER.critical(exc)
         con.close()
 
-# Parse lane data
+
 def parse_lane_data(laneData):
+# Parse binary vdsdata.lanedata column
+
     import struct
     result = []
 
@@ -329,6 +305,8 @@ def parse_lane_data(laneData):
     return result
 
 def transform_raw_data(df):
+#transform vdsdata for inserting into RDS.
+
     import pandas as pd
     from datetime import datetime
     import pytz
@@ -339,18 +317,18 @@ def transform_raw_data(df):
     if empty_rows.empty is False:
         print(f'Rows with empty lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).')
     else: 
-        print(f'No empty rows discarded.')
+        print(f'No empty rows in vdsdata.')
 
-    #drop empty rows #keep??? 
+    #drop empty rows? #decided to keep
     #df_clean = df.drop(empty_rows.index) #remove empty rows
     UTC_to_EDTEST = lambda a: datetime.fromtimestamp(a, tz = pytz.timezone("EST5EDT"))
 
     df['datetime'] = df['timestamputc'].map(UTC_to_EDTEST) #convert from integer to timestamp
-    df['datetime'] = df['datetime'].dt.tz_localize(None) #remove timezone for inserting
+    df['datetime'] = df['datetime'].dt.tz_localize(None) #remove timezone before inserting into no tz column
 
     floor_15 = lambda a: 60 * 15 * (a // (60 * 15)) #very fast 15min binning using integer dtype
     df['datetime_15min'] = df['timestamputc'].map(floor_15).map(UTC_to_EDTEST) 
-    df['datetime_15min'] = df['datetime_15min'].dt.tz_localize(None) #remove timezone for inserting
+    df['datetime_15min'] = df['datetime_15min'].dt.tz_localize(None) #remove timezone before inserting into no tz column
 
     #parse each `lanedata` column entry 
     lane_data = df['lanedata'].map(parse_lane_data)
