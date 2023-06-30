@@ -4,7 +4,7 @@ CREATE TABLE vds.entity_locations (
     divisionid smallint,
     entitytype smallint,
     entityid integer,
-    locationtimestamputc timestamp without time zone,
+    locationtimestamp timestamp without time zone,
     latitude double precision,
     longitude double precision,
     altitudemetersasl double precision,

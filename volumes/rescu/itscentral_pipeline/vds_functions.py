@@ -70,7 +70,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
     SELECT
         d.divisionid,
         d.vdsid,
-        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT' AS timestamputc, --convert timestamp (without timezone) at UTC to EDT/EST
+        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT' AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
         d.lane,
         d.sensoroccupancyds,
         round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
@@ -113,7 +113,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
             
                 # Insert cleaned data into the database
                 insert_query = sql.SQL('''INSERT INTO vds.raw_vdsvehicledata (
-                                    divisionid, vdsid, timestamputc, lane, sensoroccupancyds, speed_kmh, length_meter
+                                    divisionid, vdsid, dt, lane, sensoroccupancyds, speed_kmh, length_meter
                                     ) VALUES %s;''')
                 execute_values(cur, insert_query, raw_data)           
                 LOGGER.info('Inserting into vds.raw_vdsvehicledata')
