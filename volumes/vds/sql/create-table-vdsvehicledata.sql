@@ -3,12 +3,12 @@
 CREATE TABLE vds.raw_vdsvehicledata (
     divisionid smallint, 
     vdsid integer,
-    timestamputc timestamp,
+    dt timestamp,
     lane integer,
     sensoroccupancyds smallint,
     speed_kmh float,
     length_meter float,
-    PRIMARY KEY (divisionid, vdsid, timestamputc, lane)
+    PRIMARY KEY (divisionid, vdsid, dt, lane)
 ); 
 
 ALTER TABLE vds.raw_vdsvehicledata OWNER TO vds_admins;
