@@ -17,12 +17,12 @@ vds_bot = PostgresHook("vds_bot")
 
 try:
     repo_path = '/home/gwolofs/bdit_data-sources'
-    sys.path.insert(0,path.join(repo_path,'volumes/rescu/itscentral_pipeline'))
+    sys.path.insert(0,path.join(repo_path,'volumes/vds/py'))
     from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, pull_detector_inventory, pull_entity_locations
 except:
-    raise ImportError("Cannot import functions from volumes/rescu/itscentral_pipeline/vds_functions.py.")
+    raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
-dag_name = 'pull_vds'
+dag_name = 'vds_pull'
 
 # Get slack member ids
 #dag_owners = Variable.get('dag_owners', deserialize_json=True)
