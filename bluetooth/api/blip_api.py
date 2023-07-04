@@ -318,7 +318,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
         with conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
-        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
 
     else:
         #Querying data that's been further processed overnight
@@ -336,7 +336,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(sql, {'analysis':analysis})
-            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+                    routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchall()}
 
         date_to_process = None
 
