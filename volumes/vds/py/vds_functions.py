@@ -12,7 +12,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     from psycopg2.extras import execute_values
 
     # Pull raw data from Postgres database
-    raw_sql = sql.SQL('''SELECT 
+    raw_sql = sql.SQL("""SELECT 
         d.divisionid,
         d.vdsid,
         d.timestamputc, --timestamp in INTEGER (UTC)
@@ -22,7 +22,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         timestamputc >= extract(epoch from timestamp with time zone {start})
         AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY')
         AND d.divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
-    ''').format(
+    """).format(
         start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
     )
 
@@ -49,9 +49,9 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 #con.execute(drop_query)
                 
                 # Insert cleaned data into the database
-                insert_query = sql.SQL('''INSERT INTO vds.raw_vdsdata (
+                insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
                                         division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
-                                        ) VALUES %s;''')
+                                        ) VALUES %s;""")
                 execute_values(cur, insert_query, data_tuples)
                 LOGGER.info('Inserting vdsdata into RDS.')
     except Error as exc:
@@ -66,7 +66,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
     from psycopg2 import sql, Error
     from psycopg2.extras import execute_values
     
-    raw_sql = sql.SQL('''
+    raw_sql = sql.SQL("""
     SELECT
         d.divisionid,
         d.vdsid,
@@ -88,7 +88,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         AND TIMEZONE('UTC', d.timestamputc) >= {start}::timestamptz
         AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
         AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
-    ''').format(
+    """).format(
         start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
     )
     
@@ -112,9 +112,9 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
                 #cur.execute(drop_query)
             
                 # Insert cleaned data into the database
-                insert_query = sql.SQL('''INSERT INTO vds.raw_vdsvehicledata (
+                insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
-                                    ) VALUES %s;''')
+                                    ) VALUES %s;""")
                 execute_values(cur, insert_query, raw_data)           
                 LOGGER.info('Inserting into vds.raw_vdsvehicledata')
     except Error as exc:
@@ -130,7 +130,7 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     from psycopg2.extras import execute_values
 
     # Pull data from the detector_inventory table
-    detector_sql = sql.SQL('''
+    detector_sql = sql.SQL("""
     SELECT 
         divisionid,
         vdsid,
@@ -152,7 +152,7 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         signaldivisionid,
         movement
     FROM public.vdsconfig
-    WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table''')
+    WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table""")
 
     try: 
         with itsc_conn.get_conn() as con:
@@ -168,14 +168,14 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     LOGGER.info(f"Number of rows fetched from vdsconfig table: {len(vds_config_data)}")
 
     # upsert data
-    insert_query = sql.SQL('''
+    insert_query = sql.SQL("""
         INSERT INTO vds.vdsconfig (
             division_id, vds_id, detector_id, start_timestamp, end_timestamp, lanes, has_gps_unit, 
             management_url, description, fss_division_id, fss_id, rtms_from_zone, rtms_to_zone, detector_type, 
             created_by, created_by_staffid, signal_id, signal_division_id, movement)
         VALUES %s
         ON CONFLICT DO NOTHING;
-    ''')
+    """)
 
     try: 
         with rds_conn.get_conn() as con:
@@ -195,7 +195,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
     from psycopg2.extras import execute_values
 
     # Pull data from the detector_inventory table
-    entitylocation_sql = sql.SQL('''
+    entitylocation_sql = sql.SQL("""
     SELECT 
          divisionid,
          entitytype,
@@ -221,7 +221,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
          locationdescriptionoverwrite
     FROM public.entitylocation
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
-    ''')
+    """)
 
     try:
         with itsc_conn.get_conn() as con:
@@ -237,7 +237,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
     LOGGER.info(f"Number of rows fetched from entitylocations table: {len(entitylocations)}")
 
     # upsert data
-    upsert_query = sql.SQL('''
+    upsert_query = sql.SQL("""
         INSERT INTO vds.entity_locations (
             division_id, entity_type, entity_id, location_timestamp, latitude, longitude, altitude_meters_asl, 
             heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
@@ -245,7 +245,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
             offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
         VALUES %s
         ON CONFLICT DO NOTHING;
-    ''')
+    """)
 
     try:
         with rds_conn.get_conn() as con:
