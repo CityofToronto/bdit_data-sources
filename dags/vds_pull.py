@@ -1,4 +1,4 @@
-from os import path
+import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -16,8 +16,8 @@ itsc_bot = PostgresHook("itsc_postgres")
 vds_bot = PostgresHook("vds_bot")
 
 try:
-    repo_path = '/home/gwolofs/bdit_data-sources'
-    sys.path.insert(0,path.join(repo_path,'volumes/vds/py'))
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
     from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, pull_detector_inventory, pull_entity_locations
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
@@ -62,7 +62,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
-    #'on_failure_callback': task_fail_slack_alert,
+    'on_failure_callback': task_fail_slack_alert,
 }
 
 #start_date = '2023-06-28'
