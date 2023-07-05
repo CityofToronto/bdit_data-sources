@@ -10,14 +10,14 @@ AS $BODY$
 BEGIN
 	
     --Aggregated into speed bins and 1 hour bin
-    INSERT INTO vds.volumes_15min (divisionid, vdsid, detector_id, datetime_bin, volume_15min)
+    INSERT INTO vds.volumes_15min (division_id, vds_id, detector_id, datetime_bin, volume_15min)
     
     SELECT 
-        d.divisionid,
-        d.vdsid,
+        d.division_id,
+        d.vds_id,
         c.detector_id,
         d.datetime_15min,
-        SUM(d.volumevehiclesperhour) / 4 / 45 AS volume_15min
+        SUM(d.volume_veh_per_hr) / 4 / 45 AS volume_15min
     FROM vds.raw_vdsdata AS d
     JOIN vds.vdsconfig AS c ON
         d.vdsid = c.vdsid
