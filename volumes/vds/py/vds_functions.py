@@ -244,6 +244,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
+# Function adapted from SF's C# code stored at: "K:\tra\GM Office\Big Data Group\Data Sources\VDS\RE Back-end Connection to ITS Central data.msg"
 
     result = []
 
@@ -251,21 +252,21 @@ def parse_lane_data(laneData):
         i = 0 #index within memoryview
         while i < len(mv):
             # Get lane
-            lane = mv[i][0]
+            lane = mv[i][0] #single byte
 
             # Get speed
-            #Stored in km/h * 100. 65535 for null value. Convert 0 to null to maintain backward compatibility
-            speed = struct.unpack('<H', mv[i + 1] + mv[i + 2])[0] #<H denotes stored in little-endian format
+            #Stored in km/h * 100. Null value represented by 65535. Convert 0 to null to maintain backward compatibility
+            speed = struct.unpack('<H', mv[i + 1] + mv[i + 2])[0] #two bytes. '<H' denotes stored in little-endian format
             speedKmh = None if speed == 65535 or speed == 0 else speed / 100.0
 
             # Get volume
-            #Stored in vehicles per hour. 65535 for null value.
-            volume = struct.unpack('<H', mv[i + 3] + mv[i + 4])[0]
+            #Stored in vehicles per hour. Null value represented by 65535.
+            volume = struct.unpack('<H', mv[i + 3] + mv[i + 4])[0] #two bytes
             volumeVehiclesPerHour = None if volume == 65535 else volume
 
             # Get occupancy
-            #Stored in percent * 100. 65535 for null value.
-            occupancy = struct.unpack('<H', mv[i + 5] + mv[i + 6])[0]
+            #Stored in percent * 100. Null value represented by 65535.
+            occupancy = struct.unpack('<H', mv[i + 5] + mv[i + 6])[0] #two bytes
             occupancyPercent = None if occupancy == 65535 else occupancy / 100.0
 
             # Get volume by vehicle lengths - these columns are empty 
@@ -290,16 +291,18 @@ def parse_lane_data(laneData):
 def transform_raw_data(df):
 #transform vdsdata for inserting into RDS.
 
-    #get number of lanes in the binary data stream for each row
+    #identify empty rows by length of binary data stream = 0.
     empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
 
     if empty_rows.empty is False:
-        print(f'Rows with empty lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).')
+        LOGGER.info(f"Rows with empty vdsdata.lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).")
     else: 
-        print(f'No empty rows in vdsdata.')
+        LOGGER.info("No empty rows in vdsdata.lanedata.")
 
     #drop empty rows? #decided to keep
     #df_clean = df.drop(empty_rows.index) #remove empty rows
+
+    #function to import int (UTC) timestamp in correct EST5EDT timezone. 
     UTC_to_EDTEST = lambda a: datetime.fromtimestamp(a, tz = pytz.timezone("EST5EDT"))
 
     df['datetime'] = df['timestamputc'].map(UTC_to_EDTEST) #convert from integer to timestamp
@@ -311,7 +314,7 @@ def transform_raw_data(df):
 
     #parse each `lanedata` column entry 
     lane_data = df['lanedata'].map(parse_lane_data)
-    n_rows = lane_data.map(len)
+    n_rows = lane_data.map(len) #length of each nested list (# lanes), used to flatten data
 
     #flatten the nested list structure
     lane_data = [item for sublist in lane_data for item in sublist]
@@ -320,7 +323,7 @@ def transform_raw_data(df):
     cols = ['lane', 'speedKmh', 'volumeVehiclesPerHour', 'occupancyPercent']
     lane_data_df = pd.DataFrame(lane_data, columns = cols) 
 
-    #repeat original index based on number of rows in result as a join column
+    #repeat original index based on number of lanes represented in each row as a join column
     lane_data_df.set_index(df.index.repeat(n_rows), inplace=True)
 
     #join with other columns on index 
