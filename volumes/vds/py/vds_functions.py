@@ -23,7 +23,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY')
         AND d.divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
     """).format(
-        start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
+        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
 
     try: 
@@ -89,7 +89,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
         AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
     """).format(
-        start = sql.Literal(start_date + ' 00:00:00 EST5EDT')
+        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
     
     try:
