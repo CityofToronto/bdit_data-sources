@@ -20,15 +20,15 @@ GRANT INSERT ON TABLE vds.raw_vdsdata TO vds_bot;
 
 INSERT INTO vds.raw_vdsdata_div8001
 SELECT
-    rv.division_id,
-    rv.vds_id,
-    rv.datetime_20sec,
-    rv.datetime_15min,
-    rv.lane,
-    rv.speed_kmh,
-    rv.volume_veh_per_hour,
-    rv.occupancy_percent
-FROM vds.raw_vdsdata AS rv
+    division_id,
+    vds_id,
+    datetime_20sec,
+    datetime_15min,
+    lane,
+    speed_kmh,
+    volume_veh_per_hr,
+    occupancy_percent
+FROM vds.raw_vdsdata
 WHERE division_id = 8001;
 
 DELETE FROM vds.raw_vdsdata WHERE division_id = 8001;
