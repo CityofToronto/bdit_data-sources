@@ -3,12 +3,12 @@
 CREATE TABLE vds.volumes_15min (
 	volume_uid BIGSERIAL,
 	detector_id text,
-	divisionid smallint,
-    vdsid integer,
+	division_id smallint,
+    vds_id integer,
 	datetime_bin timestamp,
 	volume_15min int,
 	PRIMARY KEY (volume_uid),
-  	UNIQUE (divisionid, vdsid, datetime_bin)
+  	UNIQUE (division_id, vds_id, datetime_bin)
 );
 
 ALTER TABLE vds.volumes_15min OWNER TO vds_admins;

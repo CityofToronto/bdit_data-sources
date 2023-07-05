@@ -1,14 +1,14 @@
 --DROP TABLE vds.raw_vdsvehicledata; 
 
 CREATE TABLE vds.raw_vdsvehicledata (
-    divisionid smallint, 
-    vdsid integer,
+    division_id smallint, 
+    vds_id integer,
     dt timestamp,
     lane integer,
-    sensoroccupancyds smallint,
+    sensor_occupancy_ds smallint,
     speed_kmh float,
     length_meter float,
-    PRIMARY KEY (divisionid, vdsid, dt, lane)
+    PRIMARY KEY (division_id, vds_id, dt, lane)
 ); 
 
 ALTER TABLE vds.raw_vdsvehicledata OWNER TO vds_admins;

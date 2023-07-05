@@ -50,7 +50,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 
                 # Insert cleaned data into the database
                 insert_query = sql.SQL('''INSERT INTO vds.raw_vdsdata (
-                                        divisionid, vdsid, datetime_20sec, datetime_15min, lane, speedKmh, volumeVehiclesPerHour, occupancyPercent
+                                        division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
                                         ) VALUES %s;''')
                 execute_values(cur, insert_query, data_tuples)
                 LOGGER.info('Inserting vdsdata into RDS.')
@@ -113,7 +113,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
             
                 # Insert cleaned data into the database
                 insert_query = sql.SQL('''INSERT INTO vds.raw_vdsvehicledata (
-                                    divisionid, vdsid, dt, lane, sensoroccupancyds, speed_kmh, length_meter
+                                    division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;''')
                 execute_values(cur, insert_query, raw_data)           
                 LOGGER.info('Inserting into vds.raw_vdsvehicledata')
@@ -170,9 +170,9 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     # upsert data
     insert_query = sql.SQL('''
         INSERT INTO vds.vdsconfig (
-            divisionid, vdsid, detector_id, starttimestamp, endtimestamp, lanes, hasgpsunit, 
-            managementurl, description, fssdivisionid, fssid, rtmsfromzone, rtmstozone, detectortype, 
-            createdby, createdbystaffid, signalid, signaldivisionid, movement)
+            division_id, vds_id, detector_id, start_timestamp, end_timestamp, lanes, has_gps_unit, 
+            management_url, description, fss_division_id, fss_id, rtms_from_zone, rtms_to_zone, detector_type, 
+            created_by, created_by_staffid, signal_id, signal_division_id, movement)
         VALUES %s
         ON CONFLICT DO NOTHING;
     ''')
@@ -238,11 +238,11 @@ def pull_entity_locations(rds_conn, itsc_conn):
 
     # upsert data
     upsert_query = sql.SQL('''
-        INSERT INTO vds.vds_entity_locations (
-            divisionid, entitytype, entityid, locationtimestamp, latitude, longitude, altitudemetersasl,
-            headingdegrees, speedkmh, numsatellites, dilutionofprecision, mainroadid, crossroadid,
-            secondcrossroadid, mainroadname, crossroadname, secondcrossroadname, streetnumber,
-            offsetdistancemeters, offsetdirectiondegrees, locationsource, locationdescriptionoverwrite)
+        INSERT INTO vds.entity_locations (
+            division_id, entity_type, entity_id, location_timestamp, latitude, longitude, altitude_meters_asl, 
+            heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
+            second_cross_road_id, main_road_name, cross_road_name, second_cross_road_name, street_number,
+            offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
         VALUES %s
         ON CONFLICT DO NOTHING;
     ''')
