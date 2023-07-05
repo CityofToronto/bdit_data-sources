@@ -28,8 +28,8 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 
     try: 
         with itsc_conn.get_conn() as con:
-            raw_data = pd.read_sql(raw_sql, con)
             LOGGER.info('Fetching vdsdata')
+            raw_data = pd.read_sql(raw_sql, con)
     except Error as exc:
         LOGGER.critical('Error fetching vdsdata.')
         LOGGER.critical(exc)
@@ -52,8 +52,8 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
                                         division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
                                         ) VALUES %s;""")
-                execute_values(cur, insert_query, data_tuples)
                 LOGGER.info('Inserting vdsdata into RDS.')
+                execute_values(cur, insert_query, data_tuples)
     except Error as exc:
         LOGGER.critical('Error inserting vdsdata into RDS.')
         LOGGER.critical(exc)
@@ -95,9 +95,9 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
     try:
         with itsc_conn.get_conn() as con:
             with con.cursor() as cur:
+                LOGGER.info('Fetching vdsvehicledata')
                 cur.execute(raw_sql)
                 raw_data = cur.fetchall()
-                LOGGER.info('Fetching vdsvehicledata')
     except Error as exc:
         LOGGER.critical('Error fetching vdsvehicledata.')
         LOGGER.critical(exc)
@@ -115,8 +115,8 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
                 insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;""")
-                execute_values(cur, insert_query, raw_data)           
                 LOGGER.info('Inserting into vds.raw_vdsvehicledata')
+                execute_values(cur, insert_query, raw_data)           
     except Error as exc:
         LOGGER.critical('Error inserting vds.raw_vdsvehicledata.')
         LOGGER.critical(exc)
@@ -157,9 +157,9 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     try: 
         with itsc_conn.get_conn() as con:
             with con.cursor() as cur:
+                LOGGER.info('Fetching vdsconfig')
                 cur.execute(detector_sql)
                 vds_config_data = cur.fetchall()
-                LOGGER.info('Fetching vdsconfig')
     except Error as exc:
         LOGGER.critical('Error fetching vdsconfig.')
         LOGGER.critical(exc)
@@ -180,8 +180,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     try: 
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
-                execute_values(cur, insert_query, vds_config_data)
                 LOGGER.info('Inserting vdsconfig')
+                execute_values(cur, insert_query, vds_config_data)
     except Error as exc:
         LOGGER.critical('Error inserting vdsconfig.')
         LOGGER.critical(exc)
@@ -226,9 +226,9 @@ def pull_entity_locations(rds_conn, itsc_conn):
     try:
         with itsc_conn.get_conn() as con:
             with con.cursor() as cur:
+                LOGGER.info('Fetching entitylocation')
                 cur.execute(entitylocation_sql)
                 entitylocations = cur.fetchall()
-                LOGGER.info('Fetching entitylocation')
     except Error as exc:
         LOGGER.critical('Error fetching entitylocation.')
         LOGGER.critical(exc)
@@ -250,8 +250,8 @@ def pull_entity_locations(rds_conn, itsc_conn):
     try:
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
-                execute_values(cur, upsert_query, entitylocations)
                 LOGGER.info('Inserting vds_entity_locations')
+                execute_values(cur, upsert_query, entitylocations)
     except Error as exc:
         LOGGER.critical('Error inserting vds_entity_locations.')
         LOGGER.critical(exc)
