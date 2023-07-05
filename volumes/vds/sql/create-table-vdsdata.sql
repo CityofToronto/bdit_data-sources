@@ -1,15 +1,15 @@
 --DROP TABLE vds.raw_vdsdata;
 
 CREATE TABLE vds.raw_vdsdata (
-    divisionid smallint,
-    vdsid integer,
+    division_id smallint,
+    vds_id integer,
     datetime_20sec timestamp without time zone,
     datetime_15min timestamp without time zone,
     lane integer, 
-    speedKmh float, 
-    volumeVehiclesPerHour integer,
-    occupancyPercent float,
-    PRIMARY KEY (divisionid, vdsid, datetime_20sec, lane)
+    speed_kmh float, 
+    volume_veh_per_hr integer,
+    occupancy_percent float,
+    PRIMARY KEY (division_id, vds_id, datetime_20sec, lane)
 ); 
 
 ALTER TABLE vds.raw_vdsdata OWNER TO vds_admins;

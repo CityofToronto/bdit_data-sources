@@ -1,26 +1,26 @@
 --DROP TABLE vds.vdsconfig; 
 
 CREATE TABLE vds.vdsconfig (
-    divisionid smallint,
-    vdsid integer,
+    division_id smallint,
+    vds_id integer,
     detector_id character varying,
-    starttimestamp timestamp without time zone,
-    endtimestamp timestamp without time zone,
+    start_timestamp timestamp without time zone,
+    end_timestamp timestamp without time zone,
     lanes smallint,
-    hasgpsunit boolean,
-    managementurl character varying,
+    has_gps_unit boolean,
+    management_url character varying,
     description character varying,
-    fssdivisionid integer,
-    fssid integer,
-    rtmsfromzone integer,
-    rtmstozone integer,
-    detectortype smallint,
-    createdby character varying,
-    createdbystaffid uuid,
-    signalid integer,
-    signaldivisionid smallint,
+    fss_division_id integer,
+    fss_id integer,
+    rtms_from_zone integer,
+    rtms_to_zone integer,
+    detector_type smallint,
+    created_by character varying,
+    created_by_staffid uuid,
+    signal_id integer,
+    signal_division_id smallint,
     movement smallint,
-    PRIMARY KEY (divisionid, vdsid, starttimestamputc)
+    PRIMARY KEY (division_id, vds_id, start_timestamp)
 );
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
