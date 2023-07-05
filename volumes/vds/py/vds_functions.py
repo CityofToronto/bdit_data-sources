@@ -1,15 +1,17 @@
 import logging
+import pandas as pd
+from numpy import nan
+from psycopg2 import sql, Error
+from psycopg2.extras import execute_values
+import struct
+from datetime import datetime
+import pytz
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
-
-    import pandas as pd
-    from numpy import nan
-    from psycopg2 import sql, Error
-    from psycopg2.extras import execute_values
 
     # Pull raw data from Postgres database
     raw_sql = sql.SQL("""SELECT 
@@ -62,10 +64,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
 #contains individual vehicle activations from highway sensors (speed, length)
-   
-    from psycopg2 import sql, Error
-    from psycopg2.extras import execute_values
-    
+      
     raw_sql = sql.SQL("""
     SELECT
         d.divisionid,
@@ -125,9 +124,6 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
 def pull_detector_inventory(rds_conn, itsc_conn):
 #pull the detector inventory table (`vdsconfig`) from ITS Central and insert into RDS `vds.vdsconfig` as is. 
 #very small table so OK to pull entire table daily. 
-
-    from psycopg2 import sql, Error
-    from psycopg2.extras import execute_values
 
     # Pull data from the detector_inventory table
     detector_sql = sql.SQL("""
@@ -190,9 +186,6 @@ def pull_detector_inventory(rds_conn, itsc_conn):
 def pull_entity_locations(rds_conn, itsc_conn):
 #pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
 #very small table so OK to pull entire table daily. 
-
-    from psycopg2 import sql, Error
-    from psycopg2.extras import execute_values
 
     # Pull data from the detector_inventory table
     entitylocation_sql = sql.SQL("""
@@ -261,7 +254,6 @@ def pull_entity_locations(rds_conn, itsc_conn):
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
 
-    import struct
     result = []
 
     with memoryview(laneData) as mv:
@@ -306,10 +298,6 @@ def parse_lane_data(laneData):
 
 def transform_raw_data(df):
 #transform vdsdata for inserting into RDS.
-
-    import pandas as pd
-    from datetime import datetime
-    import pytz
 
     #get number of lanes in the binary data stream for each row
     empty_rows = df[[len(x) == 0 for x in df['lanedata']]]

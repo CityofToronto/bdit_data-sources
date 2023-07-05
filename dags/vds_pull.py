@@ -18,7 +18,7 @@ vds_bot = PostgresHook("vds_bot")
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    from vds_functions import pull_raw_vdsdata, pull_raw_vdsvehicledata, pull_detector_inventory, pull_entity_locations
+    import vds_functions
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
@@ -72,7 +72,7 @@ dag = DAG(dag_name, default_args=default_args, schedule_interval='0 4 * * *') #d
 #get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`
 pull_raw_vdsdata_task = PythonOperator(
     task_id='pull_raw_vdsdata',
-    python_callable=pull_raw_vdsdata,
+    python_callable=vds_functions.pull_raw_vdsdata,
     dag=dag,
     op_kwargs = {
             'rds_conn':vds_bot,
@@ -84,7 +84,7 @@ pull_raw_vdsdata_task = PythonOperator(
 #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
 pull_raw_vdsvehicledata_task = PythonOperator(
     task_id='pull_raw_vdsvehicledata',
-    python_callable=pull_raw_vdsvehicledata,
+    python_callable=vds_functions.pull_raw_vdsvehicledata,
     dag=dag,
     op_kwargs = {
             'rds_conn':vds_bot,
@@ -106,7 +106,7 @@ summarize_data_task = PostgresOperator(
 #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
 pull_detector_inventory_task = PythonOperator(
     task_id='pull_and_insert_detector_inventory',
-    python_callable=pull_detector_inventory,
+    python_callable=vds_functions.pull_detector_inventory,
     dag=dag,
     op_kwargs = {
         'rds_conn':vds_bot,
@@ -117,7 +117,7 @@ pull_detector_inventory_task = PythonOperator(
 #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
 pull_entity_locations_task = PythonOperator(
     task_id='pull_and_insert_entitylocations',
-    python_callable=pull_entity_locations,
+    python_callable=vds_functions.pull_entity_locations,
     dag=dag,
     op_kwargs = {
         'rds_conn':vds_bot,
