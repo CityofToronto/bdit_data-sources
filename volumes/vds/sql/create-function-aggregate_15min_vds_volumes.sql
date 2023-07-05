@@ -22,10 +22,10 @@ BEGIN
     JOIN vds.vdsconfig AS c ON
         d.vdsid = c.vdsid
         AND d.divisionid = c.divisionid
-        AND d.datetime_15min >= c.starttimestamputc
+        AND d.datetime_15min >= c.starttimestamp
         AND (
-            d.datetime_15min <= c.endtimestamputc
-            OR c.endtimestamputc IS NULL) --no end date
+            d.datetime_15min <= c.endtimestamp
+            OR c.endtimestamp IS NULL) --no end date
     WHERE 
         datetime_15min >= _start_date --'2023-06-01 01:00:00'::timestamp 
         AND datetime_15min < _end_date --'2023-06-01 02:00:00'::timestamp
