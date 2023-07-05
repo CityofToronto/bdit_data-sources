@@ -47,8 +47,14 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
                 # Drop records for the current date
-                #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsdata WHERE datetime_bin::date = '{dt}'")
-                #con.execute(drop_query)
+                drop_query = sql.SQL("""DELETE FROM vds.raw_vdsdata
+                                     WHERE datetime_bin >= {dt}
+                                     AND datetime_bin < {dt} + INTERVAL '1 DAY'
+                                     """).format(
+                                        dt = sql.Literal(start_date + " 00:00:00")
+                                    )
+                LOGGER.info("Deleting data for %s from vds.raw_vdsdata.", start_date)
+                cur.execute(drop_query)
                 
                 # Insert cleaned data into the database
                 insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
@@ -107,8 +113,14 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
             with con.cursor() as cur:
     
                 # Drop records for the current date
-                #drop_query = sql.SQL(f"DELETE FROM vds.raw_vdsvehicledata WHERE timestamptz::date = '{dt}'")
-                #cur.execute(drop_query)
+                drop_query = sql.SQL("""DELETE FROM vds.raw_vdsvehicledata
+                                     WHERE dt >= {dt}
+                                     AND dt < {dt} + INTERVAL '1 DAY'
+                                     """).format(
+                                        dt = sql.Literal(start_date + " 00:00:00")
+                                    )
+                LOGGER.info("Deleting data for %s from vds.raw_vdsvehicledata.", start_date)
+                cur.execute(drop_query)
             
                 # Insert cleaned data into the database
                 insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
