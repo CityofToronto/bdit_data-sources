@@ -95,7 +95,7 @@ pull_raw_vdsvehicledata_task = PythonOperator(
 
 #inserts summarized data into RDS `vds.volumes_15min`
 summarize_data_task = PostgresOperator(
-    sql='''SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')''',
+    sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
     task_id='summarize_data',
     dag=dag,
     postgres_conn_id='vds_bot',
