@@ -76,7 +76,7 @@ with DAG(dag_name,
     with TaskGroup(group_id='pull_vdsdata') as vdsdata:
         #deletes data from vds.raw_vdsdata
         delete_raw_vdsdata_task = PostgresOperator(
-            sql = "DELETE FROM vds.raw_vdsdata WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+            sql = "DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
             task_id='delete_vdsdata',
             dag=dag,
             postgres_conn_id='vds_bot',
