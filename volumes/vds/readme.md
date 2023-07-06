@@ -4,22 +4,24 @@ VDS data is pulled daily from ITS Central database on terminal server by dag: /b
 This table contains parsed data from ITSC public.vdsdata. 
 Volumes are in vehicles per hour for the 20 sec bin. To convert to 15 minute volume, group by datetime_15min and take `SUM(volume_veh_per_hr) / 4 / 45` where / 4 represents hourly to 15 min conversion and / 45 represents number of 20 sec bins in a 15 minute period. This assumes both missing bins and zero values are zeros, in line with old pipeline. 
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
+Contains only division_id = 2. A sample of data for division_id = 8001 is stored in `vds.raw_vdsdata_div8001` for future investigation. 
 
 Row count: 1,203,083 (7 days)
 | column_name       | data_type                   | sample              | description   |
 |:------------------|:----------------------------|:--------------------|:--------------|
 | division_id       | smallint                    | 2                   |               |
 | vds_id            | integer                     | 2000410             |               |
-| datetime_20sec    | timestamp without time zone | 2023-06-29 00:01:02 |               |
-| datetime_15min    | timestamp without time zone | 2023-06-29 00:00:00 |               |
+| datetime_20sec    | timestamp without time zone | 2023-06-29 00:01:02 | Timestamp of record. Not always 20sec increments, depending on sensor. |
+| datetime_15min    | timestamp without time zone | 2023-06-29 00:00:00 | Floored to 15 minute bins. |
 | lane              | integer                     | 1                   |               |
-| speed_kmh         | double precision            | 99.5                |               |
-| volume_veh_per_hr | integer                     | 1800                |               |
-| occupancy_percent | double precision            | 10.31               |               |
+| speed_kmh         | double precision            | 99.5                | Average speed during bin? |
+| volume_veh_per_hr | integer                     | 1800                | In vehicles per hour, need to convert to get # vehicles. |
+| occupancy_percent | double precision            | 10.31               | % of time the sensor is occupied. Goes up with congestion (higher vehicle density). |
 
 ## vds.raw_vdsvehicledata
 This table contains individual vehicle detections from ITSC public.vdsvehicledata. 
 This data can be useful to identify highway speeds and vehicle type mix (from length column).
+Note these observations do not align exactly with the binned data.
 
 Row count: 1,148,765 (7 days)
 | column_name         | data_type                   | sample                     | description   |
@@ -43,11 +45,11 @@ Row count: 633,448 (7 days)
 | detector_id   | text                        | DW0161DEG           |               |
 | division_id   | smallint                    | 2                   |               |
 | vds_id        | integer                     | 2000381             |               |
-| datetime_bin  | timestamp without time zone | 2023-06-29 00:00:00 |               |
+| datetime_bin  | timestamp without time zone | 2023-06-29 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if bin timestamp represents start or end of 15 minute period. |
 | volume_15min  | integer                     | 632                 |               |
 
 ## vds.vdsconfig
-This table is a copy of ITSC public.vdsconfig which contains details about vehicle detectors. 
+This table contains details about vehicle detectors from ITSC public.vdsconfig. 
 
 Row count: 10,219
 | column_name        | data_type                   | sample                 | description   |
@@ -73,10 +75,10 @@ Row count: 10,219
 | movement           | smallint                    |                        |               |
 
 ## vds.entity_locations
-This table is a copy of ITSC public.entitylocations which contains locations for vehicle detectors. 
-Join on entity_locations.entity_id = vdsconfig.vdsid and DISTINCT ON (entity_id), ORDER BY DESC location_timestamp. 
+This table contains locations for vehicle detectors from ITSC public.entitylocations.
+To get the current location, join on entity_locations.entity_id = vdsconfig.vdsid and `SELECT DISTINCT ON (entity_id) ... ORDER BY entity_id, location_timestamp DESC`. 
 
-Row count: 0
+Row count: 15,930
 | column_name                    | data_type                   | description   |
 |:-------------------------------|:----------------------------|:--------------|
 | division_id                    | smallint                    |               |
@@ -103,7 +105,7 @@ Row count: 0
 | location_description_overwrite | character varying           |               |
 
 ## vds.raw_vdsdata_div8001
-A sample of 2 days of vdsdata for sensors from division_id 8001. The data is mostly blank rows and may not be of any utility. vdsdata is now filtered to only division_id = 2. 
+A sample of 1 day of vdsdata for sensors from division_id 8001. The data is mostly blank rows and may not be of any utility. Main `raw_vdsdata` table is now filtered to only division_id = 2. 
 
 Row count: 601,460
 | column_name       | data_type                   | sample              | description   |
