@@ -12,4 +12,4 @@ CREATE TABLE vds.raw_vdsvehicledata (
 ); 
 
 ALTER TABLE vds.raw_vdsvehicledata OWNER TO vds_admins;
-GRANT INSERT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
+GRANT INSERT, DELETE ON TABLE vds.raw_vdsvehicledata TO vds_bot;
