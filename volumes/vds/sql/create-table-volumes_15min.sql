@@ -12,4 +12,4 @@ CREATE TABLE vds.volumes_15min (
 );
 
 ALTER TABLE vds.volumes_15min OWNER TO vds_admins;
-GRANT INSERT, DELETE ON TABLE vds.volumes_15min TO vds_bot;
+GRANT INSERT, DELETE, SELECT ON TABLE vds.volumes_15min TO vds_bot;
