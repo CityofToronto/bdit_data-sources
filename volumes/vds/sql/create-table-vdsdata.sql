@@ -13,4 +13,4 @@ CREATE TABLE vds.raw_vdsdata (
 ); 
 
 ALTER TABLE vds.raw_vdsdata OWNER TO vds_admins;
-GRANT INSERT, DELETE ON TABLE vds.raw_vdsdata TO vds_bot;
+GRANT INSERT, DELETE, SELECT ON TABLE vds.raw_vdsdata TO vds_bot;
