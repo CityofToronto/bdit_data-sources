@@ -38,20 +38,32 @@ def task_fail_slack_alert(context):
         list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    # print this task_msg and tag these users
-    task_msg = """:ring_buoy: The Task {task} failed. {slack_name} please check. """.format(
-        task=context.get('task_instance').task_id, 
-        slack_name = ' '.join(list_names),) 
     
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
+    slack_msg = """
+        :ring_buoy: Task Failed. 
+        *Hostname*: {hostname}
+        *Task*: {task}
+        *Dag*: {dag}
+        *Execution Time*: {exec_date}
+        *Log Url*: {log_url}
+        {slack_name} please check.
+        """.format(
+        hostname=context.get('task_instance').hostname,
+        task=context.get('task_instance').task_id,
+        dag=context.get('task_instance').dag_id,
+        ti=context.get('task_instance'),
+        exec_date=context.get('execution_date'),
+        log_url=context.get('task_instance').log_url,
+        slack_name=' '.join(list_names)
+    )
+    
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username='airflow',
+        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
         )
     return failed_alert.execute(context=context)
     
@@ -76,7 +88,7 @@ with DAG(dag_name,
     with TaskGroup(group_id='pull_vdsdata') as vdsdata:
         #deletes data from vds.raw_vdsdata
         delete_raw_vdsdata_task = PostgresOperator(
-            sql = "DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+            sql="DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
             task_id='delete_vdsdata',
             dag=dag,
             postgres_conn_id='vds_bot',
@@ -90,9 +102,9 @@ with DAG(dag_name,
             python_callable=vds_functions.pull_raw_vdsdata,
             dag=dag,
             op_kwargs = {
-                    'rds_conn':vds_bot,
-                    'itsc_conn':itsc_bot,
-                    'start_date':'{{ ds }}'
+                    'rds_conn': vds_bot,
+                    'itsc_conn': itsc_bot,
+                    'start_date': '{{ ds }}'
                     } 
         )
 
@@ -102,7 +114,7 @@ with DAG(dag_name,
     with TaskGroup(group_id='summarize_v15') as v15data:
         #deletes data from vds.volumes_15min
         delete_v15_task = PostgresOperator(
-            sql = "DELETE FROM vds.volumes_15min WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+            sql="DELETE FROM vds.volumes_15min WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
             task_id='delete_v15',
             dag=dag,
             postgres_conn_id='vds_bot',
@@ -126,7 +138,7 @@ with DAG(dag_name,
     with TaskGroup(group_id='pull_vdsvehicledata') as vdsvehicledata:
         #deletes data from vds.volumes_15min
         delete_vdsvehicledata_task = PostgresOperator(
-            sql = "DELETE FROM vds.raw_vdsvehicledata WHERE dt >= '{{ds}} 00:00:00'::timestamp AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+            sql="DELETE FROM vds.raw_vdsvehicledata WHERE dt >= '{{ds}} 00:00:00'::timestamp AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
             task_id='delete_vdsvehicledata',
             dag=dag,
             postgres_conn_id='vds_bot',
@@ -140,9 +152,9 @@ with DAG(dag_name,
             python_callable=vds_functions.pull_raw_vdsvehicledata,
             dag=dag,
             op_kwargs = {
-                    'rds_conn':vds_bot,
-                    'itsc_conn':itsc_bot,
-                    'start_date':'{{ ds }}'
+                    'rds_conn': vds_bot,
+                    'itsc_conn': itsc_bot,
+                    'start_date': '{{ ds }}'
                     } 
         )
 
@@ -154,8 +166,8 @@ with DAG(dag_name,
         python_callable=vds_functions.pull_detector_inventory,
         dag=dag,
         op_kwargs = {
-            'rds_conn':vds_bot,
-            'itsc_conn':itsc_bot,
+            'rds_conn': vds_bot,
+            'itsc_conn': itsc_bot,
             },
     )
 
@@ -165,8 +177,8 @@ with DAG(dag_name,
         python_callable=vds_functions.pull_entity_locations,
         dag=dag,
         op_kwargs = {
-            'rds_conn':vds_bot,
-            'itsc_conn':itsc_bot,
+            'rds_conn': vds_bot,
+            'itsc_conn': itsc_bot,
             },
     )
 
