@@ -32,6 +32,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         with itsc_conn.get_conn() as con:
             LOGGER.info('Fetching vdsdata')
             raw_data = pd.read_sql(raw_sql, con)
+            LOGGER.info(f"Number of rows fetched from vdsconfig table: {raw_data.shape[0]}")
     except Error as exc:
         LOGGER.critical('Error fetching vdsdata.')
         LOGGER.critical(exc)
@@ -52,6 +53,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                                         ) VALUES %s;""")
                 LOGGER.info('Inserting vdsdata into RDS.')
                 execute_values(cur, insert_query, data_tuples)
+                LOGGER.info(f"Inserted {len(data_tuples)} rows into vds.raw_vdsdata.")
     except Error as exc:
         LOGGER.critical('Error inserting vdsdata into RDS.')
         LOGGER.critical(exc)
@@ -93,6 +95,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
                 LOGGER.info('Fetching vdsvehicledata')
                 cur.execute(raw_sql)
                 raw_data = cur.fetchall()
+                LOGGER.info(f"Number of rows fetched from vdsvehicledata table: {len(raw_data)}")
     except Error as exc:
         LOGGER.critical('Error fetching vdsvehicledata.')
         LOGGER.critical(exc)
@@ -106,7 +109,8 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;""")
                 LOGGER.info('Inserting into vds.raw_vdsvehicledata')
-                execute_values(cur, insert_query, raw_data)           
+                execute_values(cur, insert_query, raw_data)
+                LOGGER.info(f"Inserted {len(raw_data)} rows into vds.raw_vdsvehicledata.")
     except Error as exc:
         LOGGER.critical('Error inserting vds.raw_vdsvehicledata.')
         LOGGER.critical(exc)
@@ -147,12 +151,11 @@ def pull_detector_inventory(rds_conn, itsc_conn):
                 LOGGER.info('Fetching vdsconfig')
                 cur.execute(detector_sql)
                 vds_config_data = cur.fetchall()
+                LOGGER.info(f"Number of rows fetched from vdsconfig table: {len(vds_config_data)}")
     except Error as exc:
         LOGGER.critical('Error fetching vdsconfig.')
         LOGGER.critical(exc)
         con.close()
-
-    LOGGER.info(f"Number of rows fetched from vdsconfig table: {len(vds_config_data)}")
 
     # upsert data
     insert_query = sql.SQL("""
@@ -163,12 +166,18 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT DO NOTHING;
     """)
+    select_count = sql.SQL("""SELECT COUNT(1) FROM vds.vdsconfig""")
 
     try: 
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
+                cur.execute(select_count)
+                original_count = cur.fetchone()[0]
                 LOGGER.info('Inserting vdsconfig')
                 execute_values(cur, insert_query, vds_config_data)
+                cur.execute(select_count)
+                new_count = cur.fetchone()[0]
+                LOGGER.info(f"{new_count - original_count} new records inserted into vds.vdsconfig.")
     except Error as exc:
         LOGGER.critical('Error inserting vdsconfig.')
         LOGGER.critical(exc)
@@ -230,17 +239,22 @@ def pull_entity_locations(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT DO NOTHING;
     """)
+    select_count = sql.SQL("""SELECT COUNT(1) FROM vds.entity_locations""")
 
     try:
         with rds_conn.get_conn() as con:
             with con.cursor() as cur:
-                LOGGER.info('Inserting vds_entity_locations')
+                cur.execute(select_count)
+                original_count = cur.fetchone()[0]
+                LOGGER.info('Inserting into vds.entity_locations')
                 execute_values(cur, upsert_query, entitylocations)
+                cur.execute(select_count)
+                new_count = cur.fetchone()[0]
+                LOGGER.info(f"{new_count - original_count} new records inserted into vds.entity_locations.")
     except Error as exc:
         LOGGER.critical('Error inserting vds_entity_locations.')
         LOGGER.critical(exc)
         con.close()
-
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
