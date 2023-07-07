@@ -1,5 +1,11 @@
 VDS data is pulled daily from ITS Central database on terminal server by dag: /bdit_data-sources/dags/vds_pull.py
 
+VDS system consists of: 
+-RESCU loop detectors
+-Blue City VDS
+-Intersection signal detectors
+-
+
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata. 
 Volumes are in vehicles per hour for the 20 sec bin. To convert to 15 minute volume, group by datetime_15min and take `SUM(volume_veh_per_hr) / 4 / 45` where / 4 represents hourly to 15 min conversion and / 45 represents number of 20 sec bins in a 15 minute period. This assumes both missing bins and zero values are zeros, in line with old pipeline. 
@@ -50,6 +56,13 @@ Row count: 633,448 (7 days)
 
 ## vds.vdsconfig
 This table contains details about vehicle detectors from ITSC public.vdsconfig. 
+A number of different sensor types are contained in this table: 
+RESCU Loop detectors: `detector_id LIKE 'D%' AND division_id = 2`
+Signal "Detectors" (DET): `detector_id SIMILAR TO 'PX[1-9]{4}-DET%'`
+Signal "Special Function" (SF) detectors: `detector_id SIMILAR TO 'PX[1-9]{4}-SF%'`
+Signal "Preemption" (PE) detectors: `detector_id SIMILAR TO 'PX[1-9]{4}-PE%'`
+Blue City AI VDS: `detector_id LIKE 'BCT%'`
+Smartmicro Sensors: `detector_id LIKE ANY ('{"YONGE & DAVENPORT SMARTMICRO%", "YONGE HEATH%", "YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}')`
 
 Row count: 10,219
 | column_name        | data_type                   | sample                 | description   |
@@ -119,3 +132,53 @@ Row count: 601,460
 | volume_veh_per_hr | integer                     | 0                   |               |
 | occupancy_percent | double precision            | 0.0                 |               |
 
+## Special Function and Preemption detectors: 
+These types of sensors include transit preemption, fire emergency services preemption. The one day sample we have only contains 22 detections which doesn't seem accurate. Sample query: 
+```SELECT DISTINCT ON (vds_id, datetime_20sec)
+    c.detector_id, d.* 
+FROM vds.raw_vdsdata_div8001 AS d
+LEFT JOIN vds.vdsconfig AS c
+    ON d.vds_id = c.vds_id
+--WHERE c.detector_id SIMILAR TO 'PX[1-9]{4}-DET%'
+WHERE (detector_id SIMILAR TO 'PX[1-9]{4}-SF%' OR detector_id SIMILAR TO 'PX[1-9]{4}-PE%')
+    AND (volume_veh_per_hr > 0 OR occupancy_percent > 0)
+ORDER BY vds_id, datetime_20sec, c.start_timestamp DESC
+LIMIT 1000```
+
+Inquire with Simon about backfilling?
+Hard to tell if required 
+
+On RDS:
+```
+SELECT
+    date_trunc('day', datetime_15min)
+    COUNT(DISTINCT vds_id::text || datetime_20sec::text)
+FROM vds.raw_vdsdata
+GROUP BY 1
+```
+
+On ITS Central: 
+```
+SELECT
+    TIMEZONE('EST5EDT', TO_TIMESTAMP(d.timestamputc))::date, 
+	COUNT(*)
+FROM public.vdsdata AS d
+WHERE
+	timestamputc >= extract(epoch from timestamp with time zone '2023-06-28 00:00:00 EST5EDT')
+	AND timestamputc < extract(epoch from timestamp with time zone '2023-07-06 00:00:00 EST5EDT' + INTERVAL '1 DAY')
+	AND d.divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
+GROUP BY 1
+ORDER BY 1
+```
+
+There are some missing records in RDS from the last 9 days. 
+|date_trunc	      |RDS Count| ITSC Count | Dif |
+| 06/28/2023 0:00 | 56285 | 57149 | 864 |
+| 06/29/2023 0:00 | 53754 | 53826 | 72 |
+| 06/30/2023 0:00 | 55417 | 56713 | 1296 |
+| 07/01/2023 0:00 | 52893 | 56349 | 3456 |
+| 07/02/2023 0:00 | 53727 | 54339 | 612 |
+| 07/03/2023 0:00 | 54090 | 54090 | 0 |
+| 07/04/2023 0:00 | 53958 | 53958 | 0 |
+| 07/05/2023 0:00 | 53506 | 53506 | 0 |
+| 07/06/2023 0:00 | 53286 | 53286 | 0 |
