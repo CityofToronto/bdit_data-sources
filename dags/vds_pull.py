@@ -11,10 +11,10 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 
 #CONNECT TO ITS_CENTRAL
-itsc_bot = PostgresHook("itsc_postgres")
+itsc_bot = PostgresHook('itsc_postgres')
 
 #CONNECT TO BIGDATA
-vds_bot = PostgresHook("vds_bot")
+vds_bot = PostgresHook('vds_bot')
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
