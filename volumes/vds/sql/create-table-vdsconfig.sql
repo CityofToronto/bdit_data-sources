@@ -24,4 +24,4 @@ CREATE TABLE vds.vdsconfig (
 );
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
-GRANT INSERT ON TABLE vds.vdsconfig TO vds_bot;
+GRANT INSERT, SELECT ON TABLE vds.vdsconfig TO vds_bot;
