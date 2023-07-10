@@ -27,4 +27,4 @@ CREATE TABLE vds.entity_locations (
 );
 
 ALTER TABLE vds.entity_locations OWNER TO vds_admins;
-GRANT INSERT ON TABLE vds.entity_locations TO vds_bot;
+GRANT INSERT, SELECT ON TABLE vds.entity_locations TO vds_bot;
