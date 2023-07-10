@@ -32,7 +32,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         with itsc_conn.get_conn() as con:
             LOGGER.info("Fetching vdsdata")
             raw_data = pd.read_sql(raw_sql, con)
-            LOGGER.info(f"Number of rows fetched from vdsconfig table: {raw_data.shape[0]}")
+            LOGGER.info(f"Number of rows fetched from ITSC vdsdata table: {raw_data.shape[0]}")
     except Error as exc:
         LOGGER.critical("Error fetching vdsdata.")
         LOGGER.critical(exc)
@@ -53,7 +53,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                                         ) VALUES %s;""")
                 LOGGER.info("Inserting vdsdata into RDS.")
                 execute_values(cur, insert_query, data_tuples)
-                LOGGER.info(f"Inserted {len(data_tuples)} rows into vds.raw_vdsdata.")
+                LOGGER.info(f"Inserted {len(data_tuples)} rows (lanedata expanded) into vds.raw_vdsdata.")
     except Error as exc:
         LOGGER.critical("Error inserting vdsdata into RDS.")
         LOGGER.critical(exc)
