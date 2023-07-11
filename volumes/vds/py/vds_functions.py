@@ -346,3 +346,137 @@ def transform_raw_data(df):
     return raw_20sec
 
 
+def monitor_vdsdata(rds_conn, itsc_conn, start_date): 
+# compare row counts for vdsdata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
+      
+    itsc_query = sql.SQL("""
+        SELECT
+            TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
+            COUNT(*) AS count_itsc
+        FROM public.vdsdata
+        WHERE
+            timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY')
+            AND timestamputc < extract(epoch from timestamp with time zone {start})
+            AND divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
+        GROUP BY 1
+    """).format(
+        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+    )
+    
+    try:
+        with itsc_conn.get_conn() as con:
+            LOGGER.info("Fetching vdsdata daily count.")
+            itsc_rows = pd.read_sql(itsc_query, con)
+            LOGGER.info(f"Number of rows fetched from ITSC: {itsc_rows.shape[0]}")
+    except Error as exc:
+        LOGGER.critical("Error fetching row count for ITSC vdsdata.")
+        LOGGER.critical(exc)
+        con.close()
+    
+    rds_query = sql.SQL("""
+        SELECT
+            date_trunc('day', datetime_15min)::date AS dt,
+            COUNT(DISTINCT vds_id::text || datetime_20sec::text) AS count_rds
+                --due to lanedata expansion, need to count distinct vds_id + dt
+        FROM vds.raw_vdsdata
+        WHERE
+            datetime_20sec >= {start}::timestamp - INTERVAL '7 DAY'
+            AND datetime_20sec < {start}::timestamp
+        GROUP BY 1
+        """).format(
+        start = sql.Literal(start_date + " 00:00:00")
+    )
+
+    try:
+        with rds_conn.get_conn() as con: 
+            LOGGER.info("Fetching vds.raw_vdsdata daily count")
+            rds_rows = pd.read_sql(rds_query, con)
+            LOGGER.info(f"Number of rows fetched from RDS: {rds_rows.shape[0]}.")
+    except Error as exc:
+        LOGGER.critical("Error fetching row count for vds.raw_vdsdata.")
+        LOGGER.critical(exc)
+        con.close()
+
+    #find days with more rows in ITSC than RDS (existing pull). 
+    combined_rows = rds_rows.merge(itsc_rows, on='dt')
+    dates_dif = combined_rows[combined_rows['count_itsc'] > combined_rows['count_rds']]['dt'].map(lambda a: datetime(a))
+
+    for dt in dates_dif:
+        LOGGER.info(f"Clearing vds_pull.vdsdata_complete for {dt}")       
+        """ clear_tasks = BashOperator(
+            task_id='clear_tasks',
+            bash_command=f"airflow tasks clear -s {dt} -e {dt} -y -t vdsdata_complete vdspull"
+        )
+        clear_tasks.execute(context=context) """
+
+def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date): 
+# compare row counts for vdsvehicledata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
+
+    itsc_query = sql.SQL("""
+        SELECT
+            (TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+            count(*) AS count
+        FROM public.vdsvehicledata AS d
+        LEFT JOIN public.vdsconfig AS c ON
+            d.vdsid = c.vdsid
+            AND d.divisionid = c.divisionid
+            AND d.timestamputc >= c.starttimestamputc
+            AND (
+                d.timestamputc <= c.endtimestamputc
+                OR c.endtimestamputc IS NULL) --no end date
+        WHERE
+            d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+            AND TIMEZONE('UTC', d.timestamputc) >= {start}::timestamptz - INTERVAL '7 DAY'
+            AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz
+            AND substring(c.sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors have no data
+        GROUP BY 1
+    """).format(
+        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+    )
+    
+    try:
+        with itsc_conn.get_conn() as con:
+            LOGGER.info("Fetching vdsvehicledata daily count.")
+            itsc_rows = pd.read_sql(itsc_query, con)
+            LOGGER.info(f"Number of rows fetched from ITSC: {itsc_rows.shape[0]}")
+    except Error as exc:
+        LOGGER.critical("Error fetching row count for ITSC vdsvehicledata.")
+        LOGGER.critical(exc)
+        con.close()
+    
+    rds_query = sql.SQL("""
+        SELECT
+            d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+            count(*) AS count
+        FROM vds.raw_vdsvehicledata AS d
+        WHERE
+            d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
+            AND dt >= {start}::timestamp - INTERVAL '7 DAY'
+            AND dt < {start}::timestamp
+        GROUP BY 1
+        """).format(
+        start = sql.Literal(start_date + " 00:00:00")
+    )
+
+    try:
+        with rds_conn.get_conn() as con: 
+            LOGGER.info("Fetching vds.raw_vdsvehicledata daily count")
+            rds_rows = pd.read_sql(rds_query, con)
+            LOGGER.info(f"Number of rows fetched from RDS: {rds_rows.shape[0]}.")
+    except Error as exc:
+        LOGGER.critical("Error fetching row count for vds.raw_vdsvehicledata.")
+        LOGGER.critical(exc)
+        con.close()
+
+    #find days with more rows in ITSC than RDS (existing pull). 
+    #from airflow.operators.bash import BashOperator
+    combined_rows = rds_rows.merge(itsc_rows, on='dt')
+    dates_dif = combined_rows[combined_rows['count_itsc'] > combined_rows['count_rds']]['dt'].map(lambda a: datetime(a))
+
+    for dt in dates_dif:
+        LOGGER.info(f"Clearing vds_pull.vdsdata_complete for {dt}")       
+        """ clear_tasks = BashOperator(
+            task_id='clear_tasks',
+            bash_command=f"airflow tasks clear -s {dt} -e {dt} -y -t vdsdata_complete vdspull"
+        )
+        clear_tasks.execute(context=context) """
