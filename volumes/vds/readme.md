@@ -182,3 +182,55 @@ There are some missing records in RDS from the last 9 days.
 | 07/04/2023 0:00 | 53958 | 53958 | 0 |
 | 07/05/2023 0:00 | 53506 | 53506 | 0 |
 | 07/06/2023 0:00 | 53286 | 53286 | 0 |
+
+In `vdsvehicledata`:
+
+RDS: 
+```
+SELECT
+        d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+		count(*)
+FROM vds.raw_vdsvehicledata AS d
+WHERE
+	d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
+	--AND TIMEZONE('UTC', d.timestamputc) >= ''::timestamptz
+	--AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
+GROUP BY 1
+ORDER BY 1
+```
+
+ITSC: 
+```
+SELECT
+        (TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+		count(*)
+FROM public.vdsvehicledata AS d
+LEFT JOIN public.vdsconfig AS c ON
+	d.vdsid = c.vdsid
+	AND d.divisionid = c.divisionid
+	AND d.timestamputc >= c.starttimestamputc
+	AND (
+		d.timestamputc <= c.endtimestamputc
+		OR c.endtimestamputc IS NULL) --no end date
+WHERE
+	d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+	AND TIMEZONE('UTC', d.timestamputc) >= '2023-06-28 00:00:00 EST5EDT'::timestamptz
+	AND TIMEZONE('UTC', d.timestamputc) < '2023-07-09 00:00:00 EST5EDT'::timestamptz + INTERVAL '1 DAY'
+	AND substring(c.sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors have no data
+GROUP BY 1
+ORDER BY 1
+```
+
+date	rds_count	itsc_count	
+06/28/2023	173903	173903	0
+06/29/2023	172128	172128	0
+06/30/2023	172501	172501	0
+07/01/2023	157790	157790	0
+07/02/2023	147145	147145	0
+07/03/2023	146517	146517	0
+07/04/2023	178781	178782	1
+07/05/2023	178354	178354	0
+07/06/2023	183501	183501	0
+07/07/2023	191859	191860	1
+07/08/2023	179182	179182	0
+07/09/2023	170521	170521	0
