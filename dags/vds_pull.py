@@ -39,6 +39,10 @@ def task_fail_slack_alert(context):
 
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
+    log_url = context.get('task_instance').log_url.replace(
+        'localhost', context.get('task_instance').hostname + ":8080"
+    )
+    
     slack_msg = """
         :ring_buoy: Task Failed. 
         *Hostname*: {hostname}
@@ -48,13 +52,13 @@ def task_fail_slack_alert(context):
         *Log Url*: {log_url}
         {slack_name} please check.
         """.format(
-        hostname=context.get('task_instance').hostname,
-        task=context.get('task_instance').task_id,
-        dag=context.get('task_instance').dag_id,
-        ti=context.get('task_instance'),
-        exec_date=context.get('execution_date'),
-        log_url=context.get('task_instance').log_url,
-        slack_name=' '.join(list_names)
+            hostname=context.get('task_instance').hostname,
+            task=context.get('task_instance').task_id,
+            dag=context.get('task_instance').dag_id,
+            ti=context.get('task_instance'),
+            exec_date=context.get('execution_date'),
+            log_url=log_url,
+            slack_name=' '.join(list_names)
     )
     
     failed_alert = SlackWebhookOperator(
@@ -70,12 +74,13 @@ def task_fail_slack_alert(context):
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
-    'start_date': datetime(2023, 6, 30),
+    'start_date': datetime(2023, 6, 1),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
     'on_failure_callback': task_fail_slack_alert,
+    'catchup':False,
 }
 
 #start_date = '2023-06-28'
@@ -84,55 +89,59 @@ with DAG(dag_name,
          default_args=default_args,
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
-    #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
-    with TaskGroup(group_id='pull_vdsdata') as vdsdata:
-        #deletes data from vds.raw_vdsdata
-        delete_raw_vdsdata_task = PostgresOperator(
-            sql="DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
-            task_id='delete_vdsdata',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
+    with TaskGroup(group_id='vdsdata_complete') as vdsdata_complete:
 
-        #get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`
-        pull_raw_vdsdata_task = PythonOperator(
-            task_id='pull_raw_vdsdata',
-            python_callable=vds_functions.pull_raw_vdsdata,
-            dag=dag,
-            op_kwargs = {
-                    'rds_conn': vds_bot,
-                    'itsc_conn': itsc_bot,
-                    'start_date': '{{ ds }}'
-                    } 
-        )
+        #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
+        with TaskGroup(group_id='pull_vdsdata') as vdsdata:
+            #deletes data from vds.raw_vdsdata
+            delete_raw_vdsdata_task = PostgresOperator(
+                sql="DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                task_id='delete_vdsdata',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
 
-        delete_raw_vdsdata_task >> pull_raw_vdsdata_task
+            #get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`
+            pull_raw_vdsdata_task = PythonOperator(
+                task_id='pull_raw_vdsdata',
+                python_callable=vds_functions.pull_raw_vdsdata,
+                dag=dag,
+                op_kwargs = {
+                        'rds_conn': vds_bot,
+                        'itsc_conn': itsc_bot,
+                        'start_date': '{{ ds }}'
+                        } 
+            )
 
-    #this task group deletes any existing data from RDS vds.volumes_15min and then inserts into the same table
-    with TaskGroup(group_id='summarize_v15') as v15data:
-        #deletes data from vds.volumes_15min
-        delete_v15_task = PostgresOperator(
-            sql="DELETE FROM vds.volumes_15min WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
-            task_id='delete_v15',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
+            delete_raw_vdsdata_task >> pull_raw_vdsdata_task
 
-        #inserts summarized data into RDS `vds.volumes_15min`
-        summarize_data_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
-            task_id='summarize_data',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
+        #this task group deletes any existing data from RDS vds.volumes_15min and then inserts into the same table
+        with TaskGroup(group_id='summarize_v15') as v15data:
+            #deletes data from vds.volumes_15min
+            delete_v15_task = PostgresOperator(
+                sql="DELETE FROM vds.volumes_15min WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                task_id='delete_v15',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
 
-        delete_v15_task >> summarize_data_task
+            #inserts summarized data into RDS `vds.volumes_15min`
+            summarize_data_task = PostgresOperator(
+                sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+                task_id='summarize_data',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            delete_v15_task >> summarize_data_task
+
+        vdsdata >> v15data
 
     #this task group deletes any existing data from RDS vds.raw_vdsvehicledata and then pulls and inserts from ITSC
     with TaskGroup(group_id='pull_vdsvehicledata') as vdsvehicledata:
@@ -160,29 +169,32 @@ with DAG(dag_name,
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
 
-    #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
-    pull_detector_inventory_task = PythonOperator(
-        task_id='pull_and_insert_detector_inventory',
-        python_callable=vds_functions.pull_detector_inventory,
-        dag=dag,
-        op_kwargs = {
-            'rds_conn': vds_bot,
-            'itsc_conn': itsc_bot,
-            },
-    )
+    with TaskGroup(group_id='update_inventories') as update_inventories:
+        #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
+        pull_detector_inventory_task = PythonOperator(
+            task_id='pull_and_insert_detector_inventory',
+            python_callable=vds_functions.pull_detector_inventory,
+            dag=dag,
+            op_kwargs = {
+                'rds_conn': vds_bot,
+                'itsc_conn': itsc_bot,
+                },
+        )
 
-    #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
-    pull_entity_locations_task = PythonOperator(
-        task_id='pull_and_insert_entitylocations',
-        python_callable=vds_functions.pull_entity_locations,
-        dag=dag,
-        op_kwargs = {
-            'rds_conn': vds_bot,
-            'itsc_conn': itsc_bot,
-            },
-    )
+        #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
+        pull_entity_locations_task = PythonOperator(
+            task_id='pull_and_insert_entitylocations',
+            python_callable=vds_functions.pull_entity_locations,
+            dag=dag,
+            op_kwargs = {
+                'rds_conn': vds_bot,
+                'itsc_conn': itsc_bot,
+                },
+        )
 
-    vdsdata >> v15data
+        pull_detector_inventory_task
+        pull_entity_locations_task
+
+    vdsdata_complete
     vdsvehicledata
-    pull_entity_locations_task
-    pull_detector_inventory_task
+    update_inventories
