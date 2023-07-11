@@ -4,7 +4,7 @@ from numpy import nan
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 import struct
-from datetime import datetime
+from datetime import datetime, date
 import pytz
 
 LOGGER = logging.getLogger(__name__)
@@ -396,18 +396,24 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
         LOGGER.critical("Error fetching row count for vds.raw_vdsdata.")
         LOGGER.critical(exc)
         con.close()
+   
+    #create a full list of dates for a left join to make sure tasks indexing is correct.
+    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=7)
+    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
+
+    #join full date list with row counts from rds, itsc
+    dates = dates.merge(rds_rows, on='dt', how='left')
+    dates = dates.merge(itsc_rows, on='dt', how='left')
 
     #find days with more rows in ITSC than RDS (existing pull). 
-    combined_rows = rds_rows.merge(itsc_rows, on='dt')
-    dates_dif = combined_rows[combined_rows['count_itsc'] > combined_rows['count_rds']]['dt'].map(lambda a: datetime(a))
+    dates_dif = dates[dates['count_itsc'] > dates['count_rds']]['dt']
 
-    for dt in dates_dif:
-        LOGGER.info(f"Clearing vds_pull.vdsdata_complete for {dt}")       
-        """ clear_tasks = BashOperator(
-            task_id='clear_tasks',
-            bash_command=f"airflow tasks clear -s {dt} -e {dt} -y -t vdsdata_complete vdspull"
-        )
-        clear_tasks.execute(context=context) """
+    if dates_dif.empty:
+        return "empty_task" #can't have no return value for branchoperator
+    else:
+        LOGGER.info("Clearing vds_pull.vdsdata_complete for %s", dates_dif.apply(str).values)
+        return ["monitor_late_vdsdata.clear_" + str(x) for x in dates_dif.index.values] #need to add group id as prefix
+
 
 def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 # compare row counts for vdsvehicledata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
