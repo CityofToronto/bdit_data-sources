@@ -216,7 +216,7 @@ with DAG(dag_name,
                 dag=dag,
                 params = {'i': -i},
                 bash_command="airflow tasks clear -s $start -e $end -y -t vdsdata_complete vdspull",
-                env = {"start": '{{macros.ds_add(ds, params.i-1))}}',
+                env = {"start": '{{macros.ds_add(ds, params.i-1)}}',
                        "end": '{{macros.ds_add(ds, params.i)}}'}
             )
             check >> [clear_task, empty_task]
