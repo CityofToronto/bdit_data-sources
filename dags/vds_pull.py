@@ -2,13 +2,16 @@ import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
+#from airflow.macros import ds_add
 
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
@@ -195,6 +198,30 @@ with DAG(dag_name,
         pull_detector_inventory_task
         pull_entity_locations_task
 
+    with TaskGroup(group_id='monitor_late_vdsdata') as monitor_late_vdsdata:
+        #this will call the monitoring
+        check = BranchPythonOperator(task_id = "monitor_vdsdata",
+                                     dag=dag,
+                                     python_callable=vds_functions.monitor_vdsdata,
+                                     op_kwargs = {
+                                        'rds_conn': vds_bot,
+                                        'itsc_conn': itsc_bot,
+                                        'start_date': '{{ ds }}'
+                                    })
+        empty_task = EmptyOperator(task_id = "no_backfill", 
+                                   dag=dag)
+        for i in range(7):
+            clear_task = BashOperator(
+                task_id=f"clear_{i}",
+                dag=dag,
+                params = {'i': -i},
+                bash_command="airflow tasks clear -s $start -e $end -y -t vdsdata_complete vdspull",
+                env = {"start": '{{macros.ds_add(ds, params.i-1))}}',
+                       "end": '{{macros.ds_add(ds, params.i)}}'}
+            )
+            check >> [clear_task, empty_task]
+
     vdsdata_complete
     vdsvehicledata
     update_inventories
+    monitor_late_vdsdata
