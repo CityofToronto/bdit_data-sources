@@ -134,7 +134,8 @@ Row count: 601,460
 
 ## Special Function and Preemption detectors: 
 These types of sensors include transit preemption, fire emergency services preemption. The one day sample we have only contains 22 detections which doesn't seem accurate. Sample query: 
-```SELECT DISTINCT ON (vds_id, datetime_20sec)
+```
+SELECT DISTINCT ON (vds_id, datetime_20sec)
     c.detector_id, d.* 
 FROM vds.raw_vdsdata_div8001 AS d
 LEFT JOIN vds.vdsconfig AS c
@@ -143,7 +144,8 @@ LEFT JOIN vds.vdsconfig AS c
 WHERE (detector_id SIMILAR TO 'PX[1-9]{4}-SF%' OR detector_id SIMILAR TO 'PX[1-9]{4}-PE%')
     AND (volume_veh_per_hr > 0 OR occupancy_percent > 0)
 ORDER BY vds_id, datetime_20sec, c.start_timestamp DESC
-LIMIT 1000```
+LIMIT 1000
+```
 
 Inquire with Simon about backfilling?
 Hard to tell if required 
@@ -171,17 +173,19 @@ GROUP BY 1
 ORDER BY 1
 ```
 
-There are some missing records in RDS from the last 9 days. 
-|date_trunc	      |RDS Count| ITSC Count | Dif |
-| 06/28/2023 0:00 | 56285 | 57149 | 864 |
-| 06/29/2023 0:00 | 53754 | 53826 | 72 |
-| 06/30/2023 0:00 | 55417 | 56713 | 1296 |
-| 07/01/2023 0:00 | 52893 | 56349 | 3456 |
-| 07/02/2023 0:00 | 53727 | 54339 | 612 |
-| 07/03/2023 0:00 | 54090 | 54090 | 0 |
-| 07/04/2023 0:00 | 53958 | 53958 | 0 |
-| 07/05/2023 0:00 | 53506 | 53506 | 0 |
-| 07/06/2023 0:00 | 53286 | 53286 | 0 |
+There are some missing records in RDS from the last 9 days:
+
+| date_trunc      | RDS Count | ITSC Count | Dif |
+|:----------------|:----------|:-----------|:----|
+| 06/28/2023 0:00 | 56285     | 57149      | 864 |
+| 06/29/2023 0:00 | 53754     | 53826      | 72  |
+| 06/30/2023 0:00 | 55417     | 56713      | 1296|
+| 07/01/2023 0:00 | 52893     | 56349      | 3456|
+| 07/02/2023 0:00 | 53727     | 54339      | 612 |
+| 07/03/2023 0:00 | 54090     | 54090      | 0   |
+| 07/04/2023 0:00 | 53958     | 53958      | 0   |
+| 07/05/2023 0:00 | 53506     | 53506      | 0   |
+| 07/06/2023 0:00 | 53286     | 53286      | 0   |
 
 In `vdsvehicledata`:
 
@@ -221,16 +225,20 @@ GROUP BY 1
 ORDER BY 1
 ```
 
-date	rds_count	itsc_count	
-06/28/2023	173903	173903	0
-06/29/2023	172128	172128	0
-06/30/2023	172501	172501	0
-07/01/2023	157790	157790	0
-07/02/2023	147145	147145	0
-07/03/2023	146517	146517	0
-07/04/2023	178781	178782	1
-07/05/2023	178354	178354	0
-07/06/2023	183501	183501	0
-07/07/2023	191859	191860	1
-07/08/2023	179182	179182	0
-07/09/2023	170521	170521	0
+Only found 1 missing record... need to investigate further before backfilling this dataset. 
+
+| date	     | rds_count | itsc_count | dif |
+|:-----------|:--------|:----------|:----|
+| 06/28/2023 |	173903 | 173903    | 0   |
+| 06/29/2023 |	172128 | 172128    | 0   |
+| 06/30/2023 |	172501 | 172501    | 0   |
+| 07/01/2023 |	157790 | 157790    | 0   |
+| 07/02/2023 |	147145 | 147145    | 0   |
+| 07/03/2023 |	146517 | 146517    | 0   |
+| 07/04/2023 |	178781 | 178782    | 1   |
+| 07/05/2023 |	178354 | 178354    | 0   |
+| 07/06/2023 |	183501 | 183501    | 0   |
+| 07/07/2023 |	191859 | 191860    | 1   |
+| 07/08/2023 |	179182 | 179182    | 0   |
+| 07/09/2023 |	170521 | 170521    | 0   |
+   
