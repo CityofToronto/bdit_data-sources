@@ -6,6 +6,7 @@ from psycopg2.extras import execute_values
 import struct
 from datetime import datetime, date
 import pytz
+from airflow.macros import ds_add
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
