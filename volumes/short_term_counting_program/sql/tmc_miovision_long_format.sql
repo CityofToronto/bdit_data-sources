@@ -4,7 +4,7 @@ long-format table that's more compatible with the way we store
 Miovision TMCs, as in miovision_api.volumes_15min_tmc.
 */
 
-CREATE OR REPLACE VIEW traffic.tmc_miovision_long_format AS
+CREATE MATERIALIZED VIEW traffic.tmc_miovision_long_format_mat AS
 
 WITH trans AS (
     SELECT
@@ -109,3 +109,7 @@ FROM unpacked AS u
 JOIN traffic.countinfomics USING (count_info_id);
 
 GRANT SELECT ON traffic.tmc_miovision_long_format TO bdit_humans;
+
+CREATE INDEX ON traffic.tmc_miovision_long_format (arterycode);
+CREATE INDEX ON traffic.tmc_miovision_long_format (classification_uid);
+
