@@ -11,13 +11,17 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
-#from airflow.macros import ds_add
+from airflow.macros import ds_add
 
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
 
 #CONNECT TO BIGDATA
 vds_bot = PostgresHook('vds_bot')
+
+#op_kwargs:
+conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
+start_date = {'start_date': '{{ ds }}'}
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -83,7 +87,7 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
     'on_failure_callback': task_fail_slack_alert,
-    'catchup':False,
+    'catchup':True,
 }
 
 #start_date = '2023-06-28'
@@ -111,11 +115,7 @@ with DAG(dag_name,
                 task_id='pull_raw_vdsdata',
                 python_callable=vds_functions.pull_raw_vdsdata,
                 dag=dag,
-                op_kwargs = {
-                        'rds_conn': vds_bot,
-                        'itsc_conn': itsc_bot,
-                        'start_date': '{{ ds }}'
-                        } 
+                op_kwargs = conns | start_date 
             )
 
             delete_raw_vdsdata_task >> pull_raw_vdsdata_task
@@ -163,11 +163,7 @@ with DAG(dag_name,
             task_id='pull_raw_vdsvehicledata',
             python_callable=vds_functions.pull_raw_vdsvehicledata,
             dag=dag,
-            op_kwargs = {
-                    'rds_conn': vds_bot,
-                    'itsc_conn': itsc_bot,
-                    'start_date': '{{ ds }}'
-                    } 
+            op_kwargs = conns | start_date 
         )
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
@@ -178,10 +174,7 @@ with DAG(dag_name,
             task_id='pull_and_insert_detector_inventory',
             python_callable=vds_functions.pull_detector_inventory,
             dag=dag,
-            op_kwargs = {
-                'rds_conn': vds_bot,
-                'itsc_conn': itsc_bot,
-                },
+            op_kwargs = conns
         )
 
         #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
@@ -189,35 +182,35 @@ with DAG(dag_name,
             task_id='pull_and_insert_entitylocations',
             python_callable=vds_functions.pull_entity_locations,
             dag=dag,
-            op_kwargs = {
-                'rds_conn': vds_bot,
-                'itsc_conn': itsc_bot,
-                },
+            op_kwargs = conns
         )
 
         pull_detector_inventory_task
         pull_entity_locations_task
 
     with TaskGroup(group_id='monitor_late_vdsdata') as monitor_late_vdsdata:
-        #this will call the monitoring
+        #calls the monitoring (compares rows in ITSC vs RDS databases)
+        #branch operator returns list of tasks to trigger (clear_[0-7], empty_task)
         check = BranchPythonOperator(task_id = "monitor_vdsdata",
                                      dag=dag,
                                      python_callable=vds_functions.monitor_vdsdata,
-                                     op_kwargs = {
-                                        'rds_conn': vds_bot,
-                                        'itsc_conn': itsc_bot,
-                                        'start_date': '{{ ds }}'
-                                    })
-        empty_task = EmptyOperator(task_id = "no_backfill", 
-                                   dag=dag)
+                                     op_kwargs = conns | start_date
+                                     )
+        #empty_task is needed to not cause failure when no backfilling required.
+        empty_task = EmptyOperator(task_id = "no_backfill", dag=dag)
+        
+        #create 7 clear tasks, one corresponding to each of the previous 7 days
+        #"airflow tasks clear" to clear existing run and retrigger pull
         for i in range(7):
             clear_task = BashOperator(
                 task_id=f"clear_{i}",
                 dag=dag,
-                params = {'i': -i},
-                bash_command="airflow tasks clear -s $start -e $end -y -t vdsdata_complete vdspull",
+                params = {'i': -i}, #the days are indexed zero through 6 starting from start_date (0)
+                bash_command="/home/airflow/airflow_venv/bin/airflow tasks clear -s $start -e $end -y -t vdsdata_complete vds_pull",
                 env = {"start": '{{macros.ds_add(ds, params.i-1)}}',
                        "end": '{{macros.ds_add(ds, params.i)}}'}
+                #bash_command="/home/airflow/airflow_venv/bin/airflow tasks run -f vds_pull vdsdata_complete.pull_vdsdata.delete_vdsdata "'"$start"'"",
+                #env = {"start": str('{{macros.ds_add(ds, params.i-1)}}') + " 08:00:00+00:00"}
             )
             check >> [clear_task, empty_task]
 
