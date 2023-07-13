@@ -87,13 +87,14 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=60),
     'on_failure_callback': task_fail_slack_alert,
-    'catchup':True,
+    'catchup':False,
 }
 
 #start_date = '2023-06-28'
 
 with DAG(dag_name,
          default_args=default_args,
+         max_active_runs=1,
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     with TaskGroup(group_id='vdsdata_complete') as vdsdata_complete:
@@ -206,11 +207,15 @@ with DAG(dag_name,
                 task_id=f"clear_{i}",
                 dag=dag,
                 params = {'i': -i}, #the days are indexed zero through 6 starting from start_date (0)
-                bash_command="/home/airflow/airflow_venv/bin/airflow tasks clear -s $start -e $end -y -t vdsdata_complete vds_pull",
+                bash_command="/home/airflow/airflow_venv/bin/airflow tasks clear \
+                                -s $start -e $end -y -t vdsdata_complete vds_pull && \
+                              /home/airflow/airflow_venv/bin/airflow dags backfill \
+                                -s $start -e $end --yes --task-regex vdsdata_complete.* vds_pull",
                 env = {"start": '{{macros.ds_add(ds, params.i-1)}}',
                        "end": '{{macros.ds_add(ds, params.i)}}'}
-                #bash_command="/home/airflow/airflow_venv/bin/airflow tasks run -f vds_pull vdsdata_complete.pull_vdsdata.delete_vdsdata "'"$start"'"",
-                #env = {"start": str('{{macros.ds_add(ds, params.i-1)}}') + " 08:00:00+00:00"}
+                #bash_command="/home/airflow/airflow_venv/bin/airflow tasks clear -s $start -e $end -y -t vdsdata_complete vds_pull",
+                #bash_command="/home/airflow/airflow_venv/bin/airflow tasks run -f vds_pull vdsdata_complete.pull_vdsdata.delete_vdsdata $start",
+                #env = {"start": str('{{macros.ds_add(ds, params.i-1)}}') + "T08:00:00+00:00"}
             )
             check >> [clear_task, empty_task]
 
