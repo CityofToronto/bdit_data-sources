@@ -83,8 +83,8 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
             OR c.endtimestamputc IS NULL) --no end date
     WHERE
         d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-        AND TIMEZONE('UTC', d.timestamputc) >= {start}::timestamptz
-        AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
+        AND d.timestamputc >= TIMEZONE('UTC', {start}::timestamptz)
+        AND d.timestamputc < TIMEZONE('UTC', {start}::timestamptz) + INTERVAL '1 DAY'
         AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
@@ -351,15 +351,24 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
 # compare row counts for vdsdata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
       
     itsc_query = sql.SQL("""
+        WITH initial_count AS (
+            SELECT
+                timestamputc, 
+                COUNT(*) AS count_itsc
+            FROM public.vdsdata
+            WHERE
+                divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
+                AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY')
+                AND timestamputc < extract(epoch from timestamp with time zone {start})
+            GROUP BY
+                timestamputc
+        )
         SELECT
-            TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
-            COUNT(*) AS count_itsc
-        FROM public.vdsdata
-        WHERE
-            timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY')
-            AND timestamputc < extract(epoch from timestamp with time zone {start})
-            AND divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-        GROUP BY 1
+            TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt,
+            SUM(count_itsc) AS count_itsc
+        FROM initial_count
+        GROUP BY dt
+
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
