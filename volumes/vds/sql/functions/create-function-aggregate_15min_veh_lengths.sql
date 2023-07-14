@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION vds.aggregate_15min_vds_lengths(_start_date timestamp, _end_date timestamp)
+CREATE OR REPLACE FUNCTION vds.aggregate_15min_veh_lengths(_start_date timestamp, _end_date timestamp)
     RETURNS void
     LANGUAGE 'plpgsql'
 
