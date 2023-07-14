@@ -16,3 +16,5 @@ CREATE TABLE vds.volumes_15min_bylane (
 
 ALTER TABLE vds.volumes_15min_bylane OWNER TO vds_admins;
 GRANT INSERT, DELETE, SELECT ON TABLE vds.volumes_15min_bylane TO vds_bot;
+
+COMMENT ON TABLE vds.volumes_15min_bylane IS 'Table storing vehicle counts from `vds.raw_vdsdata` aggregated by detector / lane / 15min bins.'
