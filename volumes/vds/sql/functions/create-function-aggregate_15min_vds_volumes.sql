@@ -9,7 +9,7 @@ AS $BODY$
 BEGIN
 	
     --Aggregated into speed bins and 1 hour bin
-    INSERT INTO vds.volumes_15min (division_id, vds_id, detector_id, num_lanes, datetime_bin, volume_15min, expected_bins, num_obs)
+    INSERT INTO vds.volumes_15min (division_id, vds_id, detector_id, num_lanes, datetime_bin, volume_15min, expected_bins, num_obs, num_distinct_lanes)
     
     WITH detector_inventory AS (
         SELECT *, 
@@ -33,7 +33,8 @@ BEGIN
             -- / 4 to convert hourly volume to 15 minute volume
             -- / (expected_bins) to get average 15 minute volume depending on bin size (assumes blanks are 0)
         c.expected_bins,
-        COUNT(*) AS num_obs
+        COUNT(*) AS num_obs,
+        COUNT(DISTINCT d.lane) AS num_distinct_lanes
     FROM vds.raw_vdsdata AS d
     JOIN detector_inventory AS c ON
         d.vds_id = c.vds_id
