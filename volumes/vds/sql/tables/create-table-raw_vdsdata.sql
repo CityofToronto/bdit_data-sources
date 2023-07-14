@@ -10,7 +10,7 @@ CREATE TABLE vds.raw_vdsdata (
     speed_kmh float, 
     volume_veh_per_hr integer,
     occupancy_percent float,
-    PRIMARY volume_uid, 
+    PRIMARY KEY volume_uid, 
     UNIQUE (division_id, vds_id, datetime_20sec, lane)
 ); 
 
