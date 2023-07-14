@@ -59,3 +59,5 @@ END;
 $BODY$;
 
 GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_volumes(timestamp, timestamp) to vds_bot;
+
+COMMENT ON FUNCTION vds.aggregate_15min_vds_volumes IS 'Function to aggregate `vds.raw_vdsdata` into table `vds.volumes_15min` by detector / 15min bins.'
