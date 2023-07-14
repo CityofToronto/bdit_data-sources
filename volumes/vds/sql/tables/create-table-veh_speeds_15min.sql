@@ -14,5 +14,6 @@ CREATE TABLE vds.veh_speeds_15min (
 
 ALTER TABLE vds.veh_speeds_15min OWNER TO vds_admins;
 GRANT INSERT, DELETE, SELECT ON TABLE vds.veh_speeds_15min TO vds_bot;
+GRANT ALL ON SEQUENCE vds.veh_speeds_15min_uid_seq TO vds_bot;
 
 COMMENT ON TABLE vds.veh_speeds_15min IS 'A count of vehicle speeds from `raw_vdsvehicledata` aggregated to detector / speeds floored to 5kph.';

@@ -15,5 +15,6 @@ CREATE TABLE vds.raw_vdsvehicledata (
 
 ALTER TABLE vds.raw_vdsvehicledata OWNER TO vds_admins;
 GRANT INSERT, DELETE, SELECT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
+GRANT ALL ON SEQUENCE vds.raw_vdsvehicledata_volume_uid_seq TO vds_bot;
 
 COMMENT ON TABLE vds.raw_vdsvehicledata IS 'Store raw data pulled from ITS Central `vdsvehicledata` table. Filtered for divisionid = 2.'
