@@ -1,6 +1,7 @@
 --DROP TABLE vds.vdsconfig; 
 
 CREATE TABLE vds.vdsconfig (
+    uid serial,
     division_id smallint,
     vds_id integer,
     detector_id character varying,
@@ -20,7 +21,8 @@ CREATE TABLE vds.vdsconfig (
     signal_id integer,
     signal_division_id smallint,
     movement smallint,
-    PRIMARY KEY (division_id, vds_id, start_timestamp)
+    PRIMARY KEY uid,
+    UNIQUE (division_id, vds_id, start_timestamp)
 );
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;

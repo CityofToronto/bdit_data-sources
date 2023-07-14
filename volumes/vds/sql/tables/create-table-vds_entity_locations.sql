@@ -1,6 +1,7 @@
 --DROP TABLE vds.entity_locations; 
 
 CREATE TABLE vds.entity_locations (
+    uid serial, 
     division_id smallint,
     entity_type smallint,
     entity_id integer,
@@ -23,7 +24,8 @@ CREATE TABLE vds.entity_locations (
     offset_direction_degrees double precision,
     location_source smallint,
     location_description_overwrite character varying,
-    PRIMARY KEY(division_id, entity_id, location_timestamp)
+    PRIMARY KEY uid, 
+    UNIQUE(division_id, entity_id, location_timestamp)
 );
 
 ALTER TABLE vds.entity_locations OWNER TO vds_admins;
