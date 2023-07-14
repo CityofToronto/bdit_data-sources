@@ -4,9 +4,9 @@ long-format table that's more compatible with the way we store
 Miovision TMCs, as in miovision_api.volumes_15min_tmc.
 */
 
-CREATE MATERIALIZED VIEW traffic.tmc_miovision_long_format_mat AS
+CREATE MATERIALIZED VIEW traffic.tmc_miovision_long_format AS
 
-WITH trans AS (
+WITH tmcs AS (
     SELECT
         count_info_id,
         -- because traffic, unlike miovision indicates count time as
@@ -70,7 +70,7 @@ WITH trans AS (
     FROM traffic.det
 ),
 
-unpacked AS (
+unpacked_tmcs AS (
     SELECT
         count_info_id,
         time_bin,
@@ -78,10 +78,11 @@ unpacked AS (
         substring((json_each(tmc)).key, '_([rtl])$') AS movement,
         substring((json_each(tmc)).key, '^._(cars|truck|bus|peds|bike|other)') AS trans_mode,
         (json_each(tmc)).value::text AS volume -- can't cast a JSON type directly to integer
-    FROM trans
+    FROM tmcs
 )
 
 SELECT
+    count_info_id,
     countinfomics.arterycode,
     countinfomics.count_date::date + u.time_bin AS datetime_bin,
     -- fun fact: 'KEY' is a ... KEYword. Thus: 'kee'
@@ -105,11 +106,12 @@ SELECT
     CASE -- necessary because there's a sneaky 'NULL' hiding somewhere
         WHEN u.volume ~ '^\d+$' THEN u.volume::int
     END AS volume
-FROM unpacked AS u
+FROM unpacked_tmcs AS u
 JOIN traffic.countinfomics USING (count_info_id);
 
 GRANT SELECT ON traffic.tmc_miovision_long_format TO bdit_humans;
 
 CREATE INDEX ON traffic.tmc_miovision_long_format (arterycode);
 CREATE INDEX ON traffic.tmc_miovision_long_format (classification_uid);
-
+CREATE INDEX ON traffic.tmc_miovision_long_format (datetime_bin);
+CREATE INDEX ON traffic.tmc_miovision_long_format (count_info_id);
