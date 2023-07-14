@@ -85,7 +85,7 @@ default_args = {
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=60),
+    'retry_delay': timedelta(minutes=2),
     'on_failure_callback': task_fail_slack_alert,
     'catchup':False,
 }
@@ -143,7 +143,28 @@ with DAG(dag_name,
                 retries=1
             )
 
-            delete_v15_task >> summarize_data_task
+            #deletes data from vds.volumes_15min
+            delete_v15_bylane_task = PostgresOperator(
+                sql="DELETE FROM vds.volumes_15min_bylane WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                task_id='delete_v15_bylane',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            #inserts summarized data into RDS `vds.volumes_15min`
+            summarize_data_bylane_task = PostgresOperator(
+                sql="SELECT vds.aggregate_15min_vds_volumes_bylane('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+                task_id='summarize_data_bylane',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            [delete_v15_task >> summarize_data_task]
+            [delete_v15_bylane_task >> summarize_data_bylane_task]
 
         vdsdata >> v15data
 
@@ -167,7 +188,52 @@ with DAG(dag_name,
             op_kwargs = conns | start_date 
         )
 
-        delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
+        with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:
+            
+            #dlete from vds.veh_speeds_15min prior to inserting
+            delete_veh_speed_data = PostgresOperator(
+                sql="DELETE FROM vds.veh_speeds_15min WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                task_id='delete_veh_speed_data',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            #insert new data into summary table vds.aggregate_15min_veh_speeds
+            summarize_speeds_task = PostgresOperator(
+                sql="SELECT vds.aggregate_15min_veh_speeds('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+                task_id='summarize_speeds',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            #delete from vds.veh_length_15min prior to inserting
+            delete_veh_length_data = PostgresOperator(
+                sql="DELETE FROM vds.veh_length_15min WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                task_id='delete_veh_length_data',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+
+            #insert new data into summary table vds.veh_length_15min
+            summarize_lengths_task = PostgresOperator(
+                sql="SELECT vds.aggregate_15min_vds_lengths('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+                task_id='summarize_lengths',
+                dag=dag,
+                postgres_conn_id='vds_bot',
+                autocommit=True,
+                retries=1
+            )
+            
+            [delete_veh_speed_data >> summarize_speeds_task]
+            [delete_veh_length_data >> summarize_lengths_task]
+
+        delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task >> summarize_vdsvehicledata
 
     with TaskGroup(group_id='update_inventories') as update_inventories:
         #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
