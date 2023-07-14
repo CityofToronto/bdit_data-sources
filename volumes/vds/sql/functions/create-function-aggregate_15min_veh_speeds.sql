@@ -36,4 +36,4 @@ $BODY$;
 
 GRANT EXECUTE ON FUNCTION vds.aggregate_15min_veh_speeds(timestamp, timestamp) to vds_bot;
 
-
+COMMENT ON FUNCTION vds.aggregate_15min_veh_speeds IS 'Function to aggregate `vds.raw_vdsvehicledata` into table `vds.veh_speeds_15min` by detector / 15min bins / 5kph speed bins.'

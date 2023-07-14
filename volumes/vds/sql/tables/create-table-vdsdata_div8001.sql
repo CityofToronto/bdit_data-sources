@@ -32,4 +32,5 @@ FROM vds.raw_vdsdata
 WHERE division_id = 8001;
 
 DELETE FROM vds.raw_vdsdata WHERE division_id = 8001;
- 
+
+COMMENT ON TABLE vds.raw_vdsdata_div8001 IS 'A one day sample of `vdsdata` for division_id = 8001 from ITSC Central.';

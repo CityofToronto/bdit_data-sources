@@ -27,3 +27,5 @@ CREATE TABLE vds.vdsconfig (
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
 GRANT INSERT, SELECT ON TABLE vds.vdsconfig TO vds_bot;
+
+COMMENT ON TABLE vds.vdsconfig IS 'Store raw data pulled from ITS Central `vdsconfig` table. Note there are duplicates on vds_id corresponding to updated locations/details over time.';
