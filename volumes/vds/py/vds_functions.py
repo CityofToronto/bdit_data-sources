@@ -16,15 +16,15 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 
     # Pull raw data from Postgres database
     raw_sql = sql.SQL("""SELECT 
-        d.divisionid,
-        d.vdsid,
-        d.timestamputc, --timestamp in INTEGER (UTC)
-        d.lanedata
-    FROM public.vdsdata AS d
+        divisionid,
+        vdsid,
+        timestamputc, --timestamp in INTEGER (UTC)
+        lanedata
+    FROM public.vdsdata
     WHERE
-        timestamputc >= extract(epoch from timestamp with time zone {start})
-        AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY')
-        AND d.divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
+        timestamputc >= extract(epoch from timestamp with time zone {start}) :: INTEGER
+        AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY') :: INTEGER
+        AND divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
@@ -66,26 +66,18 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
       
     raw_sql = sql.SQL("""
     SELECT
-        d.divisionid,
-        d.vdsid,
-        TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT' AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-        d.lane,
-        d.sensoroccupancyds,
-        round(d.speedkmhdiv100 / 100, 1) AS speed_kmh,
-        round(d.lengthmeterdiv100 / 100, 1) AS length_meter
-    FROM public.vdsvehicledata AS d
-    LEFT JOIN public.vdsconfig AS c ON
-        d.vdsid = c.vdsid
-        AND d.divisionid = c.divisionid
-        AND d.timestamputc >= c.starttimestamputc
-        AND (
-            d.timestamputc <= c.endtimestamputc
-            OR c.endtimestamputc IS NULL) --no end date
+        divisionid,
+        vdsid,
+        TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT' AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+        lane,
+        sensoroccupancyds,
+        round(speedkmhdiv100 / 100, 1) AS speed_kmh,
+        round(lengthmeterdiv100 / 100, 1) AS length_meter
+    FROM public.vdsvehicledata
     WHERE
-        d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-        AND d.timestamputc >= TIMEZONE('UTC', {start}::timestamptz)
-        AND d.timestamputc < TIMEZONE('UTC', {start}::timestamptz) + INTERVAL '1 DAY'
-        AND substring(c.sourceid, 1, 3) <> 'BCT'; --bluecity.ai sensors have no data
+        divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+        AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz)
+        AND timestamputc < TIMEZONE('UTC', {start}::timestamptz) + INTERVAL '1 DAY';
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
