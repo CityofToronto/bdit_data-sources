@@ -81,13 +81,13 @@ def task_fail_slack_alert(context):
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
-    'start_date': datetime(2023, 6, 1),
+    'start_date': datetime(2023, 5, 1),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=2),
     'on_failure_callback': task_fail_slack_alert,
-    'catchup':False,
+    'catchup': True,
 }
 
 #start_date = '2023-06-28'
