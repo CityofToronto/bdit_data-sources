@@ -11,6 +11,49 @@ from airflow.macros import ds_add
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+#473 rows before adding fetch_X
+
+def read_sql_data(conn, query, table_name):
+    #generic function to pull data from ITSC 
+    try: 
+        with conn.get_conn() as con:
+            LOGGER.info(f"Fetching {table_name}")
+            data = pd.read_sql(query, con)
+            LOGGER.info(f"Number of rows fetched from {table_name} table: {data.shape[0]}")
+            return data
+    except Error as exc:
+        LOGGER.critical(f"Error fetching from {table_name}.")
+        LOGGER.critical(exc)
+        con.close()
+
+def fetch_all_data(conn, query, table_name):
+    #generic function to pull data from ITSC 
+    try: 
+        with conn.get_conn() as con:
+            with con.cursor() as cur:       
+                LOGGER.info(f"Fetching {table_name}")
+                cur.execute(query)
+                data = cur.fetchall()
+                LOGGER.info(f"Number of rows fetched from {table_name} table: {len(data)}")
+                return data
+    except Error as exc:
+        LOGGER.critical(f"Error fetching from {table_name}.")
+        LOGGER.critical(exc)
+        con.close()
+
+def insert_data(conn, query, table_name, data):
+    try:
+        with conn.get_conn() as con:
+            with con.cursor() as cur:                
+                # Insert cleaned data into the database
+                LOGGER.info(f"Inserting into {table_name}.")
+                execute_values(cur, query, data)
+                LOGGER.info(f"Inserted {len(data)} rows into {table_name}.")
+    except Error as exc:
+        LOGGER.critical(f"Error inserting into {table_name}.")
+        LOGGER.critical(exc)
+        con.close()
+
 def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
 
@@ -29,15 +72,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
 
-    try: 
-        with itsc_conn.get_conn() as con:
-            LOGGER.info("Fetching vdsdata")
-            raw_data = pd.read_sql(raw_sql, con)
-            LOGGER.info(f"Number of rows fetched from ITSC vdsdata table: {raw_data.shape[0]}")
-    except Error as exc:
-        LOGGER.critical("Error fetching vdsdata.")
-        LOGGER.critical(exc)
-        con.close()
+    raw_data = read_sql_data(itsc_conn, raw_sql, 'vdsdata')
     
     # Transform raw data
     transformed_data = transform_raw_data(raw_data)
@@ -45,20 +80,12 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #remove lane is None
     data_tuples = [tuple(x) for x in transformed_data.to_numpy()]
 
-    try:
-        with rds_conn.get_conn() as con:
-            with con.cursor() as cur:                
-                # Insert cleaned data into the database
-                insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
+    insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
                                         division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
                                         ) VALUES %s;""")
-                LOGGER.info("Inserting vdsdata into RDS.")
-                execute_values(cur, insert_query, data_tuples)
-                LOGGER.info(f"Inserted {len(data_tuples)} rows (lanedata expanded) into vds.raw_vdsdata.")
-    except Error as exc:
-        LOGGER.critical("Error inserting vdsdata into RDS.")
-        LOGGER.critical(exc)
-        con.close()
+    
+    insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
+
 
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
@@ -82,32 +109,13 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
     
-    try:
-        with itsc_conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info("Fetching vdsvehicledata")
-                cur.execute(raw_sql)
-                raw_data = cur.fetchall()
-                LOGGER.info(f"Number of rows fetched from vdsvehicledata table: {len(raw_data)}")
-    except Error as exc:
-        LOGGER.critical("Error fetching vdsvehicledata.")
-        LOGGER.critical(exc)
-        con.close()
+    raw_data = fetch_all_data(itsc_conn, raw_sql, 'vdsvehicledata')
     
-    try:
-        with rds_conn.get_conn() as con: 
-            with con.cursor() as cur:            
-                # Insert cleaned data into the database
-                insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
+    insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;""")
-                LOGGER.info("Inserting into vds.raw_vdsvehicledata")
-                execute_values(cur, insert_query, raw_data)
-                LOGGER.info(f"Inserted {len(raw_data)} rows into vds.raw_vdsvehicledata.")
-    except Error as exc:
-        LOGGER.critical("Error inserting vds.raw_vdsvehicledata.")
-        LOGGER.critical(exc)
-        con.close()
+    
+    insert_data(rds_conn, insert_query, 'vdsvehicledata', raw_data)
 
 def pull_detector_inventory(rds_conn, itsc_conn):
 #pull the detector inventory table (`vdsconfig`) from ITS Central and insert into RDS `vds.vdsconfig` as is. 
@@ -138,17 +146,7 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     FROM public.vdsconfig
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table""")
 
-    try: 
-        with itsc_conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info("Fetching vdsconfig")
-                cur.execute(detector_sql)
-                vds_config_data = cur.fetchall()
-                LOGGER.info(f"Number of rows fetched from vdsconfig table: {len(vds_config_data)}")
-    except Error as exc:
-        LOGGER.critical("Error fetching vdsconfig.")
-        LOGGER.critical(exc)
-        con.close()
+    vds_config_data = fetch_all_data(itsc_conn, detector_sql, 'vdsconfig')
 
     # upsert data
     insert_query = sql.SQL("""
@@ -161,20 +159,11 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     """)
     select_count = sql.SQL("""SELECT COUNT(1) FROM vds.vdsconfig""")
 
-    try: 
-        with rds_conn.get_conn() as con:
-            with con.cursor() as cur:
-                cur.execute(select_count)
-                original_count = cur.fetchone()[0]
-                LOGGER.info("Inserting vdsconfig")
-                execute_values(cur, insert_query, vds_config_data)
-                cur.execute(select_count)
-                new_count = cur.fetchone()[0]
-                LOGGER.info(f"{new_count - original_count} new records inserted into vds.vdsconfig.")
-    except Error as exc:
-        LOGGER.critical("Error inserting vdsconfig.")
-        LOGGER.critical(exc)
-        con.close()
+    original_count = fetch_all_data(rds_conn, select_count, 'vds.vdsconfig row count')
+    insert_data(rds_conn, insert_query, 'vds.vdsconfig', vds_config_data)
+    new_count = fetch_all_data(rds_conn, select_count, 'vds.vdsconfig row count') 
+    
+    LOGGER.info(f"{new_count[0][0] - original_count[0][0]} new records inserted into vds.vdsconfig.")
 
 def pull_entity_locations(rds_conn, itsc_conn):
 #pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
@@ -209,18 +198,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
     """)
 
-    try:
-        with itsc_conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info("Fetching entitylocation")
-                cur.execute(entitylocation_sql)
-                entitylocations = cur.fetchall()
-    except Error as exc:
-        LOGGER.critical("Error fetching entitylocation.")
-        LOGGER.critical(exc)
-        con.close()
-
-    LOGGER.info(f"Number of rows fetched from entitylocations table: {len(entitylocations)}")
+    entitylocations = fetch_all_data(itsc_conn, entitylocation_sql, 'entitylocations')
 
     # upsert data
     upsert_query = sql.SQL("""
@@ -234,20 +212,11 @@ def pull_entity_locations(rds_conn, itsc_conn):
     """)
     select_count = sql.SQL("""SELECT COUNT(1) FROM vds.entity_locations""")
 
-    try:
-        with rds_conn.get_conn() as con:
-            with con.cursor() as cur:
-                cur.execute(select_count)
-                original_count = cur.fetchone()[0]
-                LOGGER.info("Inserting into vds.entity_locations")
-                execute_values(cur, upsert_query, entitylocations)
-                cur.execute(select_count)
-                new_count = cur.fetchone()[0]
-                LOGGER.info(f"{new_count - original_count} new records inserted into vds.entity_locations.")
-    except Error as exc:
-        LOGGER.critical("Error inserting vds_entity_locations.")
-        LOGGER.critical(exc)
-        con.close()
+    original_count = fetch_all_data(rds_conn, select_count, 'vds.entity_locations row count')
+    insert_data(rds_conn, upsert_query, 'vds.entity_locations', entitylocations)
+    new_count = fetch_all_data(rds_conn, select_count, 'vds.entity_locations row count') 
+
+    LOGGER.info(f"{new_count[0][0] - original_count[0][0]} new records inserted into vds.entity_locations.")
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
@@ -356,16 +325,8 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
     
-    try:
-        with itsc_conn.get_conn() as con:
-            LOGGER.info("Fetching vdsdata daily count.")
-            itsc_rows = pd.read_sql(itsc_query, con)
-            LOGGER.info(f"Number of rows fetched from ITSC: {itsc_rows.shape[0]}")
-    except Error as exc:
-        LOGGER.critical("Error fetching row count for ITSC vdsdata.")
-        LOGGER.critical(exc)
-        con.close()
-    
+    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsdata daily row count')
+   
     rds_query = sql.SQL("""
         SELECT
             date_trunc('day', datetime_15min)::date AS dt,
@@ -380,15 +341,7 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00")
     )
 
-    try:
-        with rds_conn.get_conn() as con: 
-            LOGGER.info("Fetching vds.raw_vdsdata daily count")
-            rds_rows = pd.read_sql(rds_query, con)
-            LOGGER.info(f"Number of rows fetched from RDS: {rds_rows.shape[0]}.")
-    except Error as exc:
-        LOGGER.critical("Error fetching row count for vds.raw_vdsdata.")
-        LOGGER.critical(exc)
-        con.close()
+    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsdata daily row count')
    
     #create a full list of dates for a left join to make sure tasks indexing is correct.
     date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=7)
@@ -424,21 +377,13 @@ def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date):
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
-    
-    try:
-        with itsc_conn.get_conn() as con:
-            LOGGER.info("Fetching vdsvehicledata daily count.")
-            itsc_rows = pd.read_sql(itsc_query, con)
-            LOGGER.info(f"Number of rows fetched from ITSC: {itsc_rows.shape[0]}")
-    except Error as exc:
-        LOGGER.critical("Error fetching row count for ITSC vdsvehicledata.")
-        LOGGER.critical(exc)
-        con.close()
+
+    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsvehicledata daily row count')
     
     rds_query = sql.SQL("""
         SELECT
             d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-            count(*) AS count
+            count(*) AS rds_count
         FROM vds.raw_vdsvehicledata AS d
         WHERE
             d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
@@ -449,25 +394,21 @@ def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00")
     )
 
-    try:
-        with rds_conn.get_conn() as con: 
-            LOGGER.info("Fetching vds.raw_vdsvehicledata daily count")
-            rds_rows = pd.read_sql(rds_query, con)
-            LOGGER.info(f"Number of rows fetched from RDS: {rds_rows.shape[0]}.")
-    except Error as exc:
-        LOGGER.critical("Error fetching row count for vds.raw_vdsvehicledata.")
-        LOGGER.critical(exc)
-        con.close()
+    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsvehicledata daily row count')
+
+    #create a full list of dates for a left join to make sure tasks indexing is correct.
+    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=7)
+    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
+
+    #join full date list with row counts from rds, itsc
+    dates = dates.merge(rds_rows, on='dt', how='left')
+    dates = dates.merge(itsc_rows, on='dt', how='left')
 
     #find days with more rows in ITSC than RDS (existing pull). 
-    #from airflow.operators.bash import BashOperator
-    combined_rows = rds_rows.merge(itsc_rows, on='dt')
-    dates_dif = combined_rows[combined_rows['count_itsc'] > combined_rows['count_rds']]['dt'].map(lambda a: datetime(a))
+    dates_dif = dates[dates['count_itsc'] > dates['count_rds']]['dt']
 
-    for dt in dates_dif:
-        LOGGER.info(f"Clearing vds_pull.vdsdata_complete for {dt}")       
-        """ clear_tasks = BashOperator(
-            task_id='clear_tasks',
-            bash_command=f"airflow tasks clear -s {dt} -e {dt} -y -t vdsdata_complete vdspull"
-        )
-        clear_tasks.execute(context=context) """
+    if dates_dif.empty:
+        return "empty_task" #can't have no return value for branchoperator
+    else:
+        LOGGER.info("Clearing vds_pull.vdsvehicledata_complete for %s", dates_dif.apply(str).values)
+        return ["monitor_late_vdsvehicledata.clear_" + str(x) for x in dates_dif.index.values] #need to add group id as prefix
