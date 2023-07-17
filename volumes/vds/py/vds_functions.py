@@ -343,24 +343,15 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
 # compare row counts for vdsdata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
       
     itsc_query = sql.SQL("""
-        WITH initial_count AS (
-            SELECT
-                timestamputc, 
+        SELECT
+                TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
                 COUNT(*) AS count_itsc
             FROM public.vdsdata
             WHERE
                 divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-                AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY')
-                AND timestamputc < extract(epoch from timestamp with time zone {start})
-            GROUP BY
-                timestamputc
-        )
-        SELECT
-            TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt,
-            SUM(count_itsc) AS count_itsc
-        FROM initial_count
-        GROUP BY dt
-
+                AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY') :: INTEGER
+                AND timestamputc < extract(epoch from timestamp with time zone {start}) :: INTEGER
+            GROUP BY dt;
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
@@ -384,7 +375,7 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
         WHERE
             datetime_20sec >= {start}::timestamp - INTERVAL '7 DAY'
             AND datetime_20sec < {start}::timestamp
-        GROUP BY 1
+        GROUP BY dt
         """).format(
         start = sql.Literal(start_date + " 00:00:00")
     )
@@ -422,22 +413,14 @@ def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date):
 
     itsc_query = sql.SQL("""
         SELECT
-            (TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-            count(*) AS count
-        FROM public.vdsvehicledata AS d
-        LEFT JOIN public.vdsconfig AS c ON
-            d.vdsid = c.vdsid
-            AND d.divisionid = c.divisionid
-            AND d.timestamputc >= c.starttimestamputc
-            AND (
-                d.timestamputc <= c.endtimestamputc
-                OR c.endtimestamputc IS NULL) --no end date
+            (TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+            COUNT(*) AS itsc_count
+        FROM public.vdsvehicledata
         WHERE
-            d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-            AND TIMEZONE('UTC', d.timestamputc) >= {start}::timestamptz - INTERVAL '7 DAY'
-            AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz
-            AND substring(c.sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors have no data
-        GROUP BY 1
+            divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+            AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - INTERVAL '7 DAY')
+            AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
+        GROUP BY dt
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
