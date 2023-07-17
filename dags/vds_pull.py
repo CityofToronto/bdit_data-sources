@@ -12,6 +12,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.macros import ds_add
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
@@ -273,6 +274,17 @@ with DAG(dag_name,
         pull_detector_inventory_task
         pull_entity_locations_task
 
+    vdsdata_complete
+    vdsvehicledata
+    update_inventories
+
+
+with DAG('vds_monitor',
+         default_args=default_args,
+         max_active_runs=1,
+         schedule_interval='0 4 * * *',
+         catchup = False) as dag: #daily at 4am
+
     with TaskGroup(group_id='monitor_late_vdsdata') as monitor_late_vdsdata:
         #calls the monitoring (compares rows in ITSC vs RDS databases)
         #branch operator returns list of tasks to trigger (clear_[0-7], empty_task)
@@ -297,13 +309,9 @@ with DAG(dag_name,
                                 -s $start -e $end --yes --task-regex vdsdata_complete.* vds_pull",
                 env = {"start": '{{macros.ds_add(ds, params.i-1)}}',
                        "end": '{{macros.ds_add(ds, params.i)}}'}
-                #bash_command="/home/airflow/airflow_venv/bin/airflow tasks clear -s $start -e $end -y -t vdsdata_complete vds_pull",
                 #bash_command="/home/airflow/airflow_venv/bin/airflow tasks run -f vds_pull vdsdata_complete.pull_vdsdata.delete_vdsdata $start",
                 #env = {"start": str('{{macros.ds_add(ds, params.i-1)}}') + "T08:00:00+00:00"}
             )
             check >> [clear_task, empty_task]
 
-    vdsdata_complete
-    vdsvehicledata
-    update_inventories
     monitor_late_vdsdata
