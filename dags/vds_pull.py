@@ -94,7 +94,7 @@ default_args = {
 
 with DAG(dag_name,
          default_args=default_args,
-         max_active_runs=1,
+         max_active_runs=5, #need >1 for clear task to work.
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     with TaskGroup(group_id='vdsdata_complete') as vdsdata_complete:
@@ -103,7 +103,10 @@ with DAG(dag_name,
         with TaskGroup(group_id='pull_vdsdata') as vdsdata:
             #deletes data from vds.raw_vdsdata
             delete_raw_vdsdata_task = PostgresOperator(
-                sql="DELETE FROM vds.raw_vdsdata WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                sql="""DELETE FROM vds.raw_vdsdata
+                     WHERE
+                        datetime_15min >= '{{ds}} 00:00:00'::timestamp
+                        AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
                 task_id='delete_vdsdata',
                 dag=dag,
                 postgres_conn_id='vds_bot',
@@ -125,7 +128,10 @@ with DAG(dag_name,
         with TaskGroup(group_id='summarize_v15') as v15data:
             #deletes data from vds.volumes_15min
             delete_v15_task = PostgresOperator(
-                sql="DELETE FROM vds.volumes_15min WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                sql="""DELETE FROM vds.volumes_15min
+                     WHERE
+                        datetime_bin >= '{{ds}} 00:00:00'::timestamp
+                        AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
                 task_id='delete_v15',
                 dag=dag,
                 postgres_conn_id='vds_bot',
@@ -145,7 +151,10 @@ with DAG(dag_name,
 
             #deletes data from vds.volumes_15min
             delete_v15_bylane_task = PostgresOperator(
-                sql="DELETE FROM vds.volumes_15min_bylane WHERE datetime_bin >= '{{ds}} 00:00:00'::timestamp AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                sql="""DELETE FROM vds.volumes_15min_bylane
+                     WHERE
+                        datetime_bin >= '{{ds}} 00:00:00'::timestamp
+                        AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
                 task_id='delete_v15_bylane',
                 dag=dag,
                 postgres_conn_id='vds_bot',
@@ -172,7 +181,10 @@ with DAG(dag_name,
     with TaskGroup(group_id='pull_vdsvehicledata') as vdsvehicledata:
         #deletes data from vds.volumes_15min
         delete_vdsvehicledata_task = PostgresOperator(
-            sql="DELETE FROM vds.raw_vdsvehicledata WHERE dt >= '{{ds}} 00:00:00'::timestamp AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+            sql="""DELETE FROM vds.raw_vdsvehicledata
+                 WHERE
+                    dt >= '{{ds}} 00:00:00'::timestamp
+                    AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsvehicledata',
             dag=dag,
             postgres_conn_id='vds_bot',
@@ -192,7 +204,10 @@ with DAG(dag_name,
             
             #dlete from vds.veh_speeds_15min prior to inserting
             delete_veh_speed_data = PostgresOperator(
-                sql="DELETE FROM vds.veh_speeds_15min WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                sql="""DELETE FROM vds.veh_speeds_15min
+                     WHERE
+                        datetime_15min >= '{{ds}} 00:00:00'::timestamp
+                        AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
                 task_id='delete_veh_speed_data',
                 dag=dag,
                 postgres_conn_id='vds_bot',
@@ -212,7 +227,10 @@ with DAG(dag_name,
 
             #delete from vds.veh_length_15min prior to inserting
             delete_veh_length_data = PostgresOperator(
-                sql="DELETE FROM vds.veh_length_15min WHERE datetime_15min >= '{{ds}} 00:00:00'::timestamp AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'",
+                sql="""DELETE FROM vds.veh_length_15min
+                     WHERE
+                        datetime_15min >= '{{ds}} 00:00:00'::timestamp
+                        AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
                 task_id='delete_veh_length_data',
                 dag=dag,
                 postgres_conn_id='vds_bot',
