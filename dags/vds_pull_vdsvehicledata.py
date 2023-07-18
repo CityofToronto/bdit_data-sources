@@ -16,14 +16,10 @@ itsc_bot = PostgresHook('itsc_postgres')
 #CONNECT TO BIGDATA
 vds_bot = PostgresHook('vds_bot')
 
-#op_kwargs:
-conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
-start_date = {'start_date': '{{ ds }}'}
-
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    import vds_functions
+    from vds_functions import task_fail_slack_alert, pull_raw_vdsvehicledata
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
@@ -35,44 +31,6 @@ dag_name = 'vds_pull'
 names = ['gabe']
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-    list_names = []
-    for name in names:
-        list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    
-    log_url = context.get('task_instance').log_url.replace(
-        'localhost', context.get('task_instance').hostname + ":8080"
-    )
-    
-    slack_msg = """
-        :ring_buoy: Task Failed. 
-        *Hostname*: {hostname}
-        *Task*: {task}
-        *Dag*: {dag}
-        *Execution Time*: {exec_date}
-        *Log Url*: {log_url}
-        {slack_name} please check.
-        """.format(
-            hostname=context.get('task_instance').hostname,
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            exec_date=context.get('execution_date'),
-            log_url=log_url,
-            slack_name=' '.join(list_names)
-    )
-    
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
-        )
-    return failed_alert.execute(context=context)
     
 default_args = {
     'owner': ','.join(names),
@@ -109,9 +67,11 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
     pull_raw_vdsvehicledata_task = PythonOperator(
         task_id='pull_raw_vdsvehicledata',
-        python_callable=vds_functions.pull_raw_vdsvehicledata,
+        python_callable=pull_raw_vdsvehicledata,
         dag=dag,
-        op_kwargs = conns | start_date 
+        op_kwargs = {'rds_conn': vds_bot,
+                    'itsc_conn': itsc_bot,
+                   'start_date': '{{ ds }}'}
     )
 
     with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:

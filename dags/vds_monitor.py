@@ -18,14 +18,10 @@ itsc_bot = PostgresHook('itsc_postgres')
 #CONNECT TO BIGDATA
 vds_bot = PostgresHook('vds_bot')
 
-#op_kwargs:
-conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
-start_date = {'start_date': '{{ ds }}'}
-
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    from vds_functions import monitor_row_counts
+    from vds_functions import monitor_row_counts, task_fail_slack_alert
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
@@ -37,44 +33,6 @@ dag_name = 'vds_monitor'
 names = ['gabe']
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-    list_names = []
-    for name in names:
-        list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    
-    log_url = context.get('task_instance').log_url.replace(
-        'localhost', context.get('task_instance').hostname + ":8080"
-    )
-    
-    slack_msg = """
-        :ring_buoy: Task Failed. 
-        *Hostname*: {hostname}
-        *Task*: {task}
-        *Dag*: {dag}
-        *Execution Time*: {exec_date}
-        *Log Url*: {log_url}
-        {slack_name} please check.
-        """.format(
-            hostname=context.get('task_instance').hostname,
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            exec_date=context.get('execution_date'),
-            log_url=log_url,
-            slack_name=' '.join(list_names)
-    )
-    
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
-        )
-    return failed_alert.execute(context=context)
     
 def on_success_monitor_log(context):
     print(f"Clearing vds_pull for execution_date `{context.get('task').execution_date}`.")
@@ -108,7 +66,10 @@ with DAG(dag_name,
                 task_id = f"monitor_{dataset}",
                 dag=dag,
                 python_callable=monitor_row_counts,
-                op_kwargs = conns | start_date | {'dataset': dataset}
+                op_kwargs = {'rds_conn': vds_bot,
+                            'itsc_conn': itsc_bot,
+                           'start_date': '{{ ds }}',
+                            'dataset': dataset}
             )
             #empty_task is needed to not cause failure when no backfilling required.
             empty_task = EmptyOperator(task_id = "no_backfill", dag=dag)
