@@ -4,8 +4,6 @@ from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator
-from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
@@ -44,12 +42,12 @@ default_args = {
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=2),
+    'retry_delay': timedelta(minutes=30),
     'on_failure_callback': task_fail_slack_alert,
     'catchup': False,
 }
 
-#separate monitoring into it's own dag so we can use TriggerDagRunOperator
+#separate dag for monitoring late arrivals so we can use TriggerDagRunOperator
 with DAG(dag_name,
          default_args=default_args,
          max_active_runs=1,
@@ -57,36 +55,42 @@ with DAG(dag_name,
          ) as dag: #daily at 4am
 
     for dataset in ('vdsdata', 'vdsvehicledata'):
-        print(dataset)
 
+        #monitors row counts in vdsdata and vdsvehicledata tables
         with TaskGroup(group_id=f"monitor_late_{dataset}") as monitor_row_count:
-            #calls the monitoring (compares rows in ITSC vs RDS databases)
-            #branch operator returns list of tasks to trigger (clear_[0-7], empty_task)
-            check = BranchPythonOperator(
+            
+            lookback_days = 30
+
+            #calls the monitoring function (compares rows in ITSC vs RDS databases)
+            #branch operator returns list of tasks to trigger (clear_[0-(lookback_days-1)], empty_task)
+            monitor = BranchPythonOperator(
                 task_id = f"monitor_{dataset}",
                 dag=dag,
                 python_callable=monitor_row_counts,
-                op_kwargs = {'rds_conn': vds_bot,
-                            'itsc_conn': itsc_bot,
-                           'start_date': '{{ ds }}',
-                            'dataset': dataset}
+                op_kwargs = {
+                    'rds_conn': vds_bot,
+                    'itsc_conn': itsc_bot,
+                    'start_date': '{{ ds }}',
+                    'dataset': dataset,
+                    'lookback_days': lookback_days
+                }
             )
-            #empty_task is needed to not cause failure when no backfilling required.
+            #empty_task is needed to not cause failure when no backfilling tasks called
             empty_task = EmptyOperator(task_id = "no_backfill", dag=dag)
             
-            #create 7 clear tasks, one corresponding to each of the previous 7 days
+            #create clear tasks, one corresponding to each of the previous (lookback_days) days
             #"airflow tasks clear" to clear existing run and retrigger pull
-            for i in range(7):
+            for i in range(lookback_days):
                 clear_task = TriggerDagRunOperator(
                     task_id=f"clear_{i}",
                     dag=dag,
                     trigger_dag_id=f"vds_pull_{dataset}",
                     reset_dag_run=True,
-                    on_success_callback=on_success_monitor_log,
+                    on_success_callback=on_success_monitor_log, #callback listing the execution_date to clear
                     wait_for_completion=False,
                     execution_date='{{macros.ds_add(ds, params.i)}}',
-                    params={'i': -i}, #the days are indexed zero through 6 starting from start_date (0)
+                    params={'i': -i}, #the days are indexed zero through lookback_days starting from start_date (0)
                 )
-                check >> [clear_task, empty_task]
+                monitor >> [clear_task, empty_task]
     
     monitor_row_count
