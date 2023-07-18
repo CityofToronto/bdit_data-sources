@@ -95,7 +95,7 @@ default_args = {
 
 #start_date = '2023-06-28'
 
-with DAG(dag_name,
+with DAG(dag_id=dag_name,
          default_args=default_args,
          max_active_runs=5,
          schedule_interval='0 4 * * *') as dag: #daily at 4am
@@ -281,7 +281,7 @@ with DAG(dag_name,
     update_inventories
 
 #separate monitoring into it's own dag so we can use TriggerDagRunOperator
-with DAG(dag_name='vds_monitor',
+with DAG(dag_id='vds_monitor',
          default_args=default_args,
          max_active_runs=1,
          schedule_interval='0 4 * * *',
