@@ -89,7 +89,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=2),
-    #'on_failure_callback': task_fail_slack_alert,
+    'on_failure_callback': task_fail_slack_alert,
     'catchup': True,
 }
 
