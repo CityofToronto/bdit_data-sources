@@ -69,7 +69,8 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     WHERE
         timestamputc >= extract(epoch from timestamp with time zone {start}) :: INTEGER
         AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY') :: INTEGER
-        AND divisionid = 2; --other is 8001 which are traffic signal detectors and are mostly empty.
+        AND divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty.
+        AND length(lanedata) > 0; --these records don't even have any data to unpack.
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
@@ -93,7 +94,6 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                     # Transform raw data
                     transformed_data = transform_raw_data(data)
                     transformed_data = transformed_data.replace(nan, None)
-                    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #remove lane is None
                     data_tuples = [tuple(x) for x in transformed_data.to_numpy()]  
                     insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
                     data = cur.fetchmany(batch_size)
@@ -356,6 +356,7 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
                 divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
                 AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY') :: INTEGER
                 AND timestamputc < extract(epoch from timestamp with time zone {start}) :: INTEGER
+                AND length(lanedata) > 0
             GROUP BY dt;
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
