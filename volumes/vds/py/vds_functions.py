@@ -11,14 +11,18 @@ from airflow.macros import ds_add
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def read_sql_data(conn, query, table_name):
+def fetch_pandas_df(conn, query, table_name):
     #generic function to pull data in dataframe format 
-    try: 
+    try:
         with conn.get_conn() as con:
-            LOGGER.info(f"Fetching {table_name}")
-            data = pd.read_sql(query, con)
-            LOGGER.info(f"Number of rows fetched from {table_name} table: {data.shape[0]}")
-            return data
+            with con.cursor() as cur:
+                LOGGER.info(f"Fetching {table_name}")
+                cur.execute(query)
+                data = cur.fetchall()
+                LOGGER.info(f"Number of rows fetched from {table_name} table: {len(data)}")
+                data = pd.DataFrame(data)
+                data.columns=[x.name for x in cur.description]
+                return data
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
@@ -284,17 +288,6 @@ def parse_lane_data(laneData):
 def transform_raw_data(df):
 #transform vdsdata for inserting into RDS.
 
-    #identify empty rows by length of binary data stream = 0.
-    empty_rows = df[[len(x) == 0 for x in df['lanedata']]]
-
-    if empty_rows.empty is False:
-        LOGGER.info(f"Rows with empty vdsdata.lanedata: {empty_rows.shape[0]}, ({(empty_rows.shape[0] / df.shape[0]):.2f}% of total).")
-    else: 
-        LOGGER.info("No empty rows in vdsdata.lanedata.")
-
-    #drop empty rows? #decided to keep
-    #df_clean = df.drop(empty_rows.index) #remove empty rows
-
     #function to import int (UTC) timestamp in correct EST5EDT timezone. 
     UTC_to_EDTEST = lambda a: datetime.fromtimestamp(a, tz = pytz.timezone("EST5EDT"))
 
@@ -324,111 +317,94 @@ def transform_raw_data(df):
     
     return raw_20sec
 
-def monitor_func(itsc_conn, itsc_query, rds_conn, rds_query, start_date, lookback=7, threshold_percent=0.01):
+def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, lookback=7, threshold_percent=0.01):
     #compare row counts for two databases and return dates matching threshold
     #should make this function more generic
 
-    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsdata daily row count')
-    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsdata daily row count')
+    rows_source = fetch_pandas_df(conn_source, query_source, 'row count 1')
+    rows_dest = fetch_pandas_df(conn_dest, query_dest, 'row count 2')
    
     #create a full list of dates for a left join to make sure tasks indexing is correct.
     date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=lookback)
     dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
 
     #join full date list with row counts from rds, itsc
-    dates = dates.merge(rds_rows, on='dt', how='left')
-    dates = dates.merge(itsc_rows, on='dt', how='left')
+    dates = dates.merge(rows_dest, on='dt', how='left')
+    dates = dates.merge(rows_source, on='dt', how='left', suffixes=['_dest', '_source'])
 
     #find days with more rows in ITSC than RDS (existing pull). 
-    dates_dif = dates[dates['count_itsc'] >= (1 + threshold_percent) * dates['count_rds']] 
+    dates_dif = dates[dates['count_source'] >= (1 + threshold_percent) * dates['count_dest']] 
 
     return dates_dif['dt']
 
-def monitor_vdsdata(rds_conn, itsc_conn, start_date): 
+def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset):
 # compare row counts for vdsdata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
-      
-    itsc_query = sql.SQL("""
-        SELECT
-                TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
-                COUNT(*) AS count_itsc
-            FROM public.vdsdata
+    if dataset == 'vdsdata':
+        itsc_query = sql.SQL("""
+            SELECT
+                    TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
+                    SUM(LENGTH(lanedata)/15) AS count --each 15 bytes represents one row in final expanded data
+                FROM public.vdsdata
+                WHERE
+                    divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
+                    AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY') :: INTEGER
+                    AND timestamputc < extract(epoch from timestamp with time zone {start}) :: INTEGER
+                    AND length(lanedata) > 0
+                GROUP BY dt;
+        """).format(
+            start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+        )
+        
+        rds_query = sql.SQL("""
+            SELECT
+                date_trunc('day', datetime_15min)::date AS dt,
+                COUNT(*)
+            FROM vds.raw_vdsdata
             WHERE
-                divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-                AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL '7 DAY') :: INTEGER
-                AND timestamputc < extract(epoch from timestamp with time zone {start}) :: INTEGER
-                AND length(lanedata) > 0
-            GROUP BY dt;
-    """).format(
-        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
-    )
-      
-    rds_query = sql.SQL("""
-        SELECT
-            date_trunc('day', datetime_15min)::date AS dt,
-            COUNT(DISTINCT vds_id::text || datetime_20sec::text) AS count_rds
-                --due to lanedata expansion, need to count distinct vds_id + dt
-        FROM vds.raw_vdsdata
-        WHERE
-            datetime_20sec >= {start}::timestamp - INTERVAL '7 DAY'
-            AND datetime_20sec < {start}::timestamp
-        GROUP BY dt
+                datetime_20sec >= {start}::timestamp - INTERVAL '7 DAY'
+                AND datetime_20sec < {start}::timestamp
+            GROUP BY dt
+            """).format(
+            start = sql.Literal(start_date + " 00:00:00")
+        )
+    elif dataset == 'vdsvehicledata':
+        itsc_query = sql.SQL("""
+            SELECT
+                (TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+                COUNT(*)
+            FROM public.vdsvehicledata
+            WHERE
+                divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
+                AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - INTERVAL '7 DAY')
+                AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
+            GROUP BY dt
         """).format(
-        start = sql.Literal(start_date + " 00:00:00")
-    )
-
-    dates_dif = monitor_func(itsc_conn = itsc_conn,
-                             itsc_query = itsc_query,
-                             rds_conn = rds_conn,
-                             rds_query = rds_query,
-                             start_date = start_date,
-                             lookback=7)
-
-    if dates_dif.empty:
-        return "empty_task" #can't have no return value for branchoperator
-    else:
-        LOGGER.info("Clearing vds_pull.vdsdata_complete for %s", dates_dif.apply(str).values)
-        return ["monitor_late_vdsdata.clear_" + str(x) for x in dates_dif.index.values] #need to add group id as prefix
-
-def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date): 
-# compare row counts for vdsvehicledata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
-
-    itsc_query = sql.SQL("""
-        SELECT
-            (TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-            COUNT(*) AS itsc_count
-        FROM public.vdsvehicledata
-        WHERE
-            divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-            AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - INTERVAL '7 DAY')
-            AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
-        GROUP BY dt
-    """).format(
-        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
-    )
+            start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+        )
     
-    rds_query = sql.SQL("""
-        SELECT
-            d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-            count(*) AS rds_count
-        FROM vds.raw_vdsvehicledata AS d
-        WHERE
-            d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
-            AND dt >= {start}::timestamp - INTERVAL '7 DAY'
-            AND dt < {start}::timestamp
-        GROUP BY 1
-        """).format(
-        start = sql.Literal(start_date + " 00:00:00")
-    )
-
-    dates_dif = monitor_func(itsc_conn = itsc_conn,
-                             itsc_query = itsc_query,
-                             rds_conn = rds_conn,
-                             rds_query = rds_query,
-                             start_date = start_date,
-                             lookback=7)
+        rds_query = sql.SQL("""
+            SELECT
+                d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
+                COUNT(*)
+            FROM vds.raw_vdsvehicledata AS d
+            WHERE
+                d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
+                AND dt >= {start}::timestamp - INTERVAL '7 DAY'
+                AND dt < {start}::timestamp
+            GROUP BY 1
+            """).format(
+            start = sql.Literal(start_date + " 00:00:00")
+        )
+    
+    dates_dif = monitor_func(conn_source = itsc_conn,
+                            query_source = itsc_query,
+                            conn_dest = rds_conn,
+                            query_dest = rds_query,
+                            start_date = start_date,
+                            lookback=7)
 
     if dates_dif.empty:
-        return "empty_task" #can't have no return value for branchoperator
+        return "no_backfill" #can't have no return value for branchoperator
     else:
-        LOGGER.info("Clearing vds_pull.vdsvehicledata_complete for %s", dates_dif.apply(str).values)
-        return ["monitor_late_vdsvehicledata.clear_" + str(x) for x in dates_dif.index.values] #need to add group id as prefix
+        LOGGER.info("Clearing vds_pull_%s for %s", dataset, dates_dif.apply(str).values)
+        return [f"monitor_late_{dataset}.clear_" + str(x) for x in dates_dif.index.values]
