@@ -2,17 +2,13 @@ import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.bash import BashOperator
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
-from airflow.macros import ds_add
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
@@ -31,7 +27,7 @@ try:
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
-dag_name = 'vds_pull'
+dag_name = 'vds_pull_vdsdata'
 
 # Get slack member ids
 #dag_owners = Variable.get('dag_owners', deserialize_json=True)
@@ -87,15 +83,13 @@ default_args = {
     'start_date': datetime(2023, 5, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=2),
+    'retries': 5,
+    'retry_delay': timedelta(minutes=5),
     'on_failure_callback': task_fail_slack_alert,
     'catchup': True,
 }
 
-#start_date = '2023-06-28'
-
-with DAG(dag_id='vds_pull_vdsdata',
+with DAG(dag_name,
          default_args=default_args,
          max_active_runs=5,
          schedule_interval='0 4 * * *') as dag: #daily at 4am
@@ -197,123 +191,3 @@ with DAG(dag_id='vds_pull_vdsdata',
 
     vdsdata >> v15data
     update_inventories
-
-#this dag deletes any existing data from RDS vds.raw_vdsvehicledata and then pulls and inserts from ITSC
- #then summarizes into length and speed summary tables by 15 minutes.
-with DAG(dag_id='vds_pull_vdsvehicledata',
-         default_args=default_args,
-         max_active_runs=5,
-         schedule_interval='0 4 * * *') as dag: #daily at 4am
-
-    #deletes data from vds.volumes_15min
-    delete_vdsvehicledata_task = PostgresOperator(
-        sql="""DELETE FROM vds.raw_vdsvehicledata
-                WHERE
-                dt >= '{{ds}} 00:00:00'::timestamp
-                AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-        task_id='delete_vdsvehicledata',
-        dag=dag,
-        postgres_conn_id='vds_bot',
-        autocommit=True,
-        retries=1
-    )
-
-    #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
-    pull_raw_vdsvehicledata_task = PythonOperator(
-        task_id='pull_raw_vdsvehicledata',
-        python_callable=vds_functions.pull_raw_vdsvehicledata,
-        dag=dag,
-        op_kwargs = conns | start_date 
-    )
-
-    with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:
-        
-        #dlete from vds.veh_speeds_15min prior to inserting
-        delete_veh_speed_data = PostgresOperator(
-            sql="""DELETE FROM vds.veh_speeds_15min
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_veh_speed_data',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #insert new data into summary table vds.aggregate_15min_veh_speeds
-        summarize_speeds_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_veh_speeds('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
-            task_id='summarize_speeds',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #delete from vds.veh_length_15min prior to inserting
-        delete_veh_length_data = PostgresOperator(
-            sql="""DELETE FROM vds.veh_length_15min
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_veh_length_data',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #insert new data into summary table vds.veh_length_15min
-        summarize_lengths_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_vds_lengths('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
-            task_id='summarize_lengths',
-            dag=dag,
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-        
-        [delete_veh_speed_data >> summarize_speeds_task]
-        [delete_veh_length_data >> summarize_lengths_task]
-
-    delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task >> summarize_vdsvehicledata
-
-#separate monitoring into it's own dag so we can use TriggerDagRunOperator
-with DAG(dag_id='vds_monitor',
-         default_args=default_args,
-         max_active_runs=1,
-         schedule_interval='0 4 * * *',
-         catchup = False) as dag: #daily at 4am
-
-    for dataset in ('vdsdata', 'vdsvehicledata'):
-        print(dataset)
-
-        with TaskGroup(group_id=f"monitor_late_{dataset}") as monitor_row_count:
-            #calls the monitoring (compares rows in ITSC vs RDS databases)
-            #branch operator returns list of tasks to trigger (clear_[0-7], empty_task)
-            check = BranchPythonOperator(
-                task_id = f"monitor_{dataset}",
-                dag=dag,
-                python_callable=vds_functions.monitor_row_counts,
-                op_kwargs = conns | start_date | {'dataset': dataset}
-            )
-            #empty_task is needed to not cause failure when no backfilling required.
-            empty_task = EmptyOperator(task_id = "no_backfill", dag=dag)
-            
-            #create 7 clear tasks, one corresponding to each of the previous 7 days
-            #"airflow tasks clear" to clear existing run and retrigger pull
-            for i in range(7):
-                clear_task = TriggerDagRunOperator(
-                    task_id=f"clear_{i}",
-                    dag=dag,
-                    trigger_dag_id=f"vds_pull_{dataset}",
-                    reset_dag_run=True,
-                    on_success_callback=on_success_monitor_log,
-                    wait_for_completion=False,
-                    execution_date='{{macros.ds_add(ds, params.i)}}',
-                    params={'i': -i}, #the days are indexed zero through 6 starting from start_date (0)
-                )
-                check >> [clear_task, empty_task]
-    
-    monitor_row_count
