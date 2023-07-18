@@ -3,8 +3,6 @@ import sys
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
-from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
@@ -78,7 +76,7 @@ with DAG(dag_name,
 
         delete_raw_vdsdata_task >> pull_raw_vdsdata_task
 
-    #this task group deletes any existing data from RDS vds.volumes_15min and then inserts into the same table
+    #this task group deletes any existing data from RDS summary tables (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts into the same table
     with TaskGroup(group_id='summarize_v15') as v15data:
         #deletes data from vds.volumes_15min
         delete_v15_task = PostgresOperator(
@@ -94,16 +92,16 @@ with DAG(dag_name,
         )
 
         #inserts summarized data into RDS `vds.volumes_15min`
-        summarize_data_task = PostgresOperator(
+        summarize_v15_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
-            task_id='summarize_data',
+            task_id='summarize_v15',
             dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        #deletes data from vds.volumes_15min
+        #deletes data from vds.volumes_15min_bylane
         delete_v15_bylane_task = PostgresOperator(
             sql="""DELETE FROM vds.volumes_15min_bylane
                     WHERE
@@ -116,17 +114,22 @@ with DAG(dag_name,
             retries=1
         )
 
-        #inserts summarized data into RDS `vds.volumes_15min`
-        summarize_data_bylane_task = PostgresOperator(
+        #inserts summarized data into RDS `vds.volumes_15min_bylane`
+        summarize_v15_bylane_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_vds_volumes_bylane('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
-            task_id='summarize_data_bylane',
+            task_id='summarize_v15_bylane',
             dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
-    
+
+        [delete_v15_task >> summarize_v15_task]
+        [delete_v15_bylane_task >> summarize_v15_bylane_task]
+
+    #this task group pulls the detector inventories
     with TaskGroup(group_id='update_inventories') as update_inventories:
+
         #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
         pull_detector_inventory_task = PythonOperator(
             task_id='pull_and_insert_detector_inventory',
@@ -145,8 +148,6 @@ with DAG(dag_name,
 
         pull_detector_inventory_task
         pull_entity_locations_task
-        [delete_v15_task >> summarize_data_task]
-        [delete_v15_bylane_task >> summarize_data_bylane_task]
 
-    vdsdata >> v15data
+    vdsdata >> v15data #pull then summarize
     update_inventories

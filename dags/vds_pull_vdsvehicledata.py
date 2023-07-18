@@ -3,8 +3,6 @@ import sys
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
-from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
@@ -51,29 +49,35 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
          max_active_runs=5,
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
-    #deletes data from vds.volumes_15min
-    delete_vdsvehicledata_task = PostgresOperator(
-        sql="""DELETE FROM vds.raw_vdsvehicledata
-                WHERE
-                dt >= '{{ds}} 00:00:00'::timestamp
-                AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-        task_id='delete_vdsvehicledata',
-        dag=dag,
-        postgres_conn_id='vds_bot',
-        autocommit=True,
-        retries=1
-    )
+    #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
+    with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
 
-    #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
-    pull_raw_vdsvehicledata_task = PythonOperator(
-        task_id='pull_raw_vdsvehicledata',
-        python_callable=pull_raw_vdsvehicledata,
-        dag=dag,
-        op_kwargs = {'rds_conn': vds_bot,
-                    'itsc_conn': itsc_bot,
-                   'start_date': '{{ ds }}'}
-    )
+        #deletes data from vds.raw_vdsvehicledata
+        delete_vdsvehicledata_task = PostgresOperator(
+            sql="""DELETE FROM vds.raw_vdsvehicledata
+                    WHERE
+                    dt >= '{{ds}} 00:00:00'::timestamp
+                    AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
+            task_id='delete_vdsvehicledata',
+            dag=dag,
+            postgres_conn_id='vds_bot',
+            autocommit=True,
+            retries=1
+        )
 
+        #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
+        pull_raw_vdsvehicledata_task = PythonOperator(
+            task_id='pull_raw_vdsvehicledata',
+            python_callable=pull_raw_vdsvehicledata,
+            dag=dag,
+            op_kwargs = {'rds_conn': vds_bot,
+                        'itsc_conn': itsc_bot,
+                    'start_date': '{{ ds }}'}
+        )
+
+        delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
+
+    #this task group summarizes vdsvehicledata into `vds.veh_speeds_15min` (5km/h speed bins), `vds.veh_length_15min` (1m length bins)
     with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:
         
         #dlete from vds.veh_speeds_15min prior to inserting
@@ -125,4 +129,4 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         [delete_veh_speed_data >> summarize_speeds_task]
         [delete_veh_length_data >> summarize_lengths_task]
 
-    delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task >> summarize_vdsvehicledata
+    pull_vdsvehicledata >> summarize_vdsvehicledata
