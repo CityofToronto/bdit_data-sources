@@ -4,17 +4,15 @@ from numpy import nan
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 import struct
-from datetime import datetime, date
+from datetime import datetime
 import pytz
 from airflow.macros import ds_add
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-#473 rows before adding fetch_X
-
 def read_sql_data(conn, query, table_name):
-    #generic function to pull data from ITSC 
+    #generic function to pull data in dataframe format 
     try: 
         with conn.get_conn() as con:
             LOGGER.info(f"Fetching {table_name}")
@@ -26,16 +24,20 @@ def read_sql_data(conn, query, table_name):
         LOGGER.critical(exc)
         con.close()
 
-def fetch_all_data(conn, query, table_name):
-    #generic function to pull data from ITSC 
-    try: 
-        with conn.get_conn() as con:
-            with con.cursor() as cur:       
+def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, table_name, batch_size = 100000):
+    #generic function to pull and insert data using different connections and queries.
+    batch=1
+    try:
+        with select_conn.get_conn() as con:
+            with con.cursor() as cur:
                 LOGGER.info(f"Fetching {table_name}")
-                cur.execute(query)
-                data = cur.fetchall()
-                LOGGER.info(f"Number of rows fetched from {table_name} table: {len(data)}")
-                return data
+                cur.execute(select_query)
+                data = cur.fetchmany(batch_size)
+                while not len(data) == 0:
+                    LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from {table_name}.")
+                    insert_data(insert_conn, insert_query, table_name, data)
+                    data = cur.fetchmany(batch_size)
+                    batch = batch + 1
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
@@ -72,20 +74,34 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
 
-    raw_data = read_sql_data(itsc_conn, raw_sql, 'vdsdata')
-    
-    # Transform raw data
-    transformed_data = transform_raw_data(raw_data)
-    transformed_data = transformed_data.replace(nan, None)
-    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #remove lane is None
-    data_tuples = [tuple(x) for x in transformed_data.to_numpy()]
-
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
                                         division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
                                         ) VALUES %s;""")
+    batch_size = 100000
+    batch = 1
+    try:
+        with itsc_conn.get_conn() as con:
+            with con.cursor() as cur:
+                LOGGER.info("Fetching %s", 'vdsvehicledata')
+                cur.execute(raw_sql)
+                data = cur.fetchmany(batch_size)
+                while not len(data) == 0:
+                    LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from vdsdata.")
+                    data = pd.DataFrame(data)
+                    data.columns=[x.name for x in cur.description]
     
-    insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
-
+                    # Transform raw data
+                    transformed_data = transform_raw_data(data)
+                    transformed_data = transformed_data.replace(nan, None)
+                    transformed_data = transformed_data[[x is not None for x in transformed_data['lane']]] #remove lane is None
+                    data_tuples = [tuple(x) for x in transformed_data.to_numpy()]  
+                    insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
+                    data = cur.fetchmany(batch_size)
+                    batch = batch + 1
+    except Error as exc:
+            LOGGER.critical("Error fetching from %s.", 'vdsdata')
+            LOGGER.critical(exc)
+            con.close()
 
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
@@ -109,13 +125,18 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
     
-    raw_data = fetch_all_data(itsc_conn, raw_sql, 'vdsvehicledata')
-    
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;""")
-    
-    insert_data(rds_conn, insert_query, 'vdsvehicledata', raw_data)
+
+    fetch_and_insert_data(select_conn=itsc_conn, 
+                          insert_conn=rds_conn,
+                          select_query=raw_sql,
+                          insert_query=insert_query,
+                          table_name='vdsvehicledata',
+                          batch_size=1000000
+                          )
+
 
 def pull_detector_inventory(rds_conn, itsc_conn):
 #pull the detector inventory table (`vdsconfig`) from ITS Central and insert into RDS `vds.vdsconfig` as is. 
@@ -146,8 +167,6 @@ def pull_detector_inventory(rds_conn, itsc_conn):
     FROM public.vdsconfig
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table""")
 
-    vds_config_data = fetch_all_data(itsc_conn, detector_sql, 'vdsconfig')
-
     # upsert data
     insert_query = sql.SQL("""
         INSERT INTO vds.vdsconfig (
@@ -157,14 +176,14 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT DO NOTHING;
     """)
-    select_count = sql.SQL("""SELECT COUNT(1) FROM vds.vdsconfig""")
 
-    original_count = fetch_all_data(rds_conn, select_count, 'vds.vdsconfig row count')
-    insert_data(rds_conn, insert_query, 'vds.vdsconfig', vds_config_data)
-    new_count = fetch_all_data(rds_conn, select_count, 'vds.vdsconfig row count') 
+    fetch_and_insert_data(select_conn=itsc_conn, 
+                            insert_conn=rds_conn,
+                            select_query=detector_sql,
+                            insert_query=insert_query,
+                            table_name='vdsconfig'
+                            )
     
-    LOGGER.info(f"{new_count[0][0] - original_count[0][0]} new records inserted into vds.vdsconfig.")
-
 def pull_entity_locations(rds_conn, itsc_conn):
 #pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
 #very small table so OK to pull entire table daily. 
@@ -198,10 +217,8 @@ def pull_entity_locations(rds_conn, itsc_conn):
     WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
     """)
 
-    entitylocations = fetch_all_data(itsc_conn, entitylocation_sql, 'entitylocations')
-
     # upsert data
-    upsert_query = sql.SQL("""
+    insert_query = sql.SQL("""
         INSERT INTO vds.entity_locations (
             division_id, entity_type, entity_id, location_timestamp, latitude, longitude, altitude_meters_asl, 
             heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
@@ -210,13 +227,13 @@ def pull_entity_locations(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT DO NOTHING;
     """)
-    select_count = sql.SQL("""SELECT COUNT(1) FROM vds.entity_locations""")
 
-    original_count = fetch_all_data(rds_conn, select_count, 'vds.entity_locations row count')
-    insert_data(rds_conn, upsert_query, 'vds.entity_locations', entitylocations)
-    new_count = fetch_all_data(rds_conn, select_count, 'vds.entity_locations row count') 
-
-    LOGGER.info(f"{new_count[0][0] - original_count[0][0]} new records inserted into vds.entity_locations.")
+    fetch_and_insert_data(select_conn=itsc_conn, 
+                          insert_conn=rds_conn,
+                          select_query=entitylocation_sql,
+                          insert_query=insert_query,
+                          table_name='entitylocations'
+                          )
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
@@ -307,6 +324,25 @@ def transform_raw_data(df):
     
     return raw_20sec
 
+def monitor_func(itsc_conn, itsc_query, rds_conn, rds_query, start_date, lookback=7, threshold_percent=0.01):
+    #compare row counts for two databases and return dates matching threshold
+    #should make this function more generic
+
+    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsdata daily row count')
+    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsdata daily row count')
+   
+    #create a full list of dates for a left join to make sure tasks indexing is correct.
+    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=lookback)
+    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
+
+    #join full date list with row counts from rds, itsc
+    dates = dates.merge(rds_rows, on='dt', how='left')
+    dates = dates.merge(itsc_rows, on='dt', how='left')
+
+    #find days with more rows in ITSC than RDS (existing pull). 
+    dates_dif = dates[dates['count_itsc'] >= (1 + threshold_percent) * dates['count_rds']] 
+
+    return dates_dif['dt']
 
 def monitor_vdsdata(rds_conn, itsc_conn, start_date): 
 # compare row counts for vdsdata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
@@ -324,9 +360,7 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
-    
-    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsdata daily row count')
-   
+      
     rds_query = sql.SQL("""
         SELECT
             date_trunc('day', datetime_15min)::date AS dt,
@@ -341,25 +375,18 @@ def monitor_vdsdata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00")
     )
 
-    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsdata daily row count')
-   
-    #create a full list of dates for a left join to make sure tasks indexing is correct.
-    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=7)
-    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
-
-    #join full date list with row counts from rds, itsc
-    dates = dates.merge(rds_rows, on='dt', how='left')
-    dates = dates.merge(itsc_rows, on='dt', how='left')
-
-    #find days with more rows in ITSC than RDS (existing pull). 
-    dates_dif = dates[dates['count_itsc'] > dates['count_rds']]['dt']
+    dates_dif = monitor_func(itsc_conn = itsc_conn,
+                             itsc_query = itsc_query,
+                             rds_conn = rds_conn,
+                             rds_query = rds_query,
+                             start_date = start_date,
+                             lookback=7)
 
     if dates_dif.empty:
         return "empty_task" #can't have no return value for branchoperator
     else:
         LOGGER.info("Clearing vds_pull.vdsdata_complete for %s", dates_dif.apply(str).values)
         return ["monitor_late_vdsdata.clear_" + str(x) for x in dates_dif.index.values] #need to add group id as prefix
-
 
 def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 # compare row counts for vdsvehicledata table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
@@ -377,8 +404,6 @@ def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date):
     """).format(
         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
-
-    itsc_rows = read_sql_data(itsc_conn, itsc_query, 'vdsvehicledata daily row count')
     
     rds_query = sql.SQL("""
         SELECT
@@ -394,18 +419,12 @@ def monitor_vdsvehicledata(rds_conn, itsc_conn, start_date):
         start = sql.Literal(start_date + " 00:00:00")
     )
 
-    rds_rows = read_sql_data(rds_conn, rds_query, 'raw_vdsvehicledata daily row count')
-
-    #create a full list of dates for a left join to make sure tasks indexing is correct.
-    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=7)
-    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
-
-    #join full date list with row counts from rds, itsc
-    dates = dates.merge(rds_rows, on='dt', how='left')
-    dates = dates.merge(itsc_rows, on='dt', how='left')
-
-    #find days with more rows in ITSC than RDS (existing pull). 
-    dates_dif = dates[dates['count_itsc'] > dates['count_rds']]['dt']
+    dates_dif = monitor_func(itsc_conn = itsc_conn,
+                             itsc_query = itsc_query,
+                             rds_conn = rds_conn,
+                             rds_query = rds_query,
+                             start_date = start_date,
+                             lookback=7)
 
     if dates_dif.empty:
         return "empty_task" #can't have no return value for branchoperator
