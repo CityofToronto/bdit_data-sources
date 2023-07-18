@@ -7,9 +7,54 @@ import struct
 from datetime import datetime
 import pytz
 from airflow.macros import ds_add
+from airflow.models import Variable
+from airflow.hooks.base import BaseHook
+from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+def task_fail_slack_alert(context):
+    # connection to slack
+    global SLACK_CONN_ID
+
+    slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+    list_names = []
+    for name in names:
+        list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+    
+    log_url = context.get('task_instance').log_url.replace(
+        'localhost', context.get('task_instance').hostname + ":8080"
+    )
+    
+    slack_msg = """
+        :ring_buoy: Task Failed. 
+        *Hostname*: {hostname}
+        *Task*: {task}
+        *Dag*: {dag}
+        *Execution Time*: {exec_date}
+        *Log Url*: {log_url}
+        {slack_name} please check.
+        """.format(
+            hostname=context.get('task_instance').hostname,
+            task=context.get('task_instance').task_id,
+            dag=context.get('task_instance').dag_id,
+            exec_date=context.get('execution_date'),
+            log_url=log_url,
+            slack_name=' '.join(list_names)
+    )
+    
+    failed_alert = SlackWebhookOperator(
+        task_id='slack_test',
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username='airflow',
+        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
+        )
+    return failed_alert.execute(context=context)
 
 def fetch_pandas_df(conn, query, table_name):
     #generic function to pull data in dataframe format 

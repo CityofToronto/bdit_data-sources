@@ -23,7 +23,7 @@ start_date = {'start_date': '{{ ds }}'}
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    import vds_functions
+    from vds_functions import task_fail_slack_alert, pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
@@ -35,48 +35,7 @@ dag_name = 'vds_pull_vdsdata'
 names = ['gabe']
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-    list_names = []
-    for name in names:
-        list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     
-    log_url = context.get('task_instance').log_url.replace(
-        'localhost', context.get('task_instance').hostname + ":8080"
-    )
-    
-    slack_msg = """
-        :ring_buoy: Task Failed. 
-        *Hostname*: {hostname}
-        *Task*: {task}
-        *Dag*: {dag}
-        *Execution Time*: {exec_date}
-        *Log Url*: {log_url}
-        {slack_name} please check.
-        """.format(
-            hostname=context.get('task_instance').hostname,
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            exec_date=context.get('execution_date'),
-            log_url=log_url,
-            slack_name=' '.join(list_names)
-    )
-    
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
-        )
-    return failed_alert.execute(context=context)
-    
-def on_success_monitor_log(context):
-    print(f"Clearing vds_pull for execution_date `{context.get('task').execution_date}`.")
-
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
@@ -112,7 +71,7 @@ with DAG(dag_name,
         #get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`
         pull_raw_vdsdata_task = PythonOperator(
             task_id='pull_raw_vdsdata',
-            python_callable=vds_functions.pull_raw_vdsdata,
+            python_callable=pull_raw_vdsdata,
             dag=dag,
             op_kwargs = conns | start_date 
         )
@@ -171,7 +130,7 @@ with DAG(dag_name,
         #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
         pull_detector_inventory_task = PythonOperator(
             task_id='pull_and_insert_detector_inventory',
-            python_callable=vds_functions.pull_detector_inventory,
+            python_callable=pull_detector_inventory,
             dag=dag,
             op_kwargs = conns
         )
@@ -179,7 +138,7 @@ with DAG(dag_name,
         #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
         pull_entity_locations_task = PythonOperator(
             task_id='pull_and_insert_entitylocations',
-            python_callable=vds_functions.pull_entity_locations,
+            python_callable=pull_entity_locations,
             dag=dag,
             op_kwargs = conns
         )
