@@ -1,11 +1,14 @@
-VDS data is pulled daily from ITS Central database on terminal server by dag: /bdit_data-sources/dags/vds_pull.py
+# Vehicle Detector System (VDS) data  
 
-VDS system consists of: 
--RESCU loop detectors
--Blue City VDS
--Intersection signal detectors
--
+VDS data is pulled daily from ITS Central database on terminal server by dags running on Morbius.  
+VDS system consists of:  
+    Division 2:  
+        -RESCU loop detectors  
+        -Blue City VDS  
+    Division 8001: (Only 1 day sample pulled)  
+        -Intersection signal detectors + Special Detectors (Special Function and Preemption detectors)  
 
+# Table Structure  
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata. 
 Volumes are in vehicles per hour for the 20 sec bin. To convert to 15 minute volume, group by datetime_15min and take `SUM(volume_veh_per_hr) / 4 / 45` where / 4 represents hourly to 15 min conversion and / 45 represents number of 20 sec bins in a 15 minute period. This assumes both missing bins and zero values are zeros, in line with old pipeline. 
@@ -187,7 +190,7 @@ Row count: 601,460
 | volume_veh_per_hr | integer                     | 0                   |               |
 | occupancy_percent | double precision            | 0.0                 |               |
 
-## Special Function and Preemption detectors: 
+### Special Function and Preemption detectors (Division 8001): 
 These types of sensors include transit preemption, fire emergency services preemption. The one day sample we have only contains 22 detections which doesn't seem accurate. Sample query: 
 ```
 SELECT DISTINCT ON (vds_id, datetime_20sec)
@@ -205,8 +208,48 @@ LIMIT 1000
 
 # Dag Design 
 
-## vds_monitor
+## vds_pull_vdsdata [../../../dags/vds_pull_vdsdata.py]
 
-## vds_pull_vdsdata
+**pull_vdsdata**  
+    [*delete_vdsdata* >> *pull_raw_vdsdata*]  
 
-## vds_pull_vdsvehicledata
+Deletes data from RDS `vds.raw_vdsdata` for specific date and then pulls into RDS from ITS Central database table `vdsdata`. 
+
+**pull_vdsdata** >> **summarize_v15**  
+    [*delete_v15* >> *summarize_v15*]  
+    [*delete_v15_bylane* >> *summarize_v15_bylane*]
+
+First deletes any existing data then inserts summaries of `vds.raw_vdsdata` into `vds.volumes_15min` and `vds.volumes_15min_bylane`. 
+
+**update_inventories**  
+    *pull_and_insert_detector_inventory*  
+    *pull_and_insert_entitylocations*
+
+Pulls entire detector inventory (`vdsconfig`, `entitylocations` tables) into RDS daily. 
+
+## vds_pull_vdsvehicledata [../../../dags/vds_pull_vdsvehicledata.py]
+
+**pull_vdsvehicledata**  
+    *delete_vdsvehicledata* >> *pull_raw_vdsvehicledata*  
+
+Deletes data from RDS `vds.raw_vdsvehicledata` for specific date and then pulls into RDS from ITS Central database. 
+
+**summarize_vdsvehicledata**  
+    [*delete_veh_speed_data* >> *summarize_speeds*]  
+    [*delete_veh_length_data* >> *summarize_lengths*]  
+
+Deletes data from RDS `vds.veh_length_15min` and `vds.veh_speeds_15min` for specific date and then summarizes into these tables from RDS `vds.raw_vdsvehicledata`. 
+
+## vds_monitor [../../../dags/vds_monitor.py]
+
+**monitor_late_vdsdata**  
+    *monitor_vdsdata* >> [*no_backfill*, *clear_[0-N]*]
+
+Checks row count for `vdsdata` in ITS Central vs. row count in `raw_vdsdata` in RDS. If new rows exceed a threshold (currently 1%), re-triggers dag runs for those days using TriggerDagRunOperator.  
+
+**monitor_late_vdsvehicledata**  
+    *monitor_vdsvehicledata* >> [*no_backfill*, *clear_[0-N]*]
+
+Checks row count for `vdsvehicledata` in ITS Central vs. row count in `raw_vdsvehicledata` in RDS. If new rows exceed a threshold (currently 1%), re-triggers dag runs for those days using TriggerDagRunOperator.  
+
+Currently scheduled @monthly with 60 day lookback. Set `lookback_days` under task group `monitor_row_count` in vds_monitor.py. 
