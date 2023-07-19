@@ -15,6 +15,7 @@ Contains only division_id = 2. A sample of data for division_id = 8001 is stored
 Row count: 1,203,083 (7 days)
 | column_name       | data_type                   | sample              | description   |
 |:------------------|:----------------------------|:--------------------|:--------------|
+| volume_uid        | bigint                      | 105906844           | pkey          |
 | division_id       | smallint                    | 2                   |               |
 | vds_id            | integer                     | 2000410             |               |
 | datetime_20sec    | timestamp without time zone | 2023-06-29 00:01:02 | Timestamp of record. Not always 20sec increments, depending on sensor. |
@@ -39,20 +40,43 @@ Row count: 1,148,765 (7 days)
 | sensor_occupancy_ds | smallint                    | 104                        |               |
 | speed_kmh           | double precision            | 15.0                       |               |
 | length_meter        | double precision            | 4.0                        |               |
+| volume_uid          | bigint                      | 244672315                  | pkey          |
 
 ## vds.volumes_15min
 A summary of volumes from vds.raw_vdsdata. 
 Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline).
 
-Row count: 633,448 (7 days)
+Row count: 927,399
+| column_name        | data_type                   | sample              | description   |
+|:-------------------|:----------------------------|:--------------------|:--------------|
+| volumeid           | bigint                      | 2409198             | pkey          |
+| detector_id        | text                        | DE0040DWG           |               |
+| division_id        | smallint                    | 2                   |               |
+| vds_id             | integer                     | 3                   |               |
+| num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
+| datetime_bin       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if bin timestamp represents start or end of 15 minute period. |
+| volume_15min       | smallint                    | 217                 |               |
+| expected_bins      | smallint                    | 45                  | Expected bins per lane in a 15 minute period |
+| num_obs            | smallint                    | 84                  | Number of actual observations in a 15 minute period. Shouldn't be larger than num_lanes * expected_bins. |
+| volumeuid          | bigint                      | 2409198             |               |
+| num_distinct_lanes | smallint                    | 4                   | Number of distinct lanes present in this bin. |
+
+
+## vds.volumes_15min_bylane
+Same as above but by lane. 
+Will be used to determine when individual lane sensors are down. 
+Row count: 1,712,401
 | column_name   | data_type                   | sample              | description   |
 |:--------------|:----------------------------|:--------------------|:--------------|
-| volume_uid    | bigint                      | 2888803             |               |
-| detector_id   | text                        | DW0161DEG           |               |
+| volumeuid     | bigint                      | 2228148             |               |
+| detector_id   | text                        | DE0040DWG           |               |
 | division_id   | smallint                    | 2                   |               |
-| vds_id        | integer                     | 2000381             |               |
-| datetime_bin  | timestamp without time zone | 2023-06-29 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if bin timestamp represents start or end of 15 minute period. |
-| volume_15min  | integer                     | 632                 |               |
+| vds_id        | integer                     | 3                   |               |
+| lane          | smallint                    | 1                   |               |
+| datetime_bin  | timestamp without time zone | 2023-06-07 00:00:00 |               |
+| volume_15min  | smallint                    | 8                   |               |
+| expected_bins | smallint                    | 45                  |               |
+| num_obs       | smallint                    | 45                  |               |
 
 ## vds.vdsconfig
 This table contains details about vehicle detectors from ITSC public.vdsconfig. 
@@ -86,36 +110,67 @@ Row count: 10,219
 | signal_id          | integer                     | 2005518                |               |
 | signal_division_id | smallint                    | 8001                   |               |
 | movement           | smallint                    |                        |               |
+| uid                | integer                     | 1                      | pkey          |
 
 ## vds.entity_locations
 This table contains locations for vehicle detectors from ITSC public.entitylocations.
 To get the current location, join on entity_locations.entity_id = vdsconfig.vdsid and `SELECT DISTINCT ON (entity_id) ... ORDER BY entity_id, location_timestamp DESC`. 
 
-Row count: 15,930
-| column_name                    | data_type                   | description   |
-|:-------------------------------|:----------------------------|:--------------|
-| division_id                    | smallint                    |               |
-| entity_type                    | smallint                    |               |
-| entity_id                      | integer                     |               |
-| location_timestamp             | timestamp without time zone |               |
-| latitude                       | double precision            |               |
-| longitude                      | double precision            |               |
-| altitude_meters_asl            | double precision            |               |
-| heading_degrees                | double precision            |               |
-| speed_kmh                      | double precision            |               |
-| num_satellites                 | integer                     |               |
-| dilution_of_precision          | double precision            |               |
-| main_road_id                   | integer                     |               |
-| cross_road_id                  | integer                     |               |
-| second_cross_road_id           | integer                     |               |
-| main_road_name                 | character varying           |               |
-| cross_road_name                | character varying           |               |
-| second_cross_road_name         | character varying           |               |
-| street_number                  | character varying           |               |
-| offset_distance_meters         | double precision            |               |
-| offset_direction_degrees       | double precision            |               |
-| location_source                | smallint                    |               |
-| location_description_overwrite | character varying           |               |
+Row count: 16,013
+| column_name                    | data_type                   | sample                                     | description   |
+|:-------------------------------|:----------------------------|:-------------------------------------------|:--------------|
+| division_id                    | smallint                    | 8001                                       |               |
+| entity_type                    | smallint                    | 5                                          |               |
+| entity_id                      | integer                     | 2004114                                    |               |
+| location_timestamp             | timestamp without time zone | 2021-07-04 22:05:28.957568                 |               |
+| latitude                       | double precision            | 43.64945                                   |               |
+| longitude                      | double precision            | -79.371464                                 |               |
+| altitude_meters_asl            | double precision            |                                            |               |
+| heading_degrees                | double precision            |                                            |               |
+| speed_kmh                      | double precision            |                                            |               |
+| num_satellites                 | integer                     |                                            |               |
+| dilution_of_precision          | double precision            |                                            |               |
+| main_road_id                   | integer                     | 3741                                       |               |
+| cross_road_id                  | integer                     | 3471                                       |               |
+| second_cross_road_id           | integer                     | 3471                                       |               |
+| main_road_name                 | character varying           | Jarvis St                                  |               |
+| cross_road_name                | character varying           | Front St E                                 |               |
+| second_cross_road_name         | character varying           | Front St E                                 |               |
+| street_number                  | character varying           |                                            |               |
+| offset_distance_meters         | double precision            |                                            |               |
+| offset_direction_degrees       | double precision            |                                            |               |
+| location_source                | smallint                    | 4                                          |               |
+| location_description_overwrite | character varying           | JARVIS ST and FRONT ST E / LOWER JARVIS ST |               |
+| uid                            | integer                     | 1                                          |               |
+
+## vds.veh_speeds_15min
+Summarization of vdsvehicledata with count of observation (vehicle) speeds grouped by 15 min / 5kph / vds_id. 
+
+Row count: 6,415,490
+| column_name    | data_type                   | sample              | description   |
+|:---------------|:----------------------------|:--------------------|:--------------|
+| division_id    | smallint                    | 2                   |               |
+| vds_id         | integer                     | 3                   |               |
+| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
+| speed_5kph     | smallint                    | 0                   | 5km/h speed bins, rounded down. |
+| count          | smallint                    | 14                  |               |
+| total_count    | smallint                    | 25                  | Use count::numeric/total_count to get proportion. |
+| uid            | bigint                      | 6774601             |               |
+
+## vds.veh_length_15min
+Summarization of vdsvehicledata with count of observation (vehicle) lengths grouped by 15 min / 1m length / vds_id. 
+
+Row count: 4,622,437
+| column_name    | data_type                   | sample              | description   |
+|:---------------|:----------------------------|:--------------------|:--------------|
+| division_id    | smallint                    | 2                   |               |
+| vds_id         | integer                     | 3                   |               |
+| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
+| length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
+| count          | smallint                    | 3                   |               |
+| total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
+| uid            | bigint                      | 4866932             |               |
+
 
 ## vds.raw_vdsdata_div8001
 A sample of 1 day of vdsdata for sensors from division_id 8001. The data is mostly blank rows and may not be of any utility. Main `raw_vdsdata` table is now filtered to only division_id = 2. 
@@ -147,98 +202,11 @@ ORDER BY vds_id, datetime_20sec, c.start_timestamp DESC
 LIMIT 1000
 ```
 
-Inquire with Simon about backfilling?
-Hard to tell if required 
 
-On RDS:
-```
-SELECT
-    date_trunc('day', datetime_15min)
-    COUNT(DISTINCT vds_id::text || datetime_20sec::text)
-FROM vds.raw_vdsdata
-GROUP BY 1
-```
+# Dag Design 
 
-On ITS Central: 
-```
-SELECT
-    TIMEZONE('EST5EDT', TO_TIMESTAMP(d.timestamputc))::date, 
-	COUNT(*)
-FROM public.vdsdata AS d
-WHERE
-	timestamputc >= extract(epoch from timestamp with time zone '2023-06-28 00:00:00 EST5EDT')
-	AND timestamputc < extract(epoch from timestamp with time zone '2023-07-06 00:00:00 EST5EDT' + INTERVAL '1 DAY')
-	AND d.divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-GROUP BY 1
-ORDER BY 1
-```
+## vds_monitor
 
-There are some missing records in RDS from the last 9 days:
+## vds_pull_vdsdata
 
-| date_trunc      | RDS Count | ITSC Count | Dif |
-|:----------------|:----------|:-----------|:----|
-| 06/28/2023 0:00 | 56285     | 57149      | 864 |
-| 06/29/2023 0:00 | 53754     | 53826      | 72  |
-| 06/30/2023 0:00 | 55417     | 56713      | 1296|
-| 07/01/2023 0:00 | 52893     | 56349      | 3456|
-| 07/02/2023 0:00 | 53727     | 54339      | 612 |
-| 07/03/2023 0:00 | 54090     | 54090      | 0   |
-| 07/04/2023 0:00 | 53958     | 53958      | 0   |
-| 07/05/2023 0:00 | 53506     | 53506      | 0   |
-| 07/06/2023 0:00 | 53286     | 53286      | 0   |
-
-In `vdsvehicledata`:
-
-RDS: 
-```
-SELECT
-        d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-		count(*)
-FROM vds.raw_vdsvehicledata AS d
-WHERE
-	d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
-	--AND TIMEZONE('UTC', d.timestamputc) >= ''::timestamptz
-	--AND TIMEZONE('UTC', d.timestamputc) < {start}::timestamptz + INTERVAL '1 DAY'
-GROUP BY 1
-ORDER BY 1
-```
-
-ITSC: 
-```
-SELECT
-        (TIMEZONE('UTC', d.timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-		count(*)
-FROM public.vdsvehicledata AS d
-LEFT JOIN public.vdsconfig AS c ON
-	d.vdsid = c.vdsid
-	AND d.divisionid = c.divisionid
-	AND d.timestamputc >= c.starttimestamputc
-	AND (
-		d.timestamputc <= c.endtimestamputc
-		OR c.endtimestamputc IS NULL) --no end date
-WHERE
-	d.divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-	AND TIMEZONE('UTC', d.timestamputc) >= '2023-06-28 00:00:00 EST5EDT'::timestamptz
-	AND TIMEZONE('UTC', d.timestamputc) < '2023-07-09 00:00:00 EST5EDT'::timestamptz + INTERVAL '1 DAY'
-	AND substring(c.sourceid, 1, 3) <> 'BCT' --bluecity.ai sensors have no data
-GROUP BY 1
-ORDER BY 1
-```
-
-Only found 1 missing record... need to investigate further before backfilling this dataset. 
-
-| date	     | rds_count | itsc_count | dif |
-|:-----------|:--------|:----------|:----|
-| 06/28/2023 |	173903 | 173903    | 0   |
-| 06/29/2023 |	172128 | 172128    | 0   |
-| 06/30/2023 |	172501 | 172501    | 0   |
-| 07/01/2023 |	157790 | 157790    | 0   |
-| 07/02/2023 |	147145 | 147145    | 0   |
-| 07/03/2023 |	146517 | 146517    | 0   |
-| 07/04/2023 |	178781 | 178782    | 1   |
-| 07/05/2023 |	178354 | 178354    | 0   |
-| 07/06/2023 |	183501 | 183501    | 0   |
-| 07/07/2023 |	191859 | 191860    | 1   |
-| 07/08/2023 |	179182 | 179182    | 0   |
-| 07/09/2023 |	170521 | 170521    | 0   |
-   
+## vds_pull_vdsvehicledata
