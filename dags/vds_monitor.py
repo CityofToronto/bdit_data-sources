@@ -9,6 +9,7 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.macros import ds_add
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from functools import partial
 
 dag_name = 'vds_monitor'
 
@@ -41,7 +42,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=30),
-    'on_failure_callback': task_fail_slack_alert(dag_name = dag_name, owners = names),
+    'on_failure_callback': partial(task_fail_slack_alert, dag_name = dag_name, owners = names),
     'catchup': False,
 }
 
@@ -49,15 +50,15 @@ default_args = {
 with DAG(dag_name,
          default_args=default_args,
          max_active_runs=1,
-         schedule_interval='0 4 * * *'
-         ) as dag: #daily at 4am
+         schedule_interval='@monthly' #first day of month at midnight
+         ) as dag: 
 
     for dataset in ('vdsdata', 'vdsvehicledata'):
 
         #monitors row counts in vdsdata and vdsvehicledata tables
         with TaskGroup(group_id=f"monitor_late_{dataset}") as monitor_row_count:
             
-            lookback_days = 30
+            lookback_days = 60
 
             #calls the monitoring function (compares rows in ITSC vs RDS databases)
             #branch operator returns list of tasks to trigger (clear_[0-(lookback_days-1)], empty_task)
@@ -68,7 +69,7 @@ with DAG(dag_name,
                 op_kwargs = {
                     'rds_conn': vds_bot,
                     'itsc_conn': itsc_bot,
-                    'start_date': '{{ ds }}',
+                    'start_date': '{{ data_interval_end | ds }}',
                     'dataset': dataset,
                     'lookback_days': lookback_days
                 }
@@ -86,7 +87,7 @@ with DAG(dag_name,
                     reset_dag_run=True,
                     on_success_callback=on_success_monitor_log, #callback listing the execution_date to clear
                     wait_for_completion=False,
-                    execution_date='{{macros.ds_add(ds, params.i)}}',
+                    execution_date='{{macros.ds_add(data_interval_end, params.i)}}',
                     params={'i': -i}, #the days are indexed zero through lookback_days starting from start_date (0)
                 )
                 monitor >> [clear_task, empty_task]
