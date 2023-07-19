@@ -7,6 +7,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
+from functools import partial
 
 dag_name = 'vds_pull_vdsvehicledata'
 
@@ -36,7 +37,8 @@ default_args = {
     'email_on_retry': False,
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert(dag_name = dag_name, owners = names),
+    'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
+    'on_failure_callback': partial(task_fail_slack_alert, dag_name = dag_name, owners = names),
     'catchup': True,
 }
 

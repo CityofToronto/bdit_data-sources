@@ -377,6 +377,8 @@ def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, l
     dates = dates.merge(rows_dest, on='dt', how='left')
     dates = dates.merge(rows_source, on='dt', how='left', suffixes=['_dest', '_source'])
 
+    LOGGER.info(dates)
+
     #find days with more rows in ITSC (Source) than RDS (Dest)
     dates_dif = dates[dates['count_source'] >= (1 + threshold_percent) * dates['count_dest']] 
 
