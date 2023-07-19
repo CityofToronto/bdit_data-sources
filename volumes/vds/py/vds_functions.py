@@ -14,11 +14,18 @@ from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def task_fail_slack_alert(context):
+# connection to slack
+SLACK_CONN_ID = 'slack_data_pipeline'
+
+def task_fail_slack_alert(dag_name, context):
     # connection to slack
     global SLACK_CONN_ID
-    global names
     
+    # Get slack member ids
+    #dag_owners = Variable.get('dag_owners', deserialize_json=True)
+    #names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+    names = ['gabe']
+
     slack_ids = Variable.get('slack_member_id', deserialize_json=True)
     list_names = []
     for name in names:

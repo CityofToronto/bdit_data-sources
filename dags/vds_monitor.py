@@ -10,6 +10,8 @@ from airflow.utils.task_group import TaskGroup
 from airflow.macros import ds_add
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
+dag_name = 'vds_monitor'
+
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
 
@@ -22,16 +24,7 @@ try:
     from vds_functions import monitor_row_counts, task_fail_slack_alert
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
-
-dag_name = 'vds_monitor'
-
-# Get slack member ids
-#dag_owners = Variable.get('dag_owners', deserialize_json=True)
-#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-names = ['gabe']
-
-SLACK_CONN_ID = 'slack_data_pipeline'
-    
+  
 def on_success_monitor_log(context):
     print(f"Clearing vds_pull for execution_date `{context.get('task').execution_date}`.")
 

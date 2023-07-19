@@ -8,6 +8,8 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 
+dag_name = 'vds_pull_vdsdata'
+
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
 
@@ -24,16 +26,7 @@ try:
     from vds_functions import task_fail_slack_alert, pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
-
-dag_name = 'vds_pull_vdsdata'
-
-# Get slack member ids
-#dag_owners = Variable.get('dag_owners', deserialize_json=True)
-#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-names = ['gabe']
-
-SLACK_CONN_ID = 'slack_data_pipeline'
-    
+   
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
