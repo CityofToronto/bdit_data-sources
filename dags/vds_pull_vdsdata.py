@@ -16,6 +16,11 @@ itsc_bot = PostgresHook('itsc_postgres')
 #CONNECT TO BIGDATA
 vds_bot = PostgresHook('vds_bot')
 
+# Get DAG Owner
+#dag_owners = Variable.get('dag_owners', deserialize_json=True)
+#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = ['gabe']
+
 #op_kwargs:
 conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
 start_date = {'start_date': '{{ ds }}'}
@@ -35,7 +40,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert,
+    'on_failure_callback': task_fail_slack_alert(dag_name = dag_name, owners = names),
     'catchup': True,
 }
 

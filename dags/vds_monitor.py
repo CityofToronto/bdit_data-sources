@@ -15,6 +15,11 @@ dag_name = 'vds_monitor'
 #CONNECT TO ITS_CENTRAL
 itsc_bot = PostgresHook('itsc_postgres')
 
+# Get DAG Owner
+#dag_owners = Variable.get('dag_owners', deserialize_json=True)
+#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = ['gabe']
+
 #CONNECT TO BIGDATA
 vds_bot = PostgresHook('vds_bot')
 
@@ -36,7 +41,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=30),
-    'on_failure_callback': task_fail_slack_alert,
+    'on_failure_callback': task_fail_slack_alert(dag_name = dag_name, owners = names),
     'catchup': False,
 }
 
