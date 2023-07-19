@@ -454,7 +454,7 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
                             lookback=lookback_days)
 
     if dates_dif.empty:
-        return "no_backfill" #can't have no return value for branchoperator
+        return [f"monitor_late_{dataset}.no_backfill"] #can't have no return value for branchoperator
     else:
         LOGGER.info("Clearing vds_pull_%s for %s", dataset, dates_dif.apply(str).values)
         return [f"monitor_late_{dataset}.clear_" + str(x) for x in dates_dif.index.values] #returns task names to branchoperator to run (clear).
