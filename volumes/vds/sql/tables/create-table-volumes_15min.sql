@@ -1,7 +1,7 @@
 --DROP TABLE vds.volumes_15min;
 
 CREATE TABLE vds.volumes_15min (
-    volumeid bigserial,
+    volumeuid bigserial,
     detector_id text,
     division_id smallint,
     vds_id integer,
@@ -11,7 +11,7 @@ CREATE TABLE vds.volumes_15min (
     expected_bins smallint,
     num_obs smallint,
     num_distinct_lanes smallint,
-    PRIMARY KEY (volumeid),
+    PRIMARY KEY (volumeuid),
 	UNIQUE (division_id, vds_id, datetime_bin)
 );
 
