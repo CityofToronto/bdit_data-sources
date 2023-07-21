@@ -62,7 +62,7 @@ BEGIN
 		THEN
 		int1_result := gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
-		int2_result := (CASE WHEN clean_bylaws.btwn2_orig LIKE '%point%' AND (clean_bylaws.btwn2_check NOT LIKE '% of %' OR clean_bylaws.btwn2_check LIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
+		int2_result := (CASE WHEN clean_bylaws.btwn2_orig ILIKE '%point%' AND (clean_bylaws.btwn2_check NOT ILIKE '% of %' OR clean_bylaws.btwn2_check ILIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
 					THEN gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0)
 					ELSE gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
 					END);
@@ -140,7 +140,13 @@ END;
 $BODY$;
 
 ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
-    OWNER TO jchew;
+OWNER TO gis_admins;
+
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO bdit_humans;
+
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO gis_admins;
+
+REVOKE ALL ON FUNCTION gis.text_to_centreline(integer, text, text, text) FROM PUBLIC;
 
 COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
     IS '
