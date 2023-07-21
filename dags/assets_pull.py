@@ -27,9 +27,12 @@ import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable 
 
 from dateutil.parser import parse
 from datetime import datetime
+
+dag_name = 'traffic_signals_dag'
 
 # Credentials
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -41,16 +44,27 @@ vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+
 SLACK_CONN_ID = 'slack_data_pipeline'
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     slack_msg = """
             :red_circle: Task Failed / Tâche échouée.
+            {slack_name} please check.
             *Task*: {task}
             *Dag*: {dag}
             *Execution Time*: {exec_date}
             *Log Url*: {log_url}
             """.format(
+            slack_name=' '.join(list_names),
             task=context.get('task_instance').task_id,
             dag=context.get('task_instance').dag_id,
             ti=context.get('task_instance'),
@@ -435,7 +449,7 @@ def pull_traffic_signal():
 # ------------------------------------------------------------------------------
 # Set up the dag and task
 TRAFFIC_SIGNALS_DAG = DAG(
-    'traffic_signals_dag',
+    dag_id = dag_name,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
