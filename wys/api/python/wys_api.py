@@ -424,25 +424,30 @@ def update_locations(conn, loc_table):
             """
         cur.execute(calc_geom_temp_table)
         update_locations_sql="""
+            -- most recent record of each sign
             WITH locations AS (
                 SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom, id
                 FROM wys.locations 
                 ORDER BY api_id, start_date DESC
-            ),
-            differences AS (
+            )
+            -- New and moved signs
+            , differences AS (
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc, a.geom 
                 FROM daily_intersections A
-                JOIN locations B ON (A.api_id = B.api_id
-                                      AND (st_distance(A.geom, B.geom) > 100
-                                           OR A.dir <> B.dir))
-                                      OR A.api_id NOT IN (SELECT api_id FROM locations)
-            ), 
-            new_signs AS (
+                LEFT JOIN locations B ON A.api_id = B.api_id
+                WHERE
+                    st_distance(A.geom, B.geom) > 100 -- moved more than 100m
+                    OR A.dir <> B.dir -- changed direction
+                    OR A.api_id NOT IN (SELECT api_id FROM locations) -- new sign
+            )
+            -- Insert new & moved signs into wys.locations
+            , new_signs AS (
                 INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
                 SELECT * FROM differences
-            ),
-            updated_signs AS (
+            )
+            -- Signs with new name and/or address
+            , updated_signs AS (
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.loc, a.start_date, 
                        a.geom, b.id 
                 FROM daily_intersections A
@@ -452,6 +457,7 @@ def update_locations(conn, loc_table):
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
             )
+            -- Update name and/or address
             UPDATE wys.locations 
                 SET api_id = b.api_id,
                     address = b.address,

@@ -285,7 +285,7 @@ RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, 
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 RETURN ROW(_bylaw_id, highway2, btwn1, direction_btwn1, metres_btwn1, btwn2, direction_btwn2, metres_btwn2,
-btwn2_orig, btwn2_check)::cleaned_bylaws_text ;
+btwn2_orig, btwn2_check)::gis.cleaned_bylaws_text ;
 
 END;
 $$;

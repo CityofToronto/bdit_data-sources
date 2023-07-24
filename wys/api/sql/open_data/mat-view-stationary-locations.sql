@@ -41,7 +41,7 @@ GROUP BY
     ssc.flash_speed,
     ssc.strobe_speed,
     ss.geom;
-    
+GRANT SELECT ON TABLE open_data.wys_stationary_locations TO od_extract_svc;    
 CREATE UNIQUE INDEX ON open_data.wys_stationary_locations (sign_id);
 
 CREATE FUNCTION wys.refresh_od_mat_view()
