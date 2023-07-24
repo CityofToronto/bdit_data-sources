@@ -8,6 +8,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from functools import partial
+from airflow.operators.latest_only import LatestOnlyOperator
 
 dag_name = 'vds_pull_vdsdata'
 
@@ -129,6 +130,12 @@ with DAG(dag_name,
 
     #this task group pulls the detector inventories
     with TaskGroup(group_id='update_inventories') as update_inventories:
+        
+        #only run update inventories for latest scheduled interval
+            # (ie. skip during catchup)
+        skip_update_inventories = LatestOnlyOperator(
+            task_id = 'skip_update_inventories'
+        )
 
         #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
         pull_detector_inventory_task = PythonOperator(
@@ -146,8 +153,7 @@ with DAG(dag_name,
             op_kwargs = conns
         )
 
-        pull_detector_inventory_task
-        pull_entity_locations_task
+        skip_update_inventories >> [pull_detector_inventory_task, pull_entity_locations_task]
 
     vdsdata >> v15data #pull then summarize
     update_inventories
