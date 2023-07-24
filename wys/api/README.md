@@ -4,9 +4,9 @@
 
 !['A sign mounted on a pole with the words "Your Speed" and underneath a digital sign displaying "31"'](https://www.toronto.ca/wp-content/uploads/2018/09/9878-landscape-mwysp2-e1538064432616-1024x338.jpg)
 
-The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 3 programs: the normal watch your speed sign program, mobile watch your speed which has signs mounted on trailers that move to a different location every few weeks, and school watch your speed which has signs installed at high priority schools. As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
+The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flash if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 [WYS programs](../readme.md): stationary watch your speed signs (near schools) and mobile watch your speed signs mounted on trailers that move to a different location every few weeks (mostly every three weeks with a few longer exceptions). As part of the [Vision Zero Road Safety Plan](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/), these signs aim to reduce speeding.
 
-This API script can grab data from each watch your speed sign the city has. It can perform some functionality that the [streetsoncloud portal](www.streetsoncloud.com) has, mainly pulling speed and volume data. The API supports more calls including setting/getting the schedule, setting/getting the messages each sign displays and other calls.
+This API script pulls WYS speed and volume data from [streetsoncloud portal](http://www.streetsoncloud.com) using their API. This API supports more calls including setting/getting the schedule, setting/getting the messages each sign displays and other calls.
 
 ## Functionality
 
@@ -26,7 +26,7 @@ The API provides data on non-regular (but uniform) 5 minute bins, i.e., at 3:44,
 
 ## Calls and Input Parameters
 
-The WYS data puller script is called by an Airflow DAG that runs daily. It collects the count of vehicles for each speed recorded by the sign in roughly 5 minute aggregate bins.
+The WYS data puller script is called by an Airflow DAG that runs daily. It collects the count of vehicles for each speed recorded by the sign in 5 minute aggregate bins.
 
 The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, e.g., `python wys_api.py run_api`. It .
 
@@ -54,7 +54,7 @@ The main function in the puller script `api_main` do the following steps:
 
 ### Data Tables
 
-The data in `wys.raw_data` table is pre-aggregated into roughly 5 minute bins, and the table has the following columns:
+The data in `wys.raw_data` table is pre-aggregated into 5 minute bins, and the table has the following columns:
 
 |Field name|Type|Description|Example|
 |------|------|-------|------|
@@ -76,14 +76,14 @@ As described above, `wys.speed_counts_agg_5kph` has data aggregated to 1-hour an
 
 ### Lookup Tables
 
-`speed_bins_old` is a lookup table containing all the 5km/h speed bin. Bin number 21 contains any speed over 100km/h.
+`speed_bins_old` is a lookup table containing all the 5km/h speed bin, where bin number 21 contains any speed over 100km/h.
 
 |Field name|Type|Description|Example|
 |------|------|-------|------|
 `speed_id`|integer|A unique identifier for the `speed_bins` table|5
-`speed_bin`|integer range|Range of speeds for each speed bin. The upper limit is not inclusive.|[10-25)
+`speed_bin`|integer range|Range of speeds for each speed bin. The upper limit is not inclusive.|[10-15)
 
-`locations` contains each ID used for the API, direction of traffic along which the sign is collecting data, and address and name of the sign. Some signs may have information missing from any one of the fields.
+`locations` contains locations of stationary and mobile signs. It also contains information about each sign's API ID, direction of traffic, address, and name.
 
 |Field name|Type|Description|Example|
 |------|------|-------|------|
@@ -93,14 +93,14 @@ As described above, `wys.speed_counts_agg_5kph` has data aggregated to 1-hour an
 |`dir`|text|Direction of the flow of traffic|NB|
 |`start_date`|date|First date of valid data|2018-11-28|
 |`loc`|text|The coordinates of the sign|(43.666115,-79.370164)
-|`id`|integer|Unique ID and primary key of the table|1|
+|`id`|integer|Unique ID and primary key of the table. This is the same as `sign_id` in `wys.stationary_signs`.|1|
 |`geom`|geometry|The location of the sign calculated from `loc`||
 
 ## Quality Checks
 
 ### NULL rows in API data
 
-An analysis on `2021-04-23` to investigate rows with NULL speed and count columns was performed after noticing that NULL rows had started to appear in the database on `2021-03-31`. For details see notebook `investigate_api_nulls.ipynb` in this directory , as part of [issue #393](https://github.com/CityofToronto/bdit_data-sources/issues/393). Main findings:
+An analysis on `2021-04-23` to investigate rows with NULL speed and count columns was performed after noticing that NULL rows had started to appear in the database on `2021-03-31`. For details see notebook [investigate_api_nulls.ipynb](./investigate_api_nulls.ipynb), as part of [issue #393](https://github.com/CityofToronto/bdit_data-sources/issues/393). Main findings:
 
 - there are currently `872` distinct signs in `wys.raw_data`  
 - `727` of these contain rows with NULL speed or count columns  
