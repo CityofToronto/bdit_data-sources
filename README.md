@@ -31,6 +31,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
   - [RESCU - Loop Detectors](#rescu---loop-detectors)
+  - [Short-term Counting Program](#short-term-counting-program)
 - [Watch Your Speed signs](#watch-your-speed-signs)
 - [Weather](#weather)
 - [Open Data Releases](#open-data-releases)
@@ -140,6 +141,11 @@ AKA Vehicle Detector Station (VDS)
 Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
 More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+
+### Short-term Counting Program
+[`volumes/short_term_counting_program/`](volumes/short_term_counting_program/)
+
+Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also avaiable through MOVE and data go as far back as 1994. 
 
 ## Watch Your Speed signs
 [`wys/`](wys/)
