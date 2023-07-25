@@ -34,6 +34,6 @@ END;
 
 $BODY$;
 
-GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_lengths(timestamp, timestamp) to vds_bot;
+GRANT EXECUTE ON FUNCTION vds.aggregate_15min_veh_lengths(timestamp, timestamp) to vds_bot;
 
-COMMENT ON FUNCTION vds.aggregate_15min_vds_lengths IS 'Function to aggregate `vds.raw_vdsvehicledata` into table `vds.veh_length_15min` by detector / 15min bins / 1m length bins.';
+COMMENT ON FUNCTION vds.aggregate_15min_veh_lengths IS 'Function to aggregate `vds.raw_vdsvehicledata` into table `vds.veh_length_15min` by detector / 15min bins / 1m length bins.';
