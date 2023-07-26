@@ -145,7 +145,7 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 ### Short-term Counting Program
 [`volumes/short_term_counting_program/`](volumes/short_term_counting_program/)
 
-Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through MOVE and data go as far back as 1994. 
+Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through the internal application MOVE and data go as far back as 1994. 
 
 ## Watch Your Speed signs
 [`wys/`](wys/)
