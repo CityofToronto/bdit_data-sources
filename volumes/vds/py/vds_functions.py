@@ -6,6 +6,7 @@ from psycopg2.extras import execute_values
 import struct
 from datetime import datetime
 import pytz
+import json
 from airflow.macros import ds_add
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
@@ -17,13 +18,13 @@ logging.basicConfig(level=logging.INFO)
 # connection to slack
 SLACK_CONN_ID = 'slack_data_pipeline'
 
-def task_fail_slack_alert(dag_name, owners, context):
+def task_fail_slack_alert(owners, context):
     # connection to slack
     global SLACK_CONN_ID
     
     slack_ids = Variable.get('slack_member_id', deserialize_json=True)
     list_names = []
-    for name in names:
+    for name in owners:
         list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -50,59 +51,53 @@ def task_fail_slack_alert(dag_name, owners, context):
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080',
-        )
+        proxy=(
+            f"http://{BaseHook.get_connection('slack').password}"
+            f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
+        ),
+    )
     return failed_alert.execute(context=context)
 
 def fetch_pandas_df(conn, query, table_name):
     #generic function to pull data in pandas dataframe format 
     try:
         with conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info(f"Fetching {table_name}")
-                cur.execute(query)
-                data = cur.fetchall()
-                LOGGER.info(f"Number of rows fetched from {table_name} table: {len(data)}")
-                data = pd.DataFrame(data)
-                data.columns=[x.name for x in cur.description]
-                return data
+            LOGGER.info(f"Fetching {table_name}")
+            data = pd.read_sql(query, con)
+            LOGGER.info(f"Number of rows fetched from {table_name} table: {data.shape[0]}")
+            return data
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
-        con.close()
 
 def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, table_name, batch_size = 100000):
     #generic function to pull and insert data using different connections and queries.
     batch=1
     try:
-        with select_conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info(f"Fetching {table_name}")
-                cur.execute(select_query)
+        with select_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info(f"Fetching {table_name}")
+            cur.execute(select_query)
+            data = cur.fetchmany(batch_size)
+            while not len(data) == 0:
+                LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from {table_name}.")
+                insert_data(insert_conn, insert_query, table_name, data)
                 data = cur.fetchmany(batch_size)
-                while not len(data) == 0:
-                    LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from {table_name}.")
-                    insert_data(insert_conn, insert_query, table_name, data)
-                    data = cur.fetchmany(batch_size)
-                    batch = batch + 1
+                batch = batch + 1
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
-        con.close()
 
 def insert_data(conn, query, table_name, data):
     #generic function to insert data
     try:
-        with conn.get_conn() as con:
-            with con.cursor() as cur:                
-                # Insert cleaned data into the database
-                LOGGER.info(f"Inserting into {table_name}.")
-                execute_values(cur, query, data, page_size = 1000) #31s for 800k rows of vdsvehicledata w/10000. --41s w/1000. >3 minutes w/100
-                LOGGER.info(f"Inserted {len(data)} rows into {table_name}.")
+        with conn.get_conn() as con, con.cursor() as cur:                
+            # Insert cleaned data into the database
+            LOGGER.info(f"Inserting into {table_name}.")
+            execute_values(cur, query, data, page_size = 1000) #31s for 800k rows of vdsvehicledata w/10000. --41s w/1000. >3 minutes w/100
+            LOGGER.info(f"Inserted {len(data)} rows into {table_name}.")
     except Error as exc:
         LOGGER.critical(f"Error inserting into {table_name}.")
         LOGGER.critical(exc)
-        con.close()
 
 def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
@@ -130,28 +125,26 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     
     #pull data in batches and transform + insert.
     try:
-        with itsc_conn.get_conn() as con:
-            with con.cursor() as cur:
-                LOGGER.info("Fetching %s", 'vdsvehicledata')
-                cur.execute(raw_sql)
+        with itsc_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info("Fetching %s", 'vdsvehicledata')
+            cur.execute(raw_sql)
+            data = cur.fetchmany(batch_size)
+            batch = 1
+            while not len(data) == 0:
+                LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from vdsdata.")
+                data = pd.DataFrame(data)
+                data.columns=[x.name for x in cur.description]
+
+                # Transform raw data
+                transformed_data = transform_raw_data(data)
+                transformed_data = transformed_data.replace(nan, None)
+                data_tuples = [tuple(x) for x in transformed_data.to_numpy()] #convert df back to tuples for inserting
+                insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
                 data = cur.fetchmany(batch_size)
-                batch = 1
-                while not len(data) == 0:
-                    LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from vdsdata.")
-                    data = pd.DataFrame(data)
-                    data.columns=[x.name for x in cur.description]
-    
-                    # Transform raw data
-                    transformed_data = transform_raw_data(data)
-                    transformed_data = transformed_data.replace(nan, None)
-                    data_tuples = [tuple(x) for x in transformed_data.to_numpy()] #convert df back to tuples for inserting
-                    insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
-                    data = cur.fetchmany(batch_size)
-                    batch = batch + 1
+                batch = batch + 1
     except Error as exc:
             LOGGER.critical("Error fetching from %s.", 'vdsdata')
             LOGGER.critical(exc)
-            con.close()
 
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`

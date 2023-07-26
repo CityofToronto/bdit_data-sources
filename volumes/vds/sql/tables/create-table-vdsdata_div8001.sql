@@ -1,7 +1,6 @@
---move some data for divisionid=8001 into a separate table and stop pulling into main table raw_vdsdata.
+--move some data for divisionid=8001 into a separate table and stop pulling 
+    --into main table raw_vdsdata.
 --this data is very sparse (65% empty rows)
-
---DROP TABLE vds.raw_vdsdata_div8001;
 
 CREATE TABLE IF NOT EXISTS vds.raw_vdsdata_div8001 (
     division_id smallint,
@@ -33,4 +32,5 @@ WHERE division_id = 8001;
 
 DELETE FROM vds.raw_vdsdata WHERE division_id = 8001;
 
-COMMENT ON TABLE vds.raw_vdsdata_div8001 IS 'A one day sample of `vdsdata` for division_id = 8001 from ITSC Central.';
+COMMENT ON TABLE vds.raw_vdsdata_div8001 IS 'A one day sample of `vdsdata` for division_id = 8001 
+from ITSC Central.';

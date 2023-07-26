@@ -19,9 +19,8 @@ itsc_bot = PostgresHook('itsc_postgres')
 vds_bot = PostgresHook('vds_bot')
 
 # Get DAG Owner
-#dag_owners = Variable.get('dag_owners', deserialize_json=True)
-#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-names = ['gabe']
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 #op_kwargs:
 conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
@@ -43,7 +42,7 @@ default_args = {
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, dag_name = dag_name, owners = names),
+    'on_failure_callback': partial(task_fail_slack_alert, owners = names),
     'catchup': True,
 }
 
@@ -61,7 +60,6 @@ with DAG(dag_name,
                     datetime_15min >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsdata',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -71,7 +69,6 @@ with DAG(dag_name,
         pull_raw_vdsdata_task = PythonOperator(
             task_id='pull_raw_vdsdata',
             python_callable=pull_raw_vdsdata,
-            dag=dag,
             op_kwargs = conns | start_date 
         )
 
@@ -86,7 +83,6 @@ with DAG(dag_name,
                     datetime_bin >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_v15',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -96,7 +92,6 @@ with DAG(dag_name,
         summarize_v15_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
             task_id='summarize_v15',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -109,7 +104,6 @@ with DAG(dag_name,
                     datetime_bin >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_v15_bylane',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -119,7 +113,6 @@ with DAG(dag_name,
         summarize_v15_bylane_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_vds_volumes_bylane('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
             task_id='summarize_v15_bylane',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -141,7 +134,6 @@ with DAG(dag_name,
         pull_detector_inventory_task = PythonOperator(
             task_id='pull_and_insert_detector_inventory',
             python_callable=pull_detector_inventory,
-            dag=dag,
             op_kwargs = conns
         )
 
@@ -149,7 +141,6 @@ with DAG(dag_name,
         pull_entity_locations_task = PythonOperator(
             task_id='pull_and_insert_entitylocations',
             python_callable=pull_entity_locations,
-            dag=dag,
             op_kwargs = conns
         )
 
