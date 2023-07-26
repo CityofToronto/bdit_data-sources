@@ -68,6 +68,7 @@ WITH tmcs AS (
             'w_other', w_other
         ) AS tmc
     FROM traffic.det
+    WHERE count_time IS NOT NULL -- there are a handfull of nulls that cause trouble for the unique index
 ),
 
 unpacked_tmcs AS (
