@@ -119,7 +119,7 @@ CREATE INDEX ON traffic.tmc_miovision_long_format (count_info_id);
 COMMENT ON MATERIALIZED VIEW traffic.tmc_miovision_long_format
 IS 'converts traffic.det TMC table into a long format more compatible with the way we store Miovision TMC data';
 
-COMMENT ON COLUMN traffic.tmc_miovision_long_format.count_date
+COMMENT ON COLUMN traffic.tmc_miovision_long_format.datetime_bin
 IS 'This indicates the START of a 15 minute bin for compatibility with Miovision data, NOT the end, as in traffic.det';
 
 COMMENT ON COLUMN traffic.tmc_miovision_long_format.movement_uid
