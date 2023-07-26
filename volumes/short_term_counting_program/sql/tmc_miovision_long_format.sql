@@ -7,7 +7,13 @@ Miovision TMCs, as in miovision_api.volumes_15min_tmc.
 CREATE MATERIALIZED VIEW traffic.tmc_miovision_long_format AS
 
 WITH tmcs AS (
-    SELECT
+    /*
+    There are a handful of nulls and duplicates, and not-quite-duplicates
+    that cause trouble later on for the unique index necessary for a
+    concurrent refresh. Thus the DISTINCT. Where duplicate entries
+    have conflicting volumes, this picks one.
+    */
+    SELECT DISTINCT ON (count_info_id, count_time::time)
         count_info_id,
         -- because traffic, unlike miovision indicates count time as
         -- the end rather than start of the 15 minute bin
@@ -68,7 +74,7 @@ WITH tmcs AS (
             'w_other', w_other
         ) AS tmc
     FROM traffic.det
-    WHERE count_time IS NOT NULL -- there are a handfull of nulls that cause trouble for the unique index
+    WHERE count_time IS NOT NULL
 ),
 
 unpacked_tmcs AS (
@@ -116,6 +122,11 @@ CREATE INDEX ON traffic.tmc_miovision_long_format (arterycode);
 CREATE INDEX ON traffic.tmc_miovision_long_format (classification_uid);
 CREATE INDEX ON traffic.tmc_miovision_long_format (datetime_bin);
 CREATE INDEX ON traffic.tmc_miovision_long_format (count_info_id);
+
+-- allows for concurrent refresh
+CREATE UNIQUE INDEX ON traffic.tmc_miovision_long_format (
+    count_info_id, datetime_bin, classification_uid, leg, movement_uid
+);
 
 COMMENT ON MATERIALIZED VIEW traffic.tmc_miovision_long_format
 IS 'converts traffic.det TMC table into a long format more compatible with the way we store Miovision TMC data';
