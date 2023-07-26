@@ -3,7 +3,7 @@
 
 --DROP TABLE vds.raw_vdsdata_div8001;
 
-CREATE TABLE vds.raw_vdsdata_div8001 (
+CREATE TABLE IF NOT EXISTS vds.raw_vdsdata_div8001 (
     division_id smallint,
     vds_id integer,
     datetime_20sec timestamp without time zone,

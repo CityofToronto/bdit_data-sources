@@ -1,6 +1,6 @@
 --DROP TABLE vds.vdsconfig; 
 
-CREATE TABLE vds.vdsconfig (
+CREATE TABLE IF NOT EXISTS vds.vdsconfig (
     uid serial,
     division_id smallint,
     vds_id integer,
@@ -23,10 +23,11 @@ CREATE TABLE vds.vdsconfig (
     movement smallint,
     PRIMARY KEY uid,
     UNIQUE (division_id, vds_id, start_timestamp)
-);
+)
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
 GRANT INSERT, SELECT ON TABLE vds.vdsconfig TO vds_bot;
 GRANT ALL ON SEQUENCE vds.vdsconfig_uid_seq TO vds_bot;
 
-COMMENT ON TABLE vds.vdsconfig IS 'Store raw data pulled from ITS Central `vdsconfig` table. Note there are duplicates on vds_id corresponding to updated locations/details over time.';
+COMMENT ON TABLE vds.vdsconfig IS 'Store raw data pulled from ITS Central `vdsconfig` table.
+Note there are duplicates on vds_id corresponding to updated locations/details over time.';

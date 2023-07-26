@@ -1,6 +1,6 @@
 --DROP TABLE vds.raw_vdsdata;
 
-CREATE TABLE vds.raw_vdsdata (
+CREATE TABLE IF NOT EXISTS vds.raw_vdsdata (
     volume_uid bigserial,
     division_id smallint,
     vds_id integer,

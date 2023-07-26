@@ -1,6 +1,6 @@
 --DROP TABLE vds.veh_speeds_15min;
 
-CREATE TABLE vds.veh_speeds_15min (
+CREATE TABLE IF NOT EXISTS vds.veh_speeds_15min (
     uid bigserial,
     division_id smallint, 
     vds_id integer,

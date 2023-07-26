@@ -1,14 +1,16 @@
-CREATE OR REPLACE FUNCTION vds.aggregate_15min_veh_speeds(_start_date timestamp, _end_date timestamp)
-    RETURNS void
-    LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION vds.aggregate_15min_veh_speeds(
+    _start_date timestamp, _end_date timestamp
+)
+RETURNS void
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE SECURITY DEFINER 
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 BEGIN
 	
-    --Aggregated into speed bins and 1 hour bin
+    --Aggregated into 5kph speed and 15 minute bins
     INSERT INTO vds.veh_speeds_15min (division_id, vds_id, datetime_15min, speed_5kph, count, total_count)
 
     SELECT
@@ -34,6 +36,6 @@ END;
 
 $BODY$;
 
-GRANT EXECUTE ON FUNCTION vds.aggregate_15min_veh_speeds(timestamp, timestamp) to vds_bot;
+GRANT EXECUTE ON FUNCTION vds.aggregate_15min_veh_speeds(timestamp, timestamp) TO vds_bot;
 
 COMMENT ON FUNCTION vds.aggregate_15min_veh_speeds IS 'Function to aggregate `vds.raw_vdsvehicledata` into table `vds.veh_speeds_15min` by detector / 15min bins / 5kph speed bins.'
