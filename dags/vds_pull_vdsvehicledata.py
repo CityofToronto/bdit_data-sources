@@ -28,7 +28,7 @@ try:
     from vds_functions import task_fail_slack_alert, pull_raw_vdsvehicledata
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
-   
+
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
@@ -47,6 +47,7 @@ default_args = {
 with DAG(dag_id='vds_pull_vdsvehicledata',
          default_args=default_args,
          max_active_runs=5,
+         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
@@ -118,7 +119,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
         #insert new data into summary table vds.veh_length_15min
         summarize_lengths_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_veh_lengths('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+            sql="insert/insert-veh_length_15min.sql",
             task_id='summarize_lengths',
             dag=dag,
             postgres_conn_id='vds_bot',
