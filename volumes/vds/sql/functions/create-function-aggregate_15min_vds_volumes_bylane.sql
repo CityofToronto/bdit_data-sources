@@ -1,9 +1,11 @@
-CREATE OR REPLACE FUNCTION vds.aggregate_15min_vds_volumes_bylane(_start_date timestamp, _end_date timestamp)
-    RETURNS void
-    LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION vds.aggregate_15min_vds_volumes_bylane(
+    _start_date timestamp, _end_date timestamp
+)
+RETURNS void
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE SECURITY DEFINER 
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 BEGIN
@@ -58,6 +60,6 @@ END;
 
 $BODY$;
 
-GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_volumes_bylane(timestamp, timestamp) to vds_bot;
+GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_volumes_bylane(timestamp, timestamp) TO vds_bot;
 
 COMMENT ON FUNCTION vds.aggregate_15min_vds_volumes_bylane IS 'Function to aggregate `vds.raw_vdsdata` into `vds.volumes_15min_bylane` table by detector / lane / 15min bins.'

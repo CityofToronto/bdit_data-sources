@@ -1,6 +1,6 @@
 --DROP TABLE vds.volumes_15min;
 
-CREATE TABLE vds.volumes_15min_bylane (
+CREATE TABLE IF NOT EXISTS vds.volumes_15min_bylane (
     volumeuid bigserial,
     detector_id text,
     division_id smallint,
