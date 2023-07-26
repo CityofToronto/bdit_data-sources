@@ -18,9 +18,8 @@ itsc_bot = PostgresHook('itsc_postgres')
 vds_bot = PostgresHook('vds_bot')
 
 # Get DAG Owner
-#dag_owners = Variable.get('dag_owners', deserialize_json=True)
-#names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-names = ['gabe']
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -38,7 +37,7 @@ default_args = {
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, dag_name = dag_name, owners = names),
+    'on_failure_callback': partial(task_fail_slack_alert, owners = names),
     'catchup': True,
 }
 
@@ -59,7 +58,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
                     dt >= '{{ds}} 00:00:00'::timestamp
                     AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsvehicledata',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -69,7 +67,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         pull_raw_vdsvehicledata_task = PythonOperator(
             task_id='pull_raw_vdsvehicledata',
             python_callable=pull_raw_vdsvehicledata,
-            dag=dag,
             op_kwargs = {'rds_conn': vds_bot,
                         'itsc_conn': itsc_bot,
                     'start_date': '{{ ds }}'}
@@ -87,7 +84,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
                     datetime_15min >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_veh_speed_data',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -97,7 +93,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_veh_speeds('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
             task_id='summarize_speeds',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -110,7 +105,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
                     datetime_15min >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_veh_length_data',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
@@ -120,7 +114,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_lengths_task = PostgresOperator(
             sql="SELECT vds.aggregate_15min_veh_lengths('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
             task_id='summarize_lengths',
-            dag=dag,
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1

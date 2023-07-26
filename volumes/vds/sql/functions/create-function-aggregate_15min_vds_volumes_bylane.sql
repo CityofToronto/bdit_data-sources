@@ -10,9 +10,13 @@ AS $BODY$
 
 BEGIN
 	
-    --Aggregated into speed bins and 1 hour bin
-    INSERT INTO vds.volumes_15min_bylane (division_id, vds_id, detector_id, lane, datetime_bin, volume_15min, expected_bins, num_obs)
+    --Aggregate into 15 minute bins by detector and by lane. 
+    INSERT INTO vds.counts_15min_bylane (division_id, vds_id, detector_id, lane, datetime_bin,
+        count_15min, expected_bins, num_obs)
     
+    /* Conversion of hourly volumes to count depends on size of bin.
+    These bin counts were determined by looking at the most common bin gap using:
+        bdit_data-sources/volumes/vds/exploration/time_gaps.sql */
     WITH detector_inventory AS (
         SELECT *, 
             CASE WHEN detector_id LIKE 'D%' AND division_id = 2
@@ -31,9 +35,10 @@ BEGIN
         c.detector_id,
         d.lane,
         d.datetime_15min,
-        SUM(d.volume_veh_per_hr) / 4 / c.expected_bins AS volume_15min,
+        SUM(d.volume_veh_per_hr) / 4 / c.expected_bins AS count_15min,
             -- / 4 to convert hourly volume to 15 minute volume
-            -- / (expected_bins) to get average 15 minute volume depending on bin size (assumes blanks are 0)
+            -- / (expected_bins) to get average 15 minute volume depending on 
+                --bin size (assumes blanks are 0)
         c.expected_bins,
         COUNT(*) AS num_obs
     FROM vds.raw_vdsdata AS d
@@ -62,4 +67,5 @@ $BODY$;
 
 GRANT EXECUTE ON FUNCTION vds.aggregate_15min_vds_volumes_bylane(timestamp, timestamp) TO vds_bot;
 
-COMMENT ON FUNCTION vds.aggregate_15min_vds_volumes_bylane IS 'Function to aggregate `vds.raw_vdsdata` into `vds.volumes_15min_bylane` table by detector / lane / 15min bins.'
+COMMENT ON FUNCTION vds.aggregate_15min_vds_volumes_bylane IS 'Function to aggregate 
+`vds.raw_vdsdata` into `vds.counts_15min_bylane` table by detector / lane / 15min bins.'
