@@ -92,7 +92,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
         #insert new data into summary table vds.aggregate_15min_veh_speeds
         summarize_speeds_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_veh_speeds('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+            sql="insert/insert_veh_speeds_15min.sql",
             task_id='summarize_speeds',
             postgres_conn_id='vds_bot',
             autocommit=True,
@@ -113,7 +113,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
         #insert new data into summary table vds.veh_length_15min
         summarize_lengths_task = PostgresOperator(
-            sql="insert/insert-veh_length_15min.sql",
+            sql="insert/insert_veh_lengths_15min.sql",
             task_id='summarize_lengths',
             postgres_conn_id='vds_bot',
             autocommit=True,
