@@ -49,6 +49,7 @@ default_args = {
 with DAG(dag_name,
          default_args=default_args,
          max_active_runs=5,
+         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
@@ -76,9 +77,9 @@ with DAG(dag_name,
 
     #this task group deletes any existing data from RDS summary tables (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts into the same table
     with TaskGroup(group_id='summarize_v15') as v15data:
-        #deletes data from vds.volumes_15min
+        #deletes data from vds.counts_15min
         delete_v15_task = PostgresOperator(
-            sql="""DELETE FROM vds.volumes_15min
+            sql="""DELETE FROM vds.counts_15min
                     WHERE
                     datetime_bin >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
@@ -88,18 +89,18 @@ with DAG(dag_name,
             retries=1
         )
 
-        #inserts summarized data into RDS `vds.volumes_15min`
+        #inserts summarized data into RDS `vds.counts_15min`
         summarize_v15_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_vds_volumes('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+            sql="insert/insert_counts_15min.sql",
             task_id='summarize_v15',
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        #deletes data from vds.volumes_15min_bylane
+        #deletes data from vds.counts_15min_bylane
         delete_v15_bylane_task = PostgresOperator(
-            sql="""DELETE FROM vds.volumes_15min_bylane
+            sql="""DELETE FROM vds.counts_15min_bylane
                     WHERE
                     datetime_bin >= '{{ds}} 00:00:00'::timestamp
                     AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
@@ -109,9 +110,9 @@ with DAG(dag_name,
             retries=1
         )
 
-        #inserts summarized data into RDS `vds.volumes_15min_bylane`
+        #inserts summarized data into RDS `vds.counts_15min_bylane`
         summarize_v15_bylane_task = PostgresOperator(
-            sql="SELECT vds.aggregate_15min_vds_volumes_bylane('{{ds}} 00:00:00'::timestamp, '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY')",
+            sql="insert/insert_counts_15min_bylane.sql",
             task_id='summarize_v15_bylane',
             postgres_conn_id='vds_bot',
             autocommit=True,

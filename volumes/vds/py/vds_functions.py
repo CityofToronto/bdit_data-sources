@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 # connection to slack
 SLACK_CONN_ID = 'slack_data_pipeline'
 
-def task_fail_slack_alert(owners, context):
+def task_fail_slack_alert(owners:list, context:dict):
     # connection to slack
     global SLACK_CONN_ID
     
