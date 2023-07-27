@@ -1,0 +1,25 @@
+SELECT 
+    divisionid,
+    entitytype,
+    entityid,
+    TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamp,
+    latitude,
+    longitude,
+    altitudemetersasl,
+    headingdegrees,
+    speedkmh,
+    numsatellites,
+    dilutionofprecision,
+    mainroadid,
+    crossroadid,
+    secondcrossroadid,
+    mainroadname,
+    crossroadname,
+    secondcrossroadname,
+    streetnumber,
+    offsetdistancemeters,
+    offsetdirectiondegrees,
+    locationsource,
+    locationdescriptionoverwrite
+FROM public.entitylocation
+WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table

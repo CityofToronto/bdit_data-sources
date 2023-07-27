@@ -1,3 +1,4 @@
+import os
 import logging
 import pandas as pd
 from numpy import nan
@@ -11,6 +12,8 @@ from airflow.macros import ds_add
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+
+CUR_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -69,23 +72,28 @@ def fetch_pandas_df(conn, query, table_name):
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
+        raise Exception()
 
 def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, table_name, batch_size = 100000):
     #generic function to pull and insert data using different connections and queries.
     batch=1
+    running_total=0
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info(f"Fetching {table_name}")
             cur.execute(select_query)
             data = cur.fetchmany(batch_size)
             while not len(data) == 0:
+                running_total = running_total + len(data)
                 LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from {table_name}.")
                 insert_data(insert_conn, insert_query, table_name, data)
                 data = cur.fetchmany(batch_size)
                 batch = batch + 1
+            LOGGER.info(f"Total rows fetched: {running_total}.")
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
         LOGGER.critical(exc)
+        raise Exception()
 
 def insert_data(conn, query, table_name, data):
     #generic function to insert data
@@ -98,29 +106,20 @@ def insert_data(conn, query, table_name, data):
     except Error as exc:
         LOGGER.critical(f"Error inserting into {table_name}.")
         LOGGER.critical(exc)
+        raise Exception()
 
 def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
 
     # Pull raw data from Postgres database
-    raw_sql = sql.SQL("""SELECT 
-        divisionid,
-        vdsid,
-        timestamputc, --timestamp in INTEGER (UTC)
-        lanedata
-    FROM public.vdsdata
-    WHERE
-        timestamputc >= extract(epoch from timestamp with time zone {start}) :: INTEGER
-        AND timestamputc < extract(epoch from timestamp with time zone {start} + INTERVAL '1 DAY') :: INTEGER
-        AND divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty.
-        AND length(lanedata) > 0; --these records don't have any data to unpack.
-    """).format(
-        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+    file = open(CUR_DIR + '/sql/select/select-itsc_vdsdata.sql', 'r')
+    raw_sql = sql.SQL(file.read()).format( 
+         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
 
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
-                                        division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
-                                        ) VALUES %s;""")
+                                 division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+                                ) VALUES %s;""")
     batch_size = 100000
     
     #pull data in batches and transform + insert.
@@ -138,34 +137,33 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 # Transform raw data
                 transformed_data = transform_raw_data(data)
                 transformed_data = transformed_data.replace(nan, None)
+                
+                #check for duplicates. Keep first occurance and print/discard others. 
+                dups = transformed_data.duplicated(subset=['divisionid', 'vdsid', 'datetime', 'lane'], keep = 'first') 
+                if dups.sum() > 0:
+                    print("Duplicate values found in vdsdata discarded:")
+                    print(transformed_data[dups])
+                    transformed_data = transformed_data[~dups] 
+
+                #insert data 
                 data_tuples = [tuple(x) for x in transformed_data.to_numpy()] #convert df back to tuples for inserting
                 insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
+
+                #fetch next batch
                 data = cur.fetchmany(batch_size)
                 batch = batch + 1
     except Error as exc:
             LOGGER.critical("Error fetching from %s.", 'vdsdata')
             LOGGER.critical(exc)
-
+            raise Exception()
+    
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
 #contains individual vehicle activations from highway sensors (speed, length)
-      
-    raw_sql = sql.SQL("""
-    SELECT
-        divisionid,
-        vdsid,
-        TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT' AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-        lane,
-        sensoroccupancyds,
-        round(speedkmhdiv100 / 100, 1) AS speed_kmh,
-        round(lengthmeterdiv100 / 100, 1) AS length_meter
-    FROM public.vdsvehicledata
-    WHERE
-        divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-        AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz) --need tz conversion on RH side to make use of index.
-        AND timestamputc < TIMEZONE('UTC', {start}::timestamptz) + INTERVAL '1 DAY';
-    """).format(
-        start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+
+    file = open(CUR_DIR + '/sql/select/select-itsc_vdsvehicledata.sql', 'r')
+    raw_sql = sql.SQL(file.read()).format( 
+         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
     
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
@@ -186,29 +184,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
 #very small table so OK to pull entire table daily. 
 
     # Pull data from the detector_inventory table
-    detector_sql = sql.SQL("""
-    SELECT 
-        divisionid,
-        vdsid,
-        UPPER(sourceid) AS detector_id, --match what we already have
-        TIMEZONE('UTC', starttimestamputc) AT TIME ZONE 'EST5EDT' AS starttimestamp,
-        TIMEZONE('UTC', endtimestamputc) AT TIME ZONE 'EST5EDT' AS endtimestamp,
-        lanes,
-        hasgpsunit,
-        managementurl,
-        description,
-        fssdivisionid,
-        fssid,
-        rtmsfromzone,
-        rtmstozone,
-        detectortype,
-        createdby,
-        createdbystaffid,
-        signalid,
-        signaldivisionid,
-        movement
-    FROM public.vdsconfig
-    WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table""")
+    file = open(CUR_DIR + '/sql/select/select-itsc_vdsconfig.sql', 'r')
+    detector_sql = sql.SQL(file.read())
 
     # upsert data
     insert_query = sql.SQL("""
@@ -232,33 +209,8 @@ def pull_entity_locations(rds_conn, itsc_conn):
 #very small table so OK to pull entire table daily. 
 
     # Pull data from the detector_inventory table
-    entitylocation_sql = sql.SQL("""
-    SELECT 
-         divisionid,
-         entitytype,
-         entityid,
-         TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamp,
-         latitude,
-         longitude,
-         altitudemetersasl,
-         headingdegrees,
-         speedkmh,
-         numsatellites,
-         dilutionofprecision,
-         mainroadid,
-         crossroadid,
-         secondcrossroadid,
-         mainroadname,
-         crossroadname,
-         secondcrossroadname,
-         streetnumber,
-         offsetdistancemeters,
-         offsetdirectiondegrees,
-         locationsource,
-         locationdescriptionoverwrite
-    FROM public.entitylocation
-    WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
-    """)
+    file = open(CUR_DIR + '/sql/select/select-itsc_entitylocations.sql', 'r')
+    entitylocation_sql = sql.SQL(file.read())
 
     # upsert data
     insert_query = sql.SQL("""
@@ -356,7 +308,7 @@ def transform_raw_data(df):
     
     return raw_20sec
 
-def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, lookback=7, threshold_percent=0.01):
+def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, lookback):
     #compare row counts for two databases and return dates exceeding threshold of new rows.
 
     rows_source = fetch_pandas_df(conn_source, query_source, 'row count 1')
@@ -373,7 +325,7 @@ def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, l
     LOGGER.info(dates)
 
     #find days with more rows in ITSC (Source) than RDS (Dest)
-    dates_dif = dates[dates['count_source'] >= (1 + threshold_percent) * dates['count_dest']] 
+    dates_dif = dates[dates['count_source'] != dates['count_dest']] 
 
     return dates_dif['dt']
 
@@ -381,67 +333,17 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
 # compare row counts for table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
 # used for both vdsdata and vdsvehicledata tables. 
 
-    if dataset == 'vdsdata':
-        itsc_query = sql.SQL("""
-            SELECT
-                    TIMEZONE('EST5EDT', TO_TIMESTAMP(timestamputc))::date AS dt, 
-                    SUM(LENGTH(lanedata)/15) AS count --each 15 bytes represents one row in final expanded data
-                FROM public.vdsdata
-                WHERE
-                    divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-                    AND timestamputc >= extract(epoch from timestamp with time zone {start} - INTERVAL {lookback}) :: INTEGER
-                    AND timestamputc < extract(epoch from timestamp with time zone {start}) :: INTEGER
-                    AND length(lanedata) > 0
-                GROUP BY dt;
-        """).format(
-            start = sql.Literal(start_date + " 00:00:00 EST5EDT"),
-            lookback = sql.Literal(str(lookback_days) + ' DAYS')
-        )
-        
-        rds_query = sql.SQL("""
-            SELECT
-                date_trunc('day', datetime_15min)::date AS dt,
-                COUNT(*)
-            FROM vds.raw_vdsdata
-            WHERE
-                division_id = 2
-                AND datetime_20sec >= {start}::timestamp - INTERVAL {lookback}
-                AND datetime_20sec < {start}::timestamp
-            GROUP BY dt
-        """).format(
-            start = sql.Literal(start_date + " 00:00:00"),
-            lookback = sql.Literal(str(lookback_days) + ' DAYS')
-        )
-    elif dataset == 'vdsvehicledata':
-        itsc_query = sql.SQL("""
-            SELECT
-                (TIMEZONE('UTC', timestamputc) AT TIME ZONE 'EST5EDT')::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-                COUNT(*)
-            FROM public.vdsvehicledata
-            WHERE
-                divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-                AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - INTERVAL {lookback})
-                AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
-            GROUP BY dt
-        """).format(
-            start = sql.Literal(start_date + " 00:00:00 EST5EDT"),
-            lookback = sql.Literal(str(lookback_days) + ' DAYS')
-        )
-    
-        rds_query = sql.SQL("""
-            SELECT
-                d.dt::date AS dt, --convert timestamp (without timezone) at UTC to EDT/EST
-                COUNT(*)
-            FROM vds.raw_vdsvehicledata AS d
-            WHERE
-                d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
-                AND dt >= {start}::timestamp - INTERVAL {lookback}
-                AND dt < {start}::timestamp
-            GROUP BY 1
-            """).format(
-            start = sql.Literal(start_date + " 00:00:00"),
-            lookback = sql.Literal(str(lookback_days) + ' DAYS')
-        )
+    file = open(CUR_DIR + f'/sql/select/select-itsc_{dataset}.sql', 'r')
+    itsc_query = sql.SQL(file.read()).format( 
+        start = sql.Literal(start_date + " 00:00:00 EST5EDT"),
+        lookback = sql.Literal(str(lookback_days) + ' DAYS')
+    )
+
+    file = open(CUR_DIR + f'/sql/select/select-rds_{dataset}.sql', 'r')
+    rds_query = sql.SQL(file.read()).format( 
+        start = sql.Literal(start_date + " 00:00:00"),
+        lookback = sql.Literal(str(lookback_days) + ' DAYS')
+    )
     
     dates_dif = monitor_func(conn_source=itsc_conn,
                             query_source=itsc_query,
