@@ -98,17 +98,17 @@ SELECT
         WHEN u.movement = 't' THEN 1
         WHEN u.movement = 'l' THEN 2
         WHEN u.movement = 'r' THEN 3
-        WHEN u.trans_mode = 'bike' THEN 7
-        -- modes "other" and "peds" are left undefined, though peds 
-        -- actually combines movement_uid's 5 and 6
+        WHEN u.trans_mode IN ('bike', 'other') THEN 7 -- only indicates approach, not turning movement
+        -- peds could be either 5 or 6; no distinction is made about which way they are travelling
+        WHEN u.trans_mode = 'peds' THEN -5
     END AS movement_uid,
     CASE
         WHEN u.trans_mode = 'cars' THEN 1
         WHEN u.trans_mode = 'peds' THEN 6
         WHEN u.trans_mode = 'bike' THEN 10
         WHEN u.trans_mode = 'bus' THEN 3
-        WHEN u.trans_mode = 'truck' THEN 4 -- open to debate, this one
-        -- again, other undefined
+        WHEN u.trans_mode = 'truck' THEN -4 -- open to debate, this one
+        ELSE -99 -- again, other is undefined
     END AS classification_uid,
     CASE -- necessary because there's a sneaky 'NULL' hiding somewhere
         WHEN u.volume ~ '^\d+$' THEN u.volume::int
