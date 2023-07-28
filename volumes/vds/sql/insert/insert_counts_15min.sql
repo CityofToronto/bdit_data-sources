@@ -3,9 +3,8 @@ INSERT INTO vds.counts_15min (division_id, vds_id, detector_id, num_lanes, datet
     count_15min, expected_bins, num_obs, num_distinct_lanes)
 
 /* Conversion of hourly volumes to count depends on size of bin.
-    These bin counts were determined by looking at the most common bin gap using:
-    bdit_data-sources/volumes/vds/exploration/time_gaps.sql 
-*/
+These bin counts were determined by looking at the most common bin gap using:
+bdit_data-sources/volumes/vds/exploration/time_gaps.sql */
 WITH detector_inventory AS (
     SELECT
         *, 
@@ -30,7 +29,7 @@ SELECT
     SUM(d.volume_veh_per_hr) / 4 / c.expected_bins AS count_15min,
         -- / 4 to convert hourly volume to 15 minute volume
         -- / (expected_bins) to get average 15 minute volume depending on bin size
-            --(assumes blanks are 0)
+        -- (assumes blanks are 0)
     c.expected_bins,
     COUNT(*) AS num_obs,
     COUNT(DISTINCT d.lane) AS num_distinct_lanes
@@ -44,7 +43,7 @@ JOIN detector_inventory AS c ON
         OR c.end_timestamp IS NULL) --no end date
 WHERE 
     d.datetime_15min >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
-    AND d.datetime_15min < '{{ ds }} 00:00:00'::timestamp + INTERVAL '1 DAY' --'2023-07-06 00:00:00'::timestamp
+    AND d.datetime_15min < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
 GROUP BY
     d.division_id,
     d.vds_id,

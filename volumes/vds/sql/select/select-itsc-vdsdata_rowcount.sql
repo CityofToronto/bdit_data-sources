@@ -4,7 +4,7 @@ SELECT
 FROM public.vdsdata
 WHERE
     divisionid = 2 --other is 8001 which are traffic signal detectors and are mostly empty
-    AND timestamputc >= extract(EPOCH FROM {start}::timestamptz - INTERVAL {lookback})::integer
-    AND timestamputc < extract(EPOCH FROM {start}::timestamptz)::integer
+    AND timestamputc >= extract('epoch' FROM {start}::timestamptz - interval {lookback})::integer
+    AND timestamputc < extract('epoch' FROM {start}::timestamptz)::integer
     AND length(lanedata) > 0
 GROUP BY dt;

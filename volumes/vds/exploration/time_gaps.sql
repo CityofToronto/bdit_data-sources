@@ -11,20 +11,20 @@ WITH time_gaps AS (
     FROM vds.raw_vdsdata
 )
 
-SELECT DISTINCT ON (vds_id)
-    vds_id,
-    detector_id,
+SELECT DISTINCT ON (t.vds_id)
+    t.vds_id,
+    c.detector_id,
     c.start_timestamp,
-    gap,
-    COUNT(*)
-FROM time_gaps
+    t.gap,
+    COUNT(*) AS count
+FROM time_gaps AS t 
 LEFT JOIN vds.vdsconfig AS c USING (vds_id)
 GROUP BY
-    vds_id,
-    detector_id,
+    t.vds_id,
+    c.detector_id,
     c.start_timestamp,
-    gap
+    t.gap
 ORDER BY
-    vds_id ASC,
-    COUNT(*) DESC,
+    t.vds_id ASC,
+    count DESC,
     c.start_timestamp DESC

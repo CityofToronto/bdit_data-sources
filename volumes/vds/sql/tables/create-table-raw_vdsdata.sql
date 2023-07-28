@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS vds.raw_vdsdata (
-    volume_uid bigserial,
+    volume_uid bigserial PRIMARY KEY,
     division_id smallint,
     vds_id integer,
     dt timestamp without time zone,
@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS vds.raw_vdsdata (
     speed_kmh float, 
     volume_veh_per_hr integer,
     occupancy_percent float,
-    PRIMARY KEY volume_uid, 
     UNIQUE (division_id, vds_id, dt, lane)
 ); 
 
@@ -22,16 +21,16 @@ COMMENT ON TABLE vds.raw_vdsdata IS 'Store raw data pulled from ITS Central
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsid_dt
 ON vds.raw_vdsdata
-USING btree (
-    division_id ASC NULLS LAST, 
-    dt ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last, 
+    dt ASC nulls last
 );
     
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_divid_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsdata_divid_vdsid_dt
 ON vds.raw_vdsdata
-USING btree (
-    division_id ASC NULLS LAST,
-    vds_id ASC NULLS LAST,
-    dt ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last,
+    vds_id ASC nulls last,
+    dt ASC nulls last
 );

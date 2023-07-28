@@ -20,6 +20,7 @@ INNER JOIN vds.vdsconfig AS c ON --don't want to include the truncated detector_
     )
 WHERE v15.datetime_bin <= '2021-10-31'
 ORDER BY
-    v15.detector_id,
-    v15.datetime_bin,
-    c.start_timestamp DESC
+    v15.detector_id ASC,
+    v15.datetime_bin ASC,
+    c.start_timestamp DESC,
+    
