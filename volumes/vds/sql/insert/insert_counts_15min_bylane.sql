@@ -1,5 +1,5 @@
 --aggregate `vds.raw_vdsdata` into `vds.counts_15min_bylane` table by detector / lane / 15min bins.'
-INSERT INTO vds.counts_15min_bylane (division_id, vds_id, detector_id, lane, datetime_bin,
+INSERT INTO vds.counts_15min_bylane (division_id, vds_id, detector_id, lane, datetime_15min,
     count_15min, expected_bins, num_obs)
 
 /* Conversion of hourly volumes to count depends on size of bin.

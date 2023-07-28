@@ -81,7 +81,7 @@ Row count: 927,399
 | division_id        | smallint                    | 2                   |               |
 | vds_id             | integer                     | 3                   |               |
 | num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
-| datetime_bin       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if bin timestamp represents start or end of 15 minute period. |
+| datetime_15min       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if original bin timestamp is at the start or end of the 15 minute period. |
 | count_15min       | smallint                    | 217                 |               |
 | expected_bins      | smallint                    | 45                  | Expected bins per lane in a 15 minute period |
 | num_obs            | smallint                    | 84                  | Number of actual observations in a 15 minute period. Shouldn't be larger than num_lanes * expected_bins. |
@@ -104,7 +104,7 @@ Row count: 1,712,401
 | division_id   | smallint                    | 2                   |               |
 | vds_id        | integer                     | 3                   |               |
 | lane          | smallint                    | 1                   |               |
-| datetime_bin  | timestamp without time zone | 2023-06-07 00:00:00 |               |
+| datetime_15min  | timestamp without time zone | 2023-06-07 00:00:00 |               |
 | count_15min  | smallint                    | 8                   |               |
 | expected_bins | smallint                    | 45                  |               |
 | num_obs       | smallint                    | 45                  |               |
