@@ -13,15 +13,15 @@ CREATE TABLE wys.mobile_sign_installations
     removal_date date,
     new_sign_number text COLLATE pg_catalog."default",
     comments text COLLATE pg_catalog."default",
-    id serial
+    id serial,
+    work_order integer
 )
 WITH (
     OIDS = FALSE
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.mobile_sign_installations
-    OWNER to jchew;
+ALTER TABLE wys.mobile_sign_installations OWNER to wys_admins;
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.mobile_sign_installations TO bdit_humans;
 
