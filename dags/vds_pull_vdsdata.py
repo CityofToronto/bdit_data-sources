@@ -81,8 +81,8 @@ with DAG(dag_name,
         delete_v15_task = PostgresOperator(
             sql="""DELETE FROM vds.counts_15min
                     WHERE
-                    datetime_bin >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
+                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
+                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_v15',
             postgres_conn_id='vds_bot',
             autocommit=True,
@@ -102,8 +102,8 @@ with DAG(dag_name,
         delete_v15_bylane_task = PostgresOperator(
             sql="""DELETE FROM vds.counts_15min_bylane
                     WHERE
-                    datetime_bin >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_bin < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
+                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
+                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_v15_bylane',
             postgres_conn_id='vds_bot',
             autocommit=True,
