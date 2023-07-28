@@ -8,7 +8,9 @@ SELECT
     datetime_bin(dt, 15) AS datetime_15min,
     FLOOR(speed_kmh / 5.0) * 5 AS speed_5kph,
     COUNT(*) AS count,
-    SUM(COUNT(*)) OVER (PARTITION BY division_id, vds_id, datetime_bin(dt, 15)) AS total_count
+    SUM(COUNT(*)) OVER (
+        PARTITION BY division_id, vds_id, datetime_bin(dt, 15)
+    ) AS total_count
 FROM vds.raw_vdsvehicledata
 WHERE
     dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
@@ -17,6 +19,6 @@ WHERE
 GROUP BY 
     division_id,
     vds_id,
-    datetime_bin(dt, 15),
-    FLOOR(speed_kmh / 5.0) * 5
+    datetime_15min,
+    speed_5kph
 ON CONFLICT DO NOTHING;

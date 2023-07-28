@@ -21,10 +21,17 @@ COMMENT ON TABLE vds.raw_vdsdata IS 'Store raw data pulled from ITS Central
 
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsid_dt
-    ON vds.raw_vdsdata USING btree
-    (division_id ASC NULLS LAST, dt ASC NULLS LAST);
+ON vds.raw_vdsdata
+USING btree (
+    division_id ASC NULLS LAST, 
+    dt ASC NULLS LAST
+);
     
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_divid_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsdata_divid_vdsid_dt
-    ON vds.raw_vdsdata USING btree
-    (division_id ASC NULLS LAST, vds_id ASC NULLS LAST, dt ASC NULLS LAST);
+ON vds.raw_vdsdata
+USING btree (
+    division_id ASC NULLS LAST,
+    vds_id ASC NULLS LAST,
+    dt ASC NULLS LAST
+);
