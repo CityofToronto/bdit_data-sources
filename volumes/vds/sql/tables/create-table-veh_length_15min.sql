@@ -1,12 +1,11 @@
 CREATE TABLE IF NOT EXISTS vds.veh_length_15min (
-    uid bigserial,
+    uid bigserial PRIMARY KEY,
     division_id smallint, 
     vds_id integer,
     datetime_15min timestamp,
     length_meter smallint,
     count smallint,
     total_count smallint,
-    PRIMARY KEY uid, 
     UNIQUE (division_id, vds_id, datetime_15min, length_meter)
 );
 
@@ -20,16 +19,16 @@ aggregated to detector / lengths floored to 1m.';
 -- DROP INDEX IF EXISTS vds.ix_veh_lengths_divid_dt;
 CREATE INDEX IF NOT EXISTS ix_veh_lengths_divid_dt
 ON vds.veh_length_15min
-USING btree (
-    division_id ASC NULLS LAST,
-    datetime_15min ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last,
+    datetime_15min ASC nulls last
 );
 
 -- DROP INDEX IF EXISTS vds.ix_veh_lengths_divid_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_veh_lengths_divid_vdsid_dt
 ON vds.veh_length_15min
-USING btree (
-    division_id ASC NULLS LAST,
-    vds_id ASC NULLS LAST,
-    datetime_15min ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last,
+    vds_id ASC nulls last,
+    datetime_15min ASC nulls last
 );

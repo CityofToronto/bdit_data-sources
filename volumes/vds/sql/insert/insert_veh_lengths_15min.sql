@@ -14,7 +14,7 @@ SELECT
 FROM vds.raw_vdsvehicledata
 WHERE
     dt >= '{{ ds }} 00:00:00'::timestamp
-    AND dt < '{{ ds }} 00:00:00'::timestamp + INTERVAL '1 DAY'
+    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY'
     AND length_meter IS NOT NULL
 GROUP BY 
     division_id,

@@ -1,7 +1,7 @@
 --DROP TABLE vds.vdsconfig; 
 
 CREATE TABLE IF NOT EXISTS vds.vdsconfig (
-    uid serial,
+    uid serial PRIMARY KEY,
     division_id smallint,
     vds_id integer,
     detector_id character varying,
@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS vds.vdsconfig (
     signal_id integer,
     signal_division_id smallint,
     movement smallint,
-    PRIMARY KEY uid,
     UNIQUE (division_id, vds_id, start_timestamp)
 )
 

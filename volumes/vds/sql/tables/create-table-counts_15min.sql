@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS vds.counts_15min (
-    volumeuid bigserial,
+    volumeuid bigserial PRIMARY KEY,
     detector_id text,
     division_id smallint,
     vds_id integer,
@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS vds.counts_15min (
     expected_bins smallint,
     num_obs smallint,
     num_distinct_lanes smallint,
-    PRIMARY KEY (volumeuid),
     UNIQUE (division_id, vds_id, datetime_15min)
 );
 
@@ -23,16 +22,16 @@ aggregated by detector / 15min bins.';
 -- DROP INDEX IF EXISTS vds.ix_counts15_divid_dt;
 CREATE INDEX IF NOT EXISTS ix_counts15_divid_dt
 ON vds.counts_15min
-USING btree (
-    division_id ASC NULLS LAST,
-    datetime_15min ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last,
+    datetime_15min ASC nulls last
 );
 
 -- DROP INDEX IF EXISTS vds.ix_counts15_divid_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_counts15_divid_vdsid_dt
 ON vds.counts_15min
-USING btree (
-    division_id ASC NULLS LAST,
-    vds_id ASC NULLS LAST,
-    datetime_15min ASC NULLS LAST
+USING btree(
+    division_id ASC nulls last,
+    vds_id ASC nulls last,
+    datetime_15min ASC nulls last
 );

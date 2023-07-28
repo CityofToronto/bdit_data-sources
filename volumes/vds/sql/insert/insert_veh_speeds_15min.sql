@@ -14,7 +14,7 @@ SELECT
 FROM vds.raw_vdsvehicledata
 WHERE
     dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
-    AND dt < '{{ ds }} 00:00:00'::timestamp + INTERVAL '1 DAY' --'2023-07-06 00:00:00'::timestamp
+    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
     AND speed_kmh IS NOT NULL
 GROUP BY 
     division_id,

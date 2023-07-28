@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS vds.entity_locations (
-    uid serial, 
+    uid serial PRIMARY KEY, 
     division_id smallint,
     entity_type smallint,
     entity_id integer,
@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     offset_direction_degrees double precision,
     location_source smallint,
     location_description_overwrite character varying,
-    PRIMARY KEY uid, 
     UNIQUE(division_id, entity_id, location_timestamp)
 )
 

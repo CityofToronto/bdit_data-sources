@@ -4,6 +4,6 @@ SELECT
 FROM public.vdsvehicledata
 WHERE
     divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-    AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - INTERVAL {lookback})
+    AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - interval {lookback})
     AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
 GROUP BY dt
