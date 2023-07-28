@@ -53,6 +53,4 @@ SELECT
     spd_95 ,
     spd_100_and_above ,
     volume 
-    FROM wys.mobile_summary
-	WHERE removal_date - installation_date > 1 
-    ;
+FROM wys.mobile_summary;
