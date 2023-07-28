@@ -14,7 +14,7 @@ WITH detector_inventory AS (
             WHEN detector_id LIKE ANY('{"YONGE HEATH%", "YONGE DAVISVILLE%", "BCT%"}')
                 THEN 1 --15 min bins
             WHEN detector_id LIKE ANY(
-                    '{"YONGE & DAVENPORT SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}'
+                    '{"%SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}'
                 ) THEN 3 --5 min bins
             WHEN division_id = 8001
                 THEN 1 --15 min bins
