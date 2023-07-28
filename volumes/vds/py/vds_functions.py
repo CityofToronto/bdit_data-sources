@@ -13,7 +13,7 @@ from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
-CUR_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -84,11 +84,11 @@ def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, 
             cur.execute(select_query)
             data = cur.fetchmany(batch_size)
             while not len(data) == 0:
-                running_total = running_total + len(data)
+                running_total += len(data)
                 LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from {table_name}.")
                 insert_data(insert_conn, insert_query, table_name, data)
                 data = cur.fetchmany(batch_size)
-                batch = batch + 1
+                batch += 1
             LOGGER.info(f"Total rows fetched: {running_total}.")
     except Error as exc:
         LOGGER.critical(f"Error fetching from {table_name}.")
@@ -101,7 +101,8 @@ def insert_data(conn, query, table_name, data):
         with conn.get_conn() as con, con.cursor() as cur:                
             # Insert cleaned data into the database
             LOGGER.info(f"Inserting into {table_name}.")
-            execute_values(cur, query, data, page_size = 1000) #31s for 800k rows of vdsvehicledata w/10000. --41s w/1000. >3 minutes w/100
+            #Tested impact of page_size on insert: Default: >3 minutes w/100. 31s for 800k rows of vdsvehicledata w/10000. 41s w/1000. 
+            execute_values(cur, query, data, page_size = 1000) 
             LOGGER.info(f"Inserted {len(data)} rows into {table_name}.")
     except Error as exc:
         LOGGER.critical(f"Error inserting into {table_name}.")
@@ -112,13 +113,14 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
 
     # Pull raw data from Postgres database
-    file = open(CUR_DIR + '/sql/select/select-itsc_vdsdata.sql', 'r')
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata.sql')
+    file = open(fpath, 'r')
     raw_sql = sql.SQL(file.read()).format( 
          start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
 
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
-                                 division_id, vds_id, datetime_20sec, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+                                 division_id, vds_id, dt, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
                                 ) VALUES %s;""")
     batch_size = 100000
     
@@ -129,7 +131,10 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
             cur.execute(raw_sql)
             data = cur.fetchmany(batch_size)
             batch = 1
+            running_total_1=0
+            running_total_2=0
             while not len(data) == 0:
+                running_total_1 += len(data)
                 LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from vdsdata.")
                 data = pd.DataFrame(data)
                 data.columns=[x.name for x in cur.description]
@@ -137,13 +142,14 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 # Transform raw data
                 transformed_data = transform_raw_data(data)
                 transformed_data = transformed_data.replace(nan, None)
-                
+
                 #check for duplicates. Keep first occurance and print/discard others. 
                 dups = transformed_data.duplicated(subset=['divisionid', 'vdsid', 'datetime', 'lane'], keep = 'first') 
                 if dups.sum() > 0:
                     print("Duplicate values found in vdsdata discarded:")
                     print(transformed_data[dups])
                     transformed_data = transformed_data[~dups] 
+                running_total_2 += transformed_data.shape[0]
 
                 #insert data 
                 data_tuples = [tuple(x) for x in transformed_data.to_numpy()] #convert df back to tuples for inserting
@@ -151,7 +157,8 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 
                 #fetch next batch
                 data = cur.fetchmany(batch_size)
-                batch = batch + 1
+                batch += 1
+            LOGGER.info(f"Total rows fetched: {running_total_1}. Total rows inserted (lanedata expanded): {running_total_2}.")
     except Error as exc:
             LOGGER.critical("Error fetching from %s.", 'vdsdata')
             LOGGER.critical(exc)
@@ -161,7 +168,8 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
 #contains individual vehicle activations from highway sensors (speed, length)
 
-    file = open(CUR_DIR + '/sql/select/select-itsc_vdsvehicledata.sql', 'r')
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata.sql')
+    file = open(fpath, 'r')
     raw_sql = sql.SQL(file.read()).format( 
          start = sql.Literal(start_date + " 00:00:00 EST5EDT")
     )
@@ -184,8 +192,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
 #very small table so OK to pull entire table daily. 
 
     # Pull data from the detector_inventory table
-    file = open(CUR_DIR + '/sql/select/select-itsc_vdsconfig.sql', 'r')
-    detector_sql = sql.SQL(file.read())
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsconfig.sql')
+    detector_sql = sql.SQL(open(fpath, 'r').read())
 
     # upsert data
     insert_query = sql.SQL("""
@@ -209,8 +217,8 @@ def pull_entity_locations(rds_conn, itsc_conn):
 #very small table so OK to pull entire table daily. 
 
     # Pull data from the detector_inventory table
-    file = open(CUR_DIR + '/sql/select/select-itsc_entitylocations.sql', 'r')
-    entitylocation_sql = sql.SQL(file.read())
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_entitylocations.sql')
+    entitylocation_sql = sql.SQL(open(fpath, 'r').read())
 
     # upsert data
     insert_query = sql.SQL("""
@@ -333,13 +341,15 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
 # compare row counts for table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
 # used for both vdsdata and vdsvehicledata tables. 
 
-    file = open(CUR_DIR + f'/sql/select/select-itsc_{dataset}.sql', 'r')
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_{dataset}.sql')
+    file = open(fpath, 'r')
     itsc_query = sql.SQL(file.read()).format( 
         start = sql.Literal(start_date + " 00:00:00 EST5EDT"),
         lookback = sql.Literal(str(lookback_days) + ' DAYS')
     )
 
-    file = open(CUR_DIR + f'/sql/select/select-rds_{dataset}.sql', 'r')
+    fpath = os.path.join(SQL_DIR, 'select/select-rds_{dataset}.sql')
+    file = open(fpath, 'r')
     rds_query = sql.SQL(file.read()).format( 
         start = sql.Literal(start_date + " 00:00:00"),
         lookback = sql.Literal(str(lookback_days) + ' DAYS')
