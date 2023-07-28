@@ -67,7 +67,8 @@ with DAG(dag_name,
                     'rds_conn': vds_bot,
                     'itsc_conn': itsc_bot,
                     'start_date': '{{ data_interval_end | ds }}',
-                    'dataset': dataset
+                    'dataset': dataset,
+                    'lookback_days': LOOKBACK_DAYS
                     }
             )
             #empty_task is needed to not cause failure when no backfilling tasks called

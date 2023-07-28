@@ -341,14 +341,14 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
 # compare row counts for table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
 # used for both vdsdata and vdsvehicledata tables. 
 
-    fpath = os.path.join(SQL_DIR, 'select/select-itsc_{dataset}.sql')
+    fpath = os.path.join(SQL_DIR, f'select/select-itsc-{dataset}_rowcount.sql')
     file = open(fpath, 'r')
     itsc_query = sql.SQL(file.read()).format( 
         start = sql.Literal(start_date + " 00:00:00 EST5EDT"),
         lookback = sql.Literal(str(lookback_days) + ' DAYS')
     )
 
-    fpath = os.path.join(SQL_DIR, 'select/select-rds_{dataset}.sql')
+    fpath = os.path.join(SQL_DIR, f'select/select-rds-{dataset}_rowcount.sql')
     file = open(fpath, 'r')
     rds_query = sql.SQL(file.read()).format( 
         start = sql.Literal(start_date + " 00:00:00"),
