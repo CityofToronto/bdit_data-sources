@@ -15,6 +15,8 @@ WITH detector_inventory AS (
                 THEN 1 --15 min bins
             WHEN detector_id LIKE ANY('{"YONGE & DAVENPORT SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}')
                 THEN 3 --5 min bins
+            WHEN division_id = 8001
+                THEN 1 --15 min bins
         END AS expected_bins
     FROM vds.vdsconfig 
 )
@@ -26,9 +28,9 @@ SELECT
     d.lane,
     d.datetime_15min,
     SUM(d.volume_veh_per_hr) / 4 / c.expected_bins AS count_15min,
-        -- / 4 to convert hourly volume to 15 minute volume
-        -- / (expected_bins) to get average 15 minute volume depending on 
-        -- bin size (assumes blanks are 0)
+    -- / 4 to convert hourly volume to 15 minute volume
+    -- / (expected_bins) to get average 15 minute volume depending on 
+    -- bin size (assumes blanks are 0)
     c.expected_bins,
     COUNT(*) AS num_obs
 FROM vds.raw_vdsdata AS d
