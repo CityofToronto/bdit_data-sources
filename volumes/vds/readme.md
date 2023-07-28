@@ -17,15 +17,27 @@
     2. [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
     3. [vds_monitor](#vds_monitor)
 
-# Introduction  
-VDS data is pulled daily using by the Airflow DAGs described in [DAG Design](#dag-design) from ITS Central database. The dags need to be run on-prem to access ITSC. 
-VDS system consists of:  
-    division_id=2:  
-        -RESCU loop/radar detectors  
-        -Blue City VDS  
-        -SmartCity sensors
-    division_id=8001: (Only 1 day sample pulled)  
-        -Intersection signal detectors + Special Detectors (Special Function and Preemption detectors)  
+# Introduction 
+The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates. 
+
+Improvements over the old `rescu` schema: 
+1. The data pipeline is now pulling from farther upstream which has increased data availability. 
+2. Raw data (20 seconds for RESCU) is now included via the `vds.raw_vdsdata` table which allows investigation into the accuracy of 15 minute counts.
+-The table `vds.counts_15min` (formerly `rescu.volumes_15min`) now includes extra columns (num_lanes, expected_bins, num_obs, num_distinct_lanes) to enable accuracy checks. 
+-The table `vds.counts_15min_bylane` includes the 15 minute detectors counts by lane, which can be used to verify that all lane sensors are working, or to investigate lane by lane traffic distribution.
+3. Individual vehicle detections records are included in the `vds.raw_vdsvehicledata` table which allows us to investigate the speed and length distribution (and possibly following distance?) of vehicles passing the detectors. 
+
+VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described in [DAG Design](#dag-design). The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
+
+VDS system consists of various vehicle detectors:  
+**division_id=2:**  
+&nbsp; 1. RESCU loop/radar detectors  
+&nbsp; 2. Blue City VDS  
+&nbsp; 3. SmartCity sensors  
+**division_id=8001**: (Only 1 day sample pulled)  
+&nbsp; 1. Intersection signal detectors (DET)  
+&nbsp; 2. Signal Preemption Detectors (PE)  
+&nbsp; 3. Special Function Detectors (SF)  
 
 # Table Structure  
 ## vds.raw_vdsdata
