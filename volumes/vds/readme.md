@@ -30,7 +30,7 @@ VDS system consists of:
 # Table Structure  
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata. 
-Volumes are in vehicles per hour for the 20 sec bin. To convert to 15 minute volume, group by datetime_15min and take `SUM(volume_veh_per_hr) / 4 / 45` where / 4 represents hourly to 15 min conversion and / 45 represents number of 20 sec bins in a 15 minute period. This assumes both missing bins and zero values are zeros, in line with old pipeline. 
+Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bins which affects the conversion from volume to count. To convert to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline. 
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
 Contains only division_id = 2. A sample of data for division_id = 8001 is stored in `vds.raw_vdsdata_div8001` for future investigation. 
 
