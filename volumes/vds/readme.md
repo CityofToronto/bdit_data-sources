@@ -2,6 +2,9 @@
 
 # Table of contents
 1. [Introduction](#introduction)
+    1. [Improvements over rescu schema]
+    2. [Data Availability](#data-availability)
+    3. [Future Work](#future-work)
 2. [Table Structure](#table-structure)
     1. [vds.raw_vdsdata](#vdsraw_vdsdata)
     2. [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
@@ -20,6 +23,7 @@
 # Introduction 
 The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates. 
 
+## Improvements
 Improvements over the old `rescu` schema: 
 1. The data pipeline is now pulling from farther upstream which has increased data availability. 
 2. Raw data (20 seconds for RESCU) is now included via the `vds.raw_vdsdata` table which allows investigation into the accuracy of 15 minute counts.
@@ -30,21 +34,28 @@ Improvements over the old `rescu` schema:
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described in [DAG Design](#dag-design). The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
 
 VDS system consists of various vehicle detectors:  
-**division_id=2:**  
+**division_id=2:** Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes Yonge St "BlueCity" / "SmartCity" sensors. 
 &nbsp; 1. RESCU loop/radar detectors  
 &nbsp; 2. Blue City VDS  
 &nbsp; 3. SmartCity sensors  
-**division_id=8001**: (Only 1 day sample pulled)  
+**division_id=8001**: Traffic Signals, PXO, Beacons, Pedestals and UPS 
 &nbsp; 1. Intersection signal detectors (DET)  
 &nbsp; 2. Signal Preemption Detectors (PE)  
 &nbsp; 3. Special Function Detectors (SF)  
+
+## Data Availability
+Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and all subsequent summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.
+Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.  
+
+## Future Work 
+See Issue #658 which will add additional data quality checks to the new schema. 
 
 # Table Structure  
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata. 
 Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bins which affects the conversion from volume to count. To convert to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline. 
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
-Contains only division_id = 2. A sample of data for division_id = 8001 is stored in `vds.raw_vdsdata_div8001` for future investigation. 
+Contains `division_id IN (2, 8001)`. A one day sample for `division_id = 8001` was explored under the heading [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001); more investigation is needed to determine what this data can be used for. 
 
 Row count: 1,203,083 (7 days)
 | column_name       | data_type                   | sample              | description   |
@@ -234,8 +245,9 @@ Row count: 4,622,437
 | uid            | bigint                      | 4866932             |               |
 
 
-## vds.raw_vdsdata_div8001
-A sample of 1 day of vdsdata for sensors from division_id 8001. The data is mostly blank rows and may not be of any utility. Main `vds.raw_vdsdata` table is now filtered to only division_id = 2. 
+## vds.raw_vdsdata (division_id = 8001)
+`vds.raw_vdsdata` data for `division_id = 8001` still needs further exploration to determine utility. 
+A 1 day sample for 2023-06-28 was explored under `vds.raw_vdsdata_div8001`, described below. The data has many  blank rows and may not be of any utility, however to be safe we are pulling no zero rows into `vds.raw_vdsdata` now. The queries below will need to be adapted to work with the main `raw_vdsdata` table. 
 These types of sensors include intersection "detectors" (DET), preemption (PE) (transit /  fire emergency services), special function (SF), which you can identify through the detector_id (example below).
 
 Row count: 601,460
