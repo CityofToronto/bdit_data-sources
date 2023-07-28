@@ -5,8 +5,8 @@ WITH time_gaps AS (
     SELECT
         vds_id,
         lane,
-        datetime_20sec - lag(datetime_20sec, 1) OVER (
-            PARTITION BY vds_id, lane ORDER BY datetime_20sec
+        dt - lag(dt, 1) OVER (
+            PARTITION BY vds_id, lane ORDER BY dt
         ) AS gap
     FROM vds.raw_vdsdata
 )

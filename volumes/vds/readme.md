@@ -40,7 +40,7 @@ Row count: 1,203,083 (7 days)
 | volume_uid        | bigint                      | 105906844           | pkey          |
 | division_id       | smallint                    | 2                   |               |
 | vds_id            | integer                     | 2000410             |               |
-| datetime_20sec    | timestamp without time zone | 2023-06-29 00:01:02 | Timestamp of record. Not always 20sec increments, depending on sensor. |
+| dt    | timestamp without time zone | 2023-06-29 00:01:02 | Timestamp of record. Not always 20sec increments, depending on sensor. |
 | datetime_15min    | timestamp without time zone | 2023-06-29 00:00:00 | Floored to 15 minute bins. |
 | lane              | integer                     | 1                   |               |
 | speed_kmh         | double precision            | 99.5                | Average speed during bin? |
@@ -231,7 +231,7 @@ Row count: 601,460
 |:------------------|:----------------------------|:--------------------|:--------------|
 | division_id       | smallint                    | 8001                |               |
 | vds_id            | integer                     | 3437088             |               |
-| datetime_20sec    | timestamp without time zone | 2023-06-28 00:00:02 |               |
+| dt    | timestamp without time zone | 2023-06-28 00:00:02 |               |
 | datetime_15min    | timestamp without time zone | 2023-06-28 00:00:00 |               |
 | lane              | integer                     | 1                   |               |
 | speed_kmh         | double precision            |                     |               |
@@ -256,9 +256,9 @@ WITH volumes AS (
     FROM vds.raw_vdsdata_div8001 AS v
     LEFT JOIN
         vds.vdsconfig AS c ON v.vds_id = c.vds_id
-        AND c.start_timestamp <= v.datetime_20sec
+        AND c.start_timestamp <= v.dt
         AND (
-            c.end_timestamp > v.datetime_20sec
+            c.end_timestamp > v.dt
             OR c.end_timestamp IS NULL)
     WHERE c.detector_id IS NOT NULL 
     GROUP BY

@@ -5,13 +5,13 @@
 CREATE TABLE IF NOT EXISTS vds.raw_vdsdata_div8001 (
     division_id smallint,
     vds_id integer,
-    datetime_20sec timestamp without time zone,
+    dt timestamp without time zone,
     datetime_15min timestamp without time zone,
     lane integer, 
     speed_kmh float, 
     volume_veh_per_hr integer,
     occupancy_percent float,
-    PRIMARY KEY (division_id, vds_id, datetime_20sec, lane)
+    PRIMARY KEY (division_id, vds_id, dt, lane)
 ); 
 
 ALTER TABLE vds.raw_vdsdata OWNER TO vds_admins;
@@ -21,7 +21,7 @@ INSERT INTO vds.raw_vdsdata_div8001
 SELECT
     division_id,
     vds_id,
-    datetime_20sec,
+    dt,
     datetime_15min,
     lane,
     speed_kmh,
