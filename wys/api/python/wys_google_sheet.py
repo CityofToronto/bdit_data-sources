@@ -62,11 +62,16 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     else:
         for row in values:           
             try:             
-                if row[6] and row[8] and row[10]:
+                if row[6] and row[10]:
                     try: 
                         installation = datetime.strptime(row[6], '%m/%d/%Y').date()
-                        removal = datetime.strptime(row[8], '%m/%d/%Y').date()
-                        i = (ward_no, row[0], row[1], row[2], row[3], installation, removal, row[10], row[11], row[13])
+                        if row[8]:
+                            removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                        else:
+                            removal = None
+                        i = (
+                            ward_no, row[0], row[1], row[2], row[3], installation,
+                            removal, row[10], row[11], int(row[7]), row[13])
                         rows.append(i)
                         LOGGER.debug(row)
                     except:
@@ -86,7 +91,7 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     insert = sql.SQL('''
         WITH new_data (ward_no, location, from_street, to_street, direction, 
                     installation_date, removal_date, new_sign_number, comments, 
-                    confirmed) 
+                    work_order, confirmed) 
                     AS (
                 VALUES %s) 
         , dupes AS(
@@ -94,24 +99,22 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             upsert*/
             INSERT INTO wys.mobile_sign_installations_dupes
             SELECT ward_no::INT, location, from_street, to_street, direction, 
-            installation_date, removal_date, new_sign_number, comments
+            installation_date, removal_date, new_sign_number, comments, work_order
             FROM new_data
             NATURAL JOIN (SELECT new_sign_number, installation_date
                     FROM new_data
                     GROUP BY new_sign_number, installation_date
                     HAVING COUNT(*)> 1) dupes
-            ON CONFLICT ( location, from_street, to_street, direction, 
-                        installation_date, removal_date, new_sign_number, 
-                        comments)
+            ON CONFLICT (work_order)
             DO NOTHING
             RETURNING new_sign_number, installation_date
         )
         INSERT INTO {}.{} AS existing (ward_no, location, from_street, to_street, 
                            direction, installation_date, removal_date, 
-                           new_sign_number, comments, confirmed) 
+                           new_sign_number, comments, confirmed, work_order) 
         SELECT new_data.ward_no::INT, location, from_street, to_street, 
                 direction, installation_date, removal_date, 
-                new_sign_number, comments, confirmed
+                new_sign_number, comments, confirmed, work_order
         FROM new_data
         LEFT JOIN dupes USING (new_sign_number, installation_date)
         --Don't try to insert dupes
@@ -123,7 +126,8 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             direction=EXCLUDED.direction,
             location=EXCLUDED.location,
             from_street=EXCLUDED.from_street,
-            to_street=EXCLUDED.to_street
+            to_street=EXCLUDED.to_street,
+            work_order=EXCLUDED.work_order
         -- Prevent unnecessary update if data are unchanged
         WHERE existing.removal_date!=EXCLUDED.removal_date 
             OR existing.comments!=EXCLUDED.comments
@@ -131,6 +135,7 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             OR existing.location!=EXCLUDED.location
             OR existing.from_street!=EXCLUDED.from_street
             OR existing.to_street!=EXCLUDED.to_street
+            OR existing.work_order!=EXCLUDED.work_order
         ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
     
     LOGGER.debug(rows)
