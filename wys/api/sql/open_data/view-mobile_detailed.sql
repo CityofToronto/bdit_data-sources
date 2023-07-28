@@ -17,9 +17,11 @@ INNER JOIN open_data.wys_mobile_summary USING (location_id)
 JOIN wys.speed_counts_agg_5kph AS agg ON 
     loc.api_id = agg.api_id 
     AND agg.datetime_bin > loc.installation_date 
-    AND agg.datetime_bin < loc.removal_date
-JOIN wys.speed_bins_old AS bins USING (speed_id)
-WHERE loc.removal_date < date_trunc('month', now());
+    AND (
+        loc.removal_date IS NULL
+        OR agg.datetime_bin < loc.removal_date
+    )
+JOIN wys.speed_bins_old AS bins USING (speed_id);
 
 ALTER TABLE open_data.wys_mobile_detailed
 OWNER TO rdumas;
