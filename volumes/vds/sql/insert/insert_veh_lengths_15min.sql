@@ -5,7 +5,7 @@ INSERT INTO vds.veh_length_15min (division_id, vds_id, datetime_15min, length_me
 SELECT
     division_id,
     vds_id,
-    datetime_bin(dt, 15) AS datetime_15min,
+    datetime_bin(dt, 15) AS datetime_15min, --uses floor
     FLOOR(length_meter) AS length_meter,
     COUNT(*) AS count,
     SUM(COUNT(*)) OVER (
@@ -19,6 +19,6 @@ WHERE
 GROUP BY 
     division_id,
     vds_id,
-    datetime_bin(dt, 15),
-    FLOOR(length_meter)
+    datetime_15min,
+    length_meter
 ON CONFLICT DO NOTHING;
