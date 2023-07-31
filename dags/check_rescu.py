@@ -11,6 +11,8 @@ from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
 import logging
 
+dag_name = 'rescu_check'
+
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
@@ -35,8 +37,14 @@ def check_rescu(con, date_to_pull):
             raise Exception ('There is a PROBLEM here. There is no raw data OR raw_data is less than volume_15min OR volumes_15min is less than 7000 which is way too low')
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
@@ -45,7 +53,7 @@ def task_fail_slack_alert(context):
     task_msg = """The Task {task} failed, the total volume is too low. 
         Either a lot of loop detectors are down or there's a problem in the pipeline.
         {slack_name} please fix it :thanks_japanese: """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,)    
+        task=context.get('task_instance').task_id, slack_name = ' '.join(list_names),)    
         
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -59,10 +67,9 @@ def task_fail_slack_alert(context):
         )
     return failed_alert.execute(context=context)
 
-default_args = {'owner':'jchew',
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': datetime(2020, 4, 17),
-                'email': ['joven.chew@toronto.ca'],
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -70,7 +77,7 @@ default_args = {'owner':'jchew',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('rescu_check', default_args=default_args, schedule_interval='0 6 * * *', catchup=False)
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 6 * * *', catchup=False)
 # Run at 6 AM local time every day
 
 task1 = PythonOperator(
