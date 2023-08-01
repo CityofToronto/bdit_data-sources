@@ -52,4 +52,4 @@ FROM bin_gaps
 WHERE
     bin_break = 1
     AND bin_gap IS NOT NULL
-ORDER BY datetime_bin;
+ORDER BY time_start;
