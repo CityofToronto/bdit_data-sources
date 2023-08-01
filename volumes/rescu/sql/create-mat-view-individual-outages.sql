@@ -9,16 +9,7 @@ AS
 --runs in 2 minutes for all of rescu.volumes15min
 --doesn't include outages that end after last data point (by detector)
 
-WITH non_zero_bins AS (
-    SELECT
-        detector_id,
-        datetime_bin,
-        volume_15min
-    FROM rescu.volumes_15min
-    WHERE COALESCE(volume_15min, 0) > 0
-),
-
-bin_gaps AS (
+WITH bin_gaps AS (
     SELECT
         detector_id,
         datetime_bin,
@@ -39,7 +30,8 @@ bin_gaps AS (
         datetime_bin - LAG(
             datetime_bin, 1
         ) OVER (PARTITION BY detector_id ORDER BY datetime_bin) AS bin_gap --duration of gap
-    FROM non_zero_bins
+    FROM rescu.volumes_15min
+    WHERE COALESCE(volume_15min, 0) > 0
 )
 
 SELECT
