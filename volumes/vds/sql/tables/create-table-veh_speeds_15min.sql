@@ -16,19 +16,15 @@ GRANT ALL ON SEQUENCE vds.veh_speeds_15min_uid_seq TO vds_bot;
 COMMENT ON TABLE vds.veh_speeds_15min IS 'A count of vehicle speeds from `raw_vdsvehicledata` 
 aggregated to detector / speeds floored to 5kph.';
 
--- DROP INDEX IF EXISTS vds.ix_veh_speeds_divid_dt;
-CREATE INDEX IF NOT EXISTS ix_veh_speeds_divid_dt
+-- DROP INDEX IF EXISTS vds.ix_veh_speeds_dt;
+CREATE INDEX IF NOT EXISTS ix_veh_speeds_dt
 ON vds.veh_speeds_15min
-USING btree(
-    division_id ASC nulls last,
-    datetime_15min ASC nulls last
-);
+USING brin(datetime_15min);
 
--- DROP INDEX IF EXISTS vds.ix_veh_speeds_divid_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_veh_speeds_divid_vdsid_dt
+-- DROP INDEX IF EXISTS vds.ix_veh_speeds_vdsid_dt;
+CREATE INDEX IF NOT EXISTS ix_veh_speeds_vdsid_dt
 ON vds.veh_speeds_15min
 USING btree(
-    division_id ASC nulls last,
     vds_id ASC nulls last,
     datetime_15min ASC nulls last
 );

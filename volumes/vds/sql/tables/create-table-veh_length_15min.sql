@@ -16,19 +16,15 @@ GRANT ALL ON SEQUENCE vds.veh_length_15min_uid_seq TO vds_bot;
 COMMENT ON TABLE vds.veh_length_15min IS 'A count of vehicle lengths from `raw_vdsvehicledata` 
 aggregated to detector / lengths floored to 1m.';
 
--- DROP INDEX IF EXISTS vds.ix_veh_lengths_divid_dt;
-CREATE INDEX IF NOT EXISTS ix_veh_lengths_divid_dt
+-- DROP INDEX IF EXISTS vds.ix_veh_lengths_dt;
+CREATE INDEX IF NOT EXISTS ix_veh_lengths_dt
 ON vds.veh_length_15min
-USING btree(
-    division_id ASC nulls last,
-    datetime_15min ASC nulls last
-);
+USING brin(datetime_15min);
 
--- DROP INDEX IF EXISTS vds.ix_veh_lengths_divid_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_veh_lengths_divid_vdsid_dt
+-- DROP INDEX IF EXISTS vds.ix_veh_lengths_vdsid_dt;
+CREATE INDEX IF NOT EXISTS ix_veh_lengths_vdsid_dt
 ON vds.veh_length_15min
 USING btree(
-    division_id ASC nulls last,
     vds_id ASC nulls last,
     datetime_15min ASC nulls last
 );
