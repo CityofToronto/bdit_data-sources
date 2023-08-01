@@ -316,27 +316,6 @@ def transform_raw_data(df):
     
     return raw_20sec
 
-def monitor_func(conn_source, query_source, conn_dest, query_dest, start_date, lookback):
-    #compare row counts for two databases and return dates exceeding threshold of new rows.
-
-    rows_source = fetch_pandas_df(conn_source, query_source, 'row count 1')
-    rows_dest = fetch_pandas_df(conn_dest, query_dest, 'row count 2')
-   
-    #create a full list of dates for a left join to make sure tasks indexing is correct.
-    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=lookback)
-    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
-
-    #join full date list with row counts from rds, itsc
-    dates = dates.merge(rows_dest, on='dt', how='left')
-    dates = dates.merge(rows_source, on='dt', how='left', suffixes=['_dest', '_source'])
-
-    LOGGER.info(dates)
-
-    #find days with more rows in ITSC (Source) than RDS (Dest)
-    dates_dif = dates[dates['count_source'] != dates['count_dest']] 
-
-    return dates_dif['dt']
-
 def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
 # compare row counts for table in ITSC vs RDS and clear tasks to rerun if additional rows found. 
 # used for both vdsdata and vdsvehicledata tables. 
@@ -355,12 +334,23 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
         lookback = sql.Literal(str(lookback_days) + ' DAYS')
     )
     
-    dates_dif = monitor_func(conn_source=itsc_conn,
-                            query_source=itsc_query,
-                            conn_dest=rds_conn,
-                            query_dest=rds_query,
-                            start_date=start_date,
-                            lookback=lookback_days)
+    #fetch row  counts 
+    rows_ITSC = fetch_pandas_df(itsc_conn, itsc_query, 'ITSC row count')
+    rows_RDS = fetch_pandas_df(rds_conn, rds_query, 'RDS row count')
+   
+    #create a full list of dates for a left join to make sure tasks indexing is correct.
+    date_range = pd.date_range(start=ds_add(start_date, -1), freq='-1D', periods=lookback_days)
+    dates = pd.DataFrame({'dt': [datetime.date(x) for x in date_range]})
+
+    #join full date list with row counts from rds, itsc
+    dates = dates.merge(rows_RDS, on='dt', how='left')
+    dates = dates.merge(rows_ITSC, on='dt', how='left', suffixes=['_RDS', '_ITSC'])
+
+    LOGGER.info(dates)
+
+    #find days with more rows in ITSC (Source) than RDS (Dest)
+    dates_dif = dates[dates['count_source'] != dates['count_dest']] 
+    dates_dif = dates_dif['dt']
 
     if dates_dif.empty:
         return [f"monitor_late_{dataset}.no_backfill"] #can't have no return value for branchoperator
