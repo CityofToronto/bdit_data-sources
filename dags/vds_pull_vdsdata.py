@@ -48,7 +48,7 @@ default_args = {
 
 with DAG(dag_name,
          default_args=default_args,
-         max_active_runs=5,
+         max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
@@ -58,8 +58,8 @@ with DAG(dag_name,
         delete_raw_vdsdata_task = PostgresOperator(
             sql="""DELETE FROM vds.raw_vdsdata
                     WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
+                    dt >= '{{ds}} 00:00:00'::timestamp
+                    AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsdata',
             postgres_conn_id='vds_bot',
             autocommit=True,
@@ -77,50 +77,27 @@ with DAG(dag_name,
 
     #this task group deletes any existing data from RDS summary tables (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts into the same table
     with TaskGroup(group_id='summarize_v15') as v15data:
-        #deletes data from vds.counts_15min
-        delete_v15_task = PostgresOperator(
-            sql="""DELETE FROM vds.counts_15min
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_v15',
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
 
-        #inserts summarized data into RDS `vds.counts_15min`
+        #first deletes and then inserts summarized data into RDS `vds.counts_15min`
         summarize_v15_task = PostgresOperator(
-            sql="insert/insert_counts_15min.sql",
+            sql=["delete/delete-counts_15min.sql", "insert/insert_counts_15min.sql"],
             task_id='summarize_v15',
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        #deletes data from vds.counts_15min_bylane
-        delete_v15_bylane_task = PostgresOperator(
-            sql="""DELETE FROM vds.counts_15min_bylane
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_v15_bylane',
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #inserts summarized data into RDS `vds.counts_15min_bylane`
+        #first deletes and then inserts summarized data into RDS `vds.counts_15min_bylane`
         summarize_v15_bylane_task = PostgresOperator(
-            sql="insert/insert_counts_15min_bylane.sql",
+            sql=["delete/delete-counts_15min_bylane.sql", "insert/insert_counts_15min_bylane.sql"],
             task_id='summarize_v15_bylane',
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        [delete_v15_task >> summarize_v15_task]
-        [delete_v15_bylane_task >> summarize_v15_bylane_task]
+        summarize_v15_task
+        summarize_v15_bylane_task
 
     #this task group pulls the detector inventories
     with TaskGroup(group_id='update_inventories') as update_inventories:

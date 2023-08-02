@@ -45,7 +45,7 @@ default_args = {
  #then summarizes into length and speed summary tables by 15 minutes.
 with DAG(dag_id='vds_pull_vdsvehicledata',
          default_args=default_args,
-         max_active_runs=5,
+         max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
@@ -78,49 +78,25 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     #this task group summarizes vdsvehicledata into `vds.veh_speeds_15min` (5km/h speed bins), `vds.veh_length_15min` (1m length bins)
     with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:
         
-        #dlete from vds.veh_speeds_15min prior to inserting
-        delete_veh_speed_data = PostgresOperator(
-            sql="""DELETE FROM vds.veh_speeds_15min
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_veh_speed_data',
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #insert new data into summary table vds.aggregate_15min_veh_speeds
+        #deletes from and then inserts new data into summary table vds.aggregate_15min_veh_speeds
         summarize_speeds_task = PostgresOperator(
-            sql="insert/insert_veh_speeds_15min.sql",
+            sql=["delete/delete-veh_speeds_15min.sql", "insert/insert_veh_speeds_15min.sql"],
             task_id='summarize_speeds',
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        #delete from vds.veh_length_15min prior to inserting
-        delete_veh_length_data = PostgresOperator(
-            sql="""DELETE FROM vds.veh_length_15min
-                    WHERE
-                    datetime_15min >= '{{ds}} 00:00:00'::timestamp
-                    AND datetime_15min < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
-            task_id='delete_veh_length_data',
-            postgres_conn_id='vds_bot',
-            autocommit=True,
-            retries=1
-        )
-
-        #insert new data into summary table vds.veh_length_15min
+        #deletes from and then insert new data into summary table vds.veh_length_15min
         summarize_lengths_task = PostgresOperator(
-            sql="insert/insert_veh_lengths_15min.sql",
+            sql=["delete/delete-veh_length_15min.sql", "insert/insert_veh_lengths_15min.sql"],
             task_id='summarize_lengths',
             postgres_conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
         
-        [delete_veh_speed_data >> summarize_speeds_task]
-        [delete_veh_length_data >> summarize_lengths_task]
+        summarize_speeds_task
+        summarize_lengths_task
 
     pull_vdsvehicledata >> summarize_vdsvehicledata
