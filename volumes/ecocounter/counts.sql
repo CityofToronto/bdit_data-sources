@@ -1,0 +1,10 @@
+CREATE TABLE ecocounter.counts (
+    flow_id numeric REFERENCES ecocounter.locations (flow_id),
+    datetime_bin timestamp NOT NULL,
+    volume smallint,
+    UNIQUE(flow_id, datetime_bin)
+);
+
+CREATE INDEX ON ecocounter.counts (datetime_bin);
+
+GRANT SELECT ON ecocounter.counts TO bdit_humans;
