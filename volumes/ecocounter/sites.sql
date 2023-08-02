@@ -2,7 +2,8 @@ CREATE TABLE ecocounter.sites (
     site_id numeric PRIMARY KEY,
     site_description text NOT NULL,
     geom geometry(POINT, 4326),
-    facility_description text
+    facility_description text,
+    replaced_by numeric REFERENCES ecocounter.sites (site_id)
 );
 
 ALTER TABLE ecocounter.sites OWNER TO ecocounter_admins;
