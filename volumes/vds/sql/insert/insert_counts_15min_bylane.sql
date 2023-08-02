@@ -19,6 +19,7 @@ WITH detector_inventory AS (
                 THEN 1 --15 min bins
         END AS expected_bins
     FROM vds.vdsconfig 
+    WHERE division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into counts_15min.
 )
 
 SELECT 
