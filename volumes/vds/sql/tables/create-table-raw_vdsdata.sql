@@ -1,36 +1,77 @@
-CREATE TABLE IF NOT EXISTS vds.raw_vdsdata (
-    volume_uid bigserial PRIMARY KEY,
-    division_id smallint,
-    vds_id integer,
-    dt timestamp without time zone,
+CREATE TABLE IF NOT EXISTS vds.raw_vdsdata
+(
+    division_id smallint NOT NULL,
+    vds_id integer NOT NULL,
+    dt timestamp without time zone NOT NULL,
     datetime_15min timestamp without time zone,
-    lane integer, 
-    speed_kmh float, 
+    lane integer NOT NULL,
+    speed_kmh double precision,
     volume_veh_per_hr integer,
-    occupancy_percent float,
-    UNIQUE (division_id, vds_id, dt, lane)
-); 
+    occupancy_percent double precision,
+    volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsdata_volume_uid_seq'::regclass),
+    CONSTRAINT raw_vdsdata_unique PRIMARY KEY (division_id, vds_id, dt, lane)
+) PARTITION BY LIST (division_id);
 
-ALTER TABLE vds.raw_vdsdata OWNER TO vds_admins;
-GRANT INSERT, DELETE, SELECT ON TABLE vds.raw_vdsdata TO vds_bot;
+ALTER TABLE IF EXISTS vds.raw_vdsdata OWNER TO vds_admins;
+REVOKE ALL ON TABLE vds.raw_vdsdata FROM vds_bot;
+GRANT SELECT ON TABLE vds.raw_vdsdata TO bdit_humans;
+GRANT ALL ON TABLE vds.raw_vdsdata TO vds_admins;
+GRANT DELETE, INSERT, SELECT ON TABLE vds.raw_vdsdata TO vds_bot;
 GRANT ALL ON SEQUENCE vds.raw_vdsdata_volume_uid_seq TO vds_bot;
 
-COMMENT ON TABLE vds.raw_vdsdata IS 'Store raw data pulled from ITS Central 
-`vdsdata` table. Filtered for divisionid = 2.';
-
+COMMENT ON TABLE vds.raw_vdsdata IS 'Store raw data pulled from ITS Central `vdsdata` table.';
+   
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsid_dt
 ON vds.raw_vdsdata
 USING btree(
-    division_id ASC nulls last, 
-    dt ASC nulls last
-);
-    
--- DROP INDEX IF EXISTS vds.ix_vdsdata_divid_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_vdsdata_divid_vdsid_dt
-ON vds.raw_vdsdata
-USING btree(
-    division_id ASC nulls last,
     vds_id ASC nulls last,
     dt ASC nulls last
 );
+
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_dt;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_dt
+ON vds.raw_vdsdata
+USING brin(dt);
+
+-- DROP INDEX IF EXISTS vds.volume_uid_idx;
+CREATE INDEX IF NOT EXISTS volume_uid_idx
+ON vds.raw_vdsdata
+USING btree(volume_uid ASC nulls last);
+
+--Partition for division_id = 2. Subpartition by date (year). 
+CREATE TABLE vds.raw_vdsdata_div2 PARTITION OF vds.raw_vdsdata
+FOR VALUES IN (2)
+PARTITION BY RANGE (dt);
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div2 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div2_2021 PARTITION OF vds.raw_vdsdata_div2
+FOR VALUES FROM ('2021-01-01') TO ('2022-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2021 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div2_2022 PARTITION OF vds.raw_vdsdata_div2
+FOR VALUES FROM ('2022-01-01') TO ('2023-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2022 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div2_2023 PARTITION OF vds.raw_vdsdata_div2
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2023 OWNER TO vds_admins;
+
+--Partition for division_id = 8001. Subpartition by date (year). 
+CREATE TABLE vds.raw_vdsdata_div8001 PARTITION OF vds.raw_vdsdata
+FOR VALUES IN (8001)
+PARTITION BY RANGE (dt);
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div8001_2021 PARTITION OF vds.raw_vdsdata_div8001
+FOR VALUES FROM ('2021-01-01') TO ('2022-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2021 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div8001_2022 PARTITION OF vds.raw_vdsdata_div8001
+FOR VALUES FROM ('2022-01-01') TO ('2023-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2022 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsdata_div8001_2023 PARTITION OF vds.raw_vdsdata_div8001
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2023 OWNER TO vds_admins;
+

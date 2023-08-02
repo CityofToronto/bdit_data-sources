@@ -1,35 +1,56 @@
 CREATE TABLE IF NOT EXISTS vds.raw_vdsvehicledata (
-    volume_uid bigserial PRIMARY KEY,
-    division_id smallint, 
-    vds_id integer,
-    dt timestamp,
-    lane integer,
+    division_id smallint NOT NULL,
+    vds_id integer NOT NULL,
+    dt timestamp without time zone NOT NULL,
+    lane smallint NOT NULL,
     sensor_occupancy_ds smallint,
-    speed_kmh float,
-    length_meter float,
-    UNIQUE (division_id, vds_id, dt, lane)
-); 
+    speed_kmh double precision,
+    length_meter double precision,
+    volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsvehicledata_volume_uid_seq'::regclass),
+    CONSTRAINT raw_vdsvehicledata_pkey PRIMARY KEY (vds_id, dt, lane)
+) PARTITION BY RANGE (dt);
 
 ALTER TABLE vds.raw_vdsvehicledata OWNER TO vds_admins;
-GRANT INSERT, DELETE, SELECT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
-GRANT ALL ON SEQUENCE vds.raw_vdsvehicledata_volume_uid_seq TO vds_bot;
+REVOKE ALL ON TABLE vds.raw_vdsvehicledata FROM vds_bot;
+GRANT SELECT ON TABLE vds.raw_vdsvehicledata TO bdit_humans;
+GRANT DELETE, INSERT, SELECT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
 
-COMMENT ON TABLE vds.raw_vdsvehicledata IS 'Store raw data pulled from ITS Central 
-`vdsvehicledata` table. Filtered for divisionid = 2.'
+COMMENT ON TABLE vds.raw_vdsvehicledata IS '''Store raw data pulled from ITS Central 
+`vdsvehicledata` table. Filtered for divisionid = 2.'''
 
--- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_divid_dt;
-CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_divid_dt
+-- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_dt;
+CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_dt
+ON vds.raw_vdsvehicledata
+USING brin(dt);
+
+-- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_vdsid_dt;
+CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_vdsid_dt
 ON vds.raw_vdsvehicledata
 USING btree(
-    division_id ASC nulls last,
-    dt ASC nulls last
-);
-
--- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_divid_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_divid_vdsid_dt
-ON vds.raw_vdsvehicledata
-USING btree(
-    division_id ASC nulls last,
     vds_id ASC nulls last,
     dt ASC nulls last
 );
+
+--Create yearly partitions, subpartition by month. 
+CREATE TABLE vds.raw_vdsvehicledata_2021
+PARTITION OF vds.raw_vdsvehicledata
+FOR VALUES FROM ('2021-01-01') TO ('2022-01-01')
+PARTITION BY RANGE (dt);
+ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2021 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsvehicledata_2022
+PARTITION OF vds.raw_vdsvehicledata
+FOR VALUES FROM ('2022-01-01') TO ('2023-01-01')
+PARTITION BY RANGE (dt);
+ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2022 OWNER TO vds_admins;
+
+CREATE TABLE vds.raw_vdsvehicledata_2023
+PARTITION OF vds.raw_vdsvehicledata
+FOR VALUES FROM ('2023-01-01') TO ('2024-01-01')
+PARTITION BY RANGE (dt);
+ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2023 OWNER TO vds_admins;
+
+--create monthly partitions within year partitions. 
+SELECT vds.create_monthly_tables('2021');
+SELECT vds.create_monthly_tables('2022');
+SELECT vds.create_monthly_tables('2023');
