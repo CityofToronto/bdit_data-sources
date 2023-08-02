@@ -112,8 +112,8 @@ Row count: 927,399
 
 
 ## vds.counts_15min_bylane
-Same as above but by lane. 
-Will be used to determine when individual lane sensors are down. 
+Same as above but by lane. Will be used to determine when individual lane sensors are down. 
+Excludes `division_id = 8001` since those sensors have only 1 lane and the data would be duplicated with the above table.  
 
 Data quality checks: 
 -- You can compare `num_obs` to `expected_bins`. Consider using a threshold.
@@ -213,7 +213,8 @@ Summarization of vdsvehicledata with count of observation (vehicle) speeds group
 
 Data quality: 
 --There is a suspicious volume of very high speeds reported. 
---There are null speed values which are excluded from total_count. 
+--There are null speed values which are excluded from total_count.
+--Some detectors appear to report speeds centred around 3kph intervals (ie. 91, 94, 97). Multiple 3kph intervals may fall into the same 5kph bin creating some unusual results for these detectors.
 
 Row count: 6,415,490
 | column_name    | data_type                   | sample              | description   |
@@ -342,8 +343,8 @@ ORDER BY v.vds_id, e.location_timestamp DESC
 Deletes data from RDS `vds.raw_vdsdata` for specific date and then pulls into RDS from ITS Central database table `vdsdata`. 
 
 **pull_vdsdata** >> **summarize_v15**  
-    [*delete_v15* >> *summarize_v15*]  
-    [*delete_v15_bylane* >> *summarize_v15_bylane*]
+    *summarize_v15*
+    *summarize_v15_bylane*
 
 First deletes any existing data then inserts summaries of `vds.raw_vdsdata` into `vds.counts_15min` and `vds.counts_15min_bylane`. 
 
@@ -361,8 +362,8 @@ Pulls entire detector inventory (`vdsconfig`, `entitylocations` tables) into RDS
 Deletes data from RDS `vds.raw_vdsvehicledata` for specific date and then pulls into RDS from ITS Central database. 
 
 **summarize_vdsvehicledata**  
-    [*delete_veh_speed_data* >> *summarize_speeds*]  
-    [*delete_veh_length_data* >> *summarize_lengths*]  
+    *summarize_speeds* 
+    *summarize_lengths*
 
 Deletes data from RDS `vds.veh_length_15min` and `vds.veh_speeds_15min` for specific date and then summarizes into these tables from RDS `vds.raw_vdsvehicledata`. 
 
