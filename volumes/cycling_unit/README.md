@@ -1,6 +1,6 @@
 # Short-term cycling volume counts
 
-Short-term cycling count data collected by the cycling division is stored in the `cycling` schema. This data has not been updated since at least 2021.
+Short-term cycling count data collected by (what is now) the Cycling & Pedestrian Projects Unit is stored in the `cycling` schema. This data has not been updated since at least 2021.
 
 There are two tables of note:
 
