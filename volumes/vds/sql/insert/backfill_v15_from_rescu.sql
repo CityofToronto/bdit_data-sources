@@ -1,7 +1,7 @@
 --INSERT 0 19955760
 --Query returned successfully in 3 min 18 secs.
 
-INSERT INTO vds.counts_15min (detector_id, division_id, vds_id, num_lanes, datetime_15min, volume_15min)
+INSERT INTO vds.counts_15min (detector_id, division_id, vds_id, num_lanes, datetime_15min, count_15min)
 
 SELECT DISTINCT ON (v15.detector_id, v15.datetime_bin)
     v15.detector_id,
@@ -22,5 +22,5 @@ WHERE v15.datetime_bin <= '2021-10-31'
 ORDER BY
     v15.detector_id ASC,
     v15.datetime_bin ASC,
-    c.start_timestamp DESC,
+    c.start_timestamp DESC
     
