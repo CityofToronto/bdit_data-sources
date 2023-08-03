@@ -6,6 +6,8 @@ RETURNS void
     VOLATILE SECURITY DEFINER 
 AS $BODY$
 
+SELECT wys.clear_mobile_summary_for_month (_mon);
+
 INSERT INTO wys.mobile_summary
 SELECT 
     location_id,
