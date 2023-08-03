@@ -6,6 +6,8 @@ RETURNS void
     VOLATILE SECURITY DEFINER 
 AS $BODY$
 
+SELECT wys.clear_stationary_summary_for_month (_mon);
+
 INSERT INTO wys.stationary_summary
 SELECT 
     sign_id,
