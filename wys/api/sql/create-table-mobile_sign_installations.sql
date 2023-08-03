@@ -2,7 +2,7 @@
 
 -- DROP TABLE wys.mobile_sign_installations;
 
-CREATE TABLE wys.mobile_sign_installations
+CREATE TABLE wys.mobile_sign_installations -- noqa: PRS
 (
     ward_no integer,
     location text COLLATE pg_catalog."default",
@@ -21,7 +21,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.mobile_sign_installations OWNER to wys_admins;
+ALTER TABLE wys.mobile_sign_installations OWNER TO wys_admins;
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.mobile_sign_installations TO bdit_humans;
 
