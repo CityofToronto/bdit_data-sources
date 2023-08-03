@@ -26,7 +26,11 @@
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
-  - [Identifying Dates with Poor Data Quality](#identifying-dates-with-poor-data-quality)
+  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
+    - [Fields in `miovision_api.anomalous_ranges`](#fields-in-miovision_apianomalous_ranges)
+    - [Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#fields-in-miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
+    - [An applied example](#an-applied-example)
+    - [Identifying new anomalies](#identifying-new-anomalies)
 - [4. Repulling data](#4-repulling-data)
   - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
         
