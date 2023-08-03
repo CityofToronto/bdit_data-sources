@@ -3,16 +3,16 @@
 -- DROP TABLE IF EXISTS wys.mobile_sign_installations_dupes;
 
 CREATE TABLE IF NOT EXISTS wys.mobile_sign_installations_dupes (
-    ward_no INTEGER,
-    location TEXT,
-    from_street TEXT,
-    to_street TEXT,
-    direction TEXT,
-    installation_date DATE,
-    removal_date DATE,
-    new_sign_number TEXT,
-    comments TEXT,
-    work_order INTEGER,
+    ward_no integer,
+    location text,
+    from_street text,
+    to_street text,
+    direction text,
+    installation_date date,
+    removal_date date,
+    new_sign_number text,
+    comments text,
+    work_order integer,
     CONSTRAINT mobile_sign_installations_dupes_key UNIQUE (work_order)
 );
 
