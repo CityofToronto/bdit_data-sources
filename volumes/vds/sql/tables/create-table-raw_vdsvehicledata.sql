@@ -31,26 +31,14 @@ USING btree(
     dt ASC nulls last
 );
 
---Create yearly partitions, subpartition by month. 
-CREATE TABLE vds.raw_vdsvehicledata_2021
-PARTITION OF vds.raw_vdsvehicledata
-FOR VALUES FROM ('2021-01-01') TO ('2022-01-01')
-PARTITION BY RANGE (dt);
-ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2021 OWNER TO vds_admins;
+-- DROP INDEX IF EXISTS vds.vdsvehicledata_volume_uid_idx;
+-- hoping to solve very slow delete from this large table.
+CREATE INDEX IF NOT EXISTS vdsvehicledata_volume_uid_idx
+ON vds.raw_vdsvehicledata
+USING btree(volumeu_id ASC nulls last);
 
-CREATE TABLE vds.raw_vdsvehicledata_2022
-PARTITION OF vds.raw_vdsvehicledata
-FOR VALUES FROM ('2022-01-01') TO ('2023-01-01')
-PARTITION BY RANGE (dt);
-ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.raw_vdsvehicledata_2023
-PARTITION OF vds.raw_vdsvehicledata
-FOR VALUES FROM ('2023-01-01') TO ('2024-01-01')
-PARTITION BY RANGE (dt);
-ALTER TABLE IF EXISTS vds.raw_vdsvehicledata_2023 OWNER TO vds_admins;
-
---create monthly partitions within year partitions. 
-SELECT vds.create_monthly_tables('2021');
-SELECT vds.create_monthly_tables('2022');
-SELECT vds.create_monthly_tables('2023');
+--Create yearly partitions, subpartition by month.
+--new partitions created by vds_pull_vdsvehicledata DAG, `check_partitions` task.
+SELECT vds.partition_vdsvehicledata(2021);
+SELECT vds.partition_vdsvehicledata(2022);
+SELECT vds.partition_vdsvehicledata(2023);

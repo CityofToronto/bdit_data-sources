@@ -45,33 +45,17 @@ FOR VALUES IN (2)
 PARTITION BY RANGE (dt);
 ALTER TABLE IF EXISTS vds.raw_vdsdata_div2 OWNER TO vds_admins;
 
-CREATE TABLE vds.raw_vdsdata_div2_2021 PARTITION OF vds.raw_vdsdata_div2
-FOR VALUES FROM ('2021-01-01') TO ('2022-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.raw_vdsdata_div2_2022 PARTITION OF vds.raw_vdsdata_div2
-FOR VALUES FROM ('2022-01-01') TO ('2023-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.raw_vdsdata_div2_2023 PARTITION OF vds.raw_vdsdata_div2
-FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div2_2023 OWNER TO vds_admins;
-
 --Partition for division_id = 8001. Subpartition by date (year). 
 CREATE TABLE vds.raw_vdsdata_div8001 PARTITION OF vds.raw_vdsdata
 FOR VALUES IN (8001)
 PARTITION BY RANGE (dt);
 ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001 OWNER TO vds_admins;
 
-CREATE TABLE vds.raw_vdsdata_div8001_2021 PARTITION OF vds.raw_vdsdata_div8001
-FOR VALUES FROM ('2021-01-01') TO ('2022-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.raw_vdsdata_div8001_2022 PARTITION OF vds.raw_vdsdata_div8001
-FOR VALUES FROM ('2022-01-01') TO ('2023-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.raw_vdsdata_div8001_2023 PARTITION OF vds.raw_vdsdata_div8001
-FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
-ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001_2023 OWNER TO vds_admins;
-
+--Sub partitions created with vds.partition_vdsdata
+--new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2021, 2);
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2022, 2);
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2023, 2);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2021, 8001);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2022, 8001);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2023, 8001);

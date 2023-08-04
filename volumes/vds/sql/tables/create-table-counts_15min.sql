@@ -34,6 +34,12 @@ USING btree(
     datetime_15min ASC nulls last
 );
 
+-- DROP INDEX IF EXISTS vds.counts_15_volumeuid_idx;
+-- hoping to solve very slow delete from this large table.
+CREATE INDEX IF NOT EXISTS counts_15_volumeuid_idx
+ON vds.counts_15min
+USING btree(volumeuid ASC nulls last);
+
 --Create partitions by division_id. Subpartition by date.
 CREATE TABLE vds.counts_15min_div2
 PARTITION OF vds.counts_15min FOR VALUES IN ('2') 
@@ -46,43 +52,17 @@ PARTITION BY RANGE (datetime_15min);
 ALTER TABLE IF EXISTS vds.counts_15min_div8001 OWNER TO vds_admins;
 
 --Division 2 subpartitions
-CREATE TABLE vds.counts_15min_div2_2017
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2017-01-01 00:00:00') TO ('2018-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2017 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2018
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2018-01-01 00:00:00') TO ('2019-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2018 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2019
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2019-01-01 00:00:00') TO ('2020-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2019 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2020
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2020-01-01 00:00:00') TO ('2021-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2020 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2021
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2021-01-01 00:00:00') TO ('2022-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2022
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2022-01-01 00:00:00') TO ('2023-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div2_2023
-PARTITION OF vds.counts_15min_div2 FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div2_2023 OWNER TO vds_admins;
+--Sub partitions created with vds.partition_vdsdata
+--new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
+SELECT vds.partition_vdsdata('counts_15min_div2', 2017, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2018, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2019, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2020, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2021, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2022, 2);
+SELECT vds.partition_vdsdata('counts_15min_div2', 2023, 2);
 
 --Division 8001 subpartitions
-CREATE TABLE vds.counts_15min_div8001_2021
-PARTITION OF vds.counts_15min_div8001 FOR VALUES FROM ('2021-01-01 00:00:00') TO ('2022-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div8001_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div8001_2022
-PARTITION OF vds.counts_15min_div8001 FOR VALUES FROM ('2022-01-01 00:00:00') TO ('2023-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div8001_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_div8001_2023
-PARTITION OF vds.counts_15min_div8001 FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_div8001_2023 OWNER TO vds_admins;
+SELECT vds.partition_vdsdata('counts_15min_div8001', 2021, 8001);
+SELECT vds.partition_vdsdata('counts_15min_div8001', 2022, 8001);
+SELECT vds.partition_vdsdata('counts_15min_div8001', 2023, 8001);
