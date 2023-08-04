@@ -1,9 +1,17 @@
-CREATE OR REPLACE FUNCTION wys.mobile_summary_for_month (_mon DATE)
-RETURNS void
-    LANGUAGE 'sql'
+/*
+Parameters:
+Name | Type | Description
+_mon | date | Month whose data to be aggregated
 
-    COST 100
-    VOLATILE SECURITY DEFINER 
+Return: Void
+Purpose: Summarizes the data of mobile WYS signs which were removed during the specified month
+*/
+CREATE OR REPLACE FUNCTION wys.mobile_summary_for_month (_mon date)
+RETURNS void
+LANGUAGE 'sql'
+
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 SELECT wys.clear_mobile_summary_for_month (_mon);
@@ -72,7 +80,10 @@ WHERE removal_date >= _mon AND removal_date < _mon + INTERVAL '1 month'
 GROUP BY location_id, loc.ward_no, loc.location, loc.from_street, 
          loc.to_street, loc.direction, loc.installation_date, 
          loc.removal_date,schedule, min_speed
+
 $BODY$;
 
-REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE)FROM public;
-GRANT EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) TO wys_bot;
+ALTER FUNCTION wys.mobile_summary_for_month(date) OWNER TO wys_admins;
+
+REVOKE EXECUTE ON FUNCTION wys.mobile_summary_for_month (date) FROM public;
+GRANT EXECUTE ON FUNCTION wys.mobile_summary_for_month (date) TO wys_bot;
