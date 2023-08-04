@@ -24,7 +24,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    from vds_functions import task_fail_slack_alert, pull_raw_vdsvehicledata
+    from vds_functions import task_fail_slack_alert, pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
@@ -48,6 +48,14 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
          max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
+
+    #this task group checks if all necessary partitions exist and if not executes create functions.
+    check_partitions = PythonOperator(
+        task_id='check_partitions',
+        python_callable=check_vdsvehicledata_partitions,
+        op_kwargs = {'rds_conn': vds_bot,
+                    'start_date': '{{ ds }}'}
+    )  
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
@@ -99,4 +107,5 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
+    check_partitions
     pull_vdsvehicledata >> summarize_vdsvehicledata

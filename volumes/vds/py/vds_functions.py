@@ -357,3 +357,98 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
     else:
         LOGGER.info("Clearing vds_pull_%s for %s", dataset, dates_dif.apply(str).values)
         return [f"monitor_late_{dataset}.clear_" + str(x) for x in dates_dif.index.values] #returns task names to branchoperator to run (clear).
+
+def check_vdsdata_partitions(rds_conn, start_date):
+    y = datetime.strptime(start_date, '%Y-%m-%d').year
+
+    sql_check = sql.SQL("""
+        WITH target_tables(tablename) AS (
+            VALUES (%s), (%s), (%s), (%s), (%s), (%s), (%s)
+        )
+
+        SELECT COUNT(tt.*) = COUNT(pt.*) --if false, create new partitions
+        FROM target_tables AS tt
+        LEFT JOIN pg_tables AS pt ON pt.schemaname||'.'||pt.tablename = 'vds.'||tt.tablename;
+        """)
+    
+    try: 
+        with rds_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info(f"Checking if necessary vdsdata partitions exist.")
+            cur.execute(sql_check, [
+                f"raw_vdsdata_div2_{y}",
+                f"raw_vdsdata_div8001_{y}_01_06",
+                f"raw_vdsdata_div8001_{y}_07_12",
+                f"counts_15min_div2_{y}",
+                f"counts_15min_div8001_{y}_01_06",
+                f"counts_15min_div8001_{y}_07_12",
+                f"counts_15min_bylane_div2_{y}",
+                ])
+            table_check = cur.fetchone()[0]
+    except Error as exc:
+        LOGGER.critical(f"Error checking vdsdata partitions.")
+        LOGGER.critical(exc)
+        raise Exception()
+
+    if table_check:  
+        LOGGER.info(f"No need to create new partition tables. Existing.")
+    elif not table_check:
+        try:
+            with rds_conn.get_conn() as con, con.cursor() as cur:
+                LOGGER.info(f"Creating partition tables.")
+                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('raw_vdsdata_div8001', %s, 8001);"), (y,))
+                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('raw_vdsdata_div2', %s, 2);"), (y,))
+                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_div8001', %s, 8001);"), (y,))
+                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_div2', %s, 2);"), (y,))
+                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_bylane_div2', %s, 2);"), (y,))
+                LOGGER.critical(f"Finished creating vdsdata partition tables.")
+        except Error as exc:
+            LOGGER.critical(f"Error creating vdsdata partitions.")
+            LOGGER.critical(exc)
+            raise Exception()
+
+def check_vdsvehicledata_partitions(rds_conn, start_date):
+    y = datetime.strptime(start_date, '%Y-%m-%d').year
+
+    sql_check = sql.SQL("""
+        WITH target_tables(tablename) AS (
+            VALUES (%s)
+        )
+
+        SELECT COUNT(tt.*) = COUNT(pt.*) --if false, create new partitions
+        FROM target_tables AS tt
+        LEFT JOIN pg_tables AS pt ON pt.schemaname||'.'||pt.tablename = 'vds.'||tt.tablename;
+        """)
+    
+    try: 
+        with rds_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info(f"Checking if necessary vdsdata partitions exist.")
+            cur.execute(sql_check, [
+                f"raw_vdsvehicledata_{y}",
+                ])
+            table_check = cur.fetchone()[0]
+    except Error as exc:
+        LOGGER.critical(f"Error checking vdsvehicledata partitions.")
+        LOGGER.critical(exc)
+        raise Exception()
+
+    if table_check:  
+        LOGGER.info(f"No need to create new partition tables. Existing.")
+    elif not table_check:
+        try:
+            with rds_conn.get_conn() as con, con.cursor() as cur:
+                LOGGER.info(f"Creating partition tables.")
+                cur.execute(sql.SQL("SELECT vds.partition_vdsvehicledata(%s);"), (y,))
+                LOGGER.critical(f"Finished creating vdsvehicledata partition tables.")
+        except Error as exc:
+            LOGGER.critical(f"Error creating vdsvehicledata partitions.")
+            LOGGER.critical(exc)
+            raise Exception()
+
+
+
+
+        
+        
+        
+        
+        

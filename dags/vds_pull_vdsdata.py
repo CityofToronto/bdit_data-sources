@@ -29,7 +29,7 @@ start_date = {'start_date': '{{ ds }}'}
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    from vds_functions import task_fail_slack_alert, pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
+    from vds_functions import task_fail_slack_alert, pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_vdsdata_partitions
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
    
@@ -51,6 +51,13 @@ with DAG(dag_name,
          max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
+
+    #this task group checks if all necessary partitions exist and if not executes create functions.
+    check_partitions = PythonOperator(
+        task_id='check_partitions',
+        python_callable=check_vdsdata_partitions,
+        op_kwargs = {'rds_conn': vds_bot} | start_date 
+    )
 
     #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
     with TaskGroup(group_id='pull_vdsdata') as vdsdata:
@@ -124,5 +131,6 @@ with DAG(dag_name,
 
         skip_update_inventories >> [pull_detector_inventory_task, pull_entity_locations_task]
 
+    check_partitions
     vdsdata >> v15data #pull then summarize
     update_inventories
