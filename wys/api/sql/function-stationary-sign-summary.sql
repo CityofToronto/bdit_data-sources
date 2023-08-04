@@ -1,9 +1,17 @@
-CREATE OR REPLACE FUNCTION wys.stationary_summary_for_month (_mon DATE)
-RETURNS void
-    LANGUAGE 'sql'
+/*
+Parameters:
+Name | Type | Description
+_mon | date | Month whose data to be aggregated
 
-    COST 100
-    VOLATILE SECURITY DEFINER 
+Return: Void
+Purpose: Summarizes the data of stationary WYS signs for the given month
+*/
+CREATE OR REPLACE FUNCTION wys.stationary_summary_for_month (_mon date)
+RETURNS void
+LANGUAGE 'sql'
+
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 SELECT wys.clear_stationary_summary_for_month (_mon);
@@ -62,7 +70,10 @@ INNER JOIN wys.stationary_signs sign ON raw.api_id = sign.api_id
 INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
 WHERE datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
 GROUP BY sign_id, mon, raw.api_id;
+
 $BODY$;
 
-REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE)FROM public;
-GRANT EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) TO wys_bot;
+ALTER FUNCTION wys.stationary_summary_for_month(date) OWNER TO wys_admins;
+
+REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (date) FROM public;
+GRANT EXECUTE ON FUNCTION wys.stationary_summary_for_month (date) TO wys_bot;
