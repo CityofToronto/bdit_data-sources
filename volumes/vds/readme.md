@@ -34,11 +34,11 @@ Improvements over the old `rescu` schema:
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described in [DAG Design](#dag-design). The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
 
 VDS system consists of various vehicle detectors:  
-**division_id=2:** Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes Yonge St "BlueCity" / "SmartCity" sensors. 
+**division_id=2:** Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes Yonge St "BlueCity" / "SmartCity" sensors. Approx 700K rows per day from ~200 sensors at primarily 20 second intervals. 
 &nbsp; 1. RESCU loop/radar detectors  
 &nbsp; 2. Blue City VDS  
 &nbsp; 3. SmartCity sensors  
-**division_id=8001**: Traffic Signals, PXO, Beacons, Pedestals and UPS 
+**division_id=8001**: Traffic Signals, PXO, Beacons, Pedestals and UPS. Approx 700K rows per day from ~10,000 sensors at 15 minute intervals.  
 &nbsp; 1. Intersection signal detectors (DET)  
 &nbsp; 2. Signal Preemption Detectors (PE)  
 &nbsp; 3. Special Function Detectors (SF)  
@@ -88,7 +88,7 @@ Row count: 1,148,765 (7 days)
 | length_meter        | double precision            | 4.0                        |               |
 
 ## vds.counts_15min
-A summary of 15 minute vehicle counts from vds.raw_vdsdata. 
+A summary of 15 minute vehicle counts from vds.raw_vdsdata. Only includes `division_id = 2`, since division_id '8001' is already 15 minute data in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval.
 Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline).
 
 Data quality checks:
@@ -101,7 +101,7 @@ Row count: 927,399
 |:-------------------|:----------------------------|:--------------------|:--------------|
 | volumeuid          | bigint                      | 2409198             | pkey          |
 | detector_id        | text                        | DE0040DWG           |               |
-| division_id        | smallint                    | 2                   |               |
+| division_id        | smallint                    | 2                   | Table filtered for division_id = 2 |
 | vds_id             | integer                     | 3                   |               |
 | num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
 | datetime_15min       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if original bin timestamp is at the start or end of the 15 minute period. |
@@ -113,7 +113,7 @@ Row count: 927,399
 
 ## vds.counts_15min_bylane
 Same as above but by lane. Will be used to determine when individual lane sensors are down. 
-Excludes `division_id = 8001` since those sensors have only 1 lane and the data would be duplicated with the above table.  
+Excludes `division_id = 8001` since those sensors have only 1 lane and as above, the data is very large (~700K rows per day) to store twice at same interval.  
 
 Data quality checks: 
 -- You can compare `num_obs` to `expected_bins`. Consider using a threshold.
@@ -137,7 +137,7 @@ This summary does not account for differences in data availability between lanes
 
 Road width | Lane 1	| Lane 2 | Lane 3 |	Lane 4 | Lane 5 |
 |:---------|:-------|:-------|:-------|:-------|:-------|
-2 Lanes |	46.2%	| 53.8% |          |        | 		|	
+2 Lanes |	46.2%	| 53.8% |          |        | 		|
 3 Lanes |	34.7%	| 36.2% | 	29.1%  |	    |       |
 4 Lanes |	29.0%	| 33.3% | 	24.8%  | 12.9%	|       |
 5 Lanes |	24.0%	| 28.5% | 	22.7%  | 19.9%	| 4.9%  |
