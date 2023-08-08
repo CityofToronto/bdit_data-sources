@@ -25,7 +25,10 @@
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
 - [4. Repulling data](#4-repulling-data)
 	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
-        
+- [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+	- [Removing Intersections](#removing-intersections)
+	- [Adding Intersections](#adding-intersections)
+
 ## 1. Overview
 
 The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api`.
@@ -433,3 +436,190 @@ python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/mio
 ```
 
 The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
+
+
+## 5. Steps to Add or Remove Intersections
+There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. Remove the decommissioned cameras first then include the newly installed ones. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.** Ideally, the whole adding and removing process should be able to be done in one day.
+
+### Removing Intersections
+Once we are informed of the decommissioned date of a Miovision camera, we can carry out the following steps.
+
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
+
+2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_mvt` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+
+3) Done. Removing intersections is short and simple.
+
+### Adding Intersections
+Adding intersections is not as simple as removing an intersection. We will first have to find out some information before proceeding to aggregating the data. The steps are outlined below.
+
+1) Look at the table [`miovision_api.intersections`](#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, do an INSERT INTO this table to include the new intersections.
+
+	a) The new intersection's name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). The key needed to authorize the API is the same one used by the Miovision Airflow user. `date_installed` and `date_decommissioned` are the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'), and `date_decommissioned` is the date of the *last row of data from the location*. `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the Jupyter notebook in the `update_intersections` folder. If it is already a day later, the last date for the old location can be found from the `miovision_api.volumes` table.
+	
+	b) `px` for the intersection can then be found easily from this [web interface](https://demo.itscentral.ca/#).
+	
+	c) With the `px` information found above, get the rest of the information (such as `street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` (`int_id` is `node_id` in `gis.traffic_signal`).
+	
+	d) In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
+
+	When adding multiple intersections, you can prepare updates to the table in an Excel
+	spreadsheet, read the spreadsheet into Python, and then append the spreadsheet
+	to `miovision_api.intersections`. First, create a spreadsheet with the same
+	columns in `miovision_api.intersections` - this can be done by exporting the
+	table in pgAdmin, and then deleting all the rows of data. Then insert new rows
+	of data representing the new intersections using the procedure above, keeping
+	`date_decommissioned` and `geom` blank (these will be filled in later). Finally,
+	run a script like the one below to get the new rows into `miovision_api.intersections`.
+
+	If you do use this method and the script below, **DO NOT INCLUDE ANY EXISTING
+	INTERSECTIONS IN YOUR EXCEL SPREADSHEET**.
+
+	```python
+	import pandas as pd
+	import psycopg2
+	from psycopg2.extras import execute_values
+
+	import configparser
+	import pathlib
+
+	# Read in Postgres credentials.
+	config = configparser.ConfigParser()
+	config.read(pathlib.Path.home().joinpath({YOUR_FILE}}).as_posix())
+	postgres_settings = config['POSTGRES']
+
+	# Process new intersections Excel file.
+	df = pd.read_excel({NEW_INTERSECTION_FILE})
+	# We'll deal with these later.
+	df.drop(columns=['date_decommissioned', 'geom'], inplace=True)
+	# psycopg2 translates None to NULL, so change any NULL in leg restricted column to None.
+	# If you have nulls in other columns you will need to handle them in the same way.
+	# https://stackoverflow.com/questions/4231491/how-to-insert-null-values-into-postgresql-database-using-python
+	for col in ('n_leg_restricted', 'e_leg_restricted',
+				'w_leg_restricted', 's_leg_restricted'):
+		df[col] = df[col].astype(object)
+		df.loc[df[col].isna(), col] = None
+	df_list = [list(row.values) for i, row in df.iterrows()]
+
+	# Write Excel table row-by-row into miovision_api.intersections.
+	with psycopg2.connect(**postgres_settings) as conn:
+		with conn.cursor() as cur:
+			insert_data = """INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
+															date_installed, lat, lng,
+															street_main, street_cross, int_id, px,
+															n_leg_restricted, e_leg_restricted,
+															s_leg_restricted, w_leg_restricted) VALUES %s"""
+			execute_values(cur, insert_data, df_list)
+			if conn.notices != []:
+				print(conn.notices)
+	```
+
+	Finally, to populate the geometries table, run the following query:
+
+	```sql
+	UPDATE miovision_api.intersections a
+	SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
+	FROM miovision_api.intersections b
+	WHERE a.intersection_uid = b.intersection_uid
+		AND a.intersection_uid IN ({INSERT NEW INTERSECTIONS HERE});
+	```
+
+2) Now that the updated table of [`miovision_api.intersections`](#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](#intersection_movements). We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
+
+	a) Run the [api script](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process. `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull` . `--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
+	
+	b) First run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. Then, INSERT INTO `intersection_movements` table which has all valid movements for intersections. These include decommissioned intersections, just in case we might need those in the future.
+
+	```sql
+	-- Uncomment when you're ready to insert.
+	-- INSERT INTO miovision_api.intersection_movements
+	SELECT DISTINCT intersection_uid, classification_uid, leg, movement_uid
+	FROM miovision_api.volumes
+  	WHERE intersection_uid IN ( *** ) -- only include new intersection_uid
+    	AND datetime_bin > 'now'::text::date - interval '2 days' 		-- or the date of data that you pulled
+	AND classification_uid IN (1,2,6,10)-- will include the ones for other modes after this
+	GROUP BY intersection_uid, classification_uid, leg, movement_uid
+	HAVING COUNT(DISTINCT datetime_bin::time) >= 20;
+	```
+
+    If you run the `SELECT` and find you need to manually add movements,
+    download the output of the query into a CSV, manually edit the CSV, then
+    append it to `miovision_api.intersection_movements` by modifying the script:
+
+	```python
+	import pandas as pd
+	import psycopg2
+	from psycopg2.extras import execute_values
+
+	import configparser
+	import pathlib
+
+	# Insert code to read configuration settings.
+	postgres_settings = {your_postgres_config}
+
+	# Insert the name of your CSV file.
+	df = pd.read_csv({your_file.csv})
+	df_list = [list(row.values) for i, row in df.iterrows()]
+
+	with psycopg2.connect(**postgres_settings) as conn:
+		with conn.cursor() as cur:
+			insert_data = """INSERT INTO miovision_api.intersection_movements(intersection_uid, classification_uid, leg, movement_uid) VALUES %s"""
+			execute_values(cur, insert_data, df_list)
+			if conn.notices != []:
+				print(conn.notices)
+	```
+	
+    c) The step before only include valid intersection movements for
+    classification_uid IN (1,2,6,10) which are light vehicles, cyclists and
+    pedestrians. The reason is that the counts for other mode may not pass the
+    mark of having 20 distinct datetime_bin. However, we know that if vehicles
+    can make that turn, so can trucks, vans, buses and unclassified motorized
+    vehicles, which are `classification_uid IN (3, 4, 5, 8, 9)`. Therefore, we
+    will run the below query for all the classes not included in the previous
+    steps, and all intersections under consideration.
+
+	```sql
+	-- Include all wanted classification_uids here.
+	WITH wanted_veh(classification_uid) AS (
+	         VALUES (3), (4), (5), (8), (9)
+	)
+	INSERT INTO miovision_api.intersection_movements
+      ( intersection_uid, classification_uid, leg, movement_uid )
+	SELECT a.intersection_uid,
+	       b.classification_uid,
+		   a.leg,
+		   a.movement_uid
+	FROM miovision_api.intersection_movements a
+	CROSS JOIN wanted_veh b
+	-- Specify which intersection_uids to use.
+	WHERE a.intersection_uid IN {INSERT_IDS_HERE}
+	AND a.classification_uid = 1
+	ORDER BY 1, 2, 3, 4
+	```
+	
+	d) Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](#intersection_movements). **Though, the valid movements should be manually reviewed.**
+	
+	e) Then, we have to finish aggregating the data with the updated table. With `--pull` included in the command line, we have now only inserted the bins into the volume table and have not done other processing yet. Therefore, in order to complete the full process, we now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date). 
+	```sql
+	SELECT miovision_api.find_gaps(%s::date, %s::date) ;
+	SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date) ;
+	SELECT miovision_api.aggregate_15_min(%s::date, %s::date) ; 
+	SELECT miovision_api.report_dates(%s::date, %s::date) ;
+	```
+
+3) Check the data pulled for the new intersections to see if you find anything weird in the data, be it at the `volumes` table or at the `volumes_15min` table or even other tables.
+
+4) Then, manually insert **ONLY NEW intersections** for those dates that we have missed up until today. Then from the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
+
+5) Update the below table of when intersections were decommissioned for future references.
+
+|intersection_uid | last datetime_bin|
+|-----------------|------------------|
+9 | 2020-06-15 15:51:00|
+11 | 2020-06-15 09:46:00|
+13 | 2020-06-15 18:01:00|
+14 | NULL|
+16 | 2020-06-15 19:52:00|
+19 | 2020-06-15 20:18:00|
+30 | 2020-06-15 18:58:00|
+32 | 2020-06-15 18:30:00|
