@@ -390,16 +390,17 @@ def check_vdsdata_partitions(rds_conn, start_date):
         raise Exception()
 
     if table_check:  
-        LOGGER.info(f"No need to create new partition tables. Existing.")
+        LOGGER.info(f"No need to create new partition tables. Exiting.")
     elif not table_check:
         try:
             with rds_conn.get_conn() as con, con.cursor() as cur:
                 LOGGER.info(f"Creating partition tables.")
-                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('raw_vdsdata_div8001', %s, 8001);"), (y,))
-                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('raw_vdsdata_div2', %s, 2);"), (y,))
-                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_div8001', %s, 8001);"), (y,))
-                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_div2', %s, 2);"), (y,))
-                cur.execute(sql.SQL("SELECT vds.partition_vdsdata('counts_15min_bylane_div2', %s, 2);"), (y,))
+                partition_sql = sql.SQL("SELECT vds.partition_vdsdata(%s, %s, %s);")
+                cur.execute(partition_sql, ('raw_vdsdata_div8001', int(y), int(8001)))
+                cur.execute(partition_sql, ('raw_vdsdata_div2', int(y), int(2)))
+                cur.execute(partition_sql, ('counts_15min_div8001', int(y), int(8001)))
+                cur.execute(partition_sql, ('counts_15min_div2', int(y), int(2)))
+                cur.execute(partition_sql, ('counts_15min_bylane_div2', int(y), int(2)))
                 LOGGER.critical(f"Finished creating vdsdata partition tables.")
         except Error as exc:
             LOGGER.critical(f"Error creating vdsdata partitions.")
@@ -432,12 +433,13 @@ def check_vdsvehicledata_partitions(rds_conn, start_date):
         raise Exception()
 
     if table_check:  
-        LOGGER.info(f"No need to create new partition tables. Existing.")
+        LOGGER.info(f"No need to create new partition tables. Exiting.")
     elif not table_check:
         try:
             with rds_conn.get_conn() as con, con.cursor() as cur:
                 LOGGER.info(f"Creating partition tables.")
-                cur.execute(sql.SQL("SELECT vds.partition_vdsvehicledata(%s);"), (y,))
+                partition_sql = sql.SQL("SELECT vds.partition_vdsvehicledata(%s);")
+                cur.execute(partition_sql, (int(y)))
                 LOGGER.critical(f"Finished creating vdsvehicledata partition tables.")
         except Error as exc:
             LOGGER.critical(f"Error creating vdsvehicledata partitions.")
