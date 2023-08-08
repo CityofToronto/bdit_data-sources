@@ -40,8 +40,9 @@ JOIN vds.vdsconfig AS c ON
                     THEN 1 --15 min bins
             END AS expected_bins
     ) AS b
-WHERE 
-    d.dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
+WHERE
+    d.division_id = 2
+    AND d.dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
     AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
 GROUP BY
     d.division_id,
