@@ -28,6 +28,8 @@
 - [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
 	- [Removing Intersections](#removing-intersections)
 	- [Adding Intersections](#adding-intersections)
+		- [Update `intersections`](#update-miovision_apiintersections)
+		- [Update `intersections_intersection_movements`](#update-miovision_apiintersection_movements)
 
 ## 1. Overview
 
@@ -453,7 +455,8 @@ Once we are informed of the decommissioned date of a Miovision camera, we can ca
 ### Adding Intersections
 Adding intersections is not as simple as removing an intersection. We will first have to find out some information before proceeding to aggregating the data. The steps are outlined below.
 
-1) Look at the table [`miovision_api.intersections`](#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, do an INSERT INTO this table to include the new intersections.
+#### Update `miovision_api.intersections`  
+1) Look at the table [`miovision_api.intersections`](#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 	a) The new intersection's name and details such as `intersection_uid`, `id`, `intersection_name` can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections). The key needed to authorize the API is the same one used by the Miovision Airflow user. `date_installed` and `date_decommissioned` are the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'), and `date_decommissioned` is the date of the *last row of data from the location*. `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the Jupyter notebook in the `update_intersections` folder. If it is already a day later, the last date for the old location can be found from the `miovision_api.volumes` table.
 	
@@ -524,6 +527,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 		AND a.intersection_uid IN ({INSERT NEW INTERSECTIONS HERE});
 	```
 
+#### Update `miovision_api.intersection_movements`  
 2) Now that the updated table of [`miovision_api.intersections`](#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](#intersection_movements). We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
 	a) Run the [api script](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process. `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull` . `--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
