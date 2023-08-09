@@ -28,7 +28,7 @@ The API provides data on non-regular (but uniform) 5 minute bins, i.e., at 3:44,
 
 The WYS data puller script is called by an Airflow DAG that runs daily. It collects the count of vehicles for each speed recorded by the sign in 5 minute aggregate bins.
 
-The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, e.g., `python wys_api.py run_api`. It .
+The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, e.g., `python wys_api.py run_api`.
 
 |Option|Type|Format|Description|Example|Default|
 |-----|------|------|-------|-----|-----|
