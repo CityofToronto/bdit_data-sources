@@ -38,12 +38,12 @@ setfacl -R -m u:airflow:rwx <REPLACE-WITH-THE-REPO-FOLDER>
 6) Create a new symbolic link using:
 
 ```
-ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> airflow/dags/<DAG-FILE>
+ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> /etc/airflow/dags/<DAG-FILE>
 ```
 If you get a "permission denied" error, ask a sys admin to do this step for you. The sys admin may transform into everyone's favourite super hero "Super User" using:
 ```
 sudo su - airflow
-ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> airflow/dags/<DAG-FILE>
+ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> /etc/airflow/dags/<DAG-FILE>
 ```
 
 7) In a new browser tab, go to https://`EC2 IP address`/airflow/ and enter your Airflow credentials.
