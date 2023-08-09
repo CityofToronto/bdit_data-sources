@@ -3,11 +3,22 @@
 # Operators; we need this to operate!
 from airflow import DAG
 from datetime import datetime, timedelta
+import os
+import sys
+from threading import local
+import psycopg2
+from psycopg2 import sql
+import requests
+from psycopg2.extras import execute_values
+from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable
+from dateutil.parser import parse
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 SLACK_CONN_ID = 'slack_data_pipeline'
+
 
 #This script does things with those operators:
 #1) does 9 upsert queries to update data in arc_link, arterydata, category, cnt_det, cnt_spd, countinfo, countinfomics, det, node
@@ -16,6 +27,7 @@ SLACK_CONN_ID = 'slack_data_pipeline'
 dag_name = 'traffic_transfer'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
+
 slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
@@ -24,20 +36,30 @@ list_names = []
 for name in names:
     list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
-def task_fail_nattery_slack_alert(context):
+def task_fail_slack_alert(context):
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = 'The {task} in updating traffic failed, {slack_name} go fix it meow :meow_notlike: '.format(
+    slack_msg = """
+            :red_circle: Task Failed / Tâche échouée.
+            {slack_name} please check.
+            *Task*: {task}
+            *Dag*: {dag}
+            *Execution Time*: {exec_date}
+            *Log Url*: {log_url}
+            """.format(
+            slack_name=' '.join(list_names),
             task=context.get('task_instance').task_id,
-            slack_name = ' '.join(list_names))
-        
-    slack_msg = task_msg + """(<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
+            dag=context.get('task_instance').dag_id,
+            ti=context.get('task_instance'),
+            exec_date=context.get('execution_date'),
+            log_url=context.get('task_instance').log_url,
+        )
+
     failed_alert = SlackWebhookOperator(
         task_id='slack_test',
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow'
+        username='airflow',
         )
     return failed_alert.execute(context=context)
 
@@ -48,7 +70,7 @@ default_args = {'owner': ','.join(names),
                  'email_on_success': False,
                  'retries': 0,
                  'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_nattery_slack_alert
+                 'on_failure_callback': task_fail_slack_alert
                 }
 
 
@@ -118,5 +140,12 @@ with DAG(dag_id = dag_name,
 				autocommit = True,
 				retries = 0
     )
+    
+    update_long_tmc = PostgresOperator(sql = 'SELECT traffic.update_tmc_mio()',
+				task_id = 'update_long_tmc',
+				postgres_conn_id = 'traffic_bot',
+				autocommit = True,
+				retries = 0
+    )
                                    
-    update_arc_link >> update_arterydata >> update_category >> update_cnt_det >> update_cnt_spd >> update_countinfo >> update_countinfomics >> update_det >> update_node
+    update_arc_link >> update_arterydata >> update_category >> update_cnt_det >> update_cnt_spd >> update_countinfo >> update_countinfomics >> update_det >> update_node >> update_long_tmc
