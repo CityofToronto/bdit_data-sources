@@ -1,23 +1,25 @@
-# Miovision Intersection Update Resources
+<!-- TOC ignore:true -->
+# Miovision Intersection Update Resources  
 
-	- [Removing Intersections](#removing-intersections)
-	- [Adding Intersections](#adding-intersections)
-		- [Update `intersections`](#1-update-miovision_apiintersections)
-		- [Update `intersections_intersection_movements`](#2update-miovision_apiintersection_movements)
-		- [Backfill and Aggregate New Intersections](#3-backfillaggregate-new-intersection-data)
+This readme contains information and resources on how to add/remove Miovision intersections from our data pipeline.  
+For the main Miovision readme, see [here](../README.md). 
 
-The main resource for adding new intersections is now located in the main readme [here](../README.md#1-update-miovision_apiintersections).  
-This folder contains additional resources to assist with manually adding Miovision intersections. 
+<!-- TOC -->
 
-- [`New Intersection Activation Dates.ipynb`](#new-intersection-activation-datesipynb)
-- [`Adding many intersections`](#adding-many-intersections)
+- [Removing Intersections](#removing-intersections)
+- [Adding Intersections](#adding-intersections)  
+    - [Update miovision_api.intersections:](#update-miovision_apiintersections)
+    - [Update miovision_api.intersection_movements](#update-miovision_apiintersection_movements)
+    - [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
+- [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
+- [Adding many intersections](#adding-many-intersections)
 
-There have been some changes to the Miovision cameras and below documents on the steps to make that changes on our end. Remove the decommissioned cameras first then include the newly installed ones. **Always run your test and put all new things in a different table/function name so that they do not disrupt the current process until everything has been finalized.** Ideally, the whole adding and removing process should be able to be done in one day.
+<!-- /TOC -->
 
-### Removing Intersections
+# Removing Intersections
 Once we are informed of the decommissioned date of a Miovision camera, we can carry out the following steps.
 
-1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../README.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
 2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_mvt` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
@@ -36,11 +38,11 @@ Once we are informed of the decommissioned date of a Miovision camera, we can ca
 
 4) Done. Removing intersections is short and simple.
 
-### Adding Intersections
+## Adding Intersections
 Adding intersections is not as simple as removing an intersection. We will first have to find out some information before proceeding to aggregating the data. The steps are outlined below.
 
-#### 1. Update `miovision_api.intersections`:
-1. Look at the table [`miovision_api.intersections`](#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+### Update `miovision_api.intersections`:
+1. Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 	a) The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
 		
@@ -54,7 +56,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 		
 	f) In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
 
-	h) Prepare an insert statement for the new intersection(s). Alternatively [this](update_intersections/Readme.md#adding-many-intersections) readme contains a python snippet you can use to do the same, which may be helpful for adding a large number of intersections. 
+	h) Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same, which may be helpful for adding a large number of intersections. 
 
 	```sql
 	INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
@@ -90,10 +92,10 @@ Adding intersections is not as simple as removing an intersection. We will first
 	JOIN gis.traffic_signal AS ts USING (px)
 	```
 
-#### Update `miovision_api.intersection_movements`  
-2. Now that the updated table of [`miovision_api.intersections`](#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](#intersection_movements). We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
+### Update `miovision_api.intersection_movements`  
+2. Now that the updated table of [`miovision_api.intersections`](../README.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
-	a) If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
+	a) If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
 	`--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
 
 	b) Now that there is data in `miovision_api.volumes`, run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. `volume::numeric / classification_volume >= 0.005` is a suggested addition to make sure that for lower volume modes (bicycles), we don't filter out a small volume but large percentage (5 / 1000).  
@@ -190,13 +192,13 @@ Adding intersections is not as simple as removing an intersection. We will first
 	ORDER BY 1, 2, 3, 4
 	```
 
-	d) Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](#intersection_movements). **Though, the valid movements should be manually reviewed.**
+	d) Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). **Though, the valid movements should be manually reviewed.**
 
-### 3. Backfill/Aggregate new intersection data
+## Backfill/Aggregate new intersection data
 
 3. Now that the intersection is configured and the raw volumes data is in the database, we have to finish aggregating the data.
 
-	a) If not already complete, use the [api script](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. 
+	a) If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. 
 
 	b) We now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date) to finish aggregating the backfilled data.  
 	```sql
@@ -271,10 +273,10 @@ Adding intersections is not as simple as removing an intersection. We will first
 
 	d) From the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
-## `New Intersection Activation Dates.ipynb`
-Jupyter notebook to help identify first date of data for each new intersection.
+# [New Intersection Activation Dates.ipynb](new_intersection_activation_dates.ipynb)
+Jupyter notebook to help identify new intersections and first date of data for each new intersection.
 
-## Adding many intersections  
+# Adding many intersections  
 Below is an optional method to import new intersections using an excel table and python. You may find it easier to use a simple SQL insert statement for one or two intersections. 
 
 When adding multiple intersections, you can prepare updates to the table in an Excel
