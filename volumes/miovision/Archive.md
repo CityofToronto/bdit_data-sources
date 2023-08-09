@@ -6,9 +6,9 @@
 It may prove useful to you at some time, perhaps in a somewhat bizarre set of circumstances.
 
 ## Table of Contents
-- [Archived Miovision Info](#Archived Miovision Info)
-    -[About the Archive](#About the Archive)
-    -[Table of Contents](#Table of Contents)
+- [Archived Miovision Info](#Archived-Miovision-Info)  
+    -[About the Archive](#About-the-Archive)  
+    -[Table of Contents](#Table-of-Contents)
 	- [6. Processing Data from API](#6-processing-data-from-api)
 	- [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#7-processing-data-from-csv-dumps-no-longer-in-use)
 		- [`raw_data`](#raw_data)
