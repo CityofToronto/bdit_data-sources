@@ -26,7 +26,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable 
 from dateutil.parser import parse
 
-dag_name = 'collisions_replicator_transfer'
+
 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
