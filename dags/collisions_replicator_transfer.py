@@ -25,14 +25,11 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable 
 from dateutil.parser import parse
-
-
-
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-
-
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+
+dag_name = 'collisions_replicator_transfer'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 slack_ids = Variable.get('slack_member_id', deserialize_json=True)
