@@ -5,7 +5,7 @@ from numpy import nan
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 import struct
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import json
 from airflow.macros import ds_add
@@ -61,6 +61,16 @@ def task_fail_slack_alert(owners:list, context:dict):
     )
     return failed_alert.execute(context=context)
 
+def check_dst(start_date):
+    start = datetime.strptime(start_date, '%Y-%m-%d')
+    tz_1 = start.astimezone().tzname()
+    tz_2 = (start + timedelta(days = 1)).astimezone().tzname()
+    if tz_1 == 'EDT' and tz_2 == 'EST':
+        LOGGER.info(f"EDT -> EST time change occured today.")
+    else:
+        LOGGER.info(f"Normal day.")
+    return tz_1 == 'EDT' and tz_2 == 'EST'
+
 def fetch_pandas_df(conn, query, table_name):
     #generic function to pull data in pandas dataframe format 
     try:
@@ -113,7 +123,10 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsdata` and inserts into RDS table `vds.raw_vdsdata`
 
     # Pull raw data from Postgres database
-    fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata.sql')
+    if not check_dst(start_date):
+        fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata.sql')
+    else:
+        fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata_dst_safe.sql')
     file = open(fpath, 'r')
     raw_sql = sql.SQL(file.read()).format( 
          start = sql.Literal(start_date + " 00:00:00 EST5EDT")
@@ -168,7 +181,11 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
 #contains individual vehicle activations from highway sensors (speed, length)
 
-    fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata.sql')
+    if not check_dst(start_date):
+        fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata.sql')
+    else:
+        fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata_dst_safe.sql')
+        
     file = open(fpath, 'r')
     raw_sql = sql.SQL(file.read()).format( 
          start = sql.Literal(start_date + " 00:00:00 EST5EDT")
@@ -349,7 +366,9 @@ def monitor_row_counts(rds_conn, itsc_conn, start_date, dataset, lookback_days):
     LOGGER.info(dates)
 
     #find days with more rows in ITSC (Source) than RDS (Dest)
-    dates_dif = dates[dates['count_source'] != dates['count_dest']] 
+    dates_dif = dates[dates['count_ITSC'] != dates['count_RDS']]
+    dates_dif['check_dst'] = dates_dif['dt'].apply(str).apply(check_dst)
+    dates_dif = dates_dif[[not(x) for x in dates_dif['check_dst']]] #filter out dst day since checking row count is too complicated.
     dates_dif = dates_dif['dt']
 
     if dates_dif.empty:
