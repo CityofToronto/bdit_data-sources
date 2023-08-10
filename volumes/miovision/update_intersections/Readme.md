@@ -255,7 +255,7 @@ Adding intersections is not as simple as removing an intersection. We will first
     We now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date) to finish aggregating the backfilled data.  
 	```sql
 	SELECT miovision_api.find_gaps(%s::date, %s::date);
-	SELECT miovision_api.aggregate_15_min_tmc(%s::date, %s::date);
+	SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);
 	SELECT miovision_api.aggregate_15_min(%s::date, %s::date); 
 	SELECT miovision_api.report_dates(%s::date, %s::date);
 	```
