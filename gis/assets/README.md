@@ -1,6 +1,6 @@
 # Assets
 
-An [airflow process](../../../dags/assets_pull.py) to automatically extract Open Data on assets by pulling GeoJSON files from City of Toronto Open Data. Currently pulling two datasets
+An [airflow process](../../dags/assets_pull.py) to automatically extract Open Data on assets by pulling GeoJSON files from City of Toronto Open Data. Currently pulling two datasets
 
 - Red Light Cameras: https://open.toronto.ca/dataset/red-light-cameras/
 - Traffic signals: https://open.toronto.ca/dataset/traffic-signals-tabular/
