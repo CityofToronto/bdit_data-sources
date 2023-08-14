@@ -106,7 +106,7 @@ class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cycl
 Here is a description of the classification_uids and corresponding types. 
 Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
 
-**classification_uid**|**classification**|**definition**|
+ classification_uid | classification | definition / notes |
 :-----|:-----|:-----|
 1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
@@ -116,7 +116,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 6|Pedestrian|A walker. May or may not include zombies...|
 8|WorkVan|A van used for commercial purposes|
 9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. Bicycle data is not great - stay tuned.|
+10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
 #### `movements`
 
