@@ -54,7 +54,9 @@ GRANT ALL ON TABLE gis.traffic_signal TO gis_admins;
 
 GRANT ALL ON TABLE gis.traffic_signal TO vz_api_bot;
 
-COMMENT ON TABLE gis.traffic_signal IS 'last updated: 2022517';
+COMMENT ON TABLE gis.traffic_signal
+    IS 'Updated daily by the assets_pull dag https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/assets';
+
 -- Index: traffic_signal_gix
 
 -- DROP INDEX IF EXISTS gis.traffic_signal_gix;
