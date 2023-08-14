@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt(
+CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(
 	start_date date,
 	end_date date,
     target_intersection int)
@@ -105,11 +105,11 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
+ALTER FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int)
     OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO PUBLIC;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO miovision_admins;
