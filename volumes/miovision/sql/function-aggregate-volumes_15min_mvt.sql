@@ -98,7 +98,7 @@ $BODY$;
 ALTER FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO public;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
 
