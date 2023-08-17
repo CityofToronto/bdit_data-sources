@@ -1,11 +1,11 @@
 import requests, json
 from configparser import ConfigParser
-#from psycopg2 import connect
+from psycopg2 import connect
 
 config = ConfigParser()
-#config.read(r'/home/nwessel/db-creds.config')
-#connection = connect(**config['dbauth'])
-#connection.autocommit = True
+config.read(r'/home/nwessel/db-creds.config')
+connection = connect(**config['dbauth'])
+connection.autocommit = True
 
 endpoint = 'https://apieco.eco-counter-tools.com'
 
@@ -24,16 +24,29 @@ def getToken():
     )
     return response.json()['access_token']
 
-print(getToken())
+token = getToken()
 
-#headers = {'Authorization': f'Bearer {token}'}
+def getSites():
+    response = requests.get(
+        f'{endpoint}/api/site',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+    return response.json()
 
-#sites_response = requests.get(f'{endpoint}/site',headers=headers)
+def getChannelData(channel_id):
+    response = requests.get(
+        f'{endpoint}/api/data/site/{channel_id}',
+        headers={'Authorization': f'Bearer {token}'},
+        params={
+            'begin': '2023-07-01T00:00:00',
+            'end':   '2023-07-02T00:00:00',
+            'complete': 'false'
+            #'step'
+        }
+    )
+    return response.json()
 
-
-raise SystemExit
-
-for site in json.loads(sites_response.text):
+for site in getSites():
     # check that we know of the site
     with connection.cursor() as cursor:
         cursor.execute(
@@ -42,15 +55,7 @@ for site in json.loads(sites_response.text):
         )
         if cursor.rowcount < 1:
             continue
-
-        site_id = site['id']
-
-        print(json.dumps(site,indent=4))
-
-        break
-        data_response = requests.get(
-            f'{endpoint}/data/site/{site_id}/?complete=false&begin=2016-01-31T13:30:00&end=2023-05-31T13:30:00'
-            'begin=2015-01-01T00:00:00',
-            headers=headers
-        )
-        print(data_response.text)
+        for channel in site['channels']:
+            channel_id = channel['id']
+            print(channel_id)
+            print(getChannelData(channel_id))
