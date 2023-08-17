@@ -39,8 +39,8 @@ def getChannelData(channel_id):
         f'{endpoint}/api/data/site/{channel_id}',
         headers={'Authorization': f'Bearer {token}'},
         params={
-            'begin': '2010-01-01T00:00:00',
-            'end':   '2023-07-02T00:00:00',
+            'begin': '2010-01-01T00:00:00', # arbitrary date before any sensors installed
+            'end':   datetime.now().isoformat(timespec='seconds'),
             'complete': 'false'
         }
     )
