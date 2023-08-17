@@ -13,103 +13,90 @@ DECLARE tot_gaps integer;
 
 BEGIN
 
--- FIRST, FIND ACCEPTABLE GAP SIZES
-WITH wkdy_lookup(period, isodow) AS (
-         VALUES ('Weekday'::text,'[1,6)'::int4range), ('Weekend'::text,'[6,8)'::int4range)
-), mio AS (
- SELECT intersection_uid,
-    datetime_bin(datetime_bin, 60) AS hourly_bin,
-    sum(volume) AS vol
-   FROM miovision_api.volumes
-  WHERE datetime_bin > (GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone) - '60 days'::interval) AND
-        datetime_bin <= GREATEST(end_date::timestamp without time zone, '2019-03-01'::timestamp without time zone)
-  GROUP BY intersection_uid, (datetime_bin(datetime_bin, 60))
-), gapsize_lookup AS (
- SELECT mio.intersection_uid,
-    d.period,
-    mio.hourly_bin::time without time zone AS time_bin,
-    avg(mio.vol) AS avg_vol,
-        CASE
-            WHEN avg(mio.vol) < 100::numeric THEN 20
-            WHEN avg(mio.vol) >= 100::numeric AND avg(mio.vol) < 500::numeric THEN 15
-            WHEN avg(mio.vol) >= 500::numeric AND avg(mio.vol) < 1500::numeric THEN 10
-            WHEN avg(mio.vol) > 1500::numeric THEN 5
-            ELSE NULL::integer
-        END AS gap_tolerance
-   FROM mio
-     CROSS JOIN wkdy_lookup d
-  WHERE date_part('isodow'::text, mio.hourly_bin)::integer <@ d.isodow
-  GROUP BY mio.intersection_uid, d.period, (mio.hourly_bin::time without time zone)
-), ful AS (
-    -- THEN, FIND ALL GAPS
-	SELECT generate_series(start_date, end_date, interval '1 minute')::timestamp without time zone 
-		AS datetime_bin
-), grp AS (
-	SELECT
-	vol.volume_uid,
-	vol.intersection_uid,
-    ful.datetime_bin,
-	dense_rank() OVER (ORDER BY ful.datetime_bin)
-	- dense_rank() OVER (PARTITION BY vol.intersection_uid ORDER BY vol.datetime_bin) AS diff
-	FROM ful
-	LEFT JOIN miovision_api.volumes vol
-	USING (datetime_bin)
-), island AS (
-	SELECT grp.intersection_uid, 
-	MAX(datetime_bin) - MIN(datetime_bin) + interval '1 minute' AS island_size, 
-	MIN(datetime_bin) AS time_min, MAX(datetime_bin) AS time_max
-	FROM grp
-	GROUP BY grp.intersection_uid, diff
-	ORDER BY grp.intersection_uid, time_min
-), gap AS (
-	SELECT
-	    ROW_NUMBER() OVER(ORDER BY island.intersection_uid, time_min) AS rn,
-		island.intersection_uid,
-		island_size,
-	    time_min,
-	    time_max,
-	    LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS prev_time_end,
-		time_min - LAG(time_max,1) OVER (PARTITION BY island.intersection_uid ORDER BY island.intersection_uid, time_min) AS gap_size
-	FROM island
-	ORDER BY rn
-), sel AS (
-	SELECT gap.intersection_uid, gap.prev_time_end AS gap_start, gap.time_min AS gap_end, 
-	date_part('epoch'::text, gap.gap_size) / 60::integer AS gap_minute
-	FROM gap 
-	WHERE gap.gap_size > '00:01:00'::time  --where gap size is greater than 1 minute
-	GROUP BY gap.intersection_uid, time_min, prev_time_end, gap.gap_size
-	ORDER BY gap.intersection_uid, gap_start
-), acceptable AS (
-	-- THEN, MATCH IT TO THE LOOKUP TABLE TO CHECK IF ACCEPTABLE
-	SELECT sel.intersection_uid, sel.gap_start, sel.gap_end,
-		sel.gap_minute, gapsize_lookup.gap_tolerance AS allowed_gap,
-	CASE WHEN gap_minute < gapsize_lookup.gap_tolerance THEN TRUE
-	WHEN gap_minute >= gapsize_lookup.gap_tolerance THEN FALSE
-	END AS accept
-	FROM sel 
-	LEFT JOIN gapsize_lookup
-	ON sel.intersection_uid = gapsize_lookup.intersection_uid
-	AND DATE_TRUNC('hour', sel.gap_start)::time = gapsize_lookup.time_bin
-	AND (CASE WHEN EXTRACT(isodow FROM sel.gap_start) IN (1,2,3,4,5) THEN 'Weekday'
-	WHEN EXTRACT(isodow FROM sel.gap_start) IN (6,7) THEN 'Weekend'
-	ELSE NULL END)  = gapsize_lookup.period
-), fail AS (
-	-- INSERT INTO THE TABLE
-	-- DISTINCT ON cause there might be more than 1 gap happening in the same hour for the same intersection
+--get first and last datetime_bins for each intersection if they don't exist
+WITH fluffed_data AS (
+    SELECT
+        i.intersection_uid,
+        bins.datetime_bin,
+        interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
+    FROM miovision_api.intersections AS i
+    --add artificial data points every hour to enforce hourly outages,
+	--including for intersections with no data otherwise.
+    CROSS JOIN generate_series(
+            start_date::timestamp,
+            end_date::timestamp,
+            interval '1 hour'
+    ) AS bins(datetime_bin)
+    --LEFT JOIN miovision_api.volumes AS v USING (intersection_uid, datetime_bin)
+    --WHERE v.intersection_uid IS NULL --row does not exist in volumes
+
+    UNION 
+
+    SELECT 
+        intersection_uid,
+        datetime_bin,
+        interval '1 minute' AS gap_adjustment --need to reduce gap by 1 minute for real data
+    FROM miovision_api.volumes AS v
+    WHERE
+        datetime_bin >= start_date
+        AND datetime_bin < end_date
+),
+
+bin_times AS (
+    SELECT 
+        intersection_uid,
+        datetime_bin AS gap_start,
+        LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) AS gap_end,
+        --these variables are no longer needed to determine allowable_gap.    
+        --CASE
+        --    WHEN date_part('isodow', datetime_bin) <= 5 AND holiday.holiday IS NULL THEN False
+        --    ELSE True
+        --END as weekend,
+        --date_part('hour', datetime_bin) AS day_hour,
+        LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin)
+            - datetime_bin != interval '1 minute' AS bin_break,
+        LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) 
+            - datetime_bin
+            - gap_adjustment
+        AS bin_gap,
+        gap_adjustment
+    FROM fluffed_data
+    LEFT JOIN ref.holiday ON holiday.dt = datetime_bin::date
+    GROUP BY
+        intersection_uid, 
+        gap_start,
+        gap_adjustment
+), 
+
+gaps AS (
+	-- calculate the start and end times of gaps that are longer than 1 minutes
 	INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
-	-- Multiple gaps during the hour won't be stored.
-	SELECT DISTINCT ON (intersection_uid, DATE_TRUNC('hour', acceptable.gap_start)) *
-	FROM acceptable
-	WHERE accept = false
-	ORDER BY DATE_TRUNC('hour', acceptable.gap_start), intersection_uid
+	-- Distinct on means multiple gaps during the hour won't be stored
+	SELECT DISTINCT ON (intersection_uid, date_part('hour', gap_start))
+		intersection_uid,
+		gap_start,
+		gap_end,
+		(date_part('epoch', bin_gap) / 60::integer) AS gap_minute,
+		15 AS allowed_gap,
+		False AS accept
+	FROM bin_times
+	WHERE 
+		bin_break = True
+		AND gap_end IS NOT NULL
+		--change from a dynamicly calculated gap to a standard one across all cases
+		AND bin_gap >= interval '15 minutes'
+	ORDER BY
+		intersection_uid,
+		date_part('hour', gap_start)
 	ON CONFLICT DO NOTHING
 	RETURNING *
 )
+
 -- FOR NOTICE PURPOSES ONLY
 SELECT COUNT(*) INTO tot_gaps
-FROM fail ;
+FROM gaps;
 
-RAISE NOTICE 'Found a total of % (hours) gaps that are unacceptable' , tot_gaps;
+RAISE NOTICE 'Found a total of % (hours) gaps that are unacceptable', tot_gaps;
 
 RETURN 1;
 END;
