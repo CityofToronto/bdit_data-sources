@@ -1,10 +1,10 @@
-CREATE TABLE ecocounter.site_counts (
-    site_id numeric REFERENCES ecocounter.sites (site_id),
+CREATE TABLE ecocounter.counts (
+    flow_id numeric REFERENCES ecocounter.locations (flow_id),
     datetime_bin timestamp NOT NULL,
     volume smallint,
-    UNIQUE(site_id, datetime_bin)
+    UNIQUE(flow_id, datetime_bin)
 );
 
-CREATE INDEX ON ecocounter.site_counts (datetime_bin);
+CREATE INDEX ON ecocounter.counts (datetime_bin);
 
-GRANT SELECT ON ecocounter.site_counts TO bdit_humans;
+GRANT SELECT ON ecocounter.counts TO bdit_humans;
