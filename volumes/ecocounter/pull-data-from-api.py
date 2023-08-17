@@ -41,7 +41,8 @@ def getChannelData(channel_id):
         params={
             'begin': '2010-01-01T00:00:00', # arbitrary date before any sensors installed
             'end':   datetime.now().isoformat(timespec='seconds'),
-            'complete': 'false'
+            'complete': 'false',
+            'step': '15m'
         }
     )
     return response.json()
