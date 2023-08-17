@@ -14,7 +14,7 @@ def getToken():
     response = requests.post(
         f'{endpoint}/token',
         headers={
-            'Authorization':'Basic eVJlR1J0NDJWTkVxV1p1aTNEa0tRSm1CNXFRYTpYeFFmdGJoNDRoVXF5ck5rbTRwU21WVVJ4Nmdh'
+            'Authorization': 'Basic ' + config['DEFAULT']['secret_api_hash']
         },
         data={
             'grant_type': 'password',
