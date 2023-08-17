@@ -10,7 +10,7 @@ connection.autocommit = True
 endpoint = 'https://apieco.eco-counter-tools.com'
 
 def getToken():
-    config.read(r'volumes/ecocounter/.ecocounter-credentials.config')
+    config.read(r'volumes/ecocounter/.api-credentials.config')
     response = requests.post(
         f'{endpoint}/token',
         headers={
