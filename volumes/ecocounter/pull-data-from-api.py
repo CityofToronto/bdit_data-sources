@@ -106,7 +106,6 @@ for site in getSites():
         truncateFlow(channel_id)
         # and fill it back up!
         counts = getChannelData(channel_id, firstData=channel['firstData'])
-        raise SystemExit
         for count in counts:
             volume = count['counts']
             insertFlowCount(channel_id, count['date'], volume)
