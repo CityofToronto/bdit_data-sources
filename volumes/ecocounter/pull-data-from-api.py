@@ -1,7 +1,7 @@
 import requests, json
 from configparser import ConfigParser
 from psycopg2 import connect
-from datetime import datetime
+from datetime import datetime, timedelta, time
 
 config = ConfigParser()
 config.read(r'/home/nwessel/db-creds.config')
@@ -25,8 +25,6 @@ def getToken():
     )
     return response.json()['access_token']
 
-token = getToken()
-
 def getSites():
     response = requests.get(
         f'{endpoint}/api/site',
@@ -34,18 +32,24 @@ def getSites():
     )
     return response.json()
 
-def getChannelData(channel_id):
-    response = requests.get(
-        f'{endpoint}/api/data/site/{channel_id}',
-        headers={'Authorization': f'Bearer {token}'},
-        params={
-            'begin': '2010-01-01T00:00:00', # arbitrary date before any sensors installed
-            'end':   datetime.now().isoformat(timespec='seconds'),
-            'complete': 'false',
-            'step': '15m'
-        }
-    )
-    return response.json()
+def getChannelData(channel_id,firstData='2015-01-01T00:00:00'):
+    requestChunkSize = timedelta(days=100)
+    requestStartDate = datetime.strptime(firstData,"%Y-%m-%dT%H:%M:%S%z")
+    data = []
+    while requestStartDate.timestamp() < datetime.now().timestamp():
+        response = requests.get(
+            f'{endpoint}/api/data/site/{channel_id}',
+            headers={'Authorization': f'Bearer {token}'},
+            params={
+                'begin': requestStartDate.isoformat(timespec='seconds'), 
+                'end':  (requestStartDate + requestChunkSize).isoformat(timespec='seconds'),
+                'complete': 'false',
+                'step': '15m'
+            }
+        )
+        data += response.json()
+        requestStartDate += requestChunkSize
+    return data
 
 def siteIsKnownToUs(site_id):
     # do we have a record of this site in the database?
@@ -83,23 +87,26 @@ def insertFlowCount(flow_id, datetime_bin, volume):
             (flow_id, datetime_bin, volume)
         )
 
+token = getToken()
+
 for site in getSites():
     if not siteIsKnownToUs(site['id']):
+        print('unknown site', site['id'], site['name'])
         continue
 
     for channel in site['channels']:
         if not flowIsKnownToUs(channel['id']):
+            print('unknown flow', channel['id'])
             continue
 
-        # we have this site and channel in the database
+        # we do have this site and channel in the database; let's update its counts
         channel_id = channel['id']
-        print(channel_id)
+        print('channel', channel_id)
         # empty the count table for this flow
         truncateFlow(channel_id)
         # and fill it back up!
-        counts = getChannelData(channel_id)
+        counts = getChannelData(channel_id, firstData=channel['firstData'])
+        raise SystemExit
         for count in counts:
             volume = count['counts']
             insertFlowCount(channel_id, count['date'], volume)
-            print(count['date'])
-        #raise SystemExit
