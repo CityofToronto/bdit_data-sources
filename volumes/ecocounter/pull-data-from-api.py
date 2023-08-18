@@ -2,6 +2,7 @@ import requests, json
 from configparser import ConfigParser
 from psycopg2 import connect
 from datetime import datetime, timedelta, time
+from tqdm import tqdm
 
 config = ConfigParser()
 config.read(r'/home/nwessel/db-creds.config')
@@ -101,11 +102,13 @@ for site in getSites():
 
         # we do have this site and channel in the database; let's update its counts
         channel_id = channel['id']
-        print('channel', channel_id)
+        print(f'starting on flow {channel_id}')
         # empty the count table for this flow
         truncateFlow(channel_id)
         # and fill it back up!
+        print(f'fetching data for flow {channel_id}')
         counts = getChannelData(channel_id, firstData=channel['firstData'])
-        for count in counts:
+        print(f'inserting data for flow {channel_id}')
+        for count in tqdm(counts):
             volume = count['counts']
             insertFlowCount(channel_id, count['date'], volume)
