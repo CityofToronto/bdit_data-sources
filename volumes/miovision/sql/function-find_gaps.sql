@@ -31,26 +31,28 @@ WITH fluffed_data AS (
     --group by in next step takes care of duplicates
     UNION ALL
 
-    SELECT 
+    SELECT DISTINCT
         intersection_uid,
         datetime_bin,
-        interval '1 minute' AS gap_adjustment --need to reduce gap by 1 minute for real data
+        --need to reduce gap length by 1 minute for real data since that minute contains data
+        interval '1 minute' AS gap_adjustment
     FROM miovision_api.volumes
     WHERE
         datetime_bin >= start_date
         AND datetime_bin < end_date
 ),
 
+--looks at sequential bins to identify breaks larger than 1 minute.
 bin_times AS (
     SELECT 
         intersection_uid,
         datetime_bin AS gap_start,
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) AS gap_end,
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin)
-            - datetime_bin != interval '1 minute' AS bin_break, --True means gap between bins is larger than 1 minute
+            - datetime_bin > interval '1 minute' AS bin_break, --True means gap between bins is larger than 1 minute
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) 
             - datetime_bin
-            - SUM(gap_adjustment)
+            - SUM(gap_adjustment) --sum works because between 0 and 1, we want 1 (implies real data)
         AS bin_gap
     FROM fluffed_data
     GROUP BY
@@ -58,27 +60,35 @@ bin_times AS (
         datetime_bin
 ),
 
+--find gaps of any size before summarizing to hourly (in case we want to use this raw output for something else)
+all_gaps AS (
+	SELECT
+		intersection_uid,
+		gap_start,
+		gap_end,
+		date_part('epoch', bin_gap) / 60::integer AS gap_minute
+	FROM bin_times
+	WHERE
+		bin_break = True
+		AND gap_end IS NOT NULL
+)
+
+-- summarize gaps into hours containing gaps of 15 minutes or more.
 gaps AS (
-	-- calculate the start and end times of gaps that are longer than 15 minutes
-	--INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
-	-- Distinct on means multiple gaps during the hour won't be stored
+	INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
 	SELECT
 		intersection_uid,
 		date_trunc('hour', gap_start) AS gap_start,
-		date_trunc('hour', gap_end) + interval '1 hour' AS gap_end,
-		SUM(date_part('epoch', bin_gap)) / 60::integer AS gap_minute,
+		date_trunc('hour', gap_start) + interval '1 hour' AS gap_end,
+		SUM(gap_minute) AS gap_minute,
 		15 AS allowed_gap,
 		False AS accept
-	FROM bin_times
-	WHERE 
-		bin_break = True
-		AND gap_end IS NOT NULL
-		--change from a dynamicly calculated gap to a standard one across all cases
-		AND bin_gap >= interval '15 minutes'
+	FROM all_gaps
+    --change from a dynamicly calculated gap to a standard one across all cases
+    WHERE gap_minute >= 15	
     GROUP BY
     	intersection_uid,
-		date_trunc('hour', gap_start),
-        date_trunc('hour', gap_end)
+		date_trunc('hour', gap_start)
 	ON CONFLICT DO NOTHING
 	RETURNING *
 )
