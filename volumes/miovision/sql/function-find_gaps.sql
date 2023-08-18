@@ -1,7 +1,6 @@
 
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
-	start_date date,
-	end_date date)
+	start_date date)
     RETURNS integer
     LANGUAGE 'plpgsql'
 
@@ -13,8 +12,50 @@ DECLARE tot_gaps integer;
 
 BEGIN
 
---get first and last datetime_bins for each intersection if they don't exist
-WITH fluffed_data AS (
+--hourly sum for last 60 days
+WITH mio AS (
+    SELECT
+        intersection_uid,
+        datetime_bin::date AS date,
+        date_part('hour', datetime_bin) AS time_bin,   
+        SUM(volume) AS vol
+    FROM miovision_api.volumes
+    WHERE
+        datetime_bin > start_date - interval '60 days'
+        AND datetime_bin < start_date
+    GROUP BY
+        intersection_uid,
+        date,
+        time_bin
+),
+
+--avg of hourly volume by intersection and hour of day. 
+gapsize_lookup AS (
+    SELECT
+        mio.intersection_uid,
+        mio.time_bin,
+        CASE
+            WHEN date_part('isodow', mio.date) <= 5 AND hol.holiday IS NULL THEN False
+            ELSE True
+        END as weekend,
+        AVG(mio.vol) AS avg_vol,
+        CASE
+            WHEN AVG(mio.vol) < 100::numeric THEN 20
+            WHEN AVG(mio.vol) >= 100::numeric AND AVG(mio.vol) < 500::numeric THEN 15
+            WHEN AVG(mio.vol) >= 500::numeric AND AVG(mio.vol) < 1500::numeric THEN 10
+            WHEN AVG(mio.vol) > 1500::numeric THEN 5
+            ELSE NULL::integer
+        END AS gap_tolerance
+    FROM mio
+    LEFT JOIN ref.holiday AS hol ON hol.dt = mio.date
+    GROUP BY
+        mio.intersection_uid,
+        weekend,
+        time_bin
+), 
+
+--now find the gaps
+fluffed_data AS (
     SELECT
         i.intersection_uid,
         bins.datetime_bin,
@@ -23,8 +64,8 @@ WITH fluffed_data AS (
     --add artificial data points every hour to enforce hourly outages,
 	--including for intersections with no data otherwise.
     CROSS JOIN generate_series(
-            start_date::timestamp,
-            end_date::timestamp,
+            start_date::timestamp, --start_date
+            start_date::timestamp + interval '1 day',
             interval '1 hour'
     ) AS bins(datetime_bin)
     
@@ -39,7 +80,7 @@ WITH fluffed_data AS (
     FROM miovision_api.volumes
     WHERE
         datetime_bin >= start_date
-        AND datetime_bin < end_date
+        AND datetime_bin < start_date + interval '1 day'
 ),
 
 --looks at sequential bins to identify breaks larger than 1 minute.
@@ -66,12 +107,18 @@ all_gaps AS (
 		intersection_uid,
 		gap_start,
 		gap_end,
-		date_part('epoch', bin_gap) / 60::integer AS gap_minute
+		date_part('epoch', bin_gap) / 60::integer AS gap_minute,
+        date_part('hour', gap_start) AS time_bin, 
+        CASE
+            WHEN date_part('isodow', gap_start) <= 5 AND hol.holiday IS NULL THEN False
+            ELSE True
+        END as weekend
 	FROM bin_times
+    LEFT JOIN ref.holiday AS hol ON hol.dt = bin_times.gap_start::date
 	WHERE
 		bin_break = True
 		AND gap_end IS NOT NULL
-)
+),
 
 -- summarize gaps into hours containing gaps of 15 minutes or more.
 gaps AS (
@@ -81,14 +128,16 @@ gaps AS (
 		date_trunc('hour', gap_start) AS gap_start,
 		date_trunc('hour', gap_start) + interval '1 hour' AS gap_end,
 		SUM(gap_minute) AS gap_minute,
-		15 AS allowed_gap,
+		gap_tolerance AS allowed_gap,
 		False AS accept
-	FROM all_gaps
+	FROM all_gaps AS ag
+    LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend)
     --change from a dynamicly calculated gap to a standard one across all cases
-    WHERE gap_minute >= 15	
+    WHERE gap_minute >= gap_tolerance	
     GROUP BY
     	intersection_uid,
-		date_trunc('hour', gap_start)
+		date_trunc('hour', gap_start),
+        gap_tolerance
 	ON CONFLICT DO NOTHING
 	RETURNING *
 )
