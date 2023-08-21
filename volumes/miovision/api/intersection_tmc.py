@@ -307,14 +307,16 @@ class MiovPuller:
 
 
 def process_data(conn, start_time, end_iteration_time):
-    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-
     time_period = (start_time, end_iteration_time)
+
+    # RUN find_gaps FUNCTION to identify unacceptable hours to exclude from aggregation
     with conn:
         with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
-            cur.execute(invalid_gaps, time_period)
-            logger.info(conn.notices[-1])
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::date)"
+            #run find_gaps function one date at a time 
+            for c_date in daterange(start_time, end_iteration_time, datetime.timedelta(days=1)):  
+                cur.execute(invalid_gaps, c_date)
+                logger.info(conn.notices[-1])
     logger.info('Updated gapsize table and found gaps exceeding allowable size')
 
     # Aggregate to 15min tmc / 15min
