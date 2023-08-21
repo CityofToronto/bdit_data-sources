@@ -15,7 +15,7 @@ INNER JOIN vds.vdsconfig AS c ON --don't want to include the truncated detector_
     v15.detector_id = c.detector_id 
     AND v15.datetime_bin >= c.start_timestamp
     AND (
-        v15.datetime_bin <= c.end_timestamp
+        v15.datetime_bin < c.end_timestamp
         OR c.end_timestamp IS NULL
     )
 WHERE v15.datetime_bin <= '2021-10-31'
