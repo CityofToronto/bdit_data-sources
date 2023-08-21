@@ -1,3 +1,6 @@
+--function to identify gaps in miovision_api.volumes data and insert into
+-- miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
+-- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
 	start_date date)
@@ -12,11 +15,11 @@ DECLARE tot_gaps integer;
 
 BEGIN
 
---hourly sum for last 60 days
+--hourly sum for last 60 days to use in gapsize_lookup. 
 WITH mio AS (
     SELECT
         intersection_uid,
-        datetime_bin::date AS date,
+        date_trunc('day', datetime_bin) AS dt,
         date_part('hour', datetime_bin) AS time_bin,   
         SUM(volume) AS vol
     FROM miovision_api.volumes
@@ -25,31 +28,31 @@ WITH mio AS (
         AND datetime_bin < start_date
     GROUP BY
         intersection_uid,
-        date,
+        dt,
         time_bin
 ),
 
---avg of hourly volume by intersection and hour of day. 
+--avg of hourly volume by intersection and hour of day to determine gap_tolerance
 gapsize_lookup AS (
     SELECT
-        mio.intersection_uid,
-        mio.time_bin,
+        intersection_uid,
+        time_bin,
         CASE
-            WHEN date_part('isodow', mio.date) <= 5 AND hol.holiday IS NULL THEN False
+            WHEN date_part('isodow', dt) <= 5 AND hol.holiday IS NULL THEN False
             ELSE True
         END as weekend,
-        AVG(mio.vol) AS avg_vol,
+        AVG(vol) AS avg_vol,
         CASE
-            WHEN AVG(mio.vol) < 100::numeric THEN 20
-            WHEN AVG(mio.vol) >= 100::numeric AND AVG(mio.vol) < 500::numeric THEN 15
-            WHEN AVG(mio.vol) >= 500::numeric AND AVG(mio.vol) < 1500::numeric THEN 10
-            WHEN AVG(mio.vol) > 1500::numeric THEN 5
+            WHEN AVG(vol) < 100::numeric THEN 20
+            WHEN AVG(vol) >= 100::numeric AND AVG(vol) < 500::numeric THEN 15
+            WHEN AVG(vol) >= 500::numeric AND AVG(vol) < 1500::numeric THEN 10
+            WHEN AVG(vol) > 1500::numeric THEN 5
             ELSE NULL::integer
         END AS gap_tolerance
     FROM mio
-    LEFT JOIN ref.holiday AS hol ON hol.dt = mio.date
+    LEFT JOIN ref.holiday AS hol USING (dt)
     GROUP BY
-        mio.intersection_uid,
+        intersection_uid,
         weekend,
         time_bin
 ), 
@@ -101,7 +104,7 @@ bin_times AS (
         datetime_bin
 ),
 
---find gaps of any size before summarizing to hourly (in case we want to use this raw output for something else)
+--find gaps of any size before summarizing (in case we want to use this raw output for something else)
 all_gaps AS (
 	SELECT
 		intersection_uid,
@@ -120,19 +123,22 @@ all_gaps AS (
 		AND gap_end IS NOT NULL
 ),
 
--- summarize gaps into hours containing gaps of 15 minutes or more.
+-- summarize gaps into hours containing gaps larger than the gap_tolerance for that intersection/hour/weekday type.
 gaps AS (
-	INSERT INTO miovision_api.unacceptable_gaps(intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept)
+	INSERT INTO miovision_api.unacceptable_gaps(
+        intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
+    )
 	SELECT
 		intersection_uid,
 		date_trunc('hour', gap_start) AS gap_start,
-		date_trunc('hour', gap_start) + interval '1 hour' AS gap_end,
+        --59 min to maintain compatibility with aggregate_15_min_mvt which
+        --uses date_trunc('hour', gap_end) + 1 hour. 
+		date_trunc('hour', gap_start) + interval '59 minutes' AS gap_end,
 		SUM(gap_minute) AS gap_minute,
 		gap_tolerance AS allowed_gap,
 		False AS accept
 	FROM all_gaps AS ag
     LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend)
-    --change from a dynamicly calculated gap to a standard one across all cases
     WHERE gap_minute >= gap_tolerance	
     GROUP BY
     	intersection_uid,
