@@ -1,6 +1,6 @@
 CREATE TABLE ecocounter.flows (
     flow_id numeric PRIMARY KEY,
-    site_id numeric NOT NULL,
+    site_id numeric NOT NULL REFERENCES ecocounter.sites (site_id),
     flow_direction text NOT NULL,
     flow_geom geometry(LINESTRING,4326) CHECK(flow_geom IS NULL OR ST_NPoints(flow_geom) = 2),
     bin_size interval NOT NULL
