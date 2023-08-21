@@ -3,12 +3,12 @@
 -- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
-	start_date date)
-    RETURNS integer
-    LANGUAGE 'plpgsql'
+    start_date date)
+RETURNS integer
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
+COST 100
+VOLATILE 
 AS $BODY$
 
 DECLARE tot_gaps integer;
@@ -65,7 +65,7 @@ fluffed_data AS (
         interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
     FROM miovision_api.intersections AS i
     --add artificial data points every hour to enforce hourly outages,
-	--including for intersections with no data otherwise.
+    --including for intersections with no data otherwise.
     CROSS JOIN generate_series(
             start_date::timestamp, --start_date
             start_date::timestamp + interval '1 day',
@@ -106,46 +106,46 @@ bin_times AS (
 
 --find gaps of any size before summarizing (in case we want to use this raw output for something else)
 all_gaps AS (
-	SELECT
-		intersection_uid,
-		gap_start,
-		gap_end,
-		date_part('epoch', bin_gap) / 60::integer AS gap_minute,
+    SELECT
+        intersection_uid,
+        gap_start,
+        gap_end,
+        date_part('epoch', bin_gap) / 60::integer AS gap_minute,
         date_part('hour', gap_start) AS time_bin, 
         CASE
             WHEN date_part('isodow', gap_start) <= 5 AND hol.holiday IS NULL THEN False
             ELSE True
         END as weekend
-	FROM bin_times
+    FROM bin_times
     LEFT JOIN ref.holiday AS hol ON hol.dt = bin_times.gap_start::date
-	WHERE
-		bin_break = True
-		AND gap_end IS NOT NULL
+    WHERE
+        bin_break = True
+        AND gap_end IS NOT NULL
 ),
 
 -- summarize gaps into hours containing gaps larger than the gap_tolerance for that intersection/hour/weekday type.
 gaps AS (
-	INSERT INTO miovision_api.unacceptable_gaps(
+    INSERT INTO miovision_api.unacceptable_gaps(
         intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
     )
-	SELECT
-		intersection_uid,
-		date_trunc('hour', gap_start) AS gap_start,
+    SELECT
+        intersection_uid,
+        date_trunc('hour', gap_start) AS gap_start,
         --59 min to maintain compatibility with aggregate_15_min_mvt which
         --uses date_trunc('hour', gap_end) + 1 hour. 
-		date_trunc('hour', gap_start) + interval '59 minutes' AS gap_end,
-		SUM(gap_minute) AS gap_minute,
-		gap_tolerance AS allowed_gap,
-		False AS accept
-	FROM all_gaps AS ag
+        date_trunc('hour', gap_start) + interval '59 minutes' AS gap_end,
+        SUM(gap_minute) AS gap_minute,
+        gap_tolerance AS allowed_gap,
+        False AS accept
+    FROM all_gaps AS ag
     LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend)
-    WHERE gap_minute >= gap_tolerance	
+    WHERE gap_minute >= gap_tolerance    
     GROUP BY
-    	intersection_uid,
-		date_trunc('hour', gap_start),
+        intersection_uid,
+        date_trunc('hour', gap_start),
         gap_tolerance
-	ON CONFLICT DO NOTHING
-	RETURNING *
+    ON CONFLICT DO NOTHING
+    RETURNING *
 )
 
 -- FOR NOTICE PURPOSES ONLY
