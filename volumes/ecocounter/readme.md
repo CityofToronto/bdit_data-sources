@@ -41,6 +41,10 @@ Some of the newer sites have flows labelled in the system as "IN" and "OUT". Bel
 
 ![labelled flow diagram for a two lane path](labelled-flows-b.png)
 
+From an email from Pierre, of Ecocounter:
+> The IN and OUT disparities are configured during the setup of the counter. With the Zelt system that you own, there can only be two directions: IN and OUT, but there can be several flows. In the case of Murray Ross Parkway, some details about the direction were left in the comments section: IN – Northbound. In the following two examples, both counting sites have four loops installed on the bike paths, but in one case, four flows were configured, and only two for the second site. In the first example, both IN flows have the same name, but they have different flowId.
+
+
 ## Historical data
 
 Several sensors in the current Ecocounter network go much further back, with the sensor at Bloor and Castle Frank starting in June of 1994. These older data were collected by a different vendor and are stored in the `traffic` schema. Like other data in `cnt_det` counts are in 15 minute bins.
