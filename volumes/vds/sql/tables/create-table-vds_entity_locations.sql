@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     division_id smallint,
     entity_type smallint,
     entity_id integer,
-    location_timestamp timestamp without time zone,
+    start_timestamp timestamp without time zone,
+    end_timestamp timestamp without time zone,
     latitude double precision,
     longitude double precision,
     altitude_meters_asl double precision,
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     offset_direction_degrees double precision,
     location_source smallint,
     location_description_overwrite character varying,
-    UNIQUE(division_id, entity_id, location_timestamp)
+    UNIQUE(division_id, entity_id, start_timestamp)
 )
 
 ALTER TABLE vds.entity_locations OWNER TO vds_admins;

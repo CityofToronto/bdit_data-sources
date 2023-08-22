@@ -2,7 +2,10 @@ SELECT
     divisionid,
     entitytype,
     entityid,
-    TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS locationtimestamp,
+    location_timestamp AS start_timestamp,
+	LEAD(location_timestamp, 1) OVER (
+		PARTITION BY divisionid, entityid ORDER BY location_timestamp
+	) AS end_timestamp,
     latitude,
     longitude,
     altitudemetersasl,
@@ -21,5 +24,12 @@ SELECT
     offsetdirectiondegrees,
     locationsource,
     locationdescriptionoverwrite
-FROM public.entitylocation
+FROM public.entitylocation,
+	LATERAL (
+        SELECT TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS location_timestamp
+    ) AS ts
 WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
+ORDER BY
+	divisionid,
+    entityid,
+    start_timestamp

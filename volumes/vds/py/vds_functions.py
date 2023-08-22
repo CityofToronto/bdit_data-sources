@@ -239,13 +239,18 @@ def pull_entity_locations(rds_conn, itsc_conn):
 
     # upsert data
     insert_query = sql.SQL("""
-        INSERT INTO vds.entity_locations (
-            division_id, entity_type, entity_id, location_timestamp, latitude, longitude, altitude_meters_asl, 
+        INSERT INTO vds.entity_locations AS e (
+            division_id, entity_type, entity_id, start_timestamp, end_timestamp, latitude, longitude, altitude_meters_asl, 
             heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
             second_cross_road_id, main_road_name, cross_road_name, second_cross_road_name, street_number,
             offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
         VALUES %s
-        ON CONFLICT DO NOTHING;
+        ON CONFLICT DO UPDATE
+        SET e.end_timestamp = NEW.end_timestamp
+        WHERE
+            e.division_id = NEW.division_id
+            AND e.entity_id = NEW.entity_id
+            AND e.start_timestamp = NEW.start_timestamp;
     """)
 
     fetch_and_insert_data(select_conn=itsc_conn, 
