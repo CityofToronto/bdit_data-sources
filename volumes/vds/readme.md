@@ -56,6 +56,7 @@ This table contains parsed data from ITSC public.vdsdata.
 Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bins which affects the conversion from volume to count. To convert to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline. 
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
 Contains `division_id IN (2, 8001)`. A one day sample for `division_id = 8001` was explored under the heading [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001); more investigation is needed to determine what this data can be used for. 
+Foreign keys `vdsconfig_uid`, `entity_location_uid` are added via trigger on insertion to this table. 
 
 Row count: 1,203,083 (7 days)
 | column_name       | data_type                   | sample              | description   |
@@ -69,11 +70,14 @@ Row count: 1,203,083 (7 days)
 | speed_kmh         | double precision            | 99.5                | Average speed during bin? |
 | volume_veh_per_hr | integer                     | 1800                | In vehicles per hour, need to convert to get # vehicles. |
 | occupancy_percent | double precision            | 10.31               | % of time the sensor is occupied. Goes up with congestion (higher vehicle density). |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 
 ## vds.raw_vdsvehicledata
 This table contains individual vehicle detections from ITSC public.vdsvehicledata. 
 This data can be useful to identify highway speeds and vehicle type mix (from length column).
 Note these observations do not align exactly with the binned data.
+Foreign keys `vdsconfig_uid`, `entity_location_uid` are added via trigger on insertion to this table. 
 
 Row count: 1,148,765 (7 days)
 | column_name         | data_type                   | sample                     | description   |
@@ -86,6 +90,8 @@ Row count: 1,148,765 (7 days)
 | sensor_occupancy_ds | smallint                    | 104                        |               |
 | speed_kmh           | double precision            | 15.0                       |               |
 | length_meter        | double precision            | 4.0                        |               |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 
 ## vds.counts_15min
 A summary of 15 minute vehicle counts from vds.raw_vdsdata. Only includes `division_id = 2`, since division_id '8001' is already 15 minute data in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval.
@@ -100,9 +106,9 @@ Row count: 927,399
 | column_name        | data_type                   | sample              | description   |
 |:-------------------|:----------------------------|:--------------------|:--------------|
 | volumeuid          | bigint                      | 2409198             | pkey          |
-| detector_id        | text                        | DE0040DWG           |               |
 | division_id        | smallint                    | 2                   | Table filtered for division_id = 2 |
-| vds_id             | integer                     | 3                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 | num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
 | datetime_15min       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if original bin timestamp is at the start or end of the 15 minute period. |
 | count_15min       | smallint                    | 217                 |               |
@@ -123,9 +129,9 @@ Row count: 1,712,401
 | column_name   | data_type                   | sample              | description   |
 |:--------------|:----------------------------|:--------------------|:--------------|
 | volumeuid     | bigint                      | 2228148             |               |
-| detector_id   | text                        | DE0040DWG           |               |
 | division_id   | smallint                    | 2                   |               |
-| vds_id        | integer                     | 3                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 | lane          | smallint                    | 1                   |               |
 | datetime_15min  | timestamp without time zone | 2023-06-07 00:00:00 |               |
 | count_15min  | smallint                    | 8                   |               |
@@ -177,6 +183,19 @@ Row count: 10,219
 | movement           | smallint                    |                        |               |
 | uid                | integer                     | 1                      | pkey          |
 
+This table is joined to `vds.raw_vdsdata` (and similarly for `vds.raw_vdsvehicledata`) using the following join conditions. Note that there are occasional nulls for `c.uid`, which is interpreted as the time between a detector being turned on in the field and configured in the database. 
+```sql
+SELECT d.*, c.uid AS vdsconfig_uid
+FROM vds.raw_vdsdata AS d
+LEFT JOIN vds.vdsconfig AS c ON
+    d.vds_id = c.vds_id
+    AND d.division_id = c.division_id
+    AND d.dt >= c.start_timestamp
+    AND (
+        d.dt < c.end_timestamp
+        OR c.end_timestamp IS NULL) --no end date
+```
+
 ## vds.entity_locations
 This table contains locations for vehicle detectors from ITSC public.entitylocations.
 To get the current location, join on entity_locations.entity_id = vdsconfig.vdsid and `SELECT DISTINCT ON (entity_id) ... ORDER BY entity_id, location_timestamp DESC`. 
@@ -187,7 +206,8 @@ Row count: 16,013
 | division_id                    | smallint                    | 8001                                       |               |
 | entity_type                    | smallint                    | 5                                          |               |
 | entity_id                      | integer                     | 2004114                                    |               |
-| location_timestamp             | timestamp without time zone | 2021-07-04 22:05:28.957568                 |               |
+| start_timestamp             | timestamp without time zone | 2021-07-04 22:05:28.957568                 |               |
+| end_timestamp             | timestamp without time zone | null                 |               |
 | latitude                       | double precision            | 43.64945                                   |               |
 | longitude                      | double precision            | -79.371464                                 |               |
 | altitude_meters_asl            | double precision            |                                            |               |
@@ -208,6 +228,19 @@ Row count: 16,013
 | location_description_overwrite | character varying           | JARVIS ST and FRONT ST E / LOWER JARVIS ST |               |
 | uid                            | integer                     | 1                                          |               |
 
+This table is joined to `vds.raw_vdsdata` (and similarly for `vds.raw_vdsvehicledata`) using the following join conditions. Note that there are occasional nulls for `e.uid`, which is interpreted as the time between a detector being turned on in the field and configured in the database. 
+```sql
+SELECT d.*, c.uid AS entity_location_uid
+FROM vds.raw_vdsdata AS d
+LEFT JOIN vds.entity_locations AS e ON
+    d.vds_id = e.vds_id
+    AND d.division_id = e.division_id
+    AND d.dt >= e.start_timestamp
+    AND (
+        d.dt < e.end_timestamp
+        OR e.end_timestamp IS NULL) --no end date
+```
+
 ## vds.veh_speeds_15min
 Summarization of vdsvehicledata with count of observation (vehicle) speeds grouped by 15 min / 5kph / vds_id. 
 
@@ -220,7 +253,8 @@ Row count: 6,415,490
 | column_name    | data_type                   | sample              | description   |
 |:---------------|:----------------------------|:--------------------|:--------------|
 | division_id    | smallint                    | 2                   |               |
-| vds_id         | integer                     | 3                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 | datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
 | speed_5kph     | smallint                    | 0                   | 5km/h speed bins, rounded down. |
 | count          | smallint                    | 14                  |               |
@@ -238,7 +272,8 @@ Row count: 4,622,437
 | column_name    | data_type                   | sample              | description   |
 |:---------------|:----------------------------|:--------------------|:--------------|
 | division_id    | smallint                    | 2                   |               |
-| vds_id         | integer                     | 3                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
+| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 | datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
 | length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
 | count          | smallint                    | 3                   |               |
