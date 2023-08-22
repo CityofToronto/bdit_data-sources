@@ -1,12 +1,13 @@
 CREATE TABLE IF NOT EXISTS vds.veh_length_15min (
     uid bigserial PRIMARY KEY,
     division_id smallint, 
-    vds_id integer,
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     datetime_15min timestamp,
     length_meter smallint,
     count smallint,
     total_count smallint,
-    UNIQUE (division_id, vds_id, datetime_15min, length_meter)
+    UNIQUE (division_id, vdsconfig_uid, entity_location_uid, datetime_15min, length_meter)
 );
 
 ALTER TABLE vds.veh_length_15min OWNER TO vds_admins;
@@ -25,6 +26,6 @@ USING brin(datetime_15min);
 CREATE INDEX IF NOT EXISTS ix_veh_lengths_vdsid_dt
 ON vds.veh_length_15min
 USING btree(
-    vds_id ASC nulls last,
+    vdsconfig_uid ASC nulls last,
     datetime_15min ASC nulls last
 );

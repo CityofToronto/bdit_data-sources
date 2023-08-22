@@ -1,15 +1,15 @@
 CREATE TABLE IF NOT EXISTS vds.counts_15min_bylane
 (
     volumeuid bigint NOT NULL DEFAULT nextval('vds.counts_15min_bylane_volumeuid_seq'::regclass),
-    detector_id text COLLATE pg_catalog."default",
     division_id smallint NOT NULL,
-    vds_id integer NOT NULL,
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     lane smallint NOT NULL,
     datetime_15min timestamp without time zone NOT NULL,
     count_15min smallint,
     expected_bins smallint,
     num_obs smallint,
-    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vds_id, lane, datetime_15min)
+    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vdsconfig_uid, entity_location_uid, lane, datetime_15min)
 ) PARTITION BY LIST (division_id);
 
 ALTER TABLE vds.counts_15min_bylane OWNER TO vds_admins;
@@ -30,7 +30,7 @@ USING brin(datetime_15min);
 CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsid_dt
 ON vds.counts_15min_bylane
 USING btree(
-    vds_id ASC nulls last,
+    vdsconfig_uid ASC nulls last,
     datetime_15min ASC nulls last
 );
 

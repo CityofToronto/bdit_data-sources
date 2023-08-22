@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS vds.raw_vdsdata
     volume_veh_per_hr integer,
     occupancy_percent double precision,
     volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsdata_volume_uid_seq'::regclass),
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     CONSTRAINT raw_vdsdata_unique PRIMARY KEY (division_id, vds_id, dt, lane)
 ) PARTITION BY LIST (division_id);
 

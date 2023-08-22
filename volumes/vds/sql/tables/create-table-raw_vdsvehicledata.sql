@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS vds.raw_vdsvehicledata (
     speed_kmh double precision,
     length_meter double precision,
     volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsvehicledata_volume_uid_seq'::regclass),
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     CONSTRAINT raw_vdsvehicledata_pkey PRIMARY KEY (vds_id, dt, lane)
 ) PARTITION BY RANGE (dt);
 
