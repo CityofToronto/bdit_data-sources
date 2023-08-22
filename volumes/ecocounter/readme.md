@@ -44,6 +44,13 @@ Some of the newer sites have flows labelled in the system as "IN" and "OUT". Bel
 From an email from Pierre, of Ecocounter:
 > The IN and OUT disparities are configured during the setup of the counter. With the Zelt system that you own, there can only be two directions: IN and OUT, but there can be several flows. In the case of Murray Ross Parkway, some details about the direction were left in the comments section: IN – Northbound. In the following two examples, both counting sites have four loops installed on the bike paths, but in one case, four flows were configured, and only two for the second site. In the first example, both IN flows have the same name, but they have different flowId.
 
+## Using the Ecocounter API
+
+The documentation for the Ecocounter API lives here: https://developers.eco-counter.com/
+
+It took a bit of effort to figure out how to properly authenticate to receive a token, and the process for doing that is now embodied in code in the file [`pull-data-from-api.py`](./pull-data-from-api.py)
+
+To run this code, it's necessary to set up a configuration file with the API credentials. An example of the structure for this file is provided here: [sample-api-credentials.config](./sample-api-credentials.config)
 
 ## Historical data
 
