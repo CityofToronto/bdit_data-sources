@@ -25,7 +25,7 @@ JOIN vds.vdsconfig AS c ON
     AND d.division_id = c.division_id
     AND d.datetime_15min >= c.start_timestamp
     AND (
-        d.datetime_15min <= c.end_timestamp
+        d.datetime_15min < c.end_timestamp
         OR c.end_timestamp IS NULL), --no end date
     LATERAL(
         SELECT CASE
