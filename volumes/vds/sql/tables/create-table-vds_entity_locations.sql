@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
 ALTER TABLE vds.entity_locations OWNER TO vds_admins;
 GRANT INSERT, SELECT ON TABLE vds.entity_locations TO vds_bot;
 GRANT ALL ON SEQUENCE vds.entity_locations_uid_seq TO vds_bot;
+GRANT SELECT ON TABLE vds.entity_locations TO bdit_humans;
 
 COMMENT ON TABLE vds.entity_locations IS 'Store raw data pulled from ITS Central `entitylocations` 
 table. Note entity_locations.entity_id corresponds to vdsconfig.vds_id. Also note there are
