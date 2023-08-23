@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS vds.veh_length_15min (
 ALTER TABLE vds.veh_length_15min OWNER TO vds_admins;
 GRANT INSERT, DELETE, SELECT ON TABLE vds.veh_length_15min TO vds_bot;
 GRANT ALL ON SEQUENCE vds.veh_length_15min_uid_seq TO vds_bot;
+GRANT SELECT ON TABLE vds.veh_length_15min TO bdit_humans;
 
 COMMENT ON TABLE vds.veh_length_15min IS 'A count of vehicle lengths from `raw_vdsvehicledata` 
 aggregated to detector / lengths floored to 1m.';
