@@ -20,32 +20,25 @@ SELECT
     COUNT(*) AS num_obs,
     COUNT(DISTINCT d.lane) AS num_distinct_lanes
 FROM vds.raw_vdsdata AS d
-JOIN vds.vdsconfig AS c ON
-    d.vds_id = c.vds_id
-    AND d.division_id = c.division_id
-    AND d.datetime_15min >= c.start_timestamp
-    AND (
-        d.datetime_15min < c.end_timestamp
-        OR c.end_timestamp IS NULL), --no end date
+JOIN vds.vdsconfig AS c ON d.vdsconfig_uid = c.uid,
     LATERAL(
         SELECT CASE
                 WHEN c.detector_id LIKE 'D%' AND c.division_id = 2
                     THEN 45 --20 sec bins
                 WHEN c.detector_id LIKE ANY('{"YONGE HEATH%", "YONGE DAVISVILLE%", "BCT%"}')
                     THEN 1 --15 min bins
-                WHEN c.detector_id LIKE ANY(
-                        '{"%SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}'
-                    ) THEN 3 --5 min bins
+                WHEN c.detector_id LIKE ANY('{"%SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}')
+                    THEN 3 --5 min bins
                 WHEN c.division_id = 8001
                     THEN 1 --15 min bins
             END AS expected_bins
     ) AS b
 WHERE
     d.division_id = 2
-    AND d.dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
-    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
-    AND vdsconfig_uid IS NOT NULL
-    AND entity_location_uid IS NOT NULL
+    AND d.dt >= '{{ ds }} 00:00:00'::timestamp
+    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY'
+    AND d.vdsconfig_uid IS NOT NULL
+    AND d.entity_location_uid IS NOT NULL
 GROUP BY
     d.division_id,
     d.vdsconfig_uid,
