@@ -94,7 +94,7 @@ Row count: 1,148,765 (7 days)
 | length_meter        | double precision            | 4.0                        |               |
 
 ## vds.counts_15min
-A summary of 15 minute vehicle counts from vds.raw_vdsdata. Only includes `division_id = 2`, since division_id '8001' is already 15 minute data in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval.
+A summary of 15 minute vehicle counts from vds.raw_vdsdata. This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
 Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline).
 
 Data quality checks:
