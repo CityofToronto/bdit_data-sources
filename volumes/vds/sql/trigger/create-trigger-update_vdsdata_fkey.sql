@@ -1,39 +1,73 @@
-CREATE OR REPLACE FUNCTION vds.update_vdsdata_fkey()
+CREATE OR REPLACE FUNCTION vds.vdsdata_process_staging()
 RETURNS TRIGGER AS $$
 BEGIN
-    RAISE NOTICE 'Trigger function update_vdsdata_fkey is activating to add vdsconfig_uid.';
+    RAISE NOTICE 'Trigger function to move vdsdata from staging to raw.';
+       
+    WITH new_data AS (
+        SELECT
+            rv.division_id,
+            rv.vds_id,
+            c.uid AS vdsconfig_uid,
+            e.uid AS entity_locations_uid,
+            rv.dt,
+            rv.datetime_15min,
+            rv.lane,
+            rv.speed_kmh,
+            rv.volume_veh_per_hr,
+            rv.occupancy_percent
+        FROM vds.raw_vdsdata_div2_2023 AS rv    
+        LEFT JOIN vds.vdsconfig AS c ON
+            rv.vds_id = c.vds_id
+            AND c.division_id = 2
+            AND rv.dt >= c.start_timestamp
+            AND (
+                rv.dt < c.end_timestamp
+                OR c.end_timestamp IS NULL) --no end date
+        LEFT JOIN vds.entity_locations_new AS e ON
+            rv.vds_id = e.entity_id
+            AND e.division_id = 2
+            AND rv.dt >= e.start_timestamp
+            AND (
+                rv.dt < e.end_timestamp
+                OR e.end_timestamp IS NULL) --no end date
+    ), 
+
+    good_data AS (
+        INSERT INTO vds.raw_vdsdata (
+            division_id, vds_id, vdsconfig_uid, entity_location_uid, dt, datetime_15min,
+            lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+        ) 
+
+        SELECT
+            division_id, vds_id, vdsconfig_uid, entity_location_uid, dt, datetime_15min,
+            lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+        FROM new_data
+        WHERE
+            vdsconfig_uid IS NOT NULL
+            AND entity_location_uid IS NOT NULL
+    ),
+
+    quarantine AS (
+        INSERT INTO vds.raw_vdsdata_quarantine (
+            division_id, vds_id, vdsconfig_uid, entity_location_uid, dt, datetime_15min,
+            lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+        ) 
+
+        SELECT
+            division_id, vds_id, vdsconfig_uid, entity_location_uid, dt, datetime_15min,
+            lane, speed_kmh, volume_veh_per_hr, occupancy_percent
+        FROM new_data
+        WHERE
+            vdsconfig_uid IS NULL
+            OR entity_location_uid IS NULL
+    )
     
-    UPDATE vds.raw_vdsdata AS d
-    SET vdsconfig_uid = c.uid
-    FROM vds.vdsconfig AS c
-    WHERE
-        d.vdsconfig_uid IS NULL 
-        AND d.vds_id = c.vds_id
-        AND d.division_id = c.division_id
-        AND d.dt >= c.start_timestamp
-        AND (
-            d.dt < c.end_timestamp
-            OR c.end_timestamp IS NULL); --no end date
+    DELETE FROM vds.vdsdata_staging;
 
-    RAISE NOTICE 'Trigger function update_vdsdata_fkey is activating to add entity_location_uid.';
-
-    UPDATE vds.raw_vdsdata AS d
-    SET entity_location_uid = e.uid
-    FROM vds.entity_locations AS e
-    WHERE
-        d.entity_location_uid IS NULL    
-        AND d.vds_id = e.vds_id
-        AND d.division_id = e.division_id
-        AND d.dt >= e.start_timestamp
-        AND (
-            d.dt < e.end_timestamp
-            OR e.end_timestamp IS NULL); --no end date
-
-    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_vdsdata_fkey_trigger
-AFTER INSERT ON vds.raw_vdsdata
+CREATE TRIGGER vdsdata_process_staging
+AFTER INSERT ON vds.vdsdata_staging
 FOR EACH STATEMENT
-EXECUTE FUNCTION vds.update_vdsdata_fkey();
+EXECUTE FUNCTION vds.vdsdata_process_staging();
