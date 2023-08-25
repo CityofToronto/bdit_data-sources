@@ -12,13 +12,19 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 import os
-
 import sys
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_name = 'vz_google_sheets'
 
+SLACK_CONN_ID = 'slack_data_pipeline'
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
 ssz2018 = dag_config['ssz2018']
@@ -63,10 +69,12 @@ def task_fail_slack_alert(context):
     if invalid_rows:
         task_msg = """The Task vz_google_sheets (ssz):{task} failed.
                     Found one or more invalid records. {slack_name} please email David Tang """.format(
-            task=context.get('task_instance').task_id, slack_name = list_names,) 
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),) 
     else:
         task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
-            task=context.get('task_instance').task_id, slack_name = list_names,) 
+            task=context.get('task_instance').task_id, 
+            slack_name = ' '.join(list_names),) 
     
     # this adds the error log url at the end of the msg
     slack_msg = task_msg + """ (<{log_url}|log>)""".format(
@@ -100,11 +108,10 @@ vz_api_bot = PostgresHook("vz_api_bot")
 con = vz_api_bot.get_conn()
 
 DEFAULT_ARGS = {
-    'owner': 'itaha',
+    'owner': ','.join(names),
     'depends_on_past' : False,
-    'email': ['islam.taha@toronto.ca'],
-    'email_on_failure': True,
-    'email_on_retry': True,
+    'email_on_failure': False,
+    'email_on_retry': False,
     'start_date': datetime(2019, 9, 30),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
@@ -112,7 +119,7 @@ DEFAULT_ARGS = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-dag = DAG('vz_google_sheets', default_args=DEFAULT_ARGS, schedule_interval='@daily', catchup=False)
+dag = DAG(dag_id = dag_name, default_args = DEFAULT_ARGS, schedule_interval = '@daily', catchup = False)
 
 task1 = PythonOperator(
     task_id='2018',

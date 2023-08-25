@@ -17,7 +17,7 @@ The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-
 
 ## Open Data
 
-Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly. Because the mobile signs are moved frequently, they do not have accurate locations beyond a text description, and are therefore presented as a separate dataset. See [WYS documentation](wys/api/README.md) for more information on how the datasets are processed.
+Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly. Because the mobile signs are moved frequently, they do not have accurate locations beyond a text description, and are therefore presented as a separate dataset. See [WYS documentation](api/README.md) for more information on how the datasets are processed.
 
   - [School Safety Zone Watch Your Speed Program – Locations](https://open.toronto.ca/dataset/school-safety-zone-watch-your-speed-program-locations/): The locations and operating parameters for each location where a permanent Watch Your Speed Program Sign was installed.
   - [School Safety Zone Watch Your Speed Program – Detailed Speed Counts](https://open.toronto.ca/dataset/school-safety-zone-watch-your-speed-program-detailed-speed-counts/): An hourly aggregation of observed speeds for each location where a Watch Your Speed Program Sign was installed in 5 km/hr speed range increments.
