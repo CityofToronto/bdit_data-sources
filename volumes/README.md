@@ -10,6 +10,7 @@ The catalogue of the volume datasets owned, managed, and used by Transportation 
   - [Automatic Traffic Recorder (ATR) Counts](#automatic-traffic-recorder-atr-counts)
   - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
   - [Other Methods](#other-methods)
+  - [Cycling Counts](#cycling-counts)
 - [Permanent Sources of Volume Data](#permanent-sources-of-volume-data)
   - [RESCU Vehicle Detection Stations](#rescu-vehicle-detection-stations)
   - [Miovision Cameras](#miovision-cameras)
@@ -64,6 +65,10 @@ Short term traffic count programs are traffic monitoring programs that collect t
 Here are some examples of other short term traffic counting programs conducted by the City which are less commonly used.
 - **Pedestrian Delay and Classification Study:** Through manual observation, this study captures pedestrians crossing a road within defined zones.
 - **Pedestrian Crossover Observation Study (PXO):** This study observes the behaviour of pedestrians using a crosswalk.
+
+### Cycling Counts
+
+The Cycling & Pedestrian Projects Unit (formerly Cycling Team) conducted their own short term counts. The data structure is documented in the [`cycling_unit`](cycling_unit/) folder. 
 
 ## Permanent Sources of Volume Data
 
