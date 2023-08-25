@@ -32,8 +32,9 @@
     - [An applied example](#an-applied-example)
     - [Identifying new anomalies](#identifying-new-anomalies)
 - [4. Repulling data](#4-repulling-data)
-  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
-        
+	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+- [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+
 ## 1. Overview
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
@@ -444,3 +445,6 @@ python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/mio
 ```
 
 The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
+
+## 5. Steps to Add or Remove Intersections
+For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md). 
