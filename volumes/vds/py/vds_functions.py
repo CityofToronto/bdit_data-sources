@@ -416,12 +416,14 @@ def check_vdsdata_partitions(rds_conn, start_date):
         try:
             with rds_conn.get_conn() as con, con.cursor() as cur:
                 LOGGER.info(f"Creating partition tables.")
+                #these tables partitioned by year and month:
                 partition_yyyymm = sql.SQL("SELECT vds.partition_vds_yyyymm(%s, %s, %s);")
                 cur.execute(partition_yyyymm, ('raw_vdsdata_div8001', int(y), str('dt')))
                 cur.execute(partition_yyyymm, ('raw_vdsdata_div2', int(y), str('dt')))
+                #this tables partitioned by year only:
                 partition_yyyy = sql.SQL("SELECT vds.partition_vds_yyyy(%s, %s, %s);")
-                cur.execute(partition_yyyy, ('counts_15min_div2', int(y), str('dt')))
-                cur.execute(partition_yyyy, ('counts_15min_bylane_div2', int(y), str('dt')))
+                cur.execute(partition_yyyy, ('counts_15min_div2', int(y), str('datetime_15min')))
+                cur.execute(partition_yyyy, ('counts_15min_bylane_div2', int(y), str('datetime_15min')))
                 LOGGER.critical(f"Finished creating vdsdata partition tables.")
         except Error as exc:
             LOGGER.critical(f"Error creating vdsdata partitions.")
