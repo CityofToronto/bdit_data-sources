@@ -66,7 +66,7 @@ def task_fail_slack_alert(context):
 
 #to get credentials to access google sheets
 wys_api_hook = GoogleCloudBaseHook('vz_api_google')
-cred = wys_api_hook._get_credentials()
+cred = wys_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
 #to connect to pgadmin bot
