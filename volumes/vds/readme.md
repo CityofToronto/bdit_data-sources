@@ -26,15 +26,17 @@ The `vds` schema in bigdata will eventually fully replace the old `rescu` schema
 ## Improvements
 Improvements over the old `rescu` schema: 
 1. The data pipeline is now pulling from farther upstream which has increased data availability. 
+Daily row counts from the two tables over a 4 month period comparing `rescu.volumes_15min` and `vds.counts_15min` for `division_id = 2`:
+![Row count comparison](<exploration/rescu vs vds count.png>)
 2. Raw data (20 seconds for RESCU) is now included via the `vds.raw_vdsdata` table which allows investigation into the accuracy of 15 minute counts.
 -The table `vds.counts_15min` (formerly `rescu.volumes_15min`) now includes extra columns (num_lanes, expected_bins, num_obs, num_distinct_lanes) to enable accuracy checks. 
 -The table `vds.counts_15min_bylane` includes the 15 minute detectors counts by lane, which can be used to verify that all lane sensors are working, or to investigate lane by lane traffic distribution.
 3. Individual vehicle detections records are included in the `vds.raw_vdsvehicledata` table which allows us to investigate the speed and length distribution (and possibly following distance?) of vehicles passing the detectors. 
+4. The pipeline now includes many additional vehiclde detection systems which were not available in the previous rescu schema including: Blue City, SmartMicro and Traffic Signal detectors, explained more below. 
 
-VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described in [DAG Design](#dag-design). The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
 
 VDS system consists of various vehicle detectors:  
-**division_id=2:** Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes Yonge St "BlueCity" / "SmartCity" sensors. Approx 700K rows per day from ~200 sensors at primarily 20 second intervals. 
+**division_id=2:** Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes Yonge St "BlueCity" / "SmartCity" sensors. Approx 700K rows per day from ~200 sensors at primarily 20 second intervals.  
 &nbsp; 1. RESCU loop/radar detectors  
 &nbsp; 2. Blue City VDS  
 &nbsp; 3. SmartCity sensors  
@@ -47,16 +49,19 @@ VDS system consists of various vehicle detectors:
 Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and all subsequent summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.
 Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.  
 
+
 ## Future Work 
 See Issue #658 which will add additional data quality checks to the new schema. 
 
 # Table Structure  
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata. 
-Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bins which affects the conversion from volume to count. To convert to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline. 
+Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bin width which affects the conversion from volume to count (see `vds.detector_expected_bins`). For details on converting `raw_vdsdata` to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline. 
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
 Contains `division_id IN (2, 8001)`. A one day sample for `division_id = 8001` was explored under the heading [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001); more investigation is needed to determine what this data can be used for. 
 Foreign keys `vdsconfig_uid`, `entity_location_uid` are added via trigger on insertion to this table. 
+
+This table is partitioned first on `division_id` and further partitioned by `dt`, which should result in faster queries especially on division_id = 2 which is much lower volume data and more commonly used. Be sure to reference `dt` instead of `datetime_15min` in your WHERE clauses to make effective use of these partitions. 
 
 Row count: 1,203,083 (7 days)
 | column_name       | data_type                   | sample              | description   |
@@ -74,9 +79,10 @@ Row count: 1,203,083 (7 days)
 | entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 
 ## vds.raw_vdsvehicledata
-This table contains individual vehicle detections from ITSC public.vdsvehicledata. 
+This table contains individual vehicle detections from ITSC public.vdsvehicledata for `division_id = 2`. 
 This data can be useful to identify highway speeds and vehicle type mix (from length column).
-Note these observations do not align exactly with the binned data.
+Note that counts derived from this dataset do not align with the binned data of `raw_vdsdata`. That dataset is presumed to be more accurate for the purpose of counting vehicles. 
+This table is partitioned on year and then month which should result in faster querying when making effective use of filters on the `dt` column.  
 Foreign keys `vdsconfig_uid`, `entity_location_uid` are added via trigger on insertion to this table. 
 
 Row count: 1,148,765 (7 days)
@@ -94,7 +100,7 @@ Row count: 1,148,765 (7 days)
 | entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
 
 ## vds.counts_15min
-A summary of 15 minute vehicle counts from vds.raw_vdsdata. Only includes `division_id = 2`, since division_id '8001' is already 15 minute data in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval.
+A summary of 15 minute vehicle counts from vds.raw_vdsdata. This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
 Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline).
 
 Data quality checks:
@@ -369,8 +375,12 @@ ORDER BY v.vds_id, e.location_timestamp DESC
 ```
 
 # DAG Design 
+VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below. The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
 
 ## [vds_pull_vdsdata](../../../dags/vds_pull_vdsdata.py)
+
+*check_partitions*
+Checks the necessary partitions are available for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. 
 
 **pull_vdsdata**  
     [*delete_vdsdata* >> *pull_raw_vdsdata*]  
@@ -383,18 +393,21 @@ Deletes data from RDS `vds.raw_vdsdata` for specific date and then pulls into RD
 
 First deletes any existing data then inserts summaries of `vds.raw_vdsdata` into `vds.counts_15min` and `vds.counts_15min_bylane`. 
 
-**update_inventories**  
-    *pull_and_insert_detector_inventory*  
-    *pull_and_insert_entitylocations*
+**update_inventories**
+    *skip_update_inventories* >> 
+        [*pull_and_insert_detector_inventory*, *pull_and_insert_entitylocations*]
 
-Pulls entire detector inventory (`vdsconfig`, `entitylocations` tables) into RDS daily. Only runs these tasks for most recent schedule interval (doesn't backfill). 
+Pulls entire detector inventory (`vdsconfig`, `entitylocations` tables) into RDS daily. `skip_update_inventories` task ensures these only run for the most recent schedule interval (doesn't backfill). 
 
 ## [vds_pull_vdsvehicledata](../../../dags/vds_pull_vdsvehicledata.py)
+
+*check_partitions*
+Checks the necessary partitions are available for `raw_vdsvehicledata` before pulling data. 
 
 **pull_vdsvehicledata**  
     *delete_vdsvehicledata* >> *pull_raw_vdsvehicledata*  
 
-Deletes data from RDS `vds.raw_vdsvehicledata` for specific date and then pulls into RDS from ITS Central database. 
+Deletes data from RDS `vds.raw_vdsvehicledata` for specific date and then pulls into RDS from ITS Central database table `vdsvehicledata`.
 
 **summarize_vdsvehicledata**  
     *summarize_speeds* 
