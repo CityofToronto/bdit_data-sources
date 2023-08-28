@@ -46,8 +46,8 @@ USING btree(
     vdsconfig_uid ASC nulls last
 );
 
--- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_entity_locations_uid;
-CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_entity_locations_uid
+-- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_entity_location_uid
 ON vds.raw_vdsvehicledata
 USING btree(
     entity_location_uid ASC nulls last

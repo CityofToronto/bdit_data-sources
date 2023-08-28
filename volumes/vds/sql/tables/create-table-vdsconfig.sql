@@ -30,3 +30,13 @@ GRANT ALL ON SEQUENCE vds.vdsconfig_uid_seq TO vds_bot;
 
 COMMENT ON TABLE vds.vdsconfig IS 'Store raw data pulled from ITS Central `vdsconfig` table.
 Note there are duplicates on vds_id corresponding to updated locations/details over time.';
+
+-- DROP INDEX IF EXISTS vds.ix_entity_locations_full;
+CREATE INDEX IF NOT EXISTS ix_vdsconfig_full
+ON vds.vdsconfig
+USING btree(
+    division_id ASC nulls last,
+    vds_id ASC nulls last,
+    start_timestamp ASC nulls last,
+    end_timestamp ASC nulls last
+);

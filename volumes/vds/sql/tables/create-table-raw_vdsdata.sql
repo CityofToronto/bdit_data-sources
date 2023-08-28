@@ -48,8 +48,8 @@ USING btree(
     vdsconfig_uid ASC nulls last
 );
 
--- DROP INDEX IF EXISTS vds.ix_vdsdata_entity_locations_uid;
-CREATE INDEX IF NOT EXISTS ix_vdsdata_entity_locations_uid
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_entity_location_uid
 ON vds.raw_vdsdata
 USING btree(
     entity_location_uid ASC nulls last
@@ -69,9 +69,9 @@ ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001 OWNER TO vds_admins;
 
 --Sub partitions created with vds.partition_vdsdata
 --new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2021, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2022, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2023, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2021, 8001);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2022, 8001);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2023, 8001);
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2021);
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2022);
+SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2023);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2021);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2022);
+SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2023);
