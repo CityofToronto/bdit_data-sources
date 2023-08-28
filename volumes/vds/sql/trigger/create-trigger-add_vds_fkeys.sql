@@ -54,3 +54,7 @@ CREATE TRIGGER add_vds_fkeys_vdsvehicledata
 BEFORE INSERT ON vds.raw_vdsvehicledata
 FOR EACH ROW
 EXECUTE PROCEDURE vds.add_vds_fkeys();
+
+COMMENT ON FUNCTION vds.add_vds_fkeys IS 'Before Insert/For Each row trigger to add
+foreign keys referencing vdsconfig and entity_locations tables. Used for both raw_vdsdata 
+and raw_vdsvehicledata.'

@@ -18,3 +18,11 @@ CREATE VIEW vds.detectors_expected_bins AS (
         END AS expected_bins
     FROM vds.vdsconfig    
 );
+
+COMMENT ON VIEW vds.detectors_expected_bins IS 'Centralize information about
+expected bin width for each detector to be used in converting vehicle per hour to 
+vehicle count. May need to be periodically updated using
+bdit_data-sources/volumes/vds/exploration/time_gaps.sql';
+
+GRANT SELECT ON vds.detectors_expected_bins TO bdit_humans;
+GRANT ALL ON vds.detectors_expected_bins TO vds_admins;

@@ -65,7 +65,8 @@ $BODY$;
 
 COMMENT ON FUNCTION vds.partition_vds_yyyymm(text, integer, text) IS
 'Create new partitions by year and month under the parent table `base_table`.
-Can be used accross vds schema when partitioning by year, month. 
+Can be used accross vds schema when partitioning by year, month. Use parameter
+datetime_col to specify the partitioning timestamp column, ie. `dt`.
 Example: SELECT vds.partition_vds_yyyymm(''raw_vdsdata_div8001'', 2023, ''dt'')
 Example: SELECT vds.partition_vds_yyyymm(''raw_vdsvehicledata'', 2023, ''dt'')';
 
