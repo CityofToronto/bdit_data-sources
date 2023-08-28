@@ -60,17 +60,17 @@ PARTITION BY RANGE (datetime_15min);
 ALTER TABLE IF EXISTS vds.counts_15min_div8001 OWNER TO vds_admins;
 
 --Division 2 subpartitions
---Sub partitions created with vds.partition_vdsdata
+--Sub partitions created with vds.partition_vds_yyyy
 --new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
-SELECT vds.partition_vdsdata('counts_15min_div2', 2017, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2018, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2019, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2020, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2021, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2022, 2);
-SELECT vds.partition_vdsdata('counts_15min_div2', 2023, 2);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2017);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2018);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2019);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2020);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2021);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2022);
+SELECT vds.partition_vds_yyyy('counts_15min_div2', 2023);
 
 --Division 8001 subpartitions
-SELECT vds.partition_vdsdata('counts_15min_div8001', 2021, 8001);
-SELECT vds.partition_vdsdata('counts_15min_div8001', 2022, 8001);
-SELECT vds.partition_vdsdata('counts_15min_div8001', 2023, 8001);
+SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2021);
+SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2022);
+SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2023);

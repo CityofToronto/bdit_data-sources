@@ -50,17 +50,6 @@ PARTITION BY RANGE (datetime_15min);
 ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2 OWNER TO vds_admins;
 
 -- create sub partitions by year.
-CREATE TABLE vds.counts_15min_bylane_div2_2021
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2021-01-01 00:00:00') TO ('2022-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_bylane_div2_2022
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2022-01-01 00:00:00') TO ('2023-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_bylane_div2_2023
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2023 OWNER TO vds_admins;
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2021);
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2022);
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2023);
