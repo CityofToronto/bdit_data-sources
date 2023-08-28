@@ -30,8 +30,8 @@ USING btree(
     datetime_15min ASC nulls last
 );
 
--- DROP INDEX IF EXISTS vds.ix_veh_speeds_entity_locations_uid;
-CREATE INDEX IF NOT EXISTS ix_veh_speeds_entity_locations_uid
+-- DROP INDEX IF EXISTS vds.ix_veh_speeds_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_veh_speeds_entity_location_uid
 ON vds.veh_speeds_15min
 USING btree(
     entity_location_uid ASC nulls last
