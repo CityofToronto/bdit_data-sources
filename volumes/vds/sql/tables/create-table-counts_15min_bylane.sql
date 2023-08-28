@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS vds.counts_15min_bylane
     count_15min smallint,
     expected_bins smallint,
     num_obs smallint,
-    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vdsconfig_uid, entity_location_uid, lane, datetime_15min)
+    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vdsconfig_uid, lane, datetime_15min)
 ) PARTITION BY LIST (division_id);
 
 ALTER TABLE vds.counts_15min_bylane OWNER TO vds_admins;
@@ -32,6 +32,13 @@ ON vds.counts_15min_bylane
 USING btree(
     vdsconfig_uid ASC nulls last,
     datetime_15min ASC nulls last
+);
+
+-- DROP INDEX IF EXISTS vds.ix_counts15_entity_locations_uid;
+CREATE INDEX IF NOT EXISTS ix_counts15_entity_locations_uid
+ON vds.counts_15min_bylane
+USING btree(
+    entity_location_uid ASC nulls last
 );
 
 --create partition for div 2. Subpartition by date. 

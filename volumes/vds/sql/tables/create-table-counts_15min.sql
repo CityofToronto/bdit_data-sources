@@ -40,6 +40,13 @@ CREATE INDEX IF NOT EXISTS counts_15_volumeuid_idx
 ON vds.counts_15min
 USING btree(volumeuid ASC nulls last);
 
+-- DROP INDEX IF EXISTS vds.ix_counts15_entity_locations_uid;
+CREATE INDEX IF NOT EXISTS ix_counts15_entity_locations_uid
+ON vds.counts_15min
+USING btree(
+    entity_location_uid ASC nulls last
+);
+
 --Create partitions by division_id. Subpartition by date.
 CREATE TABLE vds.counts_15min_div2
 PARTITION OF vds.counts_15min FOR VALUES IN ('2') 

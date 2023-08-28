@@ -29,3 +29,10 @@ USING btree(
     vdsconfig_uid ASC nulls last,
     datetime_15min ASC nulls last
 );
+
+-- DROP INDEX IF EXISTS vds.ix_veh_lengths_entity_locations_uid;
+CREATE INDEX IF NOT EXISTS ix_veh_lengths_entity_locations_uid
+ON vds.veh_length_15min
+USING btree(
+    entity_location_uid ASC nulls last
+);
