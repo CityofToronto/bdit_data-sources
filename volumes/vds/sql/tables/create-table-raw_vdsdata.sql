@@ -67,11 +67,11 @@ FOR VALUES IN (8001)
 PARTITION BY RANGE (dt);
 ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001 OWNER TO vds_admins;
 
---Sub partitions created with vds.partition_vdsdata
+--Sub partitions created with vds.partition_vds_yyyymm
 --new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2021);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2022);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2023);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2021);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2022);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2023);
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2023, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2023, 'dt');

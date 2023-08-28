@@ -55,6 +55,6 @@ USING btree(
 
 --Create yearly partitions, subpartition by month.
 --new partitions created by vds_pull_vdsvehicledata DAG, `check_partitions` task.
-SELECT vds.partition_vdsvehicledata(2021);
-SELECT vds.partition_vdsvehicledata(2022);
-SELECT vds.partition_vdsvehicledata(2023);
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2023, 'dt');
