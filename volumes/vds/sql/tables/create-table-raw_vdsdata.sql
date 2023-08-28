@@ -41,6 +41,20 @@ CREATE INDEX IF NOT EXISTS volume_uid_idx
 ON vds.raw_vdsdata
 USING btree(volume_uid ASC nulls last);
 
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_vdsconfig_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsconfig_uid
+ON vds.raw_vdsdata
+USING btree(
+    vdsconfig_uid ASC nulls last
+);
+
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_entity_locations_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_entity_locations_uid
+ON vds.raw_vdsdata
+USING btree(
+    entity_location_uid ASC nulls last
+);
+
 --Partition for division_id = 2. Subpartition by date (year). 
 CREATE TABLE vds.raw_vdsdata_div2 PARTITION OF vds.raw_vdsdata
 FOR VALUES IN (2)
