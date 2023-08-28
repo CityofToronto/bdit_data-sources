@@ -100,7 +100,7 @@ except:
 
 #to get credentials to access google sheets
 vz_api_hook = GoogleCloudBaseHook('vz_api_google')
-cred = vz_api_hook._get_credentials()
+cred = vz_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
 #To connect to pgadmin bot
