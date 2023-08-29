@@ -24,7 +24,7 @@ $BODY$
         --add fkey to entity_locations table
         NEW.entity_location_uid := (
             SELECT e.uid
-            FROM vds.entity_locations_new AS e
+            FROM vds.entity_locations AS e
             WHERE
                 NEW.vds_id = e.entity_id
                 AND NEW.division_id = e.division_id
