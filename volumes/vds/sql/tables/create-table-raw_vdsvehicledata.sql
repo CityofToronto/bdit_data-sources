@@ -15,8 +15,8 @@ REVOKE ALL ON TABLE vds.raw_vdsvehicledata FROM vds_bot;
 GRANT SELECT ON TABLE vds.raw_vdsvehicledata TO bdit_humans;
 GRANT DELETE, INSERT, SELECT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
 
-COMMENT ON TABLE vds.raw_vdsvehicledata IS '''Store raw data pulled from ITS Central 
-`vdsvehicledata` table. Filtered for divisionid = 2.'''
+COMMENT ON TABLE vds.raw_vdsvehicledata IS 'Store raw data pulled from ITS Central 
+`vdsvehicledata` table. Filtered for divisionid = 2.'
 
 -- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_dt
