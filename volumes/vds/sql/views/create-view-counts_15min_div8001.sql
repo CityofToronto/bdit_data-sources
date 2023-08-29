@@ -11,7 +11,7 @@ CREATE VIEW vds.counts_15min_div8001 AS (
         SUM(d.volume_veh_per_hr) / 4 / e.expected_bins AS count_15min,
         e.expected_bins, 
         COUNT(*) AS num_obs,
-        COUNT(DISTINCT(lane)) AS num_distinct_lanes
+        COUNT(DISTINCT d.lane) AS num_distinct_lanes
     FROM vds.raw_vdsdata AS d
     JOIN vds.vdsconfig AS c ON 
         d.vds_id = c.vds_id
