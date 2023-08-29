@@ -11,10 +11,9 @@ WHERE
     divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
     --omits the 3rd hour of the day to avoid inserting duplicates when tz changes from EDT->EST
     AND ((
-		timestamputc >= TIMEZONE('UTC', {start}::timestamptz)
-    	AND timestamputc < TIMEZONE('UTC', {start}::timestamptz + interval '2 HOURS')
-	) OR (
-		timestamputc >= TIMEZONE('UTC', {start}::timestamptz + interval '3 HOURS')
-		AND timestamputc < TIMEZONE('UTC', {start}::timestamptz + interval '1 DAY')
-	))
-    
+        timestamputc >= TIMEZONE('UTC', {start}::timestamptz) -- noqa: PRS
+        AND timestamputc < TIMEZONE('UTC', {start}::timestamptz + interval '2 HOURS') -- noqa: PRS
+    ) OR (
+        timestamputc >= TIMEZONE('UTC', {start}::timestamptz + interval '3 HOURS') -- noqa: PRS
+        AND timestamputc < TIMEZONE('UTC', {start}::timestamptz + interval '1 DAY') -- noqa: PRS
+    ))

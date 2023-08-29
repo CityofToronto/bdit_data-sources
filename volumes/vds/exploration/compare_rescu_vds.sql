@@ -4,7 +4,7 @@ WITH vds_count AS (
     SELECT
         date_trunc('day', datetime_15min) AS dt,
         COUNT(*) AS vds_count,
-        SUM(v.count_15min) AS vds_sum
+        SUM(count_15min) AS vds_sum
     FROM vds.counts_15min
     WHERE
         division_id = 2
