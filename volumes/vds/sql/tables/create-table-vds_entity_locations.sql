@@ -23,9 +23,9 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     location_source smallint,
     location_description_overwrite character varying,
     UNIQUE(division_id, entity_id, location_timestamp)
-)
+);
 
-ALTER TABLE vds.entity_locations OWNER TO vds_admins; -- noqa: PRS
+ALTER TABLE vds.entity_locations OWNER TO vds_admins;
 GRANT INSERT, SELECT ON TABLE vds.entity_locations TO vds_bot;
 GRANT ALL ON SEQUENCE vds.entity_locations_uid_seq TO vds_bot;
 GRANT SELECT ON TABLE vds.entity_locations TO bdit_humans;
