@@ -27,5 +27,5 @@ CREATE INDEX IF NOT EXISTS ix_veh_lengths_vdsid_dt
 ON vds.veh_length_15min
 USING btree(
     vds_id ASC nulls last,
-    datetime_15min ASC nulls last
+    datetime_15min ASC nulls last -- noqa: PRS
 );

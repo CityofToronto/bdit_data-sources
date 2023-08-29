@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsid_dt
 ON vds.raw_vdsdata
 USING btree(
     vds_id ASC nulls last,
-    dt ASC nulls last
+    dt ASC nulls last -- noqa: PRS
 );
 
 -- DROP INDEX IF EXISTS vds.ix_vdsdata_dt;

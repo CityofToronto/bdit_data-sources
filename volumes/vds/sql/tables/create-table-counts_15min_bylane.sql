@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsid_dt
 ON vds.counts_15min_bylane
 USING btree(
     vds_id ASC nulls last,
-    datetime_15min ASC nulls last
+    datetime_15min ASC nulls last -- noqa: PRS
 );
 
 --create partition for div 2. Subpartition by date. 

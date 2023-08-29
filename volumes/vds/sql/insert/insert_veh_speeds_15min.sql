@@ -13,8 +13,8 @@ SELECT
     ) AS total_count
 FROM vds.raw_vdsvehicledata
 WHERE
-    dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
-    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
+    dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
+    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
     AND speed_kmh IS NOT NULL
 GROUP BY 
     division_id,
