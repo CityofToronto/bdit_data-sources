@@ -10,7 +10,7 @@ SELECT
     FLOOR(length_meter) AS length_meter,
     COUNT(*) AS count,
     SUM(COUNT(*)) OVER (
-        PARTITION BY division_id, vdsconfig_uid, entity_location_uid, datetime_bin(dt, 15)
+        PARTITION BY division_id, vdsconfig_uid, datetime_bin(dt, 15)
     ) AS total_count
 FROM vds.raw_vdsvehicledata
 WHERE
