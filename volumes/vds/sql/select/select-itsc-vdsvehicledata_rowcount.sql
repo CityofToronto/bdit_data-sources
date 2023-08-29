@@ -4,6 +4,6 @@ SELECT
 FROM public.vdsvehicledata
 WHERE
     divisionid = 2 --8001 and 8046 have only null values for speed/length/occupancy
-    AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - interval {lookback})
-    AND timestamputc < TIMEZONE('UTC', {start}::timestamptz)
+    AND timestamputc >= TIMEZONE('UTC', {start}::timestamptz - interval {lookback}) -- noqa: PRS
+    AND timestamputc < TIMEZONE('UTC', {start}::timestamptz) -- noqa: PRS
 GROUP BY dt
