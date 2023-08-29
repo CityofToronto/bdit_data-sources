@@ -10,9 +10,9 @@ WHERE
     AND length(lanedata) > 0 --these records don't have any data to unpack.
     --omits the 3rd hour of the day to avoid inserting duplicates when tz changes from EDT->EST
     AND ((
-		timestamputc >= extract('epoch' FROM {start}::timestamptz)::integer
-    	AND timestamputc < extract('epoch' FROM {start}::timestamptz + interval '2 HOURS')::integer
-	) OR (
-		timestamputc >= extract('epoch' FROM {start}::timestamptz + interval '3 HOURS')::integer
-		AND timestamputc < extract('epoch' FROM {start}::timestamptz + interval '1 DAY')::integer
-	))
+        timestamputc >= extract('epoch' FROM {start}::timestamptz)::integer -- noqa: PRS
+        AND timestamputc < extract('epoch' FROM {start}::timestamptz + interval '2 HOURS')::integer -- noqa: PRS
+    ) OR (
+        timestamputc >= extract('epoch' FROM {start}::timestamptz + interval '3 HOURS')::integer -- noqa: PRS
+        AND timestamputc < extract('epoch' FROM {start}::timestamptz + interval '1 DAY')::integer -- noqa: PRS
+    ))
