@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS vds.vdsconfig (
     signal_division_id smallint,
     movement smallint,
     UNIQUE (division_id, vds_id, start_timestamp)
-)
+);
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
 GRANT INSERT, SELECT ON TABLE vds.vdsconfig TO vds_bot;

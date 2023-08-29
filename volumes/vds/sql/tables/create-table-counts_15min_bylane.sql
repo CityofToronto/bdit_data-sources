@@ -26,12 +26,12 @@ CREATE INDEX IF NOT EXISTS ix_counts15_bylane_dt
 ON vds.counts_15min_bylane
 USING brin(datetime_15min);
 
--- DROP INDEX IF EXISTS vds.ix_counts15_bylane_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsid_dt
+-- DROP INDEX IF EXISTS vds.ix_counts15_bylane_vdsconfiguid_dt;
+CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsconfiguid_dt
 ON vds.counts_15min_bylane
 USING btree(
     vdsconfig_uid ASC nulls last,
-    datetime_15min ASC nulls last
+    datetime_15min ASC nulls last -- noqa: PRS
 );
 
 -- DROP INDEX IF EXISTS vds.ix_counts15_entity_location_uid;

@@ -20,9 +20,9 @@ SELECT
 FROM vds.raw_vdsdata AS d
 JOIN vds.detectors_expected_bins AS e ON d.vdsconfig_uid = e.uid
 WHERE
-    d.division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into counts_15min.
-    AND d.dt >= '{{ ds }} 00:00:00'::timestamp
-    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY'
+    d.division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into view counts_15min_div8001.
+    AND d.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
+    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
     AND d.vdsconfig_uid IS NOT NULL
     AND d.entity_location_uid IS NOT NULL
 GROUP BY
