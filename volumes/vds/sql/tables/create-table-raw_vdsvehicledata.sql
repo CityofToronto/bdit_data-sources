@@ -16,14 +16,14 @@ GRANT SELECT ON TABLE vds.raw_vdsvehicledata TO bdit_humans;
 GRANT DELETE, INSERT, SELECT ON TABLE vds.raw_vdsvehicledata TO vds_bot;
 
 COMMENT ON TABLE vds.raw_vdsvehicledata IS 'Store raw data pulled from ITS Central 
-`vdsvehicledata` table. Filtered for divisionid = 2.'
+`vdsvehicledata` table. Filtered for divisionid = 2.';
 
--- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_dt;
+--DROP INDEX IF EXISTS vds.ix_vdsvehicledata_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_dt
 ON vds.raw_vdsvehicledata
 USING brin(dt);
 
--- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_vdsid_dt;
+--DROP INDEX IF EXISTS vds.ix_vdsvehicledata_vdsid_dt;
 CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_vdsid_dt
 ON vds.raw_vdsvehicledata
 USING btree(
@@ -31,8 +31,8 @@ USING btree(
     dt ASC nulls last -- noqa: PRS
 );
 
--- DROP INDEX IF EXISTS vds.vdsvehicledata_volume_uid_idx;
--- hoping to solve very slow delete from this large table.
+--DROP INDEX IF EXISTS vds.vdsvehicledata_volume_uid_idx;
+--hoping to solve very slow delete from this large table.
 CREATE INDEX IF NOT EXISTS vdsvehicledata_volume_uid_idx
 ON vds.raw_vdsvehicledata
 USING btree(volumeu_id ASC nulls last);
