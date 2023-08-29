@@ -23,12 +23,12 @@ CREATE INDEX IF NOT EXISTS ix_veh_lengths_dt
 ON vds.veh_length_15min
 USING brin(datetime_15min);
 
--- DROP INDEX IF EXISTS vds.ix_veh_lengths_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_veh_lengths_vdsid_dt
+-- DROP INDEX IF EXISTS vds.ix_veh_lengths_vdsconfiguid_dt;
+CREATE INDEX IF NOT EXISTS ix_veh_lengths_vdsconfiguid_dt
 ON vds.veh_length_15min
 USING btree(
     vdsconfig_uid ASC nulls last,
-    datetime_15min ASC nulls last
+    datetime_15min ASC nulls last -- noqa: PRS
 );
 
 -- DROP INDEX IF EXISTS vds.ix_veh_lengths_entity_location_uid;

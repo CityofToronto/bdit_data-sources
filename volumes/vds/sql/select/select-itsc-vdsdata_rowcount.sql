@@ -4,7 +4,7 @@ SELECT
 FROM public.vdsdata
 WHERE
     divisionid IN (2, 8001)
-    AND timestamputc >= extract('epoch' FROM {start}::timestamptz - interval {lookback})::integer
-    AND timestamputc < extract('epoch' FROM {start}::timestamptz)::integer
+    AND timestamputc >= extract('epoch' FROM {start}::timestamptz - interval {lookback})::integer -- noqa: PRS
+    AND timestamputc < extract('epoch' FROM {start}::timestamptz)::integer -- noqa: PRS
     AND length(lanedata) > 0
 GROUP BY dt;
