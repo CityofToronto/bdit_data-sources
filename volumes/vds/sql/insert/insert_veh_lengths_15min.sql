@@ -13,8 +13,8 @@ SELECT
     ) AS total_count
 FROM vds.raw_vdsvehicledata
 WHERE
-    dt >= '{{ ds }} 00:00:00'::timestamp
-    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY'
+    dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
+    AND dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
     AND length_meter IS NOT NULL
 GROUP BY 
     division_id,

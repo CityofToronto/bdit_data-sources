@@ -40,8 +40,8 @@ JOIN vds.vdsconfig AS c ON
     ) AS b
 WHERE
     d.division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into counts_15min.
-    AND d.dt >= '{{ ds }} 00:00:00'::timestamp --'2023-07-05 00:00:00'::timestamp
-    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' --'2023-07-06 00:00:00'::timestamp
+    AND d.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
+    AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
 GROUP BY
     d.division_id,
     d.vds_id,

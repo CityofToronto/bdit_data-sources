@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS ix_counts15_vdsid_dt
 ON vds.counts_15min
 USING btree(
     vds_id ASC nulls last,
-    datetime_15min ASC nulls last
+    datetime_15min ASC nulls last -- noqa: PRS
 );
 
 -- DROP INDEX IF EXISTS vds.counts_15_volumeuid_idx;
