@@ -69,8 +69,3 @@ SELECT vds.partition_vds_yyyy('counts_15min_div2', 2020);
 SELECT vds.partition_vds_yyyy('counts_15min_div2', 2021);
 SELECT vds.partition_vds_yyyy('counts_15min_div2', 2022);
 SELECT vds.partition_vds_yyyy('counts_15min_div2', 2023);
-
---Division 8001 subpartitions
-SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2021);
-SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2022);
-SELECT vds.partition_vds_yyyy('counts_15min_div8001', 2023);

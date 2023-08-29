@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS vds.veh_speeds_15min (
     speed_5kph smallint,
     count smallint,
     total_count smallint,
-    UNIQUE (division_id, vdsconfig_uid, entity_location_uid, datetime_15min, speed_5kph)
+    UNIQUE (division_id, vdsconfig_uid, datetime_15min, speed_5kph)
 );
 
 ALTER TABLE vds.veh_speeds_15min OWNER TO vds_admins;
