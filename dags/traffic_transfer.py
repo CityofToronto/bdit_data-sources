@@ -1,5 +1,6 @@
 #This script should run after the MOVE dag dumps data into the "TRAFFIC_NEW" schema...
 
+import pendulum
 # Operators; we need this to operate!
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -43,7 +44,7 @@ def task_fail_nattery_slack_alert(context):
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2022, 6, 16), #start this Thursday, why not?
+                'start_date': pendulum.datetime(2022, 6, 16, tz="America/Toronto"), #start this Thursday, why not?
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
