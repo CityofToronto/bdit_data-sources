@@ -24,7 +24,28 @@ CREATE TABLE IF NOT EXISTS vds.detector_inventory_cursed
 );
 
 INSERT INTO vds.detector_inventory_cursed
-SELECT * FROM rescu.detector_inventory;
+SELECT 
+    detector_id,
+    number_of_lanes,
+    latitude,
+    longitude,
+    det_group,
+    road_class,
+    primary_road,
+    direction,
+    offset_distance,
+    offset_direction,
+    cross_road,
+    district,
+    ward,
+    vds_type,
+    total_loops,
+    sequence_number,
+    data_range_low,
+    data_range_high,
+    historical_count,
+    arterycode
+FROM rescu.detector_inventory;
 
 ALTER TABLE IF EXISTS vds.detector_inventory_cursed OWNER TO vds_admins;
 GRANT SELECT ON TABLE vds.detector_inventory_cursed TO bdit_humans;

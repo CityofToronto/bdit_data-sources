@@ -35,7 +35,7 @@ USING btree(
 );
 
 -- DROP INDEX IF EXISTS vds.ix_counts15_entity_location_uid;
-CREATE INDEX IF NOT EXISTS ix_counts15_entity_location_uid
+CREATE INDEX IF NOT EXISTS ix_counts15_bylane_entity_location_uid
 ON vds.counts_15min_bylane
 USING btree(
     entity_location_uid ASC nulls last

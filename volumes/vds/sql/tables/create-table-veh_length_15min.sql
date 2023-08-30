@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS vds.veh_length_15min (
     length_meter smallint,
     count smallint,
     total_count smallint,
-    UNIQUE (division_id, vdsconfig_uid, entity_location_uid, datetime_15min, length_meter)
+    UNIQUE (division_id, vdsconfig_uid, datetime_15min, length_meter)
 );
 
 ALTER TABLE vds.veh_length_15min OWNER TO vds_admins;
