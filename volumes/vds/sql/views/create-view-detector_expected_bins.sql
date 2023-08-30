@@ -24,5 +24,5 @@ expected bin width for each detector to be used in converting vehicle per hour t
 vehicle count. May need to be periodically updated using
 bdit_data-sources/volumes/vds/exploration/time_gaps.sql';
 
+ALTER VIEW vds.detectors_expected_bins OWNER TO vds_admins;
 GRANT SELECT ON vds.detectors_expected_bins TO bdit_humans;
-GRANT ALL ON vds.detectors_expected_bins TO vds_admins;
