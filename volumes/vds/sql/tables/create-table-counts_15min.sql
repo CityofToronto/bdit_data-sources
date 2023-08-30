@@ -53,11 +53,11 @@ PARTITION OF vds.counts_15min FOR VALUES IN ('2')
 PARTITION BY RANGE (datetime_15min);
 ALTER TABLE IF EXISTS vds.counts_15min_div2 OWNER TO vds_admins;
 
---Partitions for div 8001 are currently empty but retained for potential future use.
-CREATE TABLE vds.counts_15min_div8001
-PARTITION OF vds.counts_15min FOR VALUES IN ('8001')
-PARTITION BY RANGE (datetime_15min);
-ALTER TABLE IF EXISTS vds.counts_15min_div8001 OWNER TO vds_admins;
+--Removed partition for div 8001 and turned into a view with same name: vds.counts_15min_div8001
+--CREATE TABLE vds.counts_15min_div8001
+--PARTITION OF vds.counts_15min FOR VALUES IN ('8001')
+--PARTITION BY RANGE (datetime_15min);
+--ALTER TABLE IF EXISTS vds.counts_15min_div8001 OWNER TO vds_admins;
 
 --Division 2 subpartitions
 --Sub partitions created with vds.partition_vds_yyyy
