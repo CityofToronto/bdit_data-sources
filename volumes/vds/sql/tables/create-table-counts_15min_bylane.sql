@@ -1,15 +1,15 @@
 CREATE TABLE IF NOT EXISTS vds.counts_15min_bylane
 (
     volumeuid bigint NOT NULL DEFAULT nextval('vds.counts_15min_bylane_volumeuid_seq'::regclass),
-    detector_id text COLLATE pg_catalog."default",
     division_id smallint NOT NULL,
-    vds_id integer NOT NULL,
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     lane smallint NOT NULL,
     datetime_15min timestamp without time zone NOT NULL,
     count_15min smallint,
     expected_bins smallint,
     num_obs smallint,
-    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vds_id, lane, datetime_15min)
+    CONSTRAINT counts_15min_bylane_partitioned_pkey PRIMARY KEY (division_id, vdsconfig_uid, lane, datetime_15min)
 ) PARTITION BY LIST (division_id);
 
 ALTER TABLE vds.counts_15min_bylane OWNER TO vds_admins;
@@ -26,12 +26,19 @@ CREATE INDEX IF NOT EXISTS ix_counts15_bylane_dt
 ON vds.counts_15min_bylane
 USING brin(datetime_15min);
 
--- DROP INDEX IF EXISTS vds.ix_counts15_bylane_vdsid_dt;
-CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsid_dt
+-- DROP INDEX IF EXISTS vds.ix_counts15_bylane_vdsconfiguid_dt;
+CREATE INDEX IF NOT EXISTS ix_counts15_bylane_vdsconfiguid_dt
 ON vds.counts_15min_bylane
 USING btree(
-    vds_id ASC nulls last,
+    vdsconfig_uid ASC nulls last,
     datetime_15min ASC nulls last -- noqa: PRS
+);
+
+-- DROP INDEX IF EXISTS vds.ix_counts15_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_counts15_bylane_entity_location_uid
+ON vds.counts_15min_bylane
+USING btree(
+    entity_location_uid ASC nulls last
 );
 
 --create partition for div 2. Subpartition by date. 
@@ -43,17 +50,6 @@ PARTITION BY RANGE (datetime_15min);
 ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2 OWNER TO vds_admins;
 
 -- create sub partitions by year.
-CREATE TABLE vds.counts_15min_bylane_div2_2021
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2021-01-01 00:00:00') TO ('2022-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2021 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_bylane_div2_2022
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2022-01-01 00:00:00') TO ('2023-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2022 OWNER TO vds_admins;
-
-CREATE TABLE vds.counts_15min_bylane_div2_2023
-PARTITION OF vds.counts_15min_bylane_div2
-FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
-ALTER TABLE IF EXISTS vds.counts_15min_bylane_div2_2023 OWNER TO vds_admins;
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2021);
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2022);
+SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', 2023);

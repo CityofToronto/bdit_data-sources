@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS vds.raw_vdsvehicledata (
     speed_kmh double precision,
     length_meter double precision,
     volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsvehicledata_volume_uid_seq'::regclass),
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     CONSTRAINT raw_vdsvehicledata_pkey PRIMARY KEY (vds_id, dt, lane)
 ) PARTITION BY RANGE (dt);
 
@@ -37,8 +39,22 @@ CREATE INDEX IF NOT EXISTS vdsvehicledata_volume_uid_idx
 ON vds.raw_vdsvehicledata
 USING btree(volumeu_id ASC nulls last);
 
+-- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_vdsconfig_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_vdsconfig_uid
+ON vds.raw_vdsvehicledata
+USING btree(
+    vdsconfig_uid ASC nulls last
+);
+
+-- DROP INDEX IF EXISTS vds.ix_vdsvehicledata_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsvehicledata_entity_location_uid
+ON vds.raw_vdsvehicledata
+USING btree(
+    entity_location_uid ASC nulls last
+);
+
 --Create yearly partitions, subpartition by month.
 --new partitions created by vds_pull_vdsvehicledata DAG, `check_partitions` task.
-SELECT vds.partition_vdsvehicledata(2021);
-SELECT vds.partition_vdsvehicledata(2022);
-SELECT vds.partition_vdsvehicledata(2023);
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2023, 'dt');

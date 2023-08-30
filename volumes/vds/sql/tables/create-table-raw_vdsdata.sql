@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS vds.raw_vdsdata
     volume_veh_per_hr integer,
     occupancy_percent double precision,
     volume_uid bigint NOT NULL DEFAULT nextval('vds.raw_vdsdata_volume_uid_seq'::regclass),
+    vdsconfig_uid integer REFERENCES vds.vdsconfig(uid),
+    entity_location_uid integer REFERENCES vds.entity_locations(uid),
     CONSTRAINT raw_vdsdata_unique PRIMARY KEY (division_id, vds_id, dt, lane)
 ) PARTITION BY LIST (division_id);
 
@@ -39,6 +41,20 @@ CREATE INDEX IF NOT EXISTS volume_uid_idx
 ON vds.raw_vdsdata
 USING btree(volume_uid ASC nulls last);
 
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_vdsconfig_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_vdsconfig_uid
+ON vds.raw_vdsdata
+USING btree(
+    vdsconfig_uid ASC nulls last
+);
+
+-- DROP INDEX IF EXISTS vds.ix_vdsdata_entity_location_uid;
+CREATE INDEX IF NOT EXISTS ix_vdsdata_entity_location_uid
+ON vds.raw_vdsdata
+USING btree(
+    entity_location_uid ASC nulls last
+);
+
 --Partition for division_id = 2. Subpartition by date (year). 
 CREATE TABLE vds.raw_vdsdata_div2 PARTITION OF vds.raw_vdsdata
 FOR VALUES IN (2)
@@ -51,11 +67,11 @@ FOR VALUES IN (8001)
 PARTITION BY RANGE (dt);
 ALTER TABLE IF EXISTS vds.raw_vdsdata_div8001 OWNER TO vds_admins;
 
---Sub partitions created with vds.partition_vdsdata
+--Sub partitions created with vds.partition_vds_yyyymm
 --new partitions created by vds_pull_vdsdata DAG, `check_partitions` task.
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2021, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2022, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div2', 2023, 2);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2021, 8001);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2022, 8001);
-SELECT vds.partition_vdsdata('raw_vdsdata_div8001', 2023, 8001);
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2023, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2021, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2022, 'dt');
+SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2023, 'dt');
