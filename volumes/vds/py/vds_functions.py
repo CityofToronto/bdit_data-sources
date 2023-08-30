@@ -244,13 +244,18 @@ def pull_entity_locations(rds_conn, itsc_conn):
 
     # upsert data
     insert_query = sql.SQL("""
-        INSERT INTO vds.entity_locations (
-            division_id, entity_type, entity_id, location_timestamp, latitude, longitude, altitude_meters_asl, 
+        INSERT INTO vds.entity_locations AS e (
+            division_id, entity_type, entity_id, start_timestamp, end_timestamp, latitude, longitude, altitude_meters_asl, 
             heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
             second_cross_road_id, main_road_name, cross_road_name, second_cross_road_name, street_number,
             offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
         VALUES %s
-        ON CONFLICT DO NOTHING;
+        ON CONFLICT DO UPDATE
+        SET e.end_timestamp = NEW.end_timestamp
+        WHERE
+            e.division_id = NEW.division_id
+            AND e.entity_id = NEW.entity_id
+            AND e.start_timestamp = NEW.start_timestamp;
     """)
 
     fetch_and_insert_data(select_conn=itsc_conn, 
@@ -387,7 +392,7 @@ def check_vdsdata_partitions(rds_conn, start_date):
 
     sql_check = sql.SQL("""
         WITH target_tables(tablename) AS (
-            VALUES (%s), (%s), (%s), (%s), (%s), (%s), (%s)
+            VALUES (%s), (%s), (%s), (%s)
         )
 
         SELECT COUNT(tt.*) = COUNT(pt.*) --if false, create new partitions
@@ -400,11 +405,8 @@ def check_vdsdata_partitions(rds_conn, start_date):
             LOGGER.info(f"Checking if necessary vdsdata partitions exist.")
             cur.execute(sql_check, [
                 f"raw_vdsdata_div2_{y}",
-                f"raw_vdsdata_div8001_{y}_01_06",
-                f"raw_vdsdata_div8001_{y}_07_12",
+                f"raw_vdsdata_div8001_{y}",
                 f"counts_15min_div2_{y}",
-                f"counts_15min_div8001_{y}_01_06",
-                f"counts_15min_div8001_{y}_07_12",
                 f"counts_15min_bylane_div2_{y}",
                 ])
             table_check = cur.fetchone()[0]
@@ -419,12 +421,14 @@ def check_vdsdata_partitions(rds_conn, start_date):
         try:
             with rds_conn.get_conn() as con, con.cursor() as cur:
                 LOGGER.info(f"Creating partition tables.")
-                partition_sql = sql.SQL("SELECT vds.partition_vdsdata(%s, %s, %s);")
-                cur.execute(partition_sql, ('raw_vdsdata_div8001', int(y), int(8001)))
-                cur.execute(partition_sql, ('raw_vdsdata_div2', int(y), int(2)))
-                cur.execute(partition_sql, ('counts_15min_div8001', int(y), int(8001)))
-                cur.execute(partition_sql, ('counts_15min_div2', int(y), int(2)))
-                cur.execute(partition_sql, ('counts_15min_bylane_div2', int(y), int(2)))
+                #these tables partitioned by year and month:
+                partition_yyyymm = sql.SQL("SELECT vds.partition_vds_yyyymm(%s, %s, %s);")
+                cur.execute(partition_yyyymm, ('raw_vdsdata_div8001', int(y), str('dt')))
+                cur.execute(partition_yyyymm, ('raw_vdsdata_div2', int(y), str('dt')))
+                #this tables partitioned by year only:
+                partition_yyyy = sql.SQL("SELECT vds.partition_vds_yyyy(%s, %s, %s);")
+                cur.execute(partition_yyyy, ('counts_15min_div2', int(y), str('datetime_15min')))
+                cur.execute(partition_yyyy, ('counts_15min_bylane_div2', int(y), str('datetime_15min')))
                 LOGGER.critical(f"Finished creating vdsdata partition tables.")
         except Error as exc:
             LOGGER.critical(f"Error creating vdsdata partitions.")
@@ -446,7 +450,7 @@ def check_vdsvehicledata_partitions(rds_conn, start_date):
     
     try: 
         with rds_conn.get_conn() as con, con.cursor() as cur:
-            LOGGER.info(f"Checking if necessary vdsdata partitions exist.")
+            LOGGER.info(f"Checking if necessary vdsvehicledata partitions exist.")
             cur.execute(sql_check, [
                 f"raw_vdsvehicledata_{y}",
                 ])
@@ -462,8 +466,8 @@ def check_vdsvehicledata_partitions(rds_conn, start_date):
         try:
             with rds_conn.get_conn() as con, con.cursor() as cur:
                 LOGGER.info(f"Creating partition tables.")
-                partition_sql = sql.SQL("SELECT vds.partition_vdsvehicledata(%s);")
-                cur.execute(partition_sql, (int(y)))
+                partition_yyyymm = sql.SQL("SELECT vds.partition_vds_yyyymm(%s, %s, %s);")
+                cur.execute(partition_yyyymm, ('raw_vdsvehicledata', int(y), str('dt')))
                 LOGGER.critical(f"Finished creating vdsvehicledata partition tables.")
         except Error as exc:
             LOGGER.critical(f"Error creating vdsvehicledata partitions.")
