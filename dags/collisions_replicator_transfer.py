@@ -32,43 +32,13 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
+
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-
-SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: Task Failed / Tâche échouée.
-            {slack_name} please check.
-            *Task*: {task}
-            *Dag*: {dag}
-            *Execution Time*: {exec_date}
-            *Log Url*: {log_url}
-            """.format(
-            slack_name=' '.join(list_names),
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-        )
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
-
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
