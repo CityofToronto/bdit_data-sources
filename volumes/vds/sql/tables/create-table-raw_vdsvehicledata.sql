@@ -58,3 +58,9 @@ USING btree(
 SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2021, 'dt');
 SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2022, 'dt');
 SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', 2023, 'dt');
+
+--add foreign keys referncing vdsconfig, entity_locations
+CREATE TRIGGER add_vds_fkeys_vdsvehicledata
+BEFORE INSERT ON vds.raw_vdsvehicledata
+FOR EACH ROW
+EXECUTE PROCEDURE vds.add_vds_fkeys();

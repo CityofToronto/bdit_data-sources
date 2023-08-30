@@ -33,7 +33,7 @@ GRANT SELECT ON TABLE vds.entity_locations TO bdit_humans;
 
 COMMENT ON TABLE vds.entity_locations IS 'Store raw data pulled from ITS Central `entitylocations` 
 table. Note entity_locations.entity_id corresponds to vdsconfig.vds_id. Also note there are
-duplicates on entity_id corresponding to updated locations over time.'
+duplicates on entity_id corresponding to updated locations over time.';
 
 -- DROP INDEX IF EXISTS vds.ix_entity_locations_full;
 CREATE INDEX IF NOT EXISTS ix_entity_locations_full

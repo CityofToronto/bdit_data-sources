@@ -30,7 +30,7 @@ CREATE VIEW vds.counts_15min_div8001 AS (
         d.datetime_15min,
         c.lanes,
         e.expected_bins
-)
+);
 
 ALTER VIEW vds.counts_15min_div8001 OWNER TO vds_admins;
 GRANT SELECT ON vds.counts_15min_div8001 TO bdit_humans;

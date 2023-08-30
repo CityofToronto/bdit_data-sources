@@ -6,5 +6,4 @@ WHERE
     d.division_id = 2 --8001 and 8046 have only null values for speed/length/occupancy
     AND dt >= {start}::timestamp - interval {lookback} -- noqa: PRS
     AND dt < {start}::timestamp -- noqa: PRS
-GROUP BY
-    dt
+GROUP BY dt -- noqa: L003

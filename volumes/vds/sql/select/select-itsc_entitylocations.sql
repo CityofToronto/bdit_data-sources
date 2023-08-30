@@ -1,35 +1,35 @@
 SELECT 
-    divisionid,
-    entitytype,
-    entityid,
-    location_timestamp AS start_timestamp,
-	LEAD(location_timestamp, 1) OVER (
-		PARTITION BY divisionid, entityid ORDER BY location_timestamp
-	) AS end_timestamp,
-    latitude,
-    longitude,
-    altitudemetersasl,
-    headingdegrees,
-    speedkmh,
-    numsatellites,
-    dilutionofprecision,
-    mainroadid,
-    crossroadid,
-    secondcrossroadid,
-    mainroadname,
-    crossroadname,
-    secondcrossroadname,
-    streetnumber,
-    offsetdistancemeters,
-    offsetdirectiondegrees,
-    locationsource,
-    locationdescriptionoverwrite
-FROM public.entitylocation,
-	LATERAL (
-        SELECT TIMEZONE('UTC', locationtimestamputc) AT TIME ZONE 'EST5EDT' AS location_timestamp
+    e.divisionid,
+    e.entitytype,
+    e.entityid,
+    ts.location_timestamp AS start_timestamp,
+    LEAD(ts.location_timestamp, 1) OVER (
+        PARTITION BY e.divisionid, e.entityid ORDER BY ts.location_timestamp
+    ) AS end_timestamp,
+    e.latitude,
+    e.longitude,
+    e.altitudemetersasl,
+    e.headingdegrees,
+    e.speedkmh,
+    e.numsatellites,
+    e.dilutionofprecision,
+    e.mainroadid,
+    e.crossroadid,
+    e.secondcrossroadid,
+    e.mainroadname,
+    e.crossroadname,
+    e.secondcrossroadname,
+    e.streetnumber,
+    e.offsetdistancemeters,
+    e.offsetdirectiondegrees,
+    e.locationsource,
+    e.locationdescriptionoverwrite
+FROM public.entitylocation AS e,
+    LATERAL (
+        SELECT TIMEZONE('UTC', e.locationtimestamputc) AT TIME ZONE 'EST5EDT' AS location_timestamp
     ) AS ts
-WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
+WHERE e.divisionid IN (2, 8001) --only these have data in 'vdsdata' table
 ORDER BY
-	divisionid,
-    entityid,
+    e.divisionid,
+    e.entityid,
     start_timestamp
