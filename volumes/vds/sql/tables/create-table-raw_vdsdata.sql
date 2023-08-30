@@ -75,3 +75,9 @@ SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', 2023, 'dt');
 SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2021, 'dt');
 SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2022, 'dt');
 SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', 2023, 'dt');
+
+--add foreign keys referncing vdsconfig, entity_locations
+CREATE TRIGGER add_vds_fkeys_vdsdata
+BEFORE INSERT ON vds.raw_vdsdata
+FOR EACH ROW
+EXECUTE PROCEDURE vds.add_vds_fkeys();

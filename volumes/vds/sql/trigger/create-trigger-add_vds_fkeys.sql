@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION vds.add_vds_fkeys()
-RETURNS TRIGGER AS
+RETURNS trigger AS
 $BODY$
     BEGIN
 
@@ -45,18 +45,8 @@ LANGUAGE plpgsql
 VOLATILE SECURITY DEFINER
 COST 100;
 
-CREATE TRIGGER add_vds_fkeys_vdsdata
-BEFORE INSERT ON vds.raw_vdsdata
-FOR EACH ROW
-EXECUTE PROCEDURE vds.add_vds_fkeys();
-
-CREATE TRIGGER add_vds_fkeys_vdsvehicledata
-BEFORE INSERT ON vds.raw_vdsvehicledata
-FOR EACH ROW
-EXECUTE PROCEDURE vds.add_vds_fkeys();
-
 COMMENT ON FUNCTION vds.add_vds_fkeys IS 'Before Insert/For Each row trigger to add
 foreign keys referencing vdsconfig and entity_locations tables. Used for both raw_vdsdata 
-and raw_vdsvehicledata.'
+and raw_vdsvehicledata.';
 
 ALTER FUNCTION vds.add_vds_fkeys OWNER TO vds_admins;
