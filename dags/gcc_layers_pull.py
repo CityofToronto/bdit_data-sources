@@ -2,6 +2,7 @@
 import sys
 import os
 from datetime import datetime
+import pendulum
 from psycopg2 import sql
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -64,7 +65,7 @@ def task_fail_slack_alert(context):
 DEFAULT_ARGS = {
  'owner': ','.join(names),
  'depends_on_past': False,
- 'start_date': datetime(2022, 11, 3),
+ 'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
  'email_on_failure': False, 
  'retries': 0,
  'on_failure_callback': task_fail_slack_alert

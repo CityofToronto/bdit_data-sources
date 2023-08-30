@@ -3,6 +3,7 @@ Refresh WYS Materialized Views and run monthly aggregation function for Open Dat
 A Slack notification is raised when the airflow process fails.
 """
 import sys
+import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -41,7 +42,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 4, 30),
+                'start_date': pendulum.datetime(2020, 4, 30, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,

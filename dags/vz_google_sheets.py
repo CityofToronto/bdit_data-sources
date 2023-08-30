@@ -1,6 +1,7 @@
 """
 Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
 """
+import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -112,7 +113,7 @@ DEFAULT_ARGS = {
     'depends_on_past' : False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'start_date': datetime(2019, 9, 30),
+    'start_date': pendulum.datetime(2019, 9, 30, tz="America/Toronto"),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
     'provide_context':True,
