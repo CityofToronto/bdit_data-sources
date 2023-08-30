@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS ix_entity_locations_full
 ON vds.entity_locations
 USING btree(
     division_id ASC nulls last,
-    entity_id ASC nulls last,
+    entity_id ASC nulls last, -- noqa: PRS
     start_timestamp ASC nulls last,
     end_timestamp ASC nulls last
 );
