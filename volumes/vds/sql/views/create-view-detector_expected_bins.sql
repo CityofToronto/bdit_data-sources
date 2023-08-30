@@ -14,7 +14,7 @@ CREATE VIEW vds.detectors_expected_bins AS (
             WHEN detector_id LIKE ANY('{"%SMARTMICRO%", "%YONGE AND ROXBOROUGH%"}')
                 OR vds_id IN (6949838, 6949843, 6949845) --lakeshore smartmicro sensors
                 THEN 3 --5 min bins
-            ELSE NULL --new cases need to be updated manually and then updated in vds.count_15min%. 
+            ELSE NULL --new cases need to be updated manually and then updated in vds.count_15min%. -- noqa: L035
         END AS expected_bins
     FROM vds.vdsconfig    
 );

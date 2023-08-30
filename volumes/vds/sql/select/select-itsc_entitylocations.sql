@@ -25,7 +25,7 @@ SELECT
     e.locationsource,
     e.locationdescriptionoverwrite
 FROM public.entitylocation AS e,
-    LATERAL (
+    LATERAL(
         SELECT TIMEZONE('UTC', e.locationtimestamputc) AT TIME ZONE 'EST5EDT' AS location_timestamp
     ) AS ts
 WHERE e.divisionid IN (2, 8001) --only these have data in 'vdsdata' table
