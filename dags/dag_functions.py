@@ -22,6 +22,7 @@ def task_fail_slack_alert(
 
             import sys
             import os
+            import pendulum
             from functools import partial
             from airflow import DAG
             from airflow.operators.bash import BashOperator
@@ -30,13 +31,16 @@ def task_fail_slack_alert(
             sys.path.insert(0, repo_path)
             from dags.dag_functions import task_fail_slack_alert
             
-            with DAG(dag_id = dag_name) as dag:
+            with DAG(
+                dag_id = dag_name,
+                start_date=pendulum.datetime(2023, 8, 28, tz="America/Toronto")
+            ) as dag:
                 t = BashOperator(
                     task_id="failing_task",
                     bash_command="exit 1",
                     on_failure_callback= partial(
-                                task_fail_slack_alert, extra_msg="extra_failure_msg"
-                            )
+                        task_fail_slack_alert, extra_msg="My custom message"
+                    )
                 )
 
     Args:
@@ -59,7 +63,9 @@ def task_fail_slack_alert(
 
     # Slack failure message
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    log_url = context.get("task_instance").log_url
+    log_url = context.get("task_instance").log_url.replace(
+        "localhost", "trans-bdit.intra.prod-toronto.ca"
+    )
     slack_msg = (
         f":red_circle: {context.get('task_instance').dag_id}."
         f"{context.get('task_instance').task_id} "
