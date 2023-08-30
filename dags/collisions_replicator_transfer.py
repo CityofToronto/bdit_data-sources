@@ -16,6 +16,7 @@
 from datetime import datetime, timedelta
 import os
 import sys
+import pendulum
 from threading import local
 import psycopg2
 from psycopg2 import sql
@@ -72,7 +73,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2022, 5, 26), #start this Thursday, why not?
+                'start_date': pendulum.datetime(2022, 5, 26, tz="America/Toronto"), #start this Thursday, why not?
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,

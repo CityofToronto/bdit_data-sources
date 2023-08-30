@@ -8,6 +8,7 @@ to avoid those getting too big.
 from datetime import datetime
 import os
 import sys
+import pendulum
 from airflow import DAG
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -88,7 +89,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
     dag.doc_md = doc
     return dag
     
-START_DATE = datetime(2020, 2, 25)
+START_DATE = pendulum.datetime(2020, 2, 25, tz="America/Toronto")
 SCHEDULE_INTERVAL = '@daily'
 DAG = create_dag(__file__, __doc__, START_DATE, SCHEDULE_INTERVAL)
 

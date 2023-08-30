@@ -31,6 +31,7 @@ from airflow.models import Variable
 
 from dateutil.parser import parse
 from datetime import datetime
+import pendulum
 
 dag_name = 'traffic_signals_dag'
 
@@ -90,7 +91,7 @@ DEFAULT_ARGS = {
     'email_on_failure': True,
     'email_on_retry': True,
     'owner': 'airflow',
-    'start_date': datetime(2019, 9, 16), # YYYY, MM, DD
+    'start_date': pendulum.datetime(2019, 9, 16, tz="America/Toronto"), # YYYY, MM, DD
     'task_concurrency': 1,
     'on_failure_callback': task_fail_slack_alert
 }
