@@ -52,10 +52,5 @@ CREATE TABLE wys.mobile_summary (
     volume INT
 );
 
-ALTER TABLE wys.mobile_summary ADD UNIQUE(    ward_no ,
-    location ,
-    from_street ,
-    to_street ,
-    direction ,
-    installation_date,
-    removal_date);
+ALTER TABLE wys.mobile_summary ADD UNIQUE(
+    ward_no, location, from_street, to_street, direction, installation_date, removal_date);
