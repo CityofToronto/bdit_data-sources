@@ -8,7 +8,7 @@ AS $BODY$
 
 INSERT INTO wys.mobile_summary
 SELECT 
-    location_id,
+    loc.location_id,
     loc.ward_no,
     loc.location,
     loc.from_street,
@@ -16,8 +16,8 @@ SELECT
     loc.direction,
     loc.installation_date,
     loc.removal_date,
-    schedule, 
-    min_speed,
+    ssc.schedule,
+    ssc.min_speed,
     percentile_cont(0.05) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_05,
     percentile_cont(0.10) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_10,
     percentile_cont(0.15) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_15,
@@ -37,39 +37,52 @@ SELECT
     percentile_cont(0.85) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_85,
     percentile_cont(0.90) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_90,
     percentile_cont(0.95) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_95,
-    SUM(CASE speed_id WHEN 1 THEN "count" ELSE 0 END) AS   spd_00,
-    SUM(CASE speed_id WHEN 2 THEN "count" ELSE 0 END) AS   spd_05,
-    SUM(CASE speed_id WHEN 3 THEN "count" ELSE 0 END) AS   spd_10,
-    SUM(CASE speed_id WHEN 4 THEN "count" ELSE 0 END) AS   spd_15,
-    SUM(CASE speed_id WHEN 5 THEN "count" ELSE 0 END) AS   spd_20,
-    SUM(CASE speed_id WHEN 6 THEN "count" ELSE 0 END) AS   spd_25,
-    SUM(CASE speed_id WHEN 7 THEN "count" ELSE 0 END) AS   spd_30,
-    SUM(CASE speed_id WHEN 8 THEN "count" ELSE 0 END) AS   spd_35,
-    SUM(CASE speed_id WHEN 9 THEN "count" ELSE 0 END) AS   spd_40,
-    SUM(CASE speed_id WHEN 10 THEN "count" ELSE 0 END) AS   spd_45,
-    SUM(CASE speed_id WHEN 11 THEN "count" ELSE 0 END) AS   spd_50,
-    SUM(CASE speed_id WHEN 12 THEN "count" ELSE 0 END) AS   spd_55,
-    SUM(CASE speed_id WHEN 13 THEN "count" ELSE 0 END) AS   spd_60,
-    SUM(CASE speed_id WHEN 14 THEN "count" ELSE 0 END) AS   spd_65,
-    SUM(CASE speed_id WHEN 15 THEN "count" ELSE 0 END) AS   spd_70,
-    SUM(CASE speed_id WHEN 16 THEN "count" ELSE 0 END) AS   spd_75,
-    SUM(CASE speed_id WHEN 17 THEN "count" ELSE 0 END) AS   spd_80,
-    SUM(CASE speed_id WHEN 18 THEN "count" ELSE 0 END) AS   spd_85,
-    SUM(CASE speed_id WHEN 19 THEN "count" ELSE 0 END) AS   spd_90,
-    SUM(CASE speed_id WHEN 20 THEN "count" ELSE 0 END) AS   spd_95,
-    SUM(CASE speed_id WHEN 21 THEN "count" ELSE 0 END) AS   spd_100_and_above,
-    SUM("count") AS COUNT
-FROM wys.mobile_api_id loc
-JOIN wys.raw_data raw ON loc.api_id = raw.api_id 
-                      AND raw.datetime_bin > loc.installation_date 
-                      AND raw.datetime_bin < loc.removal_date
-INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
-LEFT OUTER JOIN wys.sign_schedules_list lst ON lst.api_id = loc.api_id
-LEFT OUTER JOIN wys.sign_schedules_clean USING (schedule_name)
-WHERE removal_date >= _mon AND removal_date < _mon + INTERVAL '1 month'
-GROUP BY location_id, loc.ward_no, loc.location, loc.from_street, 
-         loc.to_street, loc.direction, loc.installation_date, 
-         loc.removal_date,schedule, min_speed
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 1) AS spd_00,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 2) AS spd_05,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 3) AS spd_10,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 4) AS spd_15,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 5) AS spd_20,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 6) AS spd_25,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 7) AS spd_30,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 8) AS spd_35,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 9) AS spd_40,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 10) AS spd_45,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 11) AS spd_50,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 12) AS spd_55,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 13) AS spd_60,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 14) AS spd_65,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 15) AS spd_70,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 16) AS spd_75,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 17) AS spd_80,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 18) AS spd_85,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 19) AS spd_90,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 20) AS spd_95,
+    SUM(raw.count) FILTER (WHERE sb.speed_id = 21) AS spd_100_and_above,
+    SUM(raw.count) AS COUNT
+FROM wys.mobile_api_id AS loc
+JOIN wys.raw_data AS raw ON
+    loc.api_id = raw.api_id 
+    AND raw.datetime_bin > loc.installation_date 
+    AND raw.datetime_bin < loc.removal_date
+JOIN wys.speed_bins_old AS sb ON
+    raw.speed >= lower(sb.speed_bin)
+    AND raw.speed < upper(sb.speed_bin)
+LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
+LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
+WHERE
+    removal_date >= _mon
+    AND removal_date < _mon + interval '1 month'
+GROUP BY
+    loc.location_id,
+    loc.ward_no,
+    loc.location,
+    loc.from_street, 
+    loc.to_street,
+    loc.direction,
+    loc.installation_date, 
+    loc.removal_date,
+    ssc.schedule,
+    ssc.min_speed
 $BODY$;
 
 REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE)FROM public;
