@@ -62,9 +62,11 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
     else:
         for row in values:           
             try:             
-                if row[6] and row[10]:
+                #check installation_date and new_sign_number
+                if row[6] and row[10]: 
                     try: 
                         installation = datetime.strptime(row[6], '%m/%d/%Y').date()
+                        #change: add records even without removal date. 
                         if row[8]:
                             removal = datetime.strptime(row[8], '%m/%d/%Y').date()
                         else:
@@ -101,11 +103,13 @@ def pull_from_sheet(con, service, dict_table, ward, *args):
             SELECT ward_no::INT, location, from_street, to_street, direction, 
             installation_date, removal_date, new_sign_number, comments, work_order
             FROM new_data
-            NATURAL JOIN (SELECT new_sign_number, installation_date
-                    FROM new_data
-                    GROUP BY new_sign_number, installation_date
-                    HAVING COUNT(*)> 1) dupes
-            ON CONFLICT (work_order)
+            NATURAL JOIN (
+                SELECT new_sign_number, installation_date
+                FROM new_data
+                GROUP BY new_sign_number, installation_date
+                HAVING COUNT(*)> 1
+            ) AS dupes
+            ON CONFLICT (location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments)
             DO NOTHING
             RETURNING new_sign_number, installation_date
         )
