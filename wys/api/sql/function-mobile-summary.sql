@@ -63,15 +63,20 @@ FROM wys.mobile_api_id AS loc
 JOIN wys.raw_data AS raw ON
     loc.api_id = raw.api_id 
     AND raw.datetime_bin > loc.installation_date 
-    AND raw.datetime_bin < loc.removal_date
+    AND (
+        raw.datetime_bin < loc.removal_date
+        OR loc.removal_date IS NULL --change to allow still active signs to be included
+    )
 JOIN wys.speed_bins_old AS sb ON
     raw.speed >= lower(sb.speed_bin)
     AND raw.speed < upper(sb.speed_bin)
 LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
 WHERE
-    removal_date >= _mon
-    AND removal_date < _mon + interval '1 month'
+    --change to only pull all data for the current month rather than
+    --only data from signs removed during the month.
+    raw.datetime_bin >= _mon
+    AND raw.datetime_bin < _mon + interval '1 month'
 GROUP BY
     loc.location_id,
     loc.ward_no,
