@@ -6,12 +6,11 @@ from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
-SLACK_CONN_ID = "slack_data_pipeline"
-
 def task_fail_slack_alert(
     context: dict,
     extra_msg: Optional[Union[str, Callable[..., str]]] = "",
-    use_proxy: Optional[bool] = False
+    use_proxy: Optional[bool] = False,
+    dev_mode: Optional[bool] = False
 ) -> Any:
     """Sends Slack task-failure notifications.
 
@@ -52,11 +51,19 @@ def task_fail_slack_alert(
             notification (default '').
         use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
             usage is required to make the Slack webhook call on on-premises
-            servers.
+            servers (default False).
+        dev_mode: A boolean to indicate if working in development mode to send
+            Slack alerts to data_pipeline_dev instead of the regular 
+            data_pipeline (default False).
     
     Returns:
         Any: The result of executing the SlackWebhookOperator.
     """
+    if dev_mode:
+        SLACK_CONN_ID = "slack_data_pipeline_dev"
+    else:
+        SLACK_CONN_ID = "slack_data_pipeline"
+
     slack_ids = Variable.get("slack_member_id", deserialize_json=True)
     owners = context.get('dag').owner.split(',')
     list_names = " ".join([slack_ids.get(name, name) for name in owners])
