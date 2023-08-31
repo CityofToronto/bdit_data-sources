@@ -219,7 +219,8 @@ def pull_detector_inventory(rds_conn, itsc_conn):
             management_url, description, fss_division_id, fss_id, rtms_from_zone, rtms_to_zone, detector_type, 
             created_by, created_by_staffid, signal_id, signal_division_id, movement)
         VALUES %s
-        ON CONFLICT DO UPDATE
+        ON CONFLICT (division_id, vds_id, start_timestamp)
+        DO UPDATE
         SET c.end_timestamp = NEW.end_timestamp
         WHERE
             c.division_id = NEW.division_id
@@ -250,7 +251,8 @@ def pull_entity_locations(rds_conn, itsc_conn):
             second_cross_road_id, main_road_name, cross_road_name, second_cross_road_name, street_number,
             offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
         VALUES %s
-        ON CONFLICT DO UPDATE
+        ON CONFLICT (division_id, entity_id, start_timestamp)
+        DO UPDATE
         SET e.end_timestamp = NEW.end_timestamp
         WHERE
             e.division_id = NEW.division_id
