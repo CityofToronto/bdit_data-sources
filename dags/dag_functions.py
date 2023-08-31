@@ -9,7 +9,9 @@ from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 SLACK_CONN_ID = "slack_data_pipeline"
 
 def task_fail_slack_alert(
-    context: dict, extra_msg: Optional[Union[str, Callable[..., str]]] = ""
+    context: dict,
+    extra_msg: Optional[Union[str, Callable[..., str]]] = "",
+    use_proxy: Optional[bool] = False
 ) -> Any:
     """Sends Slack task-failure notifications.
 
@@ -48,6 +50,9 @@ def task_fail_slack_alert(
         extra_msg: An extra string message or a function that
             generates an extra message to be appended to the default
             notification (default '').
+        use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
+            usage is required to make the Slack webhook call on on-premises
+            servers.
     
     Returns:
         Any: The result of executing the SlackWebhookOperator.
@@ -63,9 +68,21 @@ def task_fail_slack_alert(
 
     # Slack failure message
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    log_url = context.get("task_instance").log_url.replace(
-        "localhost", "trans-bdit.intra.prod-toronto.ca"
-    )
+    if use_proxy:
+        log_url = context.get("task_instance").log_url.replace(
+            "localhost", context.get("task_instance").hostname + ":8080"
+        )
+        # get the proxy credentials from the Airflow connection ``slack``. It
+        # contains username and password to set the proxy <username>:<password>
+        proxy=(
+            f"http://{BaseHook.get_connection('slack').password}"
+            f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
+        )
+    else:
+        log_url = context.get("task_instance").log_url.replace(
+            "localhost", "trans-bdit.intra.prod-toronto.ca"
+        )
+        proxy = None
     slack_msg = (
         f":red_circle: {context.get('task_instance').dag_id}."
         f"{context.get('task_instance').task_id} "
@@ -79,5 +96,6 @@ def task_fail_slack_alert(
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username="airflow",
+        proxy=proxy,
     )
     return failed_alert.execute(context=context)
