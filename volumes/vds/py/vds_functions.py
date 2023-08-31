@@ -221,11 +221,11 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT (division_id, vds_id, start_timestamp)
         DO UPDATE
-        SET c.end_timestamp = NEW.end_timestamp
+        SET c.end_timestamp = EXCLUDED.end_timestamp
         WHERE
-            c.division_id = NEW.division_id
-            AND c.vds_id = NEW.vds_id
-            AND c.start_timestamp = NEW.start_timestamp;
+            c.division_id = EXCLUDED.division_id
+            AND c.vds_id = EXCLUDED.vds_id
+            AND c.start_timestamp = EXCLUDED.start_timestamp;
     """)
 
     fetch_and_insert_data(select_conn=itsc_conn, 
@@ -253,11 +253,11 @@ def pull_entity_locations(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT (division_id, entity_id, start_timestamp)
         DO UPDATE
-        SET e.end_timestamp = NEW.end_timestamp
+        SET e.end_timestamp = EXCLUDED.end_timestamp
         WHERE
-            e.division_id = NEW.division_id
-            AND e.entity_id = NEW.entity_id
-            AND e.start_timestamp = NEW.start_timestamp;
+            e.division_id = EXCLUDED.division_id
+            AND e.entity_id = EXCLUDED.entity_id
+            AND e.start_timestamp = EXCLUDED.start_timestamp;
     """)
 
     fetch_and_insert_data(select_conn=itsc_conn, 
