@@ -26,3 +26,4 @@ bdit_data-sources/volumes/vds/exploration/time_gaps.sql';
 
 ALTER VIEW vds.detectors_expected_bins OWNER TO vds_admins;
 GRANT SELECT ON vds.detectors_expected_bins TO bdit_humans;
+GRANT SELECT ON vds.detectors_expected_bins TO vds_bot;
