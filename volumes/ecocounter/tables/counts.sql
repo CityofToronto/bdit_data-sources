@@ -5,6 +5,8 @@ CREATE TABLE ecocounter.counts (
     UNIQUE(flow_id, datetime_bin)
 );
 
+CREATE INDEX ON ecocounter.counts (flow_id);
+
 CREATE INDEX ON ecocounter.counts (datetime_bin);
 
 GRANT SELECT ON ecocounter.counts TO bdit_humans;
