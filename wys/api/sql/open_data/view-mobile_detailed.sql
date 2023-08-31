@@ -21,7 +21,10 @@ JOIN wys.speed_counts_agg_5kph AS agg ON
         loc.removal_date IS NULL
         OR agg.datetime_bin < loc.removal_date
     )
-JOIN wys.speed_bins_old AS bins USING (speed_id);
+JOIN wys.speed_bins_old AS bins USING (speed_id)
+--mobile_summary now has still active signs, so we need to restrict
+--which data is included for those signs here.
+WHERE agg.datetime_bin < date_trunc('month', now())
 
 ALTER TABLE open_data.wys_mobile_detailed
 OWNER TO rdumas;
