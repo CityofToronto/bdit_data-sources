@@ -43,7 +43,12 @@ SELECT
     loc.to_street,
     loc.direction,
     loc.installation_date,
-    loc.removal_date,
+    --if sign is removed after EOM, we are excluding that data, so we should not show 
+    --removal date in the "future" with respect to OD month
+    CASE
+        WHEN loc.removal_date > _mon + interval '1 month' THEN null
+        ELSE loc.removal_date
+    END AS removal_date
     ssc.schedule,
     ssc.min_speed,
     percentile_cont(0.05) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_05,
@@ -101,6 +106,8 @@ JOIN wys.speed_bins_old AS sb ON
     AND raw.speed < upper(sb.speed_bin)
 LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
+--filter necessary to exclude newer data from still active signs
+WHERE raw.datetime_bin < _mon + interval '1 month'
 GROUP BY
     loc.location_id,
     loc.ward_no,
