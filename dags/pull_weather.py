@@ -23,40 +23,17 @@ cred = PostgresHook("weather_bot")
 #import python scripts
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    sys.path.insert(0,os.path.join(repo_path,'weather'))
-    from prediction_import import prediction_upsert
-    from historical_scrape import historical_upsert
+    sys.path.insert(0, repo_path)
+    from weather.prediction_import import prediction_upsert
+    from weather.historical_scrape import historical_upsert
+    from dags.dag_functions import task_fail_slack_alert
 except:
     raise ImportError("script import failed")
 
-# Define slack connections    
-SLACK_CONN_ID = 'slack_data_pipeline'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = """:cat_shocked: The Task {task} in Pull Weather dag failed, 
-			{slack_name} please check.""".format(task=context.get('task_instance').task_id, slack_name=' '.join(list_names),)
-        
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(log_url=context.get('task_instance').log_url,)
-
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
 
 #DAG
  
