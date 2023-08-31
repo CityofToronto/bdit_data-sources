@@ -10,8 +10,11 @@ ALTER TABLE ecocounter.sites OWNER TO ecocounter_admins;
 
 GRANT SELECT ON ecocounter.sites TO bdit_humans;
 
+COMMENT ON TABLE ecocounter.sites
+IS 'Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.';
+
 COMMENT ON COLUMN ecocounter.sites.site_id
-IS 'site identifier used by ecocounter';
+IS 'unique site identifier used by ecocounter';
 
 COMMENT ON COLUMN ecocounter.sites.facility_description
 IS 'description of bike-specific infrastructure which the sensor is installed within';
