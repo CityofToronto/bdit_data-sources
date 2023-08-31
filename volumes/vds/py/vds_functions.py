@@ -221,7 +221,7 @@ def pull_detector_inventory(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT (division_id, vds_id, start_timestamp)
         DO UPDATE
-        SET c.end_timestamp = EXCLUDED.end_timestamp
+        SET end_timestamp = EXCLUDED.end_timestamp
         WHERE
             c.division_id = EXCLUDED.division_id
             AND c.vds_id = EXCLUDED.vds_id
@@ -253,7 +253,7 @@ def pull_entity_locations(rds_conn, itsc_conn):
         VALUES %s
         ON CONFLICT (division_id, entity_id, start_timestamp)
         DO UPDATE
-        SET e.end_timestamp = EXCLUDED.end_timestamp
+        SET end_timestamp = EXCLUDED.end_timestamp
         WHERE
             e.division_id = EXCLUDED.division_id
             AND e.entity_id = EXCLUDED.entity_id
