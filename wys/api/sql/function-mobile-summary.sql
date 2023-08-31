@@ -6,7 +6,35 @@ RETURNS void
     VOLATILE SECURITY DEFINER 
 AS $BODY$
 
-INSERT INTO wys.mobile_summary
+WITH active_mobile_signs AS (
+    --identify all signs active during the month. 
+    SELECT location_id, api_id, installation_date, removal_date
+    FROM wys.mobile_api_id
+    WHERE (
+            --added during the month
+            installation_date >= _mon::date
+            AND installation_date < _mon::date + interval '1 month'
+        ) OR (
+            --or added before the month and active during
+            installation_date < _mon::date
+            AND (
+                removal_date >= _mon::date
+                OR removal_date IS NULL
+            )
+        )
+)
+
+clear_summary AS (
+    --delete existing summaries for these signs
+    --(easier than update with this many columns)
+    DELETE FROM wys.mobile_summary AS summ
+    USING active_mobile_signs AS active
+    WHERE
+        active.location_id = summ.location_id
+        AND active.installation_date = summ.installation_date
+        --removal date may have changed.
+)
+
 SELECT 
     loc.location_id,
     loc.ward_no,
@@ -58,25 +86,21 @@ SELECT
     SUM(raw.count) FILTER (WHERE sb.speed_id = 19) AS spd_90,
     SUM(raw.count) FILTER (WHERE sb.speed_id = 20) AS spd_95,
     SUM(raw.count) FILTER (WHERE sb.speed_id = 21) AS spd_100_and_above,
-    SUM(raw.count) AS COUNT
+    SUM(raw.count) AS volume
 FROM wys.mobile_api_id AS loc
+JOIN active_mobile_signs AS ams USING (api_id, installation_date, removal_date)
 JOIN wys.raw_data AS raw ON
-    loc.api_id = raw.api_id 
-    AND raw.datetime_bin > loc.installation_date 
+    ams.api_id = raw.api_id 
+    AND raw.datetime_bin > ams.installation_date 
     AND (
-        raw.datetime_bin < loc.removal_date
-        OR loc.removal_date IS NULL --change to allow still active signs to be included
+        raw.datetime_bin < ams.removal_date
+        OR ams.removal_date IS NULL --change to allow still active signs to be included
     )
 JOIN wys.speed_bins_old AS sb ON
     raw.speed >= lower(sb.speed_bin)
     AND raw.speed < upper(sb.speed_bin)
 LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
-WHERE
-    --change to only pull all data for the current month rather than
-    --only data from signs removed during the month.
-    raw.datetime_bin >= _mon
-    AND raw.datetime_bin < _mon + interval '1 month'
 GROUP BY
     loc.location_id,
     loc.ward_no,
@@ -90,5 +114,5 @@ GROUP BY
     ssc.min_speed
 $BODY$;
 
-REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE)FROM public;
+REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) FROM public;
 GRANT EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) TO wys_bot;
