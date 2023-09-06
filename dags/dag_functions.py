@@ -76,6 +76,8 @@ def task_fail_slack_alert(
     # Slack failure message
     slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     if use_proxy:
+        # Temporarily accessing Airflow on Morbius through 8080 instead of Nginx
+        # Its hould be eventually removed
         log_url = context.get("task_instance").log_url.replace(
             "localhost", context.get("task_instance").hostname + ":8080"
         )
@@ -87,7 +89,7 @@ def task_fail_slack_alert(
         )
     else:
         log_url = context.get("task_instance").log_url.replace(
-            "localhost", "trans-bdit.intra.prod-toronto.ca"
+            "localhost", context.get("task_instance").hostname
         )
         proxy = None
     slack_msg = (
