@@ -1,15 +1,17 @@
-import requests
+import requests, re
 from configparser import ConfigParser
 from psycopg2 import connect
 from datetime import datetime, timedelta
 from tqdm import tqdm # this is a progress bar created by simply wrapping an iterable
 
 config = ConfigParser()
-config.read(r'/home/nwessel/db-creds.config')
+config.read(r'/data/home/nwessel/db-creds.config')
 connection = connect(**config['dbauth'])
 connection.autocommit = True
 
 endpoint = 'https://apieco.eco-counter-tools.com'
+
+defaultEarliestDate = datetime.fromisoformat('2015-01-01')
 
 # get an authentication token for accessing the API
 def getToken():
@@ -36,9 +38,9 @@ def getSites():
     return response.json()
 
 # gt all of a channel/flow's data from the API
-def getChannelData(channel_id,firstData='2015-01-01T00:00:00'):
+def getChannelData(channel_id, firstData=defaultEarliestDate):
     requestChunkSize = timedelta(days=100)
-    requestStartDate = datetime.strptime(firstData,"%Y-%m-%dT%H:%M:%S%z")
+    requestStartDate = firstData
     data = []
     while requestStartDate.timestamp() < datetime.now().timestamp():
         response = requests.get(
@@ -74,11 +76,11 @@ def flowIsKnownToUs(flow_id):
         return cursor.rowcount > 0
 
 # DANGER delete all count data for a given flow
-def truncateFlow(flow_id):
+def truncateFlowSince(flow_id, sinceDate=defaultEarliestDate):
     with connection.cursor() as cursor:
         cursor.execute(
-            "DELETE FROM ecocounter.counts WHERE flow_id = %s",
-            (flow_id,)
+            """DELETE FROM ecocounter.counts WHERE flow_id = %s AND datetime_bin >= %s""",
+            (flow_id, sinceDate)
         )
 
 # insert a single count record
@@ -91,9 +93,19 @@ def insertFlowCount(flow_id, datetime_bin, volume):
 
 token = getToken()
 
+# optionally operate script on data only after a given date
+try:
+    only_since_date = datetime.fromisoformat(
+         input('Get data since when? (ISO format date(time) or null to re-fetch all data): ')
+    )
+    print('That date is valid; thanks!')
+except: 
+    print('invalid date; using default')
+    only_since_date = defaultEarliestDate
+    
 for site in getSites():
-#    if not site['id'] == 1234: # handy switch for doing a single site
-#        continue
+    #if not site['id'] == 1234: # handy switch for doing a single site
+    #    continue
 
     # only update data for sites / channels in the database
     # but announce unknowns for manual validation if necessary
@@ -111,11 +123,11 @@ for site in getSites():
         print(f'starting on flow {channel_id}')
 
         # empty the count table for this flow
-        truncateFlow(channel_id)
+        truncateFlowSince(channel_id, only_since_date)
  
         # and fill it back up!
         print(f'fetching data for flow {channel_id}')
-        counts = getChannelData(channel_id, firstData=channel['firstData'])
+        counts = getChannelData(channel_id, only_since_date)
 
         print(f'inserting data for flow {channel_id}')
         for count in tqdm(counts): # iterator with progress bar
