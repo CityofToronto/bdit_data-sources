@@ -2,6 +2,7 @@
 Pipeline to pull here data every week and put them into the here.ta table using Bash Operator.
 Slack notifications is raised when the airflow process fails.
 """
+import pendulum
 
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -46,7 +47,7 @@ rds_con = here_postgres.get_uri()
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 1, 5),
+                'start_date': pendulum.datetime(2020, 1, 5, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 3, #Retry 3 times

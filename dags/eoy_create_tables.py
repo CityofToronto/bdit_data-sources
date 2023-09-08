@@ -1,4 +1,5 @@
 import sys
+import pendulum
 
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -86,7 +87,7 @@ def congestion_create_table(dt):
 
 default_args = {'owner': ','.join(names), 
                 'depends_on_past':False,
-                'start_date': datetime(2021, 12, 1),
+                'start_date': pendulum.datetime(2021, 12, 1, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 0,
