@@ -73,8 +73,6 @@ REVOKE ALL ON TABLE wys.mobile_summary FROM wys_bot;
 
 GRANT SELECT ON TABLE wys.mobile_summary TO bdit_humans;
 
-GRANT ALL ON TABLE wys.mobile_summary TO rdumas;
-
 GRANT ALL ON TABLE wys.mobile_summary TO wys_admins;
 
 GRANT DELETE, INSERT, SELECT ON TABLE wys.mobile_summary TO wys_bot;
