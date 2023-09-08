@@ -66,8 +66,6 @@ REVOKE ALL ON TABLE wys.stationary_summary FROM wys_bot;
 
 GRANT SELECT ON TABLE wys.stationary_summary TO bdit_humans;
 
-GRANT ALL ON TABLE wys.stationary_summary TO rdumas;
-
 GRANT ALL ON TABLE wys.stationary_summary TO wys_admins;
 
 GRANT DELETE, INSERT, SELECT ON TABLE wys.stationary_summary TO wys_bot;
