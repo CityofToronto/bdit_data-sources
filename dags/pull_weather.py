@@ -5,6 +5,7 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
+import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
@@ -63,7 +64,7 @@ def task_fail_slack_alert(context):
 default_args = {
     'owner': 'Natalie',
     'depends_on_past':False,
-    'start_date': datetime(2022, 11, 8),
+    'start_date': pendulum.datetime(2022, 11, 8, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -74,7 +75,7 @@ default_args = {
 dag = DAG(
     dag_id = dag_name, 
     default_args=default_args, 
-    schedule_interval='30 23 * * *', 
+    schedule_interval='30 10 * * *', 
     catchup=False)
 
 #=======================================#

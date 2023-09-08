@@ -3,6 +3,7 @@ Pipeline to pull miovision daily data and put them into postgres tables using Ba
 Slack notifications is raised when the airflow process fails.
 """
 
+import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
@@ -44,7 +45,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2019, 11, 22),
+                'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
