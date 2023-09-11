@@ -3,7 +3,7 @@
 CREATE OR REPLACE VIEW open_data.wys_mobile_detailed
 AS
 SELECT 
-    location_id,
+    loc.location_id,
     loc.ward_no,
     loc.location,
     loc.from_street,
@@ -13,7 +13,7 @@ SELECT
     bins.speed_bin::text AS speed_bin,
     agg.volume
 FROM wys.mobile_api_id AS loc
-INNER JOIN open_data.wys_mobile_summary USING (location_id)
+JOIN open_data.wys_mobile_summary AS od_ms USING (location_id)
 JOIN wys.speed_counts_agg_5kph AS agg ON 
     loc.api_id = agg.api_id 
     AND agg.datetime_bin > loc.installation_date 
