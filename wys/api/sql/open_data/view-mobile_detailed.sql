@@ -13,7 +13,8 @@ SELECT
     bins.speed_bin::text AS speed_bin,
     agg.volume
 FROM wys.mobile_api_id AS loc
-JOIN open_data.wys_mobile_summary AS od_ms USING (location_id)
+--include details only for signs included in summary view. 
+JOIN open_data.wys_mobile_summary USING (location_id)
 JOIN wys.speed_counts_agg_5kph AS agg ON 
     loc.api_id = agg.api_id 
     AND agg.datetime_bin > loc.installation_date 
@@ -24,10 +25,9 @@ JOIN wys.speed_counts_agg_5kph AS agg ON
 JOIN wys.speed_bins_old AS bins USING (speed_id)
 --mobile_summary now has still active signs, so we need to restrict
 --which data is included for those signs here.
-WHERE agg.datetime_bin < date_trunc('month', now())
+WHERE agg.datetime_bin < date_trunc('month', now());
 
-ALTER TABLE open_data.wys_mobile_detailed
-OWNER TO rdumas;
+ALTER TABLE open_data.wys_mobile_detailed OWNER TO rdumas;
 
 GRANT SELECT ON TABLE open_data.wys_mobile_detailed TO od_extract_svc;
 GRANT ALL ON TABLE open_data.wys_mobile_detailed TO rdumas;
