@@ -16,6 +16,7 @@
 from datetime import datetime, timedelta
 import os
 import sys
+import pendulum
 from threading import local
 import psycopg2
 from psycopg2 import sql
@@ -25,6 +26,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable 
 from dateutil.parser import parse
+
 
 dag_name = 'collisions_replicator_transfer'
 
@@ -75,8 +77,7 @@ def task_fail_slack_alert(context):
 
 default_args = {'owner':','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2022, 5, 26), #start this Thursday, why not?
-                'email': ['sarah.cannon@toronto.ca'],
+                'start_date': pendulum.datetime(2022, 5, 26, tz="America/Toronto"), #start this Thursday, why not?
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -85,7 +86,7 @@ default_args = {'owner':','.join(names),
                 }
 
 
-with DAG('collisions_replicator_transfer', # going waaaaaayyyyy out on a limb of the magical assumption tree here....
+with DAG(dag_id = dag_name, # going waaaaaayyyyy out on a limb of the magical assumption tree here....
          default_args = default_args,
          schedule_interval='0 3 * * *') as daily_update: #runs at 3am every day
          

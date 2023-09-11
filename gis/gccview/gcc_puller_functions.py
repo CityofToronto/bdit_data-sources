@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 pk_dict = {
 	"city_ward": "area_id",
     "census_tract": "area_id",
+    "cycling_infrastructure": "objectid", 
     "neighbourhood_improvement_area": "area_id",
     "priority_neighbourhood_for_investment": "area_id",
     "ibms_district": "area_id",
