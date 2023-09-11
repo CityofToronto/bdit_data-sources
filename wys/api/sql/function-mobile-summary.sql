@@ -16,6 +16,7 @@ AS $BODY$
 
 SELECT wys.clear_mobile_summary_for_month (_mon);
 
+--this CTE results in a much faster execution than moving the same filter below 
 WITH active_mobile_signs AS (
     --identify all signs active during the month. 
     SELECT location_id, api_id, installation_date, removal_date
@@ -48,7 +49,7 @@ SELECT
     CASE
         WHEN loc.removal_date > _mon + interval '1 month' THEN null
         ELSE loc.removal_date
-    END AS removal_date
+    END AS removal_date,
     ssc.schedule,
     ssc.min_speed,
     percentile_cont(0.05) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_05,
