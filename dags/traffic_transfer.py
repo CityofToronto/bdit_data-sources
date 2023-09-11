@@ -1,5 +1,6 @@
 #This script should run after the MOVE dag dumps data into the "TRAFFIC_NEW" schema...
 
+import pendulum
 # Operators; we need this to operate!
 import sys
 import os
@@ -16,6 +17,7 @@ sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
 
 
+
 #This script does things with those operators:
 #1) does 9 upsert queries to update data in arc_link, arterydata, category, cnt_det, cnt_spd, countinfo, countinfomics, det, node
 #2) throws a nattery slack alert message when it fails
@@ -28,7 +30,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2022, 6, 16), #start this Thursday, why not?
+                'start_date': pendulum.datetime(2022, 6, 16, tz="America/Toronto"), #start this Thursday, why not?
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -103,5 +105,12 @@ with DAG(dag_id = dag_name,
 				autocommit = True,
 				retries = 0
     )
+    
+    update_long_tmc = PostgresOperator(sql = 'SELECT traffic.update_tmc_mio()',
+				task_id = 'update_long_tmc',
+				postgres_conn_id = 'traffic_bot',
+				autocommit = True,
+				retries = 0
+    )
                                    
-    update_arc_link >> update_arterydata >> update_category >> update_cnt_det >> update_cnt_spd >> update_countinfo >> update_countinfomics >> update_det >> update_node
+    update_arc_link >> update_arterydata >> update_category >> update_cnt_det >> update_cnt_spd >> update_countinfo >> update_countinfomics >> update_det >> update_node >> update_long_tmc
