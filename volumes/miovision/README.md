@@ -26,9 +26,15 @@
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
   - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
   - [Part II - Working Machine](#part-ii---working-machine)
+  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
+    - [Fields in `miovision_api.anomalous_ranges`](#fields-in-miovision_apianomalous_ranges)
+    - [Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#fields-in-miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
+    - [An applied example](#an-applied-example)
+    - [Identifying new anomalies](#identifying-new-anomalies)
 - [4. Repulling data](#4-repulling-data)
-  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
-        
+	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+- [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+
 ## 1. Overview
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
@@ -101,7 +107,7 @@ class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cycl
 Here is a description of the classification_uids and corresponding types. 
 Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
 
-**classification_uid**|**classification**|**definition**|
+ classification_uid | classification | definition / notes |
 :-----|:-----|:-----|
 1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
@@ -111,7 +117,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 6|Pedestrian|A walker. May or may not include zombies...|
 8|WorkVan|A van used for commercial purposes|
 9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. Bicycle data is not great - stay tuned.|
+10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
 #### `movements`
 
@@ -347,10 +353,66 @@ The following process is used to determine the gap sizes assigned to an intersec
 2. The set of acceptable gap_size implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
 3. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) is used to find all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the materialized view above.
 4. Gaps that are equal to or exceed the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
-5. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within the unacceptable_gaps's `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
+5. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within the unacceptable_gaps' `DATE_TRUNC('hour', gap_start)` and `DATE_TRUNC('hour', gap_end) + interval '1 hour'` since the hour of gap_start and gap_end may be the same.
 
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
+
+### Identifying Questionable Data Quality
+
+The table `miovision_api.anomalous_ranges` is used to flag times and places in the data where counts are potentially questionable, suspicious, or irregular. Sometimes counts are clearly not valid or data are missing, and sometimes counts look very weird but have been investigated and confirmed as valid or subject to some specific caveat. This table helps us track the status of these investigations and their results. 
+The basic idea is to identify sections of data (by timerange, intersection, and classification) that have been flagged as suspicious/anomalous for whatever reason, and state what we know about that data-subset in a semi-structured way. This lets us further investigate where that is required and carve out data that has been formally cast into doubt from queries that need only-the-best.
+
+#### Fields in `miovision_api.anomalous_ranges`
+| Column | Description |
+| ------ | ----------- |
+| uid    | simple incrementing primary key |
+| intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
+| classification_uid | the classification; `NULL` if applies to all classifications e.g. a badly misaligned camera |
+| time_range | the `tsrange` in question; may be open-ended. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range slightly _past_ the problem area. |
+| notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
+| investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
+| problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
+
+#### Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`
+| Column | Description |
+| ------ | ----------- |
+| uid    | very short descriptive text; primary key |
+| description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
+
+#### An applied example
+
+When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
+
+```sql
+SELECT volume_uid
+FROM miovision_api.volumes
+WHERE 
+    NOT EXISTS ( -- this is our one big filter for bad/dubious data
+        SELECT 1
+        FROM miovision_api.anomalous_ranges
+        WHERE
+            anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
+            AND anomalous_ranges.time_range @> volumes.datetime_bin
+            AND (
+                anomalous_ranges.intersection_uid = volumes.intersection_uid
+                OR anomalous_ranges.intersection_uid IS NULL
+            )
+            AND (
+                anomalous_ranges.classification_uid = volumes.classification_uid
+                OR anomalous_ranges.classification_uid IS NULL
+            )
+    )
+    AND NOT EXISTS ( -- also exclude official holidays
+        SELECT 1 FROM ref.holiday WHERE holiday.dt = volumes.datetime_bin::date
+    )
+    AND etc.
+```
+
+#### Identifying new anomalies
+While initially populated by a script, currently the `anomalous_ranges` tables is populated/updated manually after usually visual inspection of graphed Miovision data. For write access to the table, please request permissions from your friendly neighborhood sysadmin.
+
+There is an intention to eventually flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
 
 ## 4. Repulling data
 ### Deleting data to re-run the process
@@ -383,3 +445,6 @@ python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/mio
 ```
 
 The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
+
+## 5. Steps to Add or Remove Intersections
+For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md). 
