@@ -21,12 +21,19 @@ vds_bot = PostgresHook('vds_bot')
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
+
 try:
-    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
-    from vds_functions import task_fail_slack_alert, pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
+    from vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
+
+try:
+    from dags.dag_functions import task_fail_slack_alert
+except:
+    raise ImportError("Cannot import task_fail_slack_alert.")
 
 default_args = {
     'owner': ','.join(names),
@@ -37,7 +44,7 @@ default_args = {
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, owners = names),
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
     'catchup': True,
 }
 
