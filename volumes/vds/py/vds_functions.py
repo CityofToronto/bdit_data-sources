@@ -7,59 +7,11 @@ from psycopg2.extras import execute_values
 import struct
 from datetime import datetime, timedelta
 import pytz
-import json
-from airflow.macros import ds_add
-from airflow.models import Variable
-from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
 SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-# connection to slack
-SLACK_CONN_ID = 'slack_data_pipeline'
-
-def task_fail_slack_alert(context:dict, owners:list):
-    # connection to slack
-    global SLACK_CONN_ID
-    
-    slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-    list_names = []
-    for name in owners:
-        list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    
-    log_url = context.get('task_instance').log_url.replace(
-        'localhost', context.get('task_instance').hostname + ":8080"
-    )
-    
-    slack_msg = """
-        :ring_buoy: {dag}.{task} Task Failed.         
-        *Log Url*: {log_url}
-        {slack_name} please check.
-        """.format(
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            exec_date=context.get('execution_date'),
-            log_url=log_url,
-            slack_name=' '.join(list_names)
-    )
-    
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy=(
-            f"http://{BaseHook.get_connection('slack').password}"
-            f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
-        ),
-    )
-    return failed_alert.execute(context=context)
 
 def check_dst(start_date):
     start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -431,12 +383,3 @@ def check_vdsvehicledata_partitions(rds_conn, start_date):
             LOGGER.critical(f"Error creating vdsvehicledata partitions.")
             LOGGER.critical(exc)
             raise Exception()
-
-
-
-
-        
-        
-        
-        
-        
