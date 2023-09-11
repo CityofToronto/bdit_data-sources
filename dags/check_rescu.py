@@ -14,6 +14,7 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 from psycopg2 import connect, Error
 import logging
+import pendulum
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -50,7 +51,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 4, 17),
+                'start_date': pendulum.datetime(2020, 4, 17, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,

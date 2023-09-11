@@ -1,6 +1,7 @@
 """
 Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
 """
+import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -93,7 +94,7 @@ def custom_fail_slack_alert(context: dict) -> str:
 
 #to get credentials to access google sheets
 vz_api_hook = GoogleCloudBaseHook('vz_api_google')
-cred = vz_api_hook._get_credentials()
+cred = vz_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
 #To connect to pgadmin bot
@@ -105,7 +106,7 @@ DEFAULT_ARGS = {
     'depends_on_past' : False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'start_date': datetime(2019, 9, 30),
+    'start_date': pendulum.datetime(2019, 9, 30, tz="America/Toronto"),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
     'provide_context':True,

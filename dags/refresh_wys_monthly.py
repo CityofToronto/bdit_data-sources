@@ -4,6 +4,8 @@ A Slack notification is raised when the airflow process fails.
 """
 import sys
 import os
+import pendulum
+
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -24,7 +26,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 4, 30),
+                'start_date': pendulum.datetime(2020, 4, 30, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,

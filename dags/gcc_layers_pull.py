@@ -4,6 +4,7 @@ import os
 from functools import partial
 
 from datetime import datetime
+import pendulum
 from psycopg2 import sql
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -32,7 +33,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 DEFAULT_ARGS = {
     'owner': ','.join(names),
     'depends_on_past': False,
-    'start_date': datetime(2022, 11, 3),
+    'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
     'email_on_failure': False, 
     'retries': 0,
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)

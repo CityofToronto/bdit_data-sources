@@ -4,6 +4,7 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
+import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
@@ -33,7 +34,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 #to get credentials to access google sheets
 wys_api_hook = GoogleCloudBaseHook('vz_api_google')
-cred = wys_api_hook._get_credentials()
+cred = wys_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
 #to connect to pgadmin bot
@@ -43,7 +44,7 @@ api_key = connection.password
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 4, 1),
+                'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 3,
