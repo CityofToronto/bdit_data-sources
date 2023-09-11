@@ -47,7 +47,7 @@ SELECT
     --if sign is removed after EOM, we are excluding that data, so we should not show 
     --removal date in the "future" with respect to Open Data month
     CASE
-        WHEN loc.removal_date > _mon + interval '1 month' THEN null
+        WHEN loc.removal_date >= _mon + interval '1 month' THEN null
         ELSE loc.removal_date
     END AS removal_date,
     ssc.schedule,
