@@ -1,10 +1,20 @@
-CREATE OR REPLACE FUNCTION wys.mobile_summary_for_month (_mon DATE)
-RETURNS void
-    LANGUAGE 'sql'
+/*
+Parameters:
+Name | Type | Description
+_mon | date | Month whose data to be aggregated
 
-    COST 100
-    VOLATILE SECURITY DEFINER 
+Return: Void
+Purpose: Summarizes the data of mobile WYS signs which were removed during the specified month
+*/
+CREATE OR REPLACE FUNCTION wys.mobile_summary_for_month (_mon date)
+RETURNS void
+LANGUAGE 'sql'
+
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
+
+SELECT wys.clear_mobile_summary_for_month (_mon);
 
 WITH active_mobile_signs AS (
     --identify all signs active during the month. 
@@ -24,17 +34,7 @@ WITH active_mobile_signs AS (
         )
 )
 
-clear_summary AS (
-    --delete existing summaries for these signs
-    --(easier than update with this many columns)
-    DELETE FROM wys.mobile_summary AS summ
-    USING active_mobile_signs AS active
-    WHERE
-        active.location_id = summ.location_id
-        AND active.installation_date = summ.installation_date
-        --removal date may have changed.
-)
-
+INSERT INTO wys.mobile_summary
 SELECT 
     loc.location_id,
     loc.ward_no,
@@ -44,7 +44,7 @@ SELECT
     loc.direction,
     loc.installation_date,
     --if sign is removed after EOM, we are excluding that data, so we should not show 
-    --removal date in the "future" with respect to OD month
+    --removal date in the "future" with respect to Open Data month
     CASE
         WHEN loc.removal_date > _mon + interval '1 month' THEN null
         ELSE loc.removal_date
@@ -121,5 +121,7 @@ GROUP BY
     ssc.min_speed
 $BODY$;
 
-REVOKE EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) FROM public;
-GRANT EXECUTE ON FUNCTION wys.stationary_summary_for_month (DATE) TO wys_bot;
+ALTER FUNCTION wys.mobile_summary_for_month(date) OWNER TO wys_admins;
+
+REVOKE EXECUTE ON FUNCTION wys.mobile_summary_for_month(date) FROM public;
+GRANT EXECUTE ON FUNCTION wys.mobile_summary_for_month(date) TO wys_bot;

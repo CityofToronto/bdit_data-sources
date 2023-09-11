@@ -1,4 +1,6 @@
 import sys
+import os
+import pendulum
 
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -13,6 +15,10 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
 import holidays
+
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
 
 dag_name = 'eoy_table_create'
 
@@ -37,19 +43,6 @@ def prep_slack_message(message):
         username='airflow',
         )
     return slack_message
-
-def task_fail_slack_alert(context):
-    # print this task_msg and tag these users
-    task_msg = """As part of End of Year table creation, {task} failed.
-        {list_names} check out the """.format(
-        task=context.get('task_instance').task_id, 
-        slack_name = ' '.join(list_names),)    
-        
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """<{log_url}|log> :notes_minion: """.format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = prep_slack_message(slack_msg)
-    return failed_alert.execute(context=context)
 
 def task_success_slack_alert():   
     # print this task_msg and tag these users
@@ -86,7 +79,7 @@ def congestion_create_table(dt):
 
 default_args = {'owner': ','.join(names), 
                 'depends_on_past':False,
-                'start_date': datetime(2021, 12, 1),
+                'start_date': pendulum.datetime(2021, 12, 1, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 0,
