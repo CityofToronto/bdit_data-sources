@@ -34,8 +34,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 			- [Content](#content-5)
 			- [Table Structure](#table-structure-4)
 	- [5. Useful Views](#5-useful-views)
-
-.
+- [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
 
 ## FLOW Data
 
@@ -140,7 +139,7 @@ linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to 
 
 ### det 
 #### Content 
-This table contains individual data entries for turning movement counts
+This table contains individual data entries for turning movement counts. For a long (vs wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
 
 #### Table Structure
 Field Name|Type|Description
@@ -252,8 +251,14 @@ category_name|text|name of the data source
 
 ### 5. Useful Views
 
+- `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
+
 - `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
 
 - `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
 
+- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement asset information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [Update pavement assets #620](https://github.com/CityofToronto/bdit_data-sources/issues/620).
 
+## Cycling Seasonality Adjustment
+
+A model was developed to adjust cycling counts for before after evaluations of new infrastructure based on sparse counts. It can be found in the [`cycling_seasonality`](cycling_seasonality/) folder

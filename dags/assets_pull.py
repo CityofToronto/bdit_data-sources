@@ -27,9 +27,13 @@ import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable 
 
 from dateutil.parser import parse
 from datetime import datetime
+import pendulum
+
+dag_name = 'traffic_signals_dag'
 
 # Credentials
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -38,33 +42,14 @@ vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
 
 # ------------------------------------------------------------------------------
 # Slack notification
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: Task Failed / Tâche échouée.
-            *Task*: {task}
-            *Dag*: {dag}
-            *Execution Time*: {exec_date}
-            *Log Url*: {log_url}
-            """.format(
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-        )
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
 
 # ------------------------------------------------------------------------------
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -76,7 +61,7 @@ DEFAULT_ARGS = {
     'email_on_failure': True,
     'email_on_retry': True,
     'owner': 'airflow',
-    'start_date': datetime(2019, 9, 16), # YYYY, MM, DD
+    'start_date': pendulum.datetime(2019, 9, 16, tz="America/Toronto"), # YYYY, MM, DD
     'task_concurrency': 1,
     'on_failure_callback': task_fail_slack_alert
 }
@@ -435,7 +420,7 @@ def pull_traffic_signal():
 # ------------------------------------------------------------------------------
 # Set up the dag and task
 TRAFFIC_SIGNALS_DAG = DAG(
-    'traffic_signals_dag',
+    dag_id = dag_name,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
