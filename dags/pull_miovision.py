@@ -2,7 +2,10 @@
 Pipeline to pull miovision daily data and put them into postgres tables using Bash Operator.
 Slack notifications is raised when the airflow process fails.
 """
+import sys
+import os
 
+import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
@@ -10,33 +13,19 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
 
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    # print this task_msg and tag these users
-    task_msg = """:meow_camera: Miovision pulling failed :meow_headache:.
-        {slack_name} please fix it :thanks_japanese: """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,)    
-        
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
+dag_name = 'pull_miovision'
 
-default_args = {'owner':'rdumas',
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2019, 11, 22),
-                'email': ['raphael.dumas@toronto.ca'],
+                'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -44,11 +33,11 @@ default_args = {'owner':'rdumas',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('pull_miovision',default_args=default_args, schedule_interval='0 3 * * *')
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 3 * * *')
 # Add 3 hours to ensure that the data are at least 2 hours old
 
 t1 = BashOperator(
         task_id = 'pull_miovision',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{tomorrow_ds}} ', 
+        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
         retries = 0,
         dag=dag)
