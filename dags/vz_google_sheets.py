@@ -2,15 +2,13 @@
 Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
 """
 import pendulum
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 import os
 import sys
