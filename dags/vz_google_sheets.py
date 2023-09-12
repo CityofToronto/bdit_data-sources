@@ -1,6 +1,7 @@
 """
 Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
 """
+import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -13,18 +14,13 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from airflow.models import Variable
 import os
 import sys
+from functools import partial
 
 dag_name = 'vz_google_sheets'
 
-SLACK_CONN_ID = 'slack_data_pipeline'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
 dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
 ssz2018 = dag_config['ssz2018']
@@ -61,46 +57,44 @@ sheets = {
                   'table_name' : 'school_safety_zone_2022_raw'}
          }
 
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    # print this task_msg and tag these users
-    invalid_rows = context.get('task_instance').xcom_pull(task_ids=context.get('task_instance').task_id, 
-                                                            key='invalid_rows')
-    if invalid_rows:
-        task_msg = """The Task vz_google_sheets (ssz):{task} failed.
-                    Found one or more invalid records. {slack_name} please email David Tang """.format(
-            task=context.get('task_instance').task_id, 
-            slack_name = ' '.join(list_names),) 
-    else:
-        task_msg = """The Task vz_google_sheets (ssz):{task} failed. {slack_name} please fix it """.format(
-            task=context.get('task_instance').task_id, 
-            slack_name = ' '.join(list_names),) 
-    
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
-
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
     # absolute path to the repo
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     # path of the python scripts
-    sys.path.insert(0,os.path.join(repo_path,'gis/school_safety_zones'))
-    from schools import pull_from_sheet
+    sys.path.insert(0, repo_path)
+    from gis.school_safety_zones.schools import pull_from_sheet
+    from dags.dag_functions import task_fail_slack_alert
 except:
     raise ImportError("Cannot import functions to pull school safety zone list")
 
+def custom_fail_slack_alert(context: dict) -> str:
+    """Adds a custom failure message in case of partial failure.
+
+    Checks if the failing task completely failed or it just *partially* failed
+    to pull some rows based on the xcom variable received from the failed task.
+
+    Args:
+        context: The calling Airflow task's context
+
+    Returns:
+        str: A string containing a custom message to get attached to the 
+            standard failure alert.
+    """
+    invalid_rows = context.get(
+        "task_instance"
+    ).xcom_pull(
+        task_ids=context.get("task_instance").task_id,
+        key="invalid_rows"
+    )
+    if invalid_rows:
+        return "Found one or more invalid records. Please, email David Tang "
+    else:
+        return ""
+
 #to get credentials to access google sheets
 vz_api_hook = GoogleCloudBaseHook('vz_api_google')
-cred = vz_api_hook._get_credentials()
+cred = vz_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
 #To connect to pgadmin bot
@@ -112,11 +106,13 @@ DEFAULT_ARGS = {
     'depends_on_past' : False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'start_date': datetime(2019, 9, 30),
+    'start_date': pendulum.datetime(2019, 9, 30, tz="America/Toronto"),
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
     'provide_context':True,
-    'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': partial(
+        task_fail_slack_alert, extra_msg=custom_fail_slack_alert
+    )
 }
 
 dag = DAG(dag_id = dag_name, default_args = DEFAULT_ARGS, schedule_interval = '@daily', catchup = False)
