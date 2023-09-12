@@ -7,7 +7,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
@@ -93,7 +93,7 @@ def custom_fail_slack_alert(context: dict) -> str:
         return ""
 
 #to get credentials to access google sheets
-vz_api_hook = GoogleCloudBaseHook('vz_api_google')
+vz_api_hook = GoogleBaseHook('vz_api_google')
 cred = vz_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
