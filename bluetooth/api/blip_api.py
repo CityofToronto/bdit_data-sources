@@ -194,8 +194,8 @@ def update_configs(all_analyses, dbset):
         
     analyses_pull_data = {}
     for report in all_analyses:
-        outcomes_arr = json.dumps([i.__dict__ for i in report.outcomes])
-        routePoints_arr = json.dumps([i.__dict__ for i in report.routePoints])
+        outcomes_arr = json.dumps([outcome.__json__() for outcome in report.outcomes])
+        routePoints_arr = json.dumps([route_point.__json__() for route_point in report.routePoints])
 
         row = dict(device_class_set_name=report.deviceClassSetName,
                    analysis_id=report.id,
@@ -318,7 +318,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
         with conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT analysis_id, report_name from king_pilot.bt_segments INNER JOIN bluetooth.all_analyses USING(analysis_id)")
-        routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
 
     else:
         #Querying data that's been further processed overnight
@@ -336,7 +336,7 @@ def main(dbsetting: 'path/to/config.cfg' = None,
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(sql, {'analysis':analysis})
-            routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchone()}
+                    routes_to_pull = {analysis_id: dict(report_name = report_name) for analysis_id, report_name in cur.fetchall()}
 
         date_to_process = None
 

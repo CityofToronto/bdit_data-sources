@@ -4,12 +4,12 @@
     - [Uses for HERE data](#uses-for-here-data)
     - [Types of HERE data products](#types-of-here-data-products)
     - [HERE Data: dates and time periods](#here-data-dates-and-time-periods)
+    - [Matching maps and data](#matching-maps-and-data)
 - [HERE data at a glance](#here-data-at-a-glance)
 - [Detailed dataset overview](#detailed-dataset-overview)
     - [Traffic data](#traffic-data)
         - [Data schema](#data-schema)
             - [Getting link attributes](#getting-link-attributes)
-            - [Matching maps and data](#matching-maps-and-data)
             - [Functional classes](#functional-classes)
     - [GIS data](#gis-data)
     - [Traffic patterns: traffic models](#traffic-patterns-traffic-models)
@@ -59,6 +59,14 @@ There are also aggregated tables or views specific to certain modes (like trucks
 We have HERE data going back to 2012, but there sure weren't as many people driving around with "probes" in their pockets back then! Therefore, 2014 is generally seen as the first year for which travel times can be reasonably relied upon. 
 
 Though data are reported at 5-minute intervals, on any given link (aka road segment) there may not be a lot of observations. Longer time periods and roads with higher traffic volumes have more probe data, and therefore more accurate results, than short time periods on roads with light traffic. More probe data increases accuracy. There are some road segments in the City (cul-de-sacs and other lightly travelled roads) that have very few observations. Because of this, we calculate travel times for time periods that are at least three weeks or longer so that data from multiple days can be aggregated into a more accurate result.
+
+## Matching maps and data
+
+HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. This only applies when you're using the raw table `here.ta`.
+
+Refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh, when we receive new `here_gis.streets_##_#` and `here_gis.streets_att_##_#` tables.
+
+For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`.
 
 # HERE data at a glance
 
@@ -112,12 +120,6 @@ The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link
 ```sql
 JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numeric
 ```
-
-#### Matching maps and data
-
-HERE updates their maps on an annual basis (usually) to keep up with Toronto's evolving street network. It's important to make sure that the traffic analytics data you're using matches the street network. 
-
-Since August 2022, the `here.ta` table corresponds to the `here.routing_streets_22_2` layer. You can check to see if the `here.ta` layer corresponds to any given map layer by joining the attributes using the `link_dir` field and examining the results.
 
 #### Functional classes
 

@@ -1,4 +1,6 @@
 import sys
+import os
+import pendulum
 
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -14,10 +16,22 @@ from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
 import holidays
 
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
+
+dag_name = 'eoy_table_create'
 
 SLACK_CONN_ID = 'slack_data_pipeline'
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+list_names = []
+for name in names:
+    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+
 slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
 
 def prep_slack_message(message):
@@ -29,18 +43,6 @@ def prep_slack_message(message):
         username='airflow',
         )
     return slack_message
-
-def task_fail_slack_alert(context):
-    # print this task_msg and tag these users
-    task_msg = """As part of End of Year table creation, {task} failed.
-        {list_names} check out the """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,)    
-        
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """<{log_url}|log> :notes_minion: """.format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = prep_slack_message(slack_msg)
-    return failed_alert.execute(context=context)
 
 def task_success_slack_alert():   
     # print this task_msg and tag these users
@@ -75,10 +77,9 @@ def congestion_create_table(dt):
         cur.execute('SELECT congestion.create_yearly_tables(%s);', (year,))        
 
 
-default_args = {'owner':'rdumas',
+default_args = {'owner': ','.join(names), 
                 'depends_on_past':False,
-                'start_date': datetime(2021, 12, 1),
-                'email': ['raphael.dumas@toronto.ca'],
+                'start_date': pendulum.datetime(2021, 12, 1, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 0,
@@ -119,8 +120,9 @@ except Exception as exc:
     err_msg = "Error importing functions for end of year WYS maintenance \n" + str(exc)
     raise ImportError(err_msg)
 
-dag = DAG('eoy_table_create', default_args=default_args,
-        schedule_interval='5 9 1 12 *') #9:05 on December 1st of every year
+dag = DAG(dag_id = dag_name, 
+          default_args=default_args,
+          schedule_interval='5 9 1 12 *') #9:05 on December 1st of every year
 
 here_create_tables = PythonOperator(task_id='here_create_tables',
                                     python_callable = create_here_ta_tables,

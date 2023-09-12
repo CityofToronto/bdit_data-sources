@@ -2,7 +2,6 @@
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
 - [1. Overview](#1-overview)
 - [2. Table Structure](#2-table-structure)
     - [Open Data Tables](#open-data-tables)
