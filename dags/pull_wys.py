@@ -13,7 +13,7 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
 from dateutil.relativedelta import relativedelta
 
@@ -33,7 +33,7 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 #to get credentials to access google sheets
-wys_api_hook = GoogleCloudBaseHook('vz_api_google')
+wys_api_hook = GoogleBaseHook('vz_api_google')
 cred = wys_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
