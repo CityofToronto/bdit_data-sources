@@ -4,12 +4,13 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
+from functools import partial
 import pendulum
+
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
@@ -25,6 +26,30 @@ try:
     from dags.dag_functions import task_fail_slack_alert
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
+
+def custom_fail_slack_alert(context: dict) -> str:
+    """Adds a custom failure message in case of failing to pull data of some wards.
+
+    Args:
+        context: The calling Airflow task's context
+
+    Returns:
+        str: A string containing a custom message to get attached to the 
+            standard failure alert.
+    """
+    empty_wards = context.get(
+        "task_instance"
+    ).xcom_pull(
+        task_ids=context.get("task_instance").task_id,
+        key="empty_wards"
+    )
+    if empty_wards:
+        return (
+            "Failed to pull/load the data of the following wards: " + 
+            ", ".join(map(str, empty_wards))
+        )
+    else:
+        return ""
 
 dag_name = 'pull_wys'
 
@@ -72,5 +97,8 @@ with wys_postgres.get_conn() as con:
             task_id = 'read_google_sheets',
             python_callable = read_masterlist,
             dag = dag,
-            op_args = [con, service]
+            op_args = [con, service],
+            on_failure_callback = partial(
+                task_fail_slack_alert, extra_msg=custom_fail_slack_alert
             )
+    )
