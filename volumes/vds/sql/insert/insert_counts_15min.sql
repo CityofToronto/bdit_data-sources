@@ -12,16 +12,16 @@ SELECT
     d.entity_location_uid,
     c.lanes AS num_lanes,
     d.datetime_15min,
-    SUM(d.volume_veh_per_hr) / 4 / e.expected_bins AS count_15min,
+    SUM(d.volume_veh_per_hr) / 4 / di.expected_bins AS count_15min,
     -- / 4 to convert hourly volume to 15 minute volume
     -- / (expected_bins) to get average 15 minute volume depending on bin size
     -- (assumes blanks are 0)
-    e.expected_bins,
+    di.expected_bins,
     COUNT(*) AS num_obs,
     COUNT(DISTINCT d.lane) AS num_distinct_lanes
 FROM vds.raw_vdsdata AS d
 JOIN vds.vdsconfig AS c ON d.vdsconfig_uid = c.uid
-JOIN vds.detectors_expected_bins AS e ON d.vdsconfig_uid = e.uid
+JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
 WHERE
     d.division_id = 2
     AND d.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
@@ -33,6 +33,6 @@ GROUP BY
     d.vdsconfig_uid,
     d.entity_location_uid,
     c.lanes,
-    e.expected_bins,
+    di.expected_bins,
     d.datetime_15min
 ON CONFLICT DO NOTHING;
