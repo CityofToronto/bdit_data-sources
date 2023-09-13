@@ -37,6 +37,8 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
 
+dag_name = "collisions_replicator_transfer"
+
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
