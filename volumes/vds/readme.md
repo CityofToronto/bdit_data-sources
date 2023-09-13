@@ -7,14 +7,14 @@
     3. [Future Work](#future-work)
 2. [Table Structure](#table-structure)
     1. [vds.raw_vdsdata](#vdsraw_vdsdata)
-    2. [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
-    3. [vds.counts_15min](#vdscounts_15min)
-    4. [vds.counts_15min_bylane](#vdscounts_15min_bylane)
-    5. [vds.vdsconfig](#vdsvdsconfig)
-    6. [vds.entity_locations](#vdsentity_locations)
-    7. [vds.veh_speeds_15min](#vdsveh_speeds_15min)
-    8. [vds.veh_length_15min](#vdsveh_length_15min)
+    2. [vds.counts_15min](#vdscounts_15min)
+    3. [vds.counts_15min_bylane](#vdscounts_15min_bylane)
+    4. [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
+    5. [vds.veh_speeds_15min](#vdsveh_speeds_15min)
+    6. [vds.veh_length_15min](#vdsveh_length_15min)
     9. [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001)
+    4. [vds.vdsconfig](#vdsvdsconfig)
+    5. [vds.entity_locations](#vdsentity_locations)
 3. [DAG Design](#dag-design)
     1. [vds_pull_vdsdata](#vds_pull_vdsdata)
     2. [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
@@ -46,8 +46,8 @@ VDS system consists of various vehicle detectors:
 &nbsp; 3. Special Function Detectors (SF)  
 
 ## Data Availability
-Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and all subsequent summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.
-Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.  
+Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and related summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.
+Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.
 
 
 ## Future Work 
@@ -101,7 +101,7 @@ Row count: 1,148,765 (7 days)
 
 ## vds.counts_15min
 A summary of 15 minute vehicle counts from vds.raw_vdsdata. This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
-Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline).
+Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline), however, the availability of raw data means this assumption can be examined. 
 
 Data quality checks:
 -- You can compare `num_obs` to `expected_bins * num_lanes`. Consider using a threshold.
@@ -189,6 +189,8 @@ Row count: 10,219
 | movement           | smallint                    |                        |               |
 | uid                | integer                     | 1                      | pkey          |
 
+For applications relating to the highway RESCU network, the manual case statements under view vds.detector_inventory can help identify relevant stations.
+
 This table is joined to `vds.raw_vdsdata` (and similarly for `vds.raw_vdsvehicledata`) using the following join conditions. Note that there are occasional nulls for `c.uid`, which is interpreted as the time between a detector being turned on in the field and configured in the database. 
 ```sql
 SELECT d.*, c.uid AS vdsconfig_uid
@@ -204,7 +206,7 @@ LEFT JOIN vds.vdsconfig AS c ON
 
 ## vds.entity_locations
 This table contains locations for vehicle detectors from ITSC public.entitylocations.
-To get the current location, join on entity_locations.entity_id = vdsconfig.vdsid and `SELECT DISTINCT ON (entity_id) ... ORDER BY entity_id, location_timestamp DESC`. 
+[UPDATE REQUIRED] To get the current location, join on entity_locations.entity_id = vdsconfig.vdsid and `SELECT DISTINCT ON (entity_id) ... ORDER BY entity_id, location_timestamp DESC`. 
 
 Row count: 16,013
 | column_name                    | data_type                   | sample                                     | description   |
@@ -289,7 +291,7 @@ Row count: 4,622,437
 
 ## vds.raw_vdsdata (division_id = 8001)
 `vds.raw_vdsdata` data for `division_id = 8001` still needs further exploration to determine utility. 
-A 1 day sample for 2023-06-28 was explored under `vds.raw_vdsdata_div8001`, described below. The data has many  blank rows and may not be of any utility, however to be safe we are pulling no zero rows into `vds.raw_vdsdata` now. The queries below will need to be adapted to work with the main `raw_vdsdata` table. 
+A 1 day sample for 2023-06-28 was explored under `vds.raw_vdsdata_div8001`, described below. The data has many blank rows and may not be of any utility, however to be safe we are pulling non zero rows into `vds.raw_vdsdata` now. The queries below will need to be adapted to work with the main `raw_vdsdata` table. 
 These types of sensors include intersection "detectors" (DET), preemption (PE) (transit /  fire emergency services), special function (SF), which you can identify through the detector_id (example below).
 
 Row count: 601,460
@@ -307,43 +309,45 @@ Row count: 601,460
 ### Special Function and Preemption detectors (Division 8001): 
 A sample query exploring this data:
 ```
-WITH volumes AS (
+WITH daily_volumes AS (
     SELECT
-        v.vds_id, 
         c.detector_id,
-        SUM(volume_veh_per_hr) / 4 / 1 AS daily_volume,
+        v.dt::date,
+        CASE
+            WHEN detector_id SIMILAR TO 'PX[0-9]{4}-DET%' THEN 'Detector'
+            WHEN detector_id SIMILAR TO 'PX[0-9]{4}-SF%' THEN 'Special Function'
+            WHEN detector_id SIMILAR TO 'PX[0-9]{4}-PE%' THEN 'Preemption'
+        END as det_type,
+        SUM(v.volume_veh_per_hr) / 4 / 1 AS daily_volume
             -- / 4 to convert hourly to 15 minute count.
             -- / 1 since there is only 1 bin per 15 minute period. 
-        CASE
-            WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-DET%' THEN 'Detector'
-            WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-SF%' THEN 'Special Function'
-            WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' THEN 'Preemption'
-        END as type
     FROM vds.raw_vdsdata_div8001 AS v
-    LEFT JOIN
-        vds.vdsconfig AS c ON v.vds_id = c.vds_id
-        AND c.start_timestamp <= v.dt
-        AND (
-            c.end_timestamp > v.dt
-            OR c.end_timestamp IS NULL)
-    WHERE c.detector_id IS NOT NULL 
-    GROUP BY
-        v.vds_id,
-        c.detector_id
+    JOIN vds.vdsconfig AS c ON v.vdsconfig_uid = c.uid
+    WHERE
+        v.dt >= '2023-08-01 00:00:00'::timestamp
+        AND v.dt < '2023-09-01 00:00:00'::timestamp
+    GROUP BY 1, 2, 3
 )
 
-SELECT type, count(*), min(daily_volume), avg(daily_volume), median(daily_volume), max(daily_volume), sum(daily_volume)
-FROM volumes
-GROUP BY type 
+SELECT
+    det_type,
+    count(distinct detector_id) as num_sensors,
+    avg(daily_volume) AS avg_daily_volume,
+    median(daily_volume) AS median_daily_volume,
+    max(daily_volume) AS max_daily_volume,
+    sum(daily_volume) AS total_volume
+FROM daily_volumes
+GROUP BY 1 
 ```
 
-A total of 28 "special function" detections and 31 "preemption" detections seem dubious. 
-The regular detectors (DET) may have some utility but it is hard to tell with the zeros (more than half of all records).
-| "type"             | "count" | "min" | "avg"                  | "median"               | "max" | "sum"   |
-|--------------------|---------|-------|------------------------|------------------------|-------|---------|
-| "Special Function" | 435     | 0     | 0.06436781609195402299 | 0.00000000000000000000 | 3     | 28      |
-| "Detector"         | 9226    | 0     | 326.0718621287665294   | 12.0000000000000000    | 6156  | 3008339 |
-| "Preemption"       | 78      | 0     | 0.39743589743589743590 | 0.00000000000000000000 | 16    | 31      |
+The results for "special function" and "preemption" detectors seem extremely dubious. They both have less than 1 average detection per sensor per day. 
+The regular detectors (DET) may have some utility but it is hard to tell with the prevelance of zeros (the median daily detector volume is zero).
+
+| det_type         | num_sensors | avg_daily_volume | median_daily_volume | max_daily_volume | total_volume |
+| ---------------- | ----------- | ---------------- | ------------------- | ---------------- | ------------ |
+| Detector         | 9541        | 349.6113         | 0                   | 9398             | 1.03E+08     |
+| Preemption       | 79          | 0.234381         | 0                   | 25               | 574          |
+| Special Function | 435         | 0.003189         | 0                   | 1                | 43           |
 
 And binning the daily counts we find:
 -5028 sensors reported 0 volume. More than half of all sensors!
@@ -428,3 +432,8 @@ Checks row count for `vdsdata` in ITS Central vs. row count in `raw_vdsdata` in 
 Checks row count for `vdsvehicledata` in ITS Central vs. row count in `raw_vdsvehicledata` in RDS. If new rows exceed a threshold (currently 1%), re-triggers dag runs for those days using TriggerDagRunOperator.  
 
 Currently scheduled @monthly with 60 day lookback. Set `lookback_days` under task group `monitor_row_count` in vds_monitor.py. 
+
+# Tips for Use
+- Start with the timeframe of interest and identify which sensors have data available rather than first identifying the correct sensors. 
+- The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
+- For data requests, you can select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of `FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....`.
