@@ -10,12 +10,12 @@ CREATE VIEW vds.counts_15min_div8001 AS (
         d.entity_location_uid,
         c.lanes AS num_lanes,
         d.datetime_15min,        
-        SUM(d.volume_veh_per_hr) / 4 / e.expected_bins AS count_15min,
-        e.expected_bins, 
+        SUM(d.volume_veh_per_hr) / 4 / di.expected_bins AS count_15min,
+        di.expected_bins, 
         COUNT(*) AS num_obs,
         COUNT(DISTINCT d.lane) AS num_distinct_lanes
     FROM vds.raw_vdsdata AS d
-    JOIN vds.detectors_expected_bins AS e ON d.vdsconfig_uid = e.uid
+    JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
     LEFT JOIN vds.vdsconfig c ON d.vdsconfig_uid = c.uid
     WHERE d.division_id = 8001
     GROUP BY
@@ -23,7 +23,7 @@ CREATE VIEW vds.counts_15min_div8001 AS (
         d.vdsconfig_uid,
         d.entity_location_uid,
         c.lanes,
-        e.expected_bins,
+        di.expected_bins,
         d.datetime_15min
 );
 
