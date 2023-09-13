@@ -13,25 +13,14 @@
 
 # Operators; we need this to operate!
 
-from datetime import datetime, timedelta
 import os
 import sys
+from datetime import timedelta
 import pendulum
-from threading import local
-import psycopg2
-from psycopg2 import sql
-import requests
-from psycopg2.extras import execute_values
+
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable 
-from dateutil.parser import parse
-
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-
-
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
