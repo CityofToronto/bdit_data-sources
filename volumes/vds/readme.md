@@ -2,24 +2,24 @@
 
 # Table of contents
 1. [Introduction](#introduction)
-    1. [Summary of Improvements](#summary-of-improvements)
-    2. [Overview of Sensor Classes](#overview-of-sensor-classes)
-    2. [Data Availability](#data-availability)
-    3. [Future Work](#future-work)
+    - [Summary of Improvements](#summary-of-improvements)
+    - [Overview of Sensor Classes](#overview-of-sensor-classes)
+    - [Data Availability](#data-availability)
+    - [Future Work](#future-work)
 2. [Table Structure](#table-structure)
-    1. [vds.raw_vdsdata](#vdsraw_vdsdata)
-    2. [vds.counts_15min](#vdscounts_15min)
-    3. [vds.counts_15min_bylane](#vdscounts_15min_bylane)
-    4. [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
-    5. [vds.veh_speeds_15min](#vdsveh_speeds_15min)
-    6. [vds.veh_length_15min](#vdsveh_length_15min)
-    9. [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001)
-    4. [vds.vdsconfig](#vdsvdsconfig)
-    5. [vds.entity_locations](#vdsentity_locations)
+    - [vds.raw_vdsdata](#vdsraw_vdsdata)
+    - [vds.counts_15min](#vdscounts_15min)
+    - [vds.counts_15min_bylane](#vdscounts_15min_bylane)
+    - [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
+    - [vds.veh_speeds_15min](#vdsveh_speeds_15min)
+    - [vds.veh_length_15min](#vdsveh_length_15min)
+    - [vds.vdsconfig](#vdsvdsconfig)
+    - [vds.entity_locations](#vdsentity_locations)
+    - [vds.detector_inventory](#vdsdetector_inventory)
+    - [vds.detector_inventory_cursed](#vdsdetector_inventory_cursed)
 3. [DAG Design](#dag-design)
-    1. [vds_pull_vdsdata](#vds_pull_vdsdata)
-    2. [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
-    3. [vds_monitor](#vds_monitor)
+    - [vds_pull_vdsdata](#vds_pull_vdsdata)
+    - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
 
 # Introduction 
 The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates. 
@@ -118,7 +118,7 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 # Table Structure  
 ## vds.raw_vdsdata
 This table contains parsed data from ITSC public.vdsdata.  
-Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bin width which affects the conversion from volume to count (see `vds.detector_expected_bins`). For details on converting `raw_vdsdata` to 15 minute counts, see `vds.counts_15min` or the corresponding insert script at `bdit_data-sources/volumes/vds/sql/insert/insert_counts_15min.sql`. This method assumes both missing bins and zero values are zeros, in line with old pipeline.  
+Column `volume_veh_per_hr` stores the volumes in vehicles per hour for that bin. Note that different sensors have different bin width which affects the conversion from volume to count (see `vds.detector_expected_bins`). For details on converting `raw_vdsdata` to 15 minute counts, see `vds.counts_15min` or the corresponding [insert script](<sql/insert/insert_counts_15min.sql>). This method assumes both missing bins and zero values are zeros, in line with old pipeline.  
 This table retains zero bins to enable potential future differente treatment of missing and zero values. 
 Contains `division_id IN (2, 8001)`. A one day sample for `division_id = 8001` was explored under the heading [vds.raw_vdsdata_div8001](#vdsraw_vdsdata_div8001); more investigation is needed to determine what this data can be used for.  
 Foreign keys `vdsconfig_uid`, `entity_location_uid` are added via trigger on insertion to this table. 
@@ -137,8 +137,66 @@ Row count: 1,203,083 (7 days)
 | speed_kmh         | double precision            | 99.5                | Average speed during bin? |
 | volume_veh_per_hr | integer                     | 1800                | In vehicles per hour, need to convert to get # vehicles. |
 | occupancy_percent | double precision            | 10.31               | % of time the sensor is occupied. Potential utility for measuring congestion (vehicle density). |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
+
+## vds.counts_15min
+A summary of 15 minute vehicle counts from vds.raw_vdsdata.
+- This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
+- Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline), however, the availability of raw data means this assumption can be examined. 
+- **Note** `raw_vdsdata` is only summarized into this table if the `expected_bins` value for that `vdsconfig_uid` in `vds.detector_inventory` is not null. 
+
+Data quality checks:  
+- You can compare `num_obs` to `expected_bins * num_lanes`. Consider using a threshold.
+- There should be a total of 96 15-minute datetime bins per day.  
+- Check `num_distinct_lanes = num_lanes` to see if data from all lanes is present in bin.  
+
+Row count: 927,399
+| column_name        | data_type                   | sample              | description   |
+|:-------------------|:----------------------------|:--------------------|:--------------|
+| volumeuid          | bigint                      | 2409198             | pkey          |
+| division_id        | smallint                    | 2                   | Table filtered for division_id = 2 |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
+| num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
+| datetime_15min       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if original bin timestamp is at the start or end of the 15 minute period. |
+| count_15min       | smallint                    | 217                 |               |
+| expected_bins      | smallint                    | 45                  | Expected bins per lane in a 15 minute period |
+| num_obs            | smallint                    | 84                  | Number of actual observations in a 15 minute period. Shouldn't be larger than num_lanes * expected_bins. |
+| num_distinct_lanes | smallint                    | 4                   | Number of distinct lanes present in this bin. |
+
+
+## vds.counts_15min_bylane
+Similar to `vds.counts_15min` but broken down by lane, to be used for investigating individual lane data availability.  
+- Excludes `division_id = 8001` since those sensors have only 1 lane.  
+- **Note** `raw_vdsdata` is only summarized into this table if the `expected_bins` value for that `vdsconfig_uid` in `vds.detector_inventory` is not null. 
+
+**Data quality checks:**  
+- You can compare `num_obs` to `expected_bins`. Consider using a threshold.
+- There should be a total of 96 15-minute datetime bins per day.  
+
+Row count: 1,712,401
+| column_name   | data_type                   | sample              | description   |
+|:--------------|:----------------------------|:--------------------|:--------------|
+| volumeuid     | bigint                      | 2228148             |               |
+| division_id   | smallint                    | 2                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
+| lane          | smallint                    | 1                   |               |
+| datetime_15min  | timestamp without time zone | 2023-06-07 00:00:00 |               |
+| count_15min  | smallint                    | 8                   |               |
+| expected_bins | smallint                    | 45                  |               |
+| num_obs       | smallint                    | 45                  |               |
+
+Across all detectors, here is the percentage of volume by lane, grouped by road width. 
+This summary does not account for differences in data availability between lanes.  
+
+Road width | Lane 1	| Lane 2 | Lane 3 |	Lane 4 | Lane 5 |
+|:---------|:-------|:-------|:-------|:-------|:-------|
+2 Lanes |	46.2%	| 53.8% |          |        | 		|
+3 Lanes |	34.7%	| 36.2% | 	29.1%  |	    |       |
+4 Lanes |	29.0%	| 33.3% | 	24.8%  | 12.9%	|       |
+5 Lanes |	24.0%	| 28.5% | 	22.7%  | 19.9%	| 4.9%  |
 
 ## vds.raw_vdsvehicledata
 This table contains individual vehicle detections from ITSC public.vdsvehicledata for `division_id = 2`.  
@@ -159,65 +217,49 @@ Row count: 1,148,765 (7 days)
 | sensor_occupancy_ds | smallint                    | 104                        |               |
 | speed_kmh           | double precision            | 15.0                       |               |
 | length_meter        | double precision            | 4.0                        |               |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
 
-## vds.counts_15min
-A summary of 15 minute vehicle counts from vds.raw_vdsdata.
-- This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
-- Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline), however, the availability of raw data means this assumption can be examined. 
+## vds.veh_speeds_15min
+Summarization of vdsvehicledata with count of observation (vehicle) speeds grouped by 15 min / 5kph / vds_id. 
 
-Data quality checks:  
--- You can compare `num_obs` to `expected_bins * num_lanes`. Consider using a threshold.
--- There should be a total of 96 15-minute datetime bins per day.  
--- Check `num_distinct_lanes = num_lanes` to see if data from all lanes is present in bin.  
+**Data quality:**
+- There is a suspicious volume of very high speeds reported. 
 
-Row count: 927,399
-| column_name        | data_type                   | sample              | description   |
-|:-------------------|:----------------------------|:--------------------|:--------------|
-| volumeuid          | bigint                      | 2409198             | pkey          |
-| division_id        | smallint                    | 2                   | Table filtered for division_id = 2 |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
-| num_lanes          | smallint                    | 4                   | Number of lanes according to sensor inventory. |
-| datetime_15min       | timestamp without time zone | 2023-07-17 00:00:00 | Timestamps are floored and grouped into 15 minute bins. For 20s bins it doesn't make a big difference flooring vs. rounding, however for 15 minute sensor data (some of the Yonge St sensors), you may want to pay close attention to this and consider for example if original bin timestamp is at the start or end of the 15 minute period. |
-| count_15min       | smallint                    | 217                 |               |
-| expected_bins      | smallint                    | 45                  | Expected bins per lane in a 15 minute period |
-| num_obs            | smallint                    | 84                  | Number of actual observations in a 15 minute period. Shouldn't be larger than num_lanes * expected_bins. |
-| num_distinct_lanes | smallint                    | 4                   | Number of distinct lanes present in this bin. |
+- There are null speed values in `raw_vdsvehicledata` which are excluded here. 
 
+- Some detectors appear to report speeds centred around 3kph intervals (ie. 91, 94, 97). Multiple 3kph intervals may fall into the same 5kph bin (ie. 91, 94) creating some unusual results for these detectors.
 
-## vds.counts_15min_bylane
-Similar to `vds.counts_15min` but broken down by lane, to be used for investigating individual lane data availability.  
-- Excludes `division_id = 8001` since those sensors have only 1 lane.  
+Row count: 6,415,490
+| column_name    | data_type                   | sample              | description   |
+|:---------------|:----------------------------|:--------------------|:--------------|
+| division_id    | smallint                    | 2                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
+| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
+| speed_5kph     | smallint                    | 0                   | 5km/h speed bins, rounded down. |
+| count          | smallint                    | 14                  |               |
+| total_count    | smallint                    | 25                  | Use count::numeric/total_count to get proportion. |
+| uid            | bigint                      | 6774601             |               |
 
-**Data quality checks:**  
-- You can compare `num_obs` to `expected_bins`. Consider using a threshold.
-- There should be a total of 96 15-minute datetime bins per day.  
+## vds.veh_length_15min
+Summarization of vdsvehicledata with count of observation (vehicle) lengths grouped by 15 min / 1m length / vds_id. 
 
-Row count: 1,712,401
-| column_name   | data_type                   | sample              | description   |
-|:--------------|:----------------------------|:--------------------|:--------------|
-| volumeuid     | bigint                      | 2228148             |               |
-| division_id   | smallint                    | 2                   |               |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
-| lane          | smallint                    | 1                   |               |
-| datetime_15min  | timestamp without time zone | 2023-06-07 00:00:00 |               |
-| count_15min  | smallint                    | 8                   |               |
-| expected_bins | smallint                    | 45                  |               |
-| num_obs       | smallint                    | 45                  |               |
+Data quality: 
+- There is a suspicious volume of very long vehicles. 
+- There are null length values in `raw_vdsvehicledata` which are excluded here. 
 
-Across all detectors, here is the percentage of volume by lane, grouped by road width. 
-This summary does not account for differences in data availability between lanes.  
-
-Road width | Lane 1	| Lane 2 | Lane 3 |	Lane 4 | Lane 5 |
-|:---------|:-------|:-------|:-------|:-------|:-------|
-2 Lanes |	46.2%	| 53.8% |          |        | 		|
-3 Lanes |	34.7%	| 36.2% | 	29.1%  |	    |       |
-4 Lanes |	29.0%	| 33.3% | 	24.8%  | 12.9%	|       |
-5 Lanes |	24.0%	| 28.5% | 	22.7%  | 19.9%	| 4.9%  |
-
+Row count: 4,622,437
+| column_name    | data_type                   | sample              | description   |
+|:---------------|:----------------------------|:--------------------|:--------------|
+| division_id    | smallint                    | 2                   |               |
+| vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
+| entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
+| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
+| length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
+| count          | smallint                    | 3                   |               |
+| total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
+| uid            | bigint                      | 4866932             |               |
 
 ## vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
@@ -288,52 +330,78 @@ Row count: 16,013
 | uid                            | integer                     | 1                                          |               |
 
 
-## vds.veh_speeds_15min
-Summarization of vdsvehicledata with count of observation (vehicle) speeds grouped by 15 min / 5kph / vds_id. 
-
-**Data quality:**
-- There is a suspicious volume of very high speeds reported. 
-
-- There are null speed values in `raw_vdsvehicledata` which are excluded here. 
-
-- Some detectors appear to report speeds centred around 3kph intervals (ie. 91, 94, 97). Multiple 3kph intervals may fall into the same 5kph bin (ie. 91, 94) creating some unusual results for these detectors.
-
-Row count: 6,415,490
-| column_name    | data_type                   | sample              | description   |
-|:---------------|:----------------------------|:--------------------|:--------------|
-| division_id    | smallint                    | 2                   |               |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
-| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
-| speed_5kph     | smallint                    | 0                   | 5km/h speed bins, rounded down. |
-| count          | smallint                    | 14                  |               |
-| total_count    | smallint                    | 25                  | Use count::numeric/total_count to get proportion. |
-| uid            | bigint                      | 6774601             |               |
-
-## vds.veh_length_15min
-Summarization of vdsvehicledata with count of observation (vehicle) lengths grouped by 15 min / 1m length / vds_id. 
-
-Data quality: 
-- There is a suspicious volume of very long vehicles. 
-- There are null length values in `raw_vdsvehicledata` which are excluded here. 
-
-Row count: 4,622,437
-| column_name    | data_type                   | sample              | description   |
-|:---------------|:----------------------------|:--------------------|:--------------|
-| division_id    | smallint                    | 2                   |               |
-| vdsconfig_uid            | integer                     | 1             | fkey to vdsconfig table |
-| entity_location_uid            | integer                     | 1             | fkey to entity_locations table |
-| datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
-| length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
-| count          | smallint                    | 3                   |               |
-| total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
-| uid            | bigint                      | 4866932             |               |
-
 
 ## vds.detector_inventory
+A new manually defined detector inventory for ease of filtering `vds.vdsconfig`. For more information see CASE statements in the [definition file](<sql/views/create-view-detector_inventory.sql>)
+
+Row count: 10,540
+| column_name   | data_type         | sample           | description   |
+|:--------------|:------------------|:-----------------|:--------------|
+| uid           | integer           | 1                |               |
+| detector_id   | character varying | PX1408-DET019    |               |
+| division_id   | smallint          | 8001             |               |
+| det_type      | text              | Signal Detectors | Manual field. Possible values: 'RESCU Detectors', 'Blue City AI', 'Smartmicro Sensors' |
+| det_loc       | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP/Allen North', 'DVP South', 'Gardiner/Lakeshore East', 'Gardiner/Lakeshore West', 'Kingston Rd' |
+| det_group     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP', 'Lakeshore', 'Gardiner', 'Allen', 'Kingston Rd', 'On-Ramp' |
+| direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
+| expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
+
+
+If you add new rules to `expected_bins` to reflect new sensor types, you will need to backfill `vds.counts_15min` (and similarly `vds.counts_15min_bylane`) using the [insert script](<sql/insert/insert_counts_15min.sql>). 
+If you find yourself updating a previous error with expected_bins value, 
+you will need to update the calculated values in `vds.counts_15min` (and similarly for `vds.counts_15min_bylane`) eg: 
+
+```sql
+--some of these were mistakenly set to 1 instead of 3 expected_bins. 
+WITH updates AS (
+    SELECT volumeuid, count_15min * expected_bins / 3 AS count_15min_updated
+    FROM vds.vdsconfig AS c
+    JOIN vds.counts_15min AS c15 ON c.uid = c15.vdsconfig_uid
+    WHERE
+        detector_id LIKE ANY ('{"%YONGE HEATH%", "%YONGE DAVISVILLE%"}')
+          OR vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
+          OR (vds_id >= 7011490 AND vds_id <= 7011519) --new lakeshore smartmicro sensors
+        AND expected_bins <> 3
+)
+
+UPDATE vds.counts_15min AS c15
+SET count_15min = updates.count_15min_updated, expected_bins = 3
+FROM updates
+WHERE c15.volumeuid = updates.volumeuid
+```
 
 ## vds.detector_inventory_cursed
+Outdated detector inventory from old `rescu` schema with unknown origin, likely manual. Archiving in this schema in case some of this information is useful in the future. Only contains information about RESCU network. 
 
+Row count: 189
+| column_name      | data_type         | sample                | description   |
+|:-----------------|:------------------|:----------------------|:--------------|
+| detector_id      | text              | DW0040DEL             |               |
+| number_of_lanes  | smallint          | 3                     |               |
+| latitude         | numeric           | 43.635944             |               |
+| longitude        | numeric           | -79.401186            |               |
+| det_group        | text              | LAKE                  |               |
+| road_class       | text              | Major Arterial        |               |
+| primary_road     | text              | Lake Shore Blvd W     |               |
+| direction        | character varying | E                     |               |
+| offset_distance  | integer           |                       |               |
+| offset_direction | text              | W of                  |               |
+| cross_road       | text              | BATHURST STREET       |               |
+| district         | text              | Toronto and East York |               |
+| ward             | text              | Trinity-Spadina (20)  |               |
+| vds_type         | text              | inductive_loop        | Other values: microwave_radar (origin of classification unknown) |
+| total_loops      | smallint          | 6                     |               |
+| sequence_number  | text              | LAKE173               |               |
+| data_range_low   | integer           | 20000                 |               |
+| data_range_high  | integer           | 30000                 |               |
+| historical_count | integer           | 9700                  |               |
+| arterycode       | integer           | 826                   |               |
+
+# Tips for Use
+- Start with the timeframe of interest and identify which sensors have data available rather than first identifying the correct sensors. 
+- The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
+- In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
+- For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.
 
 # DAG Design 
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below. The dags need to be run on-prem to access ITSC database and are hosted on Morbius. 
@@ -345,12 +413,11 @@ VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs de
 
 </div>
 
-
 - `check_partitions` checks the necessary partitions are available for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. 
 
 **pull_vdsdata**  
 - `delete_vdsdata` deletes existing data from RDS `vds.raw_vdsdata` to enable easy rerunning of tasks.  
-- `pull_raw_vdsdata` pulls into RDS from ITS Central database table `vdsdata` including expanding binary `lanedata` column. 
+- `pull_raw_vdsdata` pulls into RDS from ITS Central database table `vdsdata` including expanding binary `lanedata` column. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
 
 **summarize_v15**  
 - `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
@@ -373,13 +440,8 @@ These tasks are arbitrarily grouped under this DAG because they run on the same 
 
 **pull_vdsvehicledata**  
 - `delete_vdsvehicledata` first deletes existing data from RDS `vds.raw_vdsvehicledata` to enable easy rerunning of tasks.
-- `pull_raw_vdsvehicledata` pulls into RDS from ITS Central database table `raw_vdsvehicledata`. 
+- `pull_raw_vdsvehicledata` pulls into RDS from ITS Central database table `raw_vdsvehicledata`. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
 
 **summarize_vdsvehicledata**  
 - `summarize_speeds` Deletes data from RDS `vds.veh_speeds_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`.  
 - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
-
-# Tips for Use
-- Start with the timeframe of interest and identify which sensors have data available rather than first identifying the correct sensors. 
-- The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
-- In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose `FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....`.
