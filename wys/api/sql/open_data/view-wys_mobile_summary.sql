@@ -57,5 +57,9 @@ FROM wys.mobile_summary
 WHERE
     --avoid adding signs with less than one day of data to Open Data.
     removal_date - installation_date > interval '1 day'
-    --avoid adding very new signs with little data to Open Data.
-    AND installation_date < date_trunc('month', now()) - interval '2 weeks';
+    AND (
+        --avoid adding very new signs with little data to Open Data.
+        installation_date < date_trunc('month', now()) - interval '2 weeks'
+        --however, do include these signs if they are complete.
+        OR removal_date < date_trunc('month', now())
+    );
