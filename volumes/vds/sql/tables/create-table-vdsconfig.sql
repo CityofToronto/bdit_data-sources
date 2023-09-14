@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS vds.vdsconfig (
 );
 
 ALTER TABLE vds.vdsconfig OWNER TO vds_admins;
-GRANT INSERT, SELECT ON TABLE vds.vdsconfig TO vds_bot;
+GRANT INSERT, SELECT, UPDATE ON TABLE vds.vdsconfig TO vds_bot;
 GRANT ALL ON SEQUENCE vds.vdsconfig_uid_seq TO vds_bot;
 GRANT SELECT ON TABLE vds.vdsconfig TO bdit_humans;
 
