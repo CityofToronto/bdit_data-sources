@@ -23,11 +23,10 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-sys.path.insert(0,os.path.join(repo_path,'volumes/vds/py'))
 
 try:
-    from vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
-except:
+    from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
+except
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
 try:
