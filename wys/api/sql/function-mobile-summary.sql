@@ -110,7 +110,7 @@ JOIN wys.speed_bins_old AS sb ON
 LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
 --filter necessary to exclude newer data from still active signs
-WHERE raw.datetime_bin < _mon + interval '1 month'
+WHERE raw.datetime_bin < date_trunc('month', now())
 GROUP BY
     loc.location_id,
     loc.ward_no,
