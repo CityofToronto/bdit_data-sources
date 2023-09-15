@@ -18,7 +18,6 @@ CREATE TABLE wys.speed_counts
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE wys.speed_counts
-  OWNER TO rdumas;
+ALTER TABLE wys.speed_counts OWNER TO wys_admins;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.speed_counts TO bdit_humans WITH GRANT OPTION;
 

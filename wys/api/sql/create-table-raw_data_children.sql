@@ -14,8 +14,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.raw_data_2017
-    OWNER to rdumas;
+ALTER TABLE wys.raw_data_2017 OWNER to wys_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2017 TO wys_bot;
 -- Index: raw_data_2017_datetime_bin_idx
@@ -39,8 +38,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.raw_data_2018
-    OWNER to rdumas;
+ALTER TABLE wys.raw_data_2018 OWNER to wys_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2018 TO wys_bot;
 -- Index: raw_data_2018_datetime_bin_idx
@@ -64,8 +62,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.raw_data_2019
-    OWNER to rdumas;
+ALTER TABLE wys.raw_data_2019 OWNER to wys_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2019 TO wys_bot;
 -- Index: raw_data_2019_datetime_bin_idx
@@ -89,8 +86,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.raw_data_2020
-    OWNER to rdumas;
+ALTER TABLE wys.raw_data_2020 OWNER to wys_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2020 TO wys_bot;
 -- Index: raw_data_2020_datetime_bin_idx
@@ -114,8 +110,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE wys.raw_data_2021
-    OWNER to rdumas;
+ALTER TABLE wys.raw_data_2021 OWNER to wys_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.raw_data_2021 TO wys_bot;
 -- Index: raw_data_2021_datetime_bin_idx
