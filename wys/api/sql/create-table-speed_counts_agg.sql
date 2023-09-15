@@ -15,8 +15,7 @@ CREATE TABLE wys.speed_counts_agg
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE wys.speed_counts_agg
-  OWNER TO rdumas;
+ALTER TABLE wys.speed_counts_agg OWNER TO wys_admins;
 GRANT ALL ON TABLE wys.speed_counts_agg TO rds_superuser;
 GRANT SELECT ON TABLE wys.speed_counts_agg TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, UPDATE, INSERT ON TABLE wys.speed_counts_agg TO wys_bot;

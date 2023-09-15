@@ -75,8 +75,7 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date)
-    OWNER TO rdumas;
+ALTER FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date) OWNER TO wys_admins;
 
 GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date) TO dbadmin;
 

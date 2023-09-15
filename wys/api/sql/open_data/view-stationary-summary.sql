@@ -13,9 +13,7 @@ CREATE OR REPLACE VIEW open_data.wys_stationary_summary
                                      AND (od.end_date IS NULL OR agg.mon < od.end_date)
      
 ;
-ALTER TABLE open_data.wys_stationary_summary
-    OWNER TO rdumas;
+ALTER TABLE open_data.wys_stationary_summary OWNER TO wys_admins;
 
 GRANT SELECT ON TABLE open_data.wys_stationary_summary TO od_extract_svc;
-GRANT ALL ON TABLE open_data.wys_stationary_summary TO rdumas;
 GRANT SELECT ON TABLE open_data.wys_stationary_summary TO bdit_humans;
