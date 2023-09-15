@@ -52,6 +52,8 @@ SELECT
     END AS removal_date,
     ssc.schedule,
     ssc.min_speed,
+    COUNT(DISTINCT raw.datetime_bin::date) AS days_with_data,
+    MAX(raw.datetime_bin::date) AS max_date, 
     percentile_cont(0.05) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_05,
     percentile_cont(0.10) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_10,
     percentile_cont(0.15) WITHIN GROUP (ORDER BY (raw.speed))::INT AS pct_15,
