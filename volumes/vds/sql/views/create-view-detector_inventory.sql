@@ -1,59 +1,58 @@
 DROP VIEW vds.detector_inventory;
 CREATE VIEW vds.detector_inventory AS (
     SELECT
-        uid,
-        detector_id,
-        division_id,
-        det_type,
-        CASE det_type = 'RESCU Detectors'
-            WHEN True THEN CASE substring(detector_id, 2, 1)
+        c.uid,
+        c.detector_id,
+        c.division_id,
+        types.det_type,
+        CASE types.det_type = 'RESCU Detectors'
+            WHEN TRUE THEN CASE substring(c.detector_id, 2, 1)
                 WHEN 'N' THEN 'DVP/Allen North' --North of Don Mills 
                 WHEN 'S' THEN 'DVP South' --South of Don Mills 
                 WHEN 'E' THEN 'Gardiner/Lakeshore East' --East of Yonge
                 WHEN 'W' THEN 'Gardiner/Lakeshore West' --West of Yonge
                 WHEN 'K' THEN 'Kingston Rd'
-            END
+                END
         END AS det_loc,
-        CASE det_type = 'RESCU Detectors'
-            WHEN True THEN CASE substring(detector_id, 9, 1)
+        CASE types.det_type = 'RESCU Detectors'
+            WHEN TRUE THEN CASE substring(c.detector_id, 9, 1)
                 WHEN 'D' THEN 'DVP'
                 WHEN 'L' THEN 'Lakeshore'
                 WHEN 'G' THEN 'Gardiner'
                 WHEN 'A' THEN 'Allen'
                 WHEN 'K' THEN 'Kingston Rd'
                 WHEN 'R' THEN 'On-Ramp'
-            END
+                END
         END AS det_group,
-        CASE det_type = 'RESCU Detectors'
-            WHEN True THEN CASE substring(detector_id, 8, 1)
+        CASE types.det_type = 'RESCU Detectors'
+            WHEN TRUE THEN CASE substring(c.detector_id, 8, 1)
                 WHEN 'E' THEN 'Eastbound'
                 WHEN 'W' THEN 'Westbound'
                 WHEN 'S' THEN 'Southbound'
                 WHEN 'N' THEN 'Northbound'
-            END 
+                END 
         END AS direction,
+        --new cases need to be updated manually and then updated in vds.count_15min%.
         CASE
-            WHEN division_id = 8001 THEN 1 --15 min bins
+            WHEN c.division_id = 8001 THEN 1 --15 min bins
             --remainder are division_id = 2
-            WHEN det_type = 'RESCU Detectors' THEN 45 --20 sec bins
-            WHEN det_type = 'Blue City AI' THEN 1 --15 min bins
-            WHEN det_type = 'Smartmicro Sensors' THEN 3 --5 min bins
-            ELSE NULL --new cases need to be updated manually and then updated in vds.count_15min%. -- noqa: L035
+            WHEN types.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
+            WHEN types.det_type = 'Blue City AI' THEN 1 --15 min bins
+            WHEN types.det_type = 'Smartmicro Sensors' THEN 3 --5 min bins
         END AS expected_bins
-    FROM vds.vdsconfig,
-        LATERAL (
-            SELECT 
-                CASE
-                    WHEN detector_id LIKE 'D%' AND division_id = 2 THEN 'RESCU Detectors'
-                    WHEN detector_id SIMILAR TO 'PX[0-9]{4}-DET%' AND division_id = 8001 THEN 'Signal Detectors'
-                    WHEN detector_id SIMILAR TO 'PX[0-9]{4}-SF%' AND division_id = 8001 THEN 'Signal Special Function'
-                    WHEN detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND division_id = 8001 THEN 'Signal Preemption'
-                    WHEN detector_id LIKE 'BCT%' THEN 'Blue City AI'
-                    WHEN detector_id LIKE ANY ('{"%SMARTMICRO%", "%YONGE HEATH%", "%YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}')
-                        OR vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
-                        OR (vds_id >= 7011490 AND vds_id <= 7011519) --new lakeshore smartmicro sensors
-                        THEN 'Smartmicro Sensors'
-                END AS det_type
+    FROM vds.vdsconfig AS c,
+        LATERAL(
+            SELECT CASE
+                WHEN c.detector_id LIKE 'D%' AND c.division_id = 2 THEN 'RESCU Detectors'
+                WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-DET%' AND c.division_id = 8001 THEN 'Signal Detectors'
+                WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-SF%' AND c.division_id = 8001 THEN 'Signal Special Function'
+                WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND c.division_id = 8001 THEN 'Signal Preemption'
+                WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
+                WHEN c.detector_id LIKE ANY('{"%SMARTMICRO%", "%YONGE HEATH%", "%YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}')
+                    OR c.vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
+                    OR (c.vds_id >= 7011490 AND c.vds_id <= 7011519) --new lakeshore smartmicro sensors
+                    THEN 'Smartmicro Sensors'
+            END AS det_type
         ) AS types
 );
 

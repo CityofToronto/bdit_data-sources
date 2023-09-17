@@ -16,7 +16,7 @@ CREATE VIEW vds.counts_15min_div8001 AS (
         COUNT(DISTINCT d.lane) AS num_distinct_lanes
     FROM vds.raw_vdsdata AS d
     JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
-    LEFT JOIN vds.vdsconfig c ON d.vdsconfig_uid = c.uid
+    LEFT JOIN vds.vdsconfig AS c ON d.vdsconfig_uid = c.uid
     WHERE d.division_id = 8001
     GROUP BY
         d.division_id,
