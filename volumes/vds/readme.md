@@ -57,14 +57,17 @@ Nominally only RESCU detectors according to ITSC `datadivision` table, but also 
 Approx 700K rows per day from ~200 sensors.  
 - RESCU loop/radar detectors
     - Gardiner, DVP, Lakeshore
-    - Allen Rd & Kingston Rd appear in older data
+    - Allen Rd & Kingston Rd appear in vdsconfig but have no data newer than 2021-11 when this pipeline begins. 
     - 20 second reporting interval
 - Blue City ("BCT"):
     - 40 detectors monitoring individual intersection movements at two intersections: Spadina / Fort York & Yonge / Church. 
     - 15 minute reporting interval
+    - As seen on the map view of [ITS Central](<https://itscentral.corp.toronto.ca/>), BCT sensors seem to count all modes, however this data has not been found in the database. 
 - SmartMicro sensors
     - Approximately 40 detectors along Yonge St in midtown and Lakeshore Blvd.  
     - 5 minute reporting interval
+    - There are SmartMicro detectors on Yonge St bike lanes: `SELECT * FROM vds.vdsconfig WHERE detector_id like '%BIKE%'`
+    - As seen on the map view of [ITS Central](<https://itscentral.corp.toronto.ca/>), SmartMicro sensors seem to count all modes, however this data has not been found in the database. 
 
 Division_id 2 distribution in August 2023: 
 <div style="width: 75%";>
@@ -112,6 +115,9 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 ## Future Work 
 - Future work is planned under issue #658 to add data quality checks to the new schema. 
+  - Network wide low data volume warning. 
+  - Identify individual detector outages. 
+  - Label good and bad date ranges. 
 - Further investigation of new sensor classes (division_id 8001, BlueCity, SmartMicro) to determine utility  
 
 
