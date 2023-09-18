@@ -58,6 +58,31 @@ with DAG(dag_name,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
+    #this task group pulls the detector inventories
+    with TaskGroup(group_id='update_inventories') as update_inventories:
+        
+        #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
+        pull_detector_inventory_task = PythonOperator(
+            task_id='pull_and_insert_detector_inventory',
+            python_callable=pull_detector_inventory,
+            op_kwargs = conns
+        )
+
+        #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
+        pull_entity_locations_task = PythonOperator(
+            task_id='pull_and_insert_entitylocations',
+            python_callable=pull_entity_locations,
+            op_kwargs = conns
+        )
+
+        t_done = ExternalTaskMarker(
+                task_id="done",
+                external_dag_id="vds_pull_vdsvehicledata",
+                external_task_id="starting_point"
+        )
+
+        [pull_detector_inventory_task, pull_entity_locations_task] >> t_done
+
     #this task group checks if all necessary partitions exist and if not executes create functions.
     check_partitions = PythonOperator(
         task_id='check_partitions',
@@ -111,30 +136,5 @@ with DAG(dag_name,
 
         summarize_v15_task
         summarize_v15_bylane_task
-
-    #this task group pulls the detector inventories
-    with TaskGroup(group_id='update_inventories') as update_inventories:
-        
-        #get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`
-        pull_detector_inventory_task = PythonOperator(
-            task_id='pull_and_insert_detector_inventory',
-            python_callable=pull_detector_inventory,
-            op_kwargs = conns
-        )
-
-        #get entitylocations from ITSC and insert into RDS `vds.entity_locations`
-        pull_entity_locations_task = PythonOperator(
-            task_id='pull_and_insert_entitylocations',
-            python_callable=pull_entity_locations,
-            op_kwargs = conns
-        )
-
-        t_done = ExternalTaskMarker(
-                task_id="done",
-                external_dag_id="vds_pull_vdsvehicledata",
-                external_task_id="starting_point"
-        )
-
-        [pull_detector_inventory_task, pull_entity_locations_task] >> t_done
 
     update_inventories >> check_partitions >> vdsdata >> v15data #pull then summarize
