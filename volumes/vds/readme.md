@@ -27,7 +27,8 @@
     - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
 
 # Introduction 
-The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates. 
+The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates.  
+For a summary of improvements, see [PR notes](https://github.com/CityofToronto/bdit_data-sources/pull/646#issue-1782750225). 
 
 ## Overview of Sensor Classes
 
