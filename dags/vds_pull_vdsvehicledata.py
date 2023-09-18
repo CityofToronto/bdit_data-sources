@@ -54,7 +54,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
          default_args=default_args,
          max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
-         schedule_interval='0 4 * * *') as dag: #daily at 4am
+         schedule_interval='5 4 * * *') as dag: #daily at 4:05am
 
     t_upstream_done = ExternalTaskSensor(
         task_id="starting_point",
@@ -63,6 +63,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
+        execution_delta=timedelta(minutes=5)
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
