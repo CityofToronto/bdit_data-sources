@@ -8,6 +8,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from functools import partial
+from airflow.sensors.external_task import ExternalTaskSensor
 
 dag_name = 'vds_pull_vdsvehicledata'
 
@@ -54,6 +55,15 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
          max_active_runs=1,
          template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
          schedule_interval='0 4 * * *') as dag: #daily at 4am
+
+    t_upstream_done = ExternalTaskSensor(
+        task_id="starting_point",
+        external_dag_id="vds_pull_vdsdata",
+        external_task_id="update_inventories.done",
+        poke_interval=3600, #retry hourly
+        mode="reschedule",
+        timeout=86400, #one day
+    )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
     check_partitions = PythonOperator(
@@ -113,5 +123,4 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    check_partitions
-    pull_vdsvehicledata >> summarize_vdsvehicledata
+    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata
