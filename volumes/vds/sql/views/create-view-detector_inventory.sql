@@ -1,4 +1,4 @@
-DROP VIEW vds.detector_inventory;
+--DROP VIEW vds.detector_inventory;
 CREATE VIEW vds.detector_inventory AS (
     SELECT
         c.uid,

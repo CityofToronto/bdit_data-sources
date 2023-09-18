@@ -2,7 +2,7 @@
 --use view instead of table because unlike division_id = 2 this data 
 --is already at 15 minutes in raw format.
 
-DROP VIEW vds.counts_15min_div8001;
+--DROP VIEW vds.counts_15min_div8001;
 CREATE VIEW vds.counts_15min_div8001 AS (
     SELECT
         d.division_id,

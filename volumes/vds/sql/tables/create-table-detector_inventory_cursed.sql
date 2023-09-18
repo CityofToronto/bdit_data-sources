@@ -1,4 +1,4 @@
-DROP TABLE vds.detector_inventory_cursed;
+--DROP TABLE vds.detector_inventory_cursed;
 CREATE TABLE IF NOT EXISTS vds.detector_inventory_cursed
 (
     detector_id text COLLATE pg_catalog."default",
