@@ -297,6 +297,8 @@ def transform_raw_data(df):
     
     return raw_20sec
 
+#these check functions were a bit overkill and would be nice to replace 
+#with a simpler shortcircut + postgresoperator combo to run partition tasks once a year on Jan 1. 
 def check_vdsdata_partitions(rds_conn, start_date):
     y = datetime.strptime(start_date, '%Y-%m-%d').year
 

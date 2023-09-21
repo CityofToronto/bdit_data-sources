@@ -20,8 +20,10 @@ WITH time_gaps AS (
             d.dt <= c.end_timestamp
             OR c.end_timestamp IS NULL) --no end date
     WHERE
+    --filter to specific sensors here!
+    --change dates to recent period
         d.dt >= '2023-05-01 00:00:00'::timestamp
-        AND d.dt >= '2023-05-01 00:00:00'::timestamp
+        AND d.dt < '2023-06-01 00:00:00'::timestamp
 ), 
 
 gap_count AS (
