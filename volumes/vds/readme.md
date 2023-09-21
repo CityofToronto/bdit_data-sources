@@ -5,9 +5,12 @@
     - [Overview of Sensor Classes](#overview-of-sensor-classes)
       - [Division_id 2](#division_id2)
       - [Division_id 8001](#division_id8001)
+    - [How do I access it?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
     - [Data Availability](#data-availability)
+    - [How was it aggregated and filtered?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
     - [Future Work](#future-work)
 2. [Table Structure](#table-structure)
+    - [Tips for Use](#tips-for-use)
     - [Lookup Tables and Views](#lookup-tables-and-views)
       - [vds.vdsconfig](#vdsvdsconfig)
       - [vds.entity_locations](#vdsentity_locations)
@@ -22,13 +25,17 @@
       - [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
     - [Cursed](#cursed)
       - [vds.detector_inventory_cursed](#vdsdetector_inventory_cursed)
-3. [DAG Design](#dag-design)
+3. [Data Ops](#Data-Ops)
+  - [DAG Design](#dag-design)
     - [vds_pull_vdsdata](#vds_pull_vdsdata)
     - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
+  - [Something went wrong](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
 
 # Introduction 
-The `vds` schema in bigdata will eventually fully replace the old `rescu` schema. The renaming of the schema represents that RESCU detectors are only one type of "vehicle detector system" (VDS) the City operates.  
-For a summary of improvements, see [PR notes](https://github.com/CityofToronto/bdit_data-sources/pull/646#issue-1782750225). 
+
+The `vds` schema contains volume, speed, and length data collected from various "vehicle detector system"s (VDS) the City operates, as well as details about those VDS. 
+
+For a summary of changes vs the old `rescu` schema, see [PR notes](https://github.com/CityofToronto/bdit_data-sources/pull/646#issue-1782750225). The renaming of the schema represents that RESCU detectors are only one type of VDS the City operates.
 
 ## Overview of Sensor Classes
 
@@ -38,6 +45,7 @@ VDS system consists of various vehicle detectors, organized at a high level into
 Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes various "BlueCity" / "SmartMicro" sensors.  
 Approx 700K rows per day from ~200 sensors.  
 - RESCU loop/radar detectors
+    - The City's Road Emergency Services Communication Unit (RESCU) tracks and manages traffic volume on expressways and some arterial roads using various technologies. General information can be found [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
     - Gardiner, DVP, Lakeshore
     - Allen Rd & Kingston Rd appear in vdsconfig but have no data newer than 2021-11 when this pipeline begins. 
     - 20 second reporting interval
@@ -57,7 +65,6 @@ Division_id 2 distribution in August 2023:
   ![Division_id 2 distribution in August 2023: ](<exploration/div2 sensors - august 2023.png>)
 
 </div>
-
 
 ### division_id=8001 
 Traffic Signals, PXO, Beacons, Pedestals and UPS. Approx 700K rows per day from ~10,000 sensors at 15 minute intervals.    
@@ -90,10 +97,21 @@ Remaining division_id 8001 sensors with non-zero volumes in August 2023 (No work
 The data from "special function" and "preemption" detectors seem extremely dubious. They both have less than 1 average detection per sensor per day. 
 The regular detectors (DET) may have some utility but it is hard to tell with the prevelance of zeros (the median daily detector volume is zero). 
 
+## How do I access it? Where is the OpenData (if it exists)?
+- Cleaned data is stored in `bigdata`, `vds` schema. 
+- Raw data is stored in `transnomis` postgres database `public` schema, which can be accessed by remoting in to terminal server and using connection details stored in Airflow. 
+- Internally, [ITS Central](https://itscentral.corp.toronto.ca/) is helpful for exploring the detector inventory. 
+- OpenData: RESCU data was never added to OpenData due to data quality concerns, however this decision should be reviewed with improved availability due to new pipeline and ability to formulate better data quality metrics. In particular `veh_speeds_15min` could be released in a similar pattern to existing `wys` OpenData release and may be of interest to public. 
+
 ## Data Availability
 - Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and related summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.  
 - Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.
+- There are various data outages, although many are eliminated under this new vds pipeline.
 
+## How was it aggregated & filtered? What pitfalls should I avoid?
+- Detectors/time periods with no records will not appear in summary tables.
+- Some detectors have come and gone, for example the Allen. Check the sensor you want is available in the time period. 
+- Zeros/nulls/missing records are all considered zeros when aggregating to `counts_15min` and `counts_15min_bylane` in line with logic under previous `RESCU` pipeline. Aggregation method can be adjusted/examined by going back to `raw_vdsdata` table. 
 
 ## Future Work 
 - Future work is planned under issue #658 to add data quality checks to the new schema. 
@@ -102,11 +120,9 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
   - Label good and bad date ranges. 
 - Further investigation of new sensor classes (division_id 8001, BlueCity, SmartMicro) to determine utility  
 
-
 # Table Structure  
 
 ## Tips for Use
-- Start with the timeframe of interest and identify which sensors have data available rather than first identifying the correct sensors. 
 - The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
 - For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.
@@ -400,10 +416,13 @@ Row count: 189
 | historical_count | integer           | 9700                  |               |
 | arterycode       | integer           | 826                   |               |
 
-# DAG Design 
-VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below. The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
+# Data Ops
 
-## [vds_pull_vdsdata](../../dags/vds_pull_vdsdata.py)
+## DAG Design 
+VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below.  
+The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
+
+### [vds_pull_vdsdata](../../dags/vds_pull_vdsdata.py)
 <div style="width: 75%";>
 
   ![vds_pull_vdsdata DAG](vds_pull_vdsdata_dag.png)
@@ -427,7 +446,7 @@ on-insert trigger has the latest detector information available. Also triggers o
 - `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
 - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
-## [vds_pull_vdsvehicledata](../../dags/vds_pull_vdsvehicledata.py)
+### [vds_pull_vdsvehicledata](../../dags/vds_pull_vdsvehicledata.py)
 <div style="width: 75%";>
 
   ![vds_pull_vdsvehicledata DAG](vds_pull_vdsvehicledata_dag.png)
@@ -445,3 +464,19 @@ on-insert trigger has the latest detector information available. Also triggers o
 **`summarize_vdsvehicledata`**  
 - `summarize_speeds` Deletes data from RDS `vds.veh_speeds_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`.  
 - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
+
+## Data Ops: something went wrong predictably, how do I fix it?
+**Need to retry a task?**
+- Task groups are organized to include "delete" statements prior to each insert, so you should safely be able to re-run any failed **task group**.
+**New sensor type added?**
+- If new sensor types are added, you may need to update `vds.detector_inventory` `expected_bins` [case statement](sql/views/create-view-detector_inventory.sql)
+and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).
+**Sensor type incorrectly classified?**
+- If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`
+**Raw data missing fkeys?**
+- If there are updates to the `vdsconfig` or `entity_locations` tables following inserts to raw_* tables (this shouldn't happen anymore since there are now task dependencies),
+you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).
+**No data system wide?**
+- The pipeline is running succesfully but producing low/no volumes of data? Contact Simon Foo (Transnomis) and Steven Bon (City of Toronto).
+**No data for a specific sensor?**
+- There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management. 
