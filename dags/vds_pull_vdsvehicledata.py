@@ -2,7 +2,7 @@ import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
@@ -22,12 +22,16 @@ vds_bot = PostgresHook('vds_bot')
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
+#op_kwargs:
+conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
+start_date = {'start_date': '{{ ds }}'}
+
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
 try:
-    from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
-except
+    from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_new_year
+except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
 try:
@@ -67,12 +71,22 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    check_partitions = PythonOperator(
-        task_id='check_partitions',
-        python_callable=check_vdsvehicledata_partitions,
-        op_kwargs = {'rds_conn': vds_bot,
-                    'start_date': '{{ ds }}'}
-    )  
+    with TaskGroup(group_id='check_partitions') as check_partitions_tg:
+        check_date = ShortCircuitOperator(
+            task_id='check_partitions',
+            python_callable=check_new_year,
+            op_kwargs=start_date,
+            ignore_downstream_trigger_rules=False
+        )
+
+        create_partitions = PostgresOperator(
+            task_id='create_partitions',
+            sql="""SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', {{ macros.ds_format(ds, "%Y-%m-%d", "%Ym" }}, 'dt')""",
+            postgres_conn_id='vds_bot',
+            autocommit=True
+        )
+
+        check_date >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
@@ -86,16 +100,15 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
             task_id='delete_vdsvehicledata',
             postgres_conn_id='vds_bot',
             autocommit=True,
-            retries=1
+            retries=1,
+            trigger_rule='none_failed'
         )
 
         #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
         pull_raw_vdsvehicledata_task = PythonOperator(
             task_id='pull_raw_vdsvehicledata',
             python_callable=pull_raw_vdsvehicledata,
-            op_kwargs = {'rds_conn': vds_bot,
-                        'itsc_conn': itsc_bot,
-                    'start_date': '{{ ds }}'}
+            op_kwargs = conns | start_date 
         )
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
@@ -124,4 +137,4 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata
+    t_upstream_done >> check_partitions_tg >> pull_vdsvehicledata >> summarize_vdsvehicledata
