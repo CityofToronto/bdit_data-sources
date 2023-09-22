@@ -44,16 +44,16 @@ VDS system consists of various vehicle detectors, organized at a high level into
 ### division_id=2  
 Nominally only RESCU detectors according to ITSC `datadivision` table, but also includes various "BlueCity" / "SmartMicro" sensors.  
 Approx 700K rows per day from ~200 sensors.  
-- RESCU loop/radar detectors
+- **RESCU loop/radar detectors**
     - The City's Road Emergency Services Communication Unit (RESCU) tracks and manages traffic volume on expressways and some arterial roads using various technologies. General information can be found [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
     - Gardiner, DVP, Lakeshore
     - Allen Rd & Kingston Rd appear in vdsconfig but have no data newer than 2021-11 when this pipeline begins. 
     - 20 second reporting interval
-- Blue City ("BCT"):
+- **Blue City ("BCT")**
     - 40 detectors monitoring individual intersection movements at two intersections: Spadina / Fort York & Yonge / Church. 
     - 15 minute reporting interval
     - As seen on the map view of [ITS Central](<https://itscentral.corp.toronto.ca/>), BCT sensors seem to count all modes, however this data has not been found in the database. 
-- SmartMicro sensors
+- **SmartMicro sensors**
     - Approximately 40 detectors along Yonge St in midtown and Lakeshore Blvd.  
     - 5 minute reporting interval
     - There are SmartMicro detectors on Yonge St bike lanes: `SELECT * FROM vds.vdsconfig WHERE detector_id like '%BIKE%'`
@@ -68,9 +68,9 @@ Division_id 2 distribution in August 2023:
 
 ### division_id=8001 
 Traffic Signals, PXO, Beacons, Pedestals and UPS. Approx 700K rows per day from ~10,000 sensors at 15 minute intervals.    
-- Intersection signal detectors (DET)  
-- [Signal Preemption Detectors (PE)](https://www.toronto.ca/services-payments/streets-parking-transportation/traffic-management/traffic-signals-street-signs/traffic-signal-operations/traffic-signal-prioritization/) (transit /  fire emergency services)
-- Special Function Detectors (SF)  
+- **Intersection signal detectors (DET)**  
+- [**Signal Preemption Detectors (PE)**](https://www.toronto.ca/services-payments/streets-parking-transportation/traffic-management/traffic-signals-street-signs/traffic-signal-operations/traffic-signal-prioritization/) (transit /  fire emergency services)
+- **Special Function Detectors (SF)**  
 
 Further investigation is required to determine whether this data for `division_id = 8001` under `vds.raw_vdsdata` can be used for analytics.  
 Approximately half of all sensors in division_id 8001 had zero volume in August 2023:  
@@ -100,12 +100,12 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 ## How do I access it? Where is the OpenData (if it exists)?
 - Cleaned data is stored in `bigdata`, `vds` schema. 
 - Raw data is stored in `transnomis` postgres database `public` schema, which can be accessed by remoting in to terminal server and using connection details stored in Airflow. 
-- Internally, [ITS Central](https://itscentral.corp.toronto.ca/) is helpful for exploring the detector inventory. 
+- [ITS Central](https://itscentral.corp.toronto.ca/) is helpful for exploring the detector inventory. Jesse can help you gain access.
 - OpenData: RESCU data was never added to OpenData due to data quality concerns, however this decision should be reviewed with improved availability due to new pipeline and ability to formulate better data quality metrics. In particular `veh_speeds_15min` could be released in a similar pattern to existing `wys` OpenData release and may be of interest to public. 
 
 ## Data Availability
 - Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and related summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.  
-- Data for table `vds.counts_15min` before 2021-11 was backfilled from the `rescu` schema, and only for certain columns. No other tables contain data before 2021-11.
+- Data for table `vds.counts_15min` from 2017-01-01 to 2021-10-31 was backfilled from `rescu.volumes_15min`, and contains nulls for certain columns: `lanes`, `num_distinct_lanes`, `num_obs`. Only highway RESCU sensors were included in this old schema. 
 - There are various data outages, although many are eliminated under this new vds pipeline.
 
 ## How was it aggregated & filtered? What pitfalls should I avoid?
@@ -118,7 +118,7 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
   - Network wide low data volume warning. 
   - Identify individual detector outages. 
   - Label good and bad date ranges. 
-- Further investigation of new sensor classes (division_id 8001, BlueCity, SmartMicro) to determine utility  
+- Further investigation of new sensor classes (division_id 8001, BlueCity, SmartMicro) to determine utility or if we should store these records at all. 
 
 # Table Structure  
 
@@ -131,6 +131,13 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 ### vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
+
+- For applications relating to the highway RESCU network, the manual case statements under VIEW `vds.detector_inventory` can help identify relevant stations.  
+
+- A foreign key referencing `vds.vdsconfig.uid` is added to the raw tables by trigger function `vds.add_vds_fkeys` to enable a simple join on `vds.vdsconfig.uid` = `*.vdsconfig_uid`.  
+
+- **Note that these entries don't have locations associated with them.** That is located in the next table `entity_locations`.  
+- Note that there is not a complete allignment between this data and the raw data, which is interpreted as the time between a detector being turned on in the field and configured in the database. 
 
 Row count: 10,219
 | column_name        | data_type                   | sample                 | description   |
@@ -156,12 +163,6 @@ Row count: 10,219
 | movement           | smallint                    |                        |               |
 | uid                | integer                     | 1                      | pkey          |
 
-- For applications relating to the highway RESCU network, the manual case statements under VIEW `vds.detector_inventory` can help identify relevant stations.  
-
-- A foreign key referencing `vds.vdsconfig.uid` is added to the raw tables by trigger function `vds.add_vds_fkeys` to enable a simple join on `vds.vdsconfig.uid` = `*.vdsconfig_uid`.  
-
-- **Note that these entries don't have locations associated with them.** That is located in the next table `entity_locations`.  
-- Note that there is not a complete allignment between this data and the raw data, which is interpreted as the time between a detector being turned on in the field and configured in the database. 
 
 ### vds.entity_locations
 This table contains locations for vehicle detectors from ITSC `public.entitylocations`.
@@ -200,6 +201,8 @@ Row count: 16,013
 ### vds.detector_inventory
 A new manually defined detector inventory for ease of filtering `vds.vdsconfig`. For more information see CASE statements in the [definition file](<sql/views/create-view-detector_inventory.sql>)
 
+- If you add new rules to `expected_bins` to reflect new sensor types, see the heading `New sensor type added?` or `Sensor type incorrectly classified?` under [Data Ops](#data-ops-something-went-wrong-predictably-how-do-i-fix-it) heading. 
+
 Row count: 10,540
 | column_name   | data_type         | sample           | description   |
 |:--------------|:------------------|:-----------------|:--------------|
@@ -212,30 +215,6 @@ Row count: 10,540
 | direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
 | expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
 
-
-If you add new rules to `expected_bins` to reflect new sensor types, you will need to backfill `vds.counts_15min` (and similarly `vds.counts_15min_bylane`) using the [insert script](<sql/insert/insert_counts_15min.sql>). 
-If you find yourself updating a previous error with expected_bins value, 
-you will need to update the calculated values in `vds.counts_15min` (and similarly for `vds.counts_15min_bylane`) eg: 
-
-```sql
---some of these were mistakenly set to 1 instead of 3 expected_bins. 
-WITH updates AS (
-    SELECT volumeuid, count_15min * expected_bins / 3 AS count_15min_updated
-    FROM vds.vdsconfig AS c
-    JOIN vds.counts_15min AS c15 ON c.uid = c15.vdsconfig_uid
-    WHERE
-        detector_id LIKE ANY ('{"%YONGE HEATH%", "%YONGE DAVISVILLE%"}')
-          OR vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
-          OR (vds_id >= 7011490 AND vds_id <= 7011519) --new lakeshore smartmicro sensors
-        AND expected_bins <> 3
-)
-
-UPDATE vds.counts_15min AS c15
-SET count_15min = updates.count_15min_updated, expected_bins = 3
-FROM updates
-WHERE c15.volumeuid = updates.volumeuid
-```
-
 ## Aggregate Tables
 
 ### vds.counts_15min
@@ -243,10 +222,11 @@ WHERE c15.volumeuid = updates.volumeuid
 - This table only includes `division_id = 2`, since division_id `8001` is already 15 minute data in raw format in `raw_vdsdata` and the volume of data is very large (~700K rows per day) for storing twice at same interval. Instead you can query the view `vds.counts_15min_div8001` to simplify accessing division_id 8001 data in 15 minute count format. 
 - Summary assumes that null values are zeroes (in line with assumption made in old RESCU pipeline), however, the availability of raw data means this assumption can be examined. 
 - **Note** `raw_vdsdata` is only summarized into this table if the `expected_bins` value for that `vdsconfig_uid` in `vds.detector_inventory` is not null. 
+- Partitioned by `division_id` then year (Column `datetime_15min`).
 
 Data quality checks:  
 - You can compare `num_obs` to `expected_bins * num_lanes`. Consider using a threshold.
-- There should be a total of 96 15-minute datetime bins per day.  
+- There should be a total of 96 15-minute datetime bins per day. Since small outages appear common, consider not requiring this. 
 - Check `num_distinct_lanes = num_lanes` to see if data from all lanes is present in bin.  
 
 Row count: 927,399
@@ -268,6 +248,7 @@ Row count: 927,399
 `vds.raw_vdsdata` summarized into 15 minute bins by lane, to be used for investigating individual lane data availability.  
 - Excludes `division_id = 8001` since those sensors have only 1 lane.
 - **Note** `raw_vdsdata` is only summarized into this table if the `expected_bins` value for that `vdsconfig_uid` in `vds.detector_inventory` is not null. 
+- Partitioned by `division_id` then year (Column `datetime_15min`).
 
 **Data quality checks:**  
 - You can compare `num_obs` to `expected_bins`. Consider using a threshold.
@@ -466,17 +447,22 @@ on-insert trigger has the latest detector information available. Also triggers o
 - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
 
 ## Data Ops: something went wrong predictably, how do I fix it?
-**Need to retry a task?**
-- Task groups are organized to include "delete" statements prior to each insert, so you should safely be able to re-run any failed **task group**.
-**New sensor type added?**
+**Need to retry a task?**  
+- Task groups are organized to include "delete" statements prior to each insert, so you should safely be able to re-run any failed **task group**.  
+
+**New sensor type added?**  
 - If new sensor types are added, you may need to update `vds.detector_inventory` `expected_bins` [case statement](sql/views/create-view-detector_inventory.sql)
-and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).
-**Sensor type incorrectly classified?**
-- If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`
-**Raw data missing fkeys?**
+and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).  
+
+**Sensor type incorrectly classified?**  
+- If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`  
+
+**Raw data missing fkeys?**  
 - If there are updates to the `vdsconfig` or `entity_locations` tables following inserts to raw_* tables (this shouldn't happen anymore since there are now task dependencies),
-you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).
-**No data system wide?**
-- The pipeline is running succesfully but producing low/no volumes of data? Contact Simon Foo (Transnomis) and Steven Bon (City of Toronto).
-**No data for a specific sensor?**
-- There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management. 
+you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).  
+
+**No/low data system wide?**  
+- The pipeline is running succesfully but producing low/no volumes of data? First double check Transnomis Database and ITS Central, then contact Simon Foo (Transnomis) and Steven Bon (City of Toronto).  
+
+**No data for a specific sensor?**  
+- There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management.   
