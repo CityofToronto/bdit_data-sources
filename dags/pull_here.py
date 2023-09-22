@@ -2,6 +2,9 @@
 Pipeline to pull here data every week and put them into the here.ta table using Bash Operator.
 Slack notifications is raised when the airflow process fails.
 """
+import sys
+import os
+import pendulum
 
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -11,42 +14,21 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
+
 dag_name = 'pull_here'
 
-SLACK_CONN_ID = 'slack_data_pipeline'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
-
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    # print this task_msg and tag these users
-    task_msg = """The Task {task} failed :here: :blob_fail:. {slack_name} please fix it """.format(
-        task=context.get('task_instance').task_id, 
-        slack_name = ' '.join(list_names),) 
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
 
 here_postgres = PostgresHook("here_bot")
 rds_con = here_postgres.get_uri()
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 1, 5),
+                'start_date': pendulum.datetime(2020, 1, 5, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 3, #Retry 3 times
