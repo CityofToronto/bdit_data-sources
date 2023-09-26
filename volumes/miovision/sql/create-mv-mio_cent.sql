@@ -9,92 +9,93 @@ CREATE TABLE miovision_api.centerline_miovision AS (
     --find all the nodes in the centreline file that touch miovision intersections. You have to match with "from" and "to" nodes to get all the segments
     WITH cent_int AS (
         SELECT DISTINCT
-            intersection_uid,
-            lat,
-            lng,
-            centreline_id,
-            latitude,
-            longitude
-        FROM miovision_api.intersections ter
-        LEFT JOIN prj_volume.centreline cent ON ter.int_id = cent.to_intersection_id
-        LEFT JOIN prj_volume.centreline_intersections ci ON cent.from_intersection_id = ci.intersection_id
-        WHERE feature_code_desc NOT IN ('Trail')
+            ter.intersection_uid,
+            ter.lat,
+            ter.lng,
+            cent.centreline_id,
+            ci.latitude,
+            ci.longitude
+        FROM miovision_api.intersections AS ter
+        LEFT JOIN prj_volume.centreline AS cent ON ter.int_id = cent.to_intersection_id
+        LEFT JOIN prj_volume.centreline_intersections AS ci ON cent.from_intersection_id = ci.intersection_id
+        WHERE cent.feature_code_desc NOT IN ('Trail')
 
         UNION ALL
 
         SELECT DISTINCT
-            intersection_uid,
-            lat,
-            lng,
-            centreline_id,
-            latitude,
-            longitude
-        FROM miovision_api.intersections ter
-        LEFT JOIN prj_volume.centreline cent ON ter.int_id = cent.from_intersection_id
-        LEFT JOIN prj_volume.centreline_intersections ci ON cent.to_intersection_id = ci.intersection_id
-        WHERE feature_code_desc NOT IN ('Trail')
+            ter.intersection_uid,
+            ter.lat,
+            ter.lng,
+            cent.centreline_id,
+            ci.latitude,
+            ci.longitude
+        FROM miovision_api.intersections AS ter
+        LEFT JOIN prj_volume.centreline AS cent ON ter.int_id = cent.from_intersection_id
+        LEFT JOIN prj_volume.centreline_intersections AS ci ON cent.to_intersection_id = ci.intersection_id
+        WHERE cent.feature_code_desc NOT IN ('Trail')
     ),
 
     --determine difference in the "non-miovision node" co-ordinates - figure out if we're dealing with the north-south or east-west street in the intersection
     ll_diff AS (
         SELECT
-            intersection_uid,
-            lat,
-            lng,
-            centreline_id,
-            latitude,
-            longitude,
-            latitude - lat AS lat_diff,
-            longitude - lng AS lng_diff,
+            ci.intersection_uid,
+            ci.lat,
+            ci.lng,
+            ci.centreline_id,
+            ci.latitude,
+            ci.longitude,
+            ci.latitude - lat AS lat_diff,
+            ci.longitude - lng AS lng_diff,
             CASE
-                WHEN abs(latitude - lat) > abs(longitude - lng) THEN 'NS'
-                WHEN abs(longitude - lng) > abs(latitude - lat) THEN 'EW'
+                WHEN abs(ci.latitude - ci.lat) > abs(ci.longitude - ci.lng) THEN 'NS'
+                WHEN abs(ci.longitude - ci.lng) > abs(ci.latitude - ci.lat) THEN 'EW'
             END AS nsew
-        FROM cent_int
+        FROM cent_int AS ci
     ),
 
     --determine which segments are N, S, E, W so that we can match with miovision leg + intersection_uid
     cent_leg AS (
         SELECT
-            intersection_uid,
-            lat,
-            lng,
-            centreline_id,
-            latitude,
-            longitude,
-            nsew,
+            ld.intersection_uid,
+            ld.lat,
+            ld.lng,
+            ld.centreline_id,
+            ld.latitude,
+            ld.longitude,
+            ld.nsew,
             CASE
-                WHEN nsew = 'NS' AND latitude > lat THEN 'N'
-                WHEN nsew = 'NS' AND latitude < lat THEN 'S'
-                WHEN nsew = 'EW' AND longitude > lng THEN 'E'
-                WHEN nsew = 'EW' AND longitude < lng THEN 'W'
+                WHEN ld.nsew = 'NS' AND ld.latitude > ld.lat THEN 'N'
+                WHEN ld.nsew = 'NS' AND ld.latitude < ld.lat THEN 'S'
+                WHEN ld.nsew = 'EW' AND ld.longitude > ld.lng THEN 'E'
+                WHEN ld.nsew = 'EW' AND ld.longitude < ld.lng THEN 'W'
             END AS leg
-        FROM ll_diff
+        FROM ll_diff AS ld
     )
 
-    --yeah there's a ton of fluff in those earlier tables but we just need:
+    --yeah there's a ton of stuff we needed for calculations in those earlier tables but now we just need:
     SELECT
-        centreline_id,
-        intersection_uid,
-        leg
-    FROM cent_leg);
+        cl.centreline_id,
+        cl.intersection_uid,
+        cl.leg
+    FROM cent_leg AS cl
+);
 
 --2. It's important that the centreline to miovision file has the right combination of intersection_uids and legs. Here's how I checked that:
 WITH data_legs AS (
     SELECT DISTINCT
-        intersection_uid,
-        leg
-    FROM miovision_api.volumes_15min --this gets me all the distinct intersection_uid and leg combos in the actual dataset
+        vol.intersection_uid,
+        vol.leg
+    FROM miovision_api.volumes_15min AS vol--this gets me all the distinct intersection_uid and leg combos in the actual dataset
 )
 
 SELECT
-    centreline_id,
+    cm.centreline_id,
     cm.intersection_uid,
     cm.leg,
     dl.intersection_uid data_int,
     dl.leg data_leg
-FROM data_legs dl
-FULL JOIN miovision_api.centerline_miovision cm ON cm.intersection_uid = dl.intersection_uid AND cm.leg = dl.leg -- full join means I can see what's in each pile
+FROM data_legs AS dl
+FULL JOIN miovision_api.centerline_miovision AS cm ON cm.intersection_uid = dl.intersection_uid AND cm.leg = dl.leg -- full join means I can see what's in each pile
 ORDER BY dl.intersection_uid;
 
 -- When you run this, it will look as though two intersections, in addition to the 9 listed below, have data but no corresponding centreline_id. They are:
