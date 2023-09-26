@@ -126,7 +126,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    with TaskGroup(group_id='sql_checks') as sql_checks:
+    with TaskGroup(group_id='data_checks') as data_checks:
         check_avg_rows = SQLCheckOperatorWithReturnValue(
             task_id=f"check_rows_vdsvehicledata_div2",
             sql="select/select-row_count_lookback.sql",
@@ -140,4 +140,4 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         )
         check_avg_rows
 
-    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata >> sql_checks
+    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata >> data_checks
