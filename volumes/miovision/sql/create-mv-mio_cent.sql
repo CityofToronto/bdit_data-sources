@@ -44,8 +44,8 @@ CREATE TABLE miovision_api.centerline_miovision AS (
             ci.centreline_id,
             ci.latitude,
             ci.longitude,
-            ci.latitude - lat AS lat_diff,
-            ci.longitude - lng AS lng_diff,
+            ci.latitude - ci.lat AS lat_diff,
+            ci.longitude - ci.lng AS lng_diff,
             CASE
                 WHEN abs(ci.latitude - ci.lat) > abs(ci.longitude - ci.lng) THEN 'NS'
                 WHEN abs(ci.longitude - ci.lng) > abs(ci.latitude - ci.lat) THEN 'EW'
@@ -92,8 +92,8 @@ SELECT
     cm.centreline_id,
     cm.intersection_uid,
     cm.leg,
-    dl.intersection_uid data_int,
-    dl.leg data_leg
+    dl.intersection_uid AS data_int,
+    dl.leg AS data_leg
 FROM data_legs AS dl
 FULL JOIN miovision_api.centerline_miovision AS cm ON cm.intersection_uid = dl.intersection_uid AND cm.leg = dl.leg -- full join means I can see what's in each pile
 ORDER BY dl.intersection_uid;
