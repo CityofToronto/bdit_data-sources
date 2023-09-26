@@ -35,6 +35,8 @@ try:
 except:
     raise ImportError("Cannot import task_fail_slack_alert.")
 
+from dags.custom_operators import SQLCheckOperatorWithReturnValue
+
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
@@ -124,4 +126,18 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata
+    with TaskGroup(group_id='sql_checks') as sql_checks:
+        check_avg_rows = SQLCheckOperatorWithReturnValue(
+            task_id=f"check_rows_vdsvehicledata_div2",
+            sql="select/select-row_count_lookback.sql",
+            conn_id='vds_bot',
+            params={"table": 'vds.raw_vdsdata',
+                    "lookback": '60 days',
+                    "dt_col": 'dt',
+                    "div_id": 2,
+                    "threshold": 0.7},
+            retries=2
+        )
+        check_avg_rows
+
+    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata >> sql_checks
