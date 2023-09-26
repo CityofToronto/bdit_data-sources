@@ -139,7 +139,7 @@ with DAG(dag_name,
         summarize_v15_task
         summarize_v15_bylane_task
 
-    with TaskGroup(group_id='sql_checks') as sql_checks:
+    with TaskGroup(group_id='data_checks') as data_checks:
         divisions = [2, 8001]
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
@@ -155,4 +155,4 @@ with DAG(dag_name,
             )
             check_avg_rows
 
-    update_inventories >> check_partitions >> vdsdata >> v15data >> sql_checks #pull then summarize
+    update_inventories >> check_partitions >> vdsdata >> v15data >> data_checks #pull then summarize
