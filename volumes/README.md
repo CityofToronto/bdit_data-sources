@@ -88,8 +88,8 @@ Permanent traffic counts refer to the process of continuously monitoring and rec
 - **Format available:** Custom data extract in CSV
 - **Data management and access:** Data is managed and coordinated by ITS Central.
 - Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
-- Aggregated data is available in rescu schema.
-- More information can be found on [RESCU Readme](rescu/README.md)
+- Aggregated data is available in vds schema.
+- More information can be found on [VDS Readme](vds/readme.md)
 
 
 ### Miovision Cameras
