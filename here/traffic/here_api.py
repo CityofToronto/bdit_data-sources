@@ -64,7 +64,7 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
+                request_type = 'PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "221E0"):
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
@@ -190,7 +190,7 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
-        copy = r'''"\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER 
+        copy = r'''"\COPY here.ta_probe_view FROM STDIN WITH (FORMAT csv, HEADER 
                     TRUE);"'''
         if os.getenv('here_bot'):
             #there's a here_bot environment variable to connect to postgresql.
