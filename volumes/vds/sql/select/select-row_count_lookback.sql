@@ -2,16 +2,17 @@
 --row count to average over lookback period.
 --noqa: disable=TMP, PRS
 
-WITH lookback AS (
+WITH lookback AS ( --noqa: L045
     SELECT
-        date_trunc('day', {{ params.dt_col }}), --noqa: L039
+        date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
         COUNT(*) AS lookback_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp
         AND division_id = {{ params.div_id }}::int
-    GROUP BY date_trunc('day', {{ params.dt_col }}) --noqa: L003, L039
+    --group by day then avg excludes missing days.
+    GROUP BY _dt --noqa: L003
 )
 
 SELECT
