@@ -125,7 +125,10 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 ## Tips for Use
 - The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
-- For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.
+- For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.  
+- Data quality checks have not been implemented in this new schema. For examples of past work see:  
+      - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](../rescu/date_evaluation/README.md).
+      - @gabrielwol did work to identify periods of network wide or individual sensor outages on the RESCU network which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/3ba3af5068e96191caffab524d42ae52fe7be7b2/volumes/rescu/README.md#1--are-there-known-data-gapsincomplete-data)  
 
 ## Lookup Tables and Views
 
