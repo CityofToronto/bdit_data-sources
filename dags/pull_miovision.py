@@ -38,6 +38,6 @@ dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 3 *
 
 t1 = BashOperator(
         task_id = 'pull_miovision',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{tomorrow_ds}} ', 
+        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
         retries = 0,
         dag=dag)
