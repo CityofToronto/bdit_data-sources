@@ -1,16 +1,17 @@
 --query to be used in `check_row_count` tasks to compare
 --row count to average over lookback period.
+--noqa: disable=TMP, PRS
 
 WITH lookback AS (
     SELECT
-        date_trunc('day', {{ params.dt_col }}),
+        date_trunc('day', {{ params.dt_col }}), --noqa: L039
         COUNT(*) AS lookback_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp
         AND division_id = {{ params.div_id }}::int
-    GROUP BY date_trunc('day', {{ params.dt_col }})
+    GROUP BY date_trunc('day', {{ params.dt_col }}) --noqa: L003, L039
 )
 
 SELECT
