@@ -137,6 +137,8 @@ def pull_from_sheet(
             ON CONFLICT (location, from_street, to_street, direction, 
                         installation_date, removal_date, new_sign_number, 
                         comments)
+            /*do update required here because do nothing does not return dupes
+            on conflict. */
             DO UPDATE SET 
                 location=EXCLUDED.location,
                 from_street=EXCLUDED.from_street,
