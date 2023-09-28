@@ -46,9 +46,11 @@ Nominally only RESCU detectors according to ITSC `datadivision` table, but also 
 Approx 700K rows per day from ~200 sensors.  
 - **RESCU loop/radar detectors**
     - The City's Road Emergency Services Communication Unit (RESCU) tracks and manages traffic volume on expressways and some arterial roads using various technologies. General information can be found [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+    - Loop detectors installed on the ground of the road surface OR Radar detectors (which function the same way as loop detectors) placed on the roadside. There is some information in the outdated `vds.detector_inventory_cursed` differentiating between these two technologies but the origin has been lost to time. 
     - Gardiner, DVP, Lakeshore
     - Allen Rd & Kingston Rd appear in vdsconfig but have no data newer than 2021-11 when this pipeline begins. 
     - 20 second reporting interval
+    - Despite data quality concerns (usually due to malfunctioning detectors) RESCU data are the only source of volume counts for highways within Toronto's jurisdiction. 
 - **Blue City ("BCT")**
     - 40 detectors monitoring individual intersection movements at two intersections: Spadina / Fort York & Yonge / Church. 
     - 15 minute reporting interval
@@ -106,7 +108,7 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 ## Data Availability
 - Tables `vds.raw_vdsdata` and `vds.raw_vdsvehicledata` and related summary tables (`counts_15min`, `counts_15min_bylane`, `veh_length_15min`, `veh_speeds_15min`) have data from 2021-11-01 and beyond pulled from ITSC using the new process described here.  
 - Data for table `vds.counts_15min` from 2017-01-01 to 2021-10-31 was backfilled from `rescu.volumes_15min`, and contains nulls for certain columns: `lanes`, `num_distinct_lanes`, `num_obs`. Only highway RESCU sensors were included in this old schema. 
-- There are various data outages, although many are eliminated under this new vds pipeline.
+- There are various data outages, although many are eliminated under this new vds pipeline. Humans seeking to use this dataset should check the data availability and quality for their required dates and locations and not assume all the sensors have the same data avaibility.
 
 ## How was it aggregated & filtered? What pitfalls should I avoid?
 - Detectors/time periods with no records will not appear in summary tables.
@@ -127,7 +129,7 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
 - For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.  
 - Data quality checks have not been implemented in this new schema. For examples of past work see:  
-      - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](../rescu/date_evaluation/README.md).
+      - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).
       - @gabrielwol did work to identify periods of network wide or individual sensor outages on the RESCU network which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/3ba3af5068e96191caffab524d42ae52fe7be7b2/volumes/rescu/README.md#1--are-there-known-data-gapsincomplete-data)  
 
 ## Lookup Tables and Views
@@ -383,7 +385,7 @@ Row count: 189
 | number_of_lanes  | smallint          | 3                     |               |
 | latitude         | numeric           | 43.635944             |               |
 | longitude        | numeric           | -79.401186            |               |
-| det_group        | text              | LAKE                  |               |
+| det_group        | text              | LAKE                  | "ALLEN" (Allen road), "FGG/LAKE" (Gardiner Expressway and Lakeshore ramps) , "FGG" (Gardiner Expressway), "DVP" (Don Valley Parkway), "LAKE" (Lakeshore)
 | road_class       | text              | Major Arterial        |               |
 | primary_road     | text              | Lake Shore Blvd W     |               |
 | direction        | character varying | E                     |               |
@@ -398,7 +400,7 @@ Row count: 189
 | data_range_low   | integer           | 20000                 |               |
 | data_range_high  | integer           | 30000                 |               |
 | historical_count | integer           | 9700                  |               |
-| arterycode       | integer           | 826                   |               |
+| arterycode       | integer           | 826                   | Arterycode can be used used to join the data with `traffic.artery_data` 
 
 # Data Ops
 
@@ -465,7 +467,8 @@ and run inserts to add those records to [`conuts_15min`](sql/insert/insert_count
 you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).  
 
 **No/low data system wide?**  
-- The pipeline is running succesfully but producing low/no volumes of data? First double check Transnomis Database and ITS Central, then contact Simon Foo (Transnomis) and Steven Bon (City of Toronto).  
+- The pipeline is running succesfully but producing low/no volumes of data? First double check Transnomis Database and ITS Central, then contact Simon Foo (ITS Central/Transnomis) and Steven Bon (City of Toronto).  
 
 **No data for a specific sensor?**  
+- Traffic Plant / Installation and Maintenance (TPIM) is responsible for Hardware. 
 - There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management.   
