@@ -26,6 +26,7 @@ ssz2019 = dag_config['ssz2019']
 ssz2020 = dag_config['ssz2020']
 ssz2021 = dag_config['ssz2021']
 ssz2022 = dag_config['ssz2022']
+ssz2023 = dag_config['ssz2023']
 
 """The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
 The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
@@ -33,27 +34,33 @@ Details of the spreadsheets are ID and range whereas details of the table are na
 The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
 """
 sheets = {
-           2018: {'spreadsheet_id' : ssz2018, 
-                  'range_name' : 'Master List!A4:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2018_raw'},
-           2019: {'spreadsheet_id' : ssz2019, 
-                  'range_name' : '2019 Master List!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2019_raw'},
-           2020: {'spreadsheet_id' : ssz2020, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2020_raw'},
-           2021: {'spreadsheet_id' : ssz2021, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2021_raw'},
-           2022: {'spreadsheet_id' : ssz2022,
-                  'range_name' : 'Master Sheet!A3:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2022_raw'}
-         }
+    2018: {'spreadsheet_id' : ssz2018, 
+            'range_name' : 'Master List!A4:AC180',
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2018_raw'},
+    2019: {'spreadsheet_id' : ssz2019, 
+            'range_name' : '2019 Master List!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2019_raw'},
+    2020: {'spreadsheet_id' : ssz2020, 
+            'range_name' : 'Master Sheet!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2020_raw'},
+    2021: {'spreadsheet_id' : ssz2021, 
+            'range_name' : 'Master Sheet!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2021_raw'},
+    2022: {'spreadsheet_id' : ssz2022,
+            'range_name' : 'Master Sheet!A3:AC180',
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2022_raw'},
+    2023: {
+        'spreadsheet_id' : ssz2023,
+        'range_name' : 'Master Sheet!A3:AC180',
+        'schema_name': 'vz_safety_programs_staging',
+        'table_name' : 'school_safety_zone_2023_raw'
+    },
+}
 
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
@@ -148,4 +155,11 @@ task5 = PythonOperator(
     python_callable=pull_from_sheet,
     dag=dag,
     op_args=[con, service, 2022, sheets[2022]]
+    )
+
+task6 = PythonOperator(
+    task_id='2023',
+    python_callable=pull_from_sheet,
+    dag=dag,
+    op_args=[con, service, 2023, sheets[2023]]
     )
