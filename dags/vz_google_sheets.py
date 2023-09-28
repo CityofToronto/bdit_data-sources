@@ -1,5 +1,9 @@
-"""
-Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
+r"""### The School Safety Zones DAG
+
+This DAG runs daily to pull School Safety Zones (SSZ) from multiple google
+sheets. Each sheet contains data of a single year.
+
+> This is part of VZ DAGs.
 """
 import pendulum
 from datetime import timedelta
@@ -120,46 +124,17 @@ DEFAULT_ARGS = {
     )
 }
 
-dag = DAG(dag_id = dag_name, default_args = DEFAULT_ARGS, schedule_interval = '@daily', catchup = False)
-
-task1 = PythonOperator(
-    task_id='2018',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2018, sheets[2018]]
-    )
- 
-task2 = PythonOperator(
-    task_id='2019',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2019, sheets[2019]]
-    )
-     
-task3 = PythonOperator(
-    task_id='2020',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2020, sheets[2020]]
-    )
-    
-task4 = PythonOperator(
-    task_id='2021',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2021, sheets[2021]]
-    )
-
-task5 = PythonOperator(
-    task_id='2022',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2022, sheets[2022]]
-    )
-
-task6 = PythonOperator(
-    task_id='2023',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2023, sheets[2023]]
-    )
+with DAG(
+    dag_id=dag_name,
+    default_args=DEFAULT_ARGS,
+    schedule_interval="@daily",
+    tags=["Vision Zero"],
+    doc_md=__doc__,
+    catchup=False,
+) as dag:
+    for year, sheet in sheets.items():
+        task = PythonOperator(
+            task_id=str(year),
+            python_callable=pull_from_sheet,
+            op_args=[con, service, year, sheet]
+        )
