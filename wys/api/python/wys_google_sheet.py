@@ -134,10 +134,16 @@ def pull_from_sheet(
                     FROM new_data
                     GROUP BY new_sign_number, installation_date
                     HAVING COUNT(*)> 1) dupes
-            ON CONFLICT ( location, from_street, to_street, direction, 
+            ON CONFLICT (location, from_street, to_street, direction, 
                         installation_date, removal_date, new_sign_number, 
                         comments)
-            DO NOTHING
+            DO UPDATE SET 
+                location=EXCLUDED.location,
+                from_street=EXCLUDED.from_street,
+                to_street=EXCLUDED.to_street
+                direction=EXCLUDED.direction,
+                removal_date=EXCLUDED.removal_date,
+                comments=EXCLUDED.comments
             RETURNING new_sign_number, installation_date
         )
         INSERT INTO {}.{} AS existing (ward_no, location, from_street, to_street, 
