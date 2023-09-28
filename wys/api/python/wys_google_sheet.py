@@ -142,7 +142,7 @@ def pull_from_sheet(
             DO UPDATE SET 
                 location=EXCLUDED.location,
                 from_street=EXCLUDED.from_street,
-                to_street=EXCLUDED.to_street
+                to_street=EXCLUDED.to_street,
                 direction=EXCLUDED.direction,
                 removal_date=EXCLUDED.removal_date,
                 comments=EXCLUDED.comments
