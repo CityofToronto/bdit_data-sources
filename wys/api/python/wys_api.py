@@ -467,9 +467,15 @@ def get_schedules(conn, api_key):
                          headers=headers)
     schedule_list = response.json()
     
-    rows = [(schedule['name'], api_id) for schedule in schedule_list if schedule['assigned_on_locations'] 
-            for api_id in schedule['assigned_on_locations'] if api_id]
-       
+    try:
+        rows = [(schedule['name'], api_id)
+                    for schedule in schedule_list if schedule['assigned_on_locations']
+                        for api_id in schedule['assigned_on_locations'] if api_id]
+    except TypeError as e:
+        logger.critical('Failed to pull sign schedules.')
+        logger.critical('Return value: ', schedule_list)
+        raise WYS_APIException(e)
+
     with conn.cursor() as cur:
         logger.debug('Inserting '+str(len(rows))+' rows of schedules')
         schedule_sql = '''
