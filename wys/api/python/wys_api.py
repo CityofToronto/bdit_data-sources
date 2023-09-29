@@ -20,7 +20,7 @@ from psycopg2 import sql
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
-
+from requests.exceptions import RequestException
 
 class WYS_APIException(Exception):
     """Base class for exceptions."""
@@ -463,16 +463,22 @@ def update_locations(conn, loc_table):
 
 def get_schedules(conn, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+signs_endpoint+schedule_endpoint,
-                         headers=headers)
-    schedule_list = response.json()
     
+    try: 
+        response=session.get(url+signs_endpoint+schedule_endpoint,
+                         headers=headers)
+        response.raise_for_status()
+        schedule_list = response.json()
+    except RequestException as exc: 
+        logger.critical('Error querying API, %s', exc) 
+        sys.exit(2)
+
     try:
         rows = [(schedule['name'], api_id)
                     for schedule in schedule_list if schedule['assigned_on_locations']
                         for api_id in schedule['assigned_on_locations'] if api_id]
     except TypeError as e:
-        logger.critical('Failed to pull sign schedules.')
+        logger.critical('Error converting schedules response to values list.')
         logger.critical('Return value: ', schedule_list)
         raise WYS_APIException(e)
 
