@@ -470,7 +470,8 @@ def get_schedules(conn, api_key):
         response.raise_for_status()
         schedule_list = response.json()
     except RequestException as exc: 
-        logger.critical('Error querying API, %s', exc) 
+        logger.critical('Error querying API, %s', exc)
+        logger.critical('Response: %s', exc.response)                        
         sys.exit(2)
 
     try:
@@ -479,7 +480,7 @@ def get_schedules(conn, api_key):
                         for api_id in schedule['assigned_on_locations'] if api_id]
     except TypeError as e:
         logger.critical('Error converting schedules response to values list.')
-        logger.critical('Return value: ', schedule_list)
+        logger.critical('Return value: %s', schedule_list)
         raise WYS_APIException(e)
 
     with conn.cursor() as cur:
