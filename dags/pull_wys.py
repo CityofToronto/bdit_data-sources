@@ -80,28 +80,26 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 * * *')
+with DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 * * *') as dag:
 # Run at 3 PM local time every day
 
 with wys_postgres.get_conn() as con:
     task_pull_wys = PythonOperator(
             task_id = 'pull_wys',
             python_callable = api_main, 
-            dag = dag,
             op_kwargs = {'conn':con, 
                         'start_date':'{{ ds }}', 
                         'end_date':'{{ ds }}', 
                         'api_key':api_key}
                         )
     
-    @task
+    @task()
     def task_get_schedules():
-        get_schedules(wys_postgres, api_key)
+        get_schedules(wys_postgres, connection)
 
     task_read_google_sheets = PythonOperator(
             task_id = 'read_google_sheets',
             python_callable = read_masterlist,
-            dag = dag,
             op_args = [con, service],
             on_failure_callback = partial(
                 task_fail_slack_alert, extra_msg=custom_fail_slack_alert
