@@ -461,7 +461,8 @@ def update_locations(conn, loc_table):
         """
         cur.execute(update_locations_sql)
 
-def get_schedules(conn, api_key):
+def get_schedules(conn, api_connection):
+    api_key = api_connection.password
     headers={'Content-Type':'application/json','x-api-key':api_key}
     
     try: 
@@ -472,7 +473,6 @@ def get_schedules(conn, api_key):
     except RequestException as exc: 
         logger.critical('Error querying API, %s', exc)
         logger.critical('Response: %s', exc.response)                        
-        sys.exit(2)
 
     try:
         rows = [(schedule['name'], api_id)
@@ -483,7 +483,7 @@ def get_schedules(conn, api_key):
         logger.critical('Return value: %s', schedule_list)
         raise WYS_APIException(e)
 
-    with conn.cursor() as cur:
+    with conn.get_conn() as con, con.cursor() as cur:
         logger.debug('Inserting '+str(len(rows))+' rows of schedules')
         schedule_sql = '''
             INSERT INTO wys.sign_schedules_list (schedule_name, api_id) VALUES %s
