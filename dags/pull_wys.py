@@ -13,6 +13,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
+from airflow.decorators import task
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -21,7 +22,7 @@ from dateutil.relativedelta import relativedelta
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from wys.api.python.wys_api import api_main
+    from wys.api.python.wys_api import api_main, get_schedules
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
 except:
@@ -83,7 +84,7 @@ dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 
 # Run at 3 PM local time every day
 
 with wys_postgres.get_conn() as con:
-    t1 = PythonOperator(
+    task_pull_wys = PythonOperator(
             task_id = 'pull_wys',
             python_callable = api_main, 
             dag = dag,
@@ -93,7 +94,11 @@ with wys_postgres.get_conn() as con:
                         'api_key':api_key}
                         )
     
-    t2 = PythonOperator(
+    @task
+    def task_get_schedules():
+        get_schedules(wys_postgres, api_key)
+
+    task_read_google_sheets = PythonOperator(
             task_id = 'read_google_sheets',
             python_callable = read_masterlist,
             dag = dag,
@@ -102,3 +107,7 @@ with wys_postgres.get_conn() as con:
                 task_fail_slack_alert, extra_msg=custom_fail_slack_alert
             )
     )
+
+    task_pull_wys
+    task_get_schedules()
+    task_read_google_sheets

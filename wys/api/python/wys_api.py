@@ -375,19 +375,8 @@ def api_main(start_date=default_start,
         sys.exit(1)
 
     conn.commit()
-
-    try:
-        get_schedules(conn, api_key)
-        logger.info('Updated wys.sign_schedules_list')
-    except psycopg2.Error as exc:
-        logger.critical('Error updating schedules')
-        logger.critical(exc)
-        conn.close()
-        sys.exit(1)
-
-    conn.commit()
-
     conn.close()
+
     logger.info('Done')
 
 def update_locations(conn, loc_table):
