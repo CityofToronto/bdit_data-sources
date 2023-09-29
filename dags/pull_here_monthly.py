@@ -14,11 +14,14 @@ from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperato
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+except:
+    raise ImportError("Cannot import slack alert functions")
 
-dag_name = 'pull_here'
+dag_name = 'pull_here_path_monthly'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
@@ -48,7 +51,7 @@ dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = ' 
 
 pull_data = BashOperator(
         task_id = 'pull_here',
-        bash_command = '{{ macros.datetime.date(execution_date + macros.dateutil.relativedelta.relativedelta(months=1)) }}'
+        bash_command = '{{ macros.datetime.date(execution_date + macros.dateutil.relativedelta.relativedelta(months=1)) }}',
         #bash_command = '/data/airflow/airflow_venv/bin/python3 /data/airflow/data_scripts/here/traffic/here_api.py -d /data/airflow/data_scripts/here/traffic/config.cfg -s {{ ds }} -e {{ macros.datetime.date(execution_date + macros.dateutil.relativedelta.relativedelta(months=1)) }} ', 
         dag=dag,
         )
