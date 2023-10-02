@@ -112,8 +112,7 @@ def pull_wys_dag():
         cred = wys_api_hook.get_credentials()
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
-        with wys_postgres.get_conn() as con:
-            read_masterlist(con, service)
+        read_masterlist(wys_postgres.get_conn(), service)
 
     pull_wys()
     pull_schedules()
