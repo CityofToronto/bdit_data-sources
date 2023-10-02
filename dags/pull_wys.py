@@ -74,7 +74,7 @@ default_args = {'owner': ','.join(names),
 def pull_wys_dag():
 
     @task
-    def pull_wys(**kwargs):
+    def pull_wys(ds=None):
         #to connect to pgadmin bot
         wys_postgres = PostgresHook("wys_bot")
         
@@ -83,8 +83,8 @@ def pull_wys_dag():
         api_key = api_conn.password
 
         with wys_postgres.get_conn() as conn:
-            api_main(start_date = kwargs['ds'],
-                     end_date = kwargs['ds'],
+            api_main(start_date = ds,
+                     end_date = ds,
                      conn = conn,
                      api_key=api_key)
 
