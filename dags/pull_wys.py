@@ -17,7 +17,6 @@ from airflow.decorators import task
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
-from dateutil.relativedelta import relativedelta
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -83,29 +82,31 @@ default_args = {'owner': ','.join(names),
 with DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 15 * * *') as dag:
 # Run at 3 PM local time every day
 
-with wys_postgres.get_conn() as con:
-    task_pull_wys = PythonOperator(
-            task_id = 'pull_wys',
-            python_callable = api_main, 
-            op_kwargs = {'conn':con, 
-                        'start_date':'{{ ds }}', 
-                        'end_date':'{{ ds }}', 
-                        'api_key':api_key}
-                        )
-    
-    @task()
-    def task_get_schedules():
-        get_schedules(wys_postgres, connection)
+    with wys_postgres.get_conn() as con:
+        task_pull_wys = PythonOperator(
+                task_id = 'pull_wys',
+                python_callable = api_main, 
+                op_kwargs = {'conn':con, 
+                            'start_date':'{{ ds }}', 
+                            'end_date':'{{ ds }}', 
+                            'api_key':api_key}
+                            )
+        
+        task_read_google_sheets = PythonOperator(
+                task_id = 'read_google_sheets',
+                python_callable = read_masterlist,
+                op_args = [con, service],
+                on_failure_callback = partial(
+                    task_fail_slack_alert, extra_msg=custom_fail_slack_alert
+                )
+        )
 
-    task_read_google_sheets = PythonOperator(
-            task_id = 'read_google_sheets',
-            python_callable = read_masterlist,
-            op_args = [con, service],
-            on_failure_callback = partial(
-                task_fail_slack_alert, extra_msg=custom_fail_slack_alert
-            )
-    )
+    @task()
+    def pull_schedules():
+        api_key = connection.password
+        with wys_postgres.get_conn() as conn:
+            get_schedules(conn, api_key)
 
     task_pull_wys
-    task_get_schedules()
     task_read_google_sheets
+    pull_schedules()
