@@ -375,7 +375,6 @@ def api_main(start_date=default_start,
         sys.exit(1)
 
     conn.commit()
-    conn.close()
 
     logger.info('Done')
 
