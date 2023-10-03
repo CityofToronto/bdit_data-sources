@@ -19,12 +19,12 @@ CREATE TABLE miovision_api.centreline_miovision AS (
         LEFT JOIN gis.centreline AS cent ON ter.int_id = cent.tnode
         LEFT JOIN gis.centreline_intersection AS ci ON cent.fnode = ci.int_id
         WHERE cent.fcode_desc NOT IN (
-            'Trail', 
-            'Geostatistical line', 
-            'Other', 
-            'River', 
-            'Major Railway', 
-            'Hydro Line', 
+            'Trail',
+            'Geostatistical line',
+            'Other',
+            'River',
+            'Major Railway',
+            'Hydro Line',
             'Walkway',
             'Major Shoreline',
             'Creek/Tributary',
@@ -46,12 +46,12 @@ CREATE TABLE miovision_api.centreline_miovision AS (
         LEFT JOIN gis.centreline AS cent ON ter.int_id = cent.fnode
         LEFT JOIN gis.centreline_intersection AS ci ON cent.tnode = ci.int_id
         WHERE cent.fcode_desc NOT IN (
-            'Trail', 
-            'Geostatistical line', 
-            'Other', 
-            'River', 
-            'Major Railway', 
-            'Hydro Line', 
+            'Trail',
+            'Geostatistical line',
+            'Other',
+            'River',
+            'Major Railway',
+            'Hydro Line',
             'Walkway',
             'Major Shoreline',
             'Creek/Tributary',
