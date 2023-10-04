@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS wys.mobile_summary ( -- noqa: PRS
     direction text COLLATE pg_catalog."default",
     installation_date date,
     removal_date date,
+    days_with_data integer,
+    max_date date,
     schedule text COLLATE pg_catalog."default",
     min_speed integer,
     pct_05 integer,
