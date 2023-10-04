@@ -2,7 +2,7 @@
 
 -- DROP TABLE wys.speed_counts_agg;
 
-CREATE TABLE wys.speed_counts_agg
+CREATE TABLE wys.speed_counts_agg_5kph
 (
     speed_counts_agg_id bigserial,
     api_id integer,
@@ -15,7 +15,7 @@ CREATE TABLE wys.speed_counts_agg
 WITH (
   OIDS=FALSE
 );
-ALTER TABLE wys.speed_counts_agg OWNER TO wys_admins;
-GRANT ALL ON TABLE wys.speed_counts_agg TO rds_superuser;
-GRANT SELECT ON TABLE wys.speed_counts_agg TO bdit_humans WITH GRANT OPTION;
-GRANT SELECT, UPDATE, INSERT ON TABLE wys.speed_counts_agg TO wys_bot;
+ALTER TABLE wys.speed_counts_agg_5kph OWNER TO wys_admins;
+GRANT ALL ON TABLE wys.speed_counts_agg_5kph TO rds_superuser;
+GRANT SELECT ON TABLE wys.speed_counts_agg_5kph TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, UPDATE, INSERT ON TABLE wys.speed_counts_agg_5kph TO wys_bot;
