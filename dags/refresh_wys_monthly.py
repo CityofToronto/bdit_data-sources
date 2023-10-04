@@ -31,7 +31,8 @@ default_args = {'owner': ','.join(names),
                  'email_on_success': False,
                  'retries': 0,
                  'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_slack_alert
+                 'on_failure_callback': task_fail_slack_alert,
+                 'task_concurrency': 1
                 }
 
 def last_month(ds):
@@ -42,6 +43,8 @@ def last_month(ds):
 
 with DAG(dag_id = dag_name,
          default_args=default_args,
+         concurrency=5,
+         max_active_runs=1,
          user_defined_macros={
             'last_month' : last_month
           },
