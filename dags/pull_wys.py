@@ -69,6 +69,8 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
+     catchup=False,
+     max_active_runs=5,
      schedule_interval='0 15 * * *' # Run at 3 PM local time every day
      )
 def pull_wys_dag():
