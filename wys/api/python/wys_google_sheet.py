@@ -175,13 +175,20 @@ def pull_from_sheet(
             to_street=EXCLUDED.to_street,
             work_order=EXCLUDED.work_order
         -- Prevent unnecessary update if data are unchanged
-        WHERE existing.removal_date!=EXCLUDED.removal_date 
-            OR existing.comments!=EXCLUDED.comments
-            OR existing.direction!=EXCLUDED.direction
-            OR existing.location!=EXCLUDED.location
-            OR existing.from_street!=EXCLUDED.from_street
-            OR existing.to_street!=EXCLUDED.to_street
-            OR existing.work_order!=EXCLUDED.work_order
+        WHERE  (existing.removal_date IS NULL OR 
+            existing.removal_date!=EXCLUDED.removal_date )
+            OR (existing.comments IS NULL OR 
+                existing.comments!=EXCLUDED.comments)
+            OR (existing.direction IS NULL OR 
+                existing.direction!=EXCLUDED.direction)
+            OR (existing.location IS NULL OR 
+                existing.location!=EXCLUDED.location)
+            OR (existing.from_street IS NULL OR 
+                existing.from_street!=EXCLUDED.from_street)
+            OR (existing.to_street IS NULL OR 
+                existing.to_street!=EXCLUDED.to_street)
+            OR (existing.work_order IS NULL OR 
+                existing.work_order!=EXCLUDED.work_order)
         ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
     
     LOGGER.debug(rows)
