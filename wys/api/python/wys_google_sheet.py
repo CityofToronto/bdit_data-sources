@@ -201,6 +201,7 @@ def pull_from_sheet(
     except Error as err2:
         LOGGER.error('There was an error inserting into %s', table_name)
         LOGGER.error(err2)
+        LOGGER.error(rows)
         return False
     
     LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
