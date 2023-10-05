@@ -135,7 +135,7 @@ def pull_from_sheet(
             upsert*/
             INSERT INTO wys.mobile_sign_installations_dupes
             SELECT ward_no::INT, location, from_street, to_street, direction, 
-            installation_date, removal_date, new_sign_number, comments, work_order
+            installation_date, removal_date::date, new_sign_number, comments, work_order
             FROM new_data
             NATURAL JOIN (SELECT new_sign_number, installation_date
                     FROM new_data
