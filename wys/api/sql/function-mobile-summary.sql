@@ -48,7 +48,7 @@ SELECT
     --if sign is removed after EOM, we are excluding that data, so we should not show 
     --removal date in the "future" with respect to Open Data month
     CASE
-        WHEN loc.removal_date >= _mon + interval '1 month' THEN null
+        WHEN loc.removal_date >= date_trunc('month', now()) THEN null
         ELSE loc.removal_date
     END AS removal_date,
     COUNT(DISTINCT raw.datetime_bin::date) AS days_with_data,
