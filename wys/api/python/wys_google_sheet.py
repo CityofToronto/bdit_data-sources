@@ -41,8 +41,9 @@ def read_masterlist(con, service, **kwargs):
     if empty_wards == []:
         LOGGER.info('Completed')
     else:
-        task_instance = kwargs['task_instance']
-        task_instance.xcom_push('empty_wards', empty_wards)
+        task_instance = kwargs.get('task_instance', None)
+        if task_instance:
+            task_instance.xcom_push('empty_wards', empty_wards)
         raise AirflowFailException(
             "Failed to pull/load the data of the following wards: " + 
             ", ".join(map(str, empty_wards))
