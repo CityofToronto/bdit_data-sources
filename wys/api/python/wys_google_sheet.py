@@ -160,7 +160,7 @@ def pull_from_sheet(
                            direction, installation_date, removal_date, 
                            new_sign_number, comments, confirmed, work_order) 
         SELECT new_data.ward_no::INT, location, from_street, to_street, 
-                direction, installation_date, removal_date, 
+                direction, installation_date, removal_date::DATE, 
                 new_sign_number, comments, confirmed, work_order
         FROM new_data
         LEFT JOIN dupes USING (new_sign_number, installation_date)
