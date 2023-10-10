@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS wys.mobile_sign_installations_dupes (
     new_sign_number text,
     comments text,
     work_order integer,
-    CONSTRAINT mobile_sign_installations_dup_location_from_street_to_stree_key UNIQUE (location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments)
+    CONSTRAINT mobile_sign_installations_dup_location_from_street_to_stree_key UNIQUE NULLS NOT DISTINCT (location, from_street, to_street, direction, installation_date, removal_date, new_sign_number, comments)
 );
 
 ALTER TABLE IF EXISTS wys.mobile_sign_installations_dupes OWNER TO wys_admins;
