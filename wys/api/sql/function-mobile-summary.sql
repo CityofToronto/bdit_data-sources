@@ -14,8 +14,6 @@ COST 100
 VOLATILE SECURITY DEFINER
 AS $BODY$
 
-SELECT wys.clear_mobile_summary_for_month (_mon);
-
 --this CTE results in a much faster execution than moving the same filter below 
 WITH active_mobile_signs AS (
     --identify all signs active during the month. 
