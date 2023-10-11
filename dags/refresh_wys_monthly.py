@@ -10,7 +10,6 @@ from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable 
-from airflow.utils.task_group import TaskGroup
 from dateutil.relativedelta import relativedelta
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -69,22 +68,20 @@ with DAG(dag_id = dag_name,
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
-    with TaskGroup(group_id='mobile_summary') as mobile_summary_TG:
-        clear_mobile_summary = PostgresOperator(
-                                #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
-                                sql="SELECT wys.clear_mobile_summary_for_month('{{ last_month(ds) }}')",
-                                task_id='wys_mobile_summary_clear',
-                                postgres_conn_id='wys_bot',
-                                autocommit=True,
-                                retries = 0)
-        wys_mobile_summary = PostgresOperator(
-                                #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
-                                sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
-                                task_id='wys_mobile_summary',
-                                postgres_conn_id='wys_bot',
-                                autocommit=True,
-                                retries = 0)
-        clear_mobile_summary >> wys_mobile_summary
+    clear_mobile_summary = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
+                            sql="SELECT wys.clear_mobile_summary_for_month('{{ last_month(ds) }}')",
+                            task_id='wys_mobile_summary_clear',
+                            postgres_conn_id='wys_bot',
+                            autocommit=True,
+                            retries = 0)
+    wys_mobile_summary = PostgresOperator(
+                            #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
+                            sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
+                            task_id='wys_mobile_summary',
+                            postgres_conn_id='wys_bot',
+                            autocommit=True,
+                            retries = 0)
     wys_stat_summary = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-stationary-sign-summary.sql
                             sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')", 
@@ -96,4 +93,4 @@ with DAG(dag_id = dag_name,
     # Stationary signs
     wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
     # Mobile signs
-    wys_view_mobile_api_id >> mobile_summary_TG
+    wys_view_mobile_api_id >> clear_mobile_summary >> wys_mobile_summary
