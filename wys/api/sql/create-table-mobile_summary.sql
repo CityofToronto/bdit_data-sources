@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS wys.mobile_summary ( -- noqa: PRS
     spd_95 integer,
     spd_100_and_above integer,
     volume integer,
-    CONSTRAINT mobile_summary_ward_no_location_from_street_to_street_direc_key UNIQUE NULLS NOT DISTINCT (ward_no, location, from_street, to_street, direction, installation_date, removal_date)
+    CONSTRAINT mobile_summary_ward_no_location_from_street_to_street_direc_key UNIQUE NULLS NOT DISTINCT (ward_no, location, from_street, to_street, direction, installation_date)
 )
 WITH (
     OIDS = FALSE
