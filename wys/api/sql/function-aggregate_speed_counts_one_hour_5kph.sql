@@ -2,11 +2,11 @@
 
 -- DROP FUNCTION wys.aggregate_speed_counts_one_hour();
 
-CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph( _start_date date, _end_date date)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE SECURITY DEFINER 
+CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph(_start_date date, _end_date date)
+RETURNS void
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE SECURITY DEFINER 
 AS $BODY$
 
 BEGIN
@@ -61,10 +61,10 @@ GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) T
 REVOKE EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) FROM public;
 
 CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph(_mon date)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE SECURITY DEFINER 
+RETURNS void
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE SECURITY DEFINER 
 AS $BODY$
 
 BEGIN
