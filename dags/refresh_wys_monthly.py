@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable 
+from airflow.utils.task_group import TaskGroup
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 
@@ -54,8 +55,7 @@ with DAG(dag_id = dag_name,
                             task_id='wys_view_stat_signs',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     wys_view_mobile_api_id = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-refresh_mat_view_mobile_api_id.sql
                             #sql in bdit_data-sources/wys/api/sql/create-view-mobile_api_id.sql
@@ -63,34 +63,39 @@ with DAG(dag_id = dag_name,
                             task_id='wys_view_mobile_api_id',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     od_wys_view = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/open_data/mat-view-stationary-locations.sql
                             sql='SELECT wys.refresh_od_mat_view()',
                             task_id='od_wys_view',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
-    wys_mobile_summary = PostgresOperator(
-                            #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
-                            sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
-                            task_id='wys_mobile_summary',
-                            postgres_conn_id='wys_bot',
-                            autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
+    with TaskGroup(group_id='mobile_summary') as mobile_summary_TG:
+        clear_mobile_summary = PostgresOperator(
+                                #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
+                                sql="SELECT wys.clear_mobile_summary_for_month('{{ last_month(ds) }}')",
+                                task_id='wys_mobile_summary_clear',
+                                postgres_conn_id='wys_bot',
+                                autocommit=True,
+                                retries = 0)
+        wys_mobile_summary = PostgresOperator(
+                                #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
+                                sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
+                                task_id='wys_mobile_summary',
+                                postgres_conn_id='wys_bot',
+                                autocommit=True,
+                                retries = 0)
+        clear_mobile_summary >> wys_mobile_summary
     wys_stat_summary = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-stationary-sign-summary.sql
                             sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')", 
                             task_id='wys_stat_summary',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
 
     # Stationary signs
     wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
     # Mobile signs
-    wys_view_mobile_api_id >> wys_mobile_summary
+    wys_view_mobile_api_id >> mobile_summary_TG
