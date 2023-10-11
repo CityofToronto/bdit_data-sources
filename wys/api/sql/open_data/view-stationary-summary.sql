@@ -48,7 +48,7 @@ SELECT
     agg.spd_100_and_above,
     agg.volume
 FROM open_data.wys_stationary_locations AS od
-JOIN wys.stationary_signs loc USING (sign_id)
+JOIN wys.stationary_signs AS loc USING (sign_id)
 JOIN wys.stationary_summary AS agg ON
     loc.sign_id = agg.sign_id 
     AND agg.mon >= od.start_date 

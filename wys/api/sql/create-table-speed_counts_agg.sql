@@ -13,7 +13,7 @@ CREATE TABLE wys.speed_counts_agg_5kph
     CONSTRAINT speed_counts_agg_api_id_datetime_bin_speed_id_key UNIQUE (api_id, datetime_bin, speed_id)
 )
 WITH (
-  OIDS=FALSE
+    OIDS=FALSE
 );
 ALTER TABLE wys.speed_counts_agg_5kph OWNER TO wys_admins;
 GRANT ALL ON TABLE wys.speed_counts_agg_5kph TO rds_superuser;
