@@ -41,7 +41,7 @@ Miovision currently provides volume counts gathered by cameras installed at spec
 
 The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api` for data automatically collected since January 2019. Data for the King Street Pilot were collected in batches from up to 21 intersections for a few days per month between October 2017 and August 2018. These can be found in the `miovision_csv` schema, which has a slightly different structure than the API data (see [7. Processing Data from CSV Dumps (NO LONGER IN USE) in `Archive.md`](Archive.md#7-processing-data-from-csv-dumps-no-longer-in-use))
 
-You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/mio_intersections.geojson)
 
 ### Folder Structure
 
