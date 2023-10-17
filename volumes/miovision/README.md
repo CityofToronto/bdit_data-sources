@@ -116,6 +116,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
+7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden |
 8|WorkVan|A van used for commercial purposes|
 9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
@@ -140,8 +141,8 @@ Here is a description of the movement_uids and corresponding types:
 2|Left|Vehicle turned left|
 3|Right|Vehicle turned right|
 4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
-5|Clockwise|Pedestrian proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
-6|Counter Clockwise|Pedestrian proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
+5|Clockwise|Pedestrian (or bike in crosswalk) proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
+6|Counter Clockwise|Pedestrian (or bike in crosswalk) proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
 7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
 8|Bicycle Exit|Used to determine where bicycles exited the intersection|
 
