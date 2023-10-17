@@ -1,16 +1,9 @@
-import sys
+import datetime
 import json
 from requests import Session
-from requests import exceptions
-import datetime
 import dateutil.parser
-import psycopg2
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
 import configparser
-from time import sleep
-from collections import namedtuple
 import pandas as pd
 
 def logger():
@@ -97,7 +90,7 @@ class MiovPuller:
         if response.status_code == 200:
             return response
         elif response.status_code == 401:
-            raise Exception('Error' + str(response.status_code)) 
+            raise Exception('Error' + str(response.status_code))
         
     def process_alert(self, row):
         """Process one row of Alert API output."""
@@ -113,39 +106,40 @@ class MiovPuller:
 #revisit this function
 #def pull_data(conn, start_time, end_time, path, pull, key, dupes):
 
-hours = ['2022-05-23T{}:'.format(str(h).zfill(2)) for h in range(24)]
-five_min = [[h + str(m).zfill(2) for m in range(0, 60, 5)] for h in hours]
-flat_list = [item for sublist in five_min for item in sublist]
+step_size = 1 #in minutes
+dt = '2023-10-15'
+start = datetime.datetime.strptime(dt, "%Y-%m-%d")
+flat_list = [start + datetime.timedelta(minutes=x) for x in range(0, 24 * 60, step_size)]
 
-final = pd.DataFrame()
+dfs = []
 
 for t in flat_list: 
     miovpull = MiovPuller(t, key)
     test = miovpull.get_response()
     response = miovpull.process_response(test)
-    final = final.append(pd.DataFrame(response), ignore_index=True)
-    #print(pd.unique(response))
-    #sleep(1)
-
-final.drop_duplicates(inplace = True, ignore_index = True)
+    df = pd.DataFrame(response).drop_duplicates()
+    dfs.append(df)
+    
+final = pd.concat(dfs, ignore_index=True)
 final.rename(columns={0: "time", 1: "intersection_id", 2: "alert"}, inplace = True)
+final['time'] = pd.to_datetime(final['time'])
 
-import copy
-temp = copy.copy(final)
+final = final.sort_values(by=['intersection_id', 'alert', 'time'])
+final.reset_index(drop = True, inplace = True)
+final.drop_duplicates(inplace = True, ignore_index = True)
 
-temp['time'] = pd.to_datetime(temp['time'])
+#group by alert and time
+final['shifted'] = final.groupby(by = ['intersection_id', 'alert'])['time'].shift(1)
+final['time_lag'] = final['time'] - final['shifted']
+final['start_time'] = final['time']
 
-temp = temp.sort_values(by=['intersection_id', 'alert', 'time'])
-temp.reset_index(drop = True, inplace = True)
-
-temp['shifted'] = temp.groupby(by = ['intersection_id', 'alert'])['time'].shift(1)
-temp['time_lag'] = temp['time'] - temp['shifted']
-temp['start_time'] = temp['time']
-
-for index, row in temp.iterrows():
-    if (row['time_lag'] == pd.Timedelta('0 days 00:05:00')):
-        temp.at[index, 'start_time'] = temp.at[index-1, 'start_time']
+#iterate through and check if consecutive
+for index, row in final.iterrows():
+    if (row['time_lag'] == pd.Timedelta(f"{step_size} minutes")): #lag = step size
+        final.at[index, 'start_time'] = final.at[index-1, 'start_time'] #assign previous start time
 
 #find start and end time of group 
-temp.groupby(by = ['start_time', 'intersection_id', 'alert']).agg({'time': ['min', 'max']})
-  
+summary = final.groupby(by = ['start_time', 'intersection_id', 'alert']).agg({'time': ['max']})
+summary = summary.reset_index()
+
+print(summary)
