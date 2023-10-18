@@ -51,7 +51,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     schedule_interval='30 14 * * *' ,
+     schedule_interval='30 10 * * *' ,
      catchup=False,
      tags=["HERE"]
      )
@@ -86,12 +86,24 @@ def pull_here_path():
     @task()
     def load_data(download_url: str):
         here_postgres = BaseHook.get_connection("here_bot")
-        send_data_to_database(download_url, here_postgres.host, here_postgres.login)
-
+        bash_command = send_data_to_database(download_url, here_postgres.host, here_postgres.login)
+        return bash_command
+    
     pull_date = parse_date()
     access_token = send_request(pull_date)
     request_id =  get_request_id(pull_date, access_token)
     download_url = download_data(request_id, access_token, pull_date)
-    load_data(download_url)
+
+    load_data_run = BashOperator(
+        task_id = "load_data",
+        bash_command = '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" ''', 
+        env = {"DOWNLOAD_URL": download_url, 
+               "HOST":  BaseHook.get_connection("here_bot").host, 
+               "USER" :  BaseHook.get_connection("here_bot").login, 
+               "PGPASSWORD": BaseHook.get_connection("here_bot").password},
+        append_env=True
+    )
+
+    load_data_run
 
 pull_here_path()
