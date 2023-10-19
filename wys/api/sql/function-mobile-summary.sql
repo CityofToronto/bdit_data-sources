@@ -95,7 +95,7 @@ SELECT
     SUM(raw.count) FILTER (WHERE sb.speed_id = 21) AS spd_100_and_above,
     SUM(raw.count) AS volume
 FROM wys.mobile_api_id AS loc
-JOIN active_mobile_signs AS ams USING (api_id, installation_date, removal_date)
+JOIN active_mobile_signs AS ams USING (location_id, api_id, installation_date)
 JOIN wys.raw_data AS raw ON
     ams.api_id = raw.api_id 
     AND raw.datetime_bin > ams.installation_date 
