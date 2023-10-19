@@ -26,7 +26,7 @@ try:
 except:
     raise ImportError("Cannot import slack alert functions")
 
-dag_name = 'pull_here_path_test'
+dag_name = 'pull_here_path'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
@@ -42,7 +42,7 @@ default_args = {'owner': ','.join(names),
                 'retries': 0, #Retry 3 times
                 'retry_delay': timedelta(minutes=60), #Retry after 60 mins
                 'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-                #'on_failure_callback': task_fail_slack_alert,
+                'on_failure_callback': task_fail_slack_alert,
                 'env':{'here_bot':rds_con,
                        'LC_ALL':'C.UTF-8', #Necessary for Click
                        'LANG':'C.UTF-8'}
@@ -65,34 +65,28 @@ def pull_here_path():
         pull_date = (datetime.strptime(ds, '%Y-%m-%d').date() - timedelta(days=1)).strftime("%Y%m%d")
         return pull_date
 
-    @task()
+    @task
     def send_request(pull_date: str):
         api_conn = BaseHook.get_connection('here_api_key')
         access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
         return access_token
-        # key_id = password, query_url = host, user_id = login
 
-    @task()
+    @task
     def get_request_id(pull_date: str, access_token: str):
         api_conn = BaseHook.get_connection('here_api_key')
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
         return request_id
     
-    @task() 
-    def download_data(request_id: str, access_token: str, pull_date: str):
+    @task(retries=2) 
+    def get_download_url(request_id: str, access_token: str, pull_date: str):
         api_conn = BaseHook.get_connection('here_api_key')
         download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
         return download_url
-    @task()
-    def load_data(download_url: str):
-        here_postgres = BaseHook.get_connection("here_bot")
-        bash_command = send_data_to_database(download_url, here_postgres.host, here_postgres.login)
-        return bash_command
     
     pull_date = parse_date()
     access_token = send_request(pull_date)
     request_id =  get_request_id(pull_date, access_token)
-    download_url = download_data(request_id, access_token, pull_date)
+    download_url = get_download_url(request_id, access_token, pull_date)
 
     load_data_run = BashOperator(
         task_id = "load_data",
