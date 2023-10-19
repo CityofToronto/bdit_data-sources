@@ -68,13 +68,6 @@ with DAG(dag_id = dag_name,
                             postgres_conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
-    clear_mobile_summary = PostgresOperator(
-                            #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
-                            sql="SELECT wys.clear_mobile_summary_for_month('{{ last_month(ds) }}')",
-                            task_id='wys_mobile_summary_clear',
-                            postgres_conn_id='wys_bot',
-                            autocommit=True,
-                            retries = 0)
     wys_mobile_summary = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
                             sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
@@ -93,4 +86,4 @@ with DAG(dag_id = dag_name,
     # Stationary signs
     wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
     # Mobile signs
-    wys_view_mobile_api_id >> clear_mobile_summary >> wys_mobile_summary
+    wys_view_mobile_api_id >> wys_mobile_summary
