@@ -40,8 +40,7 @@ def last_month(ds):
 
 with DAG(dag_id = dag_name,
          default_args=default_args,
-         concurrency=5,
-         max_active_runs=2,
+         max_active_runs=1,
          user_defined_macros={
             'last_month' : last_month
           },
