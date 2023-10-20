@@ -11,7 +11,7 @@ from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from airflow.decorators import task, dag
+from airflow.decorators import task, dag, task_group
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -91,16 +91,31 @@ def pull_wys_dag():
                      conn = conn,
                      api_key=api_key)
 
-    check_row_count = SQLCheckOperatorWithReturnValue(
-        task_id="check_row_count",
-        sql="wys/api/sql/select-row_count_lookback.sql",
-        conn_id="wys_bot",
-        params={"table": "wys.raw_data",
-                "lookback": '60 days',
-                "dt_col": 'datetime_bin',
-                "threshold": 0.7},
-        retries=2
-    )
+    @task_group()
+    def data_checks():
+        check_row_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_row_count",
+            sql="wys/api/sql/select-row_count_lookback.sql",
+            conn_id="wys_bot",
+            params={"table": "wys.raw_data",
+                    "lookback": '60 days',
+                    "dt_col": 'datetime_bin',
+                    "threshold": 0.7},
+            retries=2
+        )
+        check_api_id_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_row_count",
+            sql="wys/api/sql/select-api_id_count_lookback.sql",
+            conn_id="wys_bot",
+            params={"table": "wys.raw_data",
+                    "lookback": '60 days',
+                    "dt_col": 'datetime_bin',
+                    "threshold": 0.7},
+            retries=2
+        )
+
+        check_row_count
+        check_api_id_count
 
     @task
     def pull_schedules():
@@ -128,7 +143,7 @@ def pull_wys_dag():
 
         read_masterlist(wys_postgres.get_conn(), service)
 
-    pull_wys() >> check_row_count
+    pull_wys() >> data_checks()
     pull_schedules()
     read_google_sheets()
 
