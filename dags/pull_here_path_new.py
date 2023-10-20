@@ -78,7 +78,7 @@ def pull_here_path():
         return request_id
     
     @task(retries=2) 
-    def get_download_url(request_id: str, access_token: str, pull_date: str):
+    def get_download_link(request_id: str, access_token: str, pull_date: str):
         api_conn = BaseHook.get_connection('here_api_key')
         download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
         return download_url
@@ -86,7 +86,7 @@ def pull_here_path():
     pull_date = parse_date()
     access_token = send_request(pull_date)
     request_id =  get_request_id(pull_date, access_token)
-    download_url = get_download_url(request_id, access_token, pull_date)
+    download_url = get_download_link(request_id, access_token, pull_date)
 
     load_data_run = BashOperator(
         task_id = "load_data",
