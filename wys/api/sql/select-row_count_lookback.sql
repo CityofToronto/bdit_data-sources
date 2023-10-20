@@ -18,11 +18,11 @@ SELECT
     COUNT(*) AS ds_count,
     lba.lookback_avg,
     {{ params.threshold }}::numeric * lba.lookback_avg AS passing_value
-FROM {{ params.table }},
+FROM {{ params.table }} AS a,
 LATERAL (
     SELECT AVG(lookback_count) AS lookback_avg FROM lookback
 ) AS lba
 WHERE
-    {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
-    AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+    a.{{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
+    AND a.{{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
 GROUP BY lba.lookback_avg
