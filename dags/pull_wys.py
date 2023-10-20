@@ -22,6 +22,7 @@ try:
     from wys.api.python.wys_api import api_main, get_schedules
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
@@ -90,6 +91,17 @@ def pull_wys_dag():
                      conn = conn,
                      api_key=api_key)
 
+    check_row_count = SQLCheckOperatorWithReturnValue(
+        task_id="check_row_count",
+        sql="wys/api/sql/select-row_count_lookback.sql",
+        conn_id="wys_bot",
+        params={"table": "wys.raw_data",
+                "lookback": '60 days',
+                "dt_col": 'datetime_bin',
+                "threshold": 0.7},
+        retries=2
+    )
+
     @task
     def pull_schedules():
         #to connect to pgadmin bot
@@ -116,7 +128,7 @@ def pull_wys_dag():
 
         read_masterlist(wys_postgres.get_conn(), service)
 
-    pull_wys()
+    pull_wys() >> check_row_count
     pull_schedules()
     read_google_sheets()
 
