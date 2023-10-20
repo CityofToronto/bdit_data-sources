@@ -106,8 +106,8 @@ def pull_wys_dag():
             params=data_check_params,
             retries=2
         )
-        check_api_id_count = SQLCheckOperatorWithReturnValue(
-            task_id="check_row_count",
+        check_distinct_api_id = SQLCheckOperatorWithReturnValue(
+            task_id="check_distinct_api_id",
             sql="wys/api/sql/select-api_id_count_lookback.sql",
             conn_id="wys_bot",
             params=data_check_params,
@@ -115,7 +115,7 @@ def pull_wys_dag():
         )
 
         check_row_count
-        check_api_id_count
+        check_distinct_api_id
 
     @task
     def pull_schedules():
