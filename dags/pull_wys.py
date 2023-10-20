@@ -93,24 +93,24 @@ def pull_wys_dag():
 
     @task_group()
     def data_checks():
+        data_check_params = {
+            "table": "wys.raw_data",
+            "lookback": '60 days',
+            "dt_col": 'datetime_bin',
+            "threshold": 0.7
+        }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
             sql="wys/api/sql/select-row_count_lookback.sql",
             conn_id="wys_bot",
-            params={"table": "wys.raw_data",
-                    "lookback": '60 days',
-                    "dt_col": 'datetime_bin',
-                    "threshold": 0.7},
+            params=data_check_params,
             retries=2
         )
         check_api_id_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
             sql="wys/api/sql/select-api_id_count_lookback.sql",
             conn_id="wys_bot",
-            params={"table": "wys.raw_data",
-                    "lookback": '60 days',
-                    "dt_col": 'datetime_bin',
-                    "threshold": 0.7},
+            params=data_check_params,
             retries=2
         )
 
