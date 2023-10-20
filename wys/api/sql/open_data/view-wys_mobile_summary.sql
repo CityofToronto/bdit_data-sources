@@ -54,14 +54,18 @@ SELECT
     spd_90,
     spd_95,
     spd_100_and_above,
-    volume
+    volume,
+    removal_date - installation_date
 FROM wys.mobile_summary
-WHERE
-    --avoid adding signs with less than one day of data to Open Data.
-    removal_date - installation_date > interval '1 day'
+WHERE (
+        --avoid adding signs with less than one day of data to Open Data.
+        removal_date > installation_date + interval '1 day'
+        OR removal_date IS NULL
+    )
     AND (
         --avoid adding very new signs with little data to Open Data.
         installation_date < date_trunc('month', now()) - interval '2 weeks'
         --however, do include these signs if they are complete.
         OR removal_date < date_trunc('month', now())
-    );
+    )
+ORDER BY installation_date DESC;
