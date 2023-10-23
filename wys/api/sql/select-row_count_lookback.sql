@@ -15,15 +15,19 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    COUNT(*) >= {{ params.threshold }}::numeric * lba.lookback_avg AS check, --noqa: L026
-    COUNT(*) AS ds_count,
-    lba.lookback_avg,
-    {{ params.threshold }}::numeric * lba.lookback_avg AS passing_value
+    COUNT(*) >= FLOOR({{ params.threshold }}::numeric * lb.lookback_avg) AS check, 
+    'Daily count: ' || to_char(COUNT(*), 'FM9,999,999,999') AS ds_count,
+    initcap('{{ params.lookback }}') || ' Lookback Avg: '
+        || to_char(lb.lookback_avg, 'FM9,999,999,999') AS lookback_avg,
+    'Pass threshold: ' || to_char(
+            FLOOR({{ params.threshold }}::numeric * lb.lookback_avg),
+            'FM9,999,999,999'
+            ) AS passing_value
 FROM {{ params.table }} AS a,
 LATERAL (
     SELECT AVG(lookback_count) AS lookback_avg FROM lookback
-) AS lba
+) AS lb
 WHERE
     a.{{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
     AND a.{{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
-GROUP BY lba.lookback_avg --noqa: L003, L026
+GROUP BY lb.lookback_avg --noqa: L003, L026
