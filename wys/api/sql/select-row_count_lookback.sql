@@ -4,13 +4,14 @@
 
 WITH lookback AS ( --noqa: L045
     SELECT
-        date_trunc('day', {{ params.dt_col }}) AS _dt,
+        date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
         COUNT(*) AS lookback_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp
-    GROUP BY _dt --group by day then avg excludes missing days.
+    --group by day then avg excludes missing days.
+    GROUP BY _dt  --noqa: L003
 )
 
 SELECT
@@ -25,4 +26,4 @@ LATERAL (
 WHERE
     a.{{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
     AND a.{{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
-GROUP BY lba.lookback_avg --noqa: L026
+GROUP BY lba.lookback_avg --noqa: L003, L026
