@@ -26,8 +26,10 @@ mobile_installations AS (
         new_sign_number,
         comments,
         id, 
-        CASE WHEN new_sign_number NOT LIKE 'W%'
-            THEN 'Ward ' || ward_no || ' - S' || new_sign_number
+        CASE
+            WHEN new_sign_number NOT LIKE 'W%'
+                THEN 'Ward ' || ward_no || ' - S'
+                || regexp_substr(new_sign_number, '\d{1,2}')
             WHEN new_sign_number LIKE 'W%' AND new_sign_number LIKE '% - S%'
                 THEN 'Ward ' || SUBSTRING(new_sign_number, 2, 10)
             WHEN new_sign_number LIKE 'W%' AND new_sign_number NOT LIKE '% - S%'
@@ -37,7 +39,6 @@ mobile_installations AS (
         END AS combined
     FROM wys.mobile_sign_installations
 )
-
 
 SELECT 
     msi.id AS location_id,
