@@ -16,14 +16,20 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    COUNT(*) >= {{ params.threshold }}::numeric *
-        (SELECT AVG(lookback_count) FROM lookback) AS check, 
-    COUNT(*) AS ds_count,
-    (SELECT AVG(lookback_count) FROM lookback) AS lookback_avg,
-    {{ params.threshold }}::numeric *
-        (SELECT AVG(lookback_count) FROM lookback) AS passing_value
-FROM {{ params.table }}
+    COUNT(*) >= FLOOR({{ params.threshold }}::numeric * lb.lookback_avg) AS check, 
+    'Daily count: ' || to_char(COUNT(*), 'FM9,999,999,999') AS ds_count,
+    initcap('{{ params.lookback }}') || ' Lookback Avg: '
+        || to_char(lb.lookback_avg, 'FM9,999,999,999') AS lookback_avg,
+    'Pass threshold: ' || to_char(
+            FLOOR({{ params.threshold }}::numeric * lb.lookback_avg),
+            'FM9,999,999,999'
+            ) AS passing_value
+FROM {{ params.table }} AS a,
+    LATERAL (
+        SELECT AVG(lookback_count) lookback_avg FROM lookback
+    ) AS lb
 WHERE
-    {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
-    AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
-    AND division_id = {{ params.div_id }}::int
+    a.{{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
+    AND a.{{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+    AND a.division_id = {{ params.div_id }}::int
+GROUP BY lb.lookback_avg
