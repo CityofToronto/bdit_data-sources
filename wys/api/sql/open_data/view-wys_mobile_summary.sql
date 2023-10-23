@@ -54,8 +54,7 @@ SELECT
     spd_90,
     spd_95,
     spd_100_and_above,
-    volume,
-    removal_date - installation_date
+    volume
 FROM wys.mobile_summary
 WHERE (
         --avoid adding signs with less than one day of data to Open Data.
