@@ -6,9 +6,9 @@ add fkeys and then summarize those records in to veh_length_15min, veh_speeds_15
 This particular case occured when raw table was backfilled without latest lookups. 
 */
 
-WITH updates AS (
+WITH updates AS ( --noqa: L045
     SELECT
-        volume_uid,
+        d.volume_uid,
         c.uid AS vdsconfig_uid,
         e.uid AS entity_location_uid
     FROM vds.raw_vdsvehicledata AS d
@@ -27,17 +27,17 @@ WITH updates AS (
             d.dt < e.end_timestamp
             OR e.end_timestamp IS NULL) --no end date
     WHERE (
-        d.vdsconfig_uid IS NULL 
-        OR d.entity_location_uid IS NULL
-        ) AND 
+            d.vdsconfig_uid IS NULL 
+            OR d.entity_location_uid IS NULL
+        )
         --want both to be not null so we can safely insert into counts_15min
-        c.uid IS NOT NULL
+        AND c.uid IS NOT NULL
         AND e.uid IS NOT NULL
 ),
 
 --update this foreign keys in the raw table.
 updated AS (
-    UPDATE vds.raw_vdsvehicledata AS dest
+    UPDATE vds.raw_vdsvehicledata AS dest --noqa: PRS
     SET
         vdsconfig_uid = updates.vdsconfig_uid,
         entity_location_uid = updates.entity_location_uid
@@ -54,9 +54,9 @@ updated AS (
 ),
 
 --insert updated records into veh_length_15min
-veh_length_15min_update AS (
+veh_length_15min_update AS ( --noqa: L045
 
-    INSERT INTO vds.veh_length_15min (division_id, vdsconfig_uid, entity_location_uid, datetime_15min, length_meter, count,
+    INSERT INTO vds.veh_length_15min (division_id, vdsconfig_uid, entity_location_uid, datetime_15min, length_meter, count,  --noqa: PRS
     total_count)
 
     SELECT

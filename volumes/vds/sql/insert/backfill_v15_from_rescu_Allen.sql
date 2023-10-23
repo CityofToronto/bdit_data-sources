@@ -20,7 +20,7 @@ WITH vdsconfig_allen AS (
         AND substring(detector_id, 1, 1) = 'D'
         AND substring(detector_id, 9, 1) = 'A'
         --these detector_ids don't require special case: 
-        AND substring(detector_id, 1, 9) <> detector_id
+        AND substring(detector_id, 1, 9) != detector_id
 
 )
 

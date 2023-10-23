@@ -6,9 +6,9 @@ add fkeys and then summarize those records in to counts_15min, counts_15min_byla
 This particular case occured when raw table was backfilled without latest lookups. 
 */
 
-WITH updates AS (
+WITH updates AS ( --noqa: L045
     SELECT
-        volume_uid,
+        d.volume_uid,
         c.uid AS vdsconfig_uid,
         e.uid AS entity_location_uid
     FROM vds.raw_vdsdata AS d
@@ -29,15 +29,15 @@ WITH updates AS (
     WHERE (
         d.vdsconfig_uid IS NULL 
         OR d.entity_location_uid IS NULL
-        ) AND 
+        )
         --want both to be not null so we can safely insert into counts_15min
-        c.uid IS NOT NULL
+        AND c.uid IS NOT NULL
         AND e.uid IS NOT NULL
 ),
 
 --update missing fkeys in raw table.
 updated AS (
-    UPDATE vds.raw_vdsdata AS dest
+    UPDATE vds.raw_vdsdata AS dest --noqa: PRS
     SET
         vdsconfig_uid = updates.vdsconfig_uid,
         entity_location_uid = updates.entity_location_uid
@@ -54,10 +54,9 @@ updated AS (
 ),
 
 --insert `updated` records into counts_15min
-counts_15min_update AS (
-
+counts_15min_update AS ( --noqa: L045
     INSERT INTO vds.counts_15min (division_id, vdsconfig_uid, entity_location_uid, num_lanes, datetime_15min,
-        count_15min, expected_bins, num_obs, num_distinct_lanes)
+        count_15min, expected_bins, num_obs, num_distinct_lanes) --noqa: PRS
 
     /* Conversion of hourly volumes to count depends on size of bin.
     These bin counts were determined by looking at the most common bin gap using:
@@ -95,7 +94,7 @@ counts_15min_update AS (
 
 --insert `updated` records into counts_15min_Bylane
 INSERT INTO vds.counts_15min_bylane (division_id, vdsconfig_uid, entity_location_uid, lane, datetime_15min,
-count_15min, expected_bins, num_obs)
+    count_15min, expected_bins, num_obs)
 
 SELECT 
     d.division_id,
