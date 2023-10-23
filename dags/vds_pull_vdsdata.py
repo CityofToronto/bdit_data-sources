@@ -30,7 +30,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 
 try:
-    from volume.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_vdsdata_partitions
+    from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_vdsdata_partitions
 except:
     raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
 
