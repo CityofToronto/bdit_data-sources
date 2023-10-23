@@ -15,10 +15,18 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    COUNT(DISTINCT a.{{ params.sensor_id_col }}) >= {{ params.threshold }}::numeric * lba.lookback_avg AS check, --noqa: L026
-    COUNT(DISTINCT a.{{ params.sensor_id_col }}) AS ds_count,
-    lba.lookback_avg,
-    {{ params.threshold }}::numeric * lba.lookback_avg AS passing_value
+    COUNT(DISTINCT a.{{ params.sensor_id_col }}) >=
+        FLOOR({{ params.threshold }}::numeric * lb.lookback_avg) AS check, --noqa: L026
+    'Daily count: ' || to_char(
+        COUNT(DISTINCT a.{{ params.sensor_id_col }}),
+        'FM9,999,999,999'
+        ) AS ds_count,
+    initcap('{{ params.lookback }}') || ' Lookback Avg: '
+        || to_char(lb.lookback_avg, 'FM9,999,999,999') AS lookback_avg,
+    'Pass threshold: ' || to_char(
+            FLOOR({{ params.threshold }}::numeric * lb.lookback_avg),
+            'FM9,999,999,999'
+            ) AS passing_value
 FROM {{ params.table }} AS a,
 LATERAL (
     SELECT AVG(lookback_count) AS lookback_avg FROM lookback
