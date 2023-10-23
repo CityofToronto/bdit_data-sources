@@ -25,16 +25,8 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-try:
-    from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
-except
-    raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
-
-try:
-    from dags.dag_functions import task_fail_slack_alert
-except:
-    raise ImportError("Cannot import task_fail_slack_alert.")
-
+from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
+from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
 default_args = {
