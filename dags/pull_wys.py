@@ -110,7 +110,7 @@ def pull_wys_dag():
             task_id="check_distinct_api_id",
             sql="wys/api/sql/select-api_id_count_lookback.sql",
             conn_id="wys_bot",
-            params=data_check_params,
+            params=data_check_params | {"sensor_id_col": "api_id"},
             retries=2
         )
 

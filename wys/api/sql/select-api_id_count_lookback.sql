@@ -5,7 +5,7 @@
 WITH lookback AS ( --noqa: L045
     SELECT
         date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
-        COUNT(DISTINCT api_id) AS lookback_count
+        COUNT(DISTINCT {{ params.sensor_id_col }}) AS lookback_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
@@ -15,8 +15,8 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    COUNT(DISTINCT a.api_id) >= {{ params.threshold }}::numeric * lba.lookback_avg AS check, --noqa: L026
-    COUNT(DISTINCT a.api_id) AS ds_count,
+    COUNT(DISTINCT a.{{ params.sensor_id_col }}) >= {{ params.threshold }}::numeric * lba.lookback_avg AS check, --noqa: L026
+    COUNT(DISTINCT a.{{ params.sensor_id_col }}) AS ds_count,
     lba.lookback_avg,
     {{ params.threshold }}::numeric * lba.lookback_avg AS passing_value
 FROM {{ params.table }} AS a,
