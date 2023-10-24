@@ -5,13 +5,16 @@ CREATE MATERIALIZED VIEW wys.mobile_api_id AS
 WITH sign_locations AS (
     SELECT DISTINCT 
         api_id,
-        sign_name,
+        sign_name_clean AS sign_name,
         start_date,
         lead(start_date) OVER w AS next_start,
         lag(start_date) OVER w AS prev_start
-    FROM wys.locations
-    WHERE sign_name LIKE 'Ward %'
-    WINDOW w AS (PARTITION BY sign_name ORDER BY start_date)
+    FROM wys.locations,
+        LATERAL (
+            SELECT initcap((regexp_match(sign_name, '[Ww]ard \d{1,2} - [Ss]\d{1,2}'))[1]) AS sign_name_clean
+        ) AS snc
+    WHERE regexp_like(sign_name, '[Ww]ard \d{1,2} - [Ss]\d{1,2}')
+    WINDOW w AS (PARTITION BY sign_name_clean ORDER BY start_date)
 ),
 
 mobile_installations AS (
@@ -55,7 +58,8 @@ SELECT
 FROM mobile_installations AS msi
 LEFT JOIN sign_locations AS b ON 
     msi.combined = b.sign_name
-    AND (b.prev_start IS NULL OR msi.installation_date >= b.prev_start)
-    AND (b.next_start IS NULL OR msi.installation_date < b.start_date);
+    AND (b.prev_start IS NULL OR msi.installation_date >= b.start_date)
+    --if there's a subsequent sign, don't match installations after the subsequent sign's start_date
+    AND (b.next_start IS NULL OR msi.installation_date < b.next_start)
 
 CREATE UNIQUE INDEX ON wys.mobile_api_id (location_id);
