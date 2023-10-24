@@ -143,7 +143,8 @@ with DAG(dag_name,
                         "dt_col": 'dt',
                         "div_id": divid,
                         "threshold": 0.7},
-                retries=2
+                retries=2,
+                execution_timeout=timedelta(minutes=30),
             )
             check_avg_rows
 
