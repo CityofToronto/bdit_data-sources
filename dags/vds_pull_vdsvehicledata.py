@@ -29,15 +29,9 @@ start_date = {'start_date': '{{ ds }}'}
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-try:
-    from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_new_year
-except:
-    raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
-
-try:
-    from dags.dag_functions import task_fail_slack_alert
-except:
-    raise ImportError("Cannot import task_fail_slack_alert.")
+from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_new_year
+from dags.dag_functions import task_fail_slack_alert
+from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
 default_args = {
     'owner': ','.join(names),
@@ -140,4 +134,18 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    t_upstream_done >> check_partitions_tg >> pull_vdsvehicledata >> summarize_vdsvehicledata
+    with TaskGroup(group_id='data_checks') as data_checks:
+        check_avg_rows = SQLCheckOperatorWithReturnValue(
+            task_id=f"check_rows_vdsvehicledata_div2",
+            sql="select/select-row_count_lookback.sql",
+            conn_id='vds_bot',
+            params={"table": 'vds.raw_vdsdata',
+                    "lookback": '60 days',
+                    "dt_col": 'dt',
+                    "div_id": 2,
+                    "threshold": 0.7},
+            retries=2
+        )
+        check_avg_rows
+
+    [t_upstream_done, check_partitions_tg] >> pull_vdsvehicledata >> summarize_vdsvehicledata >> data_checks

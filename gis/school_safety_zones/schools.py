@@ -8,6 +8,7 @@ Note
 This script is automated on Airflow and is run daily."""
 
 from __future__ import print_function
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -186,12 +187,19 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     ------
     IndexError
         If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
+    TimeoutError
+        If the connection to Google sheets timed out.
     """
     any_error = False
-    sheet = service.spreadsheets()
-    result = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
-                                range=spreadsheet['range_name']).execute()
-    values = result.get('values', [])
+    try:
+        sheet = service.spreadsheets()
+        request = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
+                                    range=spreadsheet['range_name'])
+        result = request.execute()
+        values = result.get('values', [])
+    except TimeoutError as err:
+        LOGGER.error("Cannot access: " + json.loads(request.to_json())["uri"])
+        raise err
 
     rows = []
     if not values:

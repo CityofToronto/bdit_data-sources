@@ -1,16 +1,18 @@
-"""
-Pipeline for pulling two vz google sheets data and putting them into postgres tables using Python Operator.
+r"""### The School Safety Zones DAG
+
+This DAG runs daily to pull School Safety Zones (SSZ) from multiple google
+sheets. Each sheet contains data of a single year.
+
+> This is part of VZ DAGs.
 """
 import pendulum
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 import os
 import sys
@@ -28,6 +30,7 @@ ssz2019 = dag_config['ssz2019']
 ssz2020 = dag_config['ssz2020']
 ssz2021 = dag_config['ssz2021']
 ssz2022 = dag_config['ssz2022']
+ssz2023 = dag_config['ssz2023']
 
 """The following defines the details of the spreadsheets read and details of the table used to store the data. They are put into a dict based on year. 
 The range for both sheets is set from the beginning up to line 180 to include rows of schools which might be added later on.
@@ -35,27 +38,33 @@ Details of the spreadsheets are ID and range whereas details of the table are na
 The ID is the value between the "/d/" and the "/edit" in the URL of the spreadsheet.
 """
 sheets = {
-           2018: {'spreadsheet_id' : ssz2018, 
-                  'range_name' : 'Master List!A4:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2018_raw'},
-           2019: {'spreadsheet_id' : ssz2019, 
-                  'range_name' : '2019 Master List!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2019_raw'},
-           2020: {'spreadsheet_id' : ssz2020, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2020_raw'},
-           2021: {'spreadsheet_id' : ssz2021, 
-                  'range_name' : 'Master Sheet!A3:AC180', 
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2021_raw'},
-           2022: {'spreadsheet_id' : ssz2022,
-                  'range_name' : 'Master Sheet!A3:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2022_raw'}
-         }
+    2018: {'spreadsheet_id' : ssz2018, 
+            'range_name' : 'Master List!A4:AC180',
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2018_raw'},
+    2019: {'spreadsheet_id' : ssz2019, 
+            'range_name' : '2019 Master List!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2019_raw'},
+    2020: {'spreadsheet_id' : ssz2020, 
+            'range_name' : 'Master Sheet!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2020_raw'},
+    2021: {'spreadsheet_id' : ssz2021, 
+            'range_name' : 'Master Sheet!A3:AC180', 
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2021_raw'},
+    2022: {'spreadsheet_id' : ssz2022,
+            'range_name' : 'Master Sheet!A3:AC180',
+            'schema_name': 'vz_safety_programs_staging',
+            'table_name' : 'school_safety_zone_2022_raw'},
+    2023: {
+        'spreadsheet_id' : ssz2023,
+        'range_name' : 'Master Sheet!A3:AC180',
+        'schema_name': 'vz_safety_programs_staging',
+        'table_name' : 'school_safety_zone_2023_raw'
+    },
+}
 
 #to read the python script for pulling data from google sheet and putting it into tables in postgres
 try:
@@ -93,7 +102,7 @@ def custom_fail_slack_alert(context: dict) -> str:
         return ""
 
 #to get credentials to access google sheets
-vz_api_hook = GoogleCloudBaseHook('vz_api_google')
+vz_api_hook = GoogleBaseHook('vz_api_google')
 cred = vz_api_hook.get_credentials()
 service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
@@ -115,39 +124,17 @@ DEFAULT_ARGS = {
     )
 }
 
-dag = DAG(dag_id = dag_name, default_args = DEFAULT_ARGS, schedule_interval = '@daily', catchup = False)
-
-task1 = PythonOperator(
-    task_id='2018',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2018, sheets[2018]]
-    )
- 
-task2 = PythonOperator(
-    task_id='2019',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2019, sheets[2019]]
-    )
-     
-task3 = PythonOperator(
-    task_id='2020',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2020, sheets[2020]]
-    )
-    
-task4 = PythonOperator(
-    task_id='2021',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2021, sheets[2021]]
-    )
-
-task5 = PythonOperator(
-    task_id='2022',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, 2022, sheets[2022]]
-    )
+with DAG(
+    dag_id=dag_name,
+    default_args=DEFAULT_ARGS,
+    schedule_interval="@daily",
+    tags=["Vision Zero"],
+    doc_md=__doc__,
+    catchup=False,
+) as dag:
+    for year, sheet in sheets.items():
+        task = PythonOperator(
+            task_id=str(year),
+            python_callable=pull_from_sheet,
+            op_args=[con, service, year, sheet]
+        )
