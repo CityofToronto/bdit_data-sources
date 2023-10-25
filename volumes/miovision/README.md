@@ -19,6 +19,7 @@
     - [`movement_map`](#movement_map)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
+    - [`centreline_miovision`](#centreline_miovision)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Important Tables](#other-important-tables)
@@ -310,6 +311,15 @@ Since this reference table must be updated every time a new intersection is adde
  leg| text | Entry leg of movement|E|
  movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
 
+#### `centreline_miovision`
+
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually when intersections are added.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
+intersection_uid| integer | ID for intersection | 1 |
+leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
 
 ### Primary and Foreign Keys
 
