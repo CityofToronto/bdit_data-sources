@@ -2,7 +2,8 @@
 
 -- DROP TABLE IF EXISTS wys.mobile_sign_installations_dupes;
 
-CREATE TABLE IF NOT EXISTS wys.mobile_sign_installations_dupes ( --noqa: PRS
+CREATE TABLE IF NOT EXISTS wys.mobile_sign_installations_dupes --noqa: PRS
+(
     ward_no integer,
     location text,
     from_street text,
