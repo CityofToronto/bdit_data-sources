@@ -30,7 +30,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [TTC (inactive)](#ttc-inactive)
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-  - [RESCU - Loop Detectors](#rescu---loop-detectors)
+  - [RESCU - Loop Detectors (inactive)](#rescu---loop-detectors-inactive)
   - [Short-term Counting Program](#short-term-counting-program)  
   - [VDS](#vehicle-detector-station-vds)  
 - [Watch Your Speed signs](#watch-your-speed-signs)
@@ -134,7 +134,7 @@ This contains some valiant attempts at transforming CIS vehicle location data pr
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
 
-### RESCU - Loop Detectors
+### RESCU - Loop Detectors (inactive)
 [`volumes/rescu/`](volumes/rescu/)
 
 Deprecated. See [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds). 
