@@ -111,12 +111,12 @@ Note that bicycles are available at both a turning movement level and at an appr
 :-----|:-----|:-----|
 1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans|
+3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
 4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
 8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
+9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
 #### `movements`
