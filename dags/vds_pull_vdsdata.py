@@ -29,16 +29,10 @@ start_date = {'start_date': '{{ ds }}'}
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-try:
-    from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_new_year
-except:
-    raise ImportError("Cannot import functions from volumes/vds/py/vds_functions.py.")
+from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_new_year
+from dags.dag_functions import task_fail_slack_alert
+from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
-try:
-    from dags.dag_functions import task_fail_slack_alert
-except:
-    raise ImportError("Cannot import task_fail_slack_alert.")  
-   
 default_args = {
     'owner': ','.join(names),
     'depends_on_past': False,
@@ -157,4 +151,21 @@ with DAG(dag_name,
         summarize_v15_task
         summarize_v15_bylane_task
 
-    update_inventories >> check_partitions_tg >> vdsdata >> v15data #pull then summarize
+    with TaskGroup(group_id='data_checks') as data_checks:
+        divisions = [2, 8001]
+        for divid in divisions:
+            check_avg_rows = SQLCheckOperatorWithReturnValue(
+                task_id=f"check_rows_vdsdata_div{divid}",
+                sql="select/select-row_count_lookback.sql",
+                conn_id='vds_bot',
+                params={"table": 'vds.raw_vdsdata',
+                        "lookback": '60 days',
+                        "dt_col": 'dt',
+                        "div_id": divid,
+                        "threshold": 0.7},
+                retries=2,
+                execution_timeout=timedelta(minutes=30),
+            )
+            check_avg_rows
+
+    [update_inventories, check_partitions_tg] >> vdsdata >> v15data >> data_checks #pull then summarize

@@ -4,8 +4,8 @@ CREATE VIEW vds.detector_inventory AS (
         c.uid,
         c.detector_id,
         c.division_id,
-        types.det_type,
-        CASE types.det_type = 'RESCU Detectors'
+        dtypes.det_type,
+        CASE dtypes.det_type = 'RESCU Detectors'
             WHEN TRUE THEN CASE substring(c.detector_id, 2, 1)
                 WHEN 'N' THEN 'DVP/Allen North' --North of Don Mills 
                 WHEN 'S' THEN 'DVP South' --South of Don Mills 
@@ -14,7 +14,7 @@ CREATE VIEW vds.detector_inventory AS (
                 WHEN 'K' THEN 'Kingston Rd'
                 END
         END AS det_loc,
-        CASE types.det_type = 'RESCU Detectors'
+        CASE dtypes.det_type = 'RESCU Detectors'
             WHEN TRUE THEN CASE substring(c.detector_id, 9, 1)
                 WHEN 'D' THEN 'DVP'
                 WHEN 'L' THEN 'Lakeshore'
@@ -24,7 +24,7 @@ CREATE VIEW vds.detector_inventory AS (
                 WHEN 'R' THEN 'On-Ramp'
                 END
         END AS det_group,
-        CASE types.det_type = 'RESCU Detectors'
+        CASE dtypes.det_type = 'RESCU Detectors'
             WHEN TRUE THEN CASE substring(c.detector_id, 8, 1)
                 WHEN 'E' THEN 'Eastbound'
                 WHEN 'W' THEN 'Westbound'
@@ -36,9 +36,9 @@ CREATE VIEW vds.detector_inventory AS (
         CASE
             WHEN c.division_id = 8001 THEN 1 --15 min bins
             --remainder are division_id = 2
-            WHEN types.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
-            WHEN types.det_type = 'Blue City AI' THEN 1 --15 min bins
-            WHEN types.det_type = 'Smartmicro Sensors' THEN 3 --5 min bins
+            WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
+            WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
+            WHEN dtypes.det_type = 'Smartmicro Sensors' THEN 3 --5 min bins
         END AS expected_bins
     FROM vds.vdsconfig AS c,
         LATERAL(
@@ -52,8 +52,8 @@ CREATE VIEW vds.detector_inventory AS (
                     OR c.vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
                     OR (c.vds_id >= 7011490 AND c.vds_id <= 7011519) --new lakeshore smartmicro sensors
                     THEN 'Smartmicro Sensors'
-            END AS det_type
-        ) AS types
+                END AS det_type
+        ) AS dtypes
 );
 
 COMMENT ON VIEW vds.detector_inventory IS 'Centralize information about
