@@ -154,15 +154,16 @@ with DAG(dag_name,
         summarize_v15_bylane_task
 
     with TaskGroup(group_id='data_checks') as data_checks:
-        divisions = [2, 8001]
+        divisions = [2, ]
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
                 task_id=f"check_rows_vdsdata_div{divid}",
                 sql="select/select-row_count_lookback.sql",
                 conn_id='vds_bot',
-                params={"table": 'vds.raw_vdsdata',
+                params={"table": 'vds.counts_15min',
                         "lookback": '60 days',
-                        "dt_col": 'dt',
+                        "dt_col": 'datetime_15min',
+                        "col_to_sum": 'num_obs',
                         "div_id": divid,
                         "threshold": 0.7},
                 retries=2,
