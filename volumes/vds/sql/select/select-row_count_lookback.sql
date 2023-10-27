@@ -5,7 +5,7 @@
 WITH lookback AS ( --noqa: L045
     SELECT
         date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
-        COUNT(*) AS lookback_count
+        SUM({{ params.col_to_sum }}) AS lookback_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
@@ -16,8 +16,8 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    COUNT(*) >= FLOOR({{ params.threshold }}::numeric * lb.lookback_avg) AS check, 
-    'Daily count: ' || to_char(COUNT(*), 'FM9,999,999,999') AS ds_count,
+    SUM({{ params.col_to_sum }}) >= FLOOR({{ params.threshold }}::numeric * lb.lookback_avg) AS check, 
+    'Daily count: ' || to_char(SUM({{ params.col_to_sum }}), 'FM9,999,999,999') AS ds_count,
     initcap('{{ params.lookback }}') || ' Lookback Avg: '
         || to_char(lb.lookback_avg, 'FM9,999,999,999') AS lookback_avg,
     'Pass threshold: ' || to_char(
