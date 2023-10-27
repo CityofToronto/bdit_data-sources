@@ -20,8 +20,8 @@ today AS (
         SUM({{ params.col_to_sum }}) AS today_count
     FROM {{ params.table }}
     WHERE
-        {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
-        AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp
+        {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
+        AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
         AND division_id = {{ params.div_id }}::int
 )
 
