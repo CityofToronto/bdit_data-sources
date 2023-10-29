@@ -120,14 +120,13 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
     with TaskGroup(group_id='data_checks') as data_checks:
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            task_id=f"check_rows_vdsvehicledata_div2",
+            task_id=f"check_rows_veh_speeds",
             sql="select/select-row_count_lookback.sql",
             conn_id='vds_bot',
             params={"table": 'vds.veh_speeds_15min',
                     "lookback": '60 days',
                     "dt_col": 'datetime_15min',
                     "col_to_sum": 'count',
-                    "div_id": 2,
                     "threshold": 0.7},
             retries=2
         )

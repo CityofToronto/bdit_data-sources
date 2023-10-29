@@ -10,7 +10,6 @@ WITH lookback AS ( --noqa: L045
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp
-        AND division_id = {{ params.div_id }}::int
     --group by day then avg excludes missing days.
     GROUP BY _dt --noqa: L003
 ),
@@ -22,7 +21,6 @@ today AS (
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
-        AND division_id = {{ params.div_id }}::int
 )
 
 SELECT
