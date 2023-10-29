@@ -95,7 +95,7 @@ def pull_wys_dag():
     @task_group()
     def data_checks():
         data_check_params = {
-            "table": "wys.raw_data",
+            "table": "wys.speed_counts_agg_5kph",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
@@ -104,7 +104,7 @@ def pull_wys_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
-            params=data_check_params,
+            params=data_check_params | {"col_to_sum": 'volume'},
             retries=2
         )
         check_distinct_api_id = SQLCheckOperatorWithReturnValue(
