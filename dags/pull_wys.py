@@ -72,6 +72,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      catchup=False,
      max_active_runs=5,
+    template_searchpath=os.path.join(repo_path,'wys/api/sql'),
      schedule_interval='0 15 * * *' # Run at 3 PM local time every day
      )
 def pull_wys_dag():
@@ -101,14 +102,14 @@ def pull_wys_dag():
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
-            sql="wys/api/sql/select-row_count_lookback.sql",
+            sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
             params=data_check_params,
             retries=2
         )
         check_distinct_api_id = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_api_id",
-            sql="wys/api/sql/select-api_id_count_lookback.sql",
+            sql="select-api_id_count_lookback.sql",
             conn_id="wys_bot",
             params=data_check_params | {"sensor_id_col": "api_id"},
             retries=2
