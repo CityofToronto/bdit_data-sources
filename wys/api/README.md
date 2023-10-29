@@ -1,4 +1,20 @@
 # Watch Your Speed Sign API
+- [Watch Your Speed Sign API](#watch-your-speed-sign-api)
+  - [Overview](#overview)
+  - [Functionality](#functionality)
+    - [Requesting recent data](#requesting-recent-data)
+    - [Error Handling](#error-handling)
+    - [Inconsistent time bins](#inconsistent-time-bins)
+  - [Calls and Input Parameters](#calls-and-input-parameters)
+  - [Process](#process)
+  - [`wys` Bigdata Schema](#wys-bigdata-schema)
+    - [Data Tables](#data-tables)
+    - [Lookup Tables](#lookup-tables)
+    - [Materialized Views](#materialized-views)
+    - [Summary Tables](#summary-tables)
+  - [Quality Checks](#quality-checks)
+    - [NULL rows in API data](#null-rows-in-api-data)
+  - [Mobile Signs](#mobile-signs)
 
 ## Overview
 
@@ -50,7 +66,7 @@ The main function in the puller script `api_main` do the following steps:
 4. Update the `wys.locations` table with the changes in the direction and/or location (moved for more than 100 meters) of any existing sign and insert the locations of the new signs as well.
 5. Update the `wys.sign_schedules_list` table, if needed
 
-## PostgreSQL Processing
+## `wys` Bigdata Schema
 
 ### Data Tables
 
@@ -121,32 +137,42 @@ This table contains a list of the Google Sheets containing the the Mobile WYS si
 **`wys.mobile_sign_installations`**  
 This table contains the details of the mobile sign installations taken from the Google Sheets listed in `wys.ward_masterlist`. 
 - This table is partitioned by ward (`wys.ward_*`). 
-- New signs are inserted daily from the Google Sheets, as long as they have a valid `installation_date` and `new_sign_number`. 
-- If there is a discrepency between the information online and an existing row in this `mobile_sign_installations`, the row is updated and the change is logged in `wys.logged_actions`. 
-- If there are duplicates pulled from the Google Sheets, they are instead inserted into `wys.mobile_sign_installations_dupes`, as a row cannot be updated twice by `ON CONFLICT... DO UPDATE`.
+- New signs are inserted daily from the Google Sheets via `pull_wys` DAG, `read_google_sheets` task.  
+- Rows are pulled from the Google Sheet if they have a valid `installation_date` and a non-null `new_sign_number`.  
+  - Rows with null `removal_date` are now being pulled into the database in order to capture long-running mobile signs (high priority installations which started as mobile signs but became semi-permanent).  
+- If there is a conflict between a row in Google Sheets and an existing entry in `wys.mobile_sign_installations` based on primary key (installation_date, new_sign_number), the row is updated and the change is logged in `wys.logged_actions`.  
+  - It is possible the primary key gets updated in the Google Sheet, which will cause an insert rather than an update, and so old information remains. These erroneous records need to be manually deleted.  
+- If there are duplicates pulled from the Google Sheets, they are instead inserted into `wys.mobile_sign_installations_dupes`, as a row cannot be updated twice by `ON CONFLICT... DO UPDATE` during the insert.  
+  - The duplicates table should be checked occasionally, and inquiries made through Vision Zero team as to which information is accurate.  
 
 | column_name       | data_type   | sample           | Comments   |
 |:------------------|:------------|:-----------------|:-----------|
-| work_order        | integer     | 11869670         |            |
+| work_order        | integer     | 11869670         | Under consideration in #693 for use as a Primary Key for this table. |
 | ward_no           | integer     | 2                |            |
 | location          | text        | Wimbleton Rd     |            |
 | from_street       | text        | Anglesey Blvd    |            |
 | to_street         | text        | The Kingsway     |            |
 | direction         | text        | NB               |            |
 | installation_date | date        | 2023-10-20       |            |
-| removal_date      | date        |                  |            |
-| new_sign_number   | text        | 4                |            |
+| removal_date      | date        |                  | Removal date. Nulls possible. |
+| new_sign_number   | text        | 4                | Ward_no + new_sign_number are used to match mobile signs to api_id in mat view `mobile_api_id` |
 | comments          | text        | 149 Wimbleton Rd |            |
 | id                | integer     | 10483482         |            |
 
 **`wys.sign_schedules_list`**  
-lists the "schedule" or operating mode of each sign (api_id). It is updated daily by the `pull_wys` task `pull_schedules`.
+- Lists the "schedule" or operating mode of each sign (api_id).  
+- It is updated daily by the `pull_wys` task `pull_schedules`.  
+  
 | column_name   | data_type         | sample                                    | Comments   |
 |:--------------|:------------------|:------------------------------------------|:-----------|
 | schedule_name | character varying | School WYSP 30kmh Reg. Operating Schedule |            |
 | api_id        | integer           | 10294                                     |            |
 
-`wys.sign_schedules_clean` contains details about each of the `schedule_name`s listed in `wys.sign_schedules_list`. It is not regularly updated. 
+`wys.sign_schedules_clean`  
+- Contains details about each of the `schedule_name`s listed in `wys.sign_schedules_list`.  
+- Appears to be a cleaned version of `wys.sign_schedules`, which is not in use anywhere.  
+- It is not regularly updated and the script used to create it is lost. 
+  
 | column_name   | data_type         | sample                              | Comments   |
 |:--------------|:------------------|:------------------------------------|:-----------|
 | schedule_name | character varying | Beacon Test 40KM School             |            |
@@ -156,6 +182,71 @@ lists the "schedule" or operating mode of each sign (api_id). It is updated dail
 | speed_limit   | integer           | 40                                  |            |
 | flash_speed   | integer           | 45                                  |            |
 | strobe_speed  | integer           | 30                                  |            |
+
+### Materialized Views
+
+**`wys.mobile_api_id`**
+- This mat view is used to link mobile signs (`wys.mobile_sign_installations`) to `api_id`s in `wys.locations` table.  
+  - The join is made on a string in the format "Ward {ward_no} - S{new_sign_number}".  
+- For mobile signs, the location in the `wys.location` table is assumed to be incorrect due to the frequent repositioning of the signs. The location is instead extracted from the Google Sheets.  
+
+**`wys.stationary_signs`**
+- This mat view identifies stationary signs from the `wys.locations` table based on `sign_name`s with a 4-8 digit `serial_num` at the end of the string.  
+
+### Summary Tables
+
+**`wys.stationary_summary`**  
+- This table contains a monthly summary for each stationary WYS sign.  
+- It is used to create the Open Data view `open_data.wys_stationary_summary`. 
+
+| column_name       | data_type   | sample     | Comments   |
+|:------------------|:------------|:-----------|:-----------|
+| sign_id           | integer     | 3          |            |
+| mon               | date        | 2020-04-01 |            |
+| pct_05            | integer     | 8          |            |
+| pct_10            | integer     | 10         |            |
+...............pct_15 to pct_90................
+| pct_95            | integer     | 39         |            |
+| spd_00            | integer     | 0          |            |
+| spd_05            | integer     | 5238       |            |
+| spd_10            | integer     | 5853       |            |
+...............spd_15 to spd_90................
+| spd_95            | integer     | 0          |            |
+| spd_100_and_above | integer     | 0          |            |
+| volume            | integer     | 52467      |            |
+| api_id            | integer     | 7635       |            |
+
+**`wys.mobile_summary`**  
+- This table contains a summary for each mobile WYS sign.  
+- It is used to create the Open Data view `open_data.wys_mobile_summary`.  
+
+wys.mobile_summary
+| column_name       | data_type   | sample                    | Comments   |
+|:------------------|:------------|:--------------------------|:-----------|
+| days_with_data    | integer     | 22                        |            |
+| max_date          | date        | 2023-03-21                |            |
+| location_id       | integer     | 7895106                   |            |
+| ward_no           | integer     | 14                        |            |
+| location          | text        | Donlands Ave              |            |
+| from_street       | text        | Danforth Ave              |            |
+| to_street         | text        | Milverton Blvd            |            |
+| direction         | text        | SB                        |            |
+| installation_date | date        | 2023-02-28                |            |
+| removal_date      | date        | 2023-03-22                |            |
+| schedule          | text        | Weekdays from 7 AM - 9 PM |            |
+| min_speed         | integer     | 20                        |            |
+| pct_05            | integer     | 0                         |            |
+| pct_10            | integer     | 0                         |            |
+...............pct_15 to pct_90................
+| pct_95            | integer     | 0                         |            |
+| spd_00            | integer     |                           |            |
+| spd_05            | integer     |                           |            |
+| spd_10            | integer     |                           |            |
+...............spd_15 to spd_90................
+| spd_95            | integer     |                           |            |
+| spd_100_and_above | integer     |                           |            |
+| volume            | integer     |                           |            |
+
 
 ## Quality Checks
 
@@ -175,109 +266,6 @@ Please see the notebook for a Gantt-style visualization of the NULL date ranges.
 Sign locations are identified using Google Sheets listed in `wys.ward_master_list` table. 
 The signs have locations listed in `wys.locations`, however these are not deemed to be trustworthy for mobile signs as they get moved around frequently (every ~3 weeks) and the locations are not updated correspondingly. 
 
-### Summary Tables
-
-**`wys.stationary_summary`**
-- This table contains a monthly summary for each stationary WYS sign. It is used to create the Open Data view `open_data.wys_stationary_summary`. 
-
-| column_name       | data_type   | sample     | Comments   |
-|:------------------|:------------|:-----------|:-----------|
-| sign_id           | integer     | 3          |            |
-| mon               | date        | 2020-04-01 |            |
-| pct_05            | integer     | 8          |            |
-| pct_10            | integer     | 10         |            |
-...............pct_15 to pct_90................
-| pct_95            | integer     | 39         |            |
-| spd_00            | integer     | 0          |            |
-| spd_05            | integer     | 5238       |            |
-| spd_10            | integer     | 5853       |            |
-...............spd_15 to spd_90................
-| spd_95            | integer     | 0          |            |
-| spd_100_and_above | integer     | 0          |            |
-| volume            | integer     | 52467      |            |
-| api_id            | integer     | 7635       |            |
-
-wys.sign_schedules
-| column_name      | data_type         | sample                              | Comments   |
-|:-----------------|:------------------|:------------------------------------|:-----------|
-| schedule_name    | character varying | Beacon Test 40KM School             |            |
-| sign_type        | character varying | SP500/550 - Static SPEED LIMIT Sign |            |
-| #                | integer           | 1                                   |            |
-| sun              | character varying | OFF                                 |            |
-| mon              | character varying | Activated at 21:00                  |            |
-| tues             | character varying | Activated at 21:00                  |            |
-| wed              | character varying | Activated at 21:00                  |            |
-| thurs            | character varying | Activated at 21:00                  |            |
-| fri              | character varying | Activated at 21:00                  |            |
-| sat              | character varying | OFF                                 |            |
-| min(km/h)        | integer           | 30                                  |            |
-| display_min      | text              | SPEED LIMIT                         |            |
-| limit(km/h)      | integer           | 40                                  |            |
-| display_limit    | text              | SPEED LIMIT                         |            |
-| allowed(km/h)    | integer           | 50                                  |            |
-| display_allowed  | text              | SPEED LIMIT                         |            |
-| max(km/h)        | integer           | 75                                  |            |
-| display_max      | text              | OFF                                 |            |
-| red(km/h)        | text              |                                     |            |
-| display_red      | text              |                                     |            |
-| flashing_digits  | character varying | 45 km/h                             |            |
-| flashing_strobe  | character varying | OFF                                 |            |
-| flashing_message | character varying | OFF                                 |            |
 
 
-wys.mobile_summary
-| column_name       | data_type   | sample                    | Comments   |
-|:------------------|:------------|:--------------------------|:-----------|
-| days_with_data    | integer     | 22                        |            |
-| max_date          | date        | 2023-03-21                |            |
-| location_id       | integer     | 7895106                   |            |
-| ward_no           | integer     | 14                        |            |
-| location          | text        | Donlands Ave              |            |
-| from_street       | text        | Danforth Ave              |            |
-| to_street         | text        | Milverton Blvd            |            |
-| direction         | text        | SB                        |            |
-| installation_date | date        | 2023-02-28                |            |
-| removal_date      | date        | 2023-03-22                |            |
-| schedule          | text        | Weekdays from 7 AM - 9 PM |            |
-| min_speed         | integer     | 20                        |            |
-| pct_05            | integer     | 0                         |            |
-| pct_10            | integer     | 0                         |            |
-| pct_15            | integer     | 0                         |            |
-| pct_20            | integer     | 0                         |            |
-| pct_25            | integer     | 0                         |            |
-| pct_30            | integer     | 0                         |            |
-| pct_35            | integer     | 0                         |            |
-| pct_40            | integer     | 0                         |            |
-| pct_45            | integer     | 0                         |            |
-| pct_50            | integer     | 0                         |            |
-| pct_55            | integer     | 0                         |            |
-| pct_60            | integer     | 0                         |            |
-| pct_65            | integer     | 0                         |            |
-| pct_70            | integer     | 0                         |            |
-| pct_75            | integer     | 0                         |            |
-| pct_80            | integer     | 0                         |            |
-| pct_85            | integer     | 0                         |            |
-| pct_90            | integer     | 0                         |            |
-| pct_95            | integer     | 0                         |            |
-| spd_00            | integer     |                           |            |
-| spd_05            | integer     |                           |            |
-| spd_10            | integer     |                           |            |
-| spd_15            | integer     |                           |            |
-| spd_20            | integer     |                           |            |
-| spd_25            | integer     |                           |            |
-| spd_30            | integer     |                           |            |
-| spd_35            | integer     |                           |            |
-| spd_40            | integer     |                           |            |
-| spd_45            | integer     |                           |            |
-| spd_50            | integer     |                           |            |
-| spd_55            | integer     |                           |            |
-| spd_60            | integer     |                           |            |
-| spd_65            | integer     |                           |            |
-| spd_70            | integer     |                           |            |
-| spd_75            | integer     |                           |            |
-| spd_80            | integer     |                           |            |
-| spd_85            | integer     |                           |            |
-| spd_90            | integer     |                           |            |
-| spd_95            | integer     |                           |            |
-| spd_100_and_above | integer     |                           |            |
-| volume            | integer     |                           |            |
+
