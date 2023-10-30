@@ -132,7 +132,7 @@ with DAG(dag_name,
         summarize_v15_bylane_task
 
     with TaskGroup(group_id='data_checks') as data_checks:
-        divisions = [2, 8001]
+        divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
                 task_id=f"check_rows_vdsdata_div{divid}",
