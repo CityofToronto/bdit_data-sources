@@ -31,3 +31,4 @@ ALTER TABLE open_data.wys_mobile_detailed OWNER TO wys_admins;
 
 GRANT SELECT ON TABLE open_data.wys_mobile_detailed TO od_extract_svc;
 GRANT SELECT ON TABLE open_data.wys_mobile_detailed TO bdit_humans;
+COMMENT ON VIEW open_data.wys_mobile_detailed IS 'Semi-aggregated Watch Your Speed data from wys.speed_counts_agg_5kph for signs in the mobile WYS program';
