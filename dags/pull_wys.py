@@ -11,7 +11,7 @@ from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from airflow.decorators import task, dag
+from airflow.decorators import task, dag, task_group
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -22,6 +22,7 @@ try:
     from wys.api.python.wys_api import api_main, get_schedules
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
@@ -71,6 +72,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      catchup=False,
      max_active_runs=5,
+    template_searchpath=os.path.join(repo_path,'wys/api/sql'),
      schedule_interval='0 15 * * *' # Run at 3 PM local time every day
      )
 def pull_wys_dag():
@@ -89,6 +91,32 @@ def pull_wys_dag():
                      end_date = ds,
                      conn = conn,
                      api_key=api_key)
+
+    @task_group()
+    def data_checks():
+        data_check_params = {
+            "table": "wys.speed_counts_agg_5kph",
+            "lookback": '60 days',
+            "dt_col": 'datetime_bin',
+            "threshold": 0.7
+        }
+        check_row_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_row_count",
+            sql="select-row_count_lookback.sql",
+            conn_id="wys_bot",
+            params=data_check_params | {"col_to_sum": 'volume'},
+            retries=2
+        )
+        check_distinct_api_id = SQLCheckOperatorWithReturnValue(
+            task_id="check_distinct_api_id",
+            sql="select-api_id_count_lookback.sql",
+            conn_id="wys_bot",
+            params=data_check_params | {"sensor_id_col": "api_id"},
+            retries=2
+        )
+
+        check_row_count
+        check_distinct_api_id
 
     @task
     def pull_schedules():
@@ -116,7 +144,7 @@ def pull_wys_dag():
 
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
-    pull_wys()
+    pull_wys() >> data_checks()
     pull_schedules()
     read_google_sheets()
 
