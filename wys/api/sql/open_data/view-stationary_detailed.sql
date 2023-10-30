@@ -21,9 +21,7 @@ JOIN wys.speed_counts_agg_5kph AS agg ON
 JOIN wys.speed_bins_old AS bins USING (speed_id)
 WHERE agg.datetime_bin < date_trunc('month'::text, now());
 
-ALTER TABLE open_data.wys_stationary_detailed
-OWNER TO rdumas;
+ALTER TABLE open_data.wys_stationary_detailed OWNER TO wys_admins;
 
 GRANT SELECT ON TABLE open_data.wys_stationary_detailed TO od_extract_svc;
-GRANT ALL ON TABLE open_data.wys_stationary_detailed TO rdumas;
 GRANT SELECT ON TABLE open_data.wys_stationary_detailed TO bdit_humans;

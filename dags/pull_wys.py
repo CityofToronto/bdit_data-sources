@@ -105,7 +105,7 @@ def pull_wys_dag():
     @task(on_failure_callback = partial(
                     task_fail_slack_alert, extra_msg=custom_fail_slack_alert
                     ))
-    def read_google_sheets():
+    def read_google_sheets(**kwargs):
         #to connect to pgadmin bot
         wys_postgres = PostgresHook("wys_bot")
 
@@ -114,7 +114,7 @@ def pull_wys_dag():
         cred = wys_api_hook.get_credentials()
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
-        read_masterlist(wys_postgres.get_conn(), service)
+        read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
     pull_wys()
     pull_schedules()
