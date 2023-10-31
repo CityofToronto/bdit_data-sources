@@ -2,7 +2,8 @@ import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.python import PythonOperator, ShortCircuitOperator
+from airflow.decorators import task
+from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
@@ -66,12 +67,13 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
     with TaskGroup(group_id='check_partitions') as check_partitions_tg:
-        check_date = ShortCircuitOperator(
-            task_id='check_partitions',
-            python_callable=check_new_year,
-            op_kwargs=start_date,
-            ignore_downstream_trigger_rules=False
-        )
+
+        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
+            start_date = datetime.strptime(ds, '%Y-%m-%d')
+            if start_date.month == 1 and start_date.day == 1:
+                return True
+            return False
 
         YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
 
@@ -83,7 +85,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
             autocommit=True
         )
 
-        check_date >> create_partitions
+        check_partitions() >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
