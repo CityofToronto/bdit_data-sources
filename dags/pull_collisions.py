@@ -32,18 +32,18 @@ from dags.dag_functions import task_fail_slack_alert
 # pylint: enable=import-error
 # pylint: enable=wrong-import-position
 
-DAG_NAME = 'collisions_replicator'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
+DAG_NAME = "collisions_replicator"
+DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
-    'owner': ','.join(DAG_OWNERS),
-    'depends_on_past': False,
-    'start_date': pendulum.datetime(2023, 10, 31, tz="America/Toronto"),
-    'email_on_failure': False,
-    'email_on_success': False,
-    'retries': 3,
-    'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert,
+    "owner": ",".join(DAG_OWNERS),
+    "depends_on_past": False,
+    "start_date": pendulum.datetime(2023, 10, 31, tz="America/Toronto"),
+    "email_on_failure": False,
+    "email_on_success": False,
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": task_fail_slack_alert,
 }
 
 @dag(
@@ -52,7 +52,8 @@ default_args = {
     catchup=False,
     max_active_runs=5,
     schedule_interval="0 7 * * *",
-    doc_md=__doc__
+    doc_md=__doc__,
+    tags=["collisions"]
 )
 def collisions_replicator():
     """The main function of the collisions DAG."""
