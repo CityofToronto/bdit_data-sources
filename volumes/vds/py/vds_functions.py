@@ -296,10 +296,3 @@ def transform_raw_data(df):
     raw_20sec = df[['divisionid', 'vdsid', 'datetime', 'datetime_15min']].join(lane_data_df)
     
     return raw_20sec
-
-#check if Jan 1 to trigger partition creates. 
-def check_new_year(start_date):
-    start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
-    if start_datetime.month == 1 and start_datetime.day == 1:
-        return True
-    return False
