@@ -1,4 +1,4 @@
-CREATE TABLE mio_staging.volumes_daily AS (
+CREATE TABLE mio_staging.volumes_daily (
     intersection_uid integer NOT NULL,
     dt date NOT NULL,
     volume_1 integer, 
@@ -27,7 +27,7 @@ USING brin(dt);
 INSERT INTO mio_staging.volumes_daily
 SELECT
     intersection_uid,
-    dt::date,
+    datetime_bin::date,
     SUM(volume) FILTER (WHERE classification_uid = 1) AS volume_1,
     SUM(volume) FILTER (WHERE classification_uid = 2) AS volume_2,
     SUM(volume) FILTER (WHERE classification_uid = 3) AS volume_3,
