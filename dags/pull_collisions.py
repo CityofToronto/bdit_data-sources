@@ -58,10 +58,10 @@ default_args = {
 def collisions_replicator():
     """The main function of the collisions DAG."""
     tables = [
-        ("collisions_staging.ACC", "collisions.ACC"),
-        ("collisions_staging.events", "collisions.events"),
-        ("collisions_staging.involved", "collisions.involved"),
-        ("collisions_staging.events_centreline", "collisions.events_centreline")
+        ("move_staging.ACC", "collisions.ACC"),
+        ("move_staging.events", "collisions.events"),
+        ("move_staging.involved", "collisions.involved"),
+        ("move_staging.events_centreline", "collisions.events_centreline")
     ]
     # connection to PostgreSQL
     @task()
