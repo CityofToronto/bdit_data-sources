@@ -87,6 +87,64 @@ BEGIN
 END;
 $do$ LANGUAGE plpgsql;
 
+--this table was smaller, so inserted all at once, about 1hr. 
 INSERT INTO mio_staging.volumes_15min_mvt
 SELECT * FROM miovision_api.volumes_15min_mvt
 WHERE datetime_bin >= '2019-01-01'::date;
+
+/*insert any new data 
+INSERT INTO mio_staging.volumes_15min_mvt
+SELECT * FROM miovision_api.volumes_15min_mvt WHERE datetime_bin >= '2023-10-30 23:00:00'::timestamp
+*/
+
+--CHECK ROW COUNT BEFORE PROCEEDING
+--complete up until 2023-10-31 23:00:00. Will need to insert any new data before we changeover using script above. 
+SELECT * FROM 
+(SELECT COUNT(*) AS staging_count FROM mio_staging.volumes_15min_mvt) a,
+(SELECT COUNT(*) AS miovision_api_count FROM miovision_api.volumes_15min_mvt
+ WHERE datetime_bin >= '2019-01-01'::timestamp) b
+
+--change home/owner of sequence
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY NONE;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq SET SCHEMA mio_staging;
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY volumes_15min_mvt.volume_15min_mvt_uid;
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNER TO miovision_admins;
+
+/*Careful with these!!!
+
+--save and drop dependencies
+SELECT public.deps_save_and_drop_dependencies('miovision_api','volumes_15min_mvt');
+--truncate and drop old volumes_15min_mvt
+TRUNCATE miovision_api.volumes_15min_mvt;
+DROP miovision_api.volumes_15min_mvt;
+--switch over schema of new table:
+ALTER TABLE mio_staging.volumes_15min_mvt SET SCHEMA miovision_api;
+--restore dependencies
+SELECT public.deps_restore_dependencies('miovision_api','volumes_15min_mvt');
+
+*/
+
+--parent table needs further permissions.
+ALTER TABLE IF EXISTS miovision_api.volumes_15min_mvt OWNER to miovision_admins;
+REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
+GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO bdit_bots;
+GRANT REFERENCES, TRIGGER, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
+GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO miovision_admins;
+GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO rds_superuser WITH GRANT OPTION;
+
+--need to change the schema and owners of all the partitions.
+DO $do$
+DECLARE
+	yyyy TEXT;
+    month_table TEXT;
+    year_table TEXT;
+BEGIN
+	FOR yyyy IN 2019..2023 LOOP
+        year_table := 'volumes_15min_mvt_'||yyyy::text;
+        EXECUTE FORMAT($$ 
+            ALTER TABLE IF EXISTS mio_staging.%I SET SCHEMA miovision_api;
+            ALTER TABLE IF EXISTS miovision_api.%I OWNER to miovision_admins;
+           $$, year_table, year_table);
+	END LOOP;
+END;
+$do$ LANGUAGE plpgsql;

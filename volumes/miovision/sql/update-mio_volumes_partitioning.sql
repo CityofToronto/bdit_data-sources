@@ -20,6 +20,8 @@ CREATE TABLE mio_staging.volumes (
 )
 PARTITION BY RANGE (datetime_bin);
 
+ALTER TABLE mio_staging.volumes ALTER COLUMN volume_uid SET DEFAULT nextval('miovision_api.volumes_volume_uid_seq'::regclass);
+
 CREATE INDEX volumes_datetime_bin_idx
   ON mio_staging.volumes
   USING brin(datetime_bin);
@@ -49,7 +51,7 @@ CREATE INDEX volume_uid_unique
     ON mio_staging.volumes
     USING btree(volume_uid);
 
---create partitions
+--create year + month partitions
 DO $do$
 DECLARE
 	yyyy TEXT;
@@ -77,22 +79,94 @@ BEGIN
 	FOR yyyy IN 2019..2023 LOOP
         year_table := 'volumes_'||yyyy::text;
         --grant permissions on outer partitions
-        EXECUTE FORMAT($$ GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot $$, year_table);
+        EXECUTE FORMAT($$
+            GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
+            REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
+            GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
+            GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+            GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
+            GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
+            $$, year_table, year_table, year_table, year_table, year_table, year_table);
         FOR mm IN 01..12 LOOP
             month_table:= year_table||lpad(mm::text, 2, '0');
-            --grant permissions on outer partitions
-            EXECUTE FORMAT($$ GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot $$, month_table);
+            --grant permissions on inner partitions
+            EXECUTE FORMAT($$
+                GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
+                REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
+                GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
+                GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+                GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
+                GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
+                $$, month_table, month_table, month_table, month_table, month_table, month_table);
     	END LOOP;
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
 
---Test: 54min to insert 136,297,577 rows
+--Inserted in batches by year like so:
 INSERT INTO mio_staging.volumes
-SELECT * FROM miovision_api.volumes_2020
+SELECT * FROM miovision_api.volumes
+WHERE
+    datetime_bin >= '2019-01-01'::timestamp
+    AND datetime_bin < '2020-01-01'::timestamp
+    AND classification_uid IS NOT NULL --some rows violated this new pkey constraint
 
---check row counts are the same
+/*may need to insert newest data
+INSERT INTO mio_staging.volumes
+SELECT * FROM miovision_api.volumes WHERE datetime_bin >= '2023-11-01'::timestamp
+*/
 
---TRUNCATE miovision_api.volumes
+--CHECK ROW COUNT BEFORE PROCEEDING
+--check row count is the same, insert any new rows above if not.
+SELECT * FROM 
+(SELECT COUNT(*) AS staging_count FROM mio_staging.volumes) a,
+(SELECT COUNT(*) AS miovision_api_count FROM miovision_api.volumes
+ WHERE datetime_bin >= '2019-01-01'::timestamp
+  AND classification_uid IS NOT NULL) b
 
---ALTER TABLE mio_staging.volumes SET SCHEMA miovision_api;
+--change index ownership: 
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY NONE;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNER TO gwolofs;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq SET SCHEMA mio_staging;
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq OWNED BY volumes.volume_uid;
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq OWNER TO miovision_admins;
+
+--truncate and drop all the volumes tables; Point of no return!
+/*
+ALTER TABLE miovision_api.volumes_2018 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2018; DROP miovision_api.volumes_2018;
+ALTER TABLE miovision_api.volumes_2019 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2019; DROP miovision_api.volumes_2019;
+ALTER TABLE miovision_api.volumes_2020 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2020; DROP miovision_api.volumes_2020;
+ALTER TABLE miovision_api.volumes_2021 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2021; DROP miovision_api.volumes_2021;
+ALTER TABLE miovision_api.volumes_2022 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2022; DROP miovision_api.volumes_2022;
+ALTER TABLE miovision_api.volumes_2023 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2023; DROP miovision_api.volumes_2023;
+DROP TABLE miovision_api.volumes;
+*/
+
+ALTER TABLE mio_staging.volumes SET SCHEMA miovision_api;
+ALTER TABLE miovision_api.volumes SET OWNER miovision_admins;
+
+--CHANGE OWNER OF PARTITIONS
+DO $do$
+DECLARE
+	yyyy TEXT;
+    month_table TEXT;
+    year_table TEXT;
+BEGIN
+	FOR yyyy IN 2019..2023 LOOP
+        year_table := 'volumes_'||yyyy::text;
+        --grant permissions on outer partitions
+        EXECUTE FORMAT($$
+            ALTER TABLE IF EXISTS mio_staging.%I SET SCHEMA miovision_api;
+            ALTER TABLE miovision_api.%I OWNER TO miovision_admins;
+            $$, year_table, year_table);
+        FOR mm IN 01..12 LOOP
+            month_table:= year_table||lpad(mm::text, 2, '0');
+            --grant permissions on inner partitions
+            EXECUTE FORMAT($$
+            ALTER TABLE IF EXISTS mio_staging.%I SET SCHEMA miovision_api;
+            ALTER TABLE miovision_api.%I OWNER TO miovision_admins;
+                $$, month_table, month_table);
+    	END LOOP;
+	END LOOP;
+END;
+$do$ LANGUAGE plpgsql
