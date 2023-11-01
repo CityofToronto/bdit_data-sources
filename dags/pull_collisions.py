@@ -23,6 +23,7 @@ from psycopg2 import sql
 from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.sensors.base import PokeReturnValue
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -42,7 +43,7 @@ default_args = {
     "email_on_failure": False,
     "email_on_success": False,
     "retries": 3,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(minutes=60),
     "on_failure_callback": task_fail_slack_alert,
 }
 
@@ -51,7 +52,7 @@ default_args = {
     default_args=default_args,
     catchup=False,
     max_active_runs=5,
-    schedule_interval="0 7 * * *",
+    schedule_interval=None,
     doc_md=__doc__,
     tags=["collisions"]
 )
@@ -63,8 +64,15 @@ def collisions_replicator():
         ("move_staging.involved", "collisions.involved"),
         ("move_staging.events_centreline", "collisions.events_centreline")
     ]
-    # connection to PostgreSQL
-    @task()
+    
+    @task.sensor(poke_interval=3600, timeout=3600*24, mode="reschedule")
+    def wait_for_upstream(**kwargs) -> PokeReturnValue:
+        """Waits for an external trigger."""
+        return PokeReturnValue(
+            is_done=kwargs["task_instance"].dag_run.external_trigger
+        )
+    
+    @task(retries=3)
     def copy_table(src:str, dst:str) -> None:
         """Copies ``src`` table into ``dst`` after truncating it.
 
@@ -91,6 +99,10 @@ def collisions_replicator():
             cur.execute(insert_query)
 
     for src, dst in tables:
-        copy_table.override(task_id=dst.split(".")[1])(src, dst)
+        wait_for_upstream.override(
+            task_id="_".join([dst.split(".")[1],"sensor"])
+        )() >> copy_table.override(
+            task_id=dst.split(".")[1]
+        )(src, dst)
 
 collisions_replicator()
