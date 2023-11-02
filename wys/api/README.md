@@ -168,6 +168,20 @@ This table contains locations of stationary and mobile signs. It also contains i
 
 ### Stationary Signs
 
+```mermaid
+flowchart TD
+loc[locations]
+bins[speed_bins_old] --> agg
+raw[raw_data] --> |Hourly aggregation| agg[speed_counts_agg_5kph]
+ssl[sign_schedules_list] --> |Text Processing| ssc[sign_schedules_clean]
+loc --> |Name contains serial number| stationary_signs 
+ssc --> stationary_summary --> open_data.wys_stationary_summary
+raw --> |monthly summary|stationary_summary
+stationary_signs --> stationary_summary
+agg --> open_data.wys_stationary_detailed
+stationary_summary ----> open_data.wys_stationary_detailed
+```
+
 #### **`wys.stationary_signs`**
 - This mat view identifies stationary signs from the `wys.locations` table based on `sign_name`s with a 4-8 digit `serial_num` at the end of the string.  
 - It is updated monthly by the `refresh_wys_monthly` DAG. 
@@ -199,6 +213,20 @@ This open data table contains a detailed hourly / 5 kph speed bin summary of WYS
 
 ### Mobile Signs
 Mobile WYS signs have a number of different treatments vs. stationary signs, as the locations stored by the api are not considered reliable due to frequent repositioning. Sign locations are identified using Google Sheets listed in `wys.ward_master_list` table, which are manually updated by the Vision Zero team and by the installation contractor. The sign locations are then stored in **`wys.mobile_sign_installations`**, partitioned by Ward. The **`wys.mobile_api_id`** mat view is used to link the mobile installation location to a particular sign (`api_id`). Finally the signs are summarized in **`wys.mobile_summary`**, updated monthly, and open data views `open_data.wys_mobile_summary` and `open_data.wys_mobile_detailed`. 
+
+```mermaid
+flowchart TD
+loc[locations] --> |Name like Ward # - S#'| mai[mobile_api_id]
+raw[raw_data] --> |Hourly aggregation| agg[speed_counts_agg_5kph]
+bins[speed_bins_old] --> agg 
+ssl[sign_schedules_list] --> |Text Processing| ssc[sign_schedules_clean]
+ward_masterlist --> |Sign locations from Google Sheets| msi[mobile_sign_installations]
+msi --> |Up to date locations from contractor| mai
+ssc ----> mobile_summary --> od_summ[open_data.wys_mobile_summary] --> od_det[open_data.wys_mobile_detailed]
+raw --> mobile_summary
+mai ----> |full sign summary|mobile_summary
+agg --> od_det
+```
 
 #### **`wys.ward_masterlist`**  
 This table contains a list of the Google Sheets containing the the Mobile WYS sign locations, organized by Ward.
