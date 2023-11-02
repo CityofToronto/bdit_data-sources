@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.create_yyyy_volumes_partition(
     base_table text,
-    year_ integer)
+    year_ integer,
+    datetime_col text)
 RETURNS void
 LANGUAGE 'plpgsql'
 SECURITY DEFINER
@@ -22,22 +23,33 @@ BEGIN
         FOR VALUES FROM (%L) TO (%L)
         PARTITION BY RANGE (%I);
         ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
+        GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
+        REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
+        GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
+        GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+        GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
         $$,
         year_table,
         base_table,
         startdate,
         enddate,
         datetime_col,
+        year_table,
+        year_table,
+        year_table,
+        year_table,
+        year_table,
         year_table
     );
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer) IS
+COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) IS
 'Create a new year partition under the parent table `base_table`.
-Can be used accross schemas when partitioning by year. 
-Example: SELECT miovision_api.create_yyyy_volumes_partition(''raw_vdsvehicledata'', 2023, ''vds'', ''vds_admins'')';
+Only to be used for miovision_api `volumes` table. 
+Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`.
+Example: SELECT miovision_api.create_yyyy_volumes_partition(''volumes'', 2023, ''datetime_bin'')';
 
-ALTER FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) TO miovision_api_bot;

@@ -25,14 +25,12 @@ BEGIN
         REVOKE ALL ON TABLE miovision_api.%I FROM bdit_humans;
         GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
         GRANT ALL ON TABLE miovision_api.%I TO bdit_bots;
-        GRANT ALL ON TABLE miovision_api.%I TO miovision_admins;
         GRANT ALL ON TABLE miovision_api.%I TO rds_superuser WITH GRANT OPTION;
         $$,
         year_table,
         base_table,
         startdate,
         enddate,
-        year_table,
         year_table,
         year_table,
         year_table,
@@ -45,8 +43,8 @@ $BODY$;
 
 COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) IS
 'Create a new year partition under the parent table `base_table`.
-Can be used accross schemas when partitioning by year. 
-Example: SELECT miovision_api.create_yyyy_volumes_15min_partition(''raw_vdsvehicledata'', 2023, ''vds'', ''vds_admins'')';
+Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. 
+Example: SELECT miovision_api.create_yyyy_volumes_partition(''volumes_15min'', 2023)';
 
 ALTER FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) TO miovision_api_bot;
