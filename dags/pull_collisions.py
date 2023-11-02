@@ -98,10 +98,11 @@ def collisions_replicator():
             cur.execute(truncate_query)
             cur.execute(insert_query)
 
+    external_sensor = wait_for_upstream.override(
+        task_id="wait_for_external_trigger"
+    )()
     for src, dst in tables:
-        wait_for_upstream.override(
-            task_id="_".join([dst.split(".")[1],"sensor"])
-        )() >> copy_table.override(
+        external_sensor >> copy_table.override(
             task_id=dst.split(".")[1]
         )(src, dst)
 
