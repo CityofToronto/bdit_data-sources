@@ -128,11 +128,13 @@ b AS (
         datetime_bin >= '2019-01-01'::timestamp
         AND classification_uid IS NOT NULL
 )
+
 SELECT a.staging_count, b.miovision_api_count
-FROM a, b
+FROM a,
+b;
 
 --change index ownership: 
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY NONE; --noqa: PRS
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY NONE; --noqa
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNER TO gwolofs;
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq OWNED BY volumes.volume_uid;
@@ -150,7 +152,7 @@ DROP TABLE miovision_api.volumes;
 */
 
 ALTER TABLE mio_staging.volumes SET SCHEMA miovision_api;
-ALTER TABLE miovision_api.volumes SET OWNER miovision_admins;
+ALTER TABLE miovision_api.volumes OWNER TO miovision_admins;
 
 --CHANGE OWNER OF PARTITIONS
 DO $do$

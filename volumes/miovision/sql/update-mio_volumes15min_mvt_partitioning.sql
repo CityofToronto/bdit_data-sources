@@ -14,7 +14,7 @@ IS 'Leg of approach or entry point ';
 -- Index: volumes_15min_mvt_classification_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_classification_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_classification_uid_idx
-ON mio_staging.volumes_15min_mvt USING btree(classification_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(classification_uid ASC nulls last);
 
 -- Index: volumes_15min_mvt_datetime_bin_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_datetime_bin_idx;
@@ -24,27 +24,28 @@ ON mio_staging.volumes_15min_mvt USING brin(datetime_bin);
 -- Index: volumes_15min_mvt_intersection_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_intersection_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_intersection_uid_idx
-ON mio_staging.volumes_15min_mvt USING btree(intersection_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(intersection_uid ASC nulls last);
 
 -- Index: volumes_15min_mvt_leg_movement_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_leg_movement_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_leg_movement_uid_idx
 ON mio_staging.volumes_15min_mvt USING btree(
-    leg COLLATE pg_catalog."default" ASC NULLS LAST, movement_uid ASC NULLS LAST
+    leg COLLATE pg_catalog."default" ASC nulls last, movement_uid ASC nulls last
 );
 
 -- Index: volumes_15min_mvt_processed_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_processed_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_processed_idx
-ON mio_staging.volumes_15min_mvt USING btree(processed ASC NULLS LAST)
+ON mio_staging.volumes_15min_mvt USING btree(processed ASC nulls last)
 WHERE processed IS NULL;
 
 -- Index: volumes_15min_mvt_volume_15min_mvt_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_volume_15min_mvt_uid_idx
-ON mio_staging.volumes_15min_mvt USING btree(volume_15min_mvt_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(volume_15min_mvt_uid ASC nulls last);
     
 --create partitions
+--note this partition create function has been altered since.
 DO $do$
 DECLARE
 	yyyy TEXT;
@@ -71,7 +72,7 @@ BEGIN
         year_table:= 'volumes_15min_mvt_'||yyyy::text;
         --grant permissions on outer partitions
         EXECUTE FORMAT($$ 
-            --ALTER TABLE IF EXISTS mio_staging.%I OWNER to miovision_admins;
+            --ALTER TABLE IF EXISTS mio_staging.%I OWNER TO miovision_admins;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
             GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
             GRANT REFERENCES, TRIGGER, SELECT ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
@@ -104,11 +105,13 @@ b AS (
     FROM miovision_api.volumes_15min_mvt
     WHERE datetime_bin >= '2019-01-01'::timestamp
 )
+
 SELECT a.staging_count, b.miovision_api_count
-FROM a, b
+FROM a,
+b;
 
 --change home/owner of sequence
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY NONE; --noqa: PRS
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY NONE; --noqa
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY volumes_15min_mvt.volume_15min_mvt_uid;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNER TO miovision_admins;
@@ -146,7 +149,7 @@ BEGIN
         year_table := 'volumes_15min_mvt_'||yyyy::text;
         EXECUTE FORMAT($$ 
             ALTER TABLE IF EXISTS mio_staging.%I SET SCHEMA miovision_api;
-            ALTER TABLE IF EXISTS miovision_api.%I OWNER to miovision_admins;
+            ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
            $$, year_table, year_table);
 	END LOOP;
 END;

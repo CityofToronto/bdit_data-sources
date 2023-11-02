@@ -14,7 +14,7 @@ IS 'leg location, e.g. E leg means both entry and exit traffic across the east s
 -- Index: volumes_15min_classification_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_classification_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_classification_uid_idx
-ON mio_staging.volumes_15min USING btree(classification_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(classification_uid ASC nulls last);
 
 -- Index: volumes_15min_datetime_bin_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_datetime_bin_idx;
@@ -24,19 +24,21 @@ ON mio_staging.volumes_15min USING brin(datetime_bin);
 -- Index: volumes_15min_intersection_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_intersection_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_intersection_uid_idx
-ON mio_staging.volumes_15min USING btree(intersection_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(intersection_uid ASC nulls last);
 
 -- Index: volumes_15min_intersection_uid_leg_dir_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_intersection_uid_leg_dir_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_intersection_uid_leg_dir_idx
 ON mio_staging.volumes_15min USING btree(
-    intersection_uid ASC NULLS LAST, leg COLLATE pg_catalog."default" ASC NULLS LAST, dir COLLATE pg_catalog."default" ASC NULLS LAST
+    intersection_uid ASC nulls last,
+    leg COLLATE pg_catalog."default" ASC nulls last,
+    dir COLLATE pg_catalog."default" ASC nulls last
 );
 
 -- Index: volumes_15min_volume_15min_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_volume_15min_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_volume_15min_uid_idx
-ON mio_staging.volumes_15min USING btree(volume_15min_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(volume_15min_uid ASC nulls last);
     
 --create partitions
 DO $do$
@@ -66,7 +68,7 @@ BEGIN
         year_table := 'volumes_15min_'||yyyy::text;
         --grant permissions on outer partitions
         EXECUTE FORMAT($$ 
-            --ALTER TABLE IF EXISTS mio_staging.%I OWNER to miovision_admins;
+            --ALTER TABLE IF EXISTS mio_staging.%I OWNER TO miovision_admins;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
             GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
             GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
@@ -98,11 +100,13 @@ b AS (
     FROM miovision_api.volumes_15min
     WHERE datetime_bin >= '2019-01-01'::timestamp
 )
+
 SELECT a.staging_count, b.miovision_api_count
-FROM a, b
+FROM a,
+b;
 
 --change home/owner of sequence
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq OWNED BY NONE; --noqa: PRS
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq OWNED BY NONE; --noqa
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq OWNED BY volumes_15min.volume_15min_uid;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq OWNER TO miovision_admins;
@@ -122,7 +126,7 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min');
 */
 
 --parent table needs further permissions.
-ALTER TABLE IF EXISTS miovision_api.volumes_15min OWNER to miovision_admins;
+ALTER TABLE IF EXISTS miovision_api.volumes_15min OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM bdit_humans;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM covid_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO bdit_bots;
