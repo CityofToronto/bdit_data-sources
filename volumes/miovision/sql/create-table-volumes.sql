@@ -10,10 +10,13 @@ CREATE TABLE miovision_api.volumes
     movement_uid integer,
     volume integer,
     volume_15min_mvt_uid integer,
+    CONSTRAINT volumes_intersection_uid_datetime_bin_classification_pkey 
+    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid),
     CONSTRAINT volumes_volumes_15min_mvt_uid_fkey FOREIGN KEY (volume_15min_mvt_uid)
     REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
     ON UPDATE NO ACTION ON DELETE SET NULL
 )
+PARTITION BY RANGE (datetime_bin)
 WITH (
     OIDS=FALSE
 );
@@ -46,3 +49,12 @@ USING btree(intersection_uid);
 CREATE INDEX volumes_volume_15min_mvt_uid_idx
 ON miovision_api.volumes
 USING btree(volume_15min_mvt_uid);
+
+--the old pkey becomes a unique constraint
+-- Index: mio_staging.volume_uid_unique
+-- DROP INDEX mio_staging.volume_uid_unique;
+CREATE INDEX volume_uid_unique
+ON mio_staging.volumes
+USING btree(volume_uid);
+
+ALTER TABLE miovision_api.volumes OWNER TO miovision_admins;

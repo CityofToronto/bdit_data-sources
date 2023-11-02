@@ -135,7 +135,7 @@ GRANT SELECT ON TABLE miovision_api.volumes_15min TO covid_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTION;
 
---need to change the schema and owners of all the partitions.
+--need to change the schema and owners of all the partitions since wasn't able to do that previously. 
 DO $do$
 DECLARE
 	yyyy TEXT;
