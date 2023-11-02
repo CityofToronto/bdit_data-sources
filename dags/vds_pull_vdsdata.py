@@ -30,7 +30,7 @@ start_date = {'start_date': '{{ ds }}'}
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_new_year
+from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
