@@ -15,7 +15,7 @@ CREATE TABLE miovision_api.volumes_daily (
     volume_10 integer, 
     volume_total integer,
     CONSTRAINT volumes_daily_pkey
-        PRIMARY KEY (intersection_uid, dt)
+    PRIMARY KEY (intersection_uid, dt)
 );
 
 CREATE INDEX volumes_intersection_idx

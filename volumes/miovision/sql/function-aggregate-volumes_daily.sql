@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_volumes_daily(
-	start_date date,
-	end_date date
+    start_date date,
+    end_date date
 )
 RETURNS void
 LANGUAGE 'plpgsql'

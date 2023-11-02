@@ -4,49 +4,45 @@ CREATE TABLE mio_staging.volumes_15min_mvt (
     LIKE miovision_api.volumes_15min_mvt INCLUDING DEFAULTS,
     --change primary key to include datetime_bin for partioning
     CONSTRAINT volumes_15min_mvt_intersection_uid_datetime_bin_classificat_pk
-        PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
+    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 )
 PARTITION BY RANGE (datetime_bin);
 
 COMMENT ON COLUMN mio_staging.volumes_15min_mvt.leg
-    IS 'Leg of approach or entry point ';
+IS 'Leg of approach or entry point ';
 
 -- Index: volumes_15min_mvt_classification_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_classification_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_classification_uid_idx
-    ON mio_staging.volumes_15min_mvt USING btree
-    (classification_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(classification_uid ASC NULLS LAST);
 
 -- Index: volumes_15min_mvt_datetime_bin_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_datetime_bin_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_datetime_bin_idx
-    ON mio_staging.volumes_15min_mvt USING brin
-    (datetime_bin);
+ON mio_staging.volumes_15min_mvt USING brin(datetime_bin);
 
 -- Index: volumes_15min_mvt_intersection_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_intersection_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_intersection_uid_idx
-    ON mio_staging.volumes_15min_mvt USING btree
-    (intersection_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(intersection_uid ASC NULLS LAST);
 
 -- Index: volumes_15min_mvt_leg_movement_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_leg_movement_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_leg_movement_uid_idx
-    ON mio_staging.volumes_15min_mvt USING btree
-    (leg COLLATE pg_catalog."default" ASC NULLS LAST, movement_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(
+    leg COLLATE pg_catalog."default" ASC NULLS LAST, movement_uid ASC NULLS LAST
+);
 
 -- Index: volumes_15min_mvt_processed_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_processed_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_processed_idx
-    ON mio_staging.volumes_15min_mvt USING btree
-    (processed ASC NULLS LAST)
-    WHERE processed IS NULL;
+ON mio_staging.volumes_15min_mvt USING btree(processed ASC NULLS LAST)
+WHERE processed IS NULL;
 
 -- Index: volumes_15min_mvt_volume_15min_mvt_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_volume_15min_mvt_uid_idx
-    ON mio_staging.volumes_15min_mvt USING btree
-    (volume_15min_mvt_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min_mvt USING btree(volume_15min_mvt_uid ASC NULLS LAST);
     
 --create partitions
 DO $do$
@@ -99,13 +95,20 @@ SELECT * FROM miovision_api.volumes_15min_mvt WHERE datetime_bin >= '2023-10-30 
 
 --CHECK ROW COUNT BEFORE PROCEEDING
 --complete up until 2023-10-31 23:00:00. Will need to insert any new data before we changeover using script above. 
-SELECT * FROM 
-(SELECT COUNT(*) AS staging_count FROM mio_staging.volumes_15min_mvt) a,
-(SELECT COUNT(*) AS miovision_api_count FROM miovision_api.volumes_15min_mvt
- WHERE datetime_bin >= '2019-01-01'::timestamp) b
+WITH a AS (
+    SELECT COUNT(*) AS staging_count
+    FROM mio_staging.volumes_15min_mvt
+),
+b AS (
+    SELECT COUNT(*) AS miovision_api_count
+    FROM miovision_api.volumes_15min_mvt
+    WHERE datetime_bin >= '2019-01-01'::timestamp
+)
+SELECT a.staging_count, b.miovision_api_count
+FROM a, b
 
 --change home/owner of sequence
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY NONE;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY NONE; --noqa: PRS
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY volumes_15min_mvt.volume_15min_mvt_uid;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNER TO miovision_admins;
@@ -125,7 +128,7 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min_mvt');
 */
 
 --parent table needs further permissions.
-ALTER TABLE IF EXISTS miovision_api.volumes_15min_mvt OWNER to miovision_admins;
+ALTER TABLE IF EXISTS miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO bdit_bots;
 GRANT REFERENCES, TRIGGER, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;

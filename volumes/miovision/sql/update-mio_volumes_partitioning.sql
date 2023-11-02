@@ -1,5 +1,5 @@
 -- Create staging schema for transitioning 
-CREATE SCHEMA IF NOT EXISTS mio_staging AUTHORIZATION gwolofs;
+CREATE SCHEMA IF NOT EXISTS mio_staging AUTHORIZATION gwolofs; --noqa: PRS
 
 COMMENT ON SCHEMA mio_staging
 IS 'A staging schema for transitioning miovision_api.volumes table from inheritance partitioning to declarative partitioning. 
@@ -11,45 +11,44 @@ CREATE TABLE mio_staging.volumes (
     LIKE miovision_api.volumes INCLUDING DEFAULTS,
     --change primary key to include datetime_bin for partioning
     CONSTRAINT volumes_intersection_uid_datetime_bin_classification_pkey 
-        PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid),
+    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid),
     CONSTRAINT volumes_volume_15min_mvt_uid_fkey
-        FOREIGN KEY (volume_15min_mvt_uid)
-        REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE SET NULL
+    FOREIGN KEY (volume_15min_mvt_uid)
+    REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE SET NULL
 )
 PARTITION BY RANGE (datetime_bin);
 
 ALTER TABLE mio_staging.volumes ALTER COLUMN volume_uid SET DEFAULT nextval('miovision_api.volumes_volume_uid_seq'::regclass);
 
 CREATE INDEX volumes_datetime_bin_idx
-  ON mio_staging.volumes
-  USING brin(datetime_bin);
+ON mio_staging.volumes USING brin(datetime_bin);
 
 -- Index: mio_staging.volumes_intersection_uid_classification_uid_leg_movement_ui_idx
 -- DROP INDEX mio_staging.volumes_intersection_uid_classification_uid_leg_movement_ui_idx;
 CREATE INDEX volumes_intersection_uid_classification_uid_leg_movement_ui_idx
-    ON mio_staging.volumes
-    USING btree(intersection_uid, classification_uid, leg COLLATE pg_catalog."default", movement_uid);
+ON mio_staging.volumes
+USING btree(intersection_uid, classification_uid, leg COLLATE pg_catalog."default", movement_uid);
 
 -- Index: mio_staging.volumes_intersection_uid_idx
 -- DROP INDEX mio_staging.volumes_intersection_uid_idx;
 CREATE INDEX volumes_intersection_uid_idx
-    ON mio_staging.volumes
-    USING btree(intersection_uid);
+ON mio_staging.volumes
+USING btree(intersection_uid);
 
 -- Index: mio_staging.volumes_volume_15min_mvt_uid_idx
 -- DROP INDEX mio_staging.volumes_volume_15min_mvt_uid_idx;
 CREATE INDEX volumes_volume_15min_mvt_uid_idx
-    ON mio_staging.volumes
-    USING btree(volume_15min_mvt_uid);
+ON mio_staging.volumes
+USING btree(volume_15min_mvt_uid);
 
 --the old pkey becomes a unique constraint
 -- Index: mio_staging.volume_uid_unique
 -- DROP INDEX mio_staging.volume_uid_unique;
 CREATE INDEX volume_uid_unique
-    ON mio_staging.volumes
-    USING btree(volume_uid);
+ON mio_staging.volumes
+USING btree(volume_uid);
 
 --create year + month partitions
 DO $do$
@@ -118,14 +117,22 @@ SELECT * FROM miovision_api.volumes WHERE datetime_bin >= '2023-11-01'::timestam
 
 --CHECK ROW COUNT BEFORE PROCEEDING
 --check row count is the same, insert any new rows above if not.
-SELECT * FROM 
-(SELECT COUNT(*) AS staging_count FROM mio_staging.volumes) a,
-(SELECT COUNT(*) AS miovision_api_count FROM miovision_api.volumes
- WHERE datetime_bin >= '2019-01-01'::timestamp
-  AND classification_uid IS NOT NULL) b
+WITH a AS (
+    SELECT COUNT(*) AS staging_count
+    FROM mio_staging.volumes
+),
+b AS (
+    SELECT COUNT(*) AS miovision_api_count
+    FROM miovision_api.volumes
+    WHERE
+        datetime_bin >= '2019-01-01'::timestamp
+        AND classification_uid IS NOT NULL
+)
+SELECT a.staging_count, b.miovision_api_count
+FROM a, b
 
 --change index ownership: 
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY NONE;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY NONE; --noqa: PRS
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNER TO gwolofs;
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq OWNED BY volumes.volume_uid;

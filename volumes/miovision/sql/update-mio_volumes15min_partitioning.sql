@@ -4,41 +4,39 @@ CREATE TABLE mio_staging.volumes_15min (
     LIKE miovision_api.volumes_15min INCLUDING DEFAULTS,
     --change primary key to include datetime_bin for partioning
     CONSTRAINT volumes_15min_intersection_uid_datetime_bin_classification_pkey
-        PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, dir)
+    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, dir)
 )
 PARTITION BY RANGE (datetime_bin);
     
 COMMENT ON COLUMN mio_staging.volumes_15min.leg
-    IS 'leg location, e.g. E leg means both entry and exit traffic across the east side of the intersection. ';
+IS 'leg location, e.g. E leg means both entry and exit traffic across the east side of the intersection. ';
 
 -- Index: volumes_15min_classification_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_classification_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_classification_uid_idx
-    ON mio_staging.volumes_15min USING btree
-    (classification_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(classification_uid ASC NULLS LAST);
 
 -- Index: volumes_15min_datetime_bin_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_datetime_bin_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_datetime_bin_idx
-    ON mio_staging.volumes_15min USING brin(datetime_bin);
+ON mio_staging.volumes_15min USING brin(datetime_bin);
 
 -- Index: volumes_15min_intersection_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_intersection_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_intersection_uid_idx
-    ON mio_staging.volumes_15min USING btree
-    (intersection_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(intersection_uid ASC NULLS LAST);
 
 -- Index: volumes_15min_intersection_uid_leg_dir_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_intersection_uid_leg_dir_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_intersection_uid_leg_dir_idx
-    ON mio_staging.volumes_15min USING btree
-    (intersection_uid ASC NULLS LAST, leg COLLATE pg_catalog."default" ASC NULLS LAST, dir COLLATE pg_catalog."default" ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(
+    intersection_uid ASC NULLS LAST, leg COLLATE pg_catalog."default" ASC NULLS LAST, dir COLLATE pg_catalog."default" ASC NULLS LAST
+);
 
 -- Index: volumes_15min_volume_15min_uid_idx
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_volume_15min_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_volume_15min_uid_idx
-    ON mio_staging.volumes_15min USING btree
-    (volume_15min_uid ASC NULLS LAST);
+ON mio_staging.volumes_15min USING btree(volume_15min_uid ASC NULLS LAST);
     
 --create partitions
 DO $do$
@@ -91,13 +89,20 @@ SELECT * FROM miovision_api.volumes_15min WHERE datetime_bin >= '2023-10-30 23:0
 
 --CHECK ROW COUNT BEFORE PROCEEDING
 --complete up until 2023-10-31 23:00:00. Will need to insert any new data before we changeover using script above. 
-SELECT * FROM 
-(SELECT COUNT(*) AS staging_count FROM mio_staging.volumes_15min) a,
-(SELECT COUNT(*) AS miovision_api_count FROM miovision_api.volumes_15min
- WHERE datetime_bin >= '2019-01-01'::timestamp) b
+WITH a AS (
+    SELECT COUNT(*) AS staging_count
+    FROM mio_staging.volumes_15min
+),
+b AS (
+    SELECT COUNT(*) AS miovision_api_count
+    FROM miovision_api.volumes_15min
+    WHERE datetime_bin >= '2019-01-01'::timestamp
+)
+SELECT a.staging_count, b.miovision_api_count
+FROM a, b
 
 --change home/owner of sequence
-ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq OWNED BY NONE;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq OWNED BY NONE; --noqa: PRS
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq SET SCHEMA mio_staging;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq OWNED BY volumes_15min.volume_15min_uid;
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq OWNER TO miovision_admins;
