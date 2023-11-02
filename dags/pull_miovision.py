@@ -32,7 +32,7 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-@dag(dag_id = dag_name,
+@dag(dag_id=dag_name,
      default_args=default_args,
      schedule_interval='0 3 * * *',
      catchup=False)
@@ -54,7 +54,7 @@ def pull_miovision_dag():
       
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', {{ params.year }}::int)",
+            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', {{ params.year }}::int, 'datetime_bin')",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', {{ params.year }}::int)",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', {{ params.year }}::int)"],
             postgres_conn_id='miovision_api_bot',
