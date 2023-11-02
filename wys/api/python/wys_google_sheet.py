@@ -41,8 +41,9 @@ def read_masterlist(con, service, **kwargs):
     if empty_wards == []:
         LOGGER.info('Completed')
     else:
-        task_instance = kwargs['task_instance']
-        task_instance.xcom_push('empty_wards', empty_wards)
+        task_instance = kwargs.get('task_instance', None)
+        if task_instance:
+            task_instance.xcom_push('empty_wards', empty_wards)
         raise AirflowFailException(
             "Failed to pull/load the data of the following wards: " + 
             ", ".join(map(str, empty_wards))
@@ -96,11 +97,18 @@ def pull_from_sheet(
     else:
         for row in values:           
             try:             
-                if row[6] and row[8] and row[10]:
+                #check installation_date and new_sign_number
+                if row[6] and row[10]: 
                     try: 
                         installation = datetime.strptime(row[6], '%m/%d/%Y').date()
-                        removal = datetime.strptime(row[8], '%m/%d/%Y').date()
-                        i = (ward_no, row[0], row[1], row[2], row[3], installation, removal, row[10], row[11], row[13])
+                        #change: add records even without removal date. 
+                        if row[8]:
+                            removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                        else:
+                            removal = None
+                        i = (
+                            ward_no, row[0], row[1], row[2], row[3], installation,
+                            removal, row[10], row[11], int(row[7]), row[13])
                         rows.append(i)
                         LOGGER.debug(row)
                     except:
@@ -120,7 +128,7 @@ def pull_from_sheet(
     insert = sql.SQL('''
         WITH new_data (ward_no, location, from_street, to_street, direction, 
                     installation_date, removal_date, new_sign_number, comments, 
-                    confirmed) 
+                    work_order, confirmed) 
                     AS (
                 VALUES %s) 
         , dupes AS(
@@ -128,7 +136,7 @@ def pull_from_sheet(
             upsert*/
             INSERT INTO wys.mobile_sign_installations_dupes
             SELECT ward_no::INT, location, from_street, to_street, direction, 
-            installation_date, removal_date, new_sign_number, comments
+            installation_date, removal_date::date, new_sign_number, comments, work_order
             FROM new_data
             NATURAL JOIN (SELECT new_sign_number, installation_date
                     FROM new_data
@@ -150,10 +158,10 @@ def pull_from_sheet(
         )
         INSERT INTO {}.{} AS existing (ward_no, location, from_street, to_street, 
                            direction, installation_date, removal_date, 
-                           new_sign_number, comments, confirmed) 
+                           new_sign_number, comments, confirmed, work_order) 
         SELECT new_data.ward_no::INT, location, from_street, to_street, 
-                direction, installation_date, removal_date, 
-                new_sign_number, comments, confirmed
+                direction, installation_date, removal_date::DATE, 
+                new_sign_number, comments, confirmed, work_order
         FROM new_data
         LEFT JOIN dupes USING (new_sign_number, installation_date)
         --Don't try to insert dupes
@@ -165,14 +173,23 @@ def pull_from_sheet(
             direction=EXCLUDED.direction,
             location=EXCLUDED.location,
             from_street=EXCLUDED.from_street,
-            to_street=EXCLUDED.to_street
+            to_street=EXCLUDED.to_street,
+            work_order=EXCLUDED.work_order
         -- Prevent unnecessary update if data are unchanged
-        WHERE existing.removal_date!=EXCLUDED.removal_date 
-            OR existing.comments!=EXCLUDED.comments
-            OR existing.direction!=EXCLUDED.direction
-            OR existing.location!=EXCLUDED.location
-            OR existing.from_street!=EXCLUDED.from_street
-            OR existing.to_street!=EXCLUDED.to_street
+        WHERE  (existing.removal_date IS NULL OR 
+            existing.removal_date!=EXCLUDED.removal_date )
+            OR (existing.comments IS NULL OR 
+                existing.comments!=EXCLUDED.comments)
+            OR (existing.direction IS NULL OR 
+                existing.direction!=EXCLUDED.direction)
+            OR (existing.location IS NULL OR 
+                existing.location!=EXCLUDED.location)
+            OR (existing.from_street IS NULL OR 
+                existing.from_street!=EXCLUDED.from_street)
+            OR (existing.to_street IS NULL OR 
+                existing.to_street!=EXCLUDED.to_street)
+            OR (existing.work_order IS NULL OR 
+                existing.work_order!=EXCLUDED.work_order)
         ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
     
     LOGGER.debug(rows)
@@ -185,6 +202,7 @@ def pull_from_sheet(
     except Error as err2:
         LOGGER.error('There was an error inserting into %s', table_name)
         LOGGER.error(err2)
+        LOGGER.error(rows)
         return False
     
     LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
