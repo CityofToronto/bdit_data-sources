@@ -1,8 +1,6 @@
-CREATE OR REPLACE FUNCTION gwolofs.create_yyyy_partition(
+CREATE OR REPLACE FUNCTION miovision_api.create_yyyy_volumes_15min_partition(
     base_table text,
-    year_ integer,
-    _schema_name text,
-    _owner text)
+    year_ integer)
 RETURNS void
 LANGUAGE 'plpgsql'
 SECURITY DEFINER
@@ -20,29 +18,35 @@ DECLARE
 BEGIN
 
     EXECUTE FORMAT($$
-        CREATE TABLE IF NOT EXISTS %I.%I
-        PARTITION OF %I.%I
+        CREATE TABLE IF NOT EXISTS miovision_api.%I
+        PARTITION OF miovision_api.%I
         FOR VALUES FROM (%L) TO (%L);
-        ALTER TABLE IF EXISTS %I.%I OWNER TO %I;
+        ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
+        REVOKE ALL ON TABLE miovision_api.%I FROM bdit_humans;
+        GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
+        GRANT ALL ON TABLE miovision_api.%I TO bdit_bots;
+        GRANT ALL ON TABLE miovision_api.%I TO miovision_admins;
+        GRANT ALL ON TABLE miovision_api.%I TO rds_superuser WITH GRANT OPTION;
         $$,
-        _schema_name,
         year_table,
-        _schema_name,
         base_table,
         startdate,
         enddate,
-        _schema_name,
         year_table,
-        _owner
+        year_table,
+        year_table,
+        year_table,
+        year_table,
+        year_table
     );
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gwolofs.create_yyyy_partition(text, integer, text, text) IS
+COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) IS
 'Create a new year partition under the parent table `base_table`.
 Can be used accross schemas when partitioning by year. 
-Example: SELECT gwolofs.create_yyyy_partition(''raw_vdsvehicledata'', 2023, ''vds'', ''vds_admins'')';
+Example: SELECT miovision_api.create_yyyy_volumes_15min_partition(''raw_vdsvehicledata'', 2023, ''vds'', ''vds_admins'')';
 
---ALTER FUNCTION gwolofs.create_yyyy_partition(text, integer, text, text) OWNER TO vds_admins;
---GRANT EXECUTE ON FUNCTION gwolofs.create_yyyy_partition(text, integer, text, text) TO vds_bot;
+ALTER FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) TO miovision_api_bot;
