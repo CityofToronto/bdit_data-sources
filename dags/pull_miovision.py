@@ -88,6 +88,6 @@ def pull_miovision_dag():
         trigger_rule='none_failed'
     )
 
-    check_partitions() >> t1()
+    check_partitions() >> t1
 
 pull_miovision_dag()
