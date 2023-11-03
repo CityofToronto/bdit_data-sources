@@ -6,11 +6,9 @@ import sys
 import os
 
 import pendulum
-from airflow import DAG
+from airflow.decorators import dag, task, task_group
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -33,11 +31,20 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 3 * * *')
+@dag(dag_id=dag_name,
+     default_args=default_args,
+     schedule_interval='0 3 * * *',
+     catchup=False)
+def pull_miovision_dag(): 
 # Add 3 hours to ensure that the data are at least 2 hours old
 
-t1 = BashOperator(
+    t1 = BashOperator(
         task_id = 'pull_miovision',
         bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
         retries = 0,
-        dag=dag)
+        trigger_rule='none_failed'
+    )
+
+    t1
+
+pull_miovision_dag()
