@@ -4,6 +4,7 @@ Slack notifications is raised when the airflow process fails.
 """
 import sys
 import os
+from functools import partial
 
 import pendulum
 from airflow.decorators import dag, task_group
@@ -21,6 +22,15 @@ dag_name = 'pull_miovision'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+def get_return_value(context):
+    """Return records from SQLCheckOperatorWithReturnValue."""
+    return_value = context.get("task_instance").xcom_pull(
+        task_ids=context.get("task_instance").task_id
+    )
+    if return_value:
+        return return_value
+    return ""
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -47,7 +57,9 @@ def pull_miovision_dag():
         trigger_rule='none_failed'
     )
 
-    @task_group()
+    @task_group(on_failure_callback = partial(
+                    task_fail_slack_alert, extra_msg=get_return_value
+                    ))
     def data_checks():
         data_check_params = {
             "table": "miovision_api.volumes_15min",

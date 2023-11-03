@@ -56,6 +56,15 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
+def get_return_value(context):
+    """Return records from SQLCheckOperatorWithReturnValue."""
+    return_value = context.get("task_instance").xcom_pull(
+        task_ids=context.get("task_instance").task_id
+    )
+    if return_value:
+        return return_value
+    return ""
+
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
@@ -65,7 +74,7 @@ default_args = {'owner': ','.join(names),
                  'retry_delay': timedelta(minutes=5),
                  #progressive longer waits between retries
                  'retry_exponential_backoff': True,
-                 'on_failure_callback': task_fail_slack_alert
+                 'on_failure_callback':task_fail_slack_alert,
                 }
 
 @dag(dag_id = dag_name,
@@ -92,7 +101,9 @@ def pull_wys_dag():
                      conn = conn,
                      api_key=api_key)
 
-    @task_group()
+    @task_group(on_failure_callback = partial(
+                    task_fail_slack_alert, extra_msg=get_return_value
+                    ))
     def data_checks():
         data_check_params = {
             "table": "wys.speed_counts_agg_5kph",
