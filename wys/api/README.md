@@ -167,19 +167,37 @@ This table contains locations of stationary and mobile signs. It also contains i
 | strobe_speed  | integer           | 30                                  |            |
 
 ### Stationary Signs
+The process for Stationary Signs is relatively more straightforward to that of Mobile Signs, as the locations table pulled from the API is considered to have accurate locations. 
 
+Stationary Sign Diagram: 
+- Red represents raw data extracted from source
+- Diamond shape represents Mat View / View
 ```mermaid
 flowchart TD
-loc[locations]
-bins[speed_bins_old] --> agg
-raw[raw_data] --> |Hourly aggregation| agg[speed_counts_agg_5kph]
-ssl[sign_schedules_list] --> |Text Processing| ssc[sign_schedules_clean]
-loc --> |Name contains serial number| stationary_signs 
-ssc --> stationary_summary --> open_data.wys_stationary_summary
-raw --> |monthly summary|stationary_summary
-stationary_signs --> stationary_summary
-agg --> open_data.wys_stationary_detailed
-stationary_summary ----> open_data.wys_stationary_detailed
+classDef MatView fill:white
+classDef Raw fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow
+
+loc[wys.\nlocations]:::Raw
+agg[wys.\nspeed_counts_agg_5kph]
+raw[wys.\nraw_data]:::Raw
+ssl[wys.\nsign_schedules_list]:::Raw
+ssc[wys.\nsign_schedules_clean]
+sta_signs{wys.\nstationary_\nsigns}:::MatView
+sta_summ[wys.\nstationary_summary]
+od_det[open_data.\nwys_stationary_detailed]
+od_summ{open_data.\nwys_stationary\n_summary}
+od_loc{open_data.\nwys_stationary_\nlocations}:::MatView
+
+raw --> |Monthly\naggregation|sta_summ
+raw --> |Hourly\naggregation| agg
+ssl --> |Text Processing| ssc
+loc --> |Filter: Name contains serial number + \nLinks sign details to api_id| sta_signs --> |Additional columns\nfor Open Data|od_loc
+ssc --> |Sign operating details|od_loc
+agg --> od_det 
+ssc --> |Sign operating details|sta_summ --> od_summ
+sta_signs --> sta_summ
+od_loc --> |Filter correct signs|od_summ
+od_loc --> |Filter correct signs|od_det
 ```
 
 #### **`wys.stationary_signs`**
@@ -214,17 +232,34 @@ This open data table contains a detailed hourly / 5 kph speed bin summary of WYS
 ### Mobile Signs
 Mobile WYS signs have a number of different treatments vs. stationary signs, as the locations stored by the api are not considered reliable due to frequent repositioning. Sign locations are identified using Google Sheets listed in `wys.ward_master_list` table, which are manually updated by the Vision Zero team and by the installation contractor. The sign locations are then stored in **`wys.mobile_sign_installations`**, partitioned by Ward. The **`wys.mobile_api_id`** mat view is used to link the mobile installation location to a particular sign (`api_id`). Finally the signs are summarized in **`wys.mobile_summary`**, updated monthly, and open data views `open_data.wys_mobile_summary` and `open_data.wys_mobile_detailed`. 
 
+Mobile Sign Diagram: 
+- Red represents raw data extracted from source
+- Diamond shape represents Mat View / View
 ```mermaid
 flowchart TD
-loc[locations] --> |Name like Ward # - S#'| mai[mobile_api_id]
-raw[raw_data] --> |Hourly aggregation| agg[speed_counts_agg_5kph]
-bins[speed_bins_old] --> agg 
-ssl[sign_schedules_list] --> |Text Processing| ssc[sign_schedules_clean]
-ward_masterlist --> |Sign locations from Google Sheets| msi[mobile_sign_installations]
-msi --> |Up to date locations from contractor| mai
-ssc ----> mobile_summary --> od_summ[open_data.wys_mobile_summary] --> od_det[open_data.wys_mobile_detailed]
-raw --> mobile_summary
-mai ----> |full sign summary|mobile_summary
+classDef MatView fill:white
+classDef Raw fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow
+
+loc[wys.\nlocations]:::Raw
+mai{wys.\nmobile_api_id}:::MatView
+raw[wys.\nraw_data]:::Raw
+agg[wys.\nspeed_counts_agg_5kph]
+ssl[wys.\nsign_schedules_list]:::Raw
+ssc[wys.\nsign_schedules_clean]
+wml[wys.\nward_masterlist]
+od_summ[open_data.\nwys_mobile_summary]
+od_det[open_data.\nwys_mobile_detailed]
+msi[wys.\nmobile_sign_installations]:::Raw
+summ[wys.\nmobile_summary]
+
+loc --> |Filter: Name like Ward # - S#\n+ Link api_id to sign details| mai
+raw --> |Hourly aggregation| agg
+ssl --> |Text Processing| ssc
+wml --> |Sign locations from Google Sheets| msi
+msi --> |Up to date locations\nfrom contractor| mai
+ssc --> summ --> |Exclude very new signs|od_summ <--> |Include same signs|od_det
+mai --> |Mobile sign details|summ
+raw --> |Full sign summary|summ
 agg --> od_det
 ```
 
