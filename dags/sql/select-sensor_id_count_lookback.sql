@@ -5,8 +5,8 @@
 WITH lookback AS ( --noqa: L045
     SELECT
         date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
-        COUNT(DISTINCT {{ params.id_col }}) AS lookback_count,
-        ARRAY_AGG(DISTINCT {{ params.id_col }}) AS daily_ids
+        COUNT(DISTINCT {{ params.id_col }}) AS lookback_count, --noqa: L039
+        ARRAY_AGG(DISTINCT {{ params.id_col }}) AS daily_ids --noqa: L039
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
@@ -17,8 +17,8 @@ WITH lookback AS ( --noqa: L045
 
 today AS (
     SELECT
-        COUNT(DISTINCT {{ params.id_col }}) AS today_count,
-        ARRAY_AGG(DISTINCT {{ params.id_col }}) AS today_ids
+        COUNT(DISTINCT {{ params.id_col }}) AS today_count, --noqa: L039
+        ARRAY_AGG(DISTINCT {{ params.id_col }}) AS today_ids --noqa: L039
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
@@ -34,7 +34,7 @@ ids_dif AS (
         SELECT UNNEST(a.today_ids)
         FROM today AS a
         ORDER BY ids_diff
-    ) c
+    ) AS c
 )
 
 SELECT
@@ -52,6 +52,6 @@ SELECT
         ELSE 'All ids present.'
     END AS id_diff
 FROM today AS a,
-    lookback AS lb,
+    lookback AS lb, --noqa: L025
     ids_dif AS c
 GROUP BY a.today_count, c.ids_diff
