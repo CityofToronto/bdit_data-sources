@@ -6,7 +6,7 @@ import sys
 import os
 
 import pendulum
-from airflow.decorators import dag, task, task_group
+from airflow.decorators import dag, task_group
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
@@ -14,6 +14,7 @@ from airflow.models import Variable
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
+from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
 dag_name = 'pull_miovision'
 
@@ -34,6 +35,7 @@ default_args = {'owner': ','.join(names),
 @dag(dag_id=dag_name,
      default_args=default_args,
      schedule_interval='0 3 * * *',
+     template_searchpath=os.path.join(repo_path,'dags/sql'),
      catchup=False)
 def pull_miovision_dag(): 
 # Add 3 hours to ensure that the data are at least 2 hours old
@@ -45,6 +47,40 @@ def pull_miovision_dag():
         trigger_rule='none_failed'
     )
 
-    t1
+    @task_group()
+    def data_checks():
+        data_check_params = {
+            "table": "miovision_api.volumes_15min",
+            "lookback": '60 days',
+            "dt_col": 'datetime_bin',
+            "threshold": 0.7
+        }
+        check_row_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_row_count",
+            sql="select-row_count_lookback.sql",
+            conn_id="miovision_api_bot",
+            params=data_check_params | {"col_to_sum": 'volume'},
+            retries=2
+        )
+        check_distinct_classification_uid = SQLCheckOperatorWithReturnValue(
+            task_id="check_distinct_classification_uid",
+            sql="select-sensor_id_count_lookback.sql",
+            conn_id="miovision_api_bot",
+            params=data_check_params | {"sensor_id_col": "classification_uid"} | {"threshold": 0.9},
+            retries=2
+        )
+        check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
+            task_id="check_distinct_intersection_uid",
+            sql="select-sensor_id_count_lookback.sql",
+            conn_id="miovision_api_bot",
+            params=data_check_params | {"sensor_id_col": "intersection_uid"} | {"threshold": 0.9},
+            retries=2
+        )
+
+        check_row_count
+        check_distinct_classification_uid
+        check_distinct_intersection_uid
+
+    t1 >> data_checks()
 
 pull_miovision_dag()
