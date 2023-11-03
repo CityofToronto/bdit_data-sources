@@ -66,14 +66,22 @@ def pull_miovision_dag():
             task_id="check_distinct_classification_uid",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="miovision_api_bot",
-            params=data_check_params | {"id_col": "classification_uid"} | {"threshold": 0.9},
+            params=data_check_params | {
+                    "id_col": "classification_uid"
+                } | {
+                    "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
+                },
             retries=2
         )
         check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_intersection_uid",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="miovision_api_bot",
-            params=data_check_params | {"id_col": "intersection_uid"} | {"threshold": 0.9},
+            params=data_check_params | {
+                    "id_col": "intersection_uid"
+                } | {
+                    "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
+                },
             retries=2
         )
 
