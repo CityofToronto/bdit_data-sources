@@ -175,7 +175,7 @@ Stationary Sign Diagram:
 ```mermaid
 flowchart TD
 classDef MatView fill:white
-classDef Raw fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow
+classDef Raw fill:red,color:white,font-weight:bold
 
 loc[wys.\nlocations]:::Raw
 agg[wys.\nspeed_counts_agg_5kph]
@@ -238,7 +238,7 @@ Mobile Sign Diagram:
 ```mermaid
 flowchart TD
 classDef MatView fill:white
-classDef Raw fill:#f00,color:white,font-weight:bold,stroke-width:2px,stroke:yellow
+classDef Raw fill:red,color:white,font-weight:bold
 
 loc[wys.\nlocations]:::Raw
 mai{wys.\nmobile_api_id}:::MatView
