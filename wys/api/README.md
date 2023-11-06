@@ -313,7 +313,7 @@ This table contains the details of the mobile sign installations taken from the 
 - It is updated monthly by the `refresh_wys_monthly` DAG. 
 
 #### **`wys.mobile_summary`**  
-- This table contains a summary for each mobile WYS sign over the enitre duration of it's installation.  
+- This table contains a summary for each mobile WYS sign over the entire duration of it's installation.  
   - Unlike the stationary summary, this table stores the summary for the entire duration of the sign, not grouped by month. This is because mobile signs are typically only installed for a 3 week period.  
 - Each month, new signs are added, or long running signs updated, by the `refresh_wys_monthly` DAG. 
 - This table is used to create the Open Data view `open_data.wys_mobile_summary`.  
