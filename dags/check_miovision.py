@@ -49,6 +49,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2020, 7, 10, tz="America/Toronto"),
+                'end_date': pendulum.datetime(2023, 11, 10, tz="America/Toronto"), #functionality ported over to pull_miovision.check_data.find_gaps
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,

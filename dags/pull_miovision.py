@@ -96,10 +96,24 @@ def pull_miovision_dag():
                 },
             retries=2
         )
+        check_gaps = SQLCheckOperatorWithReturnValue(
+            task_id="check_gaps",
+            sql="select-find_gaps.sql",
+            conn_id="miovision_api_bot",
+            end_date=pendulum.datetime(2023, 11, 10, tz="America/Toronto"),
+            params={
+                "table": "miovision_api.volumes",
+                "id_col": 'intersection_uid',
+                "dt_col": 'datetime_bin',
+                "gap_threshold": '4 hours',               
+            },
+            retries=2
+        )
 
         check_row_count
         check_distinct_classification_uid
         check_distinct_intersection_uid
+        check_gaps
 
     t1 >> data_checks()
 
