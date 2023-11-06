@@ -361,7 +361,7 @@ There are two WYS DAGs, a daily data pull and a monthly summary.
 `pull_wys` >> [`check_row_count`, `check_distinct_api_id`]
 - The `pull_wys` task runs `api_main` function of `wys_api.py`:
   - See [here](#api_main-process) for more information on the `api_main` function.
-- `check_row_count` checks the volume recored in the aggregate table compared to a 60 day lookback.
+- `check_row_count` checks the volume recorded in the aggregate table compared to a 60 day lookback.
 - `check_distinct_api_id` checks the number of signs recored in the aggregate table compared to a 60 day lookback.
 
 `pull_schedules`
