@@ -4,7 +4,7 @@
 r"""### The Daily Collision Replicator DAG
 
 This DAG runs daily to update the following collisions tables from the tables
-staged in the database by the MOVE's ``BDITTO_COLLISIONS_REPLICATOR`` DAG:
+staged in the database by the MOVE's ``bigdata_replicator`` DAG:
 
 1\. acc
 
@@ -27,9 +27,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert
-from dags.common_tasks import wait_for_external_trigger, copy_table
 # pylint: enable=import-error
-# pylint: enable=wrong-import-position
 
 DAG_NAME = "collisions_replicator"
 DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
@@ -39,7 +37,6 @@ default_args = {
     "depends_on_past": False,
     "start_date": pendulum.datetime(2023, 10, 31, tz="America/Toronto"),
     "email_on_failure": False,
-    "email_on_success": False,
     "retries": 3,
     "retry_delay": timedelta(minutes=60),
     "on_failure_callback": task_fail_slack_alert,
@@ -56,6 +53,8 @@ default_args = {
 )
 def collisions_replicator():
     """The main function of the collisions DAG."""
+    from dags.common_tasks import wait_for_external_trigger, copy_table
+
     tables = [
         ("move_staging.acc", "collisions.acc"),
         ("move_staging.events", "collisions.events"),
@@ -63,10 +62,6 @@ def collisions_replicator():
         ("move_staging.events_centreline", "collisions.events_centreline")
     ]
     
-    external_sensor = wait_for_external_trigger()
-    for table in tables:
-        external_sensor >> copy_table.override(
-            task_id=table[1].split(".")[1], retries=3
-        )(table)
+    wait_for_external_trigger() >> copy_table.expand(table=tables)
 
 collisions_replicator()
