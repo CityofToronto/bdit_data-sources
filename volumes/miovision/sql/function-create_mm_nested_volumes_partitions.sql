@@ -27,17 +27,13 @@ BEGIN
             PARTITION OF miovision_api.%I
             FOR VALUES FROM (%L) TO (%L);
             ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
-            REVOKE ALL ON TABLE miovision_api.%I FROM bdit_humans;
             GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
-            GRANT ALL ON TABLE miovision_api.%I TO bdit_bots;
-            GRANT ALL ON TABLE miovision_api.%I TO rds_superuser WITH GRANT OPTION;
+            GRANT TRIGGER, SELECT, INSERT ON TABLE miovision_api.%I TO miovision_api_bot;
         $$,
         month_table,
         year_table,
         start_mm,
         end_mm,
-        month_table,
-        month_table,
         month_table,
         month_table,
         month_table

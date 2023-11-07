@@ -23,20 +23,14 @@ BEGIN
         FOR VALUES FROM (%L) TO (%L)
         PARTITION BY RANGE (%I);
         ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
-        GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
-        REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-        GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
+        GRANT TRIGGER, SELECT, INSERT ON TABLE miovision_api.%I TO miovision_api_bot;
         GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
-        GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
         $$,
         year_table,
         base_table,
         startdate,
         enddate,
         datetime_col,
-        year_table,
-        year_table,
-        year_table,
         year_table,
         year_table,
         year_table
