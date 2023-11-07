@@ -327,7 +327,8 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
                     for c_intersec in intersections:
                         update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
                                     %s::date, %s::date, %s::int)"""
-                        cur.execute(update, time_period. c_intersec.uid)
+                        query_params = time_period + (c_intersec.uid, )
+                        cur.execute(update, query_params)
                         logger.info('Aggregated intersection %s to 15 minute movement bins',
                                     c_intersec.uid)
                 else: 
