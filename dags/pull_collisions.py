@@ -4,7 +4,7 @@
 r"""### The Daily Collision Replicator DAG
 
 This DAG runs daily to update the following collisions tables from the tables
-staged in the database by the MOVE's BDITTO_COLLISIONS_REPLICATOR DAG:
+staged in the database by the MOVE's ``BDITTO_COLLISIONS_REPLICATOR`` DAG:
 
 1\. ACC
 
@@ -59,7 +59,7 @@ default_args = {
 def collisions_replicator():
     """The main function of the collisions DAG."""
     tables = [
-        ("move_staging.ACC", "collisions.ACC"),
+        ("move_staging.acc", "collisions.acc"),
         ("move_staging.events", "collisions.events"),
         ("move_staging.involved", "collisions.involved"),
         ("move_staging.events_centreline", "collisions.events_centreline")
