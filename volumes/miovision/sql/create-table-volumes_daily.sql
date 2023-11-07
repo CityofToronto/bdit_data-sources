@@ -24,7 +24,7 @@ USING btree(intersection_uid);
 
 CREATE INDEX volumes_dt_idx
 ON miovision_api.volumes_daily
-USING brin(dt);
+USING btree(dt);
 
 --insert data
 SELECT miovision_api.aggregate_volumes_daily('2019-01-01'::date, '2023-11-01'::date);
