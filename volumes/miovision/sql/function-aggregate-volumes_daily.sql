@@ -16,9 +16,11 @@ BEGIN
         period_start >= start_date - interval '1 hour'
         AND period_end <= end_date - interval '1 hour';
 
-    INSERT INTO miovision_api.volumes_daily
+    INSERT INTO miovision_api.volumes_daily (
+        intersection_uid, dt, period_start, period_end, volume_1, volume_2, volume_3, volume_4, volume_5, volume_6, volume_7, volume_8, volume_9, volume_10, volume_total
+    )
     SELECT
-        v.intersection_uid,
+        i.intersection_uid,
         d.dt,
         d.dt - interval '1 hour' AS period_start,
         d.dt - interval '1 hour' + interval '1 day' AS period_end,
@@ -33,7 +35,15 @@ BEGIN
         SUM(v.volume) FILTER (WHERE v.classification_uid = 9) AS volume_9,
         SUM(v.volume) FILTER (WHERE v.classification_uid = 10) AS volume_10,
         SUM(v.volume) AS volume_total
-    FROM miovision_api.volumes_15min AS v,
+    --add entries for intersections with no outages
+    FROM miovision_api.intersections AS i
+    LEFT JOIN miovision_api.volumes_15min AS v ON
+        i.intersection_uid = v.intersection_uid
+        AND v.datetime_bin > i.date_installed + INTERVAL '1 day'
+        AND (
+            i.date_decommissioned IS NULL
+            OR datetime_bin < i.date_decommissioned - INTERVAL '1 day'
+        ),
         LATERAL (
             --day beginning and ending at 11pm
             SELECT date_trunc('day', v.datetime_bin + interval '1 hour') AS dt
@@ -42,16 +52,15 @@ BEGIN
         v.datetime_bin >= start_date - interval '1 hour'
         AND v.datetime_bin < end_date - interval '1 hour'
     GROUP BY
-        v.intersection_uid,
+        i.intersection_uid,
         d.dt
     ORDER BY
-        v.intersection_uid,
+        i.intersection_uid,
         d.dt; 
 
 END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO bdit_humans WITH GRANT OPTION;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO dbadmin WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO bdit_bots;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO miovision_api_bot;
