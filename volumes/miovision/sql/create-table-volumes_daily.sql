@@ -26,5 +26,17 @@ CREATE INDEX volumes_dt_idx
 ON miovision_api.volumes_daily
 USING btree(dt);
 
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_1 IS 'Daily volume for classification_uid 1';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_2 IS 'Daily volume for classification_uid 2';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_3 IS 'Daily volume for classification_uid 3';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_4 IS 'Daily volume for classification_uid 4';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_5 IS 'Daily volume for classification_uid 5';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_6 IS 'Daily volume for classification_uid 6';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_7 IS 'Daily volume for classification_uid 7';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_8 IS 'Daily volume for classification_uid 8';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_9 IS 'Daily volume for classification_uid 9';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_10 IS 'Daily volume for classification_uid 10';
+COMMENT ON COLUMN miovision_api.volumes_daily.volume_total IS 'Daily volume for all classification_uids.';
+
 --insert data
-SELECT miovision_api.aggregate_volumes_daily('2019-01-01'::date, '2023-11-01'::date);
+SELECT miovision_api.aggregate_volumes_daily('2019-01-01'::date, '2023-11-06'::date);
