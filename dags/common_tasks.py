@@ -1,11 +1,15 @@
 
 from psycopg2 import sql
 from typing import Tuple
+import logging 
 # pylint: disable=import-error
 from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 @task.sensor(poke_interval=3600, timeout=3600*24, mode="reschedule")
 def wait_for_external_trigger(**kwargs) -> PokeReturnValue:
@@ -56,3 +60,5 @@ def copy_table(table:Tuple[str, str]) -> None:
     with con, con.cursor() as cur:
         cur.execute(truncate_query)
         cur.execute(insert_query)
+    
+    LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
