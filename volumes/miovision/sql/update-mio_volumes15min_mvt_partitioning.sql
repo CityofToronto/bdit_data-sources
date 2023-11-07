@@ -72,13 +72,12 @@ BEGIN
         year_table:= 'volumes_15min_mvt_'||yyyy::text;
         --grant permissions on outer partitions
         EXECUTE FORMAT($$ 
-            --ALTER TABLE IF EXISTS mio_staging.%I OWNER TO miovision_admins;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
+            GRANT SELECT, INSERT, TRIGGER ON TABLE mio_staging.%I TO miovision_api_bot;
             GRANT REFERENCES, TRIGGER, SELECT ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
             GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
-           $$, year_table, year_table, year_table, year_table, year_table, year_table
+           $$, year_table, year_table, year_table, year_table, year_table
           );
 	END LOOP;
 END;
@@ -133,7 +132,7 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min_mvt');
 --parent table needs further permissions.
 ALTER TABLE IF EXISTS miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
-GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO bdit_bots;
+GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
 GRANT REFERENCES, TRIGGER, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO rds_superuser WITH GRANT OPTION;

@@ -70,7 +70,6 @@ BEGIN
         EXECUTE FORMAT($$ 
             --ALTER TABLE IF EXISTS mio_staging.%I OWNER TO miovision_admins;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
             GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
             GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
@@ -128,10 +127,8 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min');
 --parent table needs further permissions.
 ALTER TABLE IF EXISTS miovision_api.volumes_15min OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM bdit_humans;
-REVOKE ALL ON TABLE miovision_api.volumes_15min FROM covid_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min TO bdit_bots;
+GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_api_bot;
 GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
-GRANT SELECT ON TABLE miovision_api.volumes_15min TO covid_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTION;
 

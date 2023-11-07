@@ -81,7 +81,6 @@ BEGIN
         EXECUTE FORMAT($$
             GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
             GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
             GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
@@ -92,7 +91,6 @@ BEGIN
             EXECUTE FORMAT($$
                 GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
                 REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-                GRANT ALL ON TABLE mio_staging.%I TO bdit_bots;
                 GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
                 GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
                 GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;

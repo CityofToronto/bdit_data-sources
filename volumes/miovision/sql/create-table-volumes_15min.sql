@@ -23,9 +23,7 @@ GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTIO
 GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM bdit_humans;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
-REVOKE ALL ON TABLE miovision_api.volumes_15min FROM covid_admins;
-GRANT SELECT ON TABLE miovision_api.volumes_15min TO covid_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min TO bdit_bots;
+GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min TO miovision_api_bot;
 
 COMMENT ON COLUMN miovision_api.volumes_15min.leg
 IS 'leg location, e.g. E leg means both entry and exit traffic across the east side of the intersection. ';
