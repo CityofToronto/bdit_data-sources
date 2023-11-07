@@ -8,8 +8,13 @@ from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException
 
 @task.sensor(poke_interval=3600, timeout=3600*24, mode="reschedule")
-def wait_for_upstream(**kwargs) -> PokeReturnValue:
-    """Waits for an external trigger."""
+def wait_for_external_trigger(**kwargs) -> PokeReturnValue:
+    """Waits for an external trigger.
+    
+    A sensor waiting to be triggered by an external trigger. Its default poke
+        interval is 1 hour and timeout is 1 day. The sensor's mode is set to
+        reschedule by default to free the resources while idle.
+    """
     return PokeReturnValue(
         is_done=kwargs["task_instance"].dag_run.external_trigger
     )

@@ -27,7 +27,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert
-from dags.common_tasks import wait_for_upstream, copy_table
+from dags.common_tasks import wait_for_external_trigger, copy_table
 # pylint: enable=import-error
 # pylint: enable=wrong-import-position
 
@@ -63,12 +63,7 @@ def collisions_replicator():
         ("move_staging.events_centreline", "collisions.events_centreline")
     ]
     
-    external_sensor = wait_for_upstream.override(
-        task_id="wait_for_external_trigger",
-        poke_interval=3600,
-        timeout=3600*24,
-        mode="reschedule"
-    )()
+    external_sensor = wait_for_external_trigger()
     for table in tables:
         external_sensor >> copy_table.override(
             task_id=table[1].split(".")[1], retries=3
