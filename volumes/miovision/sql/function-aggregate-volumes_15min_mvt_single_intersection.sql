@@ -108,8 +108,6 @@ $BODY$;
 ALTER FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int)
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO public;
-
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(date, date, int) TO miovision_admins;
