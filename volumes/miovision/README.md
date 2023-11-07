@@ -32,15 +32,16 @@
     - [An applied example](#an-applied-example)
     - [Identifying new anomalies](#identifying-new-anomalies)
 - [4. Repulling data](#4-repulling-data)
-  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
-        
+	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+- [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+
 ## 1. Overview
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. The data is currently being used to support the King Street Transit Pilot by analysing the trends in volume on King Street, trends in volume on surrounding roads, and thru movement violations of the pilot. An example of how it was used to support the pilot project can be found [here](https://www.toronto.ca/wp-content/uploads/2018/08/9781-KSP_May-June-2018-Dashboard-Update.pdf).
 
 The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api` for data automatically collected since January 2019. Data for the King Street Pilot were collected in batches from up to 21 intersections for a few days per month between October 2017 and August 2018. These can be found in the `miovision_csv` schema, which has a slightly different structure than the API data (see [7. Processing Data from CSV Dumps (NO LONGER IN USE) in `Archive.md`](Archive.md#7-processing-data-from-csv-dumps-no-longer-in-use))
 
-You can see the current locations of Miovision cameras [on this map.](geojson/miovision_intersections.geojson)
+You can see the current locations of Miovision cameras [on this map.](geojson/mio_intersections.geojson)
 
 ### Folder Structure
 
@@ -110,12 +111,12 @@ Note that bicycles are available at both a turning movement level and at an appr
 :-----|:-----|:-----|
 1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans|
+3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
 4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
 8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
+9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
 #### `movements`
@@ -444,3 +445,6 @@ python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/mio
 ```
 
 The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
+
+## 5. Steps to Add or Remove Intersections
+For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md). 

@@ -1,50 +1,71 @@
-CREATE TABLE wys.stationary_summary (
-    api_id integer,
-    mon date,
-    pct_05 INT,
-    pct_10 INT,
-    pct_15 INT,
-    pct_20 INT,
-    pct_25 INT,
-    pct_30 INT,
-    pct_35 INT,
-    pct_40 INT,
-    pct_45 INT,
-    pct_50 INT,
-    pct_55 INT,
-    pct_60 INT,
-    pct_65 INT,
-    pct_70 INT,
-    pct_75 INT,
-    pct_80 INT,
-    pct_85 INT,
-    pct_90 INT,
-    pct_95 INT,
-    spd_00 INT,
-    spd_05 INT,
-    spd_10 INT,
-    spd_15 INT,
-    spd_20 INT,
-    spd_25 INT,
-    spd_30 INT,
-    spd_35 INT,
-    spd_40 INT,
-    spd_45 INT,
-    spd_50 INT,
-    spd_55 INT,
-    spd_60 INT,
-    spd_65 INT,
-    spd_70 INT,
-    spd_75 INT,
-    spd_80 INT,
-    spd_85 INT,
-    spd_90 INT,
-    spd_95 INT,
-    spd_100_and_above INT,
-    volume INT
-);
+/*
+Purpose:
+A monthly summary of the stationary WYS sign data.
 
-GRANT SELECT, INSERT ON TABLE wys.stationary_summary TO wys_bot;
+Dependent Objects:
+    Type    |Name
+    View    |open_data.wys_stationary_summary
+*/
+-- DROP TABLE IF EXISTS wys.stationary_summary;
+
+CREATE TABLE IF NOT EXISTS wys.stationary_summary (
+    sign_id integer,
+    mon date,
+    pct_05 integer,
+    pct_10 integer,
+    pct_15 integer,
+    pct_20 integer,
+    pct_25 integer,
+    pct_30 integer,
+    pct_35 integer,
+    pct_40 integer,
+    pct_45 integer,
+    pct_50 integer,
+    pct_55 integer,
+    pct_60 integer,
+    pct_65 integer,
+    pct_70 integer,
+    pct_75 integer,
+    pct_80 integer,
+    pct_85 integer,
+    pct_90 integer,
+    pct_95 integer,
+    spd_00 integer,
+    spd_05 integer,
+    spd_10 integer,
+    spd_15 integer,
+    spd_20 integer,
+    spd_25 integer,
+    spd_30 integer,
+    spd_35 integer,
+    spd_40 integer,
+    spd_45 integer,
+    spd_50 integer,
+    spd_55 integer,
+    spd_60 integer,
+    spd_65 integer,
+    spd_70 integer,
+    spd_75 integer,
+    spd_80 integer,
+    spd_85 integer,
+    spd_90 integer,
+    spd_95 integer,
+    spd_100_and_above integer,
+    volume integer,
+    api_id integer,
+    CONSTRAINT stationary_summary_sign_id_mon_key UNIQUE (sign_id, mon)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS wys.stationary_summary OWNER TO wys_admins;
+
+REVOKE ALL ON TABLE wys.stationary_summary FROM wys_bot;
+
 GRANT SELECT ON TABLE wys.stationary_summary TO bdit_humans;
 
-ALTER TABLE wys.stationary_summary ADD UNIQUE(sign_id, mon);
+GRANT ALL ON TABLE wys.stationary_summary TO wys_admins;
+
+GRANT DELETE, INSERT, SELECT ON TABLE wys.stationary_summary TO wys_bot;
