@@ -6,7 +6,7 @@ r"""### The Daily Collision Replicator DAG
 This DAG runs daily to update the following collisions tables from the tables
 staged in the database by the MOVE's ``BDITTO_COLLISIONS_REPLICATOR`` DAG:
 
-1\. ACC
+1\. acc
 
 2\. events
 
@@ -18,18 +18,16 @@ import os
 import sys
 from datetime import timedelta
 import pendulum
-from psycopg2 import sql
 # pylint: disable=import-error
-from airflow.decorators import dag, task
+from airflow.decorators import dag
 from airflow.models import Variable
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.sensors.base import PokeReturnValue
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert
+from dags.common_tasks import wait_for_upstream, copy_table
 # pylint: enable=import-error
 # pylint: enable=wrong-import-position
 
@@ -65,45 +63,15 @@ def collisions_replicator():
         ("move_staging.events_centreline", "collisions.events_centreline")
     ]
     
-    @task.sensor(poke_interval=3600, timeout=3600*24, mode="reschedule")
-    def wait_for_upstream(**kwargs) -> PokeReturnValue:
-        """Waits for an external trigger."""
-        return PokeReturnValue(
-            is_done=kwargs["task_instance"].dag_run.external_trigger
-        )
-    
-    @task(retries=3)
-    def copy_table(src:str, dst:str) -> None:
-        """Copies ``src`` table into ``dst`` after truncating it.
-
-        Args:
-            src: Source table in format ``schema.table``
-            dst: Destination table in format ``schema.table``
-        """
-        con = PostgresHook("collisions_bot").get_conn()
-        src_schema, src_table = src.split(".")
-        dst_schema, dst_table = dst.split(".")
-        truncate_query = sql.SQL(
-            "TRUNCATE {}.{}"
-            ).format(
-                sql.Identifier(dst_schema), sql.Identifier(dst_table)
-            )
-        insert_query = sql.SQL(
-            "INSERT INTO {}.{} SELECT * FROM {}.{}"
-            ).format(
-                sql.Identifier(dst_schema), sql.Identifier(dst_table),
-                sql.Identifier(src_schema), sql.Identifier(src_table)
-            )
-        with con, con.cursor() as cur:
-            cur.execute(truncate_query)
-            cur.execute(insert_query)
-
     external_sensor = wait_for_upstream.override(
-        task_id="wait_for_external_trigger"
+        task_id="wait_for_external_trigger",
+        poke_interval=3600,
+        timeout=3600*24,
+        mode="reschedule"
     )()
-    for src, dst in tables:
+    for table in tables:
         external_sensor >> copy_table.override(
-            task_id=dst.split(".")[1]
-        )(src, dst)
+            task_id=table[1].split(".")[1], retries=3
+        )(table)
 
 collisions_replicator()
