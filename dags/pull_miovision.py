@@ -106,6 +106,7 @@ def pull_miovision_dag():
                 "id_col": 'intersection_uid',
                 "dt_col": 'datetime_bin',
                 "gap_threshold": '4 hours',               
+                "default_bin": '1 minute',               
             },
             retries=2
         )
