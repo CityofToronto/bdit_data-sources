@@ -50,5 +50,5 @@ COMMENT ON FUNCTION miovision_api.create_mm_nested_volumes_partitions(text, inte
 Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. 
 Example: SELECT miovision_api.create_yyyy_volumes_partition(''volumes_15min'', 2023)';
 
-ALTER FUNCTION miovision_api.create_mm_nested_volumes_partitions(text, integer, integer) OWNER TO vds_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.create_mm_nested_volumes_partitions(text, integer, integer) TO vds_bot;
+ALTER FUNCTION miovision_api.create_mm_nested_volumes_partitions(text, integer, integer) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.create_mm_nested_volumes_partitions(text, integer, integer) TO miovision_api_bot;
