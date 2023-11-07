@@ -51,10 +51,10 @@ ON miovision_api.volumes
 USING btree(volume_15min_mvt_uid);
 
 --the old pkey becomes a unique constraint
--- Index: mio_staging.volume_uid_unique
--- DROP INDEX mio_staging.volume_uid_unique;
+-- Index: miovision_api.volume_uid_unique
+-- DROP INDEX miovision_api.volume_uid_unique;
 CREATE INDEX volume_uid_unique
-ON mio_staging.volumes
+ON miovision_api.volumes
 USING btree(volume_uid);
 
 ALTER TABLE miovision_api.volumes OWNER TO miovision_admins;
