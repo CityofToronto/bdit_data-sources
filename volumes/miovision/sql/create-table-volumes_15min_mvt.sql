@@ -8,7 +8,7 @@
     movement_uid integer,
     volume numeric,
     processed boolean,
-    CONSTRAINT volumes_15min_mvt_intersection_uid_datetime_bin_classificat_pk
+    CONSTRAINT volumes_15min_mvt_int_uid_dt_bin_class_leg_mvmt_uid_pkey
     PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 )
 PARTITION BY RANGE (datetime_bin)
@@ -17,8 +17,6 @@ WITH (
 );
 
 ALTER TABLE miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO dbadmin;
-REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
 
@@ -56,8 +54,8 @@ ON miovision_api.volumes_15min_mvt
 USING btree(volume_15min_mvt_uid ASC nulls last);
 
 --create yearly partitions
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2019::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2020::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2021::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2022::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2023::int)
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2019::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2020::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2021::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2022::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2023::int);

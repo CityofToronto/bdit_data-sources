@@ -38,9 +38,6 @@ COMMENT ON COLUMN miovision_api.volumes_daily.volume_9 IS 'Daily volume for clas
 COMMENT ON COLUMN miovision_api.volumes_daily.volume_10 IS 'Daily volume for classification_uid 10';
 COMMENT ON COLUMN miovision_api.volumes_daily.volume_total IS 'Daily volume for all classification_uids.';
 
---insert data
-SELECT miovision_api.aggregate_volumes_daily('2019-01-01'::date, '2023-11-06'::date);
-
 ALTER TABLE miovision_api.volumes_daily OWNER TO miovision_admins;
 GRANT INSERT, SELECT, DELETE ON miovision_api.volumes_daily TO miovision_api_bot;
 
