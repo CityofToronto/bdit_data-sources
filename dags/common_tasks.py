@@ -24,10 +24,11 @@ def wait_for_external_trigger(**kwargs) -> PokeReturnValue:
     )
 
 @task()
-def copy_table(table:Tuple[str, str]) -> None:
+def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
     Args:
+        conn_id: The name of Airflow connection to the database
         table: A tuple containing the source table to be copied in the format
             ``schema.table``, and the destination table in the same format
             ``schema.table``.
@@ -45,7 +46,7 @@ def copy_table(table:Tuple[str, str]) -> None:
             f"Invalid destination table (expected schema.table, got {table[1]})"
         )
 
-    con = PostgresHook("collisions_bot").get_conn()
+    con = PostgresHook(conn_id).get_conn()
     truncate_query = sql.SQL(
         "TRUNCATE {}.{}"
         ).format(

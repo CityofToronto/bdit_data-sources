@@ -17,6 +17,7 @@ staged in the database by the MOVE's ``bigdata_replicator`` DAG:
 import os
 import sys
 from datetime import timedelta
+from functools import partial
 import pendulum
 # pylint: disable=import-error
 from airflow.decorators import dag
@@ -62,6 +63,7 @@ def collisions_replicator():
         ("move_staging.events_centreline", "collisions.events_centreline")
     ]
     
-    wait_for_external_trigger() >> copy_table.expand(table=tables)
+    wait_for_external_trigger() >> copy_table.partial(
+        conn_id="collisions_bot").expand(table=tables)
 
 collisions_replicator()
