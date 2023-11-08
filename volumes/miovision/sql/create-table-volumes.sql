@@ -21,7 +21,6 @@ WITH (
     OIDS=FALSE
 );
 ALTER TABLE miovision_api.volumes OWNER TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes TO rds_superuser WITH GRANT OPTION;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, UPDATE ON TABLE miovision_api.volumes TO miovision_api_bot;
 

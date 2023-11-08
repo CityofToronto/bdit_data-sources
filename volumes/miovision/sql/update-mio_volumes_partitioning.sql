@@ -83,8 +83,7 @@ BEGIN
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
             GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
-            GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
-            $$, year_table, year_table, year_table, year_table, year_table, year_table);
+            $$, year_table, year_table, year_table, year_table);
         FOR mm IN 01..12 LOOP
             month_table:= year_table||lpad(mm::text, 2, '0');
             --grant permissions on inner partitions
@@ -93,8 +92,7 @@ BEGIN
                 REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
                 GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
                 GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
-                GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
-                $$, month_table, month_table, month_table, month_table, month_table, month_table);
+                $$, month_table, month_table, month_table, month_table);
     	END LOOP;
 	END LOOP;
 END;

@@ -76,8 +76,7 @@ BEGIN
             GRANT SELECT, INSERT, TRIGGER ON TABLE mio_staging.%I TO miovision_api_bot;
             GRANT REFERENCES, TRIGGER, SELECT ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
-            GRANT ALL ON TABLE mio_staging.%I TO rds_superuser WITH GRANT OPTION;
-           $$, year_table, year_table, year_table, year_table, year_table
+           $$, year_table, year_table, year_table, year_table
           );
 	END LOOP;
 END;
@@ -135,7 +134,6 @@ REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
 GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
 GRANT REFERENCES, TRIGGER, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO rds_superuser WITH GRANT OPTION;
 
 --need to change the schema and owners of all the partitions.
 DO $do$

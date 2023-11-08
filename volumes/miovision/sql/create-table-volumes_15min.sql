@@ -19,7 +19,6 @@ WITH (
 );
 
 ALTER TABLE miovision_api.volumes_15min OWNER TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM bdit_humans;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;

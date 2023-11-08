@@ -17,12 +17,10 @@ WITH (
 );
 
 ALTER TABLE miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO dbadmin;
 REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
-GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO rds_superuser WITH GRANT OPTION;
 
 -- Index: miovision_api.volumes_15min_mvt_classification_uid_idx
 -- DROP INDEX miovision_api.volumes_15min_mvt_classification_uid_idx;
