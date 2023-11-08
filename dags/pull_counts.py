@@ -20,7 +20,7 @@ staged in the database by the MOVE's ``bigdata_replicator`` DAG:
 
 7\. cnt_det
 
-8\. count_info
+8\. countinfo
 
 9\. counts_multiday_runs
 
@@ -78,7 +78,7 @@ def counts_replicator():
         ("move_staging.atr_metadata", "traffic.atr_metadata"),
         ("move_staging.atr_study_data", "traffic.atr_study_data"),
         ("move_staging.cnt_det", "traffic.cnt_det"),
-        ("move_staging.count_info", "traffic.count_info"),
+        ("move_staging.countinfo", "traffic.countinfo"),
         ("move_staging.counts_multiday_runs", "traffic.counts_multiday_runs"),
         ("move_staging.oracle_cnt_det", "traffic.oracle_cnt_det"),
         ("move_staging.studies", "traffic.studies")
