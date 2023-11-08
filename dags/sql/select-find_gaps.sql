@@ -2,8 +2,8 @@
 --includes a lookback of `gap_threshold` so it catches gaps overlapping the start of the interval
 --includes synthetic start/end time points for all sensors so we catch gaps that don't start or end in the interval
     --doesn't catch sensors with no data in the interval. 
+--noqa: disable=TMP, PRS
 
---now find the gaps
 WITH raw AS (
     SELECT DISTINCT
         {{ params.id_col }} AS sensor_id_col,
@@ -46,8 +46,9 @@ bin_times AS (
         LEAD(dt_col, 1) OVER (PARTITION BY sensor_id_col ORDER BY dt_col) AS gap_end,
         LEAD(dt_col, 1) OVER (PARTITION BY sensor_id_col ORDER BY dt_col)
             - dt_col
-            - SUM(gap_adjustment) --sum works because between 0 (synthetic) and 1 (real), we want 1 (implies real data)
-            AS bin_gap
+            --sum works because between 0 (synthetic) and 1 (real), we want 1 (implies real data)
+            - SUM(gap_adjustment)
+        AS bin_gap
     FROM fluffed_data
     GROUP BY
         sensor_id_col, 
