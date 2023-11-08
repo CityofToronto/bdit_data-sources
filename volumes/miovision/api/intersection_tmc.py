@@ -430,6 +430,7 @@ def get_intersection_info(conn, intersection=()):
     return [Intersection(*x) for x in intersection_list]
 
 def check_dst(start_time, end_time):
+    'check if fall back (EDT -> EST) occured between two timestamps.'
     tz = pytz.timezone("EST5EDT")
     tz_1 = start_time.astimezone(tz).tzname()
     tz_2 = end_time.astimezone(tz).tzname()
@@ -488,7 +489,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
                 #if edt -> est occured in the current range
                 #discard the 2nd 1AM hour of data to avoid duplicates
-                if check_dst(c_start_t, c_end_t):                  
+                if check_dst(c_start_t, c_end_t):
                     table_veh = [x for x in table_veh if
                         datetime.fromisoformat(x[1]).hour != 1 and
                         datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
