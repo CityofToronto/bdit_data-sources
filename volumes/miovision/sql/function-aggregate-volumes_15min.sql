@@ -63,9 +63,5 @@ $BODY$;
 ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
     OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO dbadmin WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_bots;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO PUBLIC;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_api_bot;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_admins;
