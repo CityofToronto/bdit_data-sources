@@ -430,6 +430,14 @@ def get_intersection_info(conn, intersection=()):
 
     return [Intersection(*x) for x in intersection_list]
 
+def check_dst(start_time, end_time):
+    tz = pytz.timezone("EST5EDT")
+    tz_1 = start_time.astimezone(tz).tzname()
+    tz_2 = end_time.astimezone(tz).tzname()
+    if tz_1 == 'EDT' and tz_2 == 'EST':
+        logger.info(f"EDT -> EST time change occured today.")
+        return True
+    return False
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
