@@ -490,6 +490,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                 #if edt -> est occured in the current range
                 #discard the 2nd 1AM hour of data to avoid duplicates
                 if check_dst(c_start_t, c_end_t):
+                    logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
                     table_veh = [x for x in table_veh if
                         datetime.fromisoformat(x[1]).hour != 1 and
                         datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
