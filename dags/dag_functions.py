@@ -11,8 +11,8 @@ def is_prod_mode() -> bool:
     """Returns True if the code is running from the PROD ENV directory."""
     PROD_ENV_PATH = Variable.get("prod_env_path")
     dags_folder = os.path.dirname(os.path.realpath(__file__))
-    repo_folder = os.path.abspath(os.path.dirname(dags_folder))
-    return os.path.normpath(repo_folder) == os.path.normpath(PROD_ENV_PATH)
+    repo_folder = os.path.basename(os.path.dirname(dags_folder))
+    return repo_folder == PROD_ENV_PATH
 
 def task_fail_slack_alert(
     context: dict,
