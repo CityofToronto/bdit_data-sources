@@ -2,7 +2,7 @@ import sys
 import json
 from requests import Session
 from requests import exceptions
-import datetime
+from datetime import datetime, timedelta
 import pytz
 import dateutil.parser
 import psycopg2
@@ -14,7 +14,6 @@ import click
 import traceback
 from time import sleep
 from collections import namedtuple
-
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
@@ -53,9 +52,9 @@ def logger():
 logger = logger()
 logger.debug('Start')
 
-time_delta = datetime.timedelta(days=1)
-default_start = str(datetime.date.today()-time_delta)
-default_end = str(datetime.date.today())
+time_delta = timedelta(days=1)
+default_start = str(datetime.today().date()-time_delta)
+default_end = str(datetime.today().date())
 
 session = Session()
 session.proxies = {}
@@ -175,7 +174,7 @@ class MiovPuller:
         """Requests data from API."""
 
         params = {'endTime': (end_iteration_time
-                              - datetime.timedelta(milliseconds=1)),
+                              - timedelta(milliseconds=1)),
                   'startTime': start_time}
 
         # Select the appropriate request URL depending on which API we're
@@ -441,7 +440,7 @@ def check_dst(start_time, end_time):
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
-    time_delta = datetime.timedelta(hours=6)
+    time_delta = timedelta(hours=6)
 
     intersections = get_intersection_info(conn, intersection=intersection)
 
