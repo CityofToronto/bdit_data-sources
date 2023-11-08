@@ -1,13 +1,14 @@
-# Getting Started <!-- omit in toc -->
+# Getting Started
 
-- [Getting Started](#getting-started)
-      - [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
-        - [Vehicle Movements](#vehicle-movements)
-        - [Pedestrian Movement](#pedestrian-movement)
-        - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-          - [All the East Leg Crossings!](#all-the-east-leg-crossings)
+- [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
+	- [Vehicle Movements](#vehicle-movements)
+	- [Pedestrian Movement](#pedestrian-movement)
+	- [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
+- [All the East Leg Crossings!](#all-the-east-leg-crossings)
+	- [Calculating Volumes on a Segment](#calculating-volumes-on-a-segment)
+		- [See it in Code!](#see-it-in-code)
 
-## Understanding Legs, Movement and Direction of Travel 
+## Understanding Legs, Movement and Direction of Travel
 
 The Miovision data table that we receive tracks information about:
 1. where the vehicle / pedestrian / cyclist entered the intersection, 
@@ -105,7 +106,7 @@ To calculate volumes along a segment, use the approach volumes. When exit volume
 
 To calculate approach volumes, ensure that the leg and the direction are opposites. A vehicle travelling north (`dir = 'NB'`) approaches an intersection from the south (`leg = 'S'`). Conversely, if a vehicle is travelling north (`dir = 'NB'`) on the north leg of an intersection (`leg = 'N'`) the vehicle has exited the intersection - the leg and the direction are the same!
 
-#### See it in code!
+#### See it in Code!
 To calculate all vehicle volumes on an East-West street with traffic in both directions, add the west bound traffic on the east leg to the east bound traffic on the west leg. The code snippet below calculates the average, minimum and maximum weekday vehicle volumes for King and Bathurst (`intersection_uid = 10`) and King and Spadina (`intersection_uid = 12`) in October 2023.
 ```
 WITH daily_volumes AS (
@@ -115,7 +116,7 @@ WITH daily_volumes AS (
         date_trunc('day', datetime_bin) AS dt,
         SUM(volume) AS daily_vol
     FROM miovision_api.intersections AS i
-    JOIN mio_staging.volumes_15min AS dv
+    JOIN miovision_api.volumes_15min AS dv
         USING (intersection_uid)
     WHERE
         i.intersection_uid IN (10, 12)
@@ -123,14 +124,15 @@ WITH daily_volumes AS (
         AND dv.datetime_bin >= '2023-10-01'::date
         AND dv.datetime_bin < '2023-11-01'::date
         AND date_part('isodow', datetime_bin) <= 5 -- weekdays
-        AND date_trunc('day', datetime_bin) <> '2023-10-09'::timestamp --thanksgiving monday
         AND ((dv.leg = 'E' AND dv.dir = 'WB')
             OR (dv.leg = 'W' AND dv.dir = 'EB'))
     GROUP BY
         i.intersection_uid,
         i.intersection_name,
         dt
+	HAVING COUNT(DISTINCT datetime_bin) > 92
 )
+
 SELECT
     intersection_uid, 
     intersection_name, 
