@@ -74,6 +74,10 @@ def pull_miovision_dag():
             params=data_check_params | {"col_to_sum": 'volume'},
             retries=2
         )
+        check_row_count.doc_md = '''
+        Compare the row count today with the average row count from the lookback period.
+        '''
+
         check_distinct_classification_uid = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_classification_uid",
             sql="select-sensor_id_count_lookback.sql",
@@ -85,6 +89,10 @@ def pull_miovision_dag():
                 },
             retries=2
         )
+        check_distinct_classification_uid.doc_md = '''
+        Compare the count of classification_uids appearing in today's pull vs the lookback period.
+        '''
+
         check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_intersection_uid",
             sql="select-sensor_id_count_lookback.sql",
@@ -96,6 +104,10 @@ def pull_miovision_dag():
                 },
             retries=2
         )
+        check_distinct_intersection_uid.doc_md = '''
+        Identify intersections which appeared within the lookback period that did not appear today.
+        '''
+
         check_gaps = SQLCheckOperatorWithReturnValue(
             task_id="check_gaps",
             sql="select-find_gaps.sql",
@@ -105,11 +117,14 @@ def pull_miovision_dag():
                 "table": "miovision_api.volumes",
                 "id_col": 'intersection_uid',
                 "dt_col": 'datetime_bin',
-                "gap_threshold": '4 hours',               
-                "default_bin": '1 minute',               
+                "gap_threshold": '4 hours',
+                "default_bin": '1 minute',
             },
             retries=2
         )
+        check_gaps.doc_md = '''
+        Identify gaps larger than gap_threshold in intersections with values today.
+        '''
 
         check_row_count
         check_distinct_classification_uid
