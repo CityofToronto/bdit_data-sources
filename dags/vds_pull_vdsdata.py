@@ -50,7 +50,10 @@ default_args = {
 with DAG(dag_name,
          default_args=default_args,
          max_active_runs=1,
-         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
+         template_searchpath=[
+             os.path.join(repo_path,'volumes/vds/sql'),
+             os.path.join(repo_path,'dags/sql')
+            ],
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     #this task group pulls the detector inventories
@@ -158,7 +161,7 @@ with DAG(dag_name,
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
                 task_id=f"check_rows_vdsdata_div{divid}",
-                sql="select/select-row_count_lookback.sql",
+                sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',
                 params={"table": f'vds.counts_15min_div{divid}',
                         "lookback": '60 days',
