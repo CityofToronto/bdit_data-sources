@@ -33,5 +33,5 @@ SELECT
             'FM9,999,999,999'
             ) AS passing_value
 FROM today AS a,
-    lookback AS lb
+    lookback AS lb --noqa: L025
 GROUP BY a.today_count
