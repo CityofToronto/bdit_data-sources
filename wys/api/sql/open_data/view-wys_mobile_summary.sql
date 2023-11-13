@@ -1,4 +1,4 @@
-DROP VIEW open_data.wys_mobile_summary;
+--DROP VIEW open_data.wys_mobile_summary CASCADE; --wys_mobile_detailed depends on this
 CREATE OR REPLACE VIEW open_data.wys_mobile_summary AS
 
 SELECT
@@ -68,3 +68,9 @@ WHERE (
         OR removal_date < date_trunc('month', now())
     )
 ORDER BY installation_date DESC;
+ALTER TABLE open_data.wys_mobile_summary
+    OWNER TO wys_admins;
+
+GRANT SELECT ON TABLE open_data.wys_mobile_summary TO bdit_humans;
+GRANT SELECT ON TABLE open_data.wys_mobile_summary TO od_extract_svc;
+COMMENT ON VIEW open_data.wys_mobile_summary IS 'Summary data for each mobile sign installation from the wys.mobile_summary table. Long-running "permanent" signs will have their data included even if they haven''t been removed yet.';
