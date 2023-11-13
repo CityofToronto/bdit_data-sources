@@ -1,6 +1,7 @@
 import os
 import sys
 from airflow import DAG
+from airflow.decorators import task
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -29,7 +30,7 @@ start_date = {'start_date': '{{ ds }}'}
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, check_vdsdata_partitions
+from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
@@ -78,11 +79,31 @@ with DAG(dag_name,
         [pull_detector_inventory_task, pull_entity_locations_task] >> t_done
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    check_partitions = PythonOperator(
-        task_id='check_partitions',
-        python_callable=check_vdsdata_partitions,
-        op_kwargs = {'rds_conn': vds_bot} | start_date 
-    )
+    with TaskGroup(group_id='check_partitions') as check_partitions_tg:
+
+        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
+            start_date = datetime.strptime(ds, '%Y-%m-%d')
+            if start_date.month == 1 and start_date.day == 1:
+                return True
+            return False
+
+        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
+        
+        create_partitions = PostgresOperator(
+            task_id='create_partitions',
+            sql=[#partition by year and month:
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', {{ params.year }}::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', {{ params.year }}::int, 'dt')",
+                #partition by year only: 
+                "SELECT vds.partition_vds_yyyy('counts_15min_div2', {{ params.year }}::int, 'datetime_15min')",
+                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', {{ params.year }}::int, 'datetime_15min')"],
+            postgres_conn_id='vds_bot',
+            params={"year": YEAR},
+            autocommit=True
+        )
+
+        check_partitions() >> create_partitions
 
     #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
     with TaskGroup(group_id='pull_vdsdata') as vdsdata:
@@ -95,7 +116,8 @@ with DAG(dag_name,
             task_id='delete_vdsdata',
             postgres_conn_id='vds_bot',
             autocommit=True,
-            retries=1
+            retries=1,
+            trigger_rule='none_failed'
         )
 
         #get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`
@@ -148,4 +170,4 @@ with DAG(dag_name,
             )
             check_avg_rows
 
-    update_inventories >> check_partitions >> vdsdata >> v15data >> data_checks #pull then summarize
+    [update_inventories, check_partitions_tg] >> vdsdata >> v15data >> data_checks #pull then summarize
