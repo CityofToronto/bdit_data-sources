@@ -26,7 +26,6 @@ BEGIN
             a.processed IS NULL
             AND a.datetime_bin >= start_date
             AND a.datetime_bin < end_date
-        -- each day is aggregated from 23:00 the day before to 23:00 of that day
         GROUP BY
             a.intersection_uid,
             a.datetime_bin,
