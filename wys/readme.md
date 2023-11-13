@@ -13,7 +13,8 @@ The city has installed [Watch Your Speed Signs](https://www.toronto.ca/services-
 
 ## How to Access the Data
 
-**TODO**
+For most inquiries, the data prepared for Open Data should suffice, accessed either at the links [below](#open-data), or in the `open_data` schema of the `bigdata` database.  
+For more complex inquiries or investigations, the raw data is stored in the `wys` schema of `bigdata`. The aggregation process is described in detail in [api/README.md](api/README.md).  
 
 ## Open Data
 
