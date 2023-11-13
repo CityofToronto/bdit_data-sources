@@ -37,7 +37,7 @@ BEGIN
         SUM(v.volume) AS volume_total
     --add entries for intersections with no outages
     FROM miovision_api.intersections AS i
-    LEFT JOIN miovision_api.volumes_15min AS v ON
+    LEFT JOIN miovision_api.volumes_15min_mvt AS v ON
         i.intersection_uid = v.intersection_uid
         AND v.datetime_bin > i.date_installed + INTERVAL '1 day'
         AND (
