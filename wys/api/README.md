@@ -128,7 +128,7 @@ This is a lookup table containing all the 5km/h speed bin, where bin number 21 c
 `speed_bin`|integer range|Range of speeds for each speed bin. The upper limit is not inclusive.|[10-15)
 
 #### **`wys.locations`**  
-This table contains locations of stationary and mobile signs. It also contains information about each sign's API ID, direction of traffic, address, and name.
+This is a raw table pulled from the API containing details of WYS signs including API ID, direction of traffic, address, and name and is generally **not to be used** due to accuracy concerns with the manual, vendor updated location fields. Instead, use the tables `wys.stationary_signs` (which filters and transforms this source table) and `wys.mobile_api_id` (which combines information from this table with up to date mobile sign locations pulled from Google Sheets) for information and locations of stationary and mobile signs, respectively. 
 
 |Field name|Type|Description|Example|
 |------|------|-------|------|
@@ -139,7 +139,7 @@ This table contains locations of stationary and mobile signs. It also contains i
 |`start_date`|date|First date of valid data|2018-11-28|
 |`loc`|text|The coordinates of the sign|(43.666115,-79.370164)
 |`id`|integer|Unique ID and primary key of the table. This is the same as `sign_id` in `wys.stationary_signs`.|1|
-|`geom`|geometry|The location of the sign calculated from `loc`||
+|`geom`|geometry|The location of the sign calculated from `loc`. **Not to be used for mobile signs**||
 
 
 #### **`wys.sign_schedules_list`**  
