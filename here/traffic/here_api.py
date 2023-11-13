@@ -64,18 +64,18 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "221E0"):
+                request_type = 'PATH', vehicle_type = 'ALL', epoch_type = 5):
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
                             "adminLevel":3,
                             "isoCountryCode":"CAN",
-                            "startDate":str(start_date.date()),
-                            "endDate":str(end_date.date()),
+                            "startDate":datetime.strptime(start_date, '%Y%m%d').date().strftime("%Y-%m-%d"),
+                            "endDate":datetime.strptime(end_date, '%Y%m%d').date().strftime("%Y-%m-%d"),
                             "timeIntervals":[],
                             "locationFilter":{"tmcs":[]},
                             "daysOfWeek":{"U":True,"M":True,"T":True,"W":True,"R":True,"F":True,"S":True},
-                            "mapVersion": mapversion},
+                            },
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
@@ -92,7 +92,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             "userId":user_id,
             'userEmail':user_email}
 
-    LOGGER.info('Querying data from %s to %s', str(start_date.date()), str(end_date.date()))
+    LOGGER.info('Querying data from %s to %s', str(start_date), str(end_date))
     query_header = {'Authorization':'Bearer '+ access_token, 'Content-Type': 'application/json'}
 
     query_response = requests.post(query_url, headers=query_header, json=query)
