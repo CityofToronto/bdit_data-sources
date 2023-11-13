@@ -70,7 +70,7 @@ BEGIN
         EXECUTE FORMAT($$ 
             --ALTER TABLE IF EXISTS mio_staging.%I OWNER TO miovision_admins;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+            GRANT SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
            $$, year_table, year_table, year_table);
 	END LOOP;
@@ -117,8 +117,8 @@ ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq OWNER TO
 --save and drop dependencies
 SELECT public.deps_save_and_drop_dependencies('miovision_api','volumes_15min');
 --truncate and drop old volumes_15min
-TRUNCATE miovision_api.volumes_15min;
-DROP miovision_api.volumes_15min;
+TRUNCATE TABLE miovision_api.volumes_15min;
+DROP TABLE miovision_api.volumes_15min;
 --switch over schema of new table:
 ALTER TABLE mio_staging.volumes_15min SET SCHEMA miovision_api;
 --restore dependencies
@@ -130,7 +130,7 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min');
 ALTER TABLE IF EXISTS miovision_api.volumes_15min OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min FROM bdit_humans;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_api_bot;
-GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, REFERENCES ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_admins;
 
 --need to change the schema and owners of all the partitions since wasn't able to do that previously. 

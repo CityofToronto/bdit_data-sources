@@ -24,7 +24,7 @@ BEGIN
         PARTITION BY RANGE (%I);
         ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
         GRANT SELECT, INSERT, UPDATE ON TABLE miovision_api.%I TO miovision_api_bot;
-        GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
+        GRANT SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
         $$,
         year_table,
         base_table,

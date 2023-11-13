@@ -12,7 +12,7 @@ CREATE TABLE miovision_api.volumes
     volume_15min_mvt_uid integer,
     CONSTRAINT volumes_intersection_uid_datetime_bin_classification_pkey 
     PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid),
-    CONSTRAINT volumes_volumes_15min_mvt_uid_fkey FOREIGN KEY (volume_15min_mvt_uid)
+    CONSTRAINT volumes_volume_15min_mvt_uid_fkey FOREIGN KEY (volume_15min_mvt_uid)
     REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
     ON UPDATE NO ACTION ON DELETE SET NULL
 )

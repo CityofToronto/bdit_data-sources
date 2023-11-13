@@ -74,8 +74,8 @@ BEGIN
         --grant permissions on outer partitions
         EXECUTE FORMAT($$ 
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT SELECT, INSERT, TRIGGER ON TABLE mio_staging.%I TO miovision_api_bot;
-            GRANT REFERENCES, TRIGGER, SELECT ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+            GRANT SELECT, INSERT, UPDATE ON TABLE mio_staging.%I TO miovision_api_bot;
+            GRANT REFERENCES, SELECT ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
            $$, year_table, year_table, year_table, year_table
           );
@@ -123,8 +123,8 @@ ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq 
 --save and drop dependencies
 SELECT public.deps_save_and_drop_dependencies('miovision_api','volumes_15min_mvt');
 --truncate and drop old volumes_15min_mvt
-TRUNCATE miovision_api.volumes_15min_mvt;
-DROP miovision_api.volumes_15min_mvt;
+TRUNCATE TABLE miovision_api.volumes_15min_mvt;
+DROP TABLE miovision_api.volumes_15min_mvt;
 --switch over schema of new table:
 ALTER TABLE mio_staging.volumes_15min_mvt SET SCHEMA miovision_api;
 --restore dependencies
@@ -135,8 +135,8 @@ SELECT public.deps_restore_dependencies('miovision_api','volumes_15min_mvt');
 --parent table needs further permissions.
 ALTER TABLE IF EXISTS miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.volumes_15min_mvt FROM bdit_humans;
-GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
-GRANT REFERENCES, TRIGGER, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, INSERT, UPDATE ON TABLE miovision_api.volumes_15min_mvt TO miovision_api_bot;
+GRANT REFERENCES, SELECT ON TABLE miovision_api.volumes_15min_mvt TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min_mvt TO miovision_admins;
 
 --need to change the schema and owners of all the partitions.

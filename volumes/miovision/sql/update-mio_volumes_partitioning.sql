@@ -81,7 +81,7 @@ BEGIN
         EXECUTE FORMAT($$
             GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
             REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-            GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+            GRANT SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
             GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
             $$, year_table, year_table, year_table, year_table);
         FOR mm IN 01..12 LOOP
@@ -90,7 +90,7 @@ BEGIN
             EXECUTE FORMAT($$
                 GRANT INSERT, SELECT ON TABLE mio_staging.%I TO miovision_api_bot;
                 REVOKE ALL ON TABLE mio_staging.%I FROM bdit_humans;
-                GRANT TRIGGER, SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
+                GRANT SELECT, REFERENCES ON TABLE mio_staging.%I TO bdit_humans WITH GRANT OPTION;
                 GRANT ALL ON TABLE mio_staging.%I TO miovision_admins;
                 $$, month_table, month_table, month_table, month_table);
     	END LOOP;
@@ -138,12 +138,12 @@ ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq OWNER TO miovision_a
 
 --truncate and drop all the volumes tables; Point of no return!
 /*
-ALTER TABLE miovision_api.volumes_2018 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2018; DROP miovision_api.volumes_2018;
-ALTER TABLE miovision_api.volumes_2019 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2019; DROP miovision_api.volumes_2019;
-ALTER TABLE miovision_api.volumes_2020 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2020; DROP miovision_api.volumes_2020;
-ALTER TABLE miovision_api.volumes_2021 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2021; DROP miovision_api.volumes_2021;
-ALTER TABLE miovision_api.volumes_2022 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2022; DROP miovision_api.volumes_2022;
-ALTER TABLE miovision_api.volumes_2023 NO INHERIT miovision_api.volumes; TRUNCATE miovision_api.volumes_2023; DROP miovision_api.volumes_2023;
+ALTER TABLE miovision_api.volumes_2018 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2018; DROP TABLE miovision_api.volumes_2018;
+ALTER TABLE miovision_api.volumes_2019 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2019; DROP TABLE miovision_api.volumes_2019;
+ALTER TABLE miovision_api.volumes_2020 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2020; DROP TABLE miovision_api.volumes_2020;
+ALTER TABLE miovision_api.volumes_2021 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2021; DROP TABLE miovision_api.volumes_2021;
+ALTER TABLE miovision_api.volumes_2022 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2022; DROP TABLE miovision_api.volumes_2022;
+ALTER TABLE miovision_api.volumes_2023 NO INHERIT miovision_api.volumes; TRUNCATE TABLE miovision_api.volumes_2023; DROP TABLE miovision_api.volumes_2023;
 DROP TABLE miovision_api.volumes;
 */
 

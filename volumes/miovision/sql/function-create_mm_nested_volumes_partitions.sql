@@ -27,7 +27,7 @@ BEGIN
             PARTITION OF miovision_api.%I
             FOR VALUES FROM (%L) TO (%L);
             ALTER TABLE IF EXISTS miovision_api.%I OWNER TO miovision_admins;
-            GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
+            GRANT SELECT, REFERENCES ON TABLE miovision_api.%I TO bdit_humans WITH GRANT OPTION;
             GRANT SELECT, INSERT, UPDATE ON TABLE miovision_api.%I TO miovision_api_bot;
         $$,
         month_table,
