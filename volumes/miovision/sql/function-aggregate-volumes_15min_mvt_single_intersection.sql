@@ -30,8 +30,8 @@ WITH aggregate_insert AS (
     -- Cross product of dates, intersections, legal movement for cars, bikes, and peds to aggregate
     FROM miovision_api.intersection_movements AS im
     CROSS JOIN generate_series(
-        start_date - interval '1 hour',
-        end_date - interval '1 hour 15 minutes',
+        start_date,
+        end_date - interval '15 minutes',
         interval '15 minutes'
     ) AS dt(datetime_bin)
     JOIN miovision_api.intersections AS mai USING (intersection_uid)
@@ -50,8 +50,8 @@ WITH aggregate_insert AS (
     --To get 1min bins
     LEFT JOIN miovision_api.volumes AS v ON
         --help query choose correct partition
-        v.datetime_bin >= start_date - interval '1 hour'
-        AND v.datetime_bin < end_date - interval '1 hour'
+        v.datetime_bin >= start_date
+        AND v.datetime_bin < end_date
         AND v.datetime_bin >= dt.datetime_bin
         AND v.datetime_bin < dt.datetime_bin + interval '15 minutes'
         AND v.intersection_uid = im.intersection_uid

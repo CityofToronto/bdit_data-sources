@@ -21,8 +21,10 @@ BEGIN
         FROM miovision_api.volumes_15min_mvt A
         INNER JOIN miovision_api.movement_map B -- MVT to ATR crossover table.
         ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid
-        WHERE A.processed IS NULL
-        AND datetime_bin >= start_date - INTERVAL '1 hour' AND datetime_bin < end_date - INTERVAL '1 hour'
+        WHERE
+            A.processed IS NULL
+            AND datetime_bin >= start_date
+            AND datetime_bin < end_date
         -- each day is aggregated from 23:00 the day before to 23:00 of that day
         GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
     ),
