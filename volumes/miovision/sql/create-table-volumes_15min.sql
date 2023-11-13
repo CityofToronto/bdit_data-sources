@@ -15,7 +15,7 @@ CREATE TABLE miovision_api.volumes_15min
 )
 PARTITION BY RANGE (datetime_bin)
 WITH (
-  OIDS=FALSE
+    OIDS=FALSE
 );
 
 ALTER TABLE miovision_api.volumes_15min OWNER TO miovision_admins;
@@ -61,8 +61,8 @@ ON miovision_api.volumes_15min
 USING btree(volume_15min_uid ASC nulls last);
 
 --create yearly partitions
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2019::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2020::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2021::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2022::int)
-SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2023::int)
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2019::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2020::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2021::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2022::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', 2023::int);

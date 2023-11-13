@@ -30,7 +30,8 @@ ON mio_staging.volumes_15min_mvt USING btree(intersection_uid ASC nulls last);
 -- DROP INDEX IF EXISTS mio_staging.volumes_15min_mvt_leg_movement_uid_idx;
 CREATE INDEX IF NOT EXISTS volumes_15min_mvt_leg_movement_uid_idx
 ON mio_staging.volumes_15min_mvt USING btree(
-    leg COLLATE pg_catalog."default" ASC nulls last, movement_uid ASC nulls last
+    leg COLLATE pg_catalog."default" ASC nulls last, --noqa: PRS
+    movement_uid ASC nulls last
 );
 
 -- Index: volumes_15min_mvt_processed_idx
@@ -84,7 +85,7 @@ $do$ LANGUAGE plpgsql;
 
 --this table was smaller, so inserted all at once, about 1hr. 
 INSERT INTO mio_staging.volumes_15min_mvt
-SELECT * FROM miovision_api.volumes_15min_mvt
+SELECT * FROM miovision_api.volumes_15min_mvt --noqa: L044
 WHERE datetime_bin >= '2019-01-01'::date;
 
 /*insert any new data 
@@ -98,13 +99,16 @@ WITH a AS (
     SELECT COUNT(*) AS staging_count
     FROM mio_staging.volumes_15min_mvt
 ),
+
 b AS (
     SELECT COUNT(*) AS miovision_api_count
     FROM miovision_api.volumes_15min_mvt
     WHERE datetime_bin >= '2019-01-01'::timestamp
 )
 
-SELECT a.staging_count, b.miovision_api_count
+SELECT
+    a.staging_count,
+    b.miovision_api_count
 FROM a,
 b;
 

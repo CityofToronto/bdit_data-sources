@@ -42,5 +42,5 @@ ALTER TABLE miovision_api.volumes_daily OWNER TO miovision_admins;
 GRANT INSERT, SELECT, DELETE ON miovision_api.volumes_daily TO miovision_api_bot;
 
 COMMENT ON TABLE miovision_api.volumes_daily IS
-    '''Daily aggregation of miovision_api.volumes_15min. Note:
-    gaps/erroenous periods are not excluded from summarization.''';
+'''Daily aggregation of miovision_api.volumes_15min. Note:
+gaps/erroenous periods are not excluded from summarization.''';
