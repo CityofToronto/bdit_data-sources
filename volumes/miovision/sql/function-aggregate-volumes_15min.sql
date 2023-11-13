@@ -1,60 +1,88 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
 	start_date date,
 	end_date date)
-    RETURNS integer
-    LANGUAGE 'plpgsql'
+RETURNS integer
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE
+COST 100
+VOLATILE
 AS $BODY$
 BEGIN
 --Creates the ATR bins
     WITH transformed AS (
-        SELECT     A.intersection_uid,
-            A.datetime_bin,
-            A.classification_uid,
-            B.leg_new AS leg,
-            B.dir,
-            SUM(A.volume) AS volume,
-            array_agg(volume_15min_mvt_uid) AS uids
-
-        FROM miovision_api.volumes_15min_mvt A
-        INNER JOIN miovision_api.movement_map B -- MVT to ATR crossover table.
-        ON B.leg_old = A.leg AND B.movement_uid = A.movement_uid
+        SELECT
+            a.intersection_uid,
+            a.datetime_bin,
+            a.classification_uid,
+            b.leg_new AS leg,
+            b.dir,
+            SUM(a.volume) AS volume,
+            array_agg(a.volume_15min_mvt_uid) AS uids
+        FROM miovision_api.volumes_15min_mvt AS a
+        INNER JOIN miovision_api.movement_map AS b ON -- MVT to ATR crossover table.
+            b.leg_old = a.leg
+            AND b.movement_uid = a.movement_uid
         WHERE
-            A.processed IS NULL
-            AND datetime_bin >= start_date
-            AND datetime_bin < end_date
+            a.processed IS NULL
+            AND a.datetime_bin >= start_date
+            AND a.datetime_bin < end_date
         -- each day is aggregated from 23:00 the day before to 23:00 of that day
-        GROUP BY A.intersection_uid, A.datetime_bin, A.classification_uid, B.leg_new, B.dir
+        GROUP BY
+            a.intersection_uid,
+            a.datetime_bin,
+            a.classification_uid,
+            b.leg_new,
+            b.dir
     ),
+
     --Inserts the ATR bins to the ATR table
     insert_atr AS (
         INSERT INTO miovision_api.volumes_15min(intersection_uid, datetime_bin, classification_uid, leg, dir, volume)
-        SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, volume
+        SELECT
+            intersection_uid,
+            datetime_bin,
+            classification_uid,
+            leg,
+            dir,
+            volume
         FROM transformed
-        RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir)
+        RETURNING volume_15min_uid, intersection_uid, datetime_bin, classification_uid, leg, dir
+    ), 
+    
     --Updates crossover table with new IDs
-    , insert_crossover AS(
-        INSERT INTO miovision_api.volumes_mvt_atr_xover (volume_15min_mvt_uid, volume_15min_uid)
-        SELECT volume_15min_mvt_uid, volume_15min_uid
-        FROM insert_atr A
-        INNER JOIN (SELECT intersection_uid, datetime_bin, classification_uid, leg, dir, unnest(uids) AS volume_15min_mvt_uid FROM transformed) B
-            ON A.intersection_uid=B.intersection_uid
-            AND A.datetime_bin=B.datetime_bin
-            AND A.classification_uid=B.classification_uid
-            AND A.leg=B.leg
-            AND A.dir=B.dir
+    insert_crossover AS(
+        INSERT INTO miovision_api.volumes_mvt_atr_xover(volume_15min_mvt_uid, volume_15min_uid)
+        SELECT
+            volume_15min_mvt_uid,
+            volume_15min_uid
+        FROM insert_atr AS a
+        INNER JOIN (
+            SELECT
+                intersection_uid,
+                datetime_bin,
+                classification_uid,
+                leg,
+                dir,
+                unnest(uids) AS volume_15min_mvt_uid
+                FROM transformed
+            ) b
+            ON a.intersection_uid = b.intersection_uid
+            AND a.datetime_bin = b.datetime_bin
+            AND a.classification_uid = b.classification_uid
+            AND a.leg = b.leg
+            AND a.dir = b.dir
         ORDER BY volume_15min_uid
         RETURNING volume_15min_mvt_uid
     )
+
     --Sets processed column to TRUE
-    UPDATE miovision_api.volumes_15min_mvt a
+    UPDATE miovision_api.volumes_15min_mvt AS a
     SET processed = TRUE
-    FROM insert_crossover b
-    WHERE a.volume_15min_mvt_uid=b.volume_15min_mvt_uid;
+    FROM insert_crossover AS b
+    WHERE a.volume_15min_mvt_uid = b.volume_15min_mvt_uid;
 
     RETURN NULL;
+
 EXCEPTION
 	WHEN unique_violation THEN
 		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
@@ -63,7 +91,7 @@ END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
-    OWNER TO miovision_admins;
+OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans WITH GRANT OPTION;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO dbadmin WITH GRANT OPTION;
