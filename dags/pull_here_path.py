@@ -12,6 +12,7 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
+from airflow.macros import ds_add, ds_format
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -48,7 +49,6 @@ default_args = {'owner': ','.join(names),
                        'LANG':'C.UTF-8'}
                 }
 
-
 @dag(dag_id = dag_name,
      default_args=default_args,
      schedule_interval='30 10 * * *' ,
@@ -69,7 +69,7 @@ def pull_here_path():
     def get_request_id(access_token: str, **kwargs):
         api_conn = BaseHook.get_connection('here_api_key')
         ds = kwargs["ds"]
-        pull_date = (datetime.strptime(ds, '%Y-%m-%d').date() - timedelta(days=1)).strftime("%Y%m%d")
+        pull_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
         return request_id
     
