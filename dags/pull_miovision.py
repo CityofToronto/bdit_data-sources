@@ -8,14 +8,17 @@ import os
 import pendulum
 from airflow.decorators import dag, task, task_group
 from datetime import datetime, timedelta
+import configparser
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.macros import ds_add
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
-from volumes.miovision.api.intersection_tmc import run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, get_report_dates
+from volumes.miovision.api.intersection_tmc import pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, get_report_dates
 
 dag_name = 'pull_miovision'
 
@@ -82,24 +85,50 @@ def pull_miovision_dag():
         check_annual_partition() >> create_annual_partition
         check_month_partition() >> create_month_partition
 
-    clear_task = PostgresOperator(
-        task_id=
-        sql=
-        postgres_conn_id='miovision_api_bot',
-        autocommit=True
-    )
+    @task(trigger_rule='none_failed', retries = 1)
+    def pull_miovision(ds = None):
+        mio_postgres = PostgresHook("miovision_api_bot")
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read('/etc/airflow/data_scripts/volumes/miovision/api/config.cfg')
+        api_key=CONFIG['API']
+        with mio_postgres.get_conn() as conn:
+            pull_data(conn = conn, start_time = ds, end_time = ds_add(ds, 1), pull = True, key = api_key['key'])
 
-    @task
-    def pull_miovision_task():
+    @task_group
+    def miovision_agg():
+        @task
+        def find_gaps_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            with mio_postgres.get_conn() as conn:
+                find_gaps(conn, ds, ds_add(ds, 1))
 
+        @task
+        def aggregate_15_min_mvt_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            with mio_postgres.get_conn() as conn:
+                aggregate_15_min_mvt(conn, ds, ds_add(ds, 1))
 
-    t1 = BashOperator(
-        task_id = 'pull_miovision',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
-        retries = 0,
-        trigger_rule='none_failed'
-    )
+        @task
+        def aggregate_15_min_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            with mio_postgres.get_conn() as conn:
+                aggregate_15_min(conn, ds, ds_add(ds, 1))
 
-    check_partitions() >> t1
+        @task
+        def aggregate_volumes_daily_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            with mio_postgres.get_conn() as conn:
+                aggregate_volumes_daily(conn, ds, ds_add(ds, 1))
 
+        @task
+        def get_report_dates_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            with mio_postgres.get_conn() as conn:
+                get_report_dates(conn, ds, ds_add(ds, 1))
+        
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> aggregate_15_min_task() >> aggregate_volumes_daily_task() >> get_report_dates_task()
+
+    check_partitions() >> pull_miovision()
+    pull_miovision() >> miovision_agg()
+    
 pull_miovision_dag()

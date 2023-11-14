@@ -318,6 +318,11 @@ def find_gaps(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
+                delete_sql='''
+                    DELETE FROM miovision_api.unacceptable_gaps
+                    WHERE gap_start >= %s::timestamp
+                    AND gap_start < %s::timestamp;'''
+                cur.execute(delete_sql, time_period)
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
                 cur.execute(invalid_gaps, time_period)
                 logger.info(conn.notices[-1])
@@ -330,6 +335,12 @@ def aggregate_15_min_mvt(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
+                delete_sql='''
+                    DELETE FROM miovision_api.volumes_15min_mvt
+                    WHERE datetime_bin >= %s::timestamp - interval '1 hour'
+                    AND datetime_bin < %s::timestamp - interval '1 hour';
+                '''
+                cur.execute(delete_sql, time_period)
                 update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
                 cur.execute(update, time_period)
                 logger.info('Aggregated to 15 minute movement bins')
@@ -341,6 +352,12 @@ def aggregate_15_min(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
+                delete_sql='''
+                    DELETE FROM miovision_api.volumes_15min
+                    WHERE datetime_bin >= %s::timestamp - interval '1 hour'
+                    AND datetime_bin < %s::timestamp - interval '1 hour';
+                '''
+                cur.execute(delete_sql, time_period)
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
@@ -352,6 +369,7 @@ def aggregate_volumes_daily(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
+                #this function includes a delete query.
                 daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
                 cur.execute(daily_aggregation, time_period)
                 logger.info('Aggregation into daily volumes table complete')
@@ -363,6 +381,12 @@ def get_report_dates(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
+                delete_sql='''
+                    DELETE FROM miovision_api.report_dates
+                    WHERE dt >= %s::date
+                    AND dt < %s::date;
+                '''
+                cur.execute(delete_sql, time_period)
                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
                 cur.execute(report_dates, time_period)
                 logger.info('report_dates done')
@@ -374,6 +398,12 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
+            delete_sql='''
+                DELETE FROM miovision_api.volumes
+                WHERE datetime_bin >= %s::timestamp
+                AND datetime_bin < %s::timestamp;
+            '''
+            cur.execute(delete_sql, time_period)
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
