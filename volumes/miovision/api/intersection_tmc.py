@@ -305,10 +305,9 @@ class MiovPuller:
 
         return table_veh, table_ped
 
-
-def process_data(conn, start_time, end_iteration_time):
+def process_data(conn, start_time, end_iteration_time, user_def_intersection, intersections):
     find_gaps(conn, start_time, end_iteration_time)
-    aggregate_15_min_mvt(conn, start_time, end_iteration_time)
+    aggregate_15_min_mvt(conn, start_time, end_iteration_time, user_def_intersection, intersections)
     aggregate_15_min(conn, start_time, end_iteration_time)
     aggregate_volumes_daily(conn, start_time, end_iteration_time)
     get_report_dates(conn, start_time, end_iteration_time)
@@ -330,20 +329,38 @@ def find_gaps(conn, start_time, end_iteration_time):
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def aggregate_15_min_mvt(conn, start_time, end_iteration_time):
+def aggregate_15_min_mvt(conn, start_time, end_iteration_time, user_def_intersection, intersections):
     time_period = (start_time, end_iteration_time)
     try:
         with conn:
             with conn.cursor() as cur:
-                delete_sql='''
-                    DELETE FROM miovision_api.volumes_15min_mvt
-                    WHERE datetime_bin >= %s::timestamp - interval '1 hour'
-                    AND datetime_bin < %s::timestamp - interval '1 hour';
-                '''
-                cur.execute(delete_sql, time_period)
-                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
-                cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute movement bins')
+                #if intersections specified, aggregate this step one at a time
+                # with different single intersection function
+                if user_def_intersection:
+                    for c_intersec in intersections:
+                        query_params = time_period + (c_intersec.uid, )
+                        delete_sql='''
+                            DELETE FROM miovision_api.volumes_15min_mvt
+                            WHERE datetime_bin >= %s::timestamp - interval '1 hour'
+                            AND datetime_bin < %s::timestamp - interval '1 hour'
+                            AND intersection_uid = %s::int;
+                        '''
+                        cur.execute(delete_sql, query_params)
+                        update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
+                                    %s::date, %s::date, %s::int)"""
+                        cur.execute(update, query_params)
+                        logger.info('Aggregated intersection %s to 15 minute movement bins',
+                                    c_intersec.uid)
+                else: 
+                    delete_sql='''
+                        DELETE FROM miovision_api.volumes_15min_mvt
+                        WHERE datetime_bin >= %s::timestamp - interval '1 hour'
+                        AND datetime_bin < %s::timestamp - interval '1 hour';
+                    '''
+                    cur.execute(delete_sql, time_period)
+                    update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
+                    cur.execute(update, time_period)
+                    logger.info('Aggregated to 15 minute movement bins')
     except psycopg2.Error as exc:
         logger.exception(exc)
 
@@ -561,7 +578,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     if pull:
         logger.info('Skipping aggregating and processing volume data')
     else:
-        process_data(conn, start_time, end_time)
+        process_data(conn, start_time, end_time, user_def_intersection, intersections)
 
     logger.info('Done')
 

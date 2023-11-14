@@ -158,3 +158,8 @@ $do$ LANGUAGE plpgsql;
 
 ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_mvt_volume_15min_mvt_uid_seq SET SCHEMA miovision_api;
 ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq OWNED BY volumes_15min_mvt.volume_15min_mvt_uid;
+
+--add volume_15min_mvt_uid to pkey so it can be used in fkey
+ALTER TABLE miovision_api.volumes_15min_mvt DROP CONSTRAINT volumes_15min_mvt_int_uid_dt_bin_class_leg_mvmt_uid_pkey;
+ALTER TABLE miovision_api.volumes_15min_mvt ADD CONSTRAINT volumes_15min_mvt_int_uid_dt_bin_class_leg_mvmt_uid_pkey
+PRIMARY KEY (volume_15min_mvt_uid, intersection_uid, datetime_bin, classification_uid, leg, movement_uid);
