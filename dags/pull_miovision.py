@@ -83,7 +83,7 @@ def pull_miovision_dag():
 
     t1 = BashOperator(
         task_id = 'pull_miovision',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
+        bash_command = '/data/airflow/airflow_venv/bin/python3 /data/airflow/data_scripts/volumes/miovision/api/intersection_tmc.py run-api --path /data/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes --start_date {{ds}} --end_date {{ data_interval_end | ds }} ', 
         retries = 0,
         trigger_rule='none_failed'
     )
