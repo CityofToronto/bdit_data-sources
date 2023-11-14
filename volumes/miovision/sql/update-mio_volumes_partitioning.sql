@@ -175,3 +175,6 @@ BEGIN
 	END LOOP;
 END;
 $do$ LANGUAGE plpgsql
+
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_volume_uid_seq SET SCHEMA miovision_api;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_volume_uid_seq OWNED BY volumes.volume_uid;

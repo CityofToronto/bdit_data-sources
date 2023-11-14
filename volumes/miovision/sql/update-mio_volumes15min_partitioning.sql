@@ -150,3 +150,5 @@ BEGIN
 END;
 $do$ LANGUAGE plpgsql;
 
+ALTER SEQUENCE IF EXISTS mio_staging.volumes_15min_volume_15min_uid_seq SET SCHEMA miovision_api;
+ALTER SEQUENCE IF EXISTS miovision_api.volumes_15min_volume_15min_uid_seq OWNED BY volumes_15min.volume_15min_uid;
