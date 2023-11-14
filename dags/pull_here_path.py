@@ -1,7 +1,3 @@
-"""
-Pipeline to pull here data every week and put them into the here.ta table using Bash Operator.
-Slack notifications is raised when the airflow process fails.
-"""
 import json
 import sys
 import os
@@ -26,13 +22,18 @@ try:
 except:
     raise ImportError("Cannot import slack alert functions")
 
+doc_md = """
+
+### The Daily HERE pulling DAG
+
+This DAG runs daily to pull here data from traffic analytics' API to here.ta in the bigdata database using Taskflow.
+Slack notifications is raised when the airflow process fails.
+
+"""
 dag_name = 'pull_here_path'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-here_postgres = PostgresHook("here_bot")
-rds_con = here_postgres.get_uri()
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -43,8 +44,7 @@ default_args = {'owner': ','.join(names),
                 'retry_delay': timedelta(minutes=60), #Retry after 60 mins
                 'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
                 'on_failure_callback': task_fail_slack_alert,
-                'env':{'here_bot':rds_con,
-                       'LC_ALL':'C.UTF-8', #Necessary for Click
+                'env':{'LC_ALL':'C.UTF-8', #Necessary for Click
                        'LANG':'C.UTF-8'}
                 }
 
@@ -53,6 +53,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      schedule_interval='30 10 * * *' ,
      catchup=False,
+     doc_md = doc_md,
      tags=["HERE"]
      )
 
@@ -66,7 +67,7 @@ def pull_here_path():
         return pull_date
 
     @task
-    def send_request(pull_date: str):
+    def send_request():
         api_conn = BaseHook.get_connection('here_api_key')
         access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
         return access_token
@@ -78,15 +79,15 @@ def pull_here_path():
         return request_id
     
     @task(retries=2) 
-    def get_download_link(request_id: str, access_token: str, pull_date: str):
+    def get_download_link(request_id: str, access_token: str):
         api_conn = BaseHook.get_connection('here_api_key')
         download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
         return download_url
     
     pull_date = parse_date()
-    access_token = send_request(pull_date)
+    access_token = send_request()
     request_id =  get_request_id(pull_date, access_token)
-    download_url = get_download_link(request_id, access_token, pull_date)
+    download_url = get_download_link(request_id, access_token)
 
     load_data_run = BashOperator(
         task_id = "load_data",
