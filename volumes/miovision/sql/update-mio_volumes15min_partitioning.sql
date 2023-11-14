@@ -137,7 +137,6 @@ GRANT ALL ON TABLE miovision_api.volumes_15min TO miovision_admins;
 DO $do$
 DECLARE
 	yyyy TEXT;
-    month_table TEXT;
     year_table TEXT;
 BEGIN
 	FOR yyyy IN 2019..2023 LOOP
