@@ -60,21 +60,16 @@ default_args = {'owner': ','.join(names),
 def pull_here_path():
 
     @task
-    def parse_date(**kwargs):
-        ds = kwargs["ds"]
-        # Get the day before execution date
-        pull_date = (datetime.strptime(ds, '%Y-%m-%d').date() - timedelta(days=1)).strftime("%Y%m%d")
-        return pull_date
-
-    @task
     def send_request():
         api_conn = BaseHook.get_connection('here_api_key')
         access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
         return access_token
 
     @task
-    def get_request_id(pull_date: str, access_token: str):
+    def get_request_id(access_token: str, **kwargs):
         api_conn = BaseHook.get_connection('here_api_key')
+        ds = kwargs["ds"]
+        pull_date = (datetime.strptime(ds, '%Y-%m-%d').date() - timedelta(days=1)).strftime("%Y%m%d")
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
         return request_id
     
@@ -84,9 +79,8 @@ def pull_here_path():
         download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
         return download_url
     
-    pull_date = parse_date()
     access_token = send_request()
-    request_id =  get_request_id(pull_date, access_token)
+    request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
 
     load_data_run = BashOperator(
