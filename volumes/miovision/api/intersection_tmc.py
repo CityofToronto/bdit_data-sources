@@ -307,41 +307,67 @@ class MiovPuller:
 
 
 def process_data(conn, start_time, end_iteration_time):
-    # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
-
+    find_gaps(conn, start_time, end_iteration_time)
+    aggregate_15_min_mvt(conn, start_time, end_iteration_time)
+    aggregate_15_min(conn, start_time, end_iteration_time)
+    aggregate_volumes_daily(conn, start_time, end_iteration_time)
+    get_report_dates(conn, start_time, end_iteration_time)
+ 
+def find_gaps(conn, start_time, end_iteration_time):
     time_period = (start_time, end_iteration_time)
-    with conn:
-        with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
-            cur.execute(invalid_gaps, time_period)
-            logger.info(conn.notices[-1])
-    logger.info('Updated gapsize table and found gaps exceeding allowable size')
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+                cur.execute(invalid_gaps, time_period)
+                logger.info(conn.notices[-1])
+                logger.info('Updated gapsize table and found gaps exceeding allowable size')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
 
-    # Aggregate to 15min tmc / 15min
+def aggregate_15_min_mvt(conn, start_time, end_iteration_time):
+    time_period = (start_time, end_iteration_time)
     try:
         with conn:
             with conn.cursor() as cur:
                 update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
                 cur.execute(update, time_period)
                 logger.info('Aggregated to 15 minute movement bins')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
 
+def aggregate_15_min(conn, start_time, end_iteration_time):
+    time_period = (start_time, end_iteration_time)
+    try:
+        with conn:
+            with conn.cursor() as cur:
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
+    except psycopg2.Error as exc:
+        logger.exception(exc)
 
+def aggregate_volumes_daily(conn, start_time, end_iteration_time):
+    time_period = (start_time, end_iteration_time)
+    try:
+        with conn:
+            with conn.cursor() as cur:
                 daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
                 cur.execute(daily_aggregation, time_period)
                 logger.info('Aggregation into daily volumes table complete')
-
     except psycopg2.Error as exc:
         logger.exception(exc)
-        sys.exit(1)
 
-    with conn:
-        with conn.cursor() as cur:
-            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
-            cur.execute(report_dates, time_period)
-            logger.info('report_dates done')
+def get_report_dates(conn, start_time, end_iteration_time):
+    time_period = (start_time, end_iteration_time)
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
+                cur.execute(report_dates, time_period)
+                logger.info('report_dates done')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)

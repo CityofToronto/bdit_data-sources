@@ -15,6 +15,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
+from volumes.miovision.api.intersection_tmc import run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, get_report_dates
 
 dag_name = 'pull_miovision'
 
@@ -80,6 +81,17 @@ def pull_miovision_dag():
 
         check_annual_partition() >> create_annual_partition
         check_month_partition() >> create_month_partition
+
+    clear_task = PostgresOperator(
+        task_id=
+        sql=
+        postgres_conn_id='miovision_api_bot',
+        autocommit=True
+    )
+
+    @task
+    def pull_miovision_task():
+
 
     t1 = BashOperator(
         task_id = 'pull_miovision',
