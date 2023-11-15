@@ -17,8 +17,8 @@ THEN
     WITH aggregate_delete AS (
         DELETE FROM miovision_api.volumes_15min_mvt
         WHERE
-            datetime_bin >= start_date - interval '1 hour'
-            AND datetime_bin < end_date - interval '1 hour'
+            datetime_bin >= start_date
+            AND datetime_bin < end_date
         RETURNING volume_15min_mvt_uid
     )
 
@@ -28,8 +28,8 @@ THEN
     FROM aggregate_delete AS b
     WHERE
         a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
-        AND a.datetime_bin >= start_date - interval '1 hour'
-        AND a.datetime_bin < end_date - interval '1 hour';
+        AND a.datetime_bin >= start_date
+        AND a.datetime_bin < end_date;
 
 ELSE
 
@@ -37,8 +37,8 @@ ELSE
         DELETE FROM miovision_api.volumes_15min_mvt
         WHERE
             intersection_uid = intersection
-            AND datetime_bin >= start_date - interval '1 hour'
-            AND datetime_bin < end_date - interval '1 hour'
+            AND datetime_bin >= start_date
+            AND datetime_bin < end_date
         RETURNING volume_15min_mvt_uid
     )
     
@@ -49,8 +49,8 @@ ELSE
     WHERE
         a.intersection_uid = intersection
         AND a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
-        AND a.datetime_bin >= start_date - interval '1 hour'
-        AND a.datetime_bin < end_date - interval '1 hour';
+        AND a.datetime_bin >= start_date
+        AND a.datetime_bin < end_date;
 
 END IF;
 
