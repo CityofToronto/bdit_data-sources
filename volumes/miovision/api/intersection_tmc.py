@@ -431,6 +431,7 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes):
 
     with conn:
         with conn.cursor() as cur:
+            #don't think we need to delete from this table
             api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
             cur.execute(api_log, time_period)
 
