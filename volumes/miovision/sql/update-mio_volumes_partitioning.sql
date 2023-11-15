@@ -11,12 +11,7 @@ CREATE TABLE mio_staging.volumes (
     LIKE miovision_api.volumes INCLUDING DEFAULTS,
     --change primary key to include datetime_bin for partioning
     CONSTRAINT volumes_intersection_uid_datetime_bin_classification_pkey 
-    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid),
-    CONSTRAINT volumes_volume_15min_mvt_uid_fkey
-    FOREIGN KEY (volume_15min_mvt_uid)
-    REFERENCES miovision_api.volumes_15min_mvt (volume_15min_mvt_uid) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE SET NULL
+    PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, movement_uid)
 )
 PARTITION BY RANGE (datetime_bin);
 
