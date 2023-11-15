@@ -1,11 +1,10 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
-	start_date date,
-	end_date date)
-    RETURNS integer
-    LANGUAGE 'plpgsql'
-
-    COST 100
-    VOLATILE
+    start_date date,
+    end_date date)
+RETURNS integer
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE
 AS $BODY$
 BEGIN
 --Creates the ATR bins
@@ -54,18 +53,14 @@ BEGIN
 
     RETURN NULL;
 EXCEPTION
-	WHEN unique_violation THEN
-		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
-		RETURN 0;
+    WHEN unique_violation THEN
+        RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
+        RETURN 0;
 END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
-    OWNER TO miovision_admins;
+OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO dbadmin WITH GRANT OPTION;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_bots;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO PUBLIC;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_api_bot;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_admins;
