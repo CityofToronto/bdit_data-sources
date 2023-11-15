@@ -50,7 +50,10 @@ default_args = {
 with DAG(dag_name,
          default_args=default_args,
          max_active_runs=1,
-         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
+         template_searchpath=[
+             os.path.join(repo_path,'volumes/vds/sql'),
+             os.path.join(repo_path,'dags/sql')
+            ],
          schedule_interval='0 4 * * *') as dag: #daily at 4am
 
     #this task group pulls the detector inventories
@@ -154,19 +157,18 @@ with DAG(dag_name,
         summarize_v15_bylane_task
 
     with TaskGroup(group_id='data_checks') as data_checks:
-        divisions = [2, 8001]
+        divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
                 task_id=f"check_rows_vdsdata_div{divid}",
-                sql="select/select-row_count_lookback.sql",
+                sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',
-                params={"table": 'vds.raw_vdsdata',
+                params={"table": f'vds.counts_15min_div{divid}',
                         "lookback": '60 days',
-                        "dt_col": 'dt',
-                        "div_id": divid,
+                        "dt_col": 'datetime_15min',
+                        "col_to_sum": 'num_obs',
                         "threshold": 0.7},
                 retries=2,
-                execution_timeout=timedelta(minutes=30),
             )
             check_avg_rows
 

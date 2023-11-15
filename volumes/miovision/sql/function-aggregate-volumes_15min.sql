@@ -1,9 +1,8 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
-	start_date date,
-	end_date date)
+    start_date date,
+    end_date date)
 RETURNS integer
 LANGUAGE 'plpgsql'
-
 COST 100
 VOLATILE
 AS $BODY$
@@ -83,9 +82,9 @@ BEGIN
     RETURN NULL;
 
 EXCEPTION
-	WHEN unique_violation THEN
-		RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
-		RETURN 0;
+    WHEN unique_violation THEN
+        RAISE EXCEPTION 'Attempting to aggregate data that has already been aggregated but not deleted';
+        RETURN 0;
 END;
 $BODY$;
 

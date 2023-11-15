@@ -52,7 +52,10 @@ default_args = {
 with DAG(dag_id='vds_pull_vdsvehicledata',
          default_args=default_args,
          max_active_runs=1,
-         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
+         template_searchpath=[
+             os.path.join(repo_path,'volumes/vds/sql'),
+             os.path.join(repo_path,'dags/sql')
+            ]
          schedule_interval='5 4 * * *') as dag: #daily at 4:05am
 
     t_upstream_done = ExternalTaskSensor(
@@ -138,13 +141,13 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
     with TaskGroup(group_id='data_checks') as data_checks:
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            task_id=f"check_rows_vdsvehicledata_div2",
-            sql="select/select-row_count_lookback.sql",
+            task_id=f"check_rows_veh_speeds",
+            sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
-            params={"table": 'vds.raw_vdsdata',
+            params={"table": 'vds.veh_speeds_15min',
                     "lookback": '60 days',
-                    "dt_col": 'dt',
-                    "div_id": 2,
+                    "dt_col": 'datetime_15min',
+                    "col_to_sum": 'count',
                     "threshold": 0.7},
             retries=2
         )

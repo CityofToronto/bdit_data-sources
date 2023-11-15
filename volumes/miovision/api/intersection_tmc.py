@@ -340,6 +340,10 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
 
+                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
+                cur.execute(daily_aggregation, time_period)
+                logger.info('Aggregation into daily volumes table complete')
+
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
