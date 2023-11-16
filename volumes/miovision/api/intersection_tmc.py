@@ -418,20 +418,11 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_int
             #delete only the specified intersections
             if user_def_intersection:
                 for c_intersec in intersections:
-                    delete_sql='''
-                        DELETE FROM miovision_api.volumes
-                        WHERE datetime_bin >= %s::timestamp
-                        AND datetime_bin < %s::timestamp
-                        AND intersection_uid = %s;
-                    '''
+                    delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer);"
                     query_params = time_period + (c_intersec.uid, )
                     cur.execute(delete_sql, query_params)
             else:
-                delete_sql='''
-                    DELETE FROM miovision_api.volumes
-                    WHERE datetime_bin >= %s::timestamp
-                    AND datetime_bin < %s::timestamp;
-                '''
+                delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp);"
                 cur.execute(delete_sql, time_period)
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                              leg,  movement_uid, volume) VALUES %s'''
