@@ -23,7 +23,6 @@ ELSE
         AND datetime_bin < end_date;
 END IF; 
 
-RETURN NULL;
 END;
 
 $BODY$;
