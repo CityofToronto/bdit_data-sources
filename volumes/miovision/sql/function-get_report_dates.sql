@@ -1,10 +1,10 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.get_report_dates(
     start_date timestamp without time zone,
     end_date timestamp without time zone)
-  RETURNS integer AS
-$BODY$
-BEGIN
+RETURNS integer
+AS $BODY$
 
+BEGIN
 
 INSERT INTO miovision_api.report_dates
 

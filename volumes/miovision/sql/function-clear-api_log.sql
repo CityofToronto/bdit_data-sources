@@ -1,8 +1,8 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.clear_api_log(
     start_date date,
     end_date date,
-    intersection integer default null)
-RETURNS VOID
+    intersection integer DEFAULT NULL)
+RETURNS void
 LANGUAGE plpgsql
 VOLATILE
 COST 100

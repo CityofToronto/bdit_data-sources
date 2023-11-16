@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_mvt(
     start_date date,
     end_date date,
-    intersection integer default null)
+    intersection integer DEFAULT NULL)
 RETURNS void
 LANGUAGE 'plpgsql'
 
