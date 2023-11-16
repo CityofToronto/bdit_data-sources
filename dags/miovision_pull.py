@@ -45,12 +45,13 @@ default_args = {'owner': ','.join(names),
      catchup=False,
      params={
             "intersection": Param(
-                default=None,
+                default=0,
                 type="integer",
                 title="A single intersection_uid.",
                 description="A single intersection_uid to pull/aggregate for a single date.",
             )
-        }
+        },
+     tags = ['miovision']
     )
 def pull_miovision_dag():
 # Add 3 hours to ensure that the data are at least 2 hours old
@@ -121,7 +122,7 @@ def pull_miovision_dag():
         @task
         def aggregate_15_min_mvt_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
-            if context["params"]["intersection"]:
+            if context["params"]["intersection"] != 0:
                 intersections = get_intersection_info(conn, intersection=context["params"]["intersection"])
                 with mio_postgres.get_conn() as conn:
                     aggregate_15_min_mvt(conn, ds, ds_add(ds, 1), True, intersections)
@@ -147,11 +148,9 @@ def pull_miovision_dag():
             with mio_postgres.get_conn() as conn:
                 get_report_dates(conn, ds, ds_add(ds, 1))
         
-        find_gaps_task()
-        aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
         get_report_dates_task()
 
-    check_partitions() >> pull_miovision()
-    pull_miovision() >> miovision_agg()
+    check_partitions() >> pull_miovision() >> miovision_agg()
     
 pull_miovision_dag()
