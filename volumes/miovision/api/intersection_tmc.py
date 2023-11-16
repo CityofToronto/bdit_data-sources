@@ -472,9 +472,6 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                             'period.')
         sys.exit(3)
 
-    # So we don't make the comparison thousands of times below.
-    user_def_intersection = len(intersection) > 0
-
     for c_start_t in daterange(start_time, end_time, time_delta):
 
         c_end_t = c_start_t + time_delta
