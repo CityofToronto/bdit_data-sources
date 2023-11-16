@@ -89,8 +89,8 @@ UPDATE miovision_api.volumes AS a
     SET volume_15min_mvt_uid = b.volume_15min_mvt_uid
     FROM aggregate_insert AS b
     WHERE
-        a.datetime_bin >= start_date - interval '1 hour'
-        AND a.datetime_bin < end_date - interval '1 hour'
+        a.datetime_bin >= start_date
+        AND a.datetime_bin < end_date
         AND a.volume_15min_mvt_uid IS NULL
         AND b.volume > 0
         AND a.intersection_uid = b.intersection_uid
