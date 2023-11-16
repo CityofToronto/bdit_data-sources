@@ -98,6 +98,8 @@ Contains SQL used to transform text description of street (in bylaws) into centr
 
 ## HERE Travel Time Data
 
+[`here/`](here/)
+
 Travel time data provided by HERE Technologies from a mix of vehicle probes. Daily extracts of 5-min aggregated speed data for each link in the city (where data are available).
 
 ## Incidents (inactive)
@@ -157,7 +159,7 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 programs: the mobile watch your speed which has signs mounted on existing poles, moved every few weeks, and school watch your speed which has signs installed at high priority schools. The signs also collect continuous speed data.
 
 ## Weather
-[`weather/](weather/)
+[`weather/`](weather/)
 
 Daily historical weather conditions and predictions from Environment Canada.
 
