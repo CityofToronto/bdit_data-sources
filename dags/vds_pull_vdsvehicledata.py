@@ -2,6 +2,7 @@ import os
 import sys
 from airflow import DAG
 from datetime import datetime, timedelta
+from airflow.decorators import task
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -22,10 +23,14 @@ vds_bot = PostgresHook('vds_bot')
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
+#op_kwargs:
+conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
+start_date = {'start_date': '{{ ds }}'}
+
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata, check_vdsvehicledata_partitions
+from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
@@ -47,7 +52,10 @@ default_args = {
 with DAG(dag_id='vds_pull_vdsvehicledata',
          default_args=default_args,
          max_active_runs=1,
-         template_searchpath=os.path.join(repo_path,'volumes/vds/sql'),
+         template_searchpath=[
+             os.path.join(repo_path,'volumes/vds/sql'),
+             os.path.join(repo_path,'dags/sql')
+            ]
          schedule_interval='5 4 * * *') as dag: #daily at 4:05am
 
     t_upstream_done = ExternalTaskSensor(
@@ -61,12 +69,26 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    check_partitions = PythonOperator(
-        task_id='check_partitions',
-        python_callable=check_vdsvehicledata_partitions,
-        op_kwargs = {'rds_conn': vds_bot,
-                    'start_date': '{{ ds }}'}
-    )  
+    with TaskGroup(group_id='check_partitions') as check_partitions_tg:
+
+        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
+            start_date = datetime.strptime(ds, '%Y-%m-%d')
+            if start_date.month == 1 and start_date.day == 1:
+                return True
+            return False
+
+        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
+
+        create_partitions = PostgresOperator(
+            task_id='create_partitions',
+            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', {{ params.year }}::int, 'dt')",
+            postgres_conn_id='vds_bot',
+            params={"year": YEAR},
+            autocommit=True
+        )
+
+        check_partitions() >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
@@ -80,16 +102,15 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
             task_id='delete_vdsvehicledata',
             postgres_conn_id='vds_bot',
             autocommit=True,
-            retries=1
+            retries=1,
+            trigger_rule='none_failed'
         )
 
         #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
         pull_raw_vdsvehicledata_task = PythonOperator(
             task_id='pull_raw_vdsvehicledata',
             python_callable=pull_raw_vdsvehicledata,
-            op_kwargs = {'rds_conn': vds_bot,
-                        'itsc_conn': itsc_bot,
-                    'start_date': '{{ ds }}'}
+            op_kwargs = conns | start_date 
         )
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
@@ -120,16 +141,16 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
 
     with TaskGroup(group_id='data_checks') as data_checks:
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            task_id=f"check_rows_vdsvehicledata_div2",
-            sql="select/select-row_count_lookback.sql",
+            task_id=f"check_rows_veh_speeds",
+            sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
-            params={"table": 'vds.raw_vdsdata',
+            params={"table": 'vds.veh_speeds_15min',
                     "lookback": '60 days',
-                    "dt_col": 'dt',
-                    "div_id": 2,
+                    "dt_col": 'datetime_15min',
+                    "col_to_sum": 'count',
                     "threshold": 0.7},
             retries=2
         )
         check_avg_rows
 
-    t_upstream_done >> check_partitions >> pull_vdsvehicledata >> summarize_vdsvehicledata >> data_checks
+    [t_upstream_done, check_partitions_tg] >> pull_vdsvehicledata >> summarize_vdsvehicledata >> data_checks

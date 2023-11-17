@@ -247,6 +247,24 @@ We need to find out all valid movements for the new intersections from the data 
 			if conn.notices != []:
 				print(conn.notices)
 	```
+## Update `miovision_api.centreline_miovision`
+
+[`miovision_api.centreline_miovision`](../README.md) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/create-mv-mio_cent.sql). 
+
+This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
+- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
+- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
+- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
+
+Manually check that the correct segments have been identified for new Miovision intersections using:
+```
+SELECT
+	cm.*,
+	cl.geom
+FROM miovision_api.centreline_miovision AS cm
+LEFT JOIN gis.centreline AS cl ON cm.centreline_id = cl.geo_id
+WHERE intersection_uid = 72 -- change the number to match the new intersection_uid(s)
+```
 
 ## Backfill/Aggregate new intersection data
 

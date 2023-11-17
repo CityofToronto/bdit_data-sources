@@ -305,7 +305,7 @@ class MiovPuller:
         return table_veh, table_ped
 
 
-def process_data(conn, start_time, end_iteration_time):
+def process_data(conn, start_time, end_iteration_time, user_def_intersection, intersections):
     # UPDATE gapsize_lookup TABLE AND RUN find_gaps FUNCTION
 
     time_period = (start_time, end_iteration_time)
@@ -320,13 +320,28 @@ def process_data(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
-                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
-                cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute movement bins')
+                #if intersections specified, aggregate this step one at a time
+                # with different single intersection function
+                if user_def_intersection:
+                    for c_intersec in intersections:
+                        update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
+                                    %s::date, %s::date, %s::int)"""
+                        query_params = time_period + (c_intersec.uid, )
+                        cur.execute(update, query_params)
+                        logger.info('Aggregated intersection %s to 15 minute movement bins',
+                                    c_intersec.uid)
+                else: 
+                    update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
+                    cur.execute(update, time_period)
+                    logger.info('Aggregated to 15 minute movement bins')
 
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
+
+                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
+                cur.execute(daily_aggregation, time_period)
+                logger.info('Aggregation into daily volumes table complete')
 
     except psycopg2.Error as exc:
         logger.exception(exc)
@@ -520,7 +535,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     if pull:
         logger.info('Skipping aggregating and processing volume data')
     else:
-        process_data(conn, start_time, end_time)
+        process_data(conn, start_time, end_time, user_def_intersection, intersections)
 
     logger.info('Done')
 
