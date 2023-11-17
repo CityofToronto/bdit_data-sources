@@ -99,10 +99,12 @@ def pull_miovision_dag():
         check_month_partition() >> create_month_partition
 
     @task(trigger_rule='none_failed', retries = 1)
-    def pull_miovision(ds = None):
+    def pull_miovision(ds = None, **context):
+        INTERSECTION = () if context["params"]["intersection"] == 0 else context["params"]["intersection"]
         run_api(start_date=ds,
                 end_date=ds_add(ds, 1),
                 path=API_CONFIG_PATH,
+                intersection=INTERSECTION,
                 pull=True,
                 dupes=True)
 
