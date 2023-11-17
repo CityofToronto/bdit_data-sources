@@ -18,7 +18,7 @@ from airflow.macros import ds_add
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
-from volumes.miovision.api.intersection_tmc import pull_data, find_gaps, \
+from volumes.miovision.api.intersection_tmc import run_api, find_gaps, \
     aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, \
     get_report_dates, get_intersection_info
 
@@ -100,16 +100,11 @@ def pull_miovision_dag():
 
     @task(trigger_rule='none_failed', retries = 1)
     def pull_miovision(ds = None):
-        mio_postgres = PostgresHook("miovision_api_bot")
-        CONFIG = configparser.ConfigParser()
-        CONFIG.read(API_CONFIG_PATH)
-        api_key=CONFIG['API']
-        with mio_postgres.get_conn() as conn:
-            pull_data(conn = conn,
-                      start_time = ds,
-                      end_time = ds_add(ds, 1),
-                      pull = True,
-                      key = api_key['key'])
+        run_api(start_date=ds,
+                end_date=ds_add(ds, 1),
+                path=API_CONFIG_PATH,
+                pull=True,
+                dupes=True)
 
     @task_group
     def miovision_agg():
