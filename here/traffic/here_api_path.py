@@ -175,22 +175,19 @@ def download_data(ctx = None, download_url = None, filename = None):
         shutil.copyfileobj(download.raw, f)
 
 @cli.command('upload')
+@click.argument('datafile', type=click.Path(exists=True))
 @click.pass_context
-def send_data_to_database(download_url = None, host = None, user = None):
+def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
     '''Unzip the file and pipe the data to a database COPY statement'''
-    #if not dbsetting and not os.getenv('here_bot'):
-    #    configuration = configparser.ConfigParser()
-    #    configuration.read(ctx.obj['config'])
-    #    dbsetting = configuration['DBSETTINGS']
+    if not dbsetting and not os.getenv('here_bot'):
+        configuration = configparser.ConfigParser()
+        configuration.read(ctx.obj['config'])
+        dbsetting = configuration['DBSETTINGS']
 
     LOGGER.info('Sending data to database')
     try:
-        print(download_url)
-        curl = subprocess.Popen(['curl', '-o'], stdin = download_url, 
-                                stdout= subprocess.PIPE, stderr=subprocess.PIPE) 
         #First subprocess needs to use Popen because piping stdout
-        unzip = subprocess.Popen(['gunzip', ], stdin = curl.stdout, 
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        unzip = subprocess.Popen(['gunzip','-c',datafile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #Second uses check_call and 'ON_ERROR_STOP=1' to make sure errors are captured and that the third 
         #process doesn't run befor psql is finished.
         copy = r'''"\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER 
@@ -205,9 +202,10 @@ def send_data_to_database(download_url = None, host = None, user = None):
             stdin=unzip.stdout, env=os.environ.copy(), shell=True))
         else:
             LOGGER.warning('No here_bot environment variable detected, assuming .pgpass value exists')
-            LOGGER.info(subprocess.check_output(['psql','-h', host,'-U', user ,'-d','bigdata','-v','"ON_ERROR_STOP=1"',
+            LOGGER.info(subprocess.check_output(['psql','-h', dbsetting['host'],'-U',dbsetting['user'],'-d','bigdata','-v','"ON_ERROR_STOP=1"',
                                         '-c',copy],
                                         stdin=unzip.stdout))
+        subprocess.check_call(['rm', datafile])
     except subprocess.CalledProcessError as err:
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
@@ -230,7 +228,7 @@ def pull_here_data(ctx, startdate, enddate, mapversion):
         filename = 'here_data_'+str(startdate)+'_'+str(enddate)
         ctx.invoke(download_data, download_url=download_url, filename=filename)
 
-        ctx.invoke(send_data_to_database, download_url=download_url, dbsetting=dbsettings)
+        ctx.invoke(send_data_to_database, datafile=filename+'.csv.gz', dbsetting=dbsettings)
     except HereAPIException as here_exc:
         LOGGER.critical('Fatal error in pulling data')
         LOGGER.critical(here_exc)

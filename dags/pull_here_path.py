@@ -18,7 +18,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from here.traffic.here_api_test import query_dates, get_access_token, get_download_url, download_data, send_data_to_database
+    from here.traffic.here_api_path import query_dates, get_access_token, get_download_url, download_data, send_data_to_database
     cfg_path = repo_path
 except:
     raise ImportError("Cannot import slack alert functions")
