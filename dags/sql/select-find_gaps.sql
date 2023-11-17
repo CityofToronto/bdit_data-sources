@@ -42,7 +42,7 @@ fluffed_data AS (
 bin_times AS (
     SELECT 
         sensor_id_col,
-        dt_col AS gap_start,
+        dt_col + sum(gap_adjustment) AS gap_start,
         LEAD(dt_col, 1) OVER (PARTITION BY sensor_id_col ORDER BY dt_col) AS gap_end,
         LEAD(dt_col, 1) OVER (PARTITION BY sensor_id_col ORDER BY dt_col)
             - dt_col
@@ -59,15 +59,19 @@ bin_times AS (
 summarized_gaps AS (
     SELECT
         sensor_id_col,
-        STRING_AGG(gap_start || '--' || gap_end, '; ') AS gaps
+        gap_start,
+        gap_end
     FROM bin_times
     WHERE
         gap_end IS NOT NULL --NULL gap_end occurs at the end of the search period
         AND bin_gap >= '{{ params.gap_threshold }}'::interval
-    GROUP BY sensor_id_col
 )
 
 SELECT
-    'There were ' || COALESCE(COUNT(summarized_gaps.*), 0) || ' gaps larger than {{ params.gap_threshold }}.' AS summ, 
-    array_agg(summarized_gaps) AS gaps
+    COUNT(summarized_gaps.*) > 0 AS check,
+    CASE WHEN COUNT(summarized_gaps.*) = 1 THEN 'There was ' ELSE 'There were ' END ||
+        COALESCE(COUNT(summarized_gaps.*), 0) ||
+        CASE WHEN COUNT(summarized_gaps.*) = 1 THEN ' gap' ELSE ' gaps' END
+        || ' larger than {{ params.gap_threshold }}.' AS summ, 
+    array_agg(summarized_gaps || chr(10)) AS gaps
 FROM summarized_gaps
