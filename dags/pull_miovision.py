@@ -118,7 +118,6 @@ def pull_miovision_dag():
             sql="select-row_count_lookback.sql",
             conn_id="miovision_api_bot",
             params=data_check_params | {"col_to_sum": 'volume'},
-            retries=2
         )
         check_row_count.doc_md = '''
         Compare the row count today with the average row count from the lookback period.
@@ -133,7 +132,6 @@ def pull_miovision_dag():
                 } | {
                     "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
                 },
-            retries=2
         )
         check_distinct_classification_uid.doc_md = '''
         Compare the count of classification_uids appearing in today's pull vs the lookback period.
@@ -148,7 +146,6 @@ def pull_miovision_dag():
                 } | {
                     "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
                 },
-            retries=2
         )
         check_distinct_intersection_uid.doc_md = '''
         Identify intersections which appeared within the lookback period that did not appear today.
@@ -166,7 +163,6 @@ def pull_miovision_dag():
                 "gap_threshold": '4 hours',
                 "default_bin": '1 minute',
             },
-            retries=2
         )
         check_gaps.doc_md = '''
         Identify gaps larger than gap_threshold in intersections with values today.
