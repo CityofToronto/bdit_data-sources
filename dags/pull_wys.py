@@ -116,12 +116,14 @@ def pull_wys_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
+            do_xcom_push=True,
             params=data_check_params | {"col_to_sum": 'volume'},
         )
         check_distinct_api_id = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_api_id",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="wys_bot",
+            do_xcom_push=True,
             params=data_check_params | {"id_col": "api_id"} | {"threshold": 0.90},
         )
 
