@@ -107,7 +107,10 @@ JOIN wys.raw_data AS raw ON
     )
 JOIN wys.speed_bins_old AS sb ON
     raw.speed >= lower(sb.speed_bin)
-    AND raw.speed < upper(sb.speed_bin)
+    AND (
+        raw.speed < upper(sb.speed_bin)
+        OR upper(sb.speed_bin) IS NULL
+    )
 LEFT OUTER JOIN wys.sign_schedules_list AS lst ON lst.api_id = loc.api_id
 LEFT OUTER JOIN wys.sign_schedules_clean AS ssc USING (schedule_name)
 --filter necessary to exclude newer data from still active signs
