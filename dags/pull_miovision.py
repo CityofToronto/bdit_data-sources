@@ -27,7 +27,7 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-def get_return_value(context):
+def get_return_value(context) -> str:
     """Return records from SQLCheckOperatorWithReturnValue."""
     return_value = context.get("task_instance").xcom_pull(
         task_ids=context.get("task_instance").task_id

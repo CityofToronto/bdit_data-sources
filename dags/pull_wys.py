@@ -56,7 +56,7 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-def get_return_value(context):
+def get_return_value(context) -> str:
     """Return records from SQLCheckOperatorWithReturnValue."""
     return_value = context.get("task_instance").xcom_pull(
         task_ids=context.get("task_instance").task_id
@@ -65,17 +65,20 @@ def get_return_value(context):
         return return_value
     return ""
 
-default_args = {'owner': ','.join(names),
-                'depends_on_past':False,
-                'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
-                'email_on_failure': False,
-                 'email_on_success': False,
-                 'retries': 3,
-                 'retry_delay': timedelta(minutes=5),
-                 #progressive longer waits between retries
-                 'retry_exponential_backoff': True,
-                 'on_failure_callback':task_fail_slack_alert,
-                }
+default_args = {
+    'owner': ','.join(names),
+    'depends_on_past':False,
+    'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+    #progressive longer waits between retries
+    'retry_exponential_backoff': True,
+    'on_failure_callback': partial(
+        task_fail_slack_alert, extra_msg=get_return_value
+    ),
+}
 
 @dag(dag_id = dag_name,
      default_args=default_args,
@@ -101,9 +104,7 @@ def pull_wys_dag():
                      conn = conn,
                      api_key=api_key)
 
-    @task_group(on_failure_callback = partial(
-                    task_fail_slack_alert, extra_msg=get_return_value
-                    ))
+    @task_group()
     def data_checks():
         data_check_params = {
             "table": "wys.speed_counts_agg_5kph",
