@@ -2,25 +2,29 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Input Parameters](#input-parameters)
-  - [API Key and URL](#api-key-and-url)
-- [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-  - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
-  - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
-  - [Error responses](#error-responses)
-- [Input Files](#input-files)
-- [How to run the api](#how-to-run-the-api)
-  - [Virtual Environment](#virtual-environment)
-  - [Command Line Options](#command-line-options)
-- [Classifications](#classifications)
-  - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
-  - [API Classifications](#api-classifications)
-- [PostgreSQL Functions](#postgresql-functions)
-- [Invalid Movements](#invalid-movements)
-- [How the API works](#how-the-api-works)
-- [Airflow](#airflow)
-- [Notes](#notes)
+- [API Puller](#api-puller)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Input Parameters](#input-parameters)
+    - [API Key and URL](#api-key-and-url)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [Virtual Environment](#virtual-environment)
+    - [Command Line Options](#command-line-options)
+  - [Classifications](#classifications)
+    - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
+    - [API Classifications](#api-classifications)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Airflow](#airflow)
+    - [**`pull_miovision`**](#pull_miovision)
+    - [**`check_miovision`**](#check_miovision)
+  - [Notes](#notes)
 
 ## Overview
 
@@ -237,9 +241,15 @@ Since there is this function on Airflow script to send slack notifications when 
 
 The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
 
+Within the `data_checks` TaskGroup, several `SQLCheckOperatorWithReturnValue` tasks perform checks on the aggregated data from the current data interval.  
+- `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table.  
+- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column.
+- `check_distinct_intersection_uid` checks the count of distinct values in `intersection_uid` column.  
+- `check_gaps` identifes gaps larger than 4 hours for active miovision cameras.  
+
 ### **`check_miovision`**
 
-There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+The `check_miovision` DAG is deprecated by the addition of the `data_checks` TaskGroup to the main `pull_miovision` DAG, in particular `data_checks.check_gaps` which directly replaces `check_miovision.check_miovision`. This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 
 ## Notes
 
