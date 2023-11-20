@@ -104,7 +104,7 @@ def pull_miovision_dag():
                     ))
     def data_checks():
         data_check_params = {
-            "table": "miovision_api.volumes_15min",
+            "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
