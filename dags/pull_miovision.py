@@ -30,7 +30,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 def get_return_value(context) -> str:
     """Return records from SQLCheckOperatorWithReturnValue."""
     return_value = context.get("task_instance").xcom_pull(
-        task_ids=context.get("task_instance").task_id
+        task_ids=context.get("task_instance").task_id, key="return_value"
     )
     if return_value:
         return return_value
