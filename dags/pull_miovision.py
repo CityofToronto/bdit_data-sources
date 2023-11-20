@@ -36,15 +36,18 @@ def get_return_value(context):
         return return_value
     return ""
 
-default_args = {'owner': ','.join(names),
-                'depends_on_past':False,
-                'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
-                'email_on_failure': False,
-                 'email_on_success': False,
-                 'retries': 0,
-                 'retry_delay': timedelta(minutes=5),
-                 'on_failure_callback': task_fail_slack_alert
-                }
+default_args = {
+    'owner': ','.join(names),
+    'depends_on_past':False,
+    'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': partial(
+        task_fail_slack_alert, extra_msg=get_return_value
+    )
+}
 
 @dag(dag_id=dag_name,
      default_args=default_args,
@@ -101,10 +104,8 @@ def pull_miovision_dag():
         retries = 0,
         trigger_rule='none_failed'
     )
-
-    @task_group(on_failure_callback = partial(
-                    task_fail_slack_alert, extra_msg=get_return_value
-                    ))
+    
+    @task_group()
     def data_checks():
         data_check_params = {
             "table": "miovision_api.volumes_15min_mvt",
