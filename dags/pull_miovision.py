@@ -111,7 +111,7 @@ def pull_miovision_dag():
             "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
-            "threshold": 0.7
+            "threshold": 0.95
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
