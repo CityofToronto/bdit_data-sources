@@ -64,4 +64,5 @@ class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
             )
 
         self.log.info("Success.")
+        context.get("task_instance").xcom_push(key="return_value", value=records)
         return records
