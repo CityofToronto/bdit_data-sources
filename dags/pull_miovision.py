@@ -13,10 +13,13 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
-from dags.custom_operators import SQLCheckOperatorWithReturnValue
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+except:
+    raise ImportError("Cannot import DAG helper functions.")
 
 dag_name = 'pull_miovision'
 
