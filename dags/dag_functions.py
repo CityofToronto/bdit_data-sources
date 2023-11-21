@@ -106,7 +106,6 @@ def task_fail_slack_alert(
         f"{context.get('task_instance').task_id} "
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
-        f"{extra_msg_str}"
     )
     failed_alert = SlackWebhookOperator(
         task_id="slack_test",
@@ -114,6 +113,10 @@ def task_fail_slack_alert(
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username="airflow",
+        attachments=[
+            #recursively collapse extra_msg_str with new lines.
+            {"text": '\n'.join(['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str])}
+        ],
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
