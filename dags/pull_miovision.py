@@ -30,8 +30,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 def get_return_value(context) -> str:
     """Return records from SQLCheckOperatorWithReturnValue."""
     task_instance = context.get("task_instance")
-    return_value = task_instance.xcom_pull(task_instance.task_id, key="return_value")
-    print(return_value)
+    return_value = task_instance.xcom_pull(task_instance.task_id)
     if return_value:
         return return_value
     return ""
@@ -117,7 +116,6 @@ def pull_miovision_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="miovision_api_bot",
-            do_xcom_push=True,
             params=data_check_params | {"col_to_sum": 'volume'},
         )
         check_row_count.doc_md = '''
@@ -128,7 +126,6 @@ def pull_miovision_dag():
             task_id="check_distinct_classification_uid",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="miovision_api_bot",
-            do_xcom_push=True,
             params=data_check_params | {
                     "id_col": "classification_uid"
                 } | {
@@ -143,7 +140,6 @@ def pull_miovision_dag():
             task_id="check_distinct_intersection_uid",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="miovision_api_bot",
-            do_xcom_push=True,
             params=data_check_params | {
                     "id_col": "intersection_uid"
                 } | {
@@ -158,7 +154,6 @@ def pull_miovision_dag():
             task_id="check_gaps",
             sql="select-find_gaps.sql",
             conn_id="miovision_api_bot",
-            do_xcom_push=True,
             params={
                 "table": "miovision_api.volumes",
                 "id_col": 'intersection_uid',

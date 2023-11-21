@@ -58,9 +58,8 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 
 def get_return_value(context) -> str:
     """Return records from SQLCheckOperatorWithReturnValue."""
-    return_value = context.get("task_instance").xcom_pull(
-        task_ids=context.get("task_instance").task_id, key="return_value"
-    )
+    task_instance = context.get("task_instance")
+    return_value = task_instance.xcom_pull(task_instance.task_id)
     if return_value:
         return return_value
     return ""
@@ -116,14 +115,12 @@ def pull_wys_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
-            do_xcom_push=True,
             params=data_check_params | {"col_to_sum": 'volume'},
         )
         check_distinct_api_id = SQLCheckOperatorWithReturnValue(
             task_id="check_distinct_api_id",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="wys_bot",
-            do_xcom_push=True,
             params=data_check_params | {"id_col": "api_id"} | {"threshold": 0.90},
         )
 
