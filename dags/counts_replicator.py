@@ -34,7 +34,7 @@ default_args = {
     "email_on_failure": False,
     "retries": 3,
     "retry_delay": timedelta(minutes=60),
-    # "on_failure_callback": task_fail_slack_alert,
+    "on_failure_callback": task_fail_slack_alert,
 }
 
 @dag(
