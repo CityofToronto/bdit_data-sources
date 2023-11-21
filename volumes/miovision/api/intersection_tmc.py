@@ -453,10 +453,14 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_int
         with conn.cursor() as cur:
             if user_def_intersection:
                 for c_intersec in intersections:
-                    api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer)"
                     query_params = time_period + (c_intersec.uid, )
+                    delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date, %s::integer);"
+                    cur.execute(delete_sql, query_params)
+                    api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer)"
                     cur.execute(api_log, query_params)
             else:
+                delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date);"
+                cur.execute(delete_sql, time_period)
                 api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
                 cur.execute(api_log, time_period)
 

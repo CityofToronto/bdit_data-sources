@@ -1,6 +1,6 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.clear_api_log(
-    start_date date,
-    end_date date,
+    _start_date date,
+    _end_date date,
     intersection integer DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
@@ -13,14 +13,14 @@ BEGIN
 IF intersection IS NULL THEN
     DELETE FROM miovision_api.api_log
     WHERE
-        datetime_bin >= start_date
-        AND datetime_bin < end_date;
+        start_date >= _start_date
+        AND end_date < _end_date;
 ELSE 
     DELETE FROM miovision_api.api_log
     WHERE
         intersection_uid = intersection
-        AND datetime_bin >= start_date
-        AND datetime_bin < end_date;
+        AND start_date >= _start_date
+        AND end_date < _end_date;
 END IF; 
 
 END;
