@@ -1,0 +1,43 @@
+SELECT SUM(volume) FROM miovision_api.volumes_2020 --381589267
+SELECT SUM(volume) FROM miovision_csv.volumes_2020 --872534543 --whaaaat?
+
+SELECT 'raw_data' AS table, MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'This is the main table for the schema. Keep' AS comment
+FROM miovision_csv.raw_data
+UNION
+SELECT 'raw_data_new', MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'Two days of data, Drop.' AS comment
+FROM miovision_csv.raw_data_new
+UNION
+SELECT 'raw_data_old' AS table, MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'Time range overlaps with main table. Drop.' AS comment
+FROM miovision_csv.raw_data_old
+UNION
+SELECT 'raw_data_20180717' AS table, MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'Ten days of data. Drop.' AS comment
+FROM miovision_csv.raw_data_20180717
+UNION
+SELECT 'raw_data2020' AS table, MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'Empty table, drop.' AS comment 
+FROM miovision_csv.raw_data2020
+UNION
+SELECT 'volumes' AS table, MIN(datetime_bin), MAX(datetime_bin), COUNT(DISTINCT datetime_bin::date) AS days_of_data, 'This is the real raw table!' AS comment 
+FROM miovision_csv.volumes
+
+| "table"             | "min"                    | "max"                    | "days_of_data" | "comment"                                    |
+|---------------------|--------------------------|--------------------------|----------------|----------------------------------------------|
+| "raw_data_old"      | "2017-10-03 17:16:00+00" | "2018-03-10 04:59:00+00" | 61             | "Time range overlaps with main table. Drop." |
+| "raw_data_20180717" | "2018-06-18 11:00:00+00" | "2018-06-28 01:59:00+00" | 10             | "Ten days of data. Drop."                    |
+| "raw_data2020"      | 0                        | "Empty table, drop."     |                |                                              |
+| "raw_data"          | "2017-10-03 17:16:00+00" | "2018-07-27 22:59:00+00" | 83             | "This is the main table for the schema. Keep"|
+| "raw_data_new"      | "2018-03-09 05:00:00+00" | "2018-03-10 04:59:00+00" | 2              | "Two days of data, Drop."                    |
+| "volumes"           | "2017-10-03 13:16:00+00" | "2018-08-24 21:59:00+00" | 91             | "This is the real raw table!"                |
+
+--drop 2020 tables. 
+DROP TABLE miovision_csv.raw_data2020;
+DROP TABLE miovision_csv.volumes_2020;
+DROP TABLE miovision_csv.volumes2020_15min;
+DROP TABLE miovision_csv.volumes2020_15min_tmc;
+DROP TABLE miovision_csv.volumes2020_tmc_atr_xover;
+DROP TABLE miovision_csv.unacceptable_gaps_2020;
+
+--this table can be truncated because the newer processed used a trigger to instead insert data into miovision_csv.volumes and bypass raw_data. 
+TRUNCATE TABLE miovision_csv.raw_data;
+
+--add better comments on schema, comments on tables 
+COMMENT ON SCHEMA miovision_csv IS 'Older Miovision data from 2017/2018. Data format is more temporally sparse than newer miovision_api schema but potentially higher quality counts.
