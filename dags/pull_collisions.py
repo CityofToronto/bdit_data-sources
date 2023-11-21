@@ -3,16 +3,10 @@
 # noqa: D415
 r"""### The Daily Collision Replicator DAG
 
-This DAG runs daily to update the following collisions tables from the tables
-staged in the database by the MOVE's ``bigdata_replicator`` DAG:
-
-1\. acc
-
-2\. events
-
-3\. involved
-
-4\. events_centreline
+This DAG runs daily to copy MOVE's collisions tables from the ``move_staging``
+schema, which is updated by the MOVE's ``bigdata_replicator`` DAG, to the
+``collisions`` schema. This DAG runs only when it is triggered by the MOVE's
+DAG.
 """
 import os
 import sys
@@ -54,16 +48,12 @@ default_args = {
 )
 def collisions_replicator():
     """The main function of the collisions DAG."""
-    from dags.common_tasks import wait_for_external_trigger, copy_table
+    from dags.common_tasks import (
+        wait_for_external_trigger, get_list_of_tables, copy_table
+    )
 
-    tables = [
-        ("move_staging.acc", "collisions.acc"),
-        ("move_staging.events", "collisions.events"),
-        ("move_staging.involved", "collisions.involved"),
-        ("move_staging.events_centreline", "collisions.events_centreline")
-    ]
-    
-    wait_for_external_trigger() >> copy_table.partial(
-        conn_id="collisions_bot").expand(table=tables)
+    tables = get_list_of_tables("collisions_tables")
+    wait_for_external_trigger() >> tables
+    copy_table.override(task_id="copy_tables").partial(conn_id="collisions_bot").expand(table=tables)
 
 collisions_replicator()

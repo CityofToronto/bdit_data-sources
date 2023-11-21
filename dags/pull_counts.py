@@ -3,30 +3,10 @@
 # noqa: D415
 r"""### The Daily counts Replicator DAG
 
-This DAG runs daily to update the following counts tables from the tables
-staged in the database by the MOVE's ``bigdata_replicator`` DAG:
-
-1\. arteries_centreline
-
-2\. arteries_counts_groups
-
-3\. arteries_groups
-
-4\. arterydata
-
-5\. atr_metadata
-
-6\. atr_study_data
-
-7\. cnt_det
-
-8\. countinfo
-
-9\. counts_multiday_runs
-
-10\. oracle_cnt_det
-
-11\. studies
+This DAG runs daily to copy MOVE's counts tables from the ``move_staging``
+schema, which is updated by the MOVE's ``bigdata_replicator`` DAG, to the
+``traffic`` schema. This DAG runs only when it is triggered by the MOVE's
+DAG.
 """
 import os
 import sys
@@ -54,7 +34,7 @@ default_args = {
     "email_on_failure": False,
     "retries": 3,
     "retry_delay": timedelta(minutes=60),
-    "on_failure_callback": task_fail_slack_alert,
+    # "on_failure_callback": task_fail_slack_alert,
 }
 
 @dag(
@@ -68,23 +48,12 @@ default_args = {
 )
 def counts_replicator():
     """The main function of the counts DAG."""
-    from dags.common_tasks import wait_for_external_trigger, copy_table
+    from dags.common_tasks import (
+        wait_for_external_trigger, get_list_of_tables, copy_table
+    )
 
-    tables = [
-        ("move_staging.arteries_centreline", "traffic.arteries_centreline"),
-        ("move_staging.arteries_counts_groups", "traffic.arteries_counts_groups"),
-        ("move_staging.arteries_groups", "traffic.arteries_groups"),
-        ("move_staging.arterydata", "traffic.arterydata"),
-        ("move_staging.atr_metadata", "traffic.atr_metadata"),
-        ("move_staging.atr_study_data", "traffic.atr_study_data"),
-        ("move_staging.cnt_det", "traffic.cnt_det"),
-        ("move_staging.countinfo", "traffic.countinfo"),
-        ("move_staging.counts_multiday_runs", "traffic.counts_multiday_runs"),
-        ("move_staging.oracle_cnt_det", "traffic.oracle_cnt_det"),
-        ("move_staging.studies", "traffic.studies")
-    ]
-    
-    wait_for_external_trigger() >> copy_table.partial(
-        conn_id="traffic_bot").expand(table=tables)
+    tables = get_list_of_tables("counts_tables")
+    wait_for_external_trigger() >> tables
+    copy_table.override(task_id="copy_tables").partial(conn_id="traffic_bot").expand(table=tables)
 
 counts_replicator()

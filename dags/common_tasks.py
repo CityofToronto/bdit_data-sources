@@ -7,6 +7,7 @@ from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException
+from airflow.models import Variable
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,22 @@ def wait_for_external_trigger(**kwargs) -> PokeReturnValue:
     return PokeReturnValue(
         is_done=kwargs["task_instance"].dag_run.external_trigger
     )
+
+@task()
+def get_list_of_tables(var_name:str) -> list:
+    """Returns an Airflow variable.
+    
+    Returns a list of source and destination tables stored in the given Airflow
+    variable.
+
+    Args:
+        var_name: The name of the Airflow variable.
+    
+    Returns:
+        A list of two-element lists. Each list consists of a full name of the
+            source table to be copied and the destination table.
+    """
+    return Variable.get(var_name, deserialize_json=True)
 
 @task()
 def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
@@ -45,6 +62,8 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
         raise AirflowFailException(
             f"Invalid destination table (expected schema.table, got {table[1]})"
         )
+
+    LOGGER.info(f"Copying {table[0]} to {table[1]}.")
 
     con = PostgresHook(conn_id).get_conn()
     truncate_query = sql.SQL(
