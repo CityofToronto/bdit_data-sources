@@ -111,7 +111,7 @@ def pull_miovision_dag():
             "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
-            "threshold": 0.95
+            "threshold": 2 #revert to 0.70 before merging
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
@@ -159,7 +159,6 @@ def pull_miovision_dag():
             sql="select-find_gaps.sql",
             conn_id="miovision_api_bot",
             do_xcom_push=True,
-            end_date=pendulum.datetime(2023, 11, 10, tz="America/Toronto"),
             params={
                 "table": "miovision_api.volumes",
                 "id_col": 'intersection_uid',

@@ -68,7 +68,7 @@ summarized_gaps AS (
 )
 
 SELECT
-    COUNT(summarized_gaps.*) > 0 AS check,
+    NOT(COUNT(summarized_gaps.*) > 0) AS check,
     CASE WHEN COUNT(summarized_gaps.*) = 1 THEN 'There was ' ELSE 'There were ' END ||
         COALESCE(COUNT(summarized_gaps.*), 0) ||
         CASE WHEN COUNT(summarized_gaps.*) = 1 THEN ' gap' ELSE ' gaps' END
