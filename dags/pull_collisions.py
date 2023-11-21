@@ -42,7 +42,8 @@ default_args = {
     default_args=default_args,
     catchup=False,
     max_active_runs=5,
-    schedule_interval=None,
+    max_active_tasks=5,
+    schedule=None,
     doc_md=__doc__,
     tags=["collisions"]
 )
