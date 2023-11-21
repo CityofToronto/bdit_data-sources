@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_volumes_15min(
-    start_date date,
-    end_date date)
+    start_date timestamp,
+    end_date timestamp)
 RETURNS void
 LANGUAGE 'plpgsql'
 COST 100
@@ -22,7 +22,7 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_volumes_15min(date, date) OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.clear_volumes_15min(timestamp, timestamp) OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes_15min(date, date) TO miovision_api_bot;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes_15min(date, date) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes_15min(timestamp, timestamp) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes_15min(timestamp, timestamp) TO miovision_admins;

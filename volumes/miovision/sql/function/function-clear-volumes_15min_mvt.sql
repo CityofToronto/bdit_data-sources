@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_mvt(
-    start_date date,
-    end_date date,
+    start_date timestamp,
+    end_date timestamp,
     intersection integer DEFAULT NULL)
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -58,7 +58,7 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_15_min_mvt(date, date, integer) OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(date, date, integer) TO miovision_api_bot;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(date, date, integer) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) TO miovision_admins;

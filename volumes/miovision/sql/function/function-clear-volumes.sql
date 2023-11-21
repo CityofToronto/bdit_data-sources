@@ -27,5 +27,5 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_volumes(date, date, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(date, date, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer) TO miovision_api_bot;

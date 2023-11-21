@@ -350,7 +350,7 @@ def aggregate_15_min_mvt(conn, start_time, end_iteration_time,
                 if user_def_intersection:
                     for c_intersec in intersections:
                         query_params = time_period + (c_intersec.uid, )
-                        delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::date, %s::date, %s::integer);"
+                        delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer);"
                         cur.execute(delete_sql, query_params)
                         update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
                                     %s::date, %s::date, %s::int);"""
@@ -358,7 +358,7 @@ def aggregate_15_min_mvt(conn, start_time, end_iteration_time,
                         logger.info('Aggregated intersection %s to 15 minute movement bins',
                                     c_intersec.uid)
                 else: 
-                    delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::date, %s::date);"
+                    delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp);"
                     cur.execute(delete_sql, time_period)
                     update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);"
                     cur.execute(update, time_period)
@@ -377,7 +377,7 @@ def aggregate_15_min(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
-                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::date, %s::date);"
+                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
                 cur.execute(delete_sql, time_period)
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date);"
                 cur.execute(atr_aggregation, time_period)
