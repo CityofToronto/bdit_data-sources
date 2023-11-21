@@ -59,10 +59,10 @@ class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
         if not records:
             raise AirflowException("The query returned None")
         if not bool(records[0]):  # checking first element only
+            context.get("task_instance").xcom_push(key="return_value", value=records[1:])
             raise AirflowException(
                 f"Test failed.\nQuery:\n{self.sql}\nResults:\n{records!s}"
             )
 
         self.log.info("Success.")
-        context.get("task_instance").xcom_push(key="return_value", value=records)
         return records
