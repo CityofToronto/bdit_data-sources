@@ -55,7 +55,7 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
          template_searchpath=[
              os.path.join(repo_path,'volumes/vds/sql'),
              os.path.join(repo_path,'dags/sql')
-            ]
+         ],
          schedule_interval='5 4 * * *') as dag: #daily at 4:05am
 
     t_upstream_done = ExternalTaskSensor(
