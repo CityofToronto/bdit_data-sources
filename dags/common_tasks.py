@@ -25,12 +25,9 @@ def wait_for_external_trigger(**kwargs) -> PokeReturnValue:
     )
 
 @task()
-def get_list_of_tables(var_name:str) -> list:
+def get_variable(var_name:str) -> list:
     """Returns an Airflow variable.
     
-    Returns a list of source and destination tables stored in the given Airflow
-    variable.
-
     Args:
         var_name: The name of the Airflow variable.
     
