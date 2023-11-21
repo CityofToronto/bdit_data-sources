@@ -50,11 +50,15 @@ default_args = {
 def counts_replicator():
     """The main function of the counts DAG."""
     from dags.common_tasks import (
-        wait_for_external_trigger, get_list_of_tables, copy_table
+        wait_for_external_trigger, get_variable, copy_table
     )
 
-    tables = get_list_of_tables("counts_tables")
+    # Returns a list of source and destination tables stored in the given
+    # Airflow variable.
+    tables = get_variable.override(task_id="get_list_of_tables")("counts_tables")
+    # Waits for an external trigger
     wait_for_external_trigger() >> tables
+    # Copies tables
     copy_table.override(task_id="copy_tables").partial(conn_id="traffic_bot").expand(table=tables)
 
 counts_replicator()
