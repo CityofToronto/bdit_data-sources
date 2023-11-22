@@ -73,7 +73,7 @@ default_args = {'owner': ','.join(names),
      catchup=False,
      max_active_runs=5,
     template_searchpath=os.path.join(repo_path,'wys/api/sql'),
-     schedule_interval='0 15 * * *' # Run at 3 PM local time every day
+     schedule='0 15 * * *' # Run at 3 PM local time every day
      )
 def pull_wys_dag():
 
