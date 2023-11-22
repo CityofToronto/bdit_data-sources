@@ -62,7 +62,7 @@ DEFAULT_ARGS = {
     'email_on_retry': True,
     'owner': 'airflow',
     'start_date': pendulum.datetime(2019, 9, 16, tz="America/Toronto"), # YYYY, MM, DD
-    'task_concurrency': 1,
+    'max_active_tis_per_dag': 1,
     'on_failure_callback': task_fail_slack_alert
 }
 
