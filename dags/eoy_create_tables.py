@@ -10,7 +10,6 @@ logging.basicConfig(level=logging.INFO)
 
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
@@ -32,13 +31,10 @@ list_names = []
 for name in names:
     list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
-slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-
 def prep_slack_message(message):
     slack_message = SlackWebhookOperator(
         task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
+        slack_webhook_conn_id=SLACK_CONN_ID,
         message=message,
         username='airflow',
         )
@@ -159,8 +155,7 @@ congestion_create_table = PythonOperator(task_id='congestion_create_table',
 
 success_alert = SlackWebhookOperator(
                                     task_id='success_msg',
-                                    http_conn_id='slack',
-                                    webhook_token=slack_webhook_token,
+                                    slack_webhook_conn_id=SLACK_CONN_ID,
                                     message=task_success_slack_alert(),
                                     username='airflow',
                                     dag=dag)                                            
