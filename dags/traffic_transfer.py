@@ -6,7 +6,7 @@ import sys
 import os
 
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable 
 
