@@ -315,7 +315,8 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
     find_gaps(conn, start_time, end_iteration_time)
     aggregate_volumes_daily(conn, start_time, end_iteration_time)
     get_report_dates(conn, start_time, end_iteration_time)
- 
+    agg_zero_volume_anomalous_ranges(conn, start_time, end_iteration_time)
+
 def find_gaps(conn, start_time, end_iteration_time):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert into miovision_api.unacceptable_gaps."""
     time_period = (start_time, end_iteration_time)
@@ -398,6 +399,22 @@ def aggregate_volumes_daily(conn, start_time, end_iteration_time):
                 daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
                 cur.execute(daily_aggregation, time_period)
                 logger.info('Aggregation into daily volumes table complete')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+
+def agg_zero_volume_anomalous_ranges(conn, start_time, end_iteration_time):
+    """Aggregate into miovision_api.anomalous_ranges.
+
+    Data is cleared from volumes_daily prior to insert.
+    """
+    time_period = (start_time, end_iteration_time)
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                #this function includes a delete query preceeding the insert.
+                anomalous_range_sql="SELECT miovision_api.identify_zero_counts(%s::timestamp, %s::timestamp)"
+                cur.execute(anomalous_range_sql, time_period)
+                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
     except psycopg2.Error as exc:
         logger.exception(exc)
 
