@@ -18,9 +18,10 @@ from airflow.macros import ds_add
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
-from volumes.miovision.api.intersection_tmc import run_api, find_gaps, \
-    aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, \
-    get_report_dates, get_intersection_info
+from volumes.miovision.api.intersection_tmc import (
+    run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+    get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
+)
 
 dag_name = 'miovision_pull'
 
@@ -145,7 +146,17 @@ def pull_miovision_dag():
             with mio_postgres.get_conn() as conn:
                 get_report_dates(conn, ds, ds_add(ds, 1))
         
-        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
+        @task
+        def zero_volume_anomalous_ranges_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")
+            with mio_postgres.get_conn() as conn:
+                agg_zero_volume_anomalous_ranges(conn, ds, ds_add(ds, 1))
+                
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> [
+            aggregate_15_min_task(),
+            aggregate_volumes_daily_task(),
+            zero_volume_anomalous_ranges_task()
+        ]
         get_report_dates_task()
 
     check_partitions() >> pull_miovision() >> miovision_agg()
