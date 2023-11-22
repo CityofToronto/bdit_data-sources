@@ -110,7 +110,7 @@ except Exception as exc:
 
 dag = DAG(dag_id = dag_name, 
           default_args=default_args,
-          schedule_interval='5 9 1 12 *') #9:05 on December 1st of every year
+          schedule='5 9 1 12 *') #9:05 on December 1st of every year
 
 here_create_tables = PythonOperator(task_id='here_create_tables',
                                     python_callable = create_here_ta_tables,
