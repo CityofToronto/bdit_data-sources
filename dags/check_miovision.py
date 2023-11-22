@@ -7,9 +7,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
-from psycopg2 import sql
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
 import pendulum
 
