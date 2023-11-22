@@ -23,18 +23,21 @@ INNER JOIN miovision_api.classifications AS c ON
 LEFT JOIN ref.holiday ON holiday.dt = v15.datetime_bin::date
 --anti join anomalous_ranges table
 LEFT JOIN miovision_api.anomalous_ranges AS ar ON
-    ar.intersection_uid = v15.intersection_uid
-    AND (
+    (
+        ar.intersection_uid = v15.intersection_uid
+        OR ar.intersection_uid IS NULL
+    ) AND (
         ar.classification_uid = v15.classification_uid
         OR ar.classification_uid IS NULL
     )
     AND v15.datetime_bin >= LOWER(ar.time_range)
     AND v15.datetime_bin < UPPER(ar.time_range)
+    AND ar.problem_level IN ('do-not-use', 'questionable')
 WHERE
     v15.volume IS NOT NULL --null volumes are data gaps
     AND date_part('isodow', v15.datetime_bin) <= 5 --only weekdays
     AND holiday.holiday IS NULL --exclude holidays
-    AND ar.problem_level IS NULL --exclude anomalous date ranges
+    AND ar.time_range IS NULL --anti join anomalous ranges
 GROUP BY
     hr,
     v15.intersection_uid,
@@ -51,7 +54,7 @@ ORDER BY
     v15.leg,
     v15.dir;
     
---test, 40s. Seq scan over entire volumes_15min table. 
+--test, 40s. Seq scan over entire volumes_15min table. Would be much faster as a function.
 SELECT *
 FROM gwolofs.hourly_vehicle_volumes
 WHERE
