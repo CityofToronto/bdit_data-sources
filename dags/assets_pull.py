@@ -17,11 +17,8 @@ gis.traffic_signal
 Updated on 2022-09-12
 """
 
-from datetime import datetime
 import os
 import sys
-from threading import local
-import psycopg2
 from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
