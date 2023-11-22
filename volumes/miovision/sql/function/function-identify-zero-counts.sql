@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.identify_zero_counts(
     start_date timestamp,
-    end_date timestamp)
+    end_date timestamp,
+    min_gap interval default '1 hour'::interval)
 RETURNS void
 LANGUAGE 'plpgsql'
 
@@ -21,13 +22,13 @@ WITH zero_intersections AS (
         FROM miovision_api.volumes_15min_mvt
         WHERE
             classification_uid IN (1,2,6,10) 
-            AND datetime_bin >= start_date
+            AND datetime_bin > start_date - min_gap --needed to detect gaps overlapping daily intervals
             AND datetime_bin < end_date
         GROUP BY intersection_uid
         HAVING
             SUM(volume) = 0
             --duration filter
-            AND (MAX(datetime_bin) - MIN(datetime_bin) + interval '15 minutes') >= '1 hour'::interval
+            AND (MAX(datetime_bin) - MIN(datetime_bin) + interval '15 minutes') >= min_gap
     )
 
     INSERT INTO miovision_api.anomalous_ranges(
@@ -48,7 +49,7 @@ WITH zero_intersections AS (
         AND v15.datetime_bin < UPPER(zi.time_range)
     WHERE
         zi.intersection_uid IS NULL
-        AND datetime_bin >= start_date
+        AND datetime_bin > start_date - min_gap --needed to detect gaps overlapping daily intervals
         AND datetime_bin < end_date
         --this script will only catch zeros for classification_uid 1,2,6,10
         --since those are the ones that are zero padded. Filter for speed.
@@ -59,7 +60,7 @@ WITH zero_intersections AS (
     HAVING
         SUM(volume) = 0
         --duration filter
-        AND (MAX(datetime_bin) - MIN(datetime_bin) + interval '15 minutes') >= '1 hour'::interval
+        AND (MAX(datetime_bin) - MIN(datetime_bin) + interval '15 minutes') >= min_gap
 
     UNION
 
@@ -79,7 +80,7 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp) OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval) OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp) TO miovision_api_bot;
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval) TO miovision_admins;
