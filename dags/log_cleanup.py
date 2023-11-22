@@ -5,7 +5,6 @@ A maintenance workflow that you can deploy into Airflow to periodically clean ou
 to avoid those getting too big.
 """
 # pylint: disable=pointless-statement,anomalous-backslash-in-string
-from datetime import datetime
 import os
 import sys
 import pendulum
@@ -18,8 +17,6 @@ AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 dag_name = 'log_cleanup'

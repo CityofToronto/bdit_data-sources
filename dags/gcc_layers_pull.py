@@ -3,14 +3,10 @@ import sys
 import os
 from functools import partial
 
-from datetime import datetime
 import pendulum
 from psycopg2 import sql
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook
 
