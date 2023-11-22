@@ -70,7 +70,10 @@ WITH zero_intersections AS (
         notes,
         investigation_level,
         problem_level
-    FROM zero_intersections;
+    FROM zero_intersections
+    ON CONFLICT (intersection_uid, classification_uid, time_range)
+    --possibility of manual entries to this table, do not overwrite with automated ones.
+    DO NOTHING;
 
 END;
 
