@@ -41,7 +41,7 @@ default_args = {'owner': ','.join(names),
                        'LANG':'C.UTF-8'}
                 }
 
-dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = ' 30 16 * * * ')
+dag = DAG(dag_id = dag_name, default_args = default_args, schedule = ' 30 16 * * * ')
 #Every day at 1630
 
 # Execution date seems to be the day before this was run, so yesterday_ds_nodash

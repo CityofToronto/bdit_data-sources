@@ -50,7 +50,7 @@ default_args = {
 dag = DAG(
     dag_id = dag_name, 
     default_args=default_args, 
-    schedule_interval='30 10 * * *', 
+    schedule='30 10 * * *', 
     catchup=False)
 
 #=======================================#

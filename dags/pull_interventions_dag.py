@@ -31,7 +31,7 @@ default_args = {'owner':names,
                 'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = '0 0 * * *')
+dag = DAG(dag_id = dag_name, default_args = default_args, schedule = '0 0 * * *')
 
 
 t1 = BashOperator(

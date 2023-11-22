@@ -95,7 +95,7 @@ with DAG(
     dag_id = dag_name,
     catchup=False,
     default_args=DEFAULT_ARGS,
-    schedule_interval='0 7 1 */3 *' #'@quarterly'
+    schedule='0 7 1 */3 *' #'@quarterly'
 ) as gcc_layers_dag:
     deployment = os.environ.get("DEPLOYMENT", "PROD")
 

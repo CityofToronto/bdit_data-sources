@@ -56,7 +56,7 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 7 * * *', catchup=False)
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 7 * * *', catchup=False)
 # Run at 7 AM local time every day
 
 task1 = PythonOperator(

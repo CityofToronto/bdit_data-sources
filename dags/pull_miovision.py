@@ -34,7 +34,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id=dag_name,
      default_args=default_args,
-     schedule_interval='0 3 * * *',
+     schedule='0 3 * * *',
      catchup=False)
 def pull_miovision_dag(): 
 # Add 3 hours to ensure that the data are at least 2 hours old

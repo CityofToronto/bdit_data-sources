@@ -61,7 +61,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       catchup=False,
       # Prevent the same DAG from running concurrently more than once.
       max_active_runs=1,
-      schedule_interval=schedule_interval,
+      schedule=schedule_interval,
       # This allows us to simplify `create_bash_task` below.
       template_searchpath=AIRFLOW_TASKS
     )

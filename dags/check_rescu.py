@@ -58,7 +58,7 @@ default_args = {'owner': ','.join(names),
                     )
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 6 * * *', catchup=False)
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 6 * * *', catchup=False)
 # Run at 6 AM local time every day
 
 task1 = PythonOperator(

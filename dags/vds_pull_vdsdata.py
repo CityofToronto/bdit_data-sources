@@ -54,7 +54,7 @@ with DAG(dag_name,
              os.path.join(repo_path,'volumes/vds/sql'),
              os.path.join(repo_path,'dags/sql')
             ],
-         schedule_interval='0 4 * * *') as dag: #daily at 4am
+         schedule='0 4 * * *') as dag: #daily at 4am
 
     #this task group pulls the detector inventories
     with TaskGroup(group_id='update_inventories') as update_inventories:

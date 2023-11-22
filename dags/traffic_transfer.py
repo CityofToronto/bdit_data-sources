@@ -39,7 +39,7 @@ default_args = {'owner': ','.join(names),
 
 with DAG(dag_id = dag_name, 
          default_args = default_args,
-         schedule_interval='0 2 * * *') as daily_update: #runs at 2am every day
+         schedule='0 2 * * *') as daily_update: #runs at 2am every day
          
     update_arc_link = PostgresOperator(sql = 'SELECT traffic.update_arc_link()',
 				task_id = 'update_arc_link',

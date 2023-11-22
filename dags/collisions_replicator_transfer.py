@@ -45,7 +45,7 @@ default_args = {'owner': ','.join(names),
 
 with DAG(dag_id = dag_name, # going waaaaaayyyyy out on a limb of the magical assumption tree here....
          default_args = default_args,
-         schedule_interval='0 3 * * *') as daily_update: #runs at 3am every day
+         schedule='0 3 * * *') as daily_update: #runs at 3am every day
          
     update_acc_sc = PostgresOperator(sql = 'SELECT collisions_replicator.update_acc_safe_copy()',
 				task_id = 'update_acc_sc',
