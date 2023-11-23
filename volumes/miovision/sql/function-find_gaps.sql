@@ -90,69 +90,55 @@ fluffed_data AS (
 bin_times AS (
     SELECT 
         intersection_uid,
-        datetime_bin AS gap_start,
+		--sum works because between 0 and 1, we want 1 (implies real data)
+        datetime_bin + SUM(gap_adjustment) AS gap_start,
+        date_part('hour', datetime_bin) AS time_bin,
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) AS gap_end,
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin)
             - datetime_bin > interval '1 minute' AS bin_break, --True means gap between bins is larger than 1 minute
-        LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) 
-            - datetime_bin
-            - SUM(gap_adjustment) --sum works because between 0 and 1, we want 1 (implies real data)
-        AS bin_gap
-    FROM fluffed_data
-    GROUP BY
-        intersection_uid, 
-        datetime_bin
-),
-
---find gaps of any size before summarizing (in case we want to use this raw output for something else)
-all_gaps AS (
-    SELECT
-        intersection_uid,
-        gap_start,
-        gap_end,
-        date_part('epoch', bin_gap) / 60::integer AS gap_minute,
-        date_part('hour', gap_start) AS time_bin, 
         CASE
-            WHEN date_part('isodow', gap_start) <= 5 AND hol.holiday IS NULL THEN False
+            WHEN date_part('isodow', datetime_bin) <= 5
+                AND hol.holiday IS NULL THEN False
             ELSE True
         END as weekend
-    FROM bin_times
-    LEFT JOIN ref.holiday AS hol ON hol.dt = bin_times.gap_start::date
-    WHERE
-        bin_break = True
-        AND gap_end IS NOT NULL
+    FROM fluffed_data
+    LEFT JOIN ref.holiday AS hol ON hol.dt = fluffed_data.datetime_bin::date
+    GROUP BY
+        intersection_uid, 
+        datetime_bin,
+        weekend
 ),
 
--- summarize gaps into hours containing gaps larger than the gap_tolerance for that intersection/hour/weekday type.
 gaps AS (
-    INSERT INTO miovision_api.unacceptable_gaps(
-        intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
-    )
-    SELECT
-        intersection_uid,
-        date_trunc('hour', gap_start) AS gap_start,
-        --59 min to maintain compatibility with aggregate_15_min_mvt which
-        --uses date_trunc('hour', gap_end) + 1 hour. 
-        date_trunc('hour', gap_start) + interval '59 minutes' AS gap_end,
-        SUM(gap_minute) AS gap_minute,
-        gap_tolerance AS allowed_gap,
-        False AS accept
-    FROM all_gaps AS ag
-    LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend)
-    WHERE gap_minute >= gap_tolerance    
-    GROUP BY
-        intersection_uid,
-        date_trunc('hour', gap_start),
-        gap_tolerance
-    ON CONFLICT DO NOTHING
-    RETURNING *
+	--find gaps of any size before summarizing (in case we want to use this raw output for something else)
+	INSERT INTO miovision_api.unacceptable_gaps(
+		intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
+	)
+	SELECT
+		bt.intersection_uid,
+		bt.gap_start,
+		bt.gap_end,
+		gm.gap_minute,
+		gl.gap_tolerance AS allowed_gap,
+		False AS accept
+	FROM bin_times AS bt
+	LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend),
+	LATERAL (
+		SELECT date_part('epoch', gap_end - gap_start) / 60::integer AS gap_minute
+	) AS gm
+	WHERE
+		gm.gap_minute >= gl.gap_tolerance    
+		AND bt.bin_break = True
+		AND bt.gap_end IS NOT NULL
+	ON CONFLICT DO NOTHING
+	RETURNING *
 )
 
 -- FOR NOTICE PURPOSES ONLY
 SELECT COUNT(*) INTO tot_gaps
 FROM gaps;
 
-RAISE NOTICE 'Found a total of % (hours) gaps that are unacceptable', tot_gaps;
+RAISE NOTICE 'Found a total of % gaps that are unacceptable', tot_gaps;
 
 RETURN 1;
 END;
