@@ -69,7 +69,7 @@ fluffed_data AS (
     CROSS JOIN generate_series(
             start_date::timestamp, --start_date
             start_date::timestamp + interval '1 day',
-            interval '1 hour'
+            interval '15 minutes'
     ) AS bins(datetime_bin)
     
     --group by in next step takes care of duplicates
