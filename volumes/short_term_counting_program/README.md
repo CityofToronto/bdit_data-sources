@@ -139,7 +139,7 @@ linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to 
 
 ### det 
 #### Content 
-This table contains individual data entries for turning movement counts
+This table contains individual data entries for turning movement counts. For a long (vs wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
 
 #### Table Structure
 Field Name|Type|Description
@@ -225,6 +225,7 @@ Field Name|Type|Description
 count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
 count|bigint|vehicle count
 timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
+speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts
 
 #### countinfo
 
@@ -250,6 +251,8 @@ category_id|int|ID number referred to by [countinfomics](#countinfomics) and [co
 category_name|text|name of the data source
 
 ### 5. Useful Views
+
+- `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
 
 - `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
 

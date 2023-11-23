@@ -2,7 +2,7 @@ import sys
 import json
 from requests import Session
 from requests import exceptions
-import datetime
+from datetime import datetime, timedelta
 import pytz
 import dateutil.parser
 import psycopg2
@@ -14,7 +14,6 @@ import click
 import traceback
 from time import sleep
 from collections import namedtuple
-
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
@@ -53,9 +52,9 @@ def logger():
 logger = logger()
 logger.debug('Start')
 
-time_delta = datetime.timedelta(days=1)
-default_start = str(datetime.date.today()-time_delta)
-default_end = str(datetime.date.today())
+time_delta = timedelta(days=1)
+default_start = str(datetime.today().date()-time_delta)
+default_end = str(datetime.today().date())
 
 session = Session()
 session.proxies = {}
@@ -175,7 +174,7 @@ class MiovPuller:
         """Requests data from API."""
 
         params = {'endTime': (end_iteration_time
-                              - datetime.timedelta(milliseconds=1)),
+                              - timedelta(milliseconds=1)),
                   'startTime': start_time}
 
         # Select the appropriate request URL depending on which API we're
@@ -306,7 +305,7 @@ class MiovPuller:
         return table_veh, table_ped
 
 
-def process_data(conn, start_time, end_iteration_time):
+def process_data(conn, start_time, end_iteration_time, user_def_intersection, intersections):
     time_period = (start_time, end_iteration_time)
 
     # RUN find_gaps FUNCTION to identify unacceptable hours to exclude from aggregation
@@ -323,13 +322,28 @@ def process_data(conn, start_time, end_iteration_time):
     try:
         with conn:
             with conn.cursor() as cur:
-                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
-                cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute movement bins')
+                #if intersections specified, aggregate this step one at a time
+                # with different single intersection function
+                if user_def_intersection:
+                    for c_intersec in intersections:
+                        update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
+                                    %s::date, %s::date, %s::int)"""
+                        query_params = time_period + (c_intersec.uid, )
+                        cur.execute(update, query_params)
+                        logger.info('Aggregated intersection %s to 15 minute movement bins',
+                                    c_intersec.uid)
+                else: 
+                    update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date)"
+                    cur.execute(update, time_period)
+                    logger.info('Aggregated to 15 minute movement bins')
 
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
+
+                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
+                cur.execute(daily_aggregation, time_period)
+                logger.info('Aggregation into daily volumes table complete')
 
     except psycopg2.Error as exc:
         logger.exception(exc)
@@ -432,10 +446,19 @@ def get_intersection_info(conn, intersection=()):
 
     return [Intersection(*x) for x in intersection_list]
 
+def check_dst(start_time, end_time):
+    'check if fall back (EDT -> EST) occured between two timestamps.'
+    tz = pytz.timezone("EST5EDT")
+    tz_1 = start_time.astimezone(tz).tzname()
+    tz_2 = end_time.astimezone(tz).tzname()
+    if tz_1 == 'EDT' and tz_2 == 'EST':
+        logger.info(f"EDT -> EST time change occured today.")
+        return True
+    return False
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
-    time_delta = datetime.timedelta(hours=6)
+    time_delta = timedelta(hours=6)
 
     intersections = get_intersection_info(conn, intersection=intersection)
 
@@ -481,6 +504,17 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                     table_veh = []
                     table_ped = []
 
+                #if edt -> est occured in the current range
+                #discard the 2nd 1AM hour of data to avoid duplicates
+                if check_dst(c_start_t, c_end_t):
+                    logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
+                    table_veh = [x for x in table_veh if
+                        datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                    table_ped = [x for x in table_ped if
+                        datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+
                 table.extend(table_veh)
                 table.extend(table_ped)
 
@@ -503,7 +537,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     if pull:
         logger.info('Skipping aggregating and processing volume data')
     else:
-        process_data(conn, start_time, end_time)
+        process_data(conn, start_time, end_time, user_def_intersection, intersections)
 
     logger.info('Done')
 

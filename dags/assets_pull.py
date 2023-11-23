@@ -17,11 +17,8 @@ gis.traffic_signal
 Updated on 2022-09-12
 """
 
-from datetime import datetime
 import os
 import sys
-from threading import local
-import psycopg2
 from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
@@ -31,6 +28,7 @@ from airflow.models import Variable
 
 from dateutil.parser import parse
 from datetime import datetime
+import pendulum
 
 dag_name = 'traffic_signals_dag'
 
@@ -41,44 +39,14 @@ vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
 
 # ------------------------------------------------------------------------------
 # Slack notification
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: Task Failed / Tâche échouée.
-            {slack_name} please check.
-            *Task*: {task}
-            *Dag*: {dag}
-            *Execution Time*: {exec_date}
-            *Log Url*: {log_url}
-            """.format(
-            slack_name=' '.join(list_names),
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-        )
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
 
 # ------------------------------------------------------------------------------
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -90,8 +58,8 @@ DEFAULT_ARGS = {
     'email_on_failure': True,
     'email_on_retry': True,
     'owner': 'airflow',
-    'start_date': datetime(2019, 9, 16), # YYYY, MM, DD
-    'task_concurrency': 1,
+    'start_date': pendulum.datetime(2019, 9, 16, tz="America/Toronto"), # YYYY, MM, DD
+    'max_active_tis_per_dag': 1,
     'on_failure_callback': task_fail_slack_alert
 }
 
@@ -453,7 +421,7 @@ TRAFFIC_SIGNALS_DAG = DAG(
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
-    schedule_interval='0 4 * * 1-5')
+    schedule='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
 PULL_RLC = PythonOperator(

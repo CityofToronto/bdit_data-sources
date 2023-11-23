@@ -1,19 +1,19 @@
 # The official new GCC puller DAG file
 import sys
 import os
-from datetime import datetime
+from functools import partial
+
+import pendulum
 from psycopg2 import sql
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
-from gcc_puller_functions import get_layer
+sys.path.insert(0, repo_path)
+from gis.gccview.gcc_puller_functions import get_layer
+from dags.dag_functions import task_fail_slack_alert
 # Credentials - to be passed through PythonOperator
 # bigdata connection credentials
 bigdata_cred = PostgresHook("gcc_bot_bigdata")
@@ -22,52 +22,17 @@ ptc_cred = PostgresHook("gcc_bot")
 
 dag_name = 'pull_gcc_layers'
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-# Slack IDs of data pipeline admins
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: Task Failed. 
-            *Hostname*: {hostname}
-            *Task*: {task}
-            *Dag*: {dag}
-            *Execution Time*: {exec_date}
-            *Log Url*: {log_url}
-            {slack_name} please check.
-            """.format(
-            hostname=context.get('task_instance').hostname,
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-            slack_name=' '.join(list_names),
-        )
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080')
-    return failed_alert.execute(context=context)
-
 DEFAULT_ARGS = {
- 'owner': ','.join(names),
- 'depends_on_past': False,
- 'start_date': datetime(2022, 11, 3),
- 'email_on_failure': False, 
- 'retries': 0,
- 'on_failure_callback': task_fail_slack_alert
+    'owner': ','.join(names),
+    'depends_on_past': False,
+    'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
+    'email_on_failure': False, 
+    'retries': 0,
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
 }
 
 #-------------------------------------------------------------------------------------------------------
@@ -130,7 +95,7 @@ with DAG(
     dag_id = dag_name,
     catchup=False,
     default_args=DEFAULT_ARGS,
-    schedule_interval='0 7 1 */3 *' #'@quarterly'
+    schedule='0 7 1 */3 *' #'@quarterly'
 ) as gcc_layers_dag:
     deployment = os.environ.get("DEPLOYMENT", "PROD")
 
