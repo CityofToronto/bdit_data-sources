@@ -3,6 +3,8 @@ CREATE TABLE miovision_api.unacceptable_gaps
     intersection_uid integer,
     gap_start timestamp without time zone,
     gap_end timestamp without time zone,
+    gap_start_floor_15 timestamp without time zone,
+    gap_end_ceil_15 timestamp without time zone,
     gap_minute integer,
     allowed_gap integer,
     accept boolean,

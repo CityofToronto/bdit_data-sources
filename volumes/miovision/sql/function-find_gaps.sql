@@ -118,6 +118,8 @@ gaps AS (
 		bt.intersection_uid,
 		bt.gap_start,
 		bt.gap_end,
+		datetime_bin(bt.gap_start, 15) AS gap_start_floor_15,
+		datetime_bin_ceil(bt.gap_end, 15) AS gap_end_ceil_15,
 		gm.gap_minute,
 		gl.gap_tolerance AS allowed_gap,
 		False AS accept
