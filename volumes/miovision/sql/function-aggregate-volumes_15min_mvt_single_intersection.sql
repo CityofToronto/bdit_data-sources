@@ -42,9 +42,9 @@ WITH aggregate_insert AS (
     --To avoid aggregating unacceptable gaps
     LEFT JOIN miovision_api.unacceptable_gaps AS un ON
         un.intersection_uid = im.intersection_uid
-        --remove the complete hour containing any unacceptable gaps
-        AND dt.datetime_bin >= date_trunc('hour', un.gap_start)
-        AND dt.datetime_bin < date_trunc('hour', un.gap_end) + interval '1 hour'
+        --remove the 15 minute bin containing any unacceptable gaps
+        AND dt.datetime_bin15 >= un.gap_start_floor_15
+        AND dt.datetime_bin15 < un.gap_end_ceil_15
         --only join unacceptable gaps labeled as do not accept.
         AND un.accept = FALSE
     --To get 1min bins
