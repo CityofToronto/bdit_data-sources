@@ -51,7 +51,7 @@ default_args = {
 @dag(dag_id=dag_name,
      default_args=default_args,
      # Add 3 hours to ensure that the data are at least 2 hours old
-     schedule_interval='0 3 * * *',
+     schedule='0 3 * * *',
      template_searchpath=os.path.join(repo_path,'dags/sql'),
      catchup=False)
 def pull_miovision_dag(): 

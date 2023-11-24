@@ -7,9 +7,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
-from psycopg2 import sql
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
 import pendulum
 
@@ -57,7 +54,7 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 7 * * *', catchup=False)
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 7 * * *', catchup=False)
 # Run at 7 AM local time every day
 
 task1 = PythonOperator(

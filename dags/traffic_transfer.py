@@ -6,10 +6,8 @@ import sys
 import os
 
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -41,7 +39,7 @@ default_args = {'owner': ','.join(names),
 
 with DAG(dag_id = dag_name, 
          default_args = default_args,
-         schedule_interval='0 2 * * *') as daily_update: #runs at 2am every day
+         schedule='0 2 * * *') as daily_update: #runs at 2am every day
          
     update_arc_link = PostgresOperator(sql = 'SELECT traffic.update_arc_link()',
 				task_id = 'update_arc_link',

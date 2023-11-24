@@ -7,10 +7,8 @@ import os
 import sys
 import pendulum
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
@@ -52,7 +50,7 @@ default_args = {
 dag = DAG(
     dag_id = dag_name, 
     default_args=default_args, 
-    schedule_interval='30 10 * * *', 
+    schedule='30 10 * * *', 
     catchup=False)
 
 #=======================================#
