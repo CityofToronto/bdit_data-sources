@@ -1,5 +1,4 @@
 CREATE OR REPLACE FUNCTION wys.create_mm_nested_raw_data_partitions(
-    base_table text,
     year_ integer,
     mm_ integer)
 RETURNS void
@@ -11,7 +10,7 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE
-	year_table TEXT := base_table||'_'||year_::text;
+	year_table TEXT := 'raw_data_'||year_::text;
     start_mm DATE;
     end_mm DATE;
 	month_table TEXT;
@@ -41,10 +40,9 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION wys.create_mm_nested_raw_data_partitions(text, integer, integer) IS
-'Create a new month partition under the parent year table `base_table`.
-Only to be used for wys `raw_data`.
-Example: SELECT wys.create_mm_nested_raw_data_partitions(''raw_data'', 2023)';
+COMMENT ON FUNCTION wys.create_mm_nested_raw_data_partitions(integer, integer) IS
+'Create a new month partition under the parent wys `raw_data` year table.
+Example: SELECT wys.create_mm_nested_raw_data_partitions(2023, 1)';
 
-ALTER FUNCTION wys.create_mm_nested_raw_data_partitions(text, integer, integer) OWNER TO wys_admins;
-GRANT EXECUTE ON FUNCTION wys.create_mm_nested_raw_data_partitions(text, integer, integer) TO wys_bot;
+ALTER FUNCTION wys.create_mm_nested_raw_data_partitions(integer, integer) OWNER TO wys_admins;
+GRANT EXECUTE ON FUNCTION wys.create_mm_nested_raw_data_partitions(integer, integer) TO wys_bot;

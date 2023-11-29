@@ -87,7 +87,7 @@ def pull_wys_dag():
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql="SELECT wys.create_yyyy_raw_data_partition('raw_data', {{ params.year }}::int, 'datetime_bin')",
+            sql="SELECT wys.create_yyyy_raw_data_partition({{ params.year }}::int)",
             postgres_conn_id='wys_bot',
             params={"year": YEAR},
             autocommit=True
@@ -95,7 +95,7 @@ def pull_wys_dag():
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
-            sql="SELECT wys.create_mm_nested_raw_data_partitions('raw_data', {{ params.year }}::int, {{ params.month }}::int)",
+            sql="SELECT wys.create_mm_nested_raw_data_partitions({{ params.year }}::int, {{ params.month }}::int)",
             postgres_conn_id='wys_bot',
             params={"year": YEAR,
                     "month": MONTH},
