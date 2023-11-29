@@ -9,7 +9,10 @@ CREATE TABLE wys.raw_data (
     speed integer NOT NULL,
     count integer,
     speed_count_uid integer,
-    CONSTRAINT wys_raw_data_pkey PRIMARY KEY (api_id, datetime_bin, speed)
+    CONSTRAINT wys_raw_data_pkey
+    PRIMARY KEY (datetime_bin, raw_data_uid),
+    CONSTRAINT raw_data_api_id_datetime_bin_speed_key
+    UNIQUE NULLS NOT DISTINCT (datetime_bin, api_id, speed);
 )
 PARTITION BY RANGE (datetime_bin)
 WITH (
@@ -21,3 +24,6 @@ ON wys.raw_data USING brin(datetime_bin);
 
 ALTER TABLE wys.raw_data OWNER TO wys_admins;
 GRANT SELECT, REFERENCES ON TABLE wys.raw_data TO bdit_humans WITH GRANT OPTION;
+
+--annual partitions created with `wys.create_yyyy_raw_data_partition`.
+--monthly partitions created with `wys.create_mm_nested_raw_data_partitions`.
