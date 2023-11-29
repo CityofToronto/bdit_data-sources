@@ -127,7 +127,7 @@ DEFAULT_ARGS = {
 with DAG(
     dag_id=dag_name,
     default_args=DEFAULT_ARGS,
-    schedule_interval="@daily",
+    schedule="@daily",
     tags=["Vision Zero"],
     doc_md=__doc__,
     catchup=False,
