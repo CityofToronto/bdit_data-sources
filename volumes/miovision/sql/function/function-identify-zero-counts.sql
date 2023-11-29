@@ -16,7 +16,7 @@ WITH zero_intersections AS (
             intersection_uid,
             null::integer AS classification_uid,
             tsrange(MIN(datetime_bin), MAX(datetime_bin) + interval '15 minutes', '[)') AS time_range,
-            'zero counts' AS notes,
+            'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts' AS notes,
             'auto_flagged' AS investigation_level,
             'do-not-use' AS problem_level
         FROM miovision_api.volumes_15min_mvt
@@ -38,7 +38,7 @@ WITH zero_intersections AS (
         v15.intersection_uid,
         v15.classification_uid,
         tsrange(MIN(v15.datetime_bin), MAX(v15.datetime_bin) + interval '15 minutes', '[)') AS time_range,
-        'zero counts' AS notes,
+        'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts' AS notes,
         'auto_flagged' AS investigation_level,
         'do-not-use' AS problem_level
     FROM miovision_api.volumes_15min_mvt AS v15
