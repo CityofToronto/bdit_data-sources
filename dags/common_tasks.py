@@ -79,3 +79,19 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
         cur.execute(insert_query)
     
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
+
+@task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+def check_jan_1st(ds=None): #check if Jan 1 to trigger partition creates. 
+    from datetime import strptime
+    start_date = strptime(ds, '%Y-%m-%d')
+    if start_date.month == 1 and start_date.day == 1:
+        return True
+    return False
+
+@task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+def check_1st_of_month(ds=None): #check if 1st of Month to trigger partition creates. 
+    from datetime import strptime
+    start_date = strptime(ds, '%Y-%m-%d')
+    if start_date.day == 1:
+        return True
+    return False
