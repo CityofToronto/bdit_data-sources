@@ -13,8 +13,10 @@ CREATE TABLE wys.mobile_sign_installations -- noqa: PRS
     removal_date date,
     new_sign_number text COLLATE pg_catalog."default",
     comments text COLLATE pg_catalog."default",
-    id serial,
+    id integer NOT NULL DEFAULT nextval('wys.mobile_sign_installations_id_seq'::regclass),
     work_order integer
+    CONSTRAINT mobile_sign_installations_pkey
+    PRIMARY KEY (ward_no, installation_date, new_sign_number)
 )
 WITH (
     OIDS = FALSE
@@ -22,7 +24,5 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE wys.mobile_sign_installations OWNER TO wys_admins;
-
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.mobile_sign_installations TO bdit_humans;
-
 GRANT ALL ON TABLE wys.mobile_sign_installations TO wys_bot;
