@@ -10,7 +10,6 @@ logging.basicConfig(level=logging.INFO)
 
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
@@ -32,13 +31,10 @@ list_names = []
 for name in names:
     list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
 
-slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-
 def prep_slack_message(message):
     slack_message = SlackWebhookOperator(
         task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
+        slack_webhook_conn_id=SLACK_CONN_ID,
         message=message,
         username='airflow',
         )
@@ -89,7 +85,6 @@ default_args = {'owner': ','.join(names),
 
 here_admin_bot = PostgresHook('here_admin_bot')
 bt_bot = PostgresHook('bt_bot')
-miovision_bot = PostgresHook('miovision_api_bot')
 wys_bot = PostgresHook('wys_bot')
 
 try:
@@ -105,13 +100,6 @@ try:
 except Exception as exc:
     err_msg = "Error importing functions for end of year Bluetooth maintenance \n" + str(exc)
     raise ImportError(err_msg)
-
-try:
-    sys.path.append('/etc/airflow/data_scripts/volumes/miovision/sql/')
-    from miovision_eoy_create_tables import create_miovision_vol_table, replace_miovision_vol_trigger
-except Exception as exc:
-    err_msg = "Error importing functions for end of year Miovision maintenance \n" + str(exc)
-    raise ImportError(err_msg)
     
 try:
     sys.path.append('/etc/airflow/data_scripts/wys/api/python/')
@@ -122,7 +110,7 @@ except Exception as exc:
 
 dag = DAG(dag_id = dag_name, 
           default_args=default_args,
-          schedule_interval='5 9 1 12 *') #9:05 on December 1st of every year
+          schedule='5 9 1 12 *') #9:05 on December 1st of every year
 
 here_create_tables = PythonOperator(task_id='here_create_tables',
                                     python_callable = create_here_ta_tables,
@@ -143,17 +131,6 @@ bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                     op_kwargs = {'pg_hook': bt_bot,
                                                  'dt': '{{ ds }}'})
 
-miovision_create_table = PythonOperator(task_id='miovision_create_table',
-                                    python_callable = create_miovision_vol_table,
-                                    dag = dag,
-                                    op_kwargs = {'pg_hook': miovision_bot,
-                                                 'dt': '{{ ds }}'}
-                                    )
-miovision_replace_trigger = PythonOperator(task_id='miovision_replace_trigger',
-                                    python_callable = replace_miovision_vol_trigger,
-                                    dag = dag,
-                                    op_kwargs = {'pg_hook': miovision_bot,
-                                                 'dt': '{{ ds }}'})
 insert_holidays = PythonOperator(task_id='insert_holidays',
                                     python_callable = insert_holidays,
                                     dag = dag,
@@ -178,8 +155,7 @@ congestion_create_table = PythonOperator(task_id='congestion_create_table',
 
 success_alert = SlackWebhookOperator(
                                     task_id='success_msg',
-                                    http_conn_id='slack',
-                                    webhook_token=slack_webhook_token,
+                                    slack_webhook_conn_id=SLACK_CONN_ID,
                                     message=task_success_slack_alert(),
                                     username='airflow',
                                     dag=dag)                                            
@@ -187,7 +163,6 @@ success_alert = SlackWebhookOperator(
 
 here_create_tables >> success_alert
 bt_create_tables >> bt_replace_trigger >> success_alert
-miovision_create_table >> miovision_replace_trigger >> success_alert
 wys_create_table >> wys_replace_trigger >> success_alert
 congestion_create_table >> success_alert
 insert_holidays >> success_alert

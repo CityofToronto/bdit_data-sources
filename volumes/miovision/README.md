@@ -19,6 +19,7 @@
     - [`movement_map`](#movement_map)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
+    - [`centreline_miovision`](#centreline_miovision)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Important Tables](#other-important-tables)
@@ -111,13 +112,13 @@ Note that bicycles are available at both a turning movement level and at an appr
 :-----|:-----|:-----|
 1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
 2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans|
+3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
 4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
 7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden |
 8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Streetcars and miscellaneous vehicles|
+9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
 #### `movements`
@@ -311,6 +312,15 @@ Since this reference table must be updated every time a new intersection is adde
  leg| text | Entry leg of movement|E|
  movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
 
+#### `centreline_miovision`
+
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](sql/create-mv-mio_cent.sql) when intersections are added.
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
+intersection_uid| integer | ID for intersection | 1 |
+leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
 
 ### Primary and Foreign Keys
 

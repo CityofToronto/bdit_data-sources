@@ -1,16 +1,24 @@
 #!
 # -*- coding: utf-8 -*-
 """Common functions used in most of the DAGs."""
+import os
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
+def is_prod_mode() -> bool:
+    """Returns True if the code is running from the PROD ENV directory."""
+    PROD_ENV_PATH = Variable.get("prod_env_path")
+    dags_folder = os.path.dirname(os.path.realpath(__file__))
+    repo_folder = os.path.basename(os.path.dirname(dags_folder))
+    return repo_folder == PROD_ENV_PATH
+
 def task_fail_slack_alert(
     context: dict,
     extra_msg: Optional[Union[str, Callable[..., str]]] = "",
     use_proxy: Optional[bool] = False,
-    dev_mode: Optional[bool] = False
+    dev_mode: Optional[bool] = None
 ) -> Any:
     """Sends Slack task-failure notifications.
 
@@ -54,12 +62,13 @@ def task_fail_slack_alert(
             servers (default False).
         dev_mode: A boolean to indicate if working in development mode to send
             Slack alerts to data_pipeline_dev instead of the regular 
-            data_pipeline (default False).
+            data_pipeline (default None, to be determined based on the location
+            of the file).
     
     Returns:
         Any: The result of executing the SlackWebhookOperator.
     """
-    if dev_mode:
+    if dev_mode or (dev_mode is None and not is_prod_mode()):
         SLACK_CONN_ID = "slack_data_pipeline_dev"
     else:
         SLACK_CONN_ID = "slack_data_pipeline"
@@ -74,7 +83,6 @@ def task_fail_slack_alert(
         extra_msg_str = extra_msg
 
     # Slack failure message
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
     if use_proxy:
         # Temporarily accessing Airflow on Morbius through 8080 instead of Nginx
         # Its hould be eventually removed
@@ -101,8 +109,7 @@ def task_fail_slack_alert(
     )
     failed_alert = SlackWebhookOperator(
         task_id="slack_test",
-        http_conn_id="slack",
-        webhook_token=slack_webhook_token,
+        slack_webhook_conn_id=SLACK_CONN_ID,
         message=slack_msg,
         username="airflow",
         proxy=proxy,

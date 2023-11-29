@@ -9,9 +9,7 @@ import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable 
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -42,18 +40,18 @@ def last_month(ds):
 
 with DAG(dag_id = dag_name,
          default_args=default_args,
+         max_active_runs=1,
          user_defined_macros={
             'last_month' : last_month
           },
-         schedule_interval='0 3 2 * *') as monthly_summary:
+         schedule='0 3 2 * *') as monthly_summary:
     wys_view_stat_signs = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/mat-view-stationary-signs.sql
                             sql='SELECT wys.refresh_mat_view_stationary_signs()',
                             task_id='wys_view_stat_signs',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     wys_view_mobile_api_id = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-refresh_mat_view_mobile_api_id.sql
                             #sql in bdit_data-sources/wys/api/sql/create-view-mobile_api_id.sql
@@ -61,32 +59,28 @@ with DAG(dag_id = dag_name,
                             task_id='wys_view_mobile_api_id',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     od_wys_view = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/open_data/mat-view-stationary-locations.sql
                             sql='SELECT wys.refresh_od_mat_view()',
                             task_id='od_wys_view',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     wys_mobile_summary = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
                             sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
                             task_id='wys_mobile_summary',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
     wys_stat_summary = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-stationary-sign-summary.sql
                             sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')", 
                             task_id='wys_stat_summary',
                             postgres_conn_id='wys_bot',
                             autocommit=True,
-                            retries = 0,
-                            dag=monthly_summary)
+                            retries = 0)
 
     # Stationary signs
     wys_view_stat_signs >> [wys_stat_summary, od_wys_view]
