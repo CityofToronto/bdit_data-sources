@@ -1,4 +1,4 @@
--- Table: wys.raw_data
+﻿-- Table: wys.raw_data
 
 -- DROP TABLE wys.raw_data;
 
@@ -16,7 +16,8 @@ WITH (
     OIDS=FALSE
 );
 
--- DROP TRIGGER insert_raw_data_trigger ON wys.raw_data;
+CREATE INDEX IF NOT EXISTS raw_data_datetime_bin_idx
+ON wys.raw_data USING brin(datetime_bin);
 
 ALTER TABLE wys.raw_data OWNER TO wys_admins;
 GRANT SELECT, REFERENCES ON TABLE wys.raw_data TO bdit_humans WITH GRANT OPTION;
