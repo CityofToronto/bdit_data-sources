@@ -121,8 +121,9 @@ bin_times AS (
 gaps AS (
 	--find gaps of any size before summarizing (in case we want to use this raw output for something else)
 	INSERT INTO miovision_api.unacceptable_gaps(
-		intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
-	)
+		intersection_uid, gap_start, gap_end, gap_minutes_total, allowable_total_gap_threshold, 
+        datetime_bin, gap_minutes_15min, avg_historical_total_vol, avg_historical_veh_vol
+	)    
 SELECT
 		bt.intersection_uid,
 		bt.gap_start,
