@@ -64,7 +64,7 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5): 
+                request_type = 'PATH', vehicle_type = 'ALL', epoch_type = 5):
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
