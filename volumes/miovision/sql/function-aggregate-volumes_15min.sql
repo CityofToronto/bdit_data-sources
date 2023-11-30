@@ -74,10 +74,10 @@ BEGIN
     )
 
     --Sets processed column to TRUE
-    UPDATE miovision_api.volumes_15min_mvt AS a
+    UPDATE miovision_api.volumes_15min_mvt AS v15
     SET processed = TRUE
-    FROM insert_crossover AS b
-    WHERE a.volume_15min_mvt_uid = b.volume_15min_mvt_uid;
+    FROM insert_crossover AS i_c
+    WHERE v15.volume_15min_mvt_uid = i_c.volume_15min_mvt_uid;
 
     RETURN NULL;
 

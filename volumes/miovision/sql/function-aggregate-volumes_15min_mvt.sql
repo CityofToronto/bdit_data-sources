@@ -75,20 +75,20 @@ WITH aggregate_insert AS (
     RETURNING intersection_uid, volume_15min_mvt_uid, datetime_bin, classification_uid, leg, movement_uid, volume
 )
 --To update foreign key for 1min bin table
-UPDATE miovision_api.volumes AS a
-    SET volume_15min_mvt_uid = b.volume_15min_mvt_uid
-    FROM aggregate_insert b
-    WHERE
-        a.datetime_bin >= start_date
-        AND a.datetime_bin < end_date
-        AND a.volume_15min_mvt_uid IS NULL
-        AND b.volume > 0
-        AND a.intersection_uid = b.intersection_uid
-        AND a.datetime_bin >= b.datetime_bin
-        AND a.datetime_bin < b.datetime_bin + interval '15 minutes'
-        AND a.classification_uid = b.classification_uid
-        AND a.leg = b.leg
-        AND a.movement_uid = b.movement_uid;
+UPDATE miovision_api.volumes AS v
+SET volume_15min_mvt_uid = a_i.volume_15min_mvt_uid
+FROM aggregate_insert AS a_i
+WHERE
+    v.datetime_bin >= start_date
+    AND v.datetime_bin < end_date
+    AND v.volume_15min_mvt_uid IS NULL
+    AND a_i.volume > 0
+    AND v.intersection_uid = a_i.intersection_uid
+    AND v.datetime_bin >= a_i.datetime_bin
+    AND v.datetime_bin < a_i.datetime_bin + interval '15 minutes'
+    AND v.classification_uid = a_i.classification_uid
+    AND v.leg = a_i.leg
+    AND v.movement_uid = a_i.movement_uid;
 
 RAISE NOTICE '% Done aggregating to 15min MVT bin', timeofday();
 END;
