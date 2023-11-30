@@ -6,7 +6,7 @@ CREATE TABLE wys.raw_data(
     raw_data_uid bigint NOT NULL DEFAULT nextval('wys_raw_data_raw_data_uid_seq'::regclass),
     api_id integer NOT NULL,
     datetime_bin timestamp without time zone NOT NULL,
-    speed integer NOT NULL,
+    speed integer,
     count integer,
     speed_count_uid integer,
     CONSTRAINT wys_raw_data_pkey
