@@ -13,17 +13,15 @@ BEGIN
     --delete existing data for the date range
     DELETE FROM miovision_api.volumes_daily
     WHERE
-        period_start >= start_date - interval '1 hour'
-        AND period_end <= end_date - interval '1 hour';
+        dt >= start_date
+        AND dt <= end_date;
 
     INSERT INTO miovision_api.volumes_daily (
-        intersection_uid, dt, period_start, period_end, volume_1, volume_2, volume_3, volume_4, volume_5, volume_6, volume_7, volume_8, volume_9, volume_10, volume_total
+        intersection_uid, dt, volume_1, volume_2, volume_3, volume_4, volume_5, volume_6, volume_7, volume_8, volume_9, volume_10, volume_total
     )
     SELECT
         i.intersection_uid,
-        d.dt,
-        d.dt - interval '1 hour' AS period_start,
-        d.dt - interval '1 hour' + interval '1 day' AS period_end,
+        date_trunc('day', v.datetime_bin) AS dt,
         SUM(v.volume) FILTER (WHERE v.classification_uid = 1) AS volume_1,
         SUM(v.volume) FILTER (WHERE v.classification_uid = 2) AS volume_2,
         SUM(v.volume) FILTER (WHERE v.classification_uid = 3) AS volume_3,
@@ -43,24 +41,19 @@ BEGIN
         AND (
             i.date_decommissioned IS NULL
             OR datetime_bin < i.date_decommissioned - INTERVAL '1 day'
-        ),
-        LATERAL (
-            --day beginning and ending at 11pm
-            SELECT date_trunc('day', v.datetime_bin + interval '1 hour') AS dt
-        ) d
+        )
     WHERE
-        v.datetime_bin >= start_date - interval '1 hour'
-        AND v.datetime_bin < end_date - interval '1 hour'
+        v.datetime_bin >= start_date
+        AND v.datetime_bin < end_date
     GROUP BY
         i.intersection_uid,
-        d.dt
+        dt
     ORDER BY
         i.intersection_uid,
-        d.dt; 
+        dt; 
 
 END;
 $BODY$;
 
 ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO dbadmin WITH GRANT OPTION;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) TO miovision_api_bot;

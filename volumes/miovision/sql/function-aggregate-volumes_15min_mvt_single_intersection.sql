@@ -30,8 +30,8 @@ WITH aggregate_insert AS (
     -- Cross product of dates, intersections, legal movement for cars, bikes, and peds to aggregate
     FROM miovision_api.intersection_movements AS im
     CROSS JOIN generate_series(
-        start_date - interval '1 hour',
-        end_date - interval '1 hour 15 minutes',
+        start_date,
+        end_date - interval '15 minutes',
         interval '15 minutes'
     ) AS dt(datetime_bin)
     JOIN miovision_api.intersections AS mai USING (intersection_uid)
@@ -50,8 +50,8 @@ WITH aggregate_insert AS (
     --To get 1min bins
     LEFT JOIN miovision_api.volumes AS v ON
         --help query choose correct partition
-        v.datetime_bin >= start_date - interval '1 hour'
-        AND v.datetime_bin < end_date - interval '1 hour'
+        v.datetime_bin >= start_date
+        AND v.datetime_bin < end_date
         AND v.datetime_bin >= dt.datetime_bin
         AND v.datetime_bin < dt.datetime_bin + interval '15 minutes'
         AND v.intersection_uid = im.intersection_uid
@@ -85,20 +85,20 @@ WITH aggregate_insert AS (
     RETURNING intersection_uid, volume_15min_mvt_uid, datetime_bin, classification_uid, leg, movement_uid, volume
 )
 --To update foreign key for 1min bin table
-UPDATE miovision_api.volumes AS a
-    SET volume_15min_mvt_uid = b.volume_15min_mvt_uid
-    FROM aggregate_insert AS b
+UPDATE miovision_api.volumes AS v
+    SET volume_15min_mvt_uid = a_i.volume_15min_mvt_uid
+    FROM aggregate_insert AS a_i
     WHERE
-        a.datetime_bin >= start_date - interval '1 hour'
-        AND a.datetime_bin < end_date - interval '1 hour'
-        AND a.volume_15min_mvt_uid IS NULL
-        AND b.volume > 0
-        AND a.intersection_uid = b.intersection_uid
-        AND a.datetime_bin >= b.datetime_bin
-        AND a.datetime_bin < b.datetime_bin + interval '15 minutes'
-        AND a.classification_uid = b.classification_uid
-        AND a.leg = b.leg
-        AND a.movement_uid = b.movement_uid;
+        v.datetime_bin >= start_date
+        AND v.datetime_bin < end_date
+        AND v.volume_15min_mvt_uid IS NULL
+        AND a_i.volume > 0
+        AND v.intersection_uid = a_i.intersection_uid
+        AND v.datetime_bin >= a_i.datetime_bin
+        AND v.datetime_bin < a_i.datetime_bin + interval '15 minutes'
+        AND v.classification_uid = a_i.classification_uid
+        AND v.leg = a_i.leg
+        AND v.movement_uid = a_i.movement_uid;
 
 RAISE NOTICE '% Done aggregating to 15min MVT bin', timeofday();
 END;
