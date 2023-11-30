@@ -2,7 +2,7 @@
 
 -- DROP TABLE wys.raw_data;
 
-CREATE TABLE wys.raw_data (
+CREATE TABLE wys.raw_data(
     raw_data_uid bigint NOT NULL DEFAULT nextval('wys_raw_data_raw_data_uid_seq'::regclass),
     api_id integer NOT NULL,
     datetime_bin timestamp without time zone NOT NULL,
@@ -12,12 +12,10 @@ CREATE TABLE wys.raw_data (
     CONSTRAINT wys_raw_data_pkey
     PRIMARY KEY (datetime_bin, raw_data_uid),
     CONSTRAINT raw_data_api_id_datetime_bin_speed_key
-    UNIQUE NULLS NOT DISTINCT (datetime_bin, api_id, speed);
+    UNIQUE NULLS NOT DISTINCT (datetime_bin, api_id, speed)
 )
 PARTITION BY RANGE (datetime_bin)
-WITH (
-    OIDS=FALSE
-);
+WITH (OIDS=FALSE);
 
 CREATE INDEX IF NOT EXISTS raw_data_datetime_bin_idx
 ON wys.raw_data USING brin(datetime_bin);
