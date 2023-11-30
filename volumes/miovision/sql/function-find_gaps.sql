@@ -20,9 +20,11 @@ WITH mio AS (
     SELECT
         intersection_uid,
         date_trunc('day', datetime_bin) AS dt,
-        date_part('hour', datetime_bin) AS time_bin,   
-        SUM(volume) AS vol
+        date_part('hour', datetime_bin) AS time_bin,
+        SUM(volume) AS vol,
+        SUM(volume) FILTER (WHERE classifications.class_type = 'Vehicles') AS vehicle_vol
     FROM miovision_api.volumes
+    INNER JOIN miovision_api.classifications USING (classification_uid)
     WHERE
         datetime_bin > start_date - interval '60 days'
         AND datetime_bin < start_date
@@ -42,6 +44,7 @@ gapsize_lookup AS (
             ELSE True
         END as weekend,
         AVG(vol) AS avg_vol,
+        AVG(vehicle_vol) AS avg_vehicle_vol,
         CASE
             WHEN AVG(vol) < 100::numeric THEN 20
             WHEN AVG(vol) >= 100::numeric AND AVG(vol) < 500::numeric THEN 15
@@ -64,14 +67,20 @@ fluffed_data AS (
         bins.datetime_bin,
         interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
     FROM miovision_api.intersections AS i
-    --add artificial data points every hour to enforce hourly outages,
-    --including for intersections with no data otherwise.
-    CROSS JOIN generate_series(
-            start_date::timestamp, --start_date
-            start_date::timestamp + interval '1 day',
-            interval '15 minutes'
+    --add artificial data points at start and end of day to find gaps overlapping start/end.
+    CROSS JOIN (
+        VALUES
+            --catch gaps overlapping days
+            (start_date::timestamp - interval '15 minutes'),
+            (start_date::timestamp + interval '1 day')
     ) AS bins(datetime_bin)
-    
+    WHERE
+        bins.datetime_bin >= i.date_installed
+        AND (
+            bins.datetime_bin < i.date_decommissioned
+            OR i.date_decommissioned IS NULL
+        )
+
     --group by in next step takes care of duplicates
     UNION ALL
 
@@ -82,7 +91,7 @@ fluffed_data AS (
         interval '1 minute' AS gap_adjustment
     FROM miovision_api.volumes
     WHERE
-        datetime_bin >= start_date
+        datetime_bin >= start_date - interval '15 minutes'
         AND datetime_bin < start_date + interval '1 day'
 ),
 
@@ -114,26 +123,49 @@ gaps AS (
 	INSERT INTO miovision_api.unacceptable_gaps(
 		intersection_uid, gap_start, gap_end, gap_minute, allowed_gap, accept
 	)
-	SELECT
+SELECT
 		bt.intersection_uid,
 		bt.gap_start,
 		bt.gap_end,
-		datetime_bin(bt.gap_start, 15) AS gap_start_floor_15,
-		datetime_bin_ceil(bt.gap_end, 15) AS gap_end_ceil_15,
-		gm.gap_minute,
-		gl.gap_tolerance AS allowed_gap,
-		False AS accept,
-        avg_vol * gm.gap_minute / 60 AS avg_historical_vol
+		gm.gap_minutes_total,
+        gl.gap_tolerance AS allowable_total_gap_threshold,
+        bins.datetime_bin,		
+        round(gm.gap_minutes_15min) AS gap_minutes_15min,
+        round(gl.avg_vol * gm.gap_minutes_15min / 60) AS avg_historical_total_vol,
+        round(gl.avg_vehicle_vol * gm.gap_minutes_15min / 60) AS avg_historical_veh_vol
 	FROM bin_times AS bt
-	LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend),
+    --match gaps to the 15 minute bins they intersect
+    LEFT JOIN generate_series(
+            --catch gaps overlapping days
+            start_date::timestamp - interval '15 minutes',
+            start_date::timestamp + interval '1 day',
+            interval '15 minutes'
+    ) AS bins(datetime_bin) ON
+        bins.datetime_bin >= datetime_bin(bt.gap_start, 15)
+        AND bins.datetime_bin < datetime_bin_ceil(bt.gap_end, 15)
+	LEFT JOIN gapsize_lookup AS gl ON
+        gl.intersection_uid = bt.intersection_uid
+        AND gl.time_bin = date_part('hour', bins.datetime_bin)
+        AND gl.weekend = bt.weekend,
 	LATERAL (
-		SELECT date_part('epoch', gap_end - gap_start) / 60::integer AS gap_minute
+		SELECT
+            date_part('epoch', gap_end - gap_start) / 60::integer AS gap_minutes_total,
+            --find the gap minutes which occured only during the 15 minute bin.
+            EXTRACT (EPOCH FROM
+                 LEAST(bt.gap_end, bins.datetime_bin + interval '15 minutes')
+                 - GREATEST(bt.gap_start, bins.datetime_bin)
+                ) / 60 AS gap_minutes_15min
 	) AS gm
 	WHERE
-		gm.gap_minute >= gl.gap_tolerance    
+		gm.gap_minutes_total >= gl.allowable_total_gap_threshold
 		AND bt.bin_break = True
 		AND bt.gap_end IS NOT NULL
-	ON CONFLICT DO NOTHING
+        --exclude gaps that are entirely without of todays interval
+        AND NOT(bins.datetime_bin + gm.gap_minutes_15min * '1 minute'::interval) <= start_date 
+    ORDER BY
+        intersection_uid,
+        datetime_bin
+    ON CONFLICT DO NOTHING
 	RETURNING *
 )
 

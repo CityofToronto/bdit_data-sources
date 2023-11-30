@@ -22,7 +22,7 @@ WITH aggregate_insert AS (
         im.movement_uid,
         CASE
             --set unacceptable gaps as nulls
-            WHEN un.accept = FALSE THEN NULL
+            WHEN un.datetime_bin IS NOT NULL THEN NULL
             --gap fill with zeros (restricted to certain modes in having clause)
             ELSE (COALESCE(SUM(v.volume), 0))
         END AS volume
@@ -38,10 +38,7 @@ WITH aggregate_insert AS (
     LEFT JOIN miovision_api.unacceptable_gaps AS un ON
         un.intersection_uid = im.intersection_uid
         --remove the 15 minute bin containing any unacceptable gaps
-        AND dt.datetime_bin15 >= un.gap_start_floor_15
-        AND dt.datetime_bin15 < un.gap_end_ceil_15
-        --only join unacceptable gaps labeled as do not accept.
-        AND un.accept = FALSE
+        AND dt.datetime_bin15 = un.datetime_bin
     --To get 1min bins
     LEFT JOIN miovision_api.volumes AS v ON
         --help query choose correct partition
@@ -68,8 +65,7 @@ WITH aggregate_insert AS (
         dt.datetime_bin15,
         im.classification_uid,
         im.leg,
-        im.movement_uid,
-        un.accept
+        im.movement_uid
     HAVING
         --retain 0s for certain modes (padding)
         im.classification_uid IN (1,2,6,10)
