@@ -12,7 +12,17 @@
 
 ## Data Pipeline 
 
-The HERE data pipeline pulls traffic data everyday at 4PM. There is a daily automated airflow pipeline that uses a BashOpertor to run [`here_api.py`](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) on the scheduled time. It sends a request specifying the output and data resolution to the HERE API, unzips the file, pipes the output to `psql`, and runs the `/COPY` command to send the output to a simple view `here.ta_view`. The simple view has an insert trigger that executes the function [`here.here_insert_trigger`](https://github.com/CityofToronto/bdit_data-sources/blob/here_declarative/here/traffic/sql/trigger_here_insert.sql) for each row to redirect and transform input data to the parent `here.ta` table which will then insert into the corresponding partitioned table based on the input date.
+The HERE data pipeline pulls traffic data everyday at 4PM. Currently there are two daily automated airflow pipeline that pulls `PROBE_PATH` and `PATH` data respectively. 
+
+#### PROBE_PATH
+
+The [DAG](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here.py) that pulls `PROBE_PATH` data uses a BashOpertor to run [`here_api.py`](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/traffic/here_api.py) on the scheduled time. It sends a request specifying the output and data resolution to the HERE API, unzips the file, pipes the output to `psql`, and runs the `/COPY` command to send the output to a simple view `here.ta_view`. The simple view has an insert trigger that executes the function [`here.here_insert_trigger`](https://github.com/CityofToronto/bdit_data-sources/blob/here_declarative/here/traffic/sql/trigger_here_insert.sql) for each row to redirect and transform input data to the parent `here.ta` table which will then insert into the corresponding partitioned table based on the input date. 
+Probe path data include speed data derived from the paths travelled between probe points, on top of probe data derived from GPS probe speed observation.  
+
+#### PATH
+
+The [DAG](https://github.com/CityofToronto/bdit_data-sources/blob/master/dags/pull_here_path.py) that pulls `PATH` only data uses taskflow to run several functions in [`here_api_path.py`](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/traffic/here_api_path.py) on the schedule time, which separates the steps of getting access token, requesting data, fetching the download url and copying the data with `curl` to send the output to a simple view `here.ta_path_view`. The simple view has an insert trigger that executes the function [`here.here_insert_trigger`](https://github.com/CityofToronto/bdit_data-sources/blob/here_declarative/here/traffic/sql/trigger_here_insert.sql) for each row to redirect and transform input data to the parent `here.ta_path` table which will then insert into the corresponding partitioned table based on the input date.
+Path data only includes path data derived from the paths travelled between probe points and does not include speed derived from GPS probe speed observation.
 
 ### Important Tables
 
