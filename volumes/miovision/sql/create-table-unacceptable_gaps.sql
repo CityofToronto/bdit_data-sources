@@ -8,6 +8,7 @@ CREATE TABLE miovision_api.unacceptable_gaps
     gap_minute integer,
     allowed_gap integer,
     accept boolean,
+    avg_historical_vol numeric,
     CONSTRAINT intersection_uid_gap_start_gap_end_key UNIQUE (intersection_uid, gap_start, gap_end)
 )
 

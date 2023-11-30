@@ -122,7 +122,8 @@ gaps AS (
 		datetime_bin_ceil(bt.gap_end, 15) AS gap_end_ceil_15,
 		gm.gap_minute,
 		gl.gap_tolerance AS allowed_gap,
-		False AS accept
+		False AS accept,
+        avg_vol * gm.gap_minute / 60 AS avg_historical_vol
 	FROM bin_times AS bt
 	LEFT JOIN gapsize_lookup AS gl USING (intersection_uid, time_bin, weekend),
 	LATERAL (
