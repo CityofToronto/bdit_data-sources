@@ -158,7 +158,7 @@ SELECT
                 ) / 60 AS gap_minutes_15min
 	) AS gm
 	WHERE
-		gm.gap_minutes_total >= gl.allowable_total_gap_threshold
+		gm.gap_minutes_total >= gl.gap_tolerance
 		AND bt.bin_break = True
 		AND bt.gap_end IS NOT NULL
         --exclude gaps that are entirely without of todays interval
