@@ -38,7 +38,7 @@ def get_variable(var_name:str) -> list:
     return Variable.get(var_name, deserialize_json=True)
 
 @task()
-def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
+def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
     Args:
@@ -47,6 +47,12 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
             ``schema.table``, and the destination table in the same format
             ``schema.table``.
     """
+    # push an extra failure message to be sent to Slack in case of failing
+    context["task_instance"].xcom_push(
+        "extra_msg",
+        f"Failed to copy `{table[0]}` to `{table[1]}`."
+    )
+    # separate tables and schemas
     try:
         src_schema, src_table = table[0].split(".")
     except ValueError:
