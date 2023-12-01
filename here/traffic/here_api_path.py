@@ -148,9 +148,8 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', type=click.Path(exists=True))
-@click.option('-m','--mapversion', default='2018Q3')
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', mapversion=''):
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
     '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate (inclusive)
 
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
@@ -160,7 +159,7 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     ctx.obj['config'] = config
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, mapversion)
+        pull_here_data(ctx, startdate, enddate)
 
 @cli.command('download')
 @click.argument('download_url')
@@ -210,7 +209,7 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, mapversion):
+def pull_here_data(ctx, startdate, enddate):
 
     configuration = configparser.ConfigParser()
     configuration.read(ctx.obj['config'])
@@ -221,7 +220,7 @@ def pull_here_data(ctx, startdate, enddate, mapversion):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
 
