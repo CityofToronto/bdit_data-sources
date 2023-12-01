@@ -74,8 +74,22 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
             sql.Identifier(dst_schema), sql.Identifier(dst_table),
             sql.Identifier(src_schema), sql.Identifier(src_table)
         )
+    comment_query = sql.SQL(
+        r"""
+            DO $$
+            DECLARE comment_ text;
+            BEGIN
+                SELECT obj_description('{}.{}'::regclass) INTO comment_;
+                EXECUTE format('COMMENT ON TABLE {}.{} IS %L', comment_);
+            END $$;
+        """
+        ).format(
+            sql.Identifier(src_schema), sql.Identifier(src_table),
+            sql.Identifier(dst_schema), sql.Identifier(dst_table),
+        )
     with con, con.cursor() as cur:
         cur.execute(truncate_query)
         cur.execute(insert_query)
+        cur.execute(comment_query)
     
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
