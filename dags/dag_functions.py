@@ -56,7 +56,9 @@ def task_fail_slack_alert(
         context: The calling Airflow task's context
         extra_msg: An extra string message or a function that
             generates an extra message to be appended to the default
-            notification (default '').
+            notification (default '', which forces the function to look for any
+            XCom with key ``extra_msg`` returned from the failing task;
+            otherwise, no extra message is added to the standard one).
         use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
             usage is required to make the Slack webhook call on on-premises
             servers (default False).
@@ -76,10 +78,22 @@ def task_fail_slack_alert(
     slack_ids = Variable.get("slack_member_id", deserialize_json=True)
     owners = context.get('dag').owner.split(',')
     list_names = " ".join([slack_ids.get(name, name) for name in owners])
+    # get the extra message from the calling task, if provided
+    extra_msg_from_task = context.get(
+        "task_instance"
+        ).xcom_pull(
+            task_ids=context.get('task_instance').task_id,
+            key="extra_msg"
+        )[0]
 
     if callable(extra_msg):
+        # in case of function
         extra_msg_str = extra_msg(context)
+    elif extra_msg == "" and extra_msg_from_task is not None:
+        # in case the the extra message is passed from inside the task via xcom
+        extra_msg_str = extra_msg_from_task
     else:
+        # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
     # Slack failure message
