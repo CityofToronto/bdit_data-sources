@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.identify_zero_counts(
     start_date timestamp,
     end_date timestamp,
-    min_gap interval default '1 hour'::interval)
+    min_gap interval DEFAULT '1 hour'::interval)
 RETURNS void
 LANGUAGE 'plpgsql'
 
@@ -11,7 +11,7 @@ AS $BODY$
 
 BEGIN
 
-WITH zero_intersections AS (
+    WITH zero_intersections AS (
         SELECT
             intersection_uid,
             null::integer AS classification_uid,
