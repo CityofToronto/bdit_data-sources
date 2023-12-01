@@ -1,8 +1,8 @@
 CREATE OR REPLACE FUNCTION miovision_api.agg_daily_vehicle_volumes(
-	start_date date,
-	end_date date
+    start_date date,
+    end_date date
 )
-RETURNS VOID
+RETURNS void
 LANGUAGE 'plpgsql'
 
 COST 100
