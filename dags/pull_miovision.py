@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.macros import ds_format
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -42,9 +41,7 @@ def pull_miovision_dag():
 
     #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
-    def check_partitions(ds=None):
-        YEAR = ds_format(ds, '%Y-%m-%d', '%Y')
-        MONTH = ds_format(ds, '%Y-%m-%d', '%m')
+    def check_partitions():
 
         @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
         def check_annual_partition(ds=None): #check if Jan 1 to trigger partition creates. 
@@ -55,11 +52,10 @@ def pull_miovision_dag():
       
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ params.year }}'::int, 'datetime_bin')",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ params.year }}'::int)",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ params.year }}'::int)"],
+            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
             postgres_conn_id='miovision_api_bot',
-            params={"year": YEAR},
             autocommit=True
         )
 
@@ -72,10 +68,8 @@ def pull_miovision_dag():
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
-            sql="SELECT miovision_api.create_mm_nested_volumes_partition('volumes', '{{ params.year }}'::int, '{{ params.month }}'::int)",
+            sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
             postgres_conn_id='miovision_api_bot',
-            params={"year": YEAR,
-                    "month": MONTH},
             autocommit=True
         )
 
