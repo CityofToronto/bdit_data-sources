@@ -82,23 +82,18 @@ def pull_wys_dag():
     #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
     def check_partitions():
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-        MONTH = '{{ macros.ds_format(ds, "%Y-%m-%d", "%m") }}'
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql="SELECT wys.create_yyyy_raw_data_partition({{ params.year }}::int)",
+            sql="SELECT wys.create_yyyy_raw_data_partition('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
             postgres_conn_id='wys_bot',
-            params={"year": YEAR},
             autocommit=True
         )
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
-            sql="SELECT wys.create_mm_nested_raw_data_partitions({{ params.year }}::int, {{ params.month }}::int)",
+            sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
             postgres_conn_id='wys_bot',
-            params={"year": YEAR,
-                    "month": MONTH},
             autocommit=True
         )
 
