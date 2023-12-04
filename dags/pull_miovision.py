@@ -42,8 +42,8 @@ def pull_miovision_dag():
     #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
     def check_partitions():
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-        MONTH = '{{ macros.ds_format(ds, "%Y-%m-%d", "%m") }}'
+        YEAR = '''{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'''
+        MONTH = '''{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'''
 
         @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
         def check_annual_partition(ds=None): #check if Jan 1 to trigger partition creates. 
