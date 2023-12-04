@@ -140,9 +140,7 @@ success_alert = SlackWebhookOperator(
                                     username='airflow',
                                     dag=dag)                                            
 
-
 here_create_tables >> success_alert
 bt_create_tables >> bt_replace_trigger >> success_alert
-wys_create_table >> wys_replace_trigger >> success_alert
 congestion_create_table >> success_alert
 insert_holidays >> success_alert
