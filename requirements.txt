@@ -229,6 +229,8 @@ colorlog==4.8.0
     # via
     #   -c constraints.txt
     #   apache-airflow
+comm==0.2.0
+    # via ipykernel
 configupdater==3.1.1
     # via
     #   -c constraints.txt
@@ -255,6 +257,8 @@ db-dtypes==1.1.1
     # via
     #   -c constraints.txt
     #   pandas-gbq
+debugpy==1.8.0
+    # via ipykernel
 decorator==5.1.1
     # via
     #   -c constraints.txt
@@ -745,10 +749,13 @@ inflection==0.5.1
     # via
     #   -c constraints.txt
     #   connexion
+ipykernel==6.27.1
+    # via -r requirements.in
 ipython==8.14.0
     # via
     #   -c constraints.txt
     #   -r requirements.in
+    #   ipykernel
 isort==5.12.0
     # via pylint
 itsdangerous==2.1.2
@@ -783,6 +790,15 @@ jsonschema-specifications==2023.7.1
     # via
     #   -c constraints.txt
     #   jsonschema
+jupyter-client==8.3.0
+    # via
+    #   -c constraints.txt
+    #   ipykernel
+jupyter-core==5.3.1
+    # via
+    #   -c constraints.txt
+    #   ipykernel
+    #   jupyter-client
 kombu==5.3.1
     # via
     #   -c constraints.txt
@@ -852,6 +868,7 @@ marshmallow-sqlalchemy==0.26.1
 matplotlib-inline==0.1.6
     # via
     #   -c constraints.txt
+    #   ipykernel
     #   ipython
 mccabe==0.7.0
     # via pylint
@@ -868,6 +885,8 @@ multidict==6.0.4
     #   -c constraints.txt
     #   aiohttp
     #   yarl
+nest-asyncio==1.5.8
+    # via ipykernel
 numpy==1.24.4
     # via
     #   -c constraints.txt
@@ -929,6 +948,7 @@ packaging==23.1
     #   google-cloud-aiplatform
     #   google-cloud-bigquery
     #   gunicorn
+    #   ipykernel
     #   limits
     #   marshmallow
     #   sqlalchemy-bigquery
@@ -973,6 +993,7 @@ pip-tools==7.3.0
 platformdirs==3.8.1
     # via
     #   -c constraints.txt
+    #   jupyter-core
     #   pylint
 pluggy==1.2.0
     # via
@@ -1085,6 +1106,7 @@ psutil==5.9.5
     # via
     #   -c constraints.txt
     #   apache-airflow
+    #   ipykernel
 psycopg2-binary==2.9.7
     # via
     #   -c constraints.txt
@@ -1167,6 +1189,7 @@ python-dateutil==2.8.2
     #   flask-appbuilder
     #   google-cloud-bigquery
     #   holidays
+    #   jupyter-client
     #   pandas
     #   pendulum
 python-nvd3==0.15.0
@@ -1195,6 +1218,11 @@ pyyaml==6.0.1
     #   clickclick
     #   connexion
     #   google-ads
+pyzmq==25.1.1
+    # via
+    #   -c constraints.txt
+    #   ipykernel
+    #   jupyter-client
 referencing==0.30.2
     # via
     #   -c constraints.txt
@@ -1353,10 +1381,16 @@ tornado==6.3.3
     # via
     #   -c constraints.txt
     #   flower
+    #   ipykernel
+    #   jupyter-client
 traitlets==5.9.0
     # via
     #   -c constraints.txt
+    #   comm
+    #   ipykernel
     #   ipython
+    #   jupyter-client
+    #   jupyter-core
     #   matplotlib-inline
 typing-extensions==4.7.1
     # via
