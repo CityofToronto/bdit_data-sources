@@ -84,19 +84,16 @@ with DAG(dag_name,
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
     with TaskGroup(group_id='check_partitions') as check_partitions_tg:
-
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-        
+       
         create_partitions = PostgresOperator(
             task_id='create_partitions',
             sql=[#partition by year and month:
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', {{ params.year }}::int, 'dt')",
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', {{ params.year }}::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
                 #partition by year only: 
-                "SELECT vds.partition_vds_yyyy('counts_15min_div2', {{ params.year }}::int, 'datetime_15min')",
-                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', {{ params.year }}::int, 'datetime_15min')"],
+                "SELECT vds.partition_vds_yyyy('counts_15min_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')",
+                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')"],
             postgres_conn_id='vds_bot',
-            params={"year": YEAR},
             autocommit=True
         )
 

@@ -1,8 +1,6 @@
 CREATE TABLE miovision_api.volumes_daily (
     intersection_uid integer NOT NULL,
     dt date NOT NULL,
-    period_start timestamp without time zone NOT NULL,
-    period_end timestamp without time zone NOT NULL,
     volume_1 integer, 
     volume_2 integer, 
     volume_3 integer, 

@@ -72,13 +72,10 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     #this task group checks if all necessary partitions exist and if not executes create functions.
     with TaskGroup(group_id='check_partitions') as check_partitions_tg:
 
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-
         create_partitions = PostgresOperator(
             task_id='create_partitions',
-            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', {{ params.year }}::int, 'dt')",
+            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
             postgres_conn_id='vds_bot',
-            params={"year": YEAR},
             autocommit=True
         )
         
