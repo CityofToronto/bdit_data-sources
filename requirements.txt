@@ -297,6 +297,7 @@ exceptiongroup==1.1.3
     #   -c constraints.txt
     #   anyio
     #   cattrs
+    #   pytest
 executing==1.2.0
     # via
     #   -c constraints.txt
@@ -749,6 +750,10 @@ inflection==0.5.1
     # via
     #   -c constraints.txt
     #   connexion
+iniconfig==2.0.0
+    # via
+    #   -c constraints.txt
+    #   pytest
 ipykernel==6.27.1
     # via -r requirements.in
 ipython==8.14.0
@@ -951,6 +956,7 @@ packaging==23.1
     #   ipykernel
     #   limits
     #   marshmallow
+    #   pytest
     #   sqlalchemy-bigquery
 pandas==2.0.3
     # via
@@ -999,6 +1005,7 @@ pluggy==1.2.0
     # via
     #   -c constraints.txt
     #   apache-airflow
+    #   pytest
 prison==0.2.1
     # via
     #   -c constraints.txt
@@ -1175,6 +1182,10 @@ pyproj==3.6.1
     # via geopandas
 pyproject-hooks==1.0.0
     # via build
+pytest==7.4.0
+    # via
+    #   -c constraints.txt
+    #   -r requirements.in
 python-daemon==3.0.1
     # via
     #   -c constraints.txt
@@ -1373,6 +1384,7 @@ tomli==2.0.1
     #   pip-tools
     #   pylint
     #   pyproject-hooks
+    #   pytest
 tomlkit==0.12.1
     # via
     #   -c constraints.txt
