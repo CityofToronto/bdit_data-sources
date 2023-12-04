@@ -21,6 +21,7 @@ holidays==0.31
 
 # development
 ipython==8.14.0
+ipykernel==6.27.1
 
 # linters
 pydocstyle==6.3.0
