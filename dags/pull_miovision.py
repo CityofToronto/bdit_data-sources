@@ -54,9 +54,9 @@ def pull_miovision_dag():
       
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', {{ params.year }}::int, 'datetime_bin')",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', {{ params.year }}::int)",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', {{ params.year }}::int)"],
+            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ params.year }}'::int, 'datetime_bin')",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ params.year }}'::int)",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ params.year }}'::int)"],
             postgres_conn_id='miovision_api_bot',
             params={"year": YEAR},
             autocommit=True
@@ -71,7 +71,7 @@ def pull_miovision_dag():
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
-            sql="SELECT miovision_api.create_mm_nested_volumes_partition('volumes', {{ params.year }}::int, {{ params.month }}::int)",
+            sql="SELECT miovision_api.create_mm_nested_volumes_partition('volumes', '{{ params.year }}'::int, '{{ params.month }}'::int)",
             postgres_conn_id='miovision_api_bot',
             params={"year": YEAR,
                     "month": MONTH},
