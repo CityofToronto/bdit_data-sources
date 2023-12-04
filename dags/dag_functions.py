@@ -75,16 +75,16 @@ def task_fail_slack_alert(
     else:
         SLACK_CONN_ID = "slack_data_pipeline"
 
+    task_instance = context["task_instance"]
     slack_ids = Variable.get("slack_member_id", deserialize_json=True)
     owners = context.get('dag').owner.split(',')
     list_names = " ".join([slack_ids.get(name, name) for name in owners])
     # get the extra message from the calling task, if provided
-    extra_msg_from_task = context.get(
-        "task_instance"
-        ).xcom_pull(
-            task_ids=context.get('task_instance').task_id,
+    extra_msg_from_task = task_instance.xcom_pull(
+            task_ids=task_instance.task_id,
+            map_indexes=task_instance.map_index,
             key="extra_msg"
-        )[0]
+        )
 
     if callable(extra_msg):
         # in case of function
