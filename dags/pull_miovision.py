@@ -11,11 +11,11 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from dags.common_tasks import check_jan_1st, check_1st_of_month
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
+from dags.common_tasks import check_jan_1st, check_1st_of_month
 
 dag_name = 'pull_miovision'
 
