@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.macros import ds_format
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -41,9 +42,9 @@ def pull_miovision_dag():
 
     #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
-    def check_partitions():
-        YEAR = '''{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'''
-        MONTH = '''{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'''
+    def check_partitions(ds=None):
+        YEAR = ds_format(ds, '%Y-%m-%d', '%Y')
+        MONTH = ds_format(ds, '%Y-%m-%d', '%m')
 
         @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
         def check_annual_partition(ds=None): #check if Jan 1 to trigger partition creates. 
