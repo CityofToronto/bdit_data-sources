@@ -78,13 +78,10 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
                 return True
             return False
 
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-
         create_partitions = PostgresOperator(
             task_id='create_partitions',
-            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', {{ params.year }}::int, 'dt')",
+            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
             postgres_conn_id='vds_bot',
-            params={"year": YEAR},
             autocommit=True
         )
 
