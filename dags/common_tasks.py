@@ -80,7 +80,7 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
     
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
 
-@task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
 def check_jan_1st(ds=None): #check if Jan 1 to trigger partition creates. 
     from datetime import datetime
     start_date = datetime.strptime(ds, '%Y-%m-%d')
@@ -88,7 +88,7 @@ def check_jan_1st(ds=None): #check if Jan 1 to trigger partition creates.
         return True
     return False
 
-@task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
+@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
 def check_1st_of_month(ds=None): #check if 1st of Month to trigger partition creates. 
     from datetime import datetime
     start_date = datetime.strptime(ds, '%Y-%m-%d')
