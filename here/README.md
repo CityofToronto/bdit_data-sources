@@ -138,6 +138,18 @@ JOIN here_gis.streets_22_2 AS streets ON
 JOIN here_gis.streets_att_22_2 AS attributes USING (link_id)
 ```
 
+There is also a set of versioned tables for routing `here.routing_streets_xx_x`, which contain the directed geometries:
+
+```sql
+SELECT
+    link_dir,
+    geom AS directed_geom
+FROM here.ta
+JOIN here.routing_streets_22_2 USING (link_dir)
+```
+
+See also: [Routing with traffic data](#routing-with-traffic-data)
+
 #### Functional classes
 
 HERE groups roads into five functional classes, labelled 1 to 5. Lower numbers are used to represent roads with high volumes of traffic (so highways would fall under functional class 1 while local roads would have a functional class of 5). HERE also includes typically non-road routes like park paths and laneways in functional class 5 - now you know! You can exclude non-roads using:
