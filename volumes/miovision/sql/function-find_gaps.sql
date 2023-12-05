@@ -15,8 +15,23 @@ DECLARE tot_gaps integer;
 
 BEGIN
 
+--find only intersections active today
+WITH daily_intersections AS (
+    SELECT DISTINCT v.intersection_uid
+    FROM miovision_api.volumes AS v
+    INNER JOIN miovision_api.intersections AS i USING (intersection_uid)
+    WHERE
+        v.datetime_bin >= start_date
+        AND v.datetime_bin < start_date + interval '1 day'
+        AND v.datetime_bin >= i.date_installed
+        AND (
+            v.datetime_bin < i.date_decommissioned
+            OR i.date_decommissioned IS NULL
+        )
+),
+
 --hourly sum for last 60 days to use in gapsize_lookup. 
-WITH mio AS (
+mio AS (
     SELECT
         intersection_uid,
         date_trunc('day', datetime_bin) AS dt,
@@ -25,6 +40,7 @@ WITH mio AS (
         SUM(volume) FILTER (WHERE classifications.class_type = 'Vehicles') AS vehicle_vol
     FROM miovision_api.volumes
     INNER JOIN miovision_api.classifications USING (classification_uid)
+    INNER JOIN daily_intersections USING (intersection_uid)
     WHERE
         datetime_bin > start_date - interval '60 days'
         AND datetime_bin < start_date
@@ -66,7 +82,7 @@ fluffed_data AS (
         i.intersection_uid,
         bins.datetime_bin,
         interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
-    FROM miovision_api.intersections AS i
+    FROM daily_intersections AS i
     --add artificial data points at start and end of day to find gaps overlapping start/end.
     CROSS JOIN (
         VALUES
@@ -74,12 +90,6 @@ fluffed_data AS (
             (start_date::timestamp - interval '15 minutes'),
             (start_date::timestamp + interval '1 day')
     ) AS bins(datetime_bin)
-    WHERE
-        bins.datetime_bin >= i.date_installed
-        AND (
-            bins.datetime_bin < i.date_decommissioned
-            OR i.date_decommissioned IS NULL
-        )
 
     --group by in next step takes care of duplicates
     UNION ALL
@@ -124,7 +134,7 @@ gaps AS (
 		intersection_uid, gap_start, gap_end, gap_minutes_total, allowable_total_gap_threshold, 
         datetime_bin, gap_minutes_15min, avg_historical_total_vol, avg_historical_veh_vol
 	)    
-SELECT
+    SELECT
 		bt.intersection_uid,
 		bt.gap_start,
 		bt.gap_end,
