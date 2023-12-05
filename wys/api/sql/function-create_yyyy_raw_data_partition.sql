@@ -22,7 +22,7 @@ BEGIN
         FOR VALUES FROM (%L) TO (%L)
         PARTITION BY RANGE (datetime_bin);
         ALTER TABLE IF EXISTS wys.%I OWNER TO wys_admins;
-        GRANT SELECT, INSERT, UPDATE ON TABLE wys.%I TO wys_bot;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE wys.%I TO wys_bot;
         GRANT SELECT, REFERENCES ON TABLE wys.%I TO bdit_humans WITH GRANT OPTION;
         $$,
         year_table,
