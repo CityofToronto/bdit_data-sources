@@ -24,5 +24,6 @@ ALTER TABLE wys.raw_data OWNER TO wys_admins;
 GRANT SELECT, REFERENCES ON TABLE wys.raw_data TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE wys.raw_data TO wys_bot;
 
+GRANT ALL ON SEQUENCE wys.wys_raw_data_raw_data_uid_seq TO wys_bot;
 --annual partitions created with `wys.create_yyyy_raw_data_partition`.
 --monthly partitions created with `wys.create_mm_nested_raw_data_partitions`.
