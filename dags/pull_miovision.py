@@ -152,15 +152,18 @@ def pull_miovision_dag():
 
         check_gaps = SQLCheckOperatorWithReturnValue(
             task_id="check_gaps",
-            sql="select-find_gaps.sql",
-            conn_id="miovision_api_bot",
-            params={
-                "table": "miovision_api.volumes",
-                "id_col": 'intersection_uid',
-                "dt_col": 'datetime_bin',
-                "gap_threshold": '4 hours',
-                "default_bin": '1 minute',
-            },
+            sql="""SELECT _check, summ, gaps
+                FROM public.summarize_gaps_data_check(
+                    '{{ ds }}'::date, --start_date
+                    '{{ ds }}'::date, --end_date
+                    'intersection_uid'::text, --id_col
+                    'datetime_bin'::text, --dt_col
+                    'miovision_api'::text, --sch_name
+                    'volumes'::text, --tbl_name
+                    '4 hours'::interval, --gap_threshold
+                    '1 minute'::interval --default_bin
+                )""",
+            conn_id="miovision_api_bot"
         )
         check_gaps.doc_md = '''
         Identify gaps larger than gap_threshold in intersections with values today.
