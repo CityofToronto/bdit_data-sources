@@ -13,20 +13,34 @@ CREATE TABLE wys.mobile_sign_installations -- noqa: PRS
     removal_date date,
     new_sign_number text COLLATE pg_catalog."default",
     comments text COLLATE pg_catalog."default",
+    confirmed text COLLATE pg_catalog."default",
     id integer NOT NULL DEFAULT nextval('wys.mobile_sign_installations_id_seq'::regclass),
-    work_order integer
+    work_order integer,
     CONSTRAINT mobile_sign_installations_pkey
     PRIMARY KEY (ward_no, installation_date, new_sign_number)
 )
 PARTITION BY LIST (ward_no)
 WITH (
     OIDS = FALSE
-)
-TABLESPACE pg_default;
+);
 
 ALTER TABLE wys.mobile_sign_installations OWNER TO wys_admins;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.mobile_sign_installations TO bdit_humans;
 GRANT ALL ON TABLE wys.mobile_sign_installations TO wys_bot;
+
+-- Trigger: audit_trigger_row
+CREATE OR REPLACE TRIGGER audit_trigger_row
+    AFTER INSERT OR DELETE OR UPDATE 
+    ON wys.mobile_sign_installations
+    FOR EACH ROW
+    EXECUTE FUNCTION wys.if_modified_func('true');
+
+-- Trigger: audit_trigger_stm
+CREATE OR REPLACE TRIGGER audit_trigger_stm
+    AFTER TRUNCATE
+    ON wys.mobile_sign_installations
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION wys.if_modified_func('true');
 
 --create partitions with permissions: 
 DO $do$
