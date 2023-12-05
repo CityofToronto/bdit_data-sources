@@ -27,7 +27,7 @@ BEGIN
             FOR VALUES FROM (%L) TO (%L);
             ALTER TABLE IF EXISTS wys.%I OWNER TO wys_admins;
             GRANT SELECT, REFERENCES ON TABLE wys.%I TO bdit_humans WITH GRANT OPTION;
-            GRANT SELECT, INSERT, UPDATE ON TABLE wys.%I TO wys_bot;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE wys.%I TO wys_bot;
         $$,
         month_table,
         year_table,
