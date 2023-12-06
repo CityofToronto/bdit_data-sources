@@ -166,7 +166,7 @@ def pull_from_sheet(
         LEFT JOIN dupes USING (new_sign_number, installation_date)
         --Don't try to insert dupes
         WHERE dupes.new_sign_number IS NULL
-        ON CONFLICT (installation_date, new_sign_number)
+        ON CONFLICT (ward_no, installation_date, new_sign_number)
         DO UPDATE SET 
             removal_date=EXCLUDED.removal_date,
             comments=EXCLUDED.comments,
