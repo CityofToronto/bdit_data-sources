@@ -28,4 +28,12 @@ drone-registrations/
 ## Issues  
 Feel free to open issues for project management or to request help. Each Issue title should probably be of the format `Data-Name: Issue Title`
 
+## Dependency Management
+
+If a new Python package is needed, follow these instructions to install it (ask an admin if you do not have enough permissions to do so):
+
+1. Add the new Python package or update its version in the `requirements.in` file.
+2. Run `pip-compile --resolver=backtracking requirements.in` to update the `requirements.txt` file.
+3. Run `pip-sync requirements.txt` (as the `airflow` user) to install/update the new/updated packages.
+
 ## Improve this Contribution Guidelines!
