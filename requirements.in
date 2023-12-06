@@ -1,0 +1,28 @@
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.7.0/constraints-3.10.txt
+-c constraints.txt
+
+# Airflow
+apache-airflow==2.7.0
+
+# Airflow service providers
+apache-airflow-providers-celery==3.3.2
+apache-airflow-providers-google==10.6.0
+apache-airflow-providers-postgres==5.6.0
+apache-airflow-providers-slack==7.3.2
+
+# Python dependency management
+pip-tools==7.3.0
+
+# pipelines
+bs4==0.0.1
+env-canada==0.5.36
+geopandas==0.13.2
+holidays==0.31
+
+# development
+ipython==8.14.0
+ipykernel==6.27.1
+
+# linters
+pydocstyle==6.3.0
+pylint==2.17.5

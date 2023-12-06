@@ -38,7 +38,7 @@ def get_variable(var_name:str) -> list:
     return Variable.get(var_name, deserialize_json=True)
 
 @task()
-def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
+def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
     Args:
@@ -47,6 +47,12 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
             ``schema.table``, and the destination table in the same format
             ``schema.table``.
     """
+    # push an extra failure message to be sent to Slack in case of failing
+    context["task_instance"].xcom_push(
+        "extra_msg",
+        f"Failed to copy `{table[0]}` to `{table[1]}`."
+    )
+    # separate tables and schemas
     try:
         src_schema, src_table = table[0].split(".")
     except ValueError:
@@ -74,9 +80,23 @@ def copy_table(conn_id:str, table:Tuple[str, str]) -> None:
             sql.Identifier(dst_schema), sql.Identifier(dst_table),
             sql.Identifier(src_schema), sql.Identifier(src_table)
         )
+    comment_query = sql.SQL(
+        r"""
+            DO $$
+            DECLARE comment_ text;
+            BEGIN
+                SELECT obj_description('{}.{}'::regclass) INTO comment_;
+                EXECUTE format('COMMENT ON TABLE {}.{} IS %L', comment_);
+            END $$;
+        """
+        ).format(
+            sql.Identifier(src_schema), sql.Identifier(src_table),
+            sql.Identifier(dst_schema), sql.Identifier(dst_table),
+        )
     with con, con.cursor() as cur:
         cur.execute(truncate_query)
         cur.execute(insert_query)
+        cur.execute(comment_query)
     
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
 
