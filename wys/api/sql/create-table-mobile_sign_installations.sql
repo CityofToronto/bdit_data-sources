@@ -2,16 +2,16 @@
 
 -- DROP TABLE wys.mobile_sign_installations;
 
-CREATE TABLE wys.mobile_sign_installations -- noqa: PRS
+CREATE TABLE IF NOT EXISTS wys.mobile_sign_installations
 (
-    ward_no integer,
+    ward_no integer NOT NULL,
     location text COLLATE pg_catalog."default",
     from_street text COLLATE pg_catalog."default",
     to_street text COLLATE pg_catalog."default",
     direction text COLLATE pg_catalog."default",
-    installation_date date,
+    installation_date date NOT NULL,
     removal_date date,
-    new_sign_number text COLLATE pg_catalog."default",
+    new_sign_number text COLLATE pg_catalog."default" NOT NULL,
     comments text COLLATE pg_catalog."default",
     confirmed text COLLATE pg_catalog."default",
     id integer NOT NULL DEFAULT nextval('wys.mobile_sign_installations_id_seq'::regclass),
@@ -19,10 +19,7 @@ CREATE TABLE wys.mobile_sign_installations -- noqa: PRS
     CONSTRAINT mobile_sign_installations_pkey
     PRIMARY KEY (ward_no, installation_date, new_sign_number)
 )
-PARTITION BY LIST (ward_no)
-WITH (
-    OIDS = FALSE
-);
+PARTITION BY LIST (ward_no);
 
 ALTER TABLE wys.mobile_sign_installations OWNER TO wys_admins;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE wys.mobile_sign_installations TO bdit_humans;
