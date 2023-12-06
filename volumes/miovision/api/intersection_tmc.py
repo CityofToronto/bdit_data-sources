@@ -464,7 +464,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
         if len(intersections) == 0:
             logger.critical('No intersections found.')
         elif user_def_intersection:
-            logger.critical('None of the specified intersections are active'
+            logger.critical('None of the specified intersections are active '
                             'during the specified period.')
         else:
             logger.critical('No active intersections found in '
