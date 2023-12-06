@@ -459,16 +459,27 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     time_delta = timedelta(hours=6)
 
-    intersections = get_intersection_info(conn, intersection=intersection)
+    intersections = get_intersection_info(conn, intersection=intersection)           
 
-    if len(intersections) == 0:
-        logger.critical('No intersections found in '
-                        'miovision_api.intersections for the specified '
-                        'start time.')
-        sys.exit(3)
-
-    # So we don't make the comparison thousands of times below.
+    #check if the user specified intersections
     user_def_intersection = len(intersection) > 0
+    
+    check_active = []
+    for c_start_t in daterange(start_time, end_time, time_delta):
+        active_intersections = [x.is_active(c_start_t) for x in intersections]
+        check_active.extend(active_intersections)
+
+    if not(any(check_active)):
+        if len(intersections) == 0:
+            logger.critical('No intersections found.')
+        elif user_def_intersection:
+            logger.critical('None of the specified intersections are active '
+                            'during the specified period.')
+        else:
+            logger.critical('No active intersections found in '
+                            'miovision_api.intersections for the specified '
+                            'period.')
+        sys.exit(3)
 
     for c_start_t in daterange(start_time, end_time, time_delta):
 
