@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION public.summarize_gaps_data_check(
     sch_name text,
     tbl_name text,
     gap_threshold interval,
-    default_bin interval
+    default_bin interval,
+    id_col_dtype anyelement default null::text
 )
 RETURNS TABLE(_check boolean, summ text, gaps text[])
 LANGUAGE plpgsql
@@ -27,7 +28,8 @@ BEGIN
                 %L::text, --sch_name
                 %L::text, --tbl_name
                 %L::interval, --gap_threshold
-                %L::interval --default_bin
+                %L::interval, --default_bin
+                %L::regtype --id_col_dtype
             )
         )
 
@@ -40,7 +42,7 @@ BEGIN
             array_agg(summarized_gaps || chr(10)) AS gaps
         FROM summarized_gaps
     $$,
-    start_date, end_date, id_col, dt_col, sch_name, tbl_name, gap_threshold, default_bin,
+    start_date, end_date, id_col, dt_col, sch_name, tbl_name, gap_threshold, default_bin, id_col_dtype,
         gap_threshold
     );
 END;

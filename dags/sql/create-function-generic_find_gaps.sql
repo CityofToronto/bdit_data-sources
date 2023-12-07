@@ -7,19 +7,22 @@ CREATE OR REPLACE FUNCTION public.generic_find_gaps(
     sch_name text,
     tbl_name text,
     gap_threshold interval,
-    default_bin interval
+    default_bin interval,
+    id_col_dtype anyelement default null::int
 )
-RETURNS TABLE(sensor_id_col integer, gap_start timestamp, gap_end timestamp)
+RETURNS TABLE(sensor_id_col anyelement, gap_start timestamp, gap_end timestamp)
 LANGUAGE plpgsql
 COST 100
 VOLATILE 
 
 AS $BODY$
+DECLARE
+   resulttype regtype := pg_typeof(id_col_dtype);
 BEGIN
     RETURN QUERY EXECUTE FORMAT($$
         WITH raw AS (
             SELECT DISTINCT
-                %I AS sensor_id_col, --id_col
+                CAST(%I AS %s) AS sensor_id_col, --id_col, resulttype
                 %I AS dt_col --dt_col
             FROM %I.%I --sch_name, tbl_name
             WHERE
@@ -78,7 +81,7 @@ BEGIN
             gap_end IS NOT NULL --NULL gap_end occurs at the end of the search period
             AND bin_gap >= %L::interval --gap_threshold
     $$,
-    id_col,
+    id_col, resulttype,
     dt_col,
     sch_name, tbl_name, 
     dt_col, start_date, gap_threshold,
