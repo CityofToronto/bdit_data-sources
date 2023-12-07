@@ -154,14 +154,15 @@ def pull_miovision_dag():
             task_id="check_gaps",
             sql="""SELECT _check, summ, gaps
                 FROM public.summarize_gaps_data_check(
-                    '{{ ds }}'::date, --start_date
-                    '{{ ds }}'::date, --end_date
-                    'intersection_uid'::text, --id_col
-                    'datetime_bin'::text, --dt_col
-                    'miovision_api'::text, --sch_name
-                    'volumes'::text, --tbl_name
-                    '4 hours'::interval, --gap_threshold
-                    '1 minute'::interval --default_bin
+                    start_date := '{{ ds }}'::date,
+                    end_date := '{{ ds }}'::date,
+                    id_col := 'intersection_uid'::text,
+                    dt_col := 'datetime_bin'::text,
+                    sch_name := 'miovision_api'::text,
+                    tbl_name := 'volumes'::text,
+                    gap_threshold := '4 hours'::interval,
+                    default_bin := '1 minute'::interval,
+                    id_col_dtype := null::int
                 )""",
             conn_id="miovision_api_bot"
         )
