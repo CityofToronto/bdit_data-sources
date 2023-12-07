@@ -27,17 +27,13 @@ GRANT ALL ON TABLE wys.mobile_sign_installations TO wys_bot;
 
 -- Trigger: audit_trigger_row
 CREATE OR REPLACE TRIGGER audit_trigger_row
-    AFTER INSERT OR DELETE OR UPDATE 
-    ON wys.mobile_sign_installations
-    FOR EACH ROW
-    EXECUTE FUNCTION wys.if_modified_func('true');
+AFTER INSERT OR DELETE OR UPDATE ON wys.mobile_sign_installations
+FOR EACH ROW EXECUTE FUNCTION wys.if_modified_func('true');
 
 -- Trigger: audit_trigger_stm
 CREATE OR REPLACE TRIGGER audit_trigger_stm
-    AFTER TRUNCATE
-    ON wys.mobile_sign_installations
-    FOR EACH STATEMENT
-    EXECUTE FUNCTION wys.if_modified_func('true');
+AFTER TRUNCATE ON wys.mobile_sign_installations
+FOR EACH STATEMENT EXECUTE FUNCTION wys.if_modified_func('true');
 
 --create partitions with permissions: 
 DO $do$
