@@ -30,6 +30,8 @@ CREATE TABLE miovision_api.anomalous_ranges (
     intersection_uid smallint REFERENCES miovision_api.intersections (intersection_uid),
     classification_uid smallint REFERENCES miovision_api.classifications (classification_uid),
     time_range tsrange NOT NULL,
+    range_start timestamp NOT NULL,
+    range_end timestamp,
     notes text NOT NULL,
     investigation_level text NOT NULL REFERENCES miovision_api.anomaly_investigation_levels (uid),
     problem_level text NOT NULL REFERENCES miovision_api.anomaly_problem_levels (uid),
