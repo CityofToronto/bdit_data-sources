@@ -3,7 +3,7 @@ name: Test DAGs
 on: pull_request
 
 jobs:
-  build:
+  test_dags:
     runs-on: ubuntu-latest
     strategy:
       matrix:
