@@ -3,7 +3,7 @@ CREATE TABLE miovision_api.daily_vehicle_volumes(
     dt date,
     vehicle_volume integer,
     isodow smallint,
-    holiday smallint,
+    holiday boolean,
     unacceptable_gap_minutes smallint,
     datetime_bins_missing smallint,
     CONSTRAINT daily_vehicle_volumes_pkey
@@ -20,7 +20,7 @@ IS '''Daily vehicle volumes. Excludes `anomalous_ranges` (use discouraged based 
 but does not exclude time around `unacceptable_gaps` (zero volume periods).''';
 
 COMMENT ON COLUMN miovision_api.daily_vehicle_volumes.isodow
-IS 'Use `WHERE iso dow <= 5 AND holiday = 0` for non-holiday weekdays.';
+IS 'Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.';
 
 COMMENT ON COLUMN miovision_api.daily_vehicle_volumes.unacceptable_gap_minutes
 IS 'Periods of consecutive zero volumes deemed unacceptable based on avg intersection volume in that hour.';

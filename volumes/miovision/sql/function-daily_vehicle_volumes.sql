@@ -35,8 +35,8 @@ SELECT
     SUM(v.volume) AS vehicle_volume,
     date_part('isodow', v.datetime_bin::date) AS isodow,
     CASE 
-        WHEN hol.holiday IS NOT NULL THEN 1
-        ELSE 0
+        WHEN hol.holiday IS NOT NULL THEN True
+        ELSE False
     END AS holiday,
     COALESCE(un.unacceptable_gap_minutes, 0) AS unacceptable_gap_minutes,
     60 * 24 - COUNT(DISTINCT datetime_bin) AS datetime_bins_missing
