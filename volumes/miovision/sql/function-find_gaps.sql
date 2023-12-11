@@ -30,7 +30,7 @@ WITH daily_intersections AS (
         )
 ),
 
---hourly sum for last 60 days to use in gapsize_lookup. 
+--hourly volumes for last 60 days to use in gapsize_lookup. 
 mio AS (
     SELECT
         intersection_uid,
@@ -50,7 +50,7 @@ mio AS (
         time_bin
 ),
 
---avg of hourly volume by intersection and hour of day to determine gap_tolerance
+--avg of hourly volume by intersection, hour of day, day type to determine gap_tolerance
 gapsize_lookup AS (
     SELECT
         intersection_uid,
@@ -76,8 +76,10 @@ gapsize_lookup AS (
         time_bin
 ), 
 
---now find the gaps
+--combine the artificial and actual datetime_bins. 
 fluffed_data AS (
+    --add the start and end of the day interval for each active intersection
+    --to make sure the gaps are not open ended. 
     SELECT
         i.intersection_uid,
         bins.datetime_bin,
@@ -94,6 +96,7 @@ fluffed_data AS (
     --group by in next step takes care of duplicates
     UNION ALL
 
+    --the distinct datetime bins which did appear in the day's data. 
     SELECT DISTINCT
         intersection_uid,
         datetime_bin,
@@ -115,6 +118,7 @@ bin_times AS (
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin) AS gap_end,
         LEAD(datetime_bin, 1) OVER (PARTITION BY intersection_uid ORDER BY datetime_bin)
             - datetime_bin > interval '1 minute' AS bin_break, --True means gap between bins is larger than 1 minute
+        --weekend is needed to determine which gapsize_lookup to use. 
         CASE
             WHEN date_part('isodow', datetime_bin) <= 5
                 AND hol.holiday IS NULL THEN False
@@ -129,7 +133,8 @@ bin_times AS (
 ),
 
 gaps AS (
-	--find gaps of any size before summarizing (in case we want to use this raw output for something else)
+	--find gaps longer than the threshold from gapsize_lookup and cross join with
+    --generate_series output to enable easily joining with 15 minute datetime_bins.
 	INSERT INTO miovision_api.unacceptable_gaps(
 		intersection_uid, gap_start, gap_end, gap_minutes_total, allowable_total_gap_threshold, 
         datetime_bin, gap_minutes_15min, avg_historical_total_vol, avg_historical_veh_vol
@@ -142,6 +147,8 @@ gaps AS (
         gl.gap_tolerance AS allowable_total_gap_threshold,
         bins.datetime_bin,		
         round(gm.gap_minutes_15min) AS gap_minutes_15min,
+        --avg historical volumes during the gaps to use for imputation
+        --or decision on summary data quality
         round(gl.avg_vol * gm.gap_minutes_15min / 60) AS avg_historical_total_vol,
         round(gl.avg_vehicle_vol * gm.gap_minutes_15min / 60) AS avg_historical_veh_vol
 	FROM bin_times AS bt
@@ -154,6 +161,7 @@ gaps AS (
     ) AS bins(datetime_bin) ON
         bins.datetime_bin >= datetime_bin(bt.gap_start, 15)
         AND bins.datetime_bin < datetime_bin_ceil(bt.gap_end, 15)
+    --find the acceptable gap size based on historical lookback.
 	LEFT JOIN gapsize_lookup AS gl ON
         gl.intersection_uid = bt.intersection_uid
         AND gl.time_bin = date_part('hour', bins.datetime_bin)
@@ -161,7 +169,7 @@ gaps AS (
 	LATERAL (
 		SELECT
             date_part('epoch', gap_end - gap_start) / 60::integer AS gap_minutes_total,
-            --find the gap minutes which occured only during the 15 minute bin.
+            --find the gap minutes which occured only during the 15 minute bin (bins.datetime_bin)
             EXTRACT (EPOCH FROM
                  LEAST(bt.gap_end, bins.datetime_bin + interval '15 minutes')
                  - GREATEST(bt.gap_start, bins.datetime_bin)
