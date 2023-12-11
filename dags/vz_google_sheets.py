@@ -97,7 +97,7 @@ def custom_fail_slack_alert(context: dict) -> str:
         key="invalid_rows"
     )
     if invalid_rows:
-        return "Found one or more invalid records. Please, email David Tang "
+        return "Found one or more invalid records. Please, report this issue to the <mailto:VisionZeroTO@toronto.ca|Vision Zero Team>."
     else:
         return ""
 
