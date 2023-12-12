@@ -1,22 +1,16 @@
-CREATE TABLE miovision_api.volumes_daily (
-    intersection_uid integer NOT NULL,
+CREATE TABLE miovision_api.volumes_daily(
     dt date NOT NULL,
-    period_start timestamp without time zone NOT NULL,
-    period_end timestamp without time zone NOT NULL,
-    volume_1 integer, 
-    volume_2 integer, 
-    volume_3 integer, 
-    volume_4 integer, 
-    volume_5 integer, 
-    volume_6 integer, 
-    volume_7 integer, 
-    volume_8 integer, 
-    volume_9 integer, 
-    volume_10 integer, 
-    volume_total integer,
+    intersection_uid integer NOT NULL,
+    classification_uid integer NOT NULL,
+    daily_volume int,
+    isodow smallint NOT NULL,
+    holiday boolean NOT NULL,
+    datetime_bins_missing smallint,
+    unacceptable_gap_minutes smallint,
+    avg_historical_gap_vol int
     CONSTRAINT volumes_daily_pkey
-    PRIMARY KEY (intersection_uid, dt)
-);
+    PRIMARY KEY (intersection_uid, dt, classification_uid)
+); 
 
 CREATE INDEX volumes_intersection_idx
 ON miovision_api.volumes_daily
@@ -26,21 +20,25 @@ CREATE INDEX volumes_dt_idx
 ON miovision_api.volumes_daily
 USING btree(dt);
 
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_1 IS 'Daily volume for classification_uid 1';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_2 IS 'Daily volume for classification_uid 2';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_3 IS 'Daily volume for classification_uid 3';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_4 IS 'Daily volume for classification_uid 4';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_5 IS 'Daily volume for classification_uid 5';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_6 IS 'Daily volume for classification_uid 6';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_7 IS 'Daily volume for classification_uid 7';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_8 IS 'Daily volume for classification_uid 8';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_9 IS 'Daily volume for classification_uid 9';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_10 IS 'Daily volume for classification_uid 10';
-COMMENT ON COLUMN miovision_api.volumes_daily.volume_total IS 'Daily volume for all classification_uids.';
-
 ALTER TABLE miovision_api.volumes_daily OWNER TO miovision_admins;
-GRANT INSERT, SELECT, DELETE ON miovision_api.volumes_daily TO miovision_api_bot;
+GRANT SELECT ON TABLE miovision_api.volumes_daily TO bdit_humans;
+GRANT SELECT, INSERT, DELETE ON TABLE miovision_api.volumes_daily TO miovision_api_bot;
 
-COMMENT ON TABLE miovision_api.volumes_daily IS
-'''Daily aggregation of miovision_api.volumes_15min. Note:
-gaps/erroenous periods are not excluded from summarization.''';
+COMMENT ON TABLE miovision_api.volumes_daily
+IS '''Daily volumes by intersection_uid, classification_uid.
+Excludes `anomalous_ranges` (use discouraged based on investigations)
+but does not exclude time around `unacceptable_gaps` (zero volume periods).''';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.isodow
+IS 'Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.unacceptable_gap_minutes
+IS 'Periods of consecutive zero volumes deemed unacceptable
+based on avg intersection volume in that hour.';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.datetime_bins_missing
+IS 'Minutes with zero vehicle volumes out of a total of possible 1440 minutes.';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.avg_historical_gap_vol
+IS 'Avg historical volume for that classification and gap duration 
+based on averages from a 60 day lookback in that hour.';
