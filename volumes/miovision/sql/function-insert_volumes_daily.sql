@@ -20,7 +20,7 @@ BEGIN
         SELECT
             un.intersection_uid,
             avg_vols.classification_uid,
-            un.gap_start::date AS gap_date,
+            un.datetime_bin::date AS gap_date,
             SUM(un.gap_minutes_15min) AS unacceptable_gap_minutes,
             SUM(un.gap_minutes_15min * avg_vols.avg_hour_vol)/60 AS avg_historical_gap_vol
         FROM miovision_api.unacceptable_gaps AS un
@@ -29,10 +29,13 @@ BEGIN
             avg_vols.intersection_uid = un.intersection_uid
             AND avg_vols.hour_bin = date_part('hour', un.datetime_bin)
             AND avg_vols.dt = un.dt
-        WHERE avg_vols.classification_uid IS NOT NULL
+            AND avg_vols.classification_uid IS NOT NULL
+        WHERE
+            un.datetime_bin::date >= start_date
+            AND un.datetime_bin::date < end_date
         GROUP BY
             un.intersection_uid,
-            un.gap_start::date,
+            un.datetime_bin::date,
             avg_vols.classification_uid
     )
 
