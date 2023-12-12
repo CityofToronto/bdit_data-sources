@@ -18,7 +18,10 @@ BEGIN
     
     --add to gapsize lookup table for this date.
     PERFORM miovision_api.gapsize_lookup_insert(start_date);
-
+    
+    --clear table before inserting
+    DELETE FROM miovision_api.unacceptable_gaps WHERE dt = start_date::date;
+    
     --find only intersections active today
     WITH daily_intersections AS (
         SELECT DISTINCT v.intersection_uid
@@ -134,14 +137,14 @@ BEGIN
         ) AS gm
         WHERE
             gm.gap_minutes_total >= gl.gap_tolerance
-            AND bt.bin_break = True
+            AND bt.bin_break = True            
             AND bt.gap_end IS NOT NULL
             --gap entirely outside of todays range
             AND NOT(bt.gap_end <= start_date)
         ORDER BY
             bt.intersection_uid,
             bins.datetime_bin
-        ON CONFLICT (intersection_uid, gap_start, gap_end)
+        ON CONFLICT (intersection_uid, datetime_bin)
         DO NOTHING
         RETURNING *
     )

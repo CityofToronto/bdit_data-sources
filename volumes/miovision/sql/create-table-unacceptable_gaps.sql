@@ -7,9 +7,8 @@ CREATE TABLE miovision_api.unacceptable_gaps
     gap_minutes_total integer,
     allowable_total_gap_threshold integer, 
     datetime_bin timestamp without time zone,
-    gap_minutes_15min integer,
-    avg_historical_vol integer,
-    CONSTRAINT intersection_uid_gap_start_gap_end_key UNIQUE (intersection_uid, gap_start, gap_end)
+    gap_minutes_15min integer
+    CONSTRAINT intersection_uid_datetime_bin_unique UNIQUE (intersection_uid, datetime_bin)
 );
 
 ALTER TABLE miovision_api.unacceptable_gaps OWNER to miovision_admins;
