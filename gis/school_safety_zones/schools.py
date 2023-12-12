@@ -9,22 +9,15 @@ This script is automated on Airflow and is run daily."""
 
 from __future__ import print_function
 import json
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 
-import configparser
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from psycopg2 import sql
 import logging 
 
 import re
 from dateutil.parser import parse
-from datetime import datetime
 import geopandas as gpd
-from shapely.geometry import Polygon, LineString, Point
-
-from airflow.exceptions import AirflowFailException
+from shapely.geometry import Point
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -156,7 +149,15 @@ def is_int(n):
 
 #--------------------------------------------------------------------------------------------------
 
-def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
+def pull_from_sheet(
+    con,
+    service,
+    year,
+    spreadsheet_id,
+    spreadsheet_range,
+    schema,
+    table
+):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
     Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
@@ -172,29 +173,28 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     ----
     Can only read a single range of a spreadsheet with this function.
 
-    Parameters
-    ----------
-    con :
-        Connection to bigdata database.
-    service :
-        Credentials to access google sheets.
-    year : int
-        Indicates which year of data is being worked on.
-    *args 
-        Variable length argument list.
+    Args:
+        con: Connection to bigdata database.
+        service: Credentials to access google sheets.
+        year: Indicates which year of data is being worked on.
+        spreadsheet_id: The iD iof the Google spreadsheet containing raw data.
+        spreadsheet_range: The range of data within the spreadsheet.
+        schema: PostgreSQL schema to load the data into.
+        table: PostgreSQL table to load the data into.
+    
+    Returns:
+        A boolean status of ``True``, if completed without any problems;
+            Otherwise, ``False``.
 
-    Raises
-    ------
-    IndexError
-        If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
-    TimeoutError
-        If the connection to Google sheets timed out.
+    Raises:
+        IndexError: If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
+        TimeoutError: If the connection to Google sheets timed out.
     """
-    any_error = False
+    status = True
     try:
         sheet = service.spreadsheets()
-        request = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
-                                    range=spreadsheet['range_name'])
+        request = sheet.values().get(spreadsheetId=spreadsheet_id,
+                                    range=spreadsheet_range)
         result = request.execute()
         values = result.get('values', [])
     except TimeoutError as err:
@@ -219,15 +219,11 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
                     LOGGER.debug(row)
                 else:
                     LOGGER.error('at row #%i: %s', ind, row)
-                    any_error = True
+                    status = False
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurred at row #%i: %s', ind, row)
                 LOGGER.error(err)
-                any_error = True
-    
-    schema = spreadsheet['schema_name']
-    table = spreadsheet['table_name']
-    
+                status = False
     
     truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
     LOGGER.info('Truncating existing table %s', table)
@@ -247,12 +243,5 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
             cur.execute(truncate)  
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
-    task_instance = kwargs['task_instance']
-    if any_error:
-        # Custom slack message upon finding some (not all) invalid records
-        # `invalid_rows` is being pulled in the failure callback method (slack notification)
-        task_instance.xcom_push('invalid_rows', True)
-        raise AirflowFailException('Invalid rows found. See errors documented above.')
-    else:
-        task_instance.xcom_push('invalid_rows', False)
+    return status
     
