@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.agg_daily_volumes(
+CREATE OR REPLACE FUNCTION miovision_api.insert_volumes_daily(
     start_date date,
     end_date date
 )
@@ -10,7 +10,7 @@ VOLATILE
 AS $BODY$
 BEGIN
 
-    DELETE FROM miovision_api.daily_volumes
+    DELETE FROM miovision_api.volumes_daily
     WHERE 
         dt >= start_date
         AND dt < end_date;
@@ -36,7 +36,7 @@ BEGIN
             avg_vols.classification_uid
     )
 
-    INSERT INTO miovision_api.daily_volumes (
+    INSERT INTO miovision_api.volumes_daily (
         intersection_uid, dt, classification_uid, daily_volume, isodow,
         holiday, unacceptable_gap_minutes, datetime_bins_missing, avg_historical_gap_vol
     )
@@ -91,8 +91,8 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.agg_daily_volumes IS
-'Function for inserting new daily vehicle volumes into miovision_api.daily_volumes';
+COMMENT ON FUNCTION miovision_api.insert_volumes_daily IS
+'Function for inserting daily volumes into miovision_api.volumes_daily';
 
-ALTER FUNCTION miovision_api.agg_daily_volumes OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.agg_daily_volumes TO miovision_api_bot;
+ALTER FUNCTION miovision_api.insert_volumes_daily OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.insert_volumes_daily TO miovision_api_bot;

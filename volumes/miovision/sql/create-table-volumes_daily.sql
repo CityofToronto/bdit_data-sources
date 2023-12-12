@@ -7,7 +7,7 @@ CREATE TABLE miovision_api.volumes_daily(
     holiday boolean NOT NULL,
     datetime_bins_missing smallint,
     unacceptable_gap_minutes smallint,
-    avg_historical_gap_vol int
+    avg_historical_gap_vol int,
     CONSTRAINT volumes_daily_pkey
     PRIMARY KEY (intersection_uid, dt, classification_uid)
 ); 
