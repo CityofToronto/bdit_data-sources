@@ -1,4 +1,3 @@
-DROP FUNCTION IF EXISTS miovision_api.gapsize_lookup_insert;
 CREATE OR REPLACE FUNCTION miovision_api.gapsize_lookup_insert(
     start_date timestamp)
 RETURNS void
@@ -8,8 +7,8 @@ COST 100
 VOLATILE 
 AS $BODY$
     DECLARE is_weekend boolean :=
-        date_part('isodow', start_date) > 5
-        OR NOT (SELECT holiday FROM ref.holiday WHERE dt = start_date) IS NULL;
+        NOT(date_part('isodow', start_date) <= 5
+            AND (SELECT holiday FROM ref.holiday WHERE dt = start_date) IS NULL);
 
     BEGIN
 
@@ -20,10 +19,7 @@ AS $BODY$
         SELECT
             v.intersection_uid,
             v.classification_uid,
-            CASE
-                WHEN date_part('isodow', dates.dt) <= 5 AND hol.holiday IS NULL THEN False
-                ELSE True
-            END as weekend,
+            NOT(date_part('isodow', dates.dt) <= 5 AND hol.holiday IS NULL) AS weekend,
             date_part('hour', v.datetime_bin)::smallint AS hour_bin,
             SUM(v.volume) AS vol
         FROM miovision_api.volumes AS v,
@@ -32,19 +28,22 @@ AS $BODY$
         ) dates
         LEFT JOIN ref.holiday AS hol USING (dt)
         WHERE
-            v.datetime_bin > start_date - interval '60 days'
+            v.datetime_bin >= start_date - interval '60 days'
             AND v.datetime_bin < start_date
         GROUP BY
             v.intersection_uid,
-            hol.holiday,
-            v.classification_uid,
+            --group both by individual classificaiton and all classificaitons.
+            GROUPING SETS ((v.classification_uid), ()),
+            weekend,
             hour_bin,
             dates.dt
     )
     
         --avg of hourly volume by intersection, hour of day, day type to determine gap_tolerance
         INSERT INTO miovision_api.gapsize_lookup(
-            dt, intersection_uid, classification_uid, hour_bin, weekend, avg_hour_vol, gap_tolerance
+            dt, intersection_uid,
+            classification_uid,
+            hour_bin, weekend, avg_hour_vol, gap_tolerance
         )
         SELECT
             start_date,
@@ -67,8 +66,7 @@ AS $BODY$
         WHERE weekend = is_weekend
         GROUP BY
             intersection_uid,
-            --group both by individual classificaiton and all classificaitons.
-            GROUPING SETS ((classification_uid), ()),
+            classification_uid,
             weekend,
             hour_bin;
 
