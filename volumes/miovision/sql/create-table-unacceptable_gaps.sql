@@ -1,5 +1,6 @@
 CREATE TABLE miovision_api.unacceptable_gaps
 (
+    dt date,
     intersection_uid integer,
     gap_start timestamp without time zone,
     gap_end timestamp without time zone,
@@ -7,8 +8,7 @@ CREATE TABLE miovision_api.unacceptable_gaps
     allowable_total_gap_threshold integer, 
     datetime_bin timestamp without time zone,
     gap_minutes_15min integer,
-    avg_historical_total_vol integer,
-    avg_historical_veh_vol integer,
+    avg_historical_vol integer,
     CONSTRAINT intersection_uid_gap_start_gap_end_key UNIQUE (intersection_uid, gap_start, gap_end)
 );
 
