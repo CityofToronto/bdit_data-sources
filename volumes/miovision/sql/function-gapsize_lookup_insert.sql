@@ -79,3 +79,10 @@ OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_api.gapsize_lookup_insert
 TO miovision_api_bot;
+
+COMMENT ON FUNCTION miovision_api.gapsize_lookup_insert
+IS 'Determine the average volumes for each hour/intersection/daytype/classification
+based on a 60 day lookback. Uses GROUPING SETS to identify both volume for individual
+classifications and total interseciton volumes (classification_uid IS NULL).
+Total intersection volume is used to determine a minimum gap duration
+for use in unacceptable_gaps.';
