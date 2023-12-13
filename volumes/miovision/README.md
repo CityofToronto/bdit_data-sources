@@ -14,6 +14,7 @@
       - [`volumes_15min_mvt`](#volumes_15min_mvt)
       - [`volumes_15min`](#volumes_15min)
       - [`unacceptable_gaps`](#unacceptable_gaps)
+      - [`gapsize_lookup`](#gapsize_lookup)
   - [`volumes`](#volumes)
   - [Reference Tables](#reference-tables)
     - [`movement_map`](#movement_map)
@@ -33,8 +34,8 @@
     - [An applied example](#an-applied-example)
     - [Identifying new anomalies](#identifying-new-anomalies)
 - [4. Repulling data](#4-repulling-data)
-	- [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
-- [5. Steps to Add or Remove Intersections](#4-steps-to-add-or-remove-intersections)
+  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
+- [5. Steps to Add or Remove Intersections](#5-steps-to-add-or-remove-intersections)
 
 ## 1. Overview
 
@@ -226,17 +227,44 @@ A *Unique constraint* was added to the `miovision_api.volumes_15min` table based
 
 ##### `unacceptable_gaps`
 
-Data table storing all the hours containing gaps larger than 15 minutes for each intersection, including those with no data. Generated daily using the `find_gaps(start_date, end_date)` function. 
+Data table storing all the hours containing gaps larger than 5-20 minutes (this minimum threshold is set based on `gapsize_lookup`) for each intersection, including those with no data. Generated daily using the `find_gaps(start_date)` function. 
 More information can be found at [#3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera). This table is used in the `aggregate_15_min_mvt` function to set any data during unacceptable hours to `null` to prevent it from being included in AVG calculations.
 
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|8|
-gap_start|timestamp without time zone|The timestamp of when the unacceptable hour starts|2020-05-01 02:53:00|
-gap_end|timestamp without time zone|The timestamp of when the unacceptable hour ends|2020-05-01 03:08:00|
-gap_minute|integer|Duration of the gap in minute|15|
-allowed_gap|integer|Allowed gap in minute|15|
-accept|boolean|Stating whether this gap is acceptable or not|false|
+| Field Name                   | Comments                                                                      | Data Type                   | Example              |
+|:------------------------------|:------------------------------------------------------------------------------|:----------------------------|:--------------------|
+| dt                            | The date for which the function `miovision_api.find_gaps` was run             | date                        | 2023-09-05          |
+|                               | to insert this row.                                                           |                             |                     |
+| intersection_uid              |                                                                               | integer                     | 4                   |
+| gap_start                     | The timestamp when the unacceptable gap starts.                               | timestamp without time zone | 2023-09-05 07:57:00 |
+| gap_end                       | The timestamp when the unacceptable gap ends.                                 | timestamp without time zone | 2023-09-05 10:18:00 |
+| gap_minutes_total             | Duration of gap in minutes (gap_end - gap_start)                              | integer                     | 141                 |
+| allowable_total_gap_threshold | The minimum duration of zero volume to be considered an unacceptable gap      | integer                     | 5                   |
+|                               | for this intersection, hour, and day type (weekend/weekday) based on a 60 day |                             |                     |
+|                               | lookback and calculated in miovision_api.gapsize_lookup_insert.               |                             |                     |
+| datetime_bin                  | A 15 datetime_bin                                                             | timestamp without time zone | 2023-09-05 07:45:00 |
+|                               | which falls within the gap, to be used for joining to volumes_15min* tables.  |                             |                     |
+| gap_minutes_15min             | The portion of the total gap which falls within the 15 minute bin             | integer                     | 3                   |
+|                               | starting with datetime_bin.                                                   |                             |                     |
+
+##### `gapsize_lookup`
+
+Data table storing a 60 day lookback average hourly volume for each `intersection_uid`, `classification_uid`.
+Used to determine the maximum acceptable gap for use in `unacceptable_gaps` table and to determine the average historical volume associated with those gaps by mode. 
+
+| column_name        | Comments                                                                            | data_type   | sample             |
+|:-------------------|:------------------------------------------------------------------------------------|:------------|:-------------------|
+| dt                 | The date for which `miovision_api.gapsize_lookup_insert` was run to generate this row.    | date        | 2023-11-01         |
+|                    | The lookback period used to is the 60 days preceeding this date, matching the same  |             |                    |
+|                    | day type (weekday/weekend)                                                          |             |                    |
+| intersection_uid   | nan                                                                                 | integer     | 20                 |
+| classification_uid | A null classification_uid refers to the total volume for that intersection          | integer     | 5                  |
+|                    | which is used to determine the gap_tolerance.                                       |             |                    |
+| hour_bin           | Hour of the day from 0-23.                                                          | smallint    | 18                 |
+| weekend            | True if Saturday/Sunday or holiday (based on ref.holiday table).                    | boolean     | False              |
+| avg_hour_vol       | The average volume for this hour/intersection/weekend combination                   | numeric     | 1.6666666666666667 |
+|                    | based on a 60 day lookback.                                                         |             |                    |
+| gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid           | smallint    |                    |
+|                    | for the overall intersection volume (classification_uid IS NULL).                   |             |                    |
 
 ### `volumes`
 
@@ -359,13 +387,13 @@ volume_15min_uid|serial|Unique identifier for table|12412|
 In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
 
 ### Part I - Unacceptable Gaps
-The following process is used to determine the gap sizes assigned to an intersection at different time and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
+The following process is used to determine camera wide data outages and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
 
-1. The CTE `gapsize_lookup` within `find_gaps` function calculates an acceptable gap size based on avg hourly volumes from a 60 day rolling lookback.
-2. The set of acceptable gap_size implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
-3. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) is used to find all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the CTE above. Sensors with no data are also identified and included as gaps. 
-4. Hours that fully contain gaps equal to or exceeding the allowed gap sizes will then be inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
-5. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within the unacceptable_gaps' `gap_start` and `gap_end`.
+1. Within `find_gaps` function, the `gapsize_lookup_insert` function is run to populate the table `gapsize_lookup` with acceptable gap sizes based on avg hourly volumes from a 60 day rolling lookback. 
+  - The set of acceptable `gap_tolerance` implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
+2. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these will instead be included in `anomalous_ranges` table with PR [#777](https://github.com/CityofToronto/bdit_data-sources/pull/777). 
+3. Unacceptable gaps are cross joined to 15 minute bins and inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
+4. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within within 15 minute periods matching unacceptable_gaps' `datetime_bin`.
 
 ### Part II - Working Machine
 The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours OR do not have any data after '23:00:00'. The function that does this is [`miovision_api.determine_working_machine()`](sql/function-determine_working_machine.sql) and there is an Airflow dag named [`check_miovision`](/dags/check_miovision.py) that runs the function at 7AM every day to check if all cameras are working. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
