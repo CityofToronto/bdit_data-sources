@@ -1,7 +1,8 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt_single_intersection(
     start_date date,
     end_date date,
-    target_intersection int)
+    target_intersection int
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 

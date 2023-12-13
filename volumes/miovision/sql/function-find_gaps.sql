@@ -2,14 +2,14 @@
 -- miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
 -- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
-DROP FUNCTION IF EXISTS miovision_api.find_gaps;
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
-    start_date timestamp)
+    start_date timestamp
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 
 COST 100
-VOLATILE 
+VOLATILE
 AS $BODY$
 
 DECLARE tot_gaps integer;

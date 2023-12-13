@@ -11,8 +11,13 @@ CREATE TABLE miovision_api.gapsize_lookup
     UNIQUE NULLS NOT DISTINCT (dt, intersection_uid, hour_bin, classification_uid)
 );
 
-CREATE INDEX ON miovision_api.gapsize_lookup USING brin(dt);
+CREATE INDEX ON miovision_api.gapsize_lookup USING brin (dt);
 
-ALTER TABLE miovision_api.gapsize_lookup OWNER TO miovision_admins;
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.gapsize_lookup TO bdit_humans WITH GRANT OPTION;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE miovision_api.gapsize_lookup TO miovision_api_bot;
+ALTER TABLE miovision_api.gapsize_lookup
+OWNER TO miovision_admins;
+
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.gapsize_lookup
+TO bdit_humans WITH GRANT OPTION;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE miovision_api.gapsize_lookup
+TO miovision_api_bot;

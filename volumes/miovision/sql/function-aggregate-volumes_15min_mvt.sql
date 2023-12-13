@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt(
     start_date date,
-    end_date date)
+    end_date date
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 

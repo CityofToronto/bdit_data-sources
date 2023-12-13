@@ -1,10 +1,11 @@
 CREATE OR REPLACE FUNCTION miovision_api.gapsize_lookup_insert(
-    start_date timestamp)
+    start_date timestamp
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 
 COST 100
-VOLATILE 
+VOLATILE
 AS $BODY$
     DECLARE is_weekend boolean :=
         NOT(date_part('isodow', start_date) <= 5
@@ -73,5 +74,8 @@ AS $BODY$
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.gapsize_lookup_insert OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.gapsize_lookup_insert TO miovision_api_bot;
+ALTER FUNCTION miovision_api.gapsize_lookup_insert
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.gapsize_lookup_insert
+TO miovision_api_bot;
