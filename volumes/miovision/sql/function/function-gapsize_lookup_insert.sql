@@ -50,6 +50,25 @@ AS $BODY$
             GROUPING SETS ((v.classification_uid), ()),
             hour_bin,
             hol.holiday
+
+        UNION
+        
+        --padding values in case the intersection didn't appear on previous day, but
+        --did appear within the 60 day lookback, inorder to catch these with window function
+        SELECT
+            dt,
+            intersection_uid,
+            classification_uid,
+            weekend,
+            hour_bin,
+            NULL AS volume
+        FROM study_dates
+        CROSS JOIN miovision_api.intersections
+        CROSS JOIN (
+            SELECT classification_uid FROM miovision_api.classifications
+            UNION SELECT NULL::integer --represents all classifications
+        ) AS classifications 
+        CROSS JOIN generate_series(0, 23, 1) AS hours(hour_bin)
     ),
 
     lookback_avgs AS (
@@ -64,7 +83,7 @@ AS $BODY$
         WINDOW w AS (
             --60 day lookback for same intersection, classification, day type, hour
             PARTITION BY intersection_uid, classification_uid, weekend, hour_bin
-            ORDER BY dt RANGE BETWEEN 
+            ORDER BY dt RANGE BETWEEN
                 interval '60 days' PRECEDING AND interval '1 days' PRECEDING
         )
     )
