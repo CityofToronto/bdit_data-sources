@@ -1,3 +1,5 @@
+#!/data/airflow/airflow_venv/bin/python3
+# -*- coding: utf-8 -*-
 """ This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
 2020 School Safety Zone, and 2021 School Safety Zone)
 and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
@@ -15,9 +17,18 @@ from psycopg2 import sql
 import logging 
 
 import re
+from typing import Optional
 from dateutil.parser import parse
 import geopandas as gpd
 from shapely.geometry import Point
+
+import click
+import configparser
+from sqlalchemy.engine import URL
+from sqlalchemy import create_engine
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from googleapiclient.discovery import build
+    
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -94,7 +105,7 @@ def within_toronto(con, coords):
     coords: str
         string that is either empty or contains at least one pair of coords
     """
-    if coords is '':
+    if coords == '':
         return True
     elif bool(re.match(r'^Cancel', coords)):
         return True
@@ -125,7 +136,7 @@ def enforce_date_format(date, fuzzy=False):
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
     date = date.strip()
-    if date is '':
+    if date == '':
         return date
     else:
         parsed_date = parse(date, fuzzy=fuzzy)
@@ -138,7 +149,7 @@ def is_int(n):
     
     :param n: str, string to check for if it's an integer
     """
-    if n is '':
+    if n == '':
         return True
     else:
         try:
@@ -244,4 +255,90 @@ def pull_from_sheet(
             execute_values(cur, query, rows)
     LOGGER.info('Table %s is done', table)
     return status
-    
+
+@click.command()
+@click.argument(
+    "db-config",
+    # help="A configurations file containing the database details."
+)
+@click.option(
+    "--year",
+    "-y",
+    type=int,
+    required=True,
+    help="The year to pull its data",
+)
+@click.option(
+    "--spreadsheet-id",
+    "-d",
+    required=True,
+    help=(
+        "The Id of the spreadsheet to pull the data from. "
+        "Check the Airflow variable `ssz_spreadsheets` for more info."
+    ),
+)
+@click.option(
+    "--spreadsheet-range",
+    "-r",
+    required=True,
+    help=(
+        "The range of data within the spreadsheet. "
+        "Check the Airflow variable `ssz_spreadsheets` for more info."
+    ),
+)
+@click.option(
+    "--schema",
+    "-s",
+    default="vz_safety_programs_staging",
+    help="The schema to load the data into",
+)
+@click.option(
+    "--table",
+    "-t",
+    default=None,
+    help="The table to load the data into",
+)
+def pull_from_sheet_cli(
+    db_config: str,
+    year: int,
+    spreadsheet_id: str,
+    spreadsheet_range: str,
+    schema: Optional[str] = "vz_safety_programs_staging",
+    table: Optional[str] = None,
+) -> None:
+    """Loads SSZ data from Google Spreadsheets into the database.
+
+    Args:
+        db_config: A configurations file containing the database details.
+
+    Examples:
+        schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU_Wj1qBncc1gT2px40kggp5YBxVh3A3_h4JQ' -r 'Master Sheet!A3:AC180'
+    """
+    logging.basicConfig(level=logging.ERROR)
+
+    config = configparser.ConfigParser()
+    config.read(db_config)
+    connect_url = URL.create("postgresql+psycopg2", **config['DBSETTINGS'])
+    engine = create_engine(connect_url)
+
+    google_cred = GoogleBaseHook('vz_api_google').get_credentials()
+
+    if table is None:
+        table = f"school_safety_zone_{year}_raw"
+
+    if pull_from_sheet(
+        con = engine.raw_connection(),
+        service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
+        year=year,
+        spreadsheet_id=spreadsheet_id,
+        spreadsheet_range=spreadsheet_range,
+        schema=schema,
+        table=table,
+    ):
+        print(f"Successfully pulled {year} data into {schema}.{table}.")
+    else:
+        print(f"Failed to pull {year} data into {schema}.{table}.")
+
+if __name__ == "__main__":
+    # pylint: disable-next=no-value-for-parameter
+    pull_from_sheet_cli()
