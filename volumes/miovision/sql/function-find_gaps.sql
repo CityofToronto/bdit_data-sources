@@ -3,7 +3,8 @@
 -- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
-    start_date timestamp
+    start_date timestamp,
+    end_date timestamp
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -17,19 +18,24 @@ DECLARE tot_gaps integer;
 BEGIN
     
     --add to gapsize lookup table for this date.
-    PERFORM miovision_api.gapsize_lookup_insert(start_date);
+    PERFORM miovision_api.gapsize_lookup_insert(start_date, end_date);
     
     --clear table before inserting
-    DELETE FROM miovision_api.unacceptable_gaps WHERE dt = start_date::date;
+    DELETE FROM miovision_api.unacceptable_gaps
+    WHERE
+        dt >= start_date::date
+        AND dt < end_date::date;
     
-    --find only intersections active today
+    --find intersections active each day
     WITH daily_intersections AS (
-        SELECT DISTINCT v.intersection_uid
+        SELECT DISTINCT
+            datetime_bin::date AS dt,
+            v.intersection_uid
         FROM miovision_api.volumes AS v
         INNER JOIN miovision_api.intersections AS i USING (intersection_uid)
         WHERE
             v.datetime_bin >= start_date
-            AND v.datetime_bin < start_date + interval '1 day'
+            AND v.datetime_bin < end_date
             AND v.datetime_bin >= i.date_installed
             AND (
                 v.datetime_bin < i.date_decommissioned
@@ -42,16 +48,17 @@ BEGIN
         --add the start and end of the day interval for each active intersection
         --to make sure the gaps are not open ended. 
         SELECT
+            i.dt,
             i.intersection_uid,
             bins.datetime_bin,
             interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
         FROM daily_intersections AS i
-        --add artificial data points at start and end of day to find gaps overlapping start/end.
-        CROSS JOIN (
+        --add artificial data points at start and end of each day to find gaps overlapping start/end.
+        CROSS JOIN LATERAL (
             VALUES
                 --catch gaps overlapping days
-                (start_date - interval '15 minutes'),
-                (start_date + interval '1 day')
+                (i.dt - interval '15 minutes'),
+                (i.dt + interval '1 day')
         ) AS bins(datetime_bin)
 
         --group by in next step takes care of duplicates
@@ -59,6 +66,7 @@ BEGIN
 
         --the distinct datetime bins which did appear in the day's data. 
         SELECT DISTINCT
+            datetime_bin::date,
             intersection_uid,
             datetime_bin,
             --need to reduce gap length by 1 minute for real data since that minute contains data
@@ -66,12 +74,13 @@ BEGIN
         FROM miovision_api.volumes
         WHERE
             datetime_bin >= start_date - interval '15 minutes'
-            AND datetime_bin < start_date + interval '1 day'
+            AND datetime_bin < end_date
     ),
 
     --looks at sequential bins to identify breaks larger than 1 minute.
     bin_times AS (
-        SELECT 
+        SELECT
+            dt,
             intersection_uid,
             --sum works because between 0 and 1, we want 1 (implies real data)
             datetime_bin + SUM(gap_adjustment) AS gap_start,
@@ -86,8 +95,9 @@ BEGIN
                 ELSE True
             END as weekend
         FROM fluffed_data
-        LEFT JOIN ref.holiday AS hol ON hol.dt = fluffed_data.datetime_bin::date
+        LEFT JOIN ref.holiday AS hol USING (dt)
         GROUP BY
+            dt,
             intersection_uid, 
             datetime_bin,
             weekend
@@ -101,7 +111,7 @@ BEGIN
             allowable_total_gap_threshold, datetime_bin, gap_minutes_15min
         )
         SELECT
-            start_date AS dt,
+            bt.dt,
             bt.intersection_uid,
             bt.gap_start,
             bt.gap_end,
@@ -114,7 +124,7 @@ BEGIN
         JOIN generate_series(
                 --catch gaps overlapping days
                 start_date - interval '15 minutes',
-                start_date + interval '1 day',
+                end_date,
                 interval '15 minutes'
         ) AS bins(datetime_bin) ON
             bins.datetime_bin >= datetime_bin(bt.gap_start, 15)
@@ -123,7 +133,7 @@ BEGIN
         JOIN miovision_api.gapsize_lookup AS gl ON
             gl.intersection_uid = bt.intersection_uid
             AND gl.hour_bin = date_part('hour', bins.datetime_bin)
-            AND gl.dt = start_date::date
+            AND gl.dt = bt.dt
             --this contains the gap threshold for all modes combined
             AND gl.classification_uid IS NULL,
         LATERAL (
@@ -139,8 +149,8 @@ BEGIN
             gm.gap_minutes_total >= gl.gap_tolerance
             AND bt.bin_break = True            
             AND bt.gap_end IS NOT NULL
-            --gap entirely outside of todays range
-            AND NOT(bt.gap_end <= start_date)
+            --gap entirely outside of days range
+            AND NOT(bt.gap_end <= bt.dt)
         ORDER BY
             bt.intersection_uid,
             bins.datetime_bin
