@@ -110,7 +110,7 @@ BEGIN
             dt, intersection_uid, gap_start, gap_end, gap_minutes_total,
             allowable_total_gap_threshold, datetime_bin, gap_minutes_15min
         )
-        SELECT
+        SELECT DISTINCT ON (intersection_uid, datetime_bin)
             bt.dt,
             bt.intersection_uid,
             bt.gap_start,
@@ -153,7 +153,8 @@ BEGIN
             AND NOT(bt.gap_end <= bt.dt)
         ORDER BY
             bt.intersection_uid,
-            bins.datetime_bin
+            bins.datetime_bin,
+            bt.dt
         ON CONFLICT (intersection_uid, datetime_bin)
         DO NOTHING
         RETURNING *
