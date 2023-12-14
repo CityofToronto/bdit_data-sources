@@ -1,5 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.gapsize_lookup_insert(
-    start_date timestamp
+    start_date timestamp,
+    end_date timestamp
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -7,17 +8,28 @@ LANGUAGE 'plpgsql'
 COST 100
 VOLATILE
 AS $BODY$
-    DECLARE is_weekend boolean :=
-        NOT(date_part('isodow', start_date) <= 5
-            AND (SELECT holiday FROM ref.holiday WHERE dt = start_date) IS NULL);
-
     BEGIN
 
     DELETE FROM miovision_api.gapsize_lookup
-    WHERE dt = start_date;
-    
-    WITH hourly_volumes AS (
+    WHERE
+        dt >= start_date
+        AND dt < end_date;
+
+    WITH study_dates AS (
         SELECT
+            dt,
+            NOT(date_part('isodow', dates.dt) <= 5 AND hol.holiday IS NULL) AS weekend
+        FROM generate_series(
+            start_date::date,
+            end_date::date - interval '1 day', --don't include end_date
+            '1 day'::interval
+        ) dates(dt)
+        LEFT JOIN ref.holiday AS hol USING (dt)
+    ),
+    
+    hourly_volumes AS (
+        SELECT
+            dates.dt,
             v.intersection_uid,
             v.classification_uid,
             NOT(date_part('isodow', dates.dt) <= 5 AND hol.holiday IS NULL) AS weekend,
@@ -30,14 +42,31 @@ AS $BODY$
         LEFT JOIN ref.holiday AS hol USING (dt)
         WHERE
             v.datetime_bin >= start_date - interval '60 days'
-            AND v.datetime_bin < start_date
+            AND v.datetime_bin < end_date
         GROUP BY
+            dates.dt,
             v.intersection_uid,
             --group both by individual classificaiton and all classificaitons.
             GROUPING SETS ((v.classification_uid), ()),
+            hour_bin,
+            hol.holiday
+    ),
+
+    lookback_avgs AS (
+        SELECT
+            dt,
+            intersection_uid,
+            classification_uid,
             weekend,
             hour_bin,
-            dates.dt
+            AVG(vol) OVER w AS avg_hour_vol
+        FROM hourly_volumes
+        WINDOW w AS (
+            --60 day lookback for same intersection, classification, day type, hour
+            PARTITION BY intersection_uid, classification_uid, weekend, hour_bin
+            ORDER BY dt RANGE BETWEEN 
+                interval '60 days' PRECEDING AND interval '1 days' PRECEDING
+        )
     )
     
         --avg of hourly volume by intersection, hour of day, day type to determine gap_tolerance
@@ -47,29 +76,24 @@ AS $BODY$
             hour_bin, weekend, avg_hour_vol, gap_tolerance
         )
         SELECT
-            start_date,
-            intersection_uid,
-            classification_uid,
-            hour_bin,
-            weekend,
-            AVG(vol) AS avg_hour_vol,
+            study_dates.dt,
+            lba.intersection_uid,
+            lba.classification_uid,
+            lba.hour_bin,
+            study_dates.weekend,
+            lba.avg_hour_vol,
             --only designate an acceptable gap size for total volume, not for individual classifications.
-            CASE WHEN classification_uid IS NULL THEN
+            CASE WHEN lba.classification_uid IS NULL THEN
                 CASE
-                    WHEN AVG(vol) < 100::numeric THEN 20::smallint
-                    WHEN AVG(vol) >= 100::numeric AND AVG(vol) < 500::numeric THEN 15::smallint
-                    WHEN AVG(vol) >= 500::numeric AND AVG(vol) < 1500::numeric THEN 10::smallint
-                    WHEN AVG(vol) > 1500::numeric THEN 5::smallint
+                    WHEN lba.avg_hour_vol >= 1500::numeric THEN 5::smallint
+                    WHEN lba.avg_hour_vol >= 500::numeric THEN 10::smallint
+                    WHEN lba.avg_hour_vol >= 100::numeric THEN 15::smallint
+                    WHEN lba.avg_hour_vol < 100::numeric THEN 20::smallint
                     ELSE NULL::smallint
                 END
             END AS gap_tolerance
-        FROM hourly_volumes
-        WHERE weekend = is_weekend
-        GROUP BY
-            intersection_uid,
-            classification_uid,
-            weekend,
-            hour_bin;
+        FROM study_dates
+        LEFT JOIN lookback_avgs AS lba USING (weekend, dt);
 
 END;
 $BODY$;
