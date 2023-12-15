@@ -25,7 +25,7 @@ AS $BODY$
             '1 day'::interval
         ) dates(dt)
         LEFT JOIN ref.holiday AS hol USING (dt)
-    ),
+    ), 
     
     hourly_volumes AS (
         SELECT
@@ -46,12 +46,12 @@ AS $BODY$
         GROUP BY
             dates.dt,
             v.intersection_uid,
-            --group both by individual classificaiton and all classificaitons.
+            --group both by individual classificaiton and all classifications.
             GROUPING SETS ((v.classification_uid), ()),
             hour_bin,
             hol.holiday
-
-        UNION
+        
+        UNION 
         
         --padding values in case the intersection didn't appear on previous day, but
         --did appear within the 60 day lookback, inorder to catch these with window function
@@ -67,10 +67,10 @@ AS $BODY$
         CROSS JOIN (
             SELECT classification_uid FROM miovision_api.classifications
             UNION SELECT NULL::integer --represents all classifications
-        ) AS classifications 
+        ) AS classifications
         CROSS JOIN generate_series(0, 23, 1) AS hours(hour_bin)
     ),
-
+    
     lookback_avgs AS (
         SELECT
             dt,
@@ -112,8 +112,8 @@ AS $BODY$
                 END
             END AS gap_tolerance
         FROM study_dates
-        LEFT JOIN lookback_avgs AS lba USING (weekend, dt);
-
+        LEFT JOIN lookback_avgs AS lba USING (weekend, dt)
+        WHERE avg_hour_vol IS NOT NULL; --nothing in lookback
 END;
 $BODY$;
 
