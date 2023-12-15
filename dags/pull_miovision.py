@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.sensors.external_task import ExternalTaskMarker
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -121,6 +122,12 @@ def pull_miovision_dag():
         check_row_count        
         check_distinct_classification_uid
 
-    check_partitions() >> t1 >> data_checks()
+    t_done = ExternalTaskMarker(
+            task_id="done",
+            external_dag_id="check_miovision",
+            external_task_id="starting_point"
+    )
+
+    check_partitions() >> t1 >> data_checks() >> t_done
 
 pull_miovision_dag()
