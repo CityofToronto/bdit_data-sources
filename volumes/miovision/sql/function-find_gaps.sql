@@ -110,6 +110,8 @@ BEGIN
             dt, intersection_uid, gap_start, gap_end, gap_minutes_total,
             allowable_total_gap_threshold, datetime_bin, gap_minutes_15min
         )
+        --distinct on to remove duplicates in rare case where there
+        --are two distinct gaps which overlap the same time bin. 
         SELECT DISTINCT ON (intersection_uid, datetime_bin)
             bt.dt,
             bt.intersection_uid,
@@ -154,7 +156,8 @@ BEGIN
         ORDER BY
             bt.intersection_uid,
             bins.datetime_bin,
-            bt.dt
+            bt.dt,
+            bt.gap_start
         ON CONFLICT (intersection_uid, datetime_bin)
         DO NOTHING
         RETURNING *
