@@ -5,13 +5,13 @@ CREATE TABLE miovision_api.unacceptable_gaps
     gap_start timestamp without time zone,
     gap_end timestamp without time zone,
     gap_minutes_total integer,
-    allowable_total_gap_threshold integer, 
+    allowable_total_gap_threshold integer,
     datetime_bin timestamp without time zone,
     gap_minutes_15min integer,
     CONSTRAINT intersection_uid_datetime_bin_unique UNIQUE (intersection_uid, datetime_bin)
 );
 
-ALTER TABLE miovision_api.unacceptable_gaps OWNER to miovision_admins;
+ALTER TABLE miovision_api.unacceptable_gaps OWNER TO miovision_admins;
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.unacceptable_gaps TO bdit_humans WITH GRANT OPTION;
 

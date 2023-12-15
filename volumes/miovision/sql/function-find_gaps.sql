@@ -149,15 +149,15 @@ BEGIN
         ) AS gm
         WHERE
             gm.gap_minutes_total >= gl.gap_tolerance
-            AND bt.bin_break = True            
+            AND bt.bin_break = True
             AND bt.gap_end IS NOT NULL
             --gap entirely outside of days range
             AND NOT(bt.gap_end <= bt.dt)
         ORDER BY
             bt.intersection_uid,
             bins.datetime_bin,
-            bt.dt,
-            bt.gap_start
+            gm.gap_minutes_total DESC, --keep the larger gap
+            bt.gap_start --and the one that started first
         ON CONFLICT (intersection_uid, datetime_bin)
         DO NOTHING
         RETURNING *
