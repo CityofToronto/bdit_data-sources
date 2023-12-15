@@ -1,18 +1,21 @@
 import sys
 import os
 
-from airflow import DAG
+from airflow.decorators import dag
 from datetime import datetime, timedelta
-from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
 import logging
 import pendulum
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+except:
+    raise ImportError("Cannot import DAG helper functions.")
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -46,7 +49,6 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2020, 7, 10, tz="America/Toronto"),
-                'end_date': pendulum.datetime(2023, 11, 10, tz="America/Toronto"), #functionality ported over to pull_miovision.check_data.find_gaps
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -54,17 +56,54 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 7 * * *', catchup=False)
-# Run at 7 AM local time every day
+@dag(dag_id=dag_name,
+     default_args=default_args,
+     schedule='0 7 * * *', # Run at 7 AM local time every day
+     catchup=False)
+def miovision_check_dag():
 
-task1 = PythonOperator(
-    task_id = 'check_miovision',
-    python_callable = check_miovision,
-    dag=dag,
-    op_kwargs={
-      'con': con,
-      # execution date is by default a day before if the process runs daily
-      'start_date': '{{ ds }}', 
-      'end_date' : '{{ macros.ds_add(ds, 1) }}'
+    data_check_params = {
+        "table": "miovision_api.volumes_15min_mvt",
+        "lookback": '60 days',
+        "dt_col": 'datetime_bin',
+        "threshold": 0.7
     }
+
+    check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
+        task_id="check_distinct_intersection_uid",
+        sql="select-sensor_id_count_lookback.sql",
+        conn_id="miovision_api_bot",
+        params=data_check_params | {
+                "id_col": "intersection_uid"
+            } | {
+                "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
+            },
     )
+    check_distinct_intersection_uid.doc_md = '''
+    Identify intersections which appeared within the lookback period that did not appear today.
+    '''
+
+    check_gaps = SQLCheckOperatorWithReturnValue(
+        task_id="check_gaps",
+        sql="""SELECT _check, summ, gaps
+            FROM public.summarize_gaps_data_check(
+                start_date := '{{ ds }}'::date,
+                end_date := '{{ ds }}'::date,
+                id_col := 'intersection_uid'::text,
+                dt_col := 'datetime_bin'::text,
+                sch_name := 'miovision_api'::text,
+                tbl_name := 'volumes'::text,
+                gap_threshold := '4 hours'::interval,
+                default_bin := '1 minute'::interval,
+                id_col_dtype := null::int
+            )""",
+        conn_id="miovision_api_bot"
+    )
+    check_gaps.doc_md = '''
+    Identify gaps larger than gap_threshold in intersections with values today.
+    '''
+
+    check_distinct_intersection_uid
+    check_gaps
+
+miovision_check_dag()

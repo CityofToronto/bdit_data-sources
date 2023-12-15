@@ -118,44 +118,8 @@ def pull_miovision_dag():
         Compare the count of classification_uids appearing in today's pull vs the lookback period.
         '''
 
-        check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
-            task_id="check_distinct_intersection_uid",
-            sql="select-sensor_id_count_lookback.sql",
-            conn_id="miovision_api_bot",
-            params=data_check_params | {
-                    "id_col": "intersection_uid"
-                } | {
-                    "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
-                },
-        )
-        check_distinct_intersection_uid.doc_md = '''
-        Identify intersections which appeared within the lookback period that did not appear today.
-        '''
-
-        check_gaps = SQLCheckOperatorWithReturnValue(
-            task_id="check_gaps",
-            sql="""SELECT _check, summ, gaps
-                FROM public.summarize_gaps_data_check(
-                    start_date := '{{ ds }}'::date,
-                    end_date := '{{ ds }}'::date,
-                    id_col := 'intersection_uid'::text,
-                    dt_col := 'datetime_bin'::text,
-                    sch_name := 'miovision_api'::text,
-                    tbl_name := 'volumes'::text,
-                    gap_threshold := '4 hours'::interval,
-                    default_bin := '1 minute'::interval,
-                    id_col_dtype := null::int
-                )""",
-            conn_id="miovision_api_bot"
-        )
-        check_gaps.doc_md = '''
-        Identify gaps larger than gap_threshold in intersections with values today.
-        '''
-
-        check_row_count
+        check_row_count        
         check_distinct_classification_uid
-        check_distinct_intersection_uid
-        check_gaps
 
     check_partitions() >> t1 >> data_checks()
 
