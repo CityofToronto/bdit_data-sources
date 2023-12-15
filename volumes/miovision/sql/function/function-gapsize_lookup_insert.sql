@@ -72,7 +72,9 @@ AS $BODY$
     ),
     
     lookback_avgs AS (
-        SELECT
+        SELECT DISTINCT ON ( --get rid of duplicates from padding
+            dt, intersection_uid, classification_uid, weekend, hour_bin
+        )
             dt,
             intersection_uid,
             classification_uid,
@@ -86,6 +88,13 @@ AS $BODY$
             ORDER BY dt RANGE BETWEEN
                 interval '60 days' PRECEDING AND interval '1 days' PRECEDING
         )
+        ORDER BY 
+            dt,
+            intersection_uid,
+            classification_uid,
+            weekend,
+            hour_bin,
+            vol DESC NULLS LAST
     )
     
         --avg of hourly volume by intersection, hour of day, day type to determine gap_tolerance
