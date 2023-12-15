@@ -31,21 +31,23 @@ DROP FUNCTION miovision_csv.aggregate_15_min_2020;
 DROP FUNCTION miovision_csv.find_gaps_2020;
 DROP FUNCTION miovision_csv.aggregate_15_min_tmc_2020;
 DROP FUNCTION miovision_csv.insert_volumes_2020(); --table volumes_2020 is depenendent on this function
+--Done
 
 --drop "2020" tables. 
 DROP TABLE miovision_csv.raw_data2020;
 DROP TABLE miovision_csv.volumes_2020;
-DROP TABLE miovision_csv.volumes2020_15min;
+DROP TABLE miovision_csv.volumes2020_15min; --dealing with a RapidTO dependent
 DROP TABLE miovision_csv.volumes2020_15min_tmc;
 DROP TABLE miovision_csv.volumes2020_tmc_atr_xover;
 DROP TABLE miovision_csv.unacceptable_gaps_2020;
 
 --this table can be truncated because the newer process used a trigger to instead bypass raw_data and insert data into miovision_csv.volumes. 
 --the 2GB of data in this table is duplicate with that in miovision_csv.volumes. 
-TRUNCATE TABLE miovision_csv.raw_data;
+--TRUNCATE TABLE miovision_csv.raw_data;
+/*I'm going to leave this be as a record of what we received.*/
 
 --add better comments on schema, comments on tables 
-COMMENT ON SCHEMA miovision_csv IS 'Older Miovision data from 2017/2018. Data format is more temporally sparse than newer miovision_api schema but used a human-augmented process for higher quality counts.';
+COMMENT ON SCHEMA miovision_csv IS 'Older Miovision data from 2017/2018. Data format is effectively short-term counts (temporally sparse) than newer miovision_api schema but used a human-augmented process for higher quality counts.';
 
 --this table has no dependents and appears to be superseeded by `report_dates`.
 DROP TABLE miovision_csv.report_dates_old;
