@@ -13,6 +13,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import task, dag, task_group
+from airflow.sensors.external_task import ExternalTaskMarker
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -146,9 +147,13 @@ def pull_wys_dag():
             conn_id="wys_bot",
             params=data_check_params | {"id_col": "api_id"} | {"threshold": 0.90},
         )
+        t_done = ExternalTaskMarker(
+                task_id="done",
+                external_dag_id="check_miovision",
+                external_task_id="starting_point"
+        )
 
-        check_row_count
-        check_distinct_api_id
+        [check_row_count, check_distinct_api_id] >> t_done
 
     @task
     def pull_schedules():
@@ -175,6 +180,7 @@ def pull_wys_dag():
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
 
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
+
 
     check_partitions() >> pull_wys() >> data_checks()
     pull_schedules()
