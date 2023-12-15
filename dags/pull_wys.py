@@ -59,14 +59,6 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-def get_return_value(context) -> str:
-    """Return records from SQLCheckOperatorWithReturnValue."""
-    task_instance = context.get("task_instance")
-    return_value = task_instance.xcom_pull(task_instance.task_id)
-    if return_value:
-        return return_value
-    return ""
-
 default_args = {
     'owner': ','.join(names),
     'depends_on_past':False,
@@ -77,9 +69,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
     #progressive longer waits between retries
     'retry_exponential_backoff': True,
-    'on_failure_callback': partial(
-        task_fail_slack_alert, extra_msg=get_return_value
-    ),
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(dag_id = dag_name,
@@ -129,23 +119,17 @@ def pull_wys_dag():
 
     @task_group()
     def data_checks():
-        data_check_params = {
-            "table": "wys.speed_counts_agg_5kph",
-            "lookback": '60 days',
-            "dt_col": 'datetime_bin',
-            "threshold": 0.7
-        }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
-            params=data_check_params | {"col_to_sum": 'volume'},
-        )
-        check_distinct_api_id = SQLCheckOperatorWithReturnValue(
-            task_id="check_distinct_api_id",
-            sql="select-sensor_id_count_lookback.sql",
-            conn_id="wys_bot",
-            params=data_check_params | {"id_col": "api_id"} | {"threshold": 0.90},
+            params={
+                "table": "wys.speed_counts_agg_5kph",
+                "lookback": '60 days',
+                "dt_col": 'datetime_bin',
+                "col_to_sum": 'volume',
+                "threshold": 0.7
+            }
         )
         t_done = ExternalTaskMarker(
                 task_id="done",
@@ -153,7 +137,7 @@ def pull_wys_dag():
                 external_task_id="starting_point"
         )
 
-        [check_row_count, check_distinct_api_id] >> t_done
+        check_row_count >> t_done
 
     @task
     def pull_schedules():

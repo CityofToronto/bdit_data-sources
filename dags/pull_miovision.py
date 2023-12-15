@@ -4,7 +4,6 @@ Slack notifications is raised when the airflow process fails.
 """
 import sys
 import os
-from functools import partial
 
 import pendulum
 from airflow.decorators import dag, task, task_group
@@ -29,14 +28,6 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-def get_return_value(context) -> str:
-    """Return records from SQLCheckOperatorWithReturnValue."""
-    task_instance = context.get("task_instance")
-    return_value = task_instance.xcom_pull(task_instance.task_id)
-    if return_value:
-        return return_value
-    return ""
-
 default_args = {
     'owner': ','.join(names),
     'depends_on_past':False,
@@ -45,9 +36,7 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': partial(
-        task_fail_slack_alert, extra_msg=get_return_value
-    ),
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(dag_id=dag_name,
