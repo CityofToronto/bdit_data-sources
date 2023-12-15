@@ -56,7 +56,9 @@ def task_fail_slack_alert(
         context: The calling Airflow task's context
         extra_msg: An extra string message or a function that
             generates an extra message to be appended to the default
-            notification (default '').
+            notification (default '', which forces the function to look for any
+            XCom with key ``extra_msg`` returned from the failing task;
+            otherwise, no extra message is added to the standard one).
         use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
             usage is required to make the Slack webhook call on on-premises
             servers (default False).
@@ -73,21 +75,33 @@ def task_fail_slack_alert(
     else:
         SLACK_CONN_ID = "slack_data_pipeline"
 
+    task_instance = context["task_instance"]
     slack_ids = Variable.get("slack_member_id", deserialize_json=True)
     owners = context.get('dag').owner.split(',')
     list_names = " ".join([slack_ids.get(name, name) for name in owners])
+    # get the extra message from the calling task, if provided
+    extra_msg_from_task = task_instance.xcom_pull(
+            task_ids=task_instance.task_id,
+            map_indexes=task_instance.map_index,
+            key="extra_msg"
+        )
 
     if callable(extra_msg):
+        # in case of function
         extra_msg_str = extra_msg(context)
+    elif extra_msg == "" and extra_msg_from_task is not None:
+        # in case the the extra message is passed from inside the task via xcom
+        extra_msg_str = extra_msg_from_task
     else:
+        # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
     # Slack failure message
     if use_proxy:
         # Temporarily accessing Airflow on Morbius through 8080 instead of Nginx
         # Its hould be eventually removed
-        log_url = context.get("task_instance").log_url.replace(
-            "localhost", context.get("task_instance").hostname + ":8080"
+        log_url = task_instance.log_url.replace(
+            "localhost", task_instance.hostname + ":8080"
         )
         # get the proxy credentials from the Airflow connection ``slack``. It
         # contains username and password to set the proxy <username>:<password>
@@ -96,13 +110,13 @@ def task_fail_slack_alert(
             f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
         )
     else:
-        log_url = context.get("task_instance").log_url.replace(
-            "localhost", context.get("task_instance").hostname
+        log_url = task_instance.log_url.replace(
+            "localhost", task_instance.hostname
         )
         proxy = None
     slack_msg = (
-        f":red_circle: {context.get('task_instance').dag_id}."
-        f"{context.get('task_instance').task_id} "
+        f":red_circle: {task_instance.dag_id}."
+        f"{task_instance.task_id} "
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
     )

@@ -10,6 +10,7 @@ import pendulum
 from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import task, dag, task_group
 
@@ -23,6 +24,7 @@ try:
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_jan_1st, check_1st_of_month
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
@@ -88,7 +90,28 @@ default_args = {
 )
 def pull_wys_dag():
 
-    @task
+    #this task group checks if necessary to create new partitions and if so, exexcute.
+    @task_group
+    def check_partitions():
+
+        create_annual_partition = PostgresOperator(
+            task_id='create_annual_partitions',
+            sql="SELECT wys.create_yyyy_raw_data_partition('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
+            postgres_conn_id='wys_bot',
+            autocommit=True
+        )
+        
+        create_month_partition = PostgresOperator(
+            task_id='create_month_partition',
+            sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
+            postgres_conn_id='wys_bot',
+            autocommit=True
+        )
+
+        check_jan_1st() >> create_annual_partition
+        check_1st_of_month() >> create_month_partition
+
+    @task(trigger_rule='none_failed')
     def pull_wys(ds=None):
         #to connect to pgadmin bot
         wys_postgres = PostgresHook("wys_bot")
@@ -153,7 +176,7 @@ def pull_wys_dag():
 
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
-    pull_wys() >> data_checks()
+    check_partitions() >> pull_wys() >> data_checks()
     pull_schedules()
     read_google_sheets()
 

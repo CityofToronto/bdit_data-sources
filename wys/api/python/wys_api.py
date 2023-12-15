@@ -342,9 +342,7 @@ def api_main(start_date=default_start,
         try:    
             with conn.cursor() as cur:
                 logger.info('Inserting '+str(len(table))+' rows of data. Note: Insert gets roll back on error.')
-                yr = start_date.year
-                table_name = 'raw_data_'+str(yr)
-                insert_sql = sql.SQL("INSERT INTO wys.{table} VALUES %s ON CONFLICT DO NOTHING").format(table=sql.Identifier(table_name))                                  
+                insert_sql = sql.SQL("INSERT INTO wys.raw_data(api_id, datetime_bin, speed, count) VALUES %s ON CONFLICT DO NOTHING")
                 execute_values(cur, insert_sql, table)
                 
         except psycopg2.Error as exc:

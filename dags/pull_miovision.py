@@ -18,6 +18,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_jan_1st, check_1st_of_month
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -58,44 +59,25 @@ def pull_miovision_dag():
     #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
     def check_partitions():
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-        MONTH = '{{ macros.ds_format(ds, "%Y-%m-%d", "%m") }}'
 
-        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
-        def check_annual_partition(ds=None): #check if Jan 1 to trigger partition creates. 
-            start_date = datetime.strptime(ds, '%Y-%m-%d')
-            if start_date.month == 1 and start_date.day == 1:
-                return True
-            return False
-      
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
-            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', {{ params.year }}::int, 'datetime_bin')",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', {{ params.year }}::int)",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', {{ params.year }}::int)"],
+            sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
             postgres_conn_id='miovision_api_bot',
-            params={"year": YEAR},
             autocommit=True
         )
-
-        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
-        def check_month_partition(ds=None): #check if 1st of Month to trigger partition creates. 
-            start_date = datetime.strptime(ds, '%Y-%m-%d')
-            if start_date.day == 1:
-                return True
-            return False
-        
+      
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
-            sql="SELECT miovision_api.create_mm_nested_volumes_partition('volumes', {{ params.year }}::int, {{ params.month }}::int)",
+            sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
             postgres_conn_id='miovision_api_bot',
-            params={"year": YEAR,
-                    "month": MONTH},
             autocommit=True
         )
 
-        check_annual_partition() >> create_annual_partition
-        check_month_partition() >> create_month_partition
+        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
+        check_1st_of_month.override(task_id="check_month_partition")() >> create_month_partition
 
     t1 = BashOperator(
         task_id = 'pull_miovision',

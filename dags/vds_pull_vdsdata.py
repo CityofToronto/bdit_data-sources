@@ -33,6 +33,7 @@ sys.path.insert(0, repo_path)
 from volumes.vds.py.vds_functions import pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
+from dags.common_tasks import check_jan_1st
 
 default_args = {
     'owner': ','.join(names),
@@ -83,30 +84,21 @@ with DAG(dag_name,
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
     with TaskGroup(group_id='check_partitions') as check_partitions_tg:
-
-        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
-        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
-            start_date = datetime.strptime(ds, '%Y-%m-%d')
-            if start_date.month == 1 and start_date.day == 1:
-                return True
-            return False
-
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-        
+       
         create_partitions = PostgresOperator(
             task_id='create_partitions',
             sql=[#partition by year and month:
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', {{ params.year }}::int, 'dt')",
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', {{ params.year }}::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
                 #partition by year only: 
-                "SELECT vds.partition_vds_yyyy('counts_15min_div2', {{ params.year }}::int, 'datetime_15min')",
-                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', {{ params.year }}::int, 'datetime_15min')"],
+                "SELECT vds.partition_vds_yyyy('counts_15min_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')",
+                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')"],
             postgres_conn_id='vds_bot',
-            params={"year": YEAR},
             autocommit=True
         )
 
-        check_partitions() >> create_partitions
+        #check if Jan 1, if so trigger partition creates.
+        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
     #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
     with TaskGroup(group_id='pull_vdsdata') as vdsdata:

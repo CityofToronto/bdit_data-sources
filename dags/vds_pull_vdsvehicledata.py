@@ -10,6 +10,7 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
+from dags.common_tasks import check_jan_1st
 
 dag_name = 'vds_pull_vdsvehicledata'
 
@@ -71,24 +72,15 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     #this task group checks if all necessary partitions exist and if not executes create functions.
     with TaskGroup(group_id='check_partitions') as check_partitions_tg:
 
-        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
-        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
-            start_date = datetime.strptime(ds, '%Y-%m-%d')
-            if start_date.month == 1 and start_date.day == 1:
-                return True
-            return False
-
-        YEAR = '{{ macros.ds_format(ds, "%Y-%m-%d", "%Y") }}'
-
         create_partitions = PostgresOperator(
             task_id='create_partitions',
-            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', {{ params.year }}::int, 'dt')",
+            sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
             postgres_conn_id='vds_bot',
-            params={"year": YEAR},
             autocommit=True
         )
-
-        check_partitions() >> create_partitions
+        
+        #check if Jan 1, if so trigger partition creates.
+        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
