@@ -113,7 +113,7 @@ def pull_miovision_dag():
 
     t_done = ExternalTaskMarker(
             task_id="done",
-            external_dag_id="check_miovision",
+            external_dag_id="miovision_check",
             external_task_id="starting_point"
     )
 
