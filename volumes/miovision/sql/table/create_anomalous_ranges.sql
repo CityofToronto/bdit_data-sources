@@ -54,7 +54,16 @@ CREATE TABLE miovision_api.anomalous_ranges (
     CONSTRAINT miovision_qc_qa_level_fkey FOREIGN KEY (investigation_level)
         REFERENCES miovision_api.anomaly_investigation_levels (uid) MATCH SIMPLE
         ON UPDATE NO ACTION
-        ON DELETE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT anomalous_ranges_end CHECK (
+        range_end = upper(time_range) OR (range_end IS NULL AND upper(time_range) IS NULL)
+    ),
+    CONSTRAINT anomalous_ranges_range_order CHECK (
+        range_start < range_end OR range_end IS NULL
+    ),
+    CONSTRAINT anomalous_ranges_start CHECK (
+        range_start = lower(time_range)
+    )
 );
 
 ALTER TABLE IF EXISTS miovision_api.anomalous_ranges
