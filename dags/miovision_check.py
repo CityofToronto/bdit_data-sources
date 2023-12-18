@@ -1,0 +1,95 @@
+import sys
+import os
+
+from airflow.decorators import dag
+from datetime import timedelta
+from airflow.models import Variable 
+from airflow.sensors.external_task import ExternalTaskSensor
+
+import logging
+import pendulum
+
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+except:
+    raise ImportError("Cannot import DAG helper functions.")
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+dag_name = 'miovision_check'
+
+# Get slack member ids
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
+
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+default_args = {
+    'owner': ','.join(names),
+    'depends_on_past':False,
+    'start_date': pendulum.datetime(2023, 12, 21, tz="America/Toronto"),
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': task_fail_slack_alert
+}
+
+@dag(dag_id=dag_name,
+     default_args=default_args,
+     schedule='0 4 * * *', # Run at 4 AM local time every day
+     catchup=False)
+def miovision_check_dag():
+
+    t_upstream_done = ExternalTaskSensor(
+        task_id="starting_point",
+        external_dag_id="pull_miovision",
+        external_task_id="done",
+        poke_interval=3600, #retry hourly
+        mode="reschedule",
+        timeout=86400, #one day
+        execution_delta=timedelta(hours=1) #pull_miovision scheduled at '0 3 * * *'
+    )
+
+    check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
+        task_id="check_distinct_intersection_uid",
+        sql="select-sensor_id_count_lookback.sql",
+        conn_id="miovision_api_bot",
+        params={
+            "table": "miovision_api.volumes_15min_mvt",
+            "lookback": '60 days',
+            "dt_col": 'datetime_bin',
+            "id_col": "intersection_uid",
+            "threshold": 0.999 #dif is floored, so this will catch a dif of 1.
+        }
+    )
+    check_distinct_intersection_uid.doc_md = '''
+    Identify intersections which appeared within the lookback period that did not appear today.
+    '''
+
+    check_gaps = SQLCheckOperatorWithReturnValue(
+        task_id="check_gaps",
+        sql="""SELECT _check, summ, gaps
+            FROM public.summarize_gaps_data_check(
+                start_date := '{{ ds }}'::date,
+                end_date := '{{ ds }}'::date,
+                id_col := 'intersection_uid'::text,
+                dt_col := 'datetime_bin'::text,
+                sch_name := 'miovision_api'::text,
+                tbl_name := 'volumes'::text,
+                gap_threshold := '4 hours'::interval,
+                default_bin := '1 minute'::interval,
+                id_col_dtype := null::int
+            )""",
+        conn_id="miovision_api_bot"
+    )
+    check_gaps.doc_md = '''
+    Identify gaps larger than gap_threshold in intersections with values today.
+    '''
+
+    t_upstream_done >> [check_distinct_intersection_uid, check_gaps]
+
+miovision_check_dag()
