@@ -1,5 +1,7 @@
-"""
-Pipeline to pull miovision daily data and put them into postgres tables using Bash Operator.
+r"""### Daily Miovision Data Pull DAG
+Pipeline to pull miovision daily data and put them into Postgres tables using Bash Operator.
+Also checks if new monthly/yearly partition tables need to be created and runs SQL
+data-checks on the row count and distinct classification_uids found in pulled data.
 Slack notifications is raised when the airflow process fails.
 """
 import sys
@@ -22,14 +24,11 @@ try:
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
-dag_name = 'pull_miovision'
-
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'pull_miovision'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
     'email_on_failure': False,
@@ -39,17 +38,20 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-@dag(dag_id=dag_name,
-     default_args=default_args,
-     # Add 3 hours to ensure that the data are at least 2 hours old
-     schedule='0 3 * * *',
-     template_searchpath=os.path.join(repo_path,'dags/sql'),
-     catchup=False)
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    # Add 3 hours to ensure that the data are at least 2 hours old
+    schedule='0 3 * * *',
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
+    catchup=False,
+    tags=["miovision", "data_pull", "partition_create", "data_checks"],
+    doc_md=__doc__
+)
 def pull_miovision_dag(): 
-    #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
     def check_partitions():
-
+        """Task group to check if necessary to create new partitions and if so, exexcute."""
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
@@ -78,6 +80,7 @@ def pull_miovision_dag():
     
     @task_group()
     def data_checks():
+        """Task group to check critical data quality measures which could warrant re-running the DAG."""
         data_check_params = {
             "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',

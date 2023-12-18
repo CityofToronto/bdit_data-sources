@@ -1,10 +1,9 @@
 """
-Pipeline to pull Watch Your Speed sign data data and put them into the wys.raw_data table using Python Operator.
+Pipeline to run sql quality checks on Watch Your Speed sign daily data pull.
 A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
-from functools import partial
 import pendulum
 
 from datetime import timedelta
@@ -20,14 +19,11 @@ try:
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
-dag_name = 'wys_check'
-
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'wys_check'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
     'email_on_failure': False,
@@ -39,12 +35,14 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-@dag(dag_id=dag_name,
+@dag(dag_id=DAG_NAME,
      default_args=default_args,
      catchup=False,
      max_active_runs=1,
      template_searchpath=os.path.join(repo_path,'dags/sql'),
-     schedule='30 17 * * *' # Run at 5:30 PM local time every day
+     schedule='30 17 * * *', # Run at 5:30 PM local time every day
+     tags=["wys", "data_checks"],
+     doc_md=__doc__
 )
 def wys_check_dag():
 

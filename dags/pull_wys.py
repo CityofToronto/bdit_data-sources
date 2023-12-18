@@ -53,14 +53,11 @@ def custom_fail_slack_alert(context: dict) -> str:
     else:
         return ""
 
-dag_name = 'pull_wys'
-
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'pull_wys'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
     'email_on_failure': False,
@@ -72,12 +69,15 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-@dag(dag_id = dag_name,
-     default_args=default_args,
-     catchup=False,
-     max_active_runs=5,
-     template_searchpath=os.path.join(repo_path,'dags/sql'),
-     schedule='0 15 * * *' # Run at 3 PM local time every day
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    catchup=False,
+    max_active_runs=5,
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
+    schedule='0 15 * * *', # Run at 3 PM local time every day
+    tags=["wys", "data_pull", "partition_create", "data_checks"],
+    doc_md=__doc__
 )
 def pull_wys_dag():
 

@@ -1,3 +1,8 @@
+"""
+Pipeline to run SQL data quality check on daily Miovision data pull.
+Uses `miovision_api.determine_working_machine` to check if there are gaps of 4 hours or more for any camera.
+Deprecated by `miovision_check` DAG. 
+"""
 import sys
 import os
 
@@ -42,7 +47,6 @@ dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2020, 7, 10, tz="America/Toronto"),
@@ -54,7 +58,13 @@ default_args = {'owner': ','.join(names),
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 7 * * *', catchup=False)
+dag = DAG(dag_id = dag_name,
+          default_args=default_args,
+          schedule='0 7 * * *',
+          catchup=False,
+          tags = ['miovision', "data_checks", "archived"],
+          doc_md=__doc__
+)
 # Run at 7 AM local time every day
 
 task1 = PythonOperator(

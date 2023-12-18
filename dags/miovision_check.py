@@ -1,3 +1,8 @@
+r"""### Daily Miovision Data Check DAG
+Pipeline to run additional SQL data quality checks on daily miovision pull.
+Put 'yellow card' checks which would not warrant the re-running of the data_pull pipeline,
+ie. issues which suggest field maintenance of sensors required. 
+"""
 import sys
 import os
 
@@ -20,15 +25,11 @@ except:
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-dag_name = 'miovision_check'
-
-# Get slack member ids
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'miovision_check'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': pendulum.datetime(2023, 12, 21, tz="America/Toronto"),
     'email_on_failure': False,
@@ -38,10 +39,14 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert
 }
 
-@dag(dag_id=dag_name,
-     default_args=default_args,
-     schedule='0 4 * * *', # Run at 4 AM local time every day
-     catchup=False)
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    schedule='0 4 * * *', # Run at 4 AM local time every day
+    catchup=False,
+    tags=["miovision", "data_checks"],
+    doc_md=__doc__
+)
 def miovision_check_dag():
 
     t_upstream_done = ExternalTaskSensor(
