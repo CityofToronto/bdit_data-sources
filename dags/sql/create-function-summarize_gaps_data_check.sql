@@ -8,12 +8,14 @@ CREATE OR REPLACE FUNCTION public.summarize_gaps_data_check(
     tbl_name text,
     gap_threshold interval,
     default_bin interval,
-    id_col_dtype anyelement default null::text
+    id_col_dtype anyelement DEFAULT NULL::text
 )
-RETURNS TABLE(_check boolean, summ text, gaps text[])
+RETURNS TABLE(
+    _check boolean, summ text, gaps text []
+)
 LANGUAGE plpgsql
 COST 100
-VOLATILE 
+VOLATILE
 
 AS $BODY$
 BEGIN
@@ -48,7 +50,9 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION public.summarize_gaps_data_check OWNER TO gwolofs;
+ALTER FUNCTION public.summarize_gaps_data_check
+OWNER TO gwolofs;
+
 GRANT EXECUTE ON FUNCTION public.summarize_gaps_data_check TO bdit_humans;
 GRANT EXECUTE ON FUNCTION public.summarize_gaps_data_check TO bdit_bots;
 

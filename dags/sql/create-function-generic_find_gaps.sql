@@ -8,12 +8,14 @@ CREATE OR REPLACE FUNCTION public.generic_find_gaps(
     tbl_name text,
     gap_threshold interval,
     default_bin interval,
-    id_col_dtype anyelement default null::int
+    id_col_dtype anyelement DEFAULT NULL::int
 )
-RETURNS TABLE(sensor_id_col anyelement, gap_start timestamp, gap_end timestamp)
+RETURNS TABLE (
+    sensor_id_col anyelement, gap_start timestamp, gap_end timestamp
+)
 LANGUAGE plpgsql
 COST 100
-VOLATILE 
+VOLATILE
 
 AS $BODY$
 DECLARE
@@ -94,12 +96,14 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION public.generic_find_gaps OWNER TO gwolofs;
+ALTER FUNCTION public.generic_find_gaps
+OWNER TO gwolofs;
+
 GRANT EXECUTE ON FUNCTION public.generic_find_gaps TO bdit_humans;
 GRANT EXECUTE ON FUNCTION public.generic_find_gaps TO bdit_bots;
 
 COMMENT ON FUNCTION public.generic_find_gaps
 IS '''A generic find_gaps function to find gaps in sensor data.
 Includes a lookback of `gap_threshold` so it catches gaps overlapping the start of the interval.
-Includes synthetic start/end time points for all sensors so we catch gaps that don''t start or don''t end in the interval.
-Doesn''t catch sensors with no data in the interval.''';
+Includes synthetic start/end time points for all sensors so we catch gaps that don''t start or
+don''t end in the interval. Doesn''t catch sensors with no data in the interval.''';
