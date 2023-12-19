@@ -26,4 +26,5 @@ GRANT REFERENCES ON TABLE miovision_api.anomaly_investigation_levels TO miovisio
 GRANT ALL ON TABLE miovision_api.anomaly_investigation_levels TO scannon;
 
 COMMENT ON TABLE miovision_api.anomaly_investigation_levels
-IS 'Indicates the furthest degree to which the movision QA issue has been investigated. Is this only a suspicion? Or has the issue been fully confirmed/resolved?';
+IS 'Indicates the furthest degree to which the movision QA issue has been investigated.
+Is this only a suspicion? Or has the issue been fully confirmed/resolved?';

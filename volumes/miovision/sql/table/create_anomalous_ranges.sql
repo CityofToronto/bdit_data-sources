@@ -11,21 +11,21 @@ CREATE TABLE miovision_api.anomalous_ranges (
     CONSTRAINT miovision_qc_intersection_uid_classification_uid_time_range_key
     UNIQUE NULLS NOT DISTINCT (intersection_uid, classification_uid, range_start, range_end),
     CONSTRAINT miovision_qc_classification_uid_fkey FOREIGN KEY (classification_uid)
-        REFERENCES miovision_api.classifications (classification_uid) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES miovision_api.classifications (classification_uid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT miovision_qc_intersection_uid_fkey FOREIGN KEY (intersection_uid)
-        REFERENCES miovision_api.intersections (intersection_uid) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES miovision_api.intersections (intersection_uid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT miovision_qc_problem_level_fkey FOREIGN KEY (problem_level)
-        REFERENCES miovision_api.anomaly_problem_levels (uid) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES miovision_api.anomaly_problem_levels (uid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT miovision_qc_qa_level_fkey FOREIGN KEY (investigation_level)
-        REFERENCES miovision_api.anomaly_investigation_levels (uid) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES miovision_api.anomaly_investigation_levels (uid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT anomalous_ranges_range_order CHECK (
         range_start < range_end
     )
@@ -49,20 +49,20 @@ GRANT ALL ON TABLE miovision_api.anomalous_ranges TO nwessel;
 -- DROP TRIGGER IF EXISTS audit_trigger_row ON miovision_api.anomalous_ranges;
 
 CREATE OR REPLACE TRIGGER audit_trigger_row
-    AFTER INSERT OR DELETE OR UPDATE 
-    ON miovision_api.anomalous_ranges
-    FOR EACH ROW
-    EXECUTE FUNCTION miovision_api.if_modified_func('true');
+AFTER INSERT OR DELETE OR UPDATE
+ON miovision_api.anomalous_ranges
+FOR EACH ROW
+EXECUTE FUNCTION miovision_api.if_modified_func('true');
 
 -- Trigger: audit_trigger_stm
 
 -- DROP TRIGGER IF EXISTS audit_trigger_stm ON miovision_api.anomalous_ranges;
 
 CREATE OR REPLACE TRIGGER audit_trigger_stm
-    AFTER TRUNCATE
-    ON miovision_api.anomalous_ranges
-    FOR EACH STATEMENT
-    EXECUTE FUNCTION miovision_api.if_modified_func('true');
+AFTER TRUNCATE
+ON miovision_api.anomalous_ranges
+FOR EACH STATEMENT
+EXECUTE FUNCTION miovision_api.if_modified_func('true');
 
 COMMENT ON TABLE miovision_api.anomalous_ranges
 IS 'Table to store anomalous ranges of Miovision data. 
