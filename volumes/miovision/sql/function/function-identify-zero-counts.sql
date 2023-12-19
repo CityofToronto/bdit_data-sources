@@ -61,7 +61,6 @@ BEGIN
         --update new outages which are contiguous with old outages
         UPDATE miovision_api.anomalous_ranges AS existing
         SET
-            time_range = tsrange(existing.range_start, new_.range_end, '[)'),
             range_end = new_.range_end
         FROM new_gaps AS new_
         WHERE
@@ -79,11 +78,10 @@ BEGIN
     )
     
     INSERT INTO miovision_api.anomalous_ranges(
-        intersection_uid, classification_uid, time_range, range_start, range_end, notes, investigation_level, problem_level)
+        intersection_uid, classification_uid, range_start, range_end, notes, investigation_level, problem_level)
     SELECT
         new_gaps.intersection_uid,
         new_gaps.classification_uid,
-        tsrange(new_gaps.range_start, new_gaps.range_end, '[)') AS time_range,
         new_gaps.range_start,
         new_gaps.range_end,
         'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts' AS notes,
