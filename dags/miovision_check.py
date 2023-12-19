@@ -44,6 +44,7 @@ default_args = {
     default_args=default_args,
     schedule='0 4 * * *', # Run at 4 AM local time every day
     catchup=False,
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
     tags=["miovision", "data_checks"],
     doc_md=__doc__
 )
