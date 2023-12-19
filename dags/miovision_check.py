@@ -31,7 +31,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2023, 12, 21, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2023, 12, 18, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
