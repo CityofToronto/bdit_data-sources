@@ -47,7 +47,7 @@ default_args = {
         os.path.join(repo_path,'dags/sql')
     ],
     doc_md=__doc__,
-    tags=['vds', 'vdsvehicledata' 'data_checks', 'pull'],
+    tags=['vds', 'vdsvehicledata', 'data_checks', 'pull'],
     schedule='5 4 * * *' #daily at 4:05am
 )
 def vdsvehicledata_dag():
@@ -63,8 +63,8 @@ def vdsvehicledata_dag():
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    @task_group
-    def check_partitions():
+    @task_group(group_id='check_partitions')
+    def check_partitions_TG():
 
         create_partitions = PostgresOperator(
             task_id='create_partitions',
@@ -129,7 +129,7 @@ def vdsvehicledata_dag():
         summarize_speeds_task
         summarize_lengths_task
 
-    @task_group
+    @task_group(group_id='data_checks')
     def data_checks():
         "Data quality checks which may warrant re-running the DAG."
 
@@ -146,6 +146,6 @@ def vdsvehicledata_dag():
         )
         check_avg_rows
 
-    [t_upstream_done, check_partitions()] >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
+    [t_upstream_done, check_partitions_TG()] >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
 
 vdsvehicledata_dag()
