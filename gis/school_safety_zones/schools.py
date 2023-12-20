@@ -12,8 +12,6 @@ This script is automated on Airflow and is run daily."""
 from __future__ import print_function
 import json
 
-from psycopg2.extras import execute_values
-from psycopg2 import sql
 import logging 
 
 import re
@@ -24,8 +22,8 @@ from shapely.geometry import Point
 
 import click
 import configparser
+from sqlalchemy import create_engine, Table, Column, MetaData, delete
 from sqlalchemy.engine import URL
-from sqlalchemy import create_engine
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
     
@@ -158,10 +156,9 @@ def is_int(n):
             return False
         return True
 
-#--------------------------------------------------------------------------------------------------
 
 def pull_from_sheet(
-    con,
+    engine,
     service,
     year,
     spreadsheet_id,
@@ -185,7 +182,7 @@ def pull_from_sheet(
     Can only read a single range of a spreadsheet with this function.
 
     Args:
-        con: Connection to bigdata database.
+        engine: Connection to bigdata database.
         service: Credentials to access google sheets.
         year: Indicates which year of data is being worked on.
         spreadsheet_id: The iD iof the Google spreadsheet containing raw data.
@@ -224,7 +221,7 @@ def pull_from_sheet(
                     continue
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
-                if validate_school_info(con, i): # return true or false
+                if validate_school_info(engine, i): # return true or false
                     rows.append(i)
                     LOGGER.info('Reading row #%i', ind)
                     LOGGER.debug(row)
@@ -236,31 +233,41 @@ def pull_from_sheet(
                 LOGGER.error(err)
                 status = False
     
-    truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
-    LOGGER.info('Truncating existing table %s', table)
-    
-    
-    query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
-                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
-    
-    LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
-    LOGGER.debug(rows)
     
     if not rows: # Only insert if there is at least one valid row to be inserted
         LOGGER.warning('There is no valid data for year: %i', year)
         return
-    with con:
-        with con.cursor() as cur:
-            cur.execute(truncate)  
-            execute_values(cur, query, rows)
+    
+    metadata = MetaData(schema = schema)
+    t = Table(
+        table,
+        metadata,
+        *[Column(c) for c in [
+            "school_name",
+            "address",
+            "work_order_fb",
+            "work_order_wyss",
+            "locations_zone",
+            "final_sign_installation",
+            "locations_fb",
+            "locations_wyss"
+            ]
+        ]
+    )
+    truncate_stmt = delete(t)
+    insert_stmt = t.insert().values(rows)
+    with engine.connect() as conn:
+        LOGGER.info('Truncating existing table %s', table)
+        conn.execute(truncate_stmt)
+        LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
+        LOGGER.debug(rows)
+        conn.execute(insert_stmt)
+
     LOGGER.info('Table %s is done', table)
     return status
 
 @click.command()
-@click.argument(
-    "db-config",
-    # help="A configurations file containing the database details."
-)
+@click.argument("db-config")
 @click.option(
     "--year",
     "-y",
@@ -312,7 +319,7 @@ def pull_from_sheet_cli(
         db_config: A configurations file containing the database details.
 
     Examples:
-        schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU_Wj1qBncc1gT2px40kggp5YBxVh3A3_h4JQ' -r 'Master Sheet!A3:AC180'
+        gis/school_safety_zones/schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU_Wj1qBncc1gT2px40kggp5YBxVh3A3_h4JQ' -r 'Master Sheet!A3:AC180'
     """
     logging.basicConfig(level=logging.ERROR)
 
@@ -327,7 +334,7 @@ def pull_from_sheet_cli(
         table = f"school_safety_zone_{year}_raw"
 
     if pull_from_sheet(
-        con = engine.raw_connection(),
+        engine = engine,
         service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
         year=year,
         spreadsheet_id=spreadsheet_id,

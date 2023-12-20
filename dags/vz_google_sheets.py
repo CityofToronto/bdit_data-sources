@@ -12,7 +12,7 @@ import sys
 import pendulum
 from datetime import timedelta
 from typing import Any
-from psycopg2.extensions import connection
+from sqlalchemy.engine import Engine
 from googleapiclient.discovery import build
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
@@ -62,7 +62,7 @@ def get_vz_data():
 
     @task()
     def pull_data(
-        con: connection,
+        engine: Engine,
         service: Any,
         schema: str,
         spreadsheet: dict,
@@ -71,7 +71,7 @@ def get_vz_data():
         """Loads SSZ data from Google Spreadsheets into the database.
 
         Args:
-            con: Connection to the PostgreSQL database.
+            engine: Connection to the PostgreSQL database.
             service: Resource for interacting with the Google API.
             schema: Name of schema to load the data into.
             spreadsheet: Dictionary of the year to be loaded, the spreadsheet
@@ -89,7 +89,7 @@ def get_vz_data():
             f"Failed to pull {year} data. "
         )
         if not pull_from_sheet(
-            con=con,
+            engine=engine,
             service=service,
             year=year,
             spreadsheet_id=spreadsheet["spreadsheet_id"],
@@ -111,7 +111,7 @@ def get_vz_data():
 
     spreadsheets = get_variable.override(task_id="get_list_of_years")("ssz_spreadsheets")
     pull_data.partial(
-        con=PostgresHook("vz_api_bot").get_conn(),
+        engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine(),
         service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
         schema="vz_safety_programs_staging"
     ).expand(
