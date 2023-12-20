@@ -1,32 +1,18 @@
 import os
 import sys
-from airflow import DAG
+from airflow.decorators import dag, TaskGroup, task
 from datetime import datetime, timedelta
-from airflow.decorators import task
-from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
 from dags.common_tasks import check_jan_1st
 
-dag_name = 'vds_pull_vdsvehicledata'
-
-#CONNECT TO ITS_CENTRAL
-itsc_bot = PostgresHook('itsc_postgres')
-
-#CONNECT TO BIGDATA
-vds_bot = PostgresHook('vds_bot')
+DAG_NAME = 'vds_pull_vdsvehicledata'
 
 # Get DAG Owner
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-#op_kwargs:
-conns = {'rds_conn': vds_bot, 'itsc_conn': itsc_bot}
-start_date = {'start_date': '{{ ds }}'}
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -36,7 +22,7 @@ from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
 default_args = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
@@ -50,14 +36,17 @@ default_args = {
 
 #this dag deletes any existing data from RDS vds.raw_vdsvehicledata and then pulls and inserts from ITSC
  #then summarizes into length and speed summary tables by 15 minutes.
-with DAG(dag_id='vds_pull_vdsvehicledata',
-         default_args=default_args,
-         max_active_runs=1,
-         template_searchpath=[
-             os.path.join(repo_path,'volumes/vds/sql'),
-             os.path.join(repo_path,'dags/sql')
-         ],
-         schedule='5 4 * * *') as dag: #daily at 4:05am
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    max_active_runs=1,
+    template_searchpath=[
+        os.path.join(repo_path,'volumes/vds/sql'),
+        os.path.join(repo_path,'dags/sql')
+    ],
+    schedule='5 4 * * *' #daily at 4:05am
+)
+def vdsvehicledata_dag():
 
     t_upstream_done = ExternalTaskSensor(
         task_id="starting_point",
@@ -70,7 +59,8 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    with TaskGroup(group_id='check_partitions') as check_partitions_tg:
+    @TaskGroup()
+    def check_partitions():
 
         @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
         def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
@@ -90,7 +80,8 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
-    with TaskGroup(group_id='pull_vdsvehicledata') as pull_vdsvehicledata:
+    @TaskGroup()
+    def pull_vdsvehicledata():
 
         #deletes data from vds.raw_vdsvehicledata
         delete_vdsvehicledata_task = PostgresOperator(
@@ -106,16 +97,20 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         )
 
         #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
-        pull_raw_vdsvehicledata_task = PythonOperator(
-            task_id='pull_raw_vdsvehicledata',
-            python_callable=pull_raw_vdsvehicledata,
-            op_kwargs = conns | start_date 
-        )
+        @task(task_id='pull_raw_vdsvehicledata')
+        def pull_raw_vdsvehicledata_task(ds=None):
+            #CONNECT TO ITS_CENTRAL
+            itsc_bot = PostgresHook('itsc_postgres')
+            #CONNECT TO BIGDATA
+            vds_bot = PostgresHook('vds_bot')
 
-        delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task
+            pull_raw_vdsvehicledata(rds_conn = vds_bot, itsc_conn = itsc_bot, start_date = ds)
+
+        delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task()
 
     #this task group summarizes vdsvehicledata into `vds.veh_speeds_15min` (5km/h speed bins), `vds.veh_length_15min` (1m length bins)
-    with TaskGroup(group_id='summarize_vdsvehicledata') as summarize_vdsvehicledata:
+    @TaskGroup
+    def summarize_vdsvehicledata():
         
         #deletes from and then inserts new data into summary table vds.aggregate_15min_veh_speeds
         summarize_speeds_task = PostgresOperator(
@@ -138,7 +133,8 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         summarize_speeds_task
         summarize_lengths_task
 
-    with TaskGroup(group_id='data_checks') as data_checks:
+    @TaskGroup
+    def data_checks():
         check_avg_rows = SQLCheckOperatorWithReturnValue(
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
@@ -152,4 +148,6 @@ with DAG(dag_id='vds_pull_vdsvehicledata',
         )
         check_avg_rows
 
-    [t_upstream_done, check_partitions_tg] >> pull_vdsvehicledata >> summarize_vdsvehicledata >> data_checks
+    [t_upstream_done, check_partitions()] >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
+
+vdsvehicledata_dag()
