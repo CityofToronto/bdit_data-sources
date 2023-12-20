@@ -6,14 +6,13 @@ A SQL data check on the number of rows is run to ensure data quality."""
 
 import os
 import sys
-from airflow.decorators import dag, TaskGroup, task
+from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
-from dags.common_tasks import check_jan_1st
 
 DAG_NAME = 'vds_pull_vdsvehicledata'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
@@ -24,6 +23,7 @@ sys.path.insert(0, repo_path)
 from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
+from dags.common_tasks import check_jan_1st
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -62,7 +62,7 @@ def vdsvehicledata_dag():
     )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
-    @TaskGroup()
+    @task_group
     def check_partitions():
 
         @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
@@ -83,7 +83,7 @@ def vdsvehicledata_dag():
         check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
-    @TaskGroup()
+    @task_group
     def pull_vdsvehicledata():
 
         #deletes data from vds.raw_vdsvehicledata
@@ -109,7 +109,7 @@ def vdsvehicledata_dag():
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task()
 
-    @TaskGroup
+    @task_group
     def summarize_vdsvehicledata():
         """This task group summarizes vdsvehicledata into `vds.veh_speeds_15min`
         (5km/h speed bins), `vds.veh_length_15min` (1m length bins)"""
@@ -135,7 +135,7 @@ def vdsvehicledata_dag():
         summarize_speeds_task
         summarize_lengths_task
 
-    @TaskGroup
+    @task_group
     def data_checks():
         "Data quality checks which may warrant re-running the DAG."
 
