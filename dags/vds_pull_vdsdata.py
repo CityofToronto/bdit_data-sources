@@ -1,3 +1,10 @@
+"""Daily DAG to pull `vdsdata` from the ITS Central Database
+and into bigdata database. Before pulling new data, new partitions are
+created if necessary, existing data for the date range is deleted,
+and the latest detector inventory+locations are fetched into bigdata.
+Also summarizes data into 15 minutes tables.
+A SQL data check on the number of rows is run to ensure data quality."""
+
 import os
 import sys
 from airflow.decorators import dag, TaskGroup, task
@@ -9,8 +16,6 @@ from functools import partial
 from airflow.sensors.external_task import ExternalTaskMarker
 
 DAG_NAME = 'vds_pull_vdsdata'
-
-# Get DAG Owner
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -44,20 +49,19 @@ default_args = {
         os.path.join(repo_path,'volumes/vds/sql'),
         os.path.join(repo_path,'dags/sql')
     ],
+    doc_md=__doc__,
     schedule='0 4 * * *' #daily at 4am
 )
 def vdsdata_dag():
-
     @TaskGroup()
     def update_inventories():
-        "This task group pulls the detector inventories"
+        """This task group pulls the detector inventory and locations into bigdata.
+        The vdsvehicledata DAG is also triggered after the lookups are updated."""
   
         @task
         def pull_and_insert_detector_inventory():
             "Get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`"
-            #CONNECT TO ITS_CENTRAL
             itsc_bot = PostgresHook('itsc_postgres')
-            #CONNECT TO BIGDATA
             vds_bot = PostgresHook('vds_bot')
 
             pull_detector_inventory(rds_conn = vds_bot, itsc_conn=itsc_bot)
@@ -65,9 +69,7 @@ def vdsdata_dag():
         @task
         def pull_and_insert_entitylocations():
             "Get entitylocations from ITSC and insert into RDS `vds.entity_locations`"
-            #CONNECT TO ITS_CENTRAL
             itsc_bot = PostgresHook('itsc_postgres')
-            #CONNECT TO BIGDATA
             vds_bot = PostgresHook('vds_bot')
             pull_entity_locations(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
@@ -79,10 +81,11 @@ def vdsdata_dag():
 
         [pull_and_insert_detector_inventory(), pull_and_insert_entitylocations()] >> t_done
 
-    #this task group checks if all necessary partitions exist and if not executes create functions.
     @TaskGroup
     def check_partitions():
-       
+        """Task group checks if all necessary partitions exist and
+        if not executes create functions."""
+
         create_partitions = PostgresOperator(
             task_id='create_partitions',
             sql=[#partition by year and month:
@@ -98,9 +101,11 @@ def vdsdata_dag():
         #check if Jan 1, if so trigger partition creates.
         check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
-    #this task group deletes any existing data from RDS vds.raw_vdsdata and then pulls and inserts from ITSC
     @TaskGroup
     def pull_vdsdata():
+        """Task group deletes any existing data from RDS vds.raw_vdsdata
+        and then pulls and inserts from ITSC."""
+
         #deletes data from vds.raw_vdsdata
         delete_raw_vdsdata_task = PostgresOperator(
             sql="""DELETE FROM vds.raw_vdsdata
@@ -116,20 +121,20 @@ def vdsdata_dag():
 
         @task
         def pull_raw_vdsdata_task(ds=None):
-            "get vdsdata from ITSC and insert into RDS `vds.raw_vdsdata`"
-            #CONNECT TO ITS_CENTRAL
+            "Get vdsdata from ITSC, transform, and insert into RDS `vds.raw_vdsdata`."
             itsc_bot = PostgresHook('itsc_postgres')
-            #CONNECT TO BIGDATA
             vds_bot = PostgresHook('vds_bot')
 
             pull_raw_vdsdata(rds_conn = vds_bot, itsc_conn = itsc_bot, start_date = ds)
 
         delete_raw_vdsdata_task >> pull_raw_vdsdata_task()
 
-    #this task group deletes any existing data from RDS summary tables (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts into the same table
     @TaskGroup
     def summarize_v15():
-
+        """Task group deletes any existing data from RDS summary tables
+        (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts
+        into the same table."""
+        
         #first deletes and then inserts summarized data into RDS `vds.counts_15min`
         summarize_v15_task = PostgresOperator(
             sql=["delete/delete-counts_15min.sql", "insert/insert_counts_15min.sql"],
@@ -153,6 +158,8 @@ def vdsdata_dag():
 
     @TaskGroup
     def data_checks():
+        "Data quality checks which may warrant re-running the DAG."
+        
         divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
