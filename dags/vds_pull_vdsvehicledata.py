@@ -6,6 +6,7 @@ A SQL data check on the number of rows is run to ensure data quality."""
 
 import os
 import sys
+import re
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -24,6 +25,11 @@ from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
 from dags.dag_functions import task_fail_slack_alert
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 from dags.common_tasks import check_jan_1st
+
+doc_md_path = os.path.join(repo_path, 'volumes/vds/readme.md')
+contents = open(doc_md_path, 'r').read()
+doc_md_regex = '(?<=### vds_pull_vdsvehicledata DAG \n)[\s\S]+(?=#{1,3} )'
+DOC_MD = re.findall(doc_md_regex, contents)[0]
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -46,7 +52,7 @@ default_args = {
         os.path.join(repo_path,'volumes/vds/sql'),
         os.path.join(repo_path,'dags/sql')
     ],
-    doc_md=__doc__,
+    doc_md=DOC_MD,
     tags=['vds', 'vdsvehicledata', 'data_checks', 'pull'],
     schedule='5 4 * * *' #daily at 4:05am
 )

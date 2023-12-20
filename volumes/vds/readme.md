@@ -432,7 +432,7 @@ on-insert trigger has the latest detector information available. Also triggers o
 - `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
 - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
-### [vds_pull_vdsvehicledata](../../dags/vds_pull_vdsvehicledata.py)
+### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
   ![vds_pull_vdsvehicledata DAG](vds_pull_vdsvehicledata_dag.png)
