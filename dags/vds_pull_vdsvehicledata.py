@@ -1,3 +1,9 @@
+"""Daily DAG to pull `vdsvehicledata` from the ITS Central Database
+and into bigdata database. Before pulling new data, new partitions are
+created if necessary, and existing data for the date range is deleted.
+Also summarizes data into speed and length tables by 15 minutes.
+A SQL data check on the number of rows is run to ensure data quality."""
+
 import os
 import sys
 from airflow.decorators import dag, TaskGroup, task
@@ -10,8 +16,6 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from dags.common_tasks import check_jan_1st
 
 DAG_NAME = 'vds_pull_vdsvehicledata'
-
-# Get DAG Owner
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -34,8 +38,6 @@ default_args = {
     'catchup': True,
 }
 
-#this dag deletes any existing data from RDS vds.raw_vdsvehicledata and then pulls and inserts from ITSC
- #then summarizes into length and speed summary tables by 15 minutes.
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
@@ -44,6 +46,7 @@ default_args = {
         os.path.join(repo_path,'volumes/vds/sql'),
         os.path.join(repo_path,'dags/sql')
     ],
+    doc_md=__doc__,
     schedule='5 4 * * *' #daily at 4:05am
 )
 def vdsvehicledata_dag():
@@ -99,19 +102,18 @@ def vdsvehicledata_dag():
         #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
         @task(task_id='pull_raw_vdsvehicledata')
         def pull_raw_vdsvehicledata_task(ds=None):
-            #CONNECT TO ITS_CENTRAL
             itsc_bot = PostgresHook('itsc_postgres')
-            #CONNECT TO BIGDATA
             vds_bot = PostgresHook('vds_bot')
 
             pull_raw_vdsvehicledata(rds_conn = vds_bot, itsc_conn = itsc_bot, start_date = ds)
 
         delete_vdsvehicledata_task >> pull_raw_vdsvehicledata_task()
 
-    #this task group summarizes vdsvehicledata into `vds.veh_speeds_15min` (5km/h speed bins), `vds.veh_length_15min` (1m length bins)
     @TaskGroup
     def summarize_vdsvehicledata():
-        
+        """This task group summarizes vdsvehicledata into `vds.veh_speeds_15min`
+        (5km/h speed bins), `vds.veh_length_15min` (1m length bins)"""
+
         #deletes from and then inserts new data into summary table vds.aggregate_15min_veh_speeds
         summarize_speeds_task = PostgresOperator(
             sql=["delete/delete-veh_speeds_15min.sql", "insert/insert_veh_speeds_15min.sql"],
@@ -135,6 +137,8 @@ def vdsvehicledata_dag():
 
     @TaskGroup
     def data_checks():
+        "Data quality checks which may warrant re-running the DAG."
+
         check_avg_rows = SQLCheckOperatorWithReturnValue(
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
