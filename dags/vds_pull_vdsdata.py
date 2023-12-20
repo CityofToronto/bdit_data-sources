@@ -120,7 +120,7 @@ def vdsdata_dag():
             trigger_rule='none_failed'
         )
 
-        @task
+        @task(task_id='pull_raw_vdsdata')
         def pull_raw_vdsdata_task(ds=None):
             "Get vdsdata from ITSC, transform, and insert into RDS `vds.raw_vdsdata`."
             itsc_bot = PostgresHook('itsc_postgres')
