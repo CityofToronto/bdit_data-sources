@@ -7,7 +7,7 @@ A SQL data check on the number of rows is run to ensure data quality."""
 
 import os
 import sys
-from airflow.decorators import dag, TaskGroup, task
+from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -53,7 +53,7 @@ default_args = {
     schedule='0 4 * * *' #daily at 4am
 )
 def vdsdata_dag():
-    @TaskGroup()
+    @task_group
     def update_inventories():
         """This task group pulls the detector inventory and locations into bigdata.
         The vdsvehicledata DAG is also triggered after the lookups are updated."""
@@ -81,7 +81,7 @@ def vdsdata_dag():
 
         [pull_and_insert_detector_inventory(), pull_and_insert_entitylocations()] >> t_done
 
-    @TaskGroup
+    @task_group
     def check_partitions():
         """Task group checks if all necessary partitions exist and
         if not executes create functions."""
@@ -101,7 +101,7 @@ def vdsdata_dag():
         #check if Jan 1, if so trigger partition creates.
         check_jan_1st.override(task_id="check_partitions")() >> create_partitions
 
-    @TaskGroup
+    @task_group
     def pull_vdsdata():
         """Task group deletes any existing data from RDS vds.raw_vdsdata
         and then pulls and inserts from ITSC."""
@@ -129,7 +129,7 @@ def vdsdata_dag():
 
         delete_raw_vdsdata_task >> pull_raw_vdsdata_task()
 
-    @TaskGroup
+    @task_group
     def summarize_v15():
         """Task group deletes any existing data from RDS summary tables
         (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts
@@ -156,7 +156,7 @@ def vdsdata_dag():
         summarize_v15_task
         summarize_v15_bylane_task
 
-    @TaskGroup
+    @task_group
     def data_checks():
         "Data quality checks which may warrant re-running the DAG."
         
