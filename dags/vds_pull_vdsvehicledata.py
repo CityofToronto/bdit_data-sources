@@ -28,7 +28,7 @@ from dags.common_tasks import check_jan_1st
 
 doc_md_path = os.path.join(repo_path, 'volumes/vds/readme.md')
 contents = open(doc_md_path, 'r').read()
-doc_md_regex = '(?<=### vds_pull_vdsvehicledata DAG \n)[\s\S]+(?=#{1,3} )'
+doc_md_regex = '### vds_pull_vdsvehicledata DAG \n[\s\S]+(?=\n#{1,3} )'
 DOC_MD = re.findall(doc_md_regex, contents)[0]
 
 default_args = {
