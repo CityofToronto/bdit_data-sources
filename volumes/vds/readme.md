@@ -408,7 +408,7 @@ Row count: 189
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below.  
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
-### [vds_pull_vdsdata](../../dags/vds_pull_vdsdata.py)
+### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
   ![vds_pull_vdsdata DAG](vds_pull_vdsdata_dag.png)
