@@ -1,10 +1,3 @@
-"""Daily DAG to pull `vdsdata` from the ITS Central Database
-and into bigdata database. Before pulling new data, new partitions are
-created if necessary, existing data for the date range is deleted,
-and the latest detector inventory+locations are fetched into bigdata.
-Also summarizes data into 15 minutes tables.
-A SQL data check on the number of rows is run to ensure data quality."""
-
 import os
 import sys
 import re
