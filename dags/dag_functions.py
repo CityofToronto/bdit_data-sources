@@ -96,6 +96,12 @@ def task_fail_slack_alert(
         # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
+    if isinstance(extra_msg_str, list):
+        #recursively collapse extra_msg_str's which are in the form of a list with new lines.
+        extra_msg_str = '\n'.join(
+            ['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str]
+        )
+
     # Slack failure message
     if use_proxy:
         # Temporarily accessing Airflow on Morbius through 8080 instead of Nginx
@@ -125,10 +131,7 @@ def task_fail_slack_alert(
         slack_webhook_conn_id=SLACK_CONN_ID,
         message=slack_msg,
         username="airflow",
-        attachments=[
-            #recursively collapse extra_msg_str with new lines.
-            {"text": '\n'.join(['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str])}
-        ],
+        attachments=[{"text": extra_msg_str}],
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
