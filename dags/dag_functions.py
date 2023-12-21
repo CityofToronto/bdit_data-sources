@@ -129,3 +129,10 @@ def task_fail_slack_alert(
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
+
+def get_readme_docmd(readme_path, dag_name):
+    import re
+    contents = open(readme_path, 'r').read()
+    doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
+    doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
+    return re.findall(doc_md_regex, contents)[0]
