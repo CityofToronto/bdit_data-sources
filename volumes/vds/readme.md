@@ -408,6 +408,7 @@ Row count: 189
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below.  
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
+<!-- vds_pull_vdsdata_doc_md -->
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
@@ -439,8 +440,9 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
 
   **`data_checks`**  
   - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
+<!-- vds_pull_vdsdata_doc_md -->
 
-
+<!-- vds_pull_vdsvehicledata_doc_md -->
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
@@ -468,6 +470,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
 
   **`data_checks`**  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
+<!-- vds_pull_vdsvehicledata_doc_md -->
 
 ## Data Ops: something went wrong predictably, how do I fix it?
 **Need to retry a task?**  
