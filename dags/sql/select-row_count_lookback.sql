@@ -16,11 +16,13 @@ WITH lookback AS ( --noqa: L045
 
 today AS (
     SELECT
+        date_trunc('day', {{ params.dt_col }}) AS _dt, --noqa: L039
         SUM({{ params.col_to_sum }}) AS today_count
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp
         AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+    GROUP BY _dt --noqa: L003
 )
 
 SELECT
@@ -32,6 +34,8 @@ SELECT
             FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count)),
             'FM9,999,999,999'
             ) AS passing_value
-FROM today AS a,
-    lookback AS lb --noqa: L025
+FROM today AS a
+JOIN lookback AS lb ON
+    NOT(date_part('isodow', a._dt) <= 5 AND (SELECT holiday FROM ref.holiday WHERE dt = a._dt) IS NULL) = 
+    NOT(date_part('isodow', lb._dt) <= 5 AND (SELECT holiday FROM ref.holiday WHERE dt = lb._dt) IS NULL)
 GROUP BY a.today_count
