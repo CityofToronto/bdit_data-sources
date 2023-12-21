@@ -1,9 +1,3 @@
-"""Daily DAG to pull `vdsvehicledata` from the ITS Central Database
-and into bigdata database. Before pulling new data, new partitions are
-created if necessary, and existing data for the date range is deleted.
-Also summarizes data into speed and length tables by 15 minutes.
-A SQL data check on the number of rows is run to ensure data quality."""
-
 import os
 import sys
 import re
