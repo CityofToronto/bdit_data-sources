@@ -131,6 +131,15 @@ def task_fail_slack_alert(
     return failed_alert.execute(context=context)
 
 def get_readme_docmd(readme_path, dag_name):
+    """Extracts a DAG doc_md from a .md file using html comments tags.
+
+    Args:
+        readme_path: An aboslute path to the .md file to extract from. 
+        dag_name: The name of the DAG, matching the html comment in the .md
+        file to extract from. The html comment should be in the format
+        '<!-- dag_name_doc_md -->' before and after the relevant section. 
+    """
+
     import re
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
