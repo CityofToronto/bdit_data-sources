@@ -26,16 +26,27 @@ today AS (
 )
 
 SELECT
-    a.today_count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count)) AS check, 
-    'Daily count: ' || to_char(a.today_count, 'FM9,999,999,999') AS ds_count,
-    initcap('{{ params.lookback }}') || ' Lookback Avg: '
-        || to_char(AVG(lb.lookback_count), 'FM9,999,999,999') AS lookback_avg,
+    a.today_count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count))
+    AS check, 
+    'Daily count: ' || to_char(
+        a.today_count, 'FM9,999,999,999'
+    ) AS ds_count,
+    initcap('{{ params.lookback }}') || ' Lookback Avg: ' || to_char(
+        AVG(lb.lookback_count), 'FM9,999,999,999'
+    ) AS lookback_avg,
     'Pass threshold: ' || to_char(
-            FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count)),
-            'FM9,999,999,999'
-            ) AS passing_value
+        FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count)),
+        'FM9,999,999,999'
+    ) AS passing_value
 FROM today AS a
 JOIN lookback AS lb ON
-    NOT(date_part('isodow', a._dt) <= 5 AND (SELECT holiday FROM ref.holiday WHERE dt = a._dt) IS NULL) = 
-    NOT(date_part('isodow', lb._dt) <= 5 AND (SELECT holiday FROM ref.holiday WHERE dt = lb._dt) IS NULL)
+    NOT (date_part('isodow', a._dt) <= 5
+        AND (
+            SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = a._dt
+        ) IS NULL)
+    = NOT (
+        date_part('isodow', lb._dt) <= 5
+        AND (
+            SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = lb._dt
+        ) IS NULL)
 GROUP BY a.today_count

@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.summarize_gaps_data_check(
     default_bin interval,
     id_col_dtype anyelement DEFAULT NULL::text
 )
-RETURNS TABLE(
+RETURNS TABLE (
     _check boolean, summ text, gaps text []
 )
 LANGUAGE plpgsql
