@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Common functions used in most of the DAGs."""
 import os
+import re
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
@@ -140,7 +141,6 @@ def get_readme_docmd(readme_path, dag_name):
         '<!-- dag_name_doc_md -->' before and after the relevant section. 
     """
 
-    import re
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
