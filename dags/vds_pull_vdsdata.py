@@ -88,11 +88,11 @@ with DAG(dag_name,
         create_partitions = PostgresOperator(
             task_id='create_partitions',
             sql=[#partition by year and month:
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
-                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
+                "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
                 #partition by year only: 
-                "SELECT vds.partition_vds_yyyy('counts_15min_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')",
-                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_15min')"],
+                "SELECT vds.partition_vds_yyyy('counts_15min_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
+                "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
             postgres_conn_id='vds_bot',
             autocommit=True
         )
