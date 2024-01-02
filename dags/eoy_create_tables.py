@@ -80,11 +80,17 @@ def eoy_create_table_dag():
                                             python_callable = replace_bt_trigger,
                                             op_kwargs = {'pg_hook': bt_bot,
                                                         'dt': '{{ ds }}'})
+        @task
+        def insert_holidays():
+            dt = kwargs["ds"]
+            next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
+            holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
+            ref_bot = PostgresHook('ref_bot')
+            with ref_bot.get_conn() as con, con.cursor() as cur:
+                for dt, name in holidays_year.items():
+                    name = name.replace('Observed', 'obs')
+                    cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
 
-        insert_holidays = PythonOperator(task_id='insert_holidays',
-                                        python_callable = insert_holidays,
-                                        op_args = ['{{ ds }}'])
-        
         here_create_tables = PostgresOperator(task_id='here_create_tables',
                                             sql="SELECT here.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
                                             postgres_conn_id='here_bot',
@@ -103,7 +109,7 @@ def eoy_create_table_dag():
                         autocommit=True
                     )
         bt_replace_trigger
-        insert_holidays
+        insert_holidays()
         here_create_tables
         bt_create_tables
         congestion_create_table
