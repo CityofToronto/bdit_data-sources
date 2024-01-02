@@ -83,7 +83,7 @@ def eoy_create_table_dag():
                         op_kwargs = {'pg_hook': bt_bot,
                                       'dt': '{{ ds }}'})
         @task
-        def insert_holidays():
+        def insert_holidays(**kwargs):
             dt = kwargs["ds"]
             next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
             holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
