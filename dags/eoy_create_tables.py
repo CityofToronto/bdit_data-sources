@@ -45,16 +45,6 @@ SLACK_CONN_ID = 'slack_data_pipeline'
 DAG_NAME = 'eoy_table_create'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-def insert_holidays(dt):
-    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
-    holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
-    ref_bot = PostgresHook('ref_bot')
-    with ref_bot.get_conn() as con, con.cursor() as cur:
-        for dt, name in holidays_year.items():
-            name = name.replace('Observed', 'obs')
-            cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
-
-
 default_args = {'owner': ','.join(DAG_OWNERS), 
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2021, 12, 1, tz="America/Toronto"),
@@ -95,19 +85,19 @@ def eoy_create_table_dag():
 
         here_create_tables = PostgresOperator(
                         task_id='here_create_tables',
-                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='here_bot',
                         autocommit=True)
         
         bt_create_tables = PostgresOperator(
                         task_id='bluetooth_create_tables',
-                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='bt_bot',
                         autocommit=True)
         
         congestion_create_table = PostgresOperator(
                         task_id='congestion_create_table',
-                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='congestion_bot',
                         autocommit=True)
         
