@@ -8,16 +8,17 @@ Slack notifications is raised for both successful and failed airflow process.
 """
 import sys
 import os
-import pendulum
+import holidays
 
+import pendulum
+from airflow.decorators import dag, task, task_group
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator #get rid of after
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
-from airflow.decorators import dag, task, task_group
-import holidays
+
 
 from datetime import datetime, timedelta
 import logging
@@ -44,6 +45,16 @@ SLACK_CONN_ID = 'slack_data_pipeline'
 DAG_NAME = 'eoy_table_create'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
+def insert_holidays(dt):
+    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
+    holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
+    ref_bot = PostgresHook('ref_bot')
+    with ref_bot.get_conn() as con, con.cursor() as cur:
+        for dt, name in holidays_year.items():
+            name = name.replace('Observed', 'obs')
+            cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
+
+
 default_args = {'owner': ','.join(DAG_OWNERS), 
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2022, 12, 1, tz="America/Toronto"),
@@ -54,15 +65,6 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'on_failure_callback': task_fail_slack_alert
                 }
 
-def insert_holidays(dt):
-    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
-    holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
-    ref_bot = PostgresHook('ref_bot')
-    with ref_bot.get_conn() as con, con.cursor() as cur:
-        for dt, name in holidays_year.items():
-            name = name.replace('Observed', 'obs')
-            cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
-
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
@@ -71,7 +73,7 @@ def insert_holidays(dt):
     doc_md=__doc__
     ) 
 def eoy_create_table_dag():
-    @task_group()
+    @task_group
     def yearly_task():
         """Task group to create yearly tables and triggers."""
         bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
@@ -102,7 +104,13 @@ def eoy_create_table_dag():
                         postgres_conn_id='congestion_bot',
                         autocommit=True
                     )
-    @task
+        bt_replace_trigger
+        insert_holidays
+        here_create_tables
+        bt_create_tables
+        congestion_create_table
+        
+    @task(trigger_rule='none_failed')
     def success_text():
         print('successful')
 
