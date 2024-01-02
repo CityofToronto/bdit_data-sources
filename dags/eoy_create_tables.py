@@ -78,13 +78,11 @@ def eoy_create_table_dag():
         """Task group to create yearly tables and triggers."""
         bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                             python_callable = replace_bt_trigger,
-                                            dag = dag,
                                             op_kwargs = {'pg_hook': bt_bot,
                                                         'dt': '{{ ds }}'})
 
         insert_holidays = PythonOperator(task_id='insert_holidays',
                                         python_callable = insert_holidays,
-                                        dag = dag,
                                         op_args = ['{{ ds }}'])
         
         here_create_tables = PostgresOperator(task_id='here_create_tables',
@@ -109,7 +107,7 @@ def eoy_create_table_dag():
         here_create_tables
         bt_create_tables
         congestion_create_table
-        
+
     @task(trigger_rule='none_failed')
     def success_text():
         print('successful')
