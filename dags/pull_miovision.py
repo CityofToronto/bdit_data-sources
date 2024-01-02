@@ -121,6 +121,6 @@ def pull_miovision_dag():
             external_task_id="starting_point"
     )
 
-    check_partitions() >> t1 >> data_checks() >> t_done
+    check_partitions() >> t1 >> t_done >> data_checks()
 
 pull_miovision_dag()

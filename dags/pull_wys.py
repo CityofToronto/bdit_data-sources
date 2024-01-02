@@ -117,6 +117,12 @@ def pull_wys_dag():
                      end_date = ds,
                      conn = conn,
                      api_key=api_key)
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="check_miovision",
+        external_task_id="starting_point"
+    )
 
     @task_group()
     def data_checks():
@@ -132,13 +138,8 @@ def pull_wys_dag():
                 "threshold": 0.7
             }
         )
-        t_done = ExternalTaskMarker(
-                task_id="done",
-                external_dag_id="check_miovision",
-                external_task_id="starting_point"
-        )
 
-        check_row_count >> t_done
+        check_row_count
 
     @task
     def pull_schedules():
@@ -167,7 +168,7 @@ def pull_wys_dag():
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
 
-    check_partitions() >> pull_wys() >> data_checks()
+    check_partitions() >> pull_wys() >> t_done >> data_checks()
     pull_schedules()
     read_google_sheets()
 
