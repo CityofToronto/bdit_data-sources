@@ -81,7 +81,7 @@ def eoy_create_table_dag():
                         task_id='bt_replace_trigger',
                         python_callable = replace_bt_trigger,
                         op_kwargs = {'pg_hook': bt_bot,
-                                      'dt': '{{ next_ds }}'})
+                                      'dt': '{{ ds }}'})
         @task
         def insert_holidays():
             dt = kwargs["ds"]
@@ -95,19 +95,19 @@ def eoy_create_table_dag():
 
         here_create_tables = PostgresOperator(
                         task_id='here_create_tables',
-                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='here_bot',
                         autocommit=True)
         
         bt_create_tables = PostgresOperator(
                         task_id='bluetooth_create_tables',
-                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='bt_bot',
                         autocommit=True)
         
         congestion_create_table = PostgresOperator(
                         task_id='congestion_create_table',
-                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(data_interval_end, '%Y-%m-%d', '%Y') }}')",
                         postgres_conn_id='congestion_bot',
                         autocommit=True)
         
