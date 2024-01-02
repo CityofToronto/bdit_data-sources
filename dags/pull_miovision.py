@@ -68,8 +68,9 @@ def pull_miovision_dag():
             autocommit=True
         )
 
-        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
-        check_1st_of_month.override(task_id="check_month_partition")() >> create_month_partition
+        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition >> (
+            check_1st_of_month.override(task_id="check_month_partition")() >> create_month_partition
+        )
 
     t1 = BashOperator(
         task_id = 'pull_miovision',
