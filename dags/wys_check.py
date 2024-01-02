@@ -28,7 +28,7 @@ default_args = {
     'start_date': pendulum.datetime(2023, 12, 18, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
-    'retries': 2,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     #progressive longer waits between retries
     'retry_exponential_backoff': True,
