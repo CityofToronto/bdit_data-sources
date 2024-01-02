@@ -81,7 +81,7 @@ def eoy_create_table_dag():
                         task_id='bt_replace_trigger',
                         python_callable = replace_bt_trigger,
                         op_kwargs = {'pg_hook': bt_bot,
-                                      'dt': '{{ ds }}'})
+                                      'dt': '{{ next_ds }}'})
         @task
         def insert_holidays():
             dt = kwargs["ds"]
