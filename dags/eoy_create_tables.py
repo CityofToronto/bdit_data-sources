@@ -10,12 +10,6 @@ import sys
 import os
 import pendulum
 
-from airflow import DAG
-from datetime import datetime, timedelta
-import logging
-LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -24,6 +18,11 @@ from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
 from airflow.decorators import dag, task, task_group
 import holidays
+
+from datetime import datetime, timedelta
+import logging
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 bt_bot = PostgresHook('bt_bot')
 
@@ -54,6 +53,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'retry_delay': timedelta(minutes=5),
                 'on_failure_callback': task_fail_slack_alert
                 }
+
 def insert_holidays(dt):
     next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
     holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
@@ -63,15 +63,17 @@ def insert_holidays(dt):
             name = name.replace('Observed', 'obs')
             cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
 
-@dag(dag_id=DAG_NAME,
-     default_args=default_args,
-     schedule='@yearly', #9:05 on December 1st of every year
-     tags=["partition_create"],
-     doc_md=__doc__) 
-
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    schedule='@yearly', #9:05 on December 1st of every year
+    tags=["partition_create"],
+    doc_md=__doc__
+    ) 
 def eoy_create_table_dag():
     @task_group()
     def yearly_task():
+        """Task group to create yearly tables and triggers."""
         bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                             python_callable = replace_bt_trigger,
                                             dag = dag,
