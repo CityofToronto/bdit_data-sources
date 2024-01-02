@@ -22,7 +22,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator #get rid of after
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
-from airflow.decorators import dag, task, task_group
+from airflow.decorators import dag, task
 import holidays
 
 bt_bot = PostgresHook('bt_bot')
@@ -54,6 +54,14 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'retry_delay': timedelta(minutes=5),
                 'on_failure_callback': task_fail_slack_alert
                 }
+def insert_holidays(dt):
+    next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
+    holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
+    ref_bot = PostgresHook('ref_bot')
+    with ref_bot.get_conn() as con, con.cursor() as cur:
+        for dt, name in holidays_year.items():
+            name = name.replace('Observed', 'obs')
+            cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
 
 @dag(dag_id=DAG_NAME,
      default_args=default_args,
@@ -61,17 +69,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
      tags=["partition_create"],
      doc_md=__doc__) 
 
-def eoy_create_table():
-
-    def insert_holidays(dt):
-        next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
-        holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
-        ref_bot = PostgresHook('ref_bot')
-        with ref_bot.get_conn() as con, con.cursor() as cur:
-            for dt, name in holidays_year.items():
-                name = name.replace('Observed', 'obs')
-                cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
-
+def eoy_create_table_dag():
     bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
                                         python_callable = replace_bt_trigger,
                                         dag = dag,
@@ -100,9 +98,10 @@ def eoy_create_table():
                     postgres_conn_id='congestion_bot',
                     autocommit=True
                 )
+    @task
     def success_text():
         print('successful')
 
     [bt_create_tables,bt_replace_trigger, insert_holidays, here_create_tables, congestion_create_table] >> success_text()
 
-eoy_create_table()
+eoy_create_table_dag()
