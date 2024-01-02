@@ -22,7 +22,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator #get rid of after
 from dateutil.relativedelta import relativedelta
 from airflow.models import Variable
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 import holidays
 
 bt_bot = PostgresHook('bt_bot')
@@ -70,38 +70,40 @@ def insert_holidays(dt):
      doc_md=__doc__) 
 
 def eoy_create_table_dag():
-    bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
-                                        python_callable = replace_bt_trigger,
-                                        dag = dag,
-                                        op_kwargs = {'pg_hook': bt_bot,
-                                                    'dt': '{{ ds }}'})
+    @task_group()
+    def yearly_task():
+        bt_replace_trigger = PythonOperator(task_id='bt_replace_trigger',
+                                            python_callable = replace_bt_trigger,
+                                            dag = dag,
+                                            op_kwargs = {'pg_hook': bt_bot,
+                                                        'dt': '{{ ds }}'})
 
-    insert_holidays = PythonOperator(task_id='insert_holidays',
-                                    python_callable = insert_holidays,
-                                    dag = dag,
-                                    op_args = ['{{ ds }}'])
-    
-    here_create_tables = PostgresOperator(task_id='here_create_tables',
-                                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
-                                        postgres_conn_id='here_bot',
-                                        autocommit=True)
-    
-    bt_create_tables = PostgresOperator(
-                    task_id='bluetooth_create_tables',
-                    sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
-                    postgres_conn_id='bt_bot',
-                    autocommit=True
-                )
-    congestion_create_table = PostgresOperator(
-                    task_id='congestion_create_table',
-                    sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
-                    postgres_conn_id='congestion_bot',
-                    autocommit=True
-                )
+        insert_holidays = PythonOperator(task_id='insert_holidays',
+                                        python_callable = insert_holidays,
+                                        dag = dag,
+                                        op_args = ['{{ ds }}'])
+        
+        here_create_tables = PostgresOperator(task_id='here_create_tables',
+                                            sql="SELECT here.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                                            postgres_conn_id='here_bot',
+                                            autocommit=True)
+        
+        bt_create_tables = PostgresOperator(
+                        task_id='bluetooth_create_tables',
+                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                        postgres_conn_id='bt_bot',
+                        autocommit=True
+                    )
+        congestion_create_table = PostgresOperator(
+                        task_id='congestion_create_table',
+                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(next_ds, '%Y-%m-%d', '%Y') }}')",
+                        postgres_conn_id='congestion_bot',
+                        autocommit=True
+                    )
     @task
     def success_text():
         print('successful')
 
-    [bt_create_tables,bt_replace_trigger, insert_holidays, here_create_tables, congestion_create_table] >> success_text()
+    yearly_task() >> success_text()
 
 eoy_create_table_dag()
