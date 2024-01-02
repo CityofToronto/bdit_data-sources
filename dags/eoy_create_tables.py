@@ -117,10 +117,15 @@ def eoy_create_table_dag():
         bt_create_tables
         congestion_create_table
 
-    @task(trigger_rule='none_failed')
-    def success_text():
-        print('successful')
+    success_alert = SlackWebhookOperator(
+        task_id="success_alert",
+        slack_webhook_conn_id = SLACK_CONN_ID,
+        message='''All End of Year tables have been successfully created, 
+                please checkout the tables on the database and make sure 
+                they have been properly created. ''',
+        username="airflow"
+    )
 
-    yearly_task() >> success_text()
+    yearly_task() >> success_alert
 
 eoy_create_table_dag()
