@@ -36,8 +36,8 @@ A configuration file named `db.cfg` is required to connect to pgAdmin to push da
 [DBSETTINGS]
 host=xx.xxx.xx.xx
 database=databasename
-user=database username
-password=database password
+username=database_username
+password=database_password
 ```
 
 ## 3. Adding a new year
