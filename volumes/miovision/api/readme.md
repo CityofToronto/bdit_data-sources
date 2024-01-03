@@ -2,25 +2,29 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Input Parameters](#input-parameters)
-  - [API Key and URL](#api-key-and-url)
-- [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-  - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
-  - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
-  - [Error responses](#error-responses)
-- [Input Files](#input-files)
-- [How to run the api](#how-to-run-the-api)
-  - [Virtual Environment](#virtual-environment)
-  - [Command Line Options](#command-line-options)
-- [Classifications](#classifications)
-  - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
-  - [API Classifications](#api-classifications)
-- [PostgreSQL Functions](#postgresql-functions)
-- [Invalid Movements](#invalid-movements)
-- [How the API works](#how-the-api-works)
-- [Airflow](#airflow)
-- [Notes](#notes)
+- [API Puller](#api-puller)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Input Parameters](#input-parameters)
+    - [API Key and URL](#api-key-and-url)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [Virtual Environment](#virtual-environment)
+    - [Command Line Options](#command-line-options)
+  - [Classifications](#classifications)
+    - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
+    - [API Classifications](#api-classifications)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Airflow](#airflow)
+    - [**`pull_miovision`**](#pull_miovision)
+    - [**`check_miovision`**](#check_miovision)
+  - [Notes](#notes)
 
 ## Overview
 
@@ -193,21 +197,20 @@ The API assigns a classification of 0 if the classification matches none of the 
 
 ## PostgreSQL Functions
 
-To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the csv dumps. More information can be found in the [miovision readme](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/README.md)
+To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the csv dumps. More information can be found in the [miovision readme](../README.md)
 
 |Function|Purpose|
 |-----|-----|
-|[`aggregate_15_min_tmc`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min_tmc.sql)|Aggregates data with valid movementsto 15 minutes turning movement count (TMC) bins and fills in gaps with 0-volume bins. |
-|[`aggregate_15_min`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
-[`find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
-[`api_log`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-api_log.sql)|Populates when the data is pulled|
-[`refresh_gapsize_lookup`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-refresh_gapsize_lookup.sql)|Refresh materialized view `miovision_api.gapsize_lookup`|
-[`find_gaps`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-find_gaps.sql)|Find unacceptabl gaps and insert into table `miovision_api.unacceptable_gaps`|
-[`report_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-report_dates.sql)|Populates `report_dates`|
+|[`aggregate_15_min_tmc`](../sql/function/function-aggregate-volumes_15min_mvt.sql)|Aggregates data with valid movementsto 15 minutes turning movement count (TMC) bins and fills in gaps with 0-volume bins. |
+|[`aggregate_15_min`](../sql/function/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
+[`find_invalid_movments`](../sql/function/function-find_invalid_movements.sql)|Finds the number of invalid movements|
+[`api_log`](../sql/function/function-api_log.sql)|Populates when the data is pulled|
+[`find_gaps`](../sql/function/function-find_gaps.sql)|Find unacceptabl gaps and insert into table `miovision_api.unacceptable_gaps`|
+[`report_dates`](../sql/function/function-get_report_dates.sql)|Populates `report_dates`|
 
 ## Invalid Movements
 
-The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. A warning is also emailed to the user if the number of invalid movements is over 1000.
+The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](../sql/function/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. A warning is also emailed to the user if the number of invalid movements is over 1000.
 
 ## How the API works
 
@@ -239,7 +242,7 @@ The Airflow uses BashOperator and run one task named `pull_miovision` using a ba
 
 ### **`check_miovision`**
 
-There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README](../README.md#3-finding-gaps-and-malfunctioning-camera).
 
 ## Notes
 
