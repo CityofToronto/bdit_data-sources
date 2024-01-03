@@ -97,8 +97,9 @@ def pull_wys_dag():
             autocommit=True
         )
 
-        check_jan_1st() >> create_annual_partition
-        check_1st_of_month() >> create_month_partition
+        check_jan_1st() >> create_annual_partition >> (
+            check_1st_of_month() >> create_month_partition
+        )
 
     @task(trigger_rule='none_failed')
     def pull_wys(ds=None):
