@@ -10,7 +10,7 @@ This file contains the following custom operators:
 from airflow.providers.common.sql.operators.sql import SQLCheckOperator
 from airflow.exceptions import AirflowException
 from airflow.utils.context import Context
-
+import psycopg2
 
 class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
     """A custom Airflow SQLCheckOperator that extends the original operator.
@@ -47,14 +47,17 @@ class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
         """
         self.log.info("Executing SQL check: %s", self.sql)
         # Fetch the first row of the sql's output and commit changes
-        hook = self.get_db_hook()
-        records = hook.run(
-            sql=self.sql,
-            handler=lambda cursor: cursor.fetchone(),
-            autocommit=True,
-        )
-        # records = self.get_db_hook().get_first(self.sql)
-
+        try:
+            hook = self.get_db_hook()
+            records = hook.run(
+                sql=self.sql,
+                handler=lambda cursor: cursor.fetchone(),
+                autocommit=True,
+            )
+        except psycopg2.Error as e:
+            context.get("task_instance").xcom_push(key="extra_msg", value=str(e))
+            raise AirflowException(e)
+            
         self.log.info("Record: %s", records)
         if not records:
             raise AirflowException("The query returned None")
