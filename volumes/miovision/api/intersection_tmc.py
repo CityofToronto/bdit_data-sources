@@ -340,6 +340,10 @@ def aggregate_15_min_mvt(conn, start_time, end_iteration_time,
     try:
         with conn:
             with conn.cursor() as cur:
+                query_params = time_period + ([x.uid for x in intersections], )
+                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer[]);"
+                cur.execute(delete_sql, query_params)
+                
                 #if intersections specified, aggregate this step one at a time
                 # with different single intersection function
                 if user_def_intersection:
