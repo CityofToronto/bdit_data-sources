@@ -329,8 +329,9 @@ def find_gaps(conn, time_period):
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def aggregate_15_min_mvt(conn, time_period,
-                            user_def_intersection = False, intersections = None):
+def aggregate_15_min_mvt(
+        conn, time_period, user_def_intersection = False, intersections = None
+):
     """Process data from raw volumes table into miovision_api.volumes_15min_mvt.
     
     First clears previous inserts.
@@ -374,7 +375,7 @@ def aggregate_15_min(conn, time_period):
                 cur.execute(delete_sql, time_period)
                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
-                logger.info('Completed data processing for %s', start_time)
+                logger.info('Completed data processing for %s to %s', time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
 
@@ -581,7 +582,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                 logger.info(c_intersec.name + '     ' + str(c_start_t))
                 miovpull = MiovPuller(c_intersec.id1, c_intersec.uid, key)
 
-                for attempt in range(3):
+                for _ in range(3):
                     try:
                         table_veh, table_ped = miovpull.get_intersection(
                             c_start_t, c_end_t)
