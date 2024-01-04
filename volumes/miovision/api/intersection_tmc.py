@@ -453,18 +453,11 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_int
 
     with conn:
         with conn.cursor() as cur:
-            if user_def_intersection:
-                for c_intersec in intersections:
-                    query_params = time_period + (c_intersec.uid, )
-                    delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date, %s::integer);"
-                    cur.execute(delete_sql, query_params)
-                    api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer)"
-                    cur.execute(api_log, query_params)
-            else:
-                delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date);"
-                cur.execute(delete_sql, time_period)
-                api_log="SELECT miovision_api.api_log(%s::date, %s::date)"
-                cur.execute(api_log, time_period)
+            query_params = time_period + ([x.uid for x in intersections], )
+            delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date, %s::integer[]);"
+            cur.execute(delete_sql, query_params)
+            api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer[])"
+            cur.execute(api_log, query_params)
 
     logger.info('Inserted into volumes and updated log')
 
@@ -541,6 +534,15 @@ def get_intersection_info(conn, intersection=()):
         intersection_list = cur.fetchall()
 
     return [Intersection(*x) for x in intersection_list]
+
+sql_query = """SELECT intersection_uid,
+                              id,
+                              intersection_name,
+                              date_installed,
+                              date_decommissioned
+                       FROM miovision_api.intersections
+                       WHERE intersection_uid = ANY(ARRAY[%s]::integer[])"""
+cur.execute(sql_query, (intersection, ))
 
 def check_dst(start_time, end_time):
     'check if fall back (EDT -> EST) occured between two timestamps.'

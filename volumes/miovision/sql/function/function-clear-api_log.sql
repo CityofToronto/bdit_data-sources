@@ -1,20 +1,31 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_api_log(
     _start_date date,
     _end_date date,
-    target_intersection integer DEFAULT NULL)
+	intersections integer[] DEFAULT ARRAY[]::integer[]
+)
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
 COST 100
 
 AS $BODY$
+
+DECLARE
+    target_intersections integer[] =
+        CASE WHEN CARDINALITY(intersections) = 0
+            --switch out a blank array for all intersections
+            THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
+            ELSE intersections
+        END;
+    n_deleted integer;
+
 BEGIN
 
-IF target_intersection IS NULL THEN
     WITH deleted AS (
         DELETE FROM miovision_api.api_log
         WHERE
-            start_date >= _start_date
+            intersection_uid = ANY(target_intersections)
+            AND start_date >= _start_date
             AND end_date < _end_date
         RETURNING *
     )
@@ -23,27 +34,14 @@ IF target_intersection IS NULL THEN
     FROM deleted;
 
     RAISE NOTICE 'Deleted % rows from miovision_api.api_log.', n_deleted;
-        
-ELSE 
-    WITH deleted AS (
-        DELETE FROM miovision_api.api_log
-        WHERE
-            intersection_uid = target_intersection
-            AND start_date >= _start_date
-            AND end_date < _end_date;
-        RETURNING *
-    )
-    -- FOR NOTICE PURPOSES ONLY
-    SELECT COUNT(*) INTO n_deleted
-    FROM deleted;
-
-    RAISE NOTICE 'Deleted % rows from miovision_api.api_log.', n_deleted;
-
-END IF; 
 
 END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_api_log(date, date, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_api_log(date, date, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.clear_api_log(date, date, integer[]) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_api_log(date, date, integer[]) TO miovision_api_bot;
+
+COMMENT ON FUNCTION miovision_api.clear_api_log(date, date, integer[])
+IS 'Clears data from miovision_api.api_log in order to facilitate re-pulling.
+Intersections value defaults to all intersections.'
