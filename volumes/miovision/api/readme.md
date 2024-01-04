@@ -22,6 +22,8 @@
   - [Invalid Movements](#invalid-movements)
   - [How the API works](#how-the-api-works)
   - [Airflow](#airflow)
+    - [**`miovision_pull`**](#miovision_pull)
+  - [Airflow - Deprecated](#airflow---deprecated)
     - [**`pull_miovision`**](#pull_miovision)
     - [**`check_miovision`**](#check_miovision)
   - [Notes](#notes)
@@ -232,13 +234,13 @@ Below shows a list of SQL trigger functions, materialized view and sequences use
 
 ## Airflow
 
-### **`pull_miovision`**
+### **`miovision_pull`**  
+This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a single intersection.  
 
-The Airflow is set up to run every day at 3am using the dag named `pull_miovision`. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
+## Airflow - Deprecated
 
-Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
-
-The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+### **`pull_miovision`**  
+This deprecated Miovisiong DAG (replaced by [`miovision_pull`](#miovision_pull)) uses a single BashOperator to run the entire data pull and aggregation in one task. The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
 
 ### **`check_miovision`**
 

@@ -26,6 +26,7 @@ names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unkno
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2019, 11, 22, tz="America/Toronto"),
+                'end_date': pendulum.datetime(2024, 1, 15, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
