@@ -3,6 +3,7 @@ import json
 from requests import Session
 from requests import exceptions
 import datetime
+import pytz
 import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
@@ -352,7 +353,7 @@ def aggregate_15_min_mvt(conn, start_time, end_iteration_time,
                         logger.info('Aggregated intersection %s to 15 minute movement bins',
                                     c_intersec.uid)
                 else: 
-                    delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp);"
+                    delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp)"
                     cur.execute(delete_sql, time_period)
                     update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);"
                     cur.execute(update, time_period)
@@ -373,7 +374,7 @@ def aggregate_15_min(conn, start_time, end_iteration_time):
             with conn.cursor() as cur:
                 delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
                 cur.execute(delete_sql, time_period)
-                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date);"
+                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
                 cur.execute(atr_aggregation, time_period)
                 logger.info('Completed data processing for %s', start_time)
     except psycopg2.Error as exc:
@@ -402,25 +403,24 @@ def get_report_dates(conn, start_time, end_iteration_time):
     """
     time_period = (start_time, end_iteration_time)
     try:
-        with conn:
-            with conn.cursor() as cur:
-                delete_sql="""
-                    WITH deleted AS (
-                        DELETE FROM miovision_api.report_dates
-                        WHERE dt >= %s::date
-                        AND dt < %s::date
-                        RETURNING *
-                    )
-                    -- FOR NOTICE PURPOSES ONLY
-                    SELECT COUNT(*) INTO n_deleted
-                    FROM deleted;
+        with conn.cursor() as cur:
+            delete_sql="""
+                WITH deleted AS (
+                    DELETE FROM miovision_api.report_dates
+                    WHERE dt >= %s::date
+                    AND dt < %s::date
+                    RETURNING *
+                )
+                -- FOR NOTICE PURPOSES ONLY
+                SELECT COUNT(*) INTO n_deleted
+                FROM deleted;
 
-                    RAISE NOTICE 'Deleted %s rows from miovision_api.report_dates.', n_deleted;
-                """
-                cur.execute(delete_sql, time_period)
-                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
-                cur.execute(report_dates, time_period)
-                logger.info('report_dates done')
+                RAISE NOTICE 'Deleted %s rows from miovision_api.report_dates.', n_deleted;
+            """
+            cur.execute(delete_sql, time_period)
+            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
+            cur.execute(report_dates, time_period)
+            logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
 
@@ -443,8 +443,8 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_int
             else:
                 delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp);"
                 cur.execute(delete_sql, time_period)
-            insert_data = """INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
-                             leg,  movement_uid, volume) VALUES %s"""
+            insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
+                             leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
             if conn.notices != []:
                 logger.warning(conn.notices[-1])
@@ -542,6 +542,15 @@ def get_intersection_info(conn, intersection=()):
 
     return [Intersection(*x) for x in intersection_list]
 
+def check_dst(start_time, end_time):
+    'check if fall back (EDT -> EST) occured between two timestamps.'
+    tz = pytz.timezone("EST5EDT")
+    tz_1 = start_time.astimezone(tz).tzname()
+    tz_2 = end_time.astimezone(tz).tzname()
+    if tz_1 == 'EDT' and tz_2 == 'EST':
+        logger.info(f"EDT -> EST time change occured today.")
+        return True
+    return False
 
 def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
@@ -560,6 +569,23 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
 
     # So we don't make the comparison thousands of times below.
     user_def_intersection = len(intersection) > 0
+
+    check_active = []
+    for c_start_t in daterange(start_time, end_time, time_delta):
+        active_intersections = [x.is_active(c_start_t) for x in intersections]
+        check_active.extend(active_intersections)
+
+    if not(any(check_active)):
+        if len(intersections) == 0:
+            logger.critical('No intersections found.')
+        elif user_def_intersection:
+            logger.critical('None of the specified intersections are active '
+                            'during the specified period.')
+        else:
+            logger.critical('No active intersections found in '
+                            'miovision_api.intersections for the specified '
+                            'period.')
+        sys.exit(3)
 
     for c_start_t in daterange(start_time, end_time, time_delta):
 
@@ -594,6 +620,17 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                     table_veh = []
                     table_ped = []
 
+                #if edt -> est occured in the current range
+                #discard the 2nd 1AM hour of data to avoid duplicates
+                if check_dst(c_start_t, c_end_t):
+                    logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
+                    table_veh = [x for x in table_veh if
+                        datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                    table_ped = [x for x in table_ped if
+                        datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                    
                 table.extend(table_veh)
                 table.extend(table_ped)
 
