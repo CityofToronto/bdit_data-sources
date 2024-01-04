@@ -372,7 +372,8 @@ def aggregate_15_min(conn, time_period):
             cur.execute(delete_sql, time_period)
             atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
             cur.execute(atr_aggregation, time_period)
-            logger.info('Completed data processing for %s to %s', time_period[0], time_period[1])
+            logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
+                        time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
 
@@ -386,7 +387,8 @@ def aggregate_volumes_daily(conn, time_period):
             #this function includes a delete query preceeding the insert.
             daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
             cur.execute(daily_aggregation, time_period)
-            logger.info('Aggregation into daily volumes table complete')
+            logger.info('Aggregation into miovision_api.volumes_daily table complete for %s to %s',
+                        time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
 
@@ -426,8 +428,8 @@ def insert_data(conn, time_period, table, dupes, intersections):
     conn.notices=[]
     with conn.cursor() as cur:
         #delete the specified intersections
-        delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
         query_params = time_period + ([x.uid for x in intersections], )
+        delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
         cur.execute(delete_sql, query_params)
         insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                             leg,  movement_uid, volume) VALUES %s'''
@@ -446,6 +448,8 @@ def insert_data(conn, time_period, table, dupes, intersections):
 
     logger.info('Inserted into volumes and updated log')
 
+    #`miovision_api.find_invalid_movements` raises notice about invalid movements.
+    #Does not insert into database.
     with conn.cursor() as cur:
         invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
         cur.execute(invalid_movements, time_period)
@@ -499,7 +503,7 @@ class Intersection:
 
 
 def get_intersection_info(conn, intersection=()):
-    """Returns a list of specified intersections. 
+    """Returns a list of specified intersections from miovision_api.intersections. 
 
     Defaults to all intersections from miovision_api.intersections if none specified.
     """
