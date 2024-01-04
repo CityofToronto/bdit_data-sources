@@ -525,15 +525,6 @@ def get_intersection_info(conn, intersection=()):
 
     return [Intersection(*x) for x in intersection_list]
 
-sql_query = """SELECT intersection_uid,
-                              id,
-                              intersection_name,
-                              date_installed,
-                              date_decommissioned
-                       FROM miovision_api.intersections
-                       WHERE intersection_uid = ANY(ARRAY[%s]::integer[])"""
-cur.execute(sql_query, (intersection, ))
-
 def check_dst(start_time, end_time):
     'check if fall back (EDT -> EST) occured between two timestamps.'
     tz = pytz.timezone("EST5EDT")
