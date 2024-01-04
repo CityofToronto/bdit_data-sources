@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_mvt(
     start_date timestamp,
     end_date timestamp,
-	intersections integer[] DEFAULT ARRAY[]::integer[]
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -11,7 +11,7 @@ VOLATILE
 AS $BODY$
 
 DECLARE
-    target_intersections integer[] =
+    target_intersections integer [] =
         CASE WHEN CARDINALITY(intersections) = 0
             --switch out a blank array for all intersections
             THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
@@ -28,7 +28,7 @@ BEGIN
             AND datetime_bin >= start_date
             AND datetime_bin < end_date
         RETURNING volume_15min_mvt_uid
-    )
+    ),
     
     updated AS (
         --To update foreign key for 1min bin table
@@ -52,11 +52,15 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
+OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) TO miovision_api_bot;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
+TO miovision_api_bot;
 
-COMMENT ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer[])
+GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
+TO miovision_admins;
+
+COMMENT ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
 IS 'Clears data from miovision_api.volumes_15min_mvt in order to facilitate re-pulling.
 Intersections value defaults to all intersections.'

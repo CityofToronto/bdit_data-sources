@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_volumes(
     start_date timestamp,
     end_date timestamp,
-	intersections integer[] DEFAULT ARRAY[]::integer[]
+	intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -11,7 +11,7 @@ COST 100
 AS $BODY$
 
 DECLARE
-    target_intersections integer[] =
+    target_intersections integer [] =
         CASE WHEN CARDINALITY(intersections) = 0
             --switch out a blank array for all intersections
             THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
@@ -39,9 +39,9 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[]) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[]) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer []) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer []) TO miovision_api_bot;
 
-COMMENT ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[])
+COMMENT ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer [])
 IS 'Clears data from miovision_api.volumes in order to facilitate re-pulling.
 Intersections value defaults to all intersections.'

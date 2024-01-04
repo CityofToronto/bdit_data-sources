@@ -1,7 +1,7 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.api_log(
     start_date date,
     end_date date,
-	intersections integer[] DEFAULT ARRAY[]::integer[]
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -11,7 +11,7 @@ VOLATILE
 AS $BODY$
 
 DECLARE
-    target_intersections integer[] =
+    target_intersections integer [] =
         CASE WHEN CARDINALITY(intersections) = 0
             --switch out a blank array for all intersections
             THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
@@ -38,5 +38,5 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.api_log(date, date, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.api_log(date, date, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.api_log(date, date, integer []) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.api_log(date, date, integer []) TO miovision_api_bot;

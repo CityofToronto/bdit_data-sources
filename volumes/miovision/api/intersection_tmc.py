@@ -341,7 +341,7 @@ def aggregate_15_min_mvt(
         with conn:
             with conn.cursor() as cur:
                 query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer[]);"
+                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer []);"
                 cur.execute(delete_sql, query_params)
                 
                 #if intersections specified, aggregate this step one at a time
@@ -431,7 +431,7 @@ def insert_data(conn, time_period, table, dupes, intersections):
     with conn:
         with conn.cursor() as cur:
             #delete the specified intersections
-            delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer[]);"
+            delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
             query_params = time_period + ([x.uid for x in intersections], )
             cur.execute(delete_sql, query_params)
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
@@ -445,9 +445,9 @@ def insert_data(conn, time_period, table, dupes, intersections):
     with conn:
         with conn.cursor() as cur:
             query_params = time_period + ([x.uid for x in intersections], )
-            delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date, %s::integer[]);"
+            delete_sql="SELECT miovision_api.clear_api_log(%s::date, %s::date, %s::integer []);"
             cur.execute(delete_sql, query_params)
-            api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer[])"
+            api_log="SELECT miovision_api.api_log(%s::date, %s::date, %s::integer [])"
             cur.execute(api_log, query_params)
 
     logger.info('Inserted into volumes and updated log')
