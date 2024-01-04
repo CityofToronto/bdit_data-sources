@@ -61,6 +61,7 @@ $do$ LANGUAGE plpgsql;
 DO $do$
 DECLARE
 	yyyy TEXT;
+    month_table TEXT;
     year_table TEXT;
 BEGIN
 	FOR yyyy IN 2019..2023 LOOP
