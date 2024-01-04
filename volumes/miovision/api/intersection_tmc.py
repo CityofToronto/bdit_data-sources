@@ -424,7 +424,7 @@ def get_report_dates(conn, start_time, end_iteration_time):
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_intersection, intersections):
+def insert_data(conn, start_time, end_iteration_time, table, dupes, intersections):
     """Inserts new data into miovision_api.volumes, pulled from API.
 
     Clears table prior to insert.
@@ -434,15 +434,10 @@ def insert_data(conn, start_time, end_iteration_time, table, dupes, user_def_int
     conn.notices=[]
     with conn:
         with conn.cursor() as cur:
-            #delete only the specified intersections
-            if user_def_intersection:
-                for c_intersec in intersections:
-                    delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer);"
-                    query_params = time_period + (c_intersec.uid, )
-                    cur.execute(delete_sql, query_params)
-            else:
-                delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp);"
-                cur.execute(delete_sql, time_period)
+            #delete the specified intersections
+            delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer[]);"
+            query_params = time_period + ([x.uid for x in intersections], )
+            cur.execute(delete_sql, query_params)
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                              leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
@@ -647,7 +642,7 @@ def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
                     %(c_start_t, c_end_t))
 
         try:
-            insert_data(conn, c_start_t, c_end_t, table, dupes, user_def_intersection, intersections)
+            insert_data(conn, c_start_t, c_end_t, table, dupes, intersections)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)

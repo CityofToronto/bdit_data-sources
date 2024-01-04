@@ -1,34 +1,30 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_volumes(
     start_date timestamp,
     end_date timestamp,
-    intersection_id integer DEFAULT NULL)
+	intersections integer[] DEFAULT ARRAY[]::integer[]
+)
 RETURNS void
 LANGUAGE plpgsql
 VOLATILE
 COST 100
 
 AS $BODY$
+
+DECLARE
+    target_intersections integer[] =
+        CASE WHEN CARDINALITY(intersections) = 0
+            --switch out a blank array for all intersections
+            THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
+            ELSE intersections
+        END;
+    n_deleted integer;
+
 BEGIN
 
-IF intersection_id IS NULL THEN
     WITH deleted AS (
         DELETE FROM miovision_api.volumes
         WHERE
-            datetime_bin >= start_date
-            AND datetime_bin < end_date
-        RETURNING *
-    )
-    -- FOR NOTICE PURPOSES ONLY
-    SELECT COUNT(*) INTO n_deleted
-    FROM deleted;
-
-    RAISE NOTICE 'Deleted % rows from miovision_api.volumes.', n_deleted;
-
-ELSE 
-    WITH deleted AS (
-        DELETE FROM miovision_api.volumes
-        WHERE
-            intersection_uid = intersection_id
+            intersection_uid = ANY(target_intersections)
             AND datetime_bin >= start_date
             AND datetime_bin < end_date
         RETURNING *
@@ -39,11 +35,13 @@ ELSE
 
     RAISE NOTICE 'Deleted % rows from miovision_api.volumes.', n_deleted;
 
-END IF; 
-
 END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[]) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[]) TO miovision_api_bot;
+
+COMMENT ON FUNCTION miovision_api.clear_volumes(timestamp, timestamp, integer[])
+IS 'Clears data from miovision_api.volumes in order to facilitate re-pulling.
+Intersections value defaults to all intersections.'
