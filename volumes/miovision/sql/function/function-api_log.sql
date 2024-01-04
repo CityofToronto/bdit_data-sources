@@ -1,7 +1,7 @@
 ﻿CREATE OR REPLACE FUNCTION miovision_api.api_log(
     start_date date,
     end_date date,
-    intersection integer DEFAULT NULL)
+    target_intersection integer DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
 
@@ -11,7 +11,7 @@ AS $BODY$
 
 BEGIN
 
-IF intersection IS NULL
+IF target_intersection IS NULL
 THEN
 
     INSERT INTO miovision_api.api_log(intersection_uid, start_date, end_date, date_added)
@@ -37,7 +37,7 @@ ELSE
         current_timestamp::date
     FROM miovision_api.volumes
     WHERE
-        intersection_uid = intersection
+        intersection_uid = target_intersection
         AND datetime_bin >= start_date
         AND datetime_bin < end_date
     GROUP BY intersection_uid

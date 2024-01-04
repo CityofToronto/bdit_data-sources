@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_mvt(
     start_date timestamp,
     end_date timestamp,
-    intersection integer DEFAULT NULL)
+    target_intersection integer DEFAULT NULL)
 RETURNS void
 LANGUAGE 'plpgsql'
 
@@ -11,7 +11,7 @@ AS $BODY$
 
 BEGIN
 
-IF intersection IS NULL
+IF target_intersection IS NULL
 THEN
 
     WITH aggregate_delete AS (
@@ -47,7 +47,7 @@ ELSE
     SET volume_15min_mvt_uid = NULL
     FROM aggregate_delete AS b
     WHERE
-        a.intersection_uid = intersection
+        a.intersection_uid = target_intersection
         AND a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
         AND a.datetime_bin >= start_date
         AND a.datetime_bin < end_date;
