@@ -8,10 +8,19 @@ VOLATILE
 AS $BODY$
 BEGIN
 
-    DELETE FROM miovision_api.volumes_15min
-    WHERE
-        datetime_bin >= start_date
-        AND datetime_bin < end_date; 
+    WITH deleted AS (
+        DELETE FROM miovision_api.volumes_15min
+        WHERE
+            datetime_bin >= start_date
+            AND datetime_bin < end_date
+        RETURNING *
+    )
+
+    -- FOR NOTICE PURPOSES ONLY
+    SELECT COUNT(*) INTO n_deleted
+    FROM deleted;
+
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_15min.', n_deleted;
 
     UPDATE miovision_api.volumes_15min_mvt
     SET processed = NULL

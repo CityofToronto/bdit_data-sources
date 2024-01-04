@@ -411,9 +411,17 @@ def get_report_dates(conn, start_time, end_iteration_time):
         with conn:
             with conn.cursor() as cur:
                 delete_sql="""
-                    DELETE FROM miovision_api.report_dates
-                    WHERE dt >= %s::date
-                    AND dt < %s::date;
+                    WITH deleted AS (
+                        DELETE FROM miovision_api.report_dates
+                        WHERE dt >= %s::date
+                        AND dt < %s::date
+                        RETURNING *
+                    )
+                    -- FOR NOTICE PURPOSES ONLY
+                    SELECT COUNT(*) INTO n_deleted
+                    FROM deleted;
+
+                    RAISE NOTICE 'Deleted %s rows from miovision_api.report_dates.', n_deleted;
                 """
                 cur.execute(delete_sql, time_period)
                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"

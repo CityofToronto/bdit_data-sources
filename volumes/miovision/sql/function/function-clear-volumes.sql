@@ -11,16 +11,34 @@ AS $BODY$
 BEGIN
 
 IF intersection_id IS NULL THEN
-    DELETE FROM miovision_api.volumes
-    WHERE
-        datetime_bin >= start_date
-        AND datetime_bin < end_date;
+    WITH deleted AS (
+        DELETE FROM miovision_api.volumes
+        WHERE
+            datetime_bin >= start_date
+            AND datetime_bin < end_date
+        RETURNING *
+    )
+    -- FOR NOTICE PURPOSES ONLY
+    SELECT COUNT(*) INTO n_deleted
+    FROM deleted;
+
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes.', n_deleted;
+
 ELSE 
-    DELETE FROM miovision_api.volumes
-    WHERE
-        intersection_uid = intersection_id
-        AND datetime_bin >= start_date
-        AND datetime_bin < end_date;
+    WITH deleted AS (
+        DELETE FROM miovision_api.volumes
+        WHERE
+            intersection_uid = intersection_id
+            AND datetime_bin >= start_date
+            AND datetime_bin < end_date
+        RETURNING *
+    )
+    -- FOR NOTICE PURPOSES ONLY
+    SELECT COUNT(*) INTO n_deleted
+    FROM deleted;
+
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes.', n_deleted;
+
 END IF; 
 
 END;

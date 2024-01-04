@@ -20,16 +20,24 @@ THEN
             datetime_bin >= start_date
             AND datetime_bin < end_date
         RETURNING volume_15min_mvt_uid
+    ),
+
+    updated AS (
+        --To update foreign key for 1min bin table
+        UPDATE miovision_api.volumes AS a
+        SET volume_15min_mvt_uid = NULL
+        FROM aggregate_delete AS b
+        WHERE
+            a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
+            AND a.datetime_bin >= start_date
+            AND a.datetime_bin < end_date
     )
 
-    --To update foreign key for 1min bin table
-    UPDATE miovision_api.volumes AS a
-    SET volume_15min_mvt_uid = NULL
-    FROM aggregate_delete AS b
-    WHERE
-        a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
-        AND a.datetime_bin >= start_date
-        AND a.datetime_bin < end_date;
+    -- FOR NOTICE PURPOSES ONLY
+    SELECT COUNT(*) INTO n_deleted
+    FROM aggregate_delete;
+
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_15min_mvt.', n_deleted;
 
 ELSE
 
@@ -42,15 +50,23 @@ ELSE
         RETURNING volume_15min_mvt_uid
     )
     
-    --To update foreign key for 1min bin table
-    UPDATE miovision_api.volumes AS a
-    SET volume_15min_mvt_uid = NULL
-    FROM aggregate_delete AS b
-    WHERE
-        a.intersection_uid = target_intersection
-        AND a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
-        AND a.datetime_bin >= start_date
-        AND a.datetime_bin < end_date;
+    updated AS (
+        --To update foreign key for 1min bin table
+        UPDATE miovision_api.volumes AS a
+        SET volume_15min_mvt_uid = NULL
+        FROM aggregate_delete AS b
+        WHERE
+            a.intersection_uid = target_intersection
+            AND a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
+            AND a.datetime_bin >= start_date
+            AND a.datetime_bin < end_date
+    )
+
+    -- FOR NOTICE PURPOSES ONLY
+    SELECT COUNT(*) INTO n_deleted
+    FROM aggregate_delete;
+
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_15min_mvt.', n_deleted;
 
 END IF;
 
