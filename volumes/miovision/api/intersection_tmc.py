@@ -3,7 +3,6 @@ import json
 from requests import Session
 from requests import exceptions
 import datetime
-import pytz
 import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
@@ -14,7 +13,6 @@ import click
 import traceback
 from time import sleep
 from collections import namedtuple
-
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
@@ -317,16 +315,12 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
     get_report_dates(conn, start_time, end_iteration_time)
  
 def find_gaps(conn, start_time, end_iteration_time):
-    """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert into miovision_api.unacceptable_gaps."""
+    """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
+    into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
     time_period = (start_time, end_iteration_time)
     try:
         with conn:
             with conn.cursor() as cur:
-                delete_sql="""
-                    DELETE FROM miovision_api.unacceptable_gaps
-                    WHERE gap_start >= %s::timestamp
-                    AND gap_start < %s::timestamp;"""
-                cur.execute(delete_sql, time_period)
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
                 cur.execute(invalid_gaps, time_period)
                 logger.info(conn.notices[-1])
