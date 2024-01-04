@@ -1,65 +1,72 @@
-"""
-Pipeline to pull miovision daily data and put them into postgres tables using Bash Operator.
+r"""### Daily Miovision Data Pull DAG
+Pipeline to pull miovision daily data and put them into Postgres tables using Bash Operator.
+Also checks if new monthly/yearly partition tables need to be created and runs SQL
+data-checks on the row count and distinct classification_uids found in pulled data.
 Slack notifications is raised when the airflow process fails.
 """
 import sys
 import os
 import pendulum
-from datetime import datetime, timedelta
-import configparser
+from datetime import timedelta
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
-from dags.common_tasks import check_jan_1st, check_1st_of_month
-from volumes.miovision.api.intersection_tmc import run_api, find_gaps, \
-    aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily, \
-    get_report_dates, get_intersection_info
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_jan_1st, check_1st_of_month
+    from volumes.miovision.api.intersection_tmc import (
+        run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+        get_report_dates, get_intersection_info
+    )
+except:
+    raise ImportError("Cannot import DAG helper functions.")
 
-dag_name = 'miovision_pull'
-
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'miovision_pull'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 API_CONFIG_PATH = '/etc/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
-default_args = {'owner': ','.join(names),
-                'depends_on_past':False,
-                'start_date': pendulum.datetime(2023, 12, 1, tz="America/Toronto"),
-                'email_on_failure': False,
-                'email_on_success': False,
-                'retries': 0,
-                'retry_delay': timedelta(minutes=5),
-                'on_failure_callback': task_fail_slack_alert
-                }
+default_args = {
+    'owner': ','.join(DAG_OWNERS),
+    'depends_on_past': False,
+    'start_date': pendulum.datetime(2024, 1, 15, tz="America/Toronto"),
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 0,
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': task_fail_slack_alert
+}
 
-@dag(dag_id=dag_name,
-     default_args=default_args,
-     schedule_interval='0 3 * * *',
-     catchup=False,
-     params={
-            "intersection": Param(
-                default=0,
-                type="integer",
-                title="A single intersection_uid.",
-                description="A single intersection_uid to pull/aggregate for a single date.",
-            )
-        },
-     tags = ['miovision']
-    )
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    schedule='0 3 * * *',
+    catchup=False,
+    params={
+        "intersection": Param(
+            default=0,
+            type="integer",
+            title="A single intersection_uid.",
+            description="A single intersection_uid to pull/aggregate for a single date.",
+        )
+    },
+    tags=["miovision", "data_pull", "partition_create", "data_checks"],
+    doc_md=__doc__
+)
 def pull_miovision_dag():
-# Add 3 hours to ensure that the data are at least 2 hours old
 
-    #this task group checks if necessary to create new partitions and if so, exexcute.
     @task_group
     def check_partitions():
+        """Task group to check if necessary to create new partitions and if so, exexcute."""
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
@@ -131,6 +138,49 @@ def pull_miovision_dag():
         find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
         get_report_dates_task()
 
-    check_partitions() >> pull_miovision() >> miovision_agg()
+    t_done = ExternalTaskMarker(
+            task_id="done",
+            external_dag_id="miovision_check",
+            external_task_id="starting_point"
+    )
+
+    @task_group()
+    def data_checks():
+        """Task group to check critical data quality measures which could warrant re-running the DAG."""
+        data_check_params = {
+            "table": "miovision_api.volumes_15min_mvt",
+            "lookback": '60 days',
+            "dt_col": 'datetime_bin',
+            "threshold": 0.7
+        }
+        check_row_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_row_count",
+            sql="select-row_count_lookback.sql",
+            conn_id="miovision_api_bot",
+            retries=1,
+            params=data_check_params | {"col_to_sum": 'volume'},
+        )
+        check_row_count.doc_md = '''
+        Compare the row count today with the average row count from the lookback period.
+        '''
+
+        check_distinct_classification_uid = SQLCheckOperatorWithReturnValue(
+            task_id="check_distinct_classification_uid",
+            sql="select-sensor_id_count_lookback.sql",
+            conn_id="miovision_api_bot",
+            retries=1,
+            params=data_check_params | {
+                    "id_col": "classification_uid",
+                    "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
+                },
+        )
+        check_distinct_classification_uid.doc_md = '''
+        Compare the count of classification_uids appearing in today's pull vs the lookback period.
+        '''
+
+        check_row_count
+        check_distinct_classification_uid
+
+    check_partitions() >> pull_miovision() >> miovision_agg() >> t_done >> data_checks()
 
 pull_miovision_dag()
