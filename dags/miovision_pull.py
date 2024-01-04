@@ -53,10 +53,11 @@ default_args = {
     catchup=False,
     params={
         "intersection": Param(
-            default=0,
-            type="integer",
-            title="A single intersection_uid.",
-            description="A single intersection_uid to pull/aggregate for a single date.",
+            default=[0],
+            type="array",
+            title="An array of intersection_uid (integers).",
+            description="A list of intersection_uid to pull/aggregate for a single date. Default [0] will pull all intersections.",
+            items={"type": "number"},
         )
     },
     tags=["miovision", "data_pull", "partition_create", "data_checks"],
@@ -90,7 +91,10 @@ def pull_miovision_dag():
 
     @task(trigger_rule='none_failed', retries = 1)
     def pull_miovision(ds = None, **context):
-        INTERSECTION = () if context["params"]["intersection"] == 0 else context["params"]["intersection"]
+        if context["params"]["intersection"] == [0]:
+            INTERSECTION = ()
+        else:
+            INTERSECTION = tuple(context["params"]["intersection"])
         run_api(start_date=ds,
                 end_date=ds_add(ds, 1),
                 path=API_CONFIG_PATH,
