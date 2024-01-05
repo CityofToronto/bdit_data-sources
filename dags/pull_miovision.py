@@ -11,10 +11,13 @@ from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable 
 from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.macros import ds_add
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_functions import task_fail_slack_alert
+from volumes.miovision.api.intersection_tmc import agg_zero_volume_anomalous_ranges
 from dags.common_tasks import check_jan_1st, check_1st_of_month
 
 dag_name = 'pull_miovision'
@@ -71,6 +74,12 @@ def pull_miovision_dag():
         trigger_rule='none_failed'
     )
 
-    check_partitions() >> t1
+    @task
+    def zero_volume_anomalous_ranges_task(ds = None):
+        mio_postgres = PostgresHook("miovision_api_bot")
+        with mio_postgres.get_conn() as conn:
+            agg_zero_volume_anomalous_ranges(conn, ds, ds_add(ds, 1))
+
+    check_partitions() >> t1 >> zero_volume_anomalous_ranges_task()
 
 pull_miovision_dag()

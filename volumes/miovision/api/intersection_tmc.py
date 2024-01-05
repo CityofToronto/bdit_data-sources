@@ -352,6 +352,23 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
             report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
             logger.info('report_dates done')
+    
+    agg_zero_volume_anomalous_ranges(conn, start_time, end_iteration_time)
+    
+def agg_zero_volume_anomalous_ranges(conn, start_time, end_iteration_time):
+    """Aggregate into miovision_api.anomalous_ranges.
+    Data is cleared from volumes_daily prior to insert.
+    """
+    time_period = (start_time, end_iteration_time)
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                #this function includes a delete query preceeding the insert.
+                anomalous_range_sql="SELECT miovision_api.identify_zero_counts(%s::timestamp, %s::timestamp)"
+                cur.execute(anomalous_range_sql, time_period)
+                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
 
 def insert_data(conn, start_time, end_iteration_time, table, dupes):
     time_period = (start_time, end_iteration_time)
