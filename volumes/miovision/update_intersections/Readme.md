@@ -11,6 +11,7 @@ For the main Miovision readme, see [here](../README.md).
 - [Adding Intersections](#adding-intersections)
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
 	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
+	- [Update `miovision_api.centreline_miovision`](#update-miovision_apicentreline_miovision)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
 - [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
 - [Adding many intersections](#adding-many-intersections)
@@ -249,7 +250,7 @@ We need to find out all valid movements for the new intersections from the data 
 	```
 ## Update `miovision_api.centreline_miovision`
 
-[`miovision_api.centreline_miovision`](../README.md) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/create-mv-mio_cent.sql). 
+[`miovision_api.centreline_miovision`](../README.md) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
 
 This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
 - Segments are not aligned in a North-South or East-West direction (like Kingston Road)
