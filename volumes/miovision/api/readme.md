@@ -23,6 +23,8 @@
   - [How the API works](#how-the-api-works)
   - [Airflow](#airflow)
     - [**`pull_miovision`**](#pull_miovision)
+    - [**`miovision_check`**](#miovision_check)
+  - [Airflow - Deprecated](#airflow---deprecated)
     - [**`check_miovision`**](#check_miovision)
   - [Notes](#notes)
 
@@ -238,7 +240,7 @@ The Airflow is set up to run every day at 3am using the dag named `pull_miovisio
 
 Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
 
-The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run-api --path /data/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
 
 Within the `data_checks` TaskGroup, several `SQLCheckOperatorWithReturnValue` tasks perform checks on the aggregated data from the current data interval.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table.  
