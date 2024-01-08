@@ -42,9 +42,9 @@ SELECT
     )
     AS passing_value,
     CASE WHEN array_length(c.ids_diff, 1) > 0
-        THEN 'The following ' || '{{ params.id_col }}' || ' were present within the last '
-            || '{{ params.lookback }}' || ', but absent today:' || c.ids_diff::text
-        ELSE 'All ids present.'
+        THEN 'The following {{ params.id_col }} were present within the last '
+            || '{{ params.lookback }}, but absent today:' || c.ids_diff::text
+        ELSE 'Sufficient {{ params.id_col }} present when compared to the last {{ params.lookback }}.'
     END AS id_diff
 FROM lookback AS today,
     lookback AS lb, --noqa: L025
