@@ -130,7 +130,7 @@ def pull_wys_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
-            retries=1,
+            retries=0,
             params={
                 "table": "wys.speed_counts_agg_5kph",
                 "lookback": '60 days',
