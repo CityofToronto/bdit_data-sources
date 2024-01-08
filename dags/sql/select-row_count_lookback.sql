@@ -26,8 +26,7 @@ today AS (
 )
 
 SELECT
-    a.today_count >= FLOOR(thr.threshold * AVG(lb.lookback_count))
-    AS check, 
+    a.today_count >= FLOOR(thr.threshold * AVG(lb.lookback_count)) AS check, 
     'Daily count: ' || to_char(
         a.today_count, 'FM9,999,999,999'
     ) AS ds_count,
@@ -40,22 +39,25 @@ SELECT
     ) AS passing_value
 FROM today AS a
 JOIN lookback AS lb ON
-    NOT (date_part('isodow', a._dt) <= 5
+    NOT (
+        date_part('isodow', a._dt) <= 5
         AND (
             SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = a._dt
-        ) IS NULL)
+        ) IS NULL
+    )
     = NOT (
         date_part('isodow', lb._dt) <= 5
         AND (
             SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = lb._dt
-        ) IS NULL),
-LATERAL (
-    --change threshold if holiday is not null
-    SELECT CASE (SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = a._dt) IS NOT NULL
-        WHEN False THEN {{ params.threshold }}::numeric
-        WHEN True THEN 0.5::numeric --50% of weekend volumes for holidays is acceptable
-    END
-) AS thr(threshold)
+        ) IS NULL
+    ),
+    LATERAL(
+        --change threshold if holiday is not null
+        SELECT CASE (SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = a._dt) IS NOT NULL
+            WHEN False THEN {{ params.threshold }}::numeric
+            WHEN True THEN 0.5::numeric --50% of weekend volumes for holidays is acceptable
+        END
+    ) AS thr (threshold)
 GROUP BY
     a.today_count,
     thr.threshold

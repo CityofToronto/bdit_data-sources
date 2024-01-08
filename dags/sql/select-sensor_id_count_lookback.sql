@@ -38,8 +38,7 @@ ids_dif AS (
 )
 
 SELECT
-    a.today_count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count))
-    AS check, 
+    a.today_count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.lookback_count)) AS check,
     'Daily count: ' || to_char(a.today_count, 'FM9,999,999,999')
     AS ds_count,
     initcap('{{ params.lookback }}') || ' Lookback Avg: '
@@ -51,8 +50,8 @@ SELECT
     )
     AS passing_value,
     CASE WHEN array_length(c.ids_diff, 1) > 0
-        THEN 'The following ' || '{{ params.id_col }}' || ' were present within the last ' || '{{ params.lookback }}' || ', but absent today:' || 
-            c.ids_diff::text
+        THEN 'The following ' || '{{ params.id_col }}' || ' were present within the last '
+            || '{{ params.lookback }}' || ', but absent today:' || c.ids_diff::text
         ELSE 'All ids present.'
     END AS id_diff
 FROM today AS a,
