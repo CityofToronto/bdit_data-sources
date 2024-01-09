@@ -312,7 +312,7 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
     
     with conn:
         with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
             cur.execute(invalid_gaps, time_period)
             logger.info(conn.notices[-1])
     logger.info('Updated gapsize table and found gaps exceeding allowable size')
