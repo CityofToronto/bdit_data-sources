@@ -20,7 +20,7 @@ from airflow.macros import ds_add
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month
     from volumes.miovision.api.intersection_tmc import (
@@ -33,12 +33,15 @@ except:
 DAG_NAME = 'miovision_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
+README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+
 API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': pendulum.datetime(2024, 1, 15, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 1, 9, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -50,6 +53,7 @@ default_args = {
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 3 * * *',
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=False,
     params={
         "intersection": Param(
@@ -61,7 +65,7 @@ default_args = {
         )
     },
     tags=["miovision", "data_pull", "partition_create", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def pull_miovision_dag():
 
