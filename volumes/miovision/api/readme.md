@@ -239,7 +239,7 @@ Below shows a list of SQL trigger functions, materialized view and sequences use
 ### **`miovision_pull`**  
 This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a single intersection.  
 
-Within the `data_checks` TaskGroup, several `SQLCheckOperatorWithReturnValue` tasks perform checks on the aggregated data from the current data interval.  
+Within the `data_checks` TaskGroup, several [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py) tasks perform checks on the aggregated data from the current data interval.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table.  
 - `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column.
 <!-- miovision_pull_doc_md -->
