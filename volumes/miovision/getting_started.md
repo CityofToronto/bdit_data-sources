@@ -130,6 +130,7 @@ WHERE
 This example calculates the volume of light vehicles passing through an intersection (King and Bathurst) in all directions. Since movement is irrelevant, the ATR table (`miovision_api.volumes_15min`) is used. Vehicles should be counted only once, when they approach the intersection.
 
 Here's what it looks like:
+
 <img src = "img/mio_approach.png" alt= "intersection approach volume" width = "500" height = "500" title = "Intersection Approach Volume">
 
 Here's the corresponding code snippet:
@@ -152,4 +153,27 @@ If `leg <> dir` is eliminated from the `WHERE` clause, light vehicles will be co
 If, for some strange reason, you need to count vehicles exiting an intersection, you can replace `leg <> dir` with `leg = dir`.
 
 Here's what that looks like:
+
 <img src = "img/mio_exit.png" alt= "intersection exit volume" width = "500" height = "500" title = "Intersection Exit Volume">
+
+#### Scenario 3: Volume Counts Across a Screenline
+
+This example calculates the volume crossing an imaginary line (or screenline) across a road, in both directions (for example, all vehicles travelling along King Street at a point east of Bathurst.
+
+Here's what it looks like:
+
+<img src = "img/mio_screenline.png" alt= "screenline volume" width = "500" height = "500" title = "Screenline Volume">
+
+Here's the corresponding code snippet:
+
+```
+SELECT
+    SUM(volume) FILTER (WHERE dir = 'EB') AS eb_volume,
+    SUM(volume) FILTER (WHERE dir = 'WB') AS wb_volume
+FROM miovision_api.volumes_15min
+WHERE 
+    intersection_uid = 10 -- King and Bathurst
+    AND leg = 'E' -- The screenline is on the east leg, so we only want counts from there
+    AND datetime_bin >= '2020-03-13' 
+    AND datetime_bin < '2020-03-20'
+```
