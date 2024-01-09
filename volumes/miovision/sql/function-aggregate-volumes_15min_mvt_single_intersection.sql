@@ -74,7 +74,8 @@ WITH aggregate_insert AS (
         dt.datetime_bin,
         im.classification_uid,
         im.leg,
-        im.movement_uid
+        im.movement_uid,
+        un.datetime_bin
     HAVING
         --retain 0s for certain modes (padding)
         im.classification_uid IN (1,2,6,10)
