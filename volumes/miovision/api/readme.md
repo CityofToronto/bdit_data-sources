@@ -23,6 +23,8 @@
   - [How the API works](#how-the-api-works)
   - [Airflow](#airflow)
     - [**`pull_miovision`**](#pull_miovision)
+    - [**`miovision_check`**](#miovision_check)
+  - [Airflow - Deprecated](#airflow---deprecated)
     - [**`check_miovision`**](#check_miovision)
   - [Notes](#notes)
 
@@ -238,11 +240,26 @@ The Airflow is set up to run every day at 3am using the dag named `pull_miovisio
 
 Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
 
-The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run-api --path /data/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+
+Within the `data_checks` TaskGroup, several `SQLCheckOperatorWithReturnValue` tasks perform checks on the aggregated data from the current data interval.  
+- `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table.  
+- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column.
+
+### **`miovision_check`**
+
+This DAG replaces the old `check_miovision`. It is used to run daily data quality checks on Miovision data that would generally not require the pipeline to be re-run. 
+
+- `starting_point` waits for upstream `pull_miovision` DAG `done` task to run. 
+- `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today.  
+- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. 
+
+## Airflow - Deprecated
 
 ### **`check_miovision`**
 
-There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README](../README.md#3-finding-gaps-and-malfunctioning-camera).
+The `check_miovision` DAG is deprecated by the addition of the `data_checks` TaskGroup to the main `pull_miovision` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
+This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 
 ## Notes
 
