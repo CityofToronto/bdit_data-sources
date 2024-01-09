@@ -33,7 +33,7 @@ except:
 DAG_NAME = 'miovision_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-API_CONFIG_PATH = '/etc/airflow/data_scripts/volumes/miovision/api/config.cfg'
+API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
