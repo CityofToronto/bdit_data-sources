@@ -165,7 +165,7 @@ def pull_miovision_dag():
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="miovision_api_bot",
-            retries=1,
+            retries=0,
             params=data_check_params | {"col_to_sum": 'volume'},
         )
         check_row_count.doc_md = '''
@@ -176,7 +176,7 @@ def pull_miovision_dag():
             task_id="check_distinct_classification_uid",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="miovision_api_bot",
-            retries=1,
+            retries=0,
             params=data_check_params | {
                     "id_col": "classification_uid",
                     "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
