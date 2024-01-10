@@ -24,7 +24,7 @@ BEGIN
     WITH aggregate_delete AS (
         DELETE FROM miovision_api.volumes_15min_mvt
         WHERE
-            intersection_uid = intersection
+            intersection_uid = ANY(target_intersections)
             AND datetime_bin >= start_date
             AND datetime_bin < end_date
         RETURNING volume_15min_mvt_uid
