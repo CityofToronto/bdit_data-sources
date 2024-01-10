@@ -11,7 +11,7 @@ CREATE TABLE miovision_api.unacceptable_gaps
     CONSTRAINT intersection_uid_datetime_bin_unique UNIQUE (intersection_uid, datetime_bin)
 );
 
-ALTER TABLE miovision_api.unacceptable_gaps OWNER TO miovision_admins;
+ALTER TABLE miovision_api.unacceptable_gaps OWNER to miovision_admins;
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.unacceptable_gaps TO bdit_humans WITH GRANT OPTION;
 
