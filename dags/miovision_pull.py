@@ -34,7 +34,7 @@ DAG_NAME = 'miovision_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
-DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+#DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
@@ -65,7 +65,7 @@ default_args = {
         )
     },
     tags=["miovision", "data_pull", "partition_create", "data_checks"],
-    doc_md=DOC_MD
+    doc_md=__doc__
 )
 def pull_miovision_dag():
 
