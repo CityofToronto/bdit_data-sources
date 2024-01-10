@@ -402,8 +402,8 @@ def get_report_dates(conn, time_period):
             delete_sql="""
                 WITH deleted AS (
                     DELETE FROM miovision_api.report_dates
-                    WHERE dt >= %s::date
-                    AND dt < %s::date
+                    WHERE dt >= %(date0)s::date
+                    AND dt < %(date1)s::date
                     RETURNING *
                 )
                 -- FOR NOTICE PURPOSES ONLY
@@ -412,19 +412,21 @@ def get_report_dates(conn, time_period):
 
                 RAISE NOTICE 'Deleted %s rows from miovision_api.report_dates.', n_deleted;
             """
-            cur.execute(delete_sql, time_period)
+            #named sql parameters used to accomodate raise notice parameter.
+            cur.execute(delete_sql, {'date0': time_period[0], 'date1': time_period[1]})
             report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
             cur.execute(report_dates, time_period)
             logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def insert_data(conn, time_period, table, dupes, intersections):
+def insert_data(conn, start_time, end_iteration_time, table, dupes, intersections):
     """Inserts new data into miovision_api.volumes, pulled from API.
 
     Clears table prior to insert.
     Separate branches for single intersection or many intersection case.
     """
+    time_period = (start_time, end_iteration_time)
     conn.notices=[]
     with conn.cursor() as cur:
         #delete the specified intersections
@@ -434,10 +436,11 @@ def insert_data(conn, time_period, table, dupes, intersections):
         insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
                             leg,  movement_uid, volume) VALUES %s'''
         execute_values(cur, insert_data, table)
-        if conn.notices != []:
-            logger.warning(conn.notices[-1])
-            if dupes:
-                sys.exit(2)
+# the raise notice in clear_volumes is causing this to exit.
+#        if conn.notices != []:
+#            logger.warning(conn.notices[-1])
+#            if dupes:
+#                sys.exit(2)
 
     with conn.cursor() as cur:
         query_params = time_period + ([x.uid for x in intersections], )
@@ -533,7 +536,7 @@ def check_dst(start_time, end_time):
         return True
     return False
 
-def pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes):
+def pull_data(conn, start_time, end_time, intersection, pull, key, dupes):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     
     Optionally aggregates raw data into downstream aggregate tables if pull=True. 
