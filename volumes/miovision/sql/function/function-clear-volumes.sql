@@ -33,7 +33,7 @@ BEGIN
     SELECT COUNT(*) INTO n_deleted
     FROM deleted;
 
-    RAISE NOTICE 'Deleted % rows from miovision_api.volumes.', n_deleted;
+    RAISE INFO 'Deleted % rows from miovision_api.volumes.', n_deleted;
 
 END;
 
