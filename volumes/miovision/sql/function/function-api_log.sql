@@ -29,7 +29,7 @@ BEGIN
         current_timestamp::date
     FROM miovision_api.volumes
     WHERE
-        intersection_uid = ANY(target_intersection)
+        intersection_uid = ANY(target_intersections)
         AND datetime_bin >= start_date
         AND datetime_bin < end_date
     GROUP BY intersection_uid

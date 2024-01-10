@@ -36,7 +36,7 @@ BEGIN
         SET volume_15min_mvt_uid = NULL
         FROM aggregate_delete AS b
         WHERE
-            a.intersection_uid = ANY(target_intersection)
+            a.intersection_uid = ANY(target_intersections)
             AND a.volume_15min_mvt_uid = b.volume_15min_mvt_uid
             AND a.datetime_bin >= start_date
             AND a.datetime_bin < end_date
