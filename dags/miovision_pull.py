@@ -1,8 +1,8 @@
 r"""### Daily Miovision Data Pull DAG
-Pipeline to pull miovision daily data and put them into Postgres tables using Bash Operator.
-Also checks if new monthly/yearly partition tables need to be created and runs SQL
-data-checks on the row count and distinct classification_uids found in pulled data.
-Slack notifications is raised when the airflow process fails.
+Pipeline to pull miovision daily data and insert them into Postgres tables using Python Operator.
+Inserted data is also aggregated into 15 minute and daily summaries, and unacceptable_gaps.
+Also creates new yearly/monthly partition tables if necessary and runs SQL data-checks on the
+pulled data, checking row count and distinct classification_uids compared to a lookback period.
 """
 import sys
 import os
@@ -69,9 +69,8 @@ default_args = {
 )
 def pull_miovision_dag():
 
-    @task_group
+    @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
-        """Task group to check if necessary to create new partitions and if so, exexcute."""
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
@@ -106,7 +105,7 @@ def pull_miovision_dag():
                 pull=True,
                 dupes=True)
 
-    @task_group
+    @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
         @task
         def find_gaps_task(ds = None):
@@ -152,9 +151,8 @@ def pull_miovision_dag():
             external_task_id="starting_point"
     )
 
-    @task_group()
+    @task_group(tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG.")
     def data_checks():
-        """Task group to check critical data quality measures which could warrant re-running the DAG."""
         data_check_params = {
             "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',
