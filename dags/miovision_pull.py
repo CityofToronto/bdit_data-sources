@@ -8,6 +8,8 @@ import sys
 import os
 import pendulum
 from datetime import timedelta
+import configparser
+import dateutil.parser
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
@@ -24,7 +26,7 @@ try:
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month
     from volumes.miovision.api.intersection_tmc import (
-        run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+        pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_report_dates, get_intersection_info
     )
 except:
@@ -34,7 +36,7 @@ DAG_NAME = 'miovision_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
-#DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
@@ -65,7 +67,7 @@ default_args = {
         )
     },
     tags=["miovision", "data_pull", "partition_create", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def pull_miovision_dag():
 
@@ -98,49 +100,59 @@ def pull_miovision_dag():
             INTERSECTION = ()
         else:
             INTERSECTION = tuple(context["params"]["intersection"])
-        run_api(start_date=ds,
-                end_date=ds_add(ds, 1),
-                path=API_CONFIG_PATH,
-                intersection=INTERSECTION,
-                pull=True,
-                dupes=True)
+        
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read(API_CONFIG_PATH)
+        api_key=CONFIG['API']
+        key=api_key['key']
+        start_time = dateutil.parser.parse(str(ds))
+        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
+        mio_postgres = PostgresHook("miovision_api_bot")
+
+        with mio_postgres.get_conn() as conn:
+            pull_data(conn, start_time, end_time, INTERSECTION, True, key, True)
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
         @task
         def find_gaps_task(ds = None):
-            mio_postgres = PostgresHook("miovision_api_bot")  
+            mio_postgres = PostgresHook("miovision_api_bot")
+            time_period = (ds, ds_add(ds, 1))
             with mio_postgres.get_conn() as conn:
-                find_gaps(conn, ds, ds_add(ds, 1))
+                find_gaps(conn, time_period)
 
         @task
         def aggregate_15_min_mvt_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
+            time_period = (ds, ds_add(ds, 1))
             if context["params"]["intersection"] != 0:
                 intersections = get_intersection_info(conn, intersection=context["params"]["intersection"])
                 with mio_postgres.get_conn() as conn:
-                    aggregate_15_min_mvt(conn, ds, ds_add(ds, 1), True, intersections)
+                    aggregate_15_min_mvt(conn, time_period, True, intersections)
             else:
                 with mio_postgres.get_conn() as conn:
-                    aggregate_15_min_mvt(conn, ds, ds_add(ds, 1))
+                    aggregate_15_min_mvt(conn, time_period)
 
         @task
         def aggregate_15_min_task(ds = None):
             mio_postgres = PostgresHook("miovision_api_bot")  
+            time_period = (ds, ds_add(ds, 1))
             with mio_postgres.get_conn() as conn:
-                aggregate_15_min(conn, ds, ds_add(ds, 1))
+                aggregate_15_min(conn, time_period)
 
         @task
         def aggregate_volumes_daily_task(ds = None):
             mio_postgres = PostgresHook("miovision_api_bot")  
+            time_period = (ds, ds_add(ds, 1))
             with mio_postgres.get_conn() as conn:
-                aggregate_volumes_daily(conn, ds, ds_add(ds, 1))
+                aggregate_volumes_daily(conn, time_period)
 
         @task
         def get_report_dates_task(ds = None):
-            mio_postgres = PostgresHook("miovision_api_bot")  
+            mio_postgres = PostgresHook("miovision_api_bot")
+            time_period = (ds, ds_add(ds, 1))
             with mio_postgres.get_conn() as conn:
-                get_report_dates(conn, ds, ds_add(ds, 1))
+                get_report_dates(conn, time_period)
 
         find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
         get_report_dates_task()
