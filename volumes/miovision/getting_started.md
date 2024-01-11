@@ -4,7 +4,7 @@
 	- [Vehicle Movements](#vehicle-movements)
 	- [Pedestrian Movement](#pedestrian-movement)
 	- [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
-- [All the East Leg Crossings!](#all-the-east-leg-crossings)
+    - [All the East Leg Crossings!](#all-the-east-leg-crossings)
 	- [Calculating Volumes on a Segment](#calculating-volumes-on-a-segment)
 		- [See it in Code!](#see-it-in-code)
 
@@ -177,3 +177,11 @@ WHERE
     AND datetime_bin >= '2020-03-13' 
     AND datetime_bin < '2020-03-20'
 ```
+
+## Important Things to Remember
+
+There are a few important caveats to keep in mind when working with Miovision data, relating to data accuracy and classifications.
+
+### Data Accuracy Dates
+
+### Don't Use `classification_uid = 2`
