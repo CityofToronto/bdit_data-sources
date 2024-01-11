@@ -11,12 +11,7 @@ VOLATILE
 AS $BODY$
 
 DECLARE
-    target_intersections integer [] =
-        CASE WHEN CARDINALITY(intersections) = 0
-            --switch out a blank array for all intersections
-            THEN (SELECT ARRAY_AGG(intersections.intersection_uid) FROM miovision_api.intersections)
-            ELSE intersections
-        END;
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
     n_deleted integer;
 
 BEGIN
