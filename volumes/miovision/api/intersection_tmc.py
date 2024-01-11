@@ -409,27 +409,24 @@ def get_report_dates(conn, time_period, intersections):
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def insert_data(conn, start_time, end_iteration_time, table, dupes, intersections):
+def insert_data(conn, time_period, table, intersections):
     """Inserts new data into miovision_api.volumes, pulled from API.
 
     Clears table prior to insert.
     Separate branches for single intersection or many intersection case.
     """
-    time_period = (start_time, end_iteration_time)
-    conn.notices=[]
-    with conn.cursor() as cur:
-        #delete the specified intersections
-        query_params = time_period + ([x.uid for x in intersections], )
-        delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
-        cur.execute(delete_sql, query_params)
-        insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
-                            leg,  movement_uid, volume) VALUES %s'''
-        execute_values(cur, insert_data, table)
-# the raise notice in clear_volumes is causing this to exit.
-#        if conn.notices != []:
-#            logger.warning(conn.notices[-1])
-#            if dupes:
-#                sys.exit(2)
+    try:
+        with conn.cursor() as cur:
+            #delete the specified intersections
+            query_params = time_period + ([x.uid for x in intersections], )
+            delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
+            cur.execute(delete_sql, query_params)
+            insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
+                                leg,  movement_uid, volume) VALUES %s'''
+            execute_values(cur, insert_data, table)
+    except psycopg2.errors.UniqueViolation:
+        logger.warning('Duplicates detected. Exiting.')
+        sys.exit(2)
 
     with conn.cursor() as cur:
         query_params = time_period + ([x.uid for x in intersections], )
@@ -618,7 +615,7 @@ def pull_data(conn, start_time, end_time, intersection, pull, key, dupes):
                     %(c_start_t, c_end_t))
 
         try:
-            insert_data(conn, c_start_t, c_end_t, table, dupes, intersections)
+            insert_data(conn, time_period=(c_start_t, c_end_t), table=table, intersections=intersections)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)
