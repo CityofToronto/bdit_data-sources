@@ -17,7 +17,7 @@ DECLARE
 BEGIN
 
     WITH deleted AS (
-        DELETE FROM miovision_api.clear_report_dates
+        DELETE FROM miovision_api.report_dates
         WHERE
             intersection_uid = ANY(target_intersections)
             AND dt >= _start_date
