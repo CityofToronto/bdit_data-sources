@@ -77,9 +77,8 @@ def cli():
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
-@click.option('--dupes' , is_flag=True, help='Script will fail if duplicates detected')
 
-def run_api(start_date, end_date, path, intersection, pull, dupes):
+def run_api(start_date, end_date, path, intersection, pull):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
@@ -95,7 +94,7 @@ def run_api(start_date, end_date, path, intersection, pull, dupes):
     logger.info('Pulling from %s to %s' %(start_time, end_time))
 
     try:
-        pull_data(conn, start_time, end_time, intersection, path, pull, key, dupes)
+        pull_data(conn, start_time, end_time, intersection, path, pull, key)
     except Exception as e:
         logger.critical(traceback.format_exc())
         sys.exit(1)
@@ -327,6 +326,7 @@ def find_gaps(conn, time_period):
             logger.info('Updated gapsize table and found gaps exceeding allowable size')
     except psycopg2.Error as exc:
         logger.exception(exc)
+        sys.exit(1)
 
 def aggregate_15_min_mvt(
         conn, time_period, user_def_intersection = False, intersections = None
@@ -358,6 +358,7 @@ def aggregate_15_min_mvt(
                 logger.info('Aggregated to 15 minute movement bins')
     except psycopg2.Error as exc:
         logger.exception(exc)
+        sys.exit(1)
 
 def aggregate_15_min(conn, time_period):
     """Aggregate into miovision_api.volumes_15min.
@@ -376,6 +377,7 @@ def aggregate_15_min(conn, time_period):
                         time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
+        sys.exit(1)
 
 def aggregate_volumes_daily(conn, time_period):
     """Aggregate into miovision_api.volumes_daily.
@@ -391,6 +393,7 @@ def aggregate_volumes_daily(conn, time_period):
                         time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
+        sys.exit(1)
 
 def get_report_dates(conn, time_period, intersections):
     """Aggregate into miovision_api.report_Dates.
@@ -408,6 +411,7 @@ def get_report_dates(conn, time_period, intersections):
             logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
+        sys.exit(1)
 
 def insert_data(conn, time_period, table, intersections):
     """Inserts new data into miovision_api.volumes, pulled from API.
@@ -496,19 +500,23 @@ def get_intersection_info(conn, intersection=()):
 
     Defaults to all intersections from miovision_api.intersections if none specified.
     """
-    with conn.cursor() as cur:
-        sql_query = """SELECT intersection_uid,
-                              id,
-                              intersection_name,
-                              date_installed,
-                              date_decommissioned
-                       FROM miovision_api.intersections"""
-        if len(intersection) > 0:
-            sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
-            cur.execute(sql_query, (list(intersection),))
-        else:
-            cur.execute(sql_query)
-        intersection_list = cur.fetchall()
+    try:
+        with conn.cursor() as cur:
+            sql_query = """SELECT intersection_uid,
+                                id,
+                                intersection_name,
+                                date_installed,
+                                date_decommissioned
+                        FROM miovision_api.intersections"""
+            if len(intersection) > 0:
+                sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
+                cur.execute(sql_query, (list(intersection),))
+            else:
+                cur.execute(sql_query)
+            intersection_list = cur.fetchall()
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
 
     return [Intersection(*x) for x in intersection_list]
 
@@ -522,7 +530,7 @@ def check_dst(start_time, end_time):
         return True
     return False
 
-def pull_data(conn, start_time, end_time, intersection, pull, key, dupes):
+def pull_data(conn, start_time, end_time, intersection, pull, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     
     Optionally aggregates raw data into downstream aggregate tables if pull=True. 
