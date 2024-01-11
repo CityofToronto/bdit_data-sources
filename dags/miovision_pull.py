@@ -125,14 +125,18 @@ def pull_miovision_dag():
         def aggregate_15_min_mvt_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
             time_period = (ds, ds_add(ds, 1))
-            if context["params"]["intersection"] != 0:
-                intersections = get_intersection_info(conn, intersection=context["params"]["intersection"])
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
                 with mio_postgres.get_conn() as conn:
-                    aggregate_15_min_mvt(conn, time_period, True, intersections)
+                    intersections = get_intersection_info(conn)
+                    aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
+            #user specified intersection
             else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])
                 with mio_postgres.get_conn() as conn:
-                    aggregate_15_min_mvt(conn, time_period)
-
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    aggregate_15_min_mvt(conn, time_period=time_period, user_def_intersection=True, intersections=intersections)
+            
         @task
         def aggregate_15_min_task(ds = None):
             mio_postgres = PostgresHook("miovision_api_bot")  

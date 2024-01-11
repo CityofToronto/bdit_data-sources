@@ -518,7 +518,7 @@ def get_intersection_info(conn, intersection=()):
                               date_decommissioned
                        FROM miovision_api.intersections"""
         if len(intersection) > 0:
-            sql_query += """ WHERE intersection_uid IN %s"""
+            sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
             cur.execute(sql_query, (intersection, ))
         else:
             cur.execute(sql_query)
