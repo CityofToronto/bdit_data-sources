@@ -311,10 +311,10 @@ def process_data(conn, start_time, end_iteration_time, user_def_intersection, in
     """
     time_period = (start_time, end_iteration_time)
     aggregate_15_min_mvt(conn, time_period, user_def_intersection, intersections)
-    aggregate_15_min(conn, time_period)
+    aggregate_15_min(conn, time_period, intersections)
     find_gaps(conn, time_period)
     aggregate_volumes_daily(conn, time_period)
-    get_report_dates(conn, time_period)
+    get_report_dates(conn, time_period, intersections)
  
 def find_gaps(conn, time_period):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
@@ -392,30 +392,19 @@ def aggregate_volumes_daily(conn, time_period):
     except psycopg2.Error as exc:
         logger.exception(exc)
 
-def get_report_dates(conn, time_period):
+def get_report_dates(conn, time_period, intersections):
     """Aggregate into miovision_api.report_Dates.
 
     First clears previous inserts for the date range.
     """
+    
+    query_params = time_period + ([x.uid for x in intersections], )
     try:
         with conn.cursor() as cur:
-            delete_sql="""
-                WITH deleted AS (
-                    DELETE FROM miovision_api.report_dates
-                    WHERE dt >= %(date0)s::date
-                    AND dt < %(date1)s::date
-                    RETURNING *
-                )
-                -- FOR NOTICE PURPOSES ONLY
-                SELECT COUNT(*) INTO n_deleted
-                FROM deleted;
-
-                RAISE NOTICE 'Deleted %s rows from miovision_api.report_dates.', n_deleted;
-            """
-            #named sql parameters used to accomodate raise notice parameter.
-            cur.execute(delete_sql, {'date0': time_period[0], 'date1': time_period[1]})
-            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date)"
-            cur.execute(report_dates, time_period)
+            delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
+            cur.execute(delete_sql, query_params)
+            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
+            cur.execute(report_dates, query_params)
             logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
@@ -519,7 +508,7 @@ def get_intersection_info(conn, intersection=()):
                        FROM miovision_api.intersections"""
         if len(intersection) > 0:
             sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
-            cur.execute(sql_query, (intersection, ))
+            cur.execute(sql_query, (list(intersection),))
         else:
             cur.execute(sql_query)
         intersection_list = cur.fetchall()

@@ -152,11 +152,20 @@ def pull_miovision_dag():
                 aggregate_volumes_daily(conn, time_period)
 
         @task
-        def get_report_dates_task(ds = None):
+        def get_report_dates_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
             time_period = (ds, ds_add(ds, 1))
+            
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                INTERSECTIONS = ()
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])              
+            
             with mio_postgres.get_conn() as conn:
-                get_report_dates(conn, time_period)
+                intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                get_report_dates(conn, time_period=time_period, intersections=intersections)
 
         find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
         get_report_dates_task()
