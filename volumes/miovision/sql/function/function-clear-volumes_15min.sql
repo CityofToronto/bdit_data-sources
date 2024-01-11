@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.clear_volumes_15min(
     start_date timestamp,
-    end_date timestamp
+    end_date timestamp,
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -10,6 +11,7 @@ AS $BODY$
 
 DECLARE
     n_deleted integer;
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
 
 BEGIN
 
@@ -18,6 +20,7 @@ BEGIN
         WHERE
             datetime_bin >= start_date
             AND datetime_bin < end_date
+            AND intersection_uid = ANY(target_intersections)
         RETURNING *
     )
 
@@ -29,9 +32,10 @@ BEGIN
 
     UPDATE miovision_api.volumes_15min_mvt
     SET processed = NULL
-    WHERE 
+    WHERE
         datetime_bin >= start_date
-        AND datetime_bin < end_date;
+        AND datetime_bin < end_date
+        AND intersection_uid = ANY(target_intersections);
 
 END;
 $BODY$;
