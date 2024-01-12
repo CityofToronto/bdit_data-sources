@@ -306,12 +306,12 @@ class MiovPuller:
 def process_data(conn, start_time, end_iteration_time, user_def_intersection, intersections):
     """Process Miovision into aggregate tables.
     
-    Tables: volumes_15min_mvt, volumes_15min, unacceptable_gaps, volumes_daily, report_dates.
+    Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
     """
     time_period = (start_time, end_iteration_time)
+    find_gaps(conn, time_period)
     aggregate_15_min_mvt(conn, time_period, user_def_intersection, intersections)
     aggregate_15_min(conn, time_period, intersections)
-    find_gaps(conn, time_period)
     aggregate_volumes_daily(conn, time_period)
     get_report_dates(conn, time_period, intersections)
  
