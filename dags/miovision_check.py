@@ -52,7 +52,7 @@ def miovision_check_dag():
 
     t_upstream_done = ExternalTaskSensor(
         task_id="starting_point",
-        external_dag_id="pull_miovision",
+        external_dag_id="miovision_pull",
         external_task_id="done",
         poke_interval=3600, #retry hourly
         mode="reschedule",

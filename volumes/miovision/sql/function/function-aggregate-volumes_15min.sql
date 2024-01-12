@@ -1,11 +1,17 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min(
     start_date date,
-    end_date date)
+    end_date date,
+    intersections integer [] DEFAULT ARRAY[]::integer []
+)
 RETURNS integer
 LANGUAGE 'plpgsql'
 COST 100
 VOLATILE
 AS $BODY$
+
+DECLARE
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
+
 BEGIN
 --Creates the ATR bins
     WITH transformed AS (
@@ -25,6 +31,7 @@ BEGIN
             v15.processed IS NULL
             AND v15.datetime_bin >= start_date
             AND v15.datetime_bin < end_date
+            AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
             v15.intersection_uid,
             v15.datetime_bin,
@@ -62,7 +69,7 @@ BEGIN
                 leg,
                 dir,
                 unnest(uids) AS volume_15min_mvt_uid
-                FROM transformed
+            FROM transformed
         ) AS ids ON
             atr.intersection_uid = ids.intersection_uid
             AND atr.datetime_bin = ids.datetime_bin
@@ -88,8 +95,7 @@ EXCEPTION
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.aggregate_15_min(date, date)
-OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.aggregate_15_min(date, date, integer []) OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_api_bot;
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date) TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date, integer []) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date, integer []) TO miovision_admins;
