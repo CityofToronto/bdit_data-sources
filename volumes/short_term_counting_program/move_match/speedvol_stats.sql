@@ -1,4 +1,4 @@
--- Grab speed volume study data for neighbourhoods    
+-- Grab speed volume study data
 WITH spd_vol AS (
     SELECT
         arterydata.arterycode,
@@ -19,7 +19,6 @@ WITH spd_vol AS (
 -- Calculate volume percentages and cumulative percentages by speed bin
 spd_bin_vol AS (
     SELECT
-        spd_vol.centreline_id,
         spd_vol.arterycode,
         spd_vol.count_info_id,
         spd_vol.direction,
@@ -31,7 +30,6 @@ spd_bin_vol AS (
         SUM(spd_vol.volume_15min) / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS pct -- SUM(SUM()) explained below
     FROM spd_vol
     GROUP BY 
-        spd_vol.centreline_id,
         spd_vol.arterycode,
         spd_vol.count_info_id,
         spd_vol.direction,
@@ -67,23 +65,61 @@ Here is an explanation of the second SUM(SUM()) line:
     You end up with the proportion of daily volume in each speed bin.
 */
 
--- Calculate 85th percentile speed
-per_85 AS (
-    SELECT DISTINCT ON (spd_bin_vol.count_info_id, spd_bin_vol.arterycode, spd_bin_vol.dt)
+-- Calculate 15th percentile speed
+per_15 AS (
+    SELECT DISTINCT ON (spd_bin_vol.count_info_id)
         spd_bin_vol.count_info_id,
         spd_bin_vol.arterycode,
         spd_bin_vol.dt,
         spd_bin_vol.cum_pct,
         spd_bin_vol.pct,
-        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
+        (
+            LOWER(spd_bin_vol.speed_kph) -- lower speed bound of bin
+            + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
+            * (
+                0.15 -- multiplied by the desired percentile (for which you want speed)
+                - ( -- minus
+                    spd_bin_vol.cum_pct -- the cumulative % for that bin
+                    - spd_bin_vol.pct -- munis the non-cumulative % from that bin
+                )
+            ) / (spd_bin_vol.pct + 0.00000001 -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
+                ) 
+        ) AS pctile_speed_15
+    FROM spd_bin_vol
+    WHERE spd_bin_vol.cum_pct >= 0.15
+),
+
+-- Calculate 50th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
+per_50 AS (
+    SELECT DISTINCT ON (spd_bin_vol.count_info_id)
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.arterycode,
+        spd_bin_vol.dt,
+        spd_bin_vol.cum_pct,
+        spd_bin_vol.pct,
+        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) 
+        * (0.50 - (spd_bin_vol.cum_pct - spd_bin_vol.pct)) / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_50
+    FROM spd_bin_vol
+    WHERE spd_bin_vol.cum_pct >= 0.50
+),
+
+-- Calculate 85th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
+per_85 AS (
+    SELECT DISTINCT ON (spd_bin_vol.count_info_id)
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.arterycode,
+        spd_bin_vol.dt,
+        spd_bin_vol.cum_pct,
+        spd_bin_vol.pct,
+        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) 
         * (0.85 - (spd_bin_vol.cum_pct - spd_bin_vol.pct)) / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_85
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.85
 ),
 
--- Calculate 95th percentile speed
+-- Calculate 95th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
 per_95 AS (
-    SELECT DISTINCT ON (spd_bin_vol.count_info_id, spd_bin_vol.arterycode, spd_bin_vol.dt)
+    SELECT DISTINCT ON (spd_bin_vol.count_info_id)
         spd_bin_vol.count_info_id,
         spd_bin_vol.arterycode,
         spd_bin_vol.dt,
@@ -183,7 +219,6 @@ pm_peak AS (
 
 -- Put all the stats together in one big happy table!!!
 SELECT DISTINCT
-    spd_vol.study_name,
     spd_vol.count_info_id,
     ave_vol.arterycode,
     spd_vol.direction,
@@ -195,17 +230,19 @@ SELECT DISTINCT
     pm_peak.pm_peak_hr,
     pm_peak.pm_peak_vol,
     ave_vol.mean_spd,
+    ROUND(per_15.pctile_speed_15, 1) AS pctile_speed_15,
+    ROUND(per_50.pctile_speed_50, 1) AS pctile_speed_50,
     ROUND(per_85.pctile_speed_85, 1) AS pctile_speed_85,
-    ROUND(per_95.pctile_speed_95, 1) AS pctile_speed_95,
-    spd_vol.seg_geom
+    ROUND(per_95.pctile_speed_95, 1) AS pctile_speed_95
 FROM spd_vol
 LEFT JOIN ave_vol USING (count_info_id)
+LEFT JOIN per_15 USING (count_info_id)
+LEFT JOIN per_50 USING (count_info_id)
 LEFT JOIN per_85 USING (count_info_id)
 LEFT JOIN per_95 USING (count_info_id)
 LEFT JOIN daily_vol USING (count_info_id)
 LEFT JOIN am_peak USING (count_info_id)
 LEFT JOIN pm_peak USING (count_info_id)
 ORDER BY
-    spd_vol.study_name,
     ave_vol.arterycode,
     ave_vol.dt;
