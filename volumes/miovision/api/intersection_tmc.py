@@ -94,7 +94,7 @@ def run_api(start_date, end_date, path, intersection, pull):
     logger.info('Pulling from %s to %s' %(start_time, end_time))
 
     try:
-        pull_data(conn, start_time, end_time, intersection, path, pull, key)
+        pull_data(conn, start_time, end_time, intersection, pull, key)
     except Exception as e:
         logger.critical(traceback.format_exc())
         sys.exit(1)
