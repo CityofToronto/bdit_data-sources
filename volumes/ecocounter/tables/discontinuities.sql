@@ -1,4 +1,5 @@
 CREATE TABLE ecocounter.discontinuities (
+    uid serial PRIMARY KEY,
     -- a references to EITHER a site_id or flow_id
     site_id numeric REFERENCES ecocounter.sites (site_id),
     flow_id numeric REFERENCES ecocounter.flows (flow_id),
