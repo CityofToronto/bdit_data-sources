@@ -63,13 +63,6 @@ def vdsvehicledata_dag():
     @task_group(group_id='check_partitions')
     def check_partitions_TG():
 
-        @task.short_circuit(ignore_downstream_trigger_rules=False) #only skip immediately downstream task
-        def check_partitions(ds=None): #check if Jan 1 to trigger partition creates. 
-            start_date = datetime.strptime(ds, '%Y-%m-%d')
-            if start_date.month == 1 and start_date.day == 1:
-                return True
-            return False
-
         create_partitions = PostgresOperator(
             task_id='create_partitions',
             sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
