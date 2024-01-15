@@ -1,7 +1,7 @@
 CREATE TABLE ecocounter.discontinuities (
     -- a references to EITHER a site_id or flow_id
-    site_id REFERENCES (sites.site_id),
-    flow_id REFERENCES (flows.flow_id),
+    site_id REFERENCES ecocounter.sites (site_id),
+    flow_id REFERENCES ecocounter.flows (flow_id),
     -- moment the change takes place
     break timestamp IS NOT NULL,
     -- approximate bounds if the precise time is not known
