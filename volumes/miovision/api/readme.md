@@ -19,6 +19,11 @@
     - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
     - [API Classifications](#api-classifications)
   - [PostgreSQL Functions](#postgresql-functions)
+    - [Aggregation Functions](#aggregation-functions)
+    - [Clear Functions](#clear-functions)
+    - [Helper Functions](#helper-functions)
+    - [Partitioning Functions](#partitioning-functions)
+    - [Deprecated Functions](#deprecated-functions)
   - [Invalid Movements](#invalid-movements)
   - [How the API works](#how-the-api-works)
   - [Airflow](#airflow)
@@ -202,18 +207,52 @@ The API assigns a classification of 0 if the classification matches none of the 
 
 To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the csv dumps. More information can be found in the [miovision readme](../README.md)
 
-|Function|Purpose|
-|-----|-----|
-|[`aggregate_15_min_tmc`](../sql/function/function-aggregate-volumes_15min_mvt.sql)|Aggregates data with valid movementsto 15 minutes turning movement count (TMC) bins and fills in gaps with 0-volume bins. |
-|[`aggregate_15_min`](../sql/function/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
-[`find_invalid_movments`](../sql/function/function-find_invalid_movements.sql)|Finds the number of invalid movements|
-[`api_log`](../sql/function/function-api_log.sql)|Populates when the data is pulled|
-[`find_gaps`](../sql/function/function-find_gaps.sql)|Find unacceptabl gaps and insert into table `miovision_api.unacceptable_gaps`|
-[`report_dates`](../sql/function/function-get_report_dates.sql)|Populates `report_dates`|
+### Aggregation Functions  
+
+| Edited | Function | Comment |
+|---|---|---|
+| x | [`aggregate_15_min(start_date date, end_date date, intersections integer[])`](../sql/function/function-aggregate-volumes_15min.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into `miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates `miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_volumes_15min()` to remove existing values before summarizing. |
+| x | [`aggregate_15_min_mvt(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
+| x | [`aggregate_volumes_daily(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
+| x | [`api_log(start_date date, end_date date, intersections integer[])`](../sql/function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
+| x | [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
+|  | [`find_gaps(start_date date, end_date date)`](../sql/function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
+
+### Clear Functions  
+
+| Edited | Function | Comment |
+|---|---|---|
+|  | [`clear_15_min_mvt(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min_mvt.sql) | Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+|  | [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+|  | [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+|  | [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+| x | [`clear_volumes_15min(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min.sql) | Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |  
+
+### Helper Functions
+
+| Edited | Function | Comment |
+|---|---|---|
+| x | [`find_invalid_movements(start_date timestamp, end_date timestamp)`](../sql/function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
+| x | [`get_intersections_uids(intersections integer[])`](../sql/function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
+
+### Partitioning Functions  
+
+| Edited | Function | Comment |
+|---|---|---|
+|  | [`create_mm_nested_volumes_partitions(base_table text, year_ integer, mm_ integer)`](../sql/function/function-create_mm_nested_volumes_partitions.sql) | Create a new month partition under the parent year table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
+|  | [`create_yyyy_volumes_15min_partition(base_table text, year_ integer)`](../sql/function/function-create_yyyy_volumes_15min_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
+|  | [`create_yyyy_volumes_partition(base_table text, year_ integer, datetime_col text)`](../sql/function/function-create_yyyy_volumes_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes` table. Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes', 2023, 'datetime_bin')` |  
+
+### Deprecated Functions
+
+| Edited | Function | Comment |
+|---|---|---|
+| x | [`determine_working_machine(start_date date, end_date date)`](../sql/function/function-determine_working_machine.sql) | Function no longer in use. Previously used in `check_miovision` DAG to determine if any cameras had gaps larger than 4 hours. See: `miovision_check` DAG `check_gaps` task for new implementation.  |
+| x | `missing_dates(_date date)` | Function no longer in use. Previously used to log dates with missing data to `miovision_api.missing_dates`. |  
 
 ## Invalid Movements
 
-The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](../sql/function/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. A warning is also emailed to the user if the number of invalid movements is over 1000.
+The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](../sql/function/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000.  
 
 ## How the API works
 

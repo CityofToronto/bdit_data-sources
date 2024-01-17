@@ -336,7 +336,7 @@ The current primary purpose for the keys is so that on deletion, the delete casc
 
 ### Other Important Tables
 
-The tables below are produced using functions explained in the [API Puller](api#postgresql-functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting.
+The tables below are produced using functions explained in the [API Puller](api/readme.md#postgresql-functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting.
 
 |Table|Purpose|
 |------|-------|
@@ -429,34 +429,9 @@ There is an intention to eventually flag times with unusual volumes automagicall
 ## 4. Repulling data
 ### Deleting data to re-run the process
 
-Uh oh, something went wrong in the process? Fret not, you can delete the data and re-run the process again. Note that you can't do that without deleting since most of our tables have a unique constraint. You will mostly likely violate that if you re-run the process without first removing the relevant data. Below you can find queries that have to be run which include all the tables that are involved. The precise version: delete 1min bins from `volumes` table and delete 15min bins from both mvt (tmc) and atr tables (note the different start_time and end_time), delete relevant information from `report_dates`, `api_log` and `unacceptable_gaps`. The example below shows how we delete a day worth of data on 2020-08-20.
+The Miovision ETL DAG `miovision_pull` and the command line `run-api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
 
-```sql
-DELETE FROM miovision_api.volumes
-WHERE datetime_bin BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
-
-DELETE FROM miovision_api.volumes_15min_mvt
-WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
-
-DELETE FROM miovision_api.volumes_15min
-WHERE datetime_bin BETWEEN '2020-08-19 23:00:00' AND '2020-08-20 22:45:00';
-
-DELETE FROM miovision_api.report_dates
-WHERE dt = '2020-08-20';
-
-DELETE FROM miovision_api.api_log
-WHERE start_date = '2020-08-20';
-
-DELETE FROM miovision_api.unacceptable_gaps
-WHERE gap_start BETWEEN '2020-08-20 00:00:00' AND '2020-08-20 23:59:00';
-```
-
-Once you have deleted all the relevant data, you can now re-run the process with the following command line.
-```
-python3 intersection_tmc.py run-api --path /etc/airflow/data_scripts/volumes/miovision/api/config.cfg --start_date 2020-08-20 --end_date 2020-08-21
-```
-
-The data pulling script currently *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-02 23:59:00'`).
+The DAG & the data pulling script *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
 
 ## 5. Steps to Add or Remove Intersections
 For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md). 
