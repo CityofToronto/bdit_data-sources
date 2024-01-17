@@ -13,7 +13,6 @@
     - [Error responses](#error-responses)
   - [Input Files](#input-files)
   - [How to run the api](#how-to-run-the-api)
-    - [Virtual Environment](#virtual-environment)
     - [Command Line Options](#command-line-options)
   - [Classifications](#classifications)
     - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
@@ -138,25 +137,15 @@ to=to@email.com
 
 ## How to run the api
 
-In command prompt, navigate to the folder where the python file is located and run `python intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
+In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
 
 The script can also customize the data it pulls and processes with various command line options.
 
 For example, to collect data from a custom date range, run `python intersection_tmc.py run_api --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
-`start_date` and `end_date` must be separated by at least 1 day, and `end_date` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
+`start_date` and `end_date` must be separated by at least 1 day, and `end_date` cannot be a future date. `start_date` is inclusive and `end_date` is exclusive.  
 
-If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled. 
-
-### Virtual Environment
-
-If the script is running on the EC2, then a virtual environment is required to run the script. In addition, it is no longer necessary to specify the proxy since the script is being run outside the firewall. 
-
-First, install pipenv by running `pip install --user pipenv`. The script is written around python 3.x, so run `pipenv --three` to setup a python 3.x virtual environment. To install the required packages such as the click module, run `pipenv intstall click`. 
-
-To run the python script, or any python commands, replace `python` at the start of your command with `pipenv run python`. For example, to run this script, run `pipenv run python intersection_tmc.py run_api`.
-
-More information can be found [here](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html).
+~~If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled.~~  
 
 ### Command Line Options
 
