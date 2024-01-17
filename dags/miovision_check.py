@@ -87,8 +87,7 @@ def miovision_check_dag():
                 sch_name := 'miovision_api'::text,
                 tbl_name := 'volumes'::text,
                 gap_threshold := '4 hours'::interval,
-                default_bin := '1 minute'::interval,
-                id_col_dtype := null::int
+                default_bin := '1 minute'::interval
             )""",
         conn_id="miovision_api_bot"
     )
