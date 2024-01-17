@@ -28,6 +28,9 @@
   - [How the API works](#how-the-api-works)
   - [Airflow](#airflow)
     - [**`miovision_pull`**](#miovision_pull)
+      - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+      - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+      - [`data_checks` TaskGroup](#data_checks-taskgroup)
     - [**`miovision_check`**](#miovision_check)
   - [Airflow - Deprecated](#airflow---deprecated)
     - [**`pull_miovision`**](#pull_miovision)
@@ -161,17 +164,13 @@ More information can be found [here](https://python-docs.readthedocs.io/en/lates
 |-----|-------|-----|-----|-----|
 |start_date|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
-|intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
+|intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
 |path|path|Specifies the directory where the `config.cfg` file is|`/etc/airflow/data_scripts/volumes/miovision/api/config.cfg`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
 |pull|BOOLEAN flag|Data processing and gap finding will be skipped|--pull|false|
-|dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
 
-`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --pull --dupes` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen as well as the script to fail if duplicates are detected.
+`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --pull` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen.  
 
 If `--pull` is specified in the command line (which is equivalent to setting it to True), the script will skip the data processing and gaps finding process. This is useful when we want to just insert data into the volumes table and check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
-
-If `--dupes` is specified in the command line (which is equivalent to setting it to True), the script will fail if duplicates are detected and exit with an exit code of 2. This is set up particularly for Airflow to fail if duplicates are detected so that we would be notified of the issue via Slack message. More can be found in the [Airflow](#airflow) section.\
-If `--dupes` is false, we would only get a warning message but the script will continue to run.
 
 ## Classifications
 
@@ -276,11 +275,32 @@ Below shows a list of SQL trigger functions, materialized view and sequences use
 
 <!-- miovision_pull_doc_md -->
 ### **`miovision_pull`**  
-This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a single intersection.  
+This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a specific intersections via a list of integer intersection_uids.  
 
-Within the `data_checks` TaskGroup, several [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py) tasks perform checks on the aggregated data from the current data interval.  
-- `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table.  
-- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column.
+#### `check_partitions` TaskGroup  
+  - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`. 
+  - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`. 
+  - `create_annual_partitions` contains any partition creates necessary for a new year.
+  - `create_month_partition` contains any partition creates necessary for a new month.
+
+ 
+`pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
+
+#### `miovision_agg` TaskGroup
+This task group completes various Miovision aggregations.  
+- `find_gaps_task` clears and then populates `miovision_api.unacceptable_gaps` using `intersection_tmc.find_gaps` function. 
+- `aggregate_15_min_mvt_task` clears and then populates `miovision_api.volumes_15min_mvt` using `intersection_tmc.aggregate_15_min_mvt` function. 
+- `aggregate_15_min_task` clears and then populates `miovision_api.volumes_15min` using `intersection_tmc.aggregate_15_min` function. 
+- `aggregate_volumes_daily_task` clears and then populates `miovision_api.volumes_daily` using `intersection_tmc.aggregate_volumes_daily` function.
+- `get_report_dates_task` clears and then populates `miovision_api.report_dates` using `intersection_tmc.get_report_dates` function.
+
+`done` signals that downstream `miovision_check` DAG can run.
+
+#### `data_checks` TaskGroup
+This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param. 
+ tasks perform checks on the aggregated data from the current data interval.  
+- `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
+- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
 <!-- miovision_pull_doc_md -->
 
 <!-- miovision_check_doc_md -->
@@ -288,9 +308,9 @@ Within the `data_checks` TaskGroup, several [`SQLCheckOperatorWithReturnValue`](
 
 This DAG replaces the old `check_miovision`. It is used to run daily data quality checks on Miovision data that would generally not require the pipeline to be re-run. 
 
-- `starting_point` waits for upstream `pull_miovision` DAG `done` task to run. 
-- `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today.  
-- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. 
+- `starting_point` waits for upstream `miovision_pull` DAG `done` task to run indicating aggregation of new data is completed.  
+- `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today. Uses [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
+- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.
 <!-- miovision_check_doc_md -->
 
 ## Airflow - Deprecated
@@ -298,13 +318,13 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 <!-- pull_miovision_doc_md -->
 ### **`pull_miovision`**  
 This deprecated Miovisiong DAG (replaced by [`miovision_pull`](#miovision_pull)) uses a single BashOperator to run the entire data pull and aggregation in one task.  
-The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg'`. 
 <!-- pull_miovision_doc_md -->
 
 <!-- check_miovision_doc_md -->
 ### **`check_miovision`**
 
-The `check_miovision` DAG is deprecated by the addition of the `data_checks` TaskGroup to the main `pull_miovision` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
+The `check_miovision` DAG is deprecated by the addition of the [`data_checks` TaskGroup](#data_checks-taskgroup) to the main `miovision_pull` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
 This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 <!-- check_miovision_doc_md -->
 

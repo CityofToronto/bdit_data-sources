@@ -23,22 +23,9 @@ Once we are informed of the decommissioned date of a Miovision camera, we can ca
 
 1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../README.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
-2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_mvt` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from aggregate tables using [function-clear-volumes_15min.sql](../sql/function/function-clear-volumes_15min.sql), [function-clear-volumes_15min_mvt.sql](../sql/function/function-clear-volumes_15min_mvt.sql). You can also manually delete `volumes_daily` table. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
-3) Update the below table of when intersections were decommissioned for future references.
-
-	|intersection_uid | last datetime_bin|
-	|-----------------|------------------|
-	9 | 2020-06-15 15:51:00|
-	11 | 2020-06-15 09:46:00|
-	13 | 2020-06-15 18:01:00|
-	14 | NULL|
-	16 | 2020-06-15 19:52:00|
-	19 | 2020-06-15 20:18:00|
-	30 | 2020-06-15 18:58:00|
-	32 | 2020-06-15 18:30:00|
-
-4) Done. Removing intersections is short and simple.
+3) Done. Removing intersections is short and simple.
 
 # Adding Intersections
 Adding intersections is not as simple as removing an intersection. We will first have to find out some information before proceeding to aggregating the data. The steps are outlined below.
@@ -272,16 +259,16 @@ WHERE intersection_uid = 72 -- change the number to match the new intersection_u
 Now that the intersection is configured and the raw volumes data is in the database, we have to finish aggregating the data.
 
 1. **Backfill `miovision_api.volumes`**   
-    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. 
+    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day, skipping aggregations.  
 
 2. **Backfill additional tables**  
-    We now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date) to finish aggregating the backfilled data.  
+    We now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date) to finish aggregating the backfilled data. See issue [#835](https://github.com/CityofToronto/bdit_data-sources/issues/835) which should make this step easier.  
 	```sql
 	SELECT miovision_api.find_gaps(%s::date, %s::date);
 	SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);
 	SELECT miovision_api.aggregate_15_min(%s::date, %s::date); 
 	SELECT miovision_api.report_dates(%s::date, %s::date);
-	```
+	```	
 
 3. **QC Aggregate Tables**  
     Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter.
