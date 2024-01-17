@@ -101,3 +101,10 @@ OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_admins;
+
+COMMENT ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
+IS '''Aggregates valid movements from `miovision_api.volumes` in to
+`miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills
+in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an
+optional intersection array parameter to aggregate only specific intersections. Use
+`clear_15_min_mvt()` to remove existing values before summarizing.''';
