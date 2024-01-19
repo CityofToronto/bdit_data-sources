@@ -1,4 +1,4 @@
-CREATE TABLE miovision_api.volumes_daily(
+CREATE TABLE miovision_api.volumes_daily (
     dt date NOT NULL,
     intersection_uid integer NOT NULL,
     classification_uid integer NOT NULL,
@@ -10,15 +10,15 @@ CREATE TABLE miovision_api.volumes_daily(
     avg_historical_gap_vol int,
     CONSTRAINT volumes_daily_pkey
     PRIMARY KEY (intersection_uid, dt, classification_uid)
-); 
+);
 
 CREATE INDEX volumes_intersection_idx
 ON miovision_api.volumes_daily
-USING btree(intersection_uid);
+USING btree (intersection_uid);
 
 CREATE INDEX volumes_dt_idx
 ON miovision_api.volumes_daily
-USING btree(dt);
+USING btree (dt);
 
 ALTER TABLE miovision_api.volumes_daily OWNER TO miovision_admins;
 GRANT SELECT ON TABLE miovision_api.volumes_daily TO bdit_humans;

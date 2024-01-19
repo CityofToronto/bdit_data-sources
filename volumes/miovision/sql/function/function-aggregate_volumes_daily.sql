@@ -94,8 +94,10 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily IS
-'Function for inserting daily volumes into miovision_api.volumes_daily';
+COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily
+IS 'Function for inserting daily volumes into miovision_api.volumes_daily';
 
-ALTER FUNCTION miovision_api.aggregate_volumes_daily OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.aggregate_volumes_daily
+OWNER TO miovision_admins;
+
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily TO miovision_api_bot;
