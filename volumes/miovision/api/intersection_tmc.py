@@ -320,7 +320,7 @@ def find_gaps(conn, time_period):
     into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
     try:
         with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::date, %s::date)"
+            invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
             cur.execute(invalid_gaps, time_period)
             logger.info(conn.notices[-1])
             logger.info('Updated gapsize table and found gaps exceeding allowable size')
