@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.insert_volumes_daily(
+CREATE OR REPLACE FUNCTION miovision_api.aggregate_volumes_daily(
     start_date date,
     end_date date
 )
@@ -94,8 +94,8 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.insert_volumes_daily IS
+COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily IS
 'Function for inserting daily volumes into miovision_api.volumes_daily';
 
-ALTER FUNCTION miovision_api.insert_volumes_daily OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.insert_volumes_daily TO miovision_api_bot;
+ALTER FUNCTION miovision_api.aggregate_volumes_daily OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily TO miovision_api_bot;
