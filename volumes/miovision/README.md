@@ -13,6 +13,7 @@
     - [Aggregated Data](#aggregated-data)
       - [`volumes_15min_mvt`](#volumes_15min_mvt)
       - [`volumes_15min`](#volumes_15min)
+      - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
       - [`unacceptable_gaps`](#unacceptable_gaps)
       - [`gapsize_lookup`](#gapsize_lookup)
   - [`volumes`](#volumes)
@@ -223,6 +224,24 @@ volume|integer|Total 15-minute volume|107|
 [`miovision_api.movement_map`](#movement_map) is used to convert the TMC data to the ATR data. 
 
 A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
+
+##### `miovision_api.volumes_daily`
+
+Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
+
+| Field Name               | Comments                                                                   | Data Type   | Exmple     |
+|:-------------------------|:---------------------------------------------------------------------------|:------------|:-----------|
+| dt                       |                                                                            | date        | 2023-09-05 |
+| intersection_uid         |                                                                            | integer     | 1          |
+| classification_uid       |                                                                            | integer     | 1          |
+| daily_volume             |                                                                            | integer     | 13830      |
+| isodow                   | Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.     | smallint    | 2          |
+| holiday                  |                                                                            | boolean     | False      |
+| datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
+| unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable                    | smallint    | 0          |
+|                          | based on avg intersection volume in that hour.                             |             |            |
+| avg_historical_gap_vol   | Avg historical volume for that classification and gap duration             | integer     |            |
+|                          | based on averages from a 60 day lookback in that hour.                     |             |            |
 
 
 ##### `unacceptable_gaps`
