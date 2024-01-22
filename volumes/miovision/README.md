@@ -172,7 +172,7 @@ The [`aggregate_15_min_mvt()`](sql/function/function-aggregate-volumes_15min_mvt
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|serial|Unique identifier for table|14524|
+volume_15min_mvt_uid|integer|Unique identifier for table from sequence `miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq`. |14524|
 intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
 datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
@@ -207,7 +207,7 @@ diagram](getting_started.md#From-Movement-Counts-to-Segment-Counts).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_15min_uid|serial|Unique identifier for table|12412|
+volume_15min_uid|integer|Unique identifier for table from sequence `miovision_api.volumes_15min_volume_15min_uid_seq`. |12412|
 intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
 datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
