@@ -1,6 +1,6 @@
 ﻿CREATE TABLE miovision_api.volumes_15min_mvt
 (
-    volume_15min_mvt_uid serial NOT NULL,
+    volume_15min_mvt_uid integer NOT NULL DEFAULT nextval('miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq'::regclass),
     intersection_uid integer,
     datetime_bin timestamp without time zone,
     classification_uid integer,
@@ -55,6 +55,12 @@ USING btree (
 CREATE INDEX volumes_15min_mvt_volume_15min_mvt_uid_idx
 ON miovision_api.volumes_15min_mvt
 USING btree (volume_15min_mvt_uid ASC NULLS LAST);
+
+-- Index: volumes_15min_mvt_processed_idx
+-- DROP INDEX IF EXISTS miovision_api.volumes_15min_mvt_processed_idx;
+CREATE INDEX IF NOT EXISTS volumes_15min_mvt_processed_idx
+ON miovision_api.volumes_15min_mvt USING btree (processed ASC NULLS LAST)
+WHERE processed IS NULL;
 
 --create yearly partitions
 SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', 2019::int);

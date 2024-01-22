@@ -3,7 +3,7 @@
 -- DROP TABLE miovision_api.volumes_15min;
 CREATE TABLE miovision_api.volumes_15min
 (
-    volume_15min_uid serial NOT NULL,
+    volume_15min_uid integer NOT NULL DEFAULT nextval('miovision_api.volumes_15min_volume_15min_uid_seq'::regclass),
     intersection_uid integer,
     datetime_bin timestamp without time zone,
     classification_uid integer,
