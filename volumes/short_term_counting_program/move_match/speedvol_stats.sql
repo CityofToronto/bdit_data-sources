@@ -1,3 +1,5 @@
+-- This code replicates statistics from the speed volume Speed Percentile Report: https://move.intra.prod-toronto.ca/view/location/s1:Ab_DAA/POINTS/reports/ATR_SPEED_VOLUME
+-- Note that am and pm peak hours as presented in this report are based on clock face hours (not 15 minute bins)
 -- Grab speed volume study data
 WITH spd_vol AS (
     SELECT
@@ -12,7 +14,8 @@ WITH spd_vol AS (
     JOIN traffic.countinfo USING (arterycode)
     JOIN traffic.cnt_det USING (count_info_id)
     JOIN prj_volume.speed_classes USING (speed_class)
-    WHERE countinfo.count_date >= '2023-01-01' 
+    WHERE 
+        countinfo.count_date >= '2023-01-01' 
         AND countinfo.count_date < '2023-01-15' -- short time period for testing purposes
 ), 
 
@@ -82,8 +85,8 @@ per_15 AS (
                     spd_bin_vol.cum_pct -- the cumulative % for that bin
                     - spd_bin_vol.pct -- munis the non-cumulative % from that bin
                 )
-            ) / (spd_bin_vol.pct + 0.00000001 -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
-                ) 
+                ) / (spd_bin_vol.pct + 0.00000001 -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
+            ) 
         ) AS pctile_speed_15
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.15
