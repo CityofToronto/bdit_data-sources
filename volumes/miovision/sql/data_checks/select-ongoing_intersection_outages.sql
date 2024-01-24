@@ -14,7 +14,7 @@ WITH ongoing_outages AS (
 )
 
 SELECT
-    COUNT(ongoing_outages.*) > 1 AS check,
+    COUNT(ongoing_outages.*) < 1 AS check,
     CASE WHEN COUNT(ongoing_outages.*) = 1 THEN 'There is ' ELSE 'There are ' END ||
         COALESCE(COUNT(ongoing_outages.*), 0) ||
         CASE WHEN COUNT(ongoing_outages.*) = 1 THEN ' ongoing outage.' ELSE ' ongoing outages.'
