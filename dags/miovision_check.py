@@ -44,7 +44,10 @@ default_args = {
     default_args=default_args,
     schedule='0 4 * * *', # Run at 4 AM local time every day
     catchup=False,
-    template_searchpath=os.path.join(repo_path,'dags/sql'),
+    template_searchpath=[
+        os.path.join(repo_path,'volumes/miovision/sql/data_checks'),
+        os.path.join(repo_path,'dags/sql')
+    ],
     tags=["miovision", "data_checks"],
     doc_md=__doc__
 )
@@ -61,15 +64,12 @@ def miovision_check_dag():
     )
 
     check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
-        task_id="check_distinct_intersection_uid",
-        sql="select-sensor_id_count_lookback.sql",
+        task_id="check_intersection_outages",
+        sql="select-ongoing_intersection_outages.sql",
         conn_id="miovision_api_bot",
         params={
-            "table": "miovision_api.volumes_15min_mvt",
             "lookback": '60 days',
-            "dt_col": 'datetime_bin',
-            "id_col": "intersection_uid",
-            "threshold": 0.999 #dif is floored, so this will catch a dif of 1.
+            "min_duration": '0 days'
         }
     )
     check_distinct_intersection_uid.doc_md = '''
