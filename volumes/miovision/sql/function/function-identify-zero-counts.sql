@@ -17,10 +17,10 @@ BEGIN
             MAX(datetime_bin) + interval '15 minutes' AS range_end
         FROM miovision_api.volumes_15min_mvt
         WHERE
-            AND datetime_bin >= start_date
+            datetime_bin >= start_date
             AND datetime_bin < start_date + interval '1 day'
         GROUP BY intersection_uid
-        HAVING SUM(volume) = 0
+        HAVING COALESCE(SUM(volume), 0) = 0
     ),
     
     new_gaps AS (
