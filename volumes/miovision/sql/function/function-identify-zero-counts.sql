@@ -10,6 +10,7 @@ AS $BODY$
 
 BEGIN
 
+    --identify intersections with zero volume regardless of mode
     WITH zero_intersections AS (
         SELECT
             intersection_uid,
@@ -24,6 +25,7 @@ BEGIN
     ),
     
     new_gaps AS (
+        --identify intersections with zero volume for specific modes
         SELECT
             v15.intersection_uid,
             v15.classification_uid,
@@ -40,13 +42,14 @@ BEGIN
             AND v15.datetime_bin >= start_date
             AND v15.datetime_bin < start_date + interval '1 day'
             --this script will only catch zeros for classification_uid 1,2,6,10
-            --since those are the ones that are zero padded. Filter for speed.
+            --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
             AND v15.classification_uid IN (1,2,6,10)
         GROUP BY
             v15.classification_uid,
             v15.intersection_uid
-        HAVING SUM(volume) = 0
+        HAVING COALESCE(SUM(volume), 0) = 0
 
+        --union with intersections with zero volume regardless of mode
         UNION
 
         SELECT
@@ -71,6 +74,7 @@ BEGIN
             --otherwise if days run out of order we have to deal with
             --recursive situation of collapsing (0)<-(new)->(2)
             AND existing.range_end = new_.range_start
+            --Only join with other automated zero count anomalous_ranges identified by this process 
             AND existing.notes = 'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts'
             AND existing.investigation_level = 'auto_flagged'
         --returns the rows from `new_gaps` which were used to modify existing.
@@ -99,6 +103,7 @@ BEGIN
         AND COALESCE(existing.classification_uid, 0) = COALESCE(new_gaps.classification_uid, 0)
         AND existing.range_end IS NULL
     WHERE
+        --anti joins
         existing.uid IS NULL
         AND updated_values.range_start IS NULL
     ON CONFLICT
