@@ -8,6 +8,10 @@ COST 100
 VOLATILE
 AS $BODY$
 
+DECLARE
+    n_inserted integer;
+    n_updated integer;
+
 BEGIN
 
     --identify intersections with zero volume regardless of mode
@@ -108,6 +112,27 @@ BEGIN
         AND updated_values.range_start IS NULL
     ON CONFLICT
     DO NOTHING;
+
+    --report on new anomalous_ranges:
+    SELECT COUNT(*) INTO n_inserted
+    FROM miovision_api.anomalous_ranges
+    WHERE
+        investigation_level = 'auto_flagged'
+        AND range_start = start_date
+        AND range_end = start_date + interval '1 day';
+
+    RAISE INFO '% records inserted into anomalous_ranges for %.', n_inserted, start_date;
+    
+    --report on updated anomalous_ranges:
+    SELECT COUNT(*) INTO n_updated
+    FROM miovision_api.anomalous_ranges
+    WHERE
+        investigation_level = 'auto_flagged'
+        AND range_start <> start_date
+        AND range_end = start_date + interval '1 day';
+    
+    RAISE INFO '% records in anomalous_ranges extended to include %.', n_updated, start_date;
+
 END;
 
 $BODY$;
