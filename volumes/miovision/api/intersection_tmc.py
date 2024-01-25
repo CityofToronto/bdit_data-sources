@@ -422,7 +422,9 @@ def agg_zero_volume_anomalous_ranges(conn, time_period):
         with conn:
             with conn.cursor() as cur:
                 #this function includes a delete query preceeding the insert.
-                anomalous_range_sql="SELECT miovision_api.identify_zero_counts(%s::timestamp, %s::timestamp)"
+                anomalous_range_sql="""SELECT *
+                    FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
                 cur.execute(anomalous_range_sql, time_period)
                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
     except psycopg2.Error as exc:
