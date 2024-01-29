@@ -242,7 +242,36 @@ The API script also checks for invalid movements by calling the [`miovision_api.
 These diagrams are in need of update. Reference with caution. 
 
 This flow chart provides a high level overview of the script:
-![Flow Chart of the API](img/api_script1.png)
+
+```mermaid
+flowchart TD
+    A[Start of the script]-->
+    B[Input command line\nvariables if any]-->
+    C[Connects to the database]-->
+    D{If intersection\nis specified}
+    E[Grabs entire list of intersections]
+    F[Grabs specified intersection]
+    D-->|Yes|E
+    D-->|No|F
+    G["Grabs Crosswalk (Pedestrian) data"]
+    F-->G
+    E-->G
+    H[Reformats data and appends\nit to temp table]
+    G-->H-->I
+    I["Grabs TMC (cyclist and vehicle) data"]-->
+    J[Reformats data and appends it to a table]-->
+    K[Inserts table to `volumes` and checks for valid movements]-->
+    L{Was it\nspecified to not\nprocess the data?}
+    M[Aggregates data:\n`volumes_15min_mvt`,\n`volumes_15min`,\n`volumes_daily`]
+    O[Iterate to next day]
+    L-->|Yes|M-->O
+    L-->|No|O
+    O-->P
+    P{Does current iteration\ndate exceed specified\ndate range?}
+    Q[End of Script]
+    P-->|Yes|Q
+    P-->|No|G
+```
 
 Below shows an overview of functions used in the script:
 ![Python Functions](img/python_functions.png)
@@ -251,11 +280,6 @@ Below shows a list of tables used (separated by source table and results table):
 ![Source Tables](img/tables_1.png)
 ![Results Tables](img/tables_2.png)
 
-Below shows a list of SQL functions used:
-![SQL Functions](img/functions.png)
-
-Below shows a list of SQL trigger functions, materialized view and sequences used:
-![Trigger Functions and Sequences](img/others.png)
 
 ## Airflow
 
