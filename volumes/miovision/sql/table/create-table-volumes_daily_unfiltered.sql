@@ -34,8 +34,8 @@ COMMENT ON COLUMN miovision_api.volumes_daily_unfiltered.isodow
 IS 'Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.';
 
 COMMENT ON COLUMN miovision_api.volumes_daily_unfiltered.unacceptable_gap_minutes
-IS 'Periods of consecutive zero volumes deemed unacceptable
-based on avg intersection volume in that hour.';
+IS 'Consecutive minutes with zero volume deemed unacceptable for use based on a
+threshold set using avg historical intersection volume in the same hour.';
 
 COMMENT ON COLUMN miovision_api.volumes_daily_unfiltered.datetime_bins_missing
 IS 'Minutes with zero vehicle volumes out of a total of possible 1440 minutes.';

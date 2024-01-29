@@ -110,4 +110,4 @@ OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date)
 TO miovision_api_bot;
 
-REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) FROM PUBLIC;
+REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) FROM public;
