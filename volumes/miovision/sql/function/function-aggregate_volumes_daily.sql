@@ -75,21 +75,8 @@ BEGIN
             un.intersection_uid = v.intersection_uid
             AND v.datetime_bin::date = un.gap_date
             AND un.classification_uid = v.classification_uid
-        --anti join anomalous_ranges table
-        LEFT JOIN miovision_api.anomalous_ranges AS ar ON
-            (
-                ar.intersection_uid = v.intersection_uid
-                OR ar.intersection_uid IS NULL
-            ) AND (
-                ar.classification_uid = v.classification_uid
-                OR ar.classification_uid IS NULL
-            )
-            AND v.datetime_bin >= LOWER(ar.time_range)
-            AND v.datetime_bin < UPPER(ar.time_range)
-            AND ar.problem_level IN ('do-not-use', 'questionable')
         WHERE
-            ar.time_range IS NULL --anti join anomalous ranges
-            AND v.datetime_bin >= start_date
+            v.datetime_bin >= start_date
             AND v.datetime_bin < end_date
         GROUP BY
             v.intersection_uid,
