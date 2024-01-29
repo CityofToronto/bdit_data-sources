@@ -239,47 +239,67 @@ The API script also checks for invalid movements by calling the [`miovision_api.
 
 ## How the API works
 
-These diagrams are in need of update. Reference with caution. 
-
 This flow chart provides a high level overview of the script:
 
 ```mermaid
-flowchart TD
-    A[Start of the script]-->
-    B[Input command line\nvariables if any]-->
-    C[Connects to the database]-->
-    D{If intersection\nis specified}
-    E[Grabs entire list of intersections]
-    F[Grabs specified intersection]
-    D-->|Yes|E
-    D-->|No|F
-    G["Grabs Crosswalk (Pedestrian) data"]
-    F-->G
-    E-->G
-    H[Reformats data and appends\nit to temp table]
-    G-->H-->I
-    I["Grabs TMC (cyclist and vehicle) data"]-->
-    J[Reformats data and appends it to a table]-->
-    K[Inserts table to `volumes` and checks for valid movements]-->
-    L{Was it\nspecified to not\nprocess the data?}
-    M[Aggregates data:\n`volumes_15min_mvt`,\n`volumes_15min`,\n`volumes_daily`]
-    O[Iterate to next day]
-    L-->|Yes|M-->O
-    L-->|No|O
-    O-->P
-    P{Does current iteration\ndate exceed specified\ndate range?}
+flowchart TB
+    A[" `pull_data` called via\ncommand line `run_api`"]
+    B[" `pull_data` called via\n`miovision_pull` Airflow DAG\n`pull_data` task"]
+    A & B-->pull_data
+
+    subgraph pull_data["`**pull_data**`" ]
+        direction TB
+
+        subgraph get_intersection_info["`**get_intersection_info**`" ]
+            direction LR
+            D{Are specific\nintersections\n specified?}
+            E[Grabs entire list of intersections\nfrom database]
+            F["Grabs specified intersection(s)\nfrom database"]
+            D-->|Yes|E
+            D-->|No|F
+        end
+
+        exit[Exit if specified intersections inactive]
+        G["Pulls crosswalk data (table_ped) and\nvehichle/cyclist data (table_veh)"]
+        H[Reformats data and appends\nit to temp tables]
+        J[Checks if EDT -> EST occured\nand if so discards 2nd 1-2AM\nto prevent duplicates]
+
+        subgraph insert_data["`**insert_data**`"]
+            direction LR
+            insert[Inserts data into `volumes` table]
+            api_log[Updates `api_log`]
+            invalid["Alerts if invalid movements\nfound (`find_invalid_movements`)"]
+            insert-->api_log-->invalid
+        end
+
+        P{Does current iteration\ndate exceed specified\ndate range?}
+        get_intersection_info-->exit-->G-->H-->J-->insert_data-->P
+        
+
+        Iterate[Iterate to next 6 hour block.]
+        L{Was it\nspecified to not\nprocess the data?}
+
+        P-->|Yes|L
+        P-->|No|Iterate
+        Iterate-->G
+
+        subgraph process_data["`**process_data**`"]
+            direction LR
+            gaps["find_gaps\n(unacceptable_gaps)"]-->
+            mvt["aggregate_15_min_mvt\n(volumes_15min_mvt)"]-->
+            v15["aggregate_15_min\n(volumes_15min)"]-->
+            volumes_daily["aggregate_volumes_daily\n(volumes_daily)"]-->
+            report_dates["get_report_dates\n(report_dates)"]
+        end
+        
+        L---->|No|process_data
+        L-->|Yes|skip[Skip aggregation]
+    end
+    
     Q[End of Script]
-    P-->|Yes|Q
-    P-->|No|G
-```
-
-Below shows an overview of functions used in the script:
-![Python Functions](img/python_functions.png)
-
-Below shows a list of tables used (separated by source table and results table):
-![Source Tables](img/tables_1.png)
-![Results Tables](img/tables_2.png)
-
+    
+    pull_data-->Q
+  ```
 
 ## Airflow
 
