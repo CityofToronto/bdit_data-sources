@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_15_min_mvt(
     start_date date,
-    end_date date
+    end_date date,
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -8,6 +9,9 @@ LANGUAGE 'plpgsql'
 COST 100
 VOLATILE
 AS $BODY$
+
+DECLARE
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
 
 BEGIN
 
@@ -17,7 +21,7 @@ WITH aggregate_insert AS (
     )
     SELECT
         im.intersection_uid,
-        dt.datetime_bin15 AS datetime_bin,
+        dt.datetime_bin,
         im.classification_uid,
         im.leg,
         im.movement_uid,
@@ -33,20 +37,20 @@ WITH aggregate_insert AS (
         start_date,
         end_date - interval '15 minutes',
         interval '15 minutes'
-    ) AS dt(datetime_bin15)
+    ) AS dt(datetime_bin)
     JOIN miovision_api.intersections AS mai USING (intersection_uid)     
     --To avoid aggregating unacceptable gaps
     LEFT JOIN miovision_api.unacceptable_gaps AS un ON
         un.intersection_uid = im.intersection_uid
         --remove the 15 minute bin containing any unacceptable gaps
-        AND dt.datetime_bin15 = un.datetime_bin
+        AND dt.datetime_bin = un.datetime_bin
     --To get 1min bins
     LEFT JOIN miovision_api.volumes AS v ON
         --help query choose correct partition
         v.datetime_bin >= start_date
         AND v.datetime_bin < end_date
-        AND v.datetime_bin >= dt.datetime_bin15
-        AND v.datetime_bin < dt.datetime_bin15 + interval '15 minutes'
+        AND v.datetime_bin >= dt.datetime_bin
+        AND v.datetime_bin < dt.datetime_bin + interval '15 minutes'
         AND v.intersection_uid = im.intersection_uid
         AND v.classification_uid = im.classification_uid
         AND v.leg = im.leg
@@ -54,16 +58,17 @@ WITH aggregate_insert AS (
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
-        dt.datetime_bin15 > mai.date_installed + interval '1 day'
+        dt.datetime_bin > mai.date_installed + interval '1 day'
         AND (
             mai.date_decommissioned IS NULL
-            OR (dt.datetime_bin15 < mai.date_decommissioned - interval '1 day')
+            OR (dt.datetime_bin < mai.date_decommissioned - interval '1 day')
         )
         --exclude movements already aggregated
         AND v.volume_15min_mvt_uid IS NULL
+        AND im.intersection_uid = ANY(target_intersections)
     GROUP BY
         im.intersection_uid,
-        dt.datetime_bin15,
+        dt.datetime_bin,
         im.classification_uid,
         im.leg,
         im.movement_uid, 
@@ -95,16 +100,18 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
+ALTER FUNCTION miovision_api.aggregate_15_min_mvt(date, date, integer [])
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date, integer [])
+TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date) TO miovision_admins;
-
-COMMENT ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date)
+COMMENT ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date, integer []) 
 IS '''Aggregates valid movements from `miovision_api.volumes` in to
 `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills
 in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an
 optional intersection array parameter to aggregate only specific intersections. Use
 `clear_15_min_mvt()` to remove existing values before summarizing.''';
+
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date, integer [])
+TO miovision_admins;
