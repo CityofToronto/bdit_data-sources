@@ -319,7 +319,7 @@ def pull_from_sheet_cli(
         db_config: A configurations file containing the database details.
 
     Examples:
-        gis/school_safety_zones/schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU_Wj1qBncc1gT2px40kggp5YBxVh3A3_h4JQ' -r 'Master Sheet!A3:AC180'
+        gis/school_safety_zones/schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU' -r 'Master Sheet!A3:AC180'
     """
     logging.basicConfig(level=logging.ERROR)
 
