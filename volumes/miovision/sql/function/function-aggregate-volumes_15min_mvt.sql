@@ -43,7 +43,7 @@ WITH aggregate_insert AS (
     LEFT JOIN miovision_api.unacceptable_gaps AS un ON
         un.intersection_uid = im.intersection_uid
         --remove the 15 minute bin containing any unacceptable gaps
-        AND dt.datetime_bin15 = un.datetime_bin
+        AND dt.datetime_bin = un.datetime_bin
     --To get 1min bins
     LEFT JOIN miovision_api.volumes AS v ON
         --help query choose correct partition
