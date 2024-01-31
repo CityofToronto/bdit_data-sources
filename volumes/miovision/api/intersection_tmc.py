@@ -303,14 +303,14 @@ class MiovPuller:
 
         return table_veh, table_ped
 
-def process_data(conn, start_time, end_iteration_time, user_def_intersection, intersections):
+def process_data(conn, start_time, end_iteration_time, intersections):
     """Process Miovision into aggregate tables.
     
     Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
     """
     time_period = (start_time, end_iteration_time)
     find_gaps(conn, time_period)
-    aggregate_15_min_mvt(conn, time_period, user_def_intersection, intersections)
+    aggregate_15_min_mvt(conn, time_period, intersections)
     agg_zero_volume_anomalous_ranges(conn, time_period)
     aggregate_15_min(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period)
@@ -330,7 +330,7 @@ def find_gaps(conn, time_period):
         sys.exit(1)
 
 def aggregate_15_min_mvt(
-        conn, time_period, user_def_intersection = False, intersections = None
+        conn, time_period, intersections = None
 ):
     """Process data from raw volumes table into miovision_api.volumes_15min_mvt.
     
@@ -339,43 +339,54 @@ def aggregate_15_min_mvt(
     """
     try:
         with conn.cursor() as cur:
-            query_params = time_period + ([x.uid for x in intersections], )
-            delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer []);"
-            cur.execute(delete_sql, query_params)
-            
-            #if intersections specified, aggregate this step one at a time
-            # with different single intersection function
-            if user_def_intersection:
-                for c_intersec in intersections:
-                    query_params = time_period + (c_intersec.uid, )
-                    update="""SELECT miovision_api.aggregate_15_min_mvt_single_intersection(
-                                %s::date, %s::date, %s::int);"""
-                    cur.execute(update, query_params)
-                    logger.info('Aggregated intersection %s to 15 minute movement bins',
-                                c_intersec.uid)
-            else: 
+            #if intersections specified, clear/aggregate only those intersections.
+            if intersections is None:
+                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp);"
+                cur.execute(delete_sql, time_period)
                 update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);"
                 cur.execute(update, time_period)
                 logger.info('Aggregated to 15 minute movement bins')
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer []);"
+                cur.execute(delete_sql, query_params)
+                update="""SELECT miovision_api.aggregate_15_min_mvt(
+                            %s::date, %s::date, %s::integer []);"""
+                cur.execute(update, query_params)
+                logger.info('Aggregated intersections %s to 15 minute movement bins',
+                            [x.uid for x in intersections]) 
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
 
-def aggregate_15_min(conn, time_period):
+def aggregate_15_min(
+        conn, time_period, intersections = None
+):
     """Aggregate into miovision_api.volumes_15min.
 
     First clears previous inserts for the date range and
     sets processed column to null for corresponding values in
-    volumes_15min_mvt. 
+    volumes_15min_mvt. Takes optional intersection param to 
+    specify certain intersections to clear/aggregate.
     """
     try:
         with conn.cursor() as cur:
-            delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
-            cur.execute(delete_sql, time_period)
-            atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
-            cur.execute(atr_aggregation, time_period)
-            logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
-                        time_period[0], time_period[1])
+            if intersections is None:
+                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
+                cur.execute(delete_sql, time_period)
+                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
+                cur.execute(atr_aggregation, time_period)
+                logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
+                            time_period[0], time_period[1])
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp, %s::integer []);"
+                cur.execute(delete_sql, query_params)
+                update="""SELECT miovision_api.aggregate_15_min(
+                            %s::date, %s::date, %s::integer []);"""
+                cur.execute(update, query_params)
+                logger.info('Completed aggregating intersections %s into miovision_api.volumes_15min for %s to %s',
+                            [x.uid for x in intersections], time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -396,20 +407,29 @@ def aggregate_volumes_daily(conn, time_period):
         logger.exception(exc)
         sys.exit(1)
 
-def get_report_dates(conn, time_period, intersections):
+def get_report_dates(conn, time_period, intersections = None):
     """Aggregate into miovision_api.report_Dates.
 
     First clears previous inserts for the date range.
+    Takes optional intersection param to clear/aggregate specific
+    for specific report dates. 
     """
     
-    query_params = time_period + ([x.uid for x in intersections], )
     try:
         with conn.cursor() as cur:
-            delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
-            cur.execute(delete_sql, query_params)
-            report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
-            cur.execute(report_dates, query_params)
-            logger.info('report_dates done')   
+            if intersections is None:
+                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date);"
+                cur.execute(delete_sql, time_period)
+                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date);"
+                cur.execute(report_dates, time_period)
+                logger.info('report_dates done')
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
+                cur.execute(delete_sql, query_params)
+                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
+                cur.execute(report_dates, query_params)
+                logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -621,11 +641,11 @@ def pull_data(conn, start_time, end_time, intersection, pull, key):
                 if check_dst(c_start_t, c_end_t):
                     logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
                     table_veh = [x for x in table_veh if
-                        datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
                     table_ped = [x for x in table_ped if
-                        datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
                     
                 table.extend(table_veh)
                 table.extend(table_ped)
