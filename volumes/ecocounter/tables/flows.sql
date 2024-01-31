@@ -4,6 +4,7 @@ CREATE TABLE ecocounter.flows (
     flow_direction text NOT NULL,
     flow_geom geometry(LINESTRING,4326) CHECK(flow_geom IS NULL OR ST_NPoints(flow_geom) = 2),
     bin_size interval NOT NULL
+    replaced_by_flow_id numeric REFERENCES ecocounter.flows (flow_id)
 );
 
 GRANT SELECT ON ecocounter.flows TO bdit_humans;
