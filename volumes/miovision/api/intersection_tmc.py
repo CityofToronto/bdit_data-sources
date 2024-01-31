@@ -623,11 +623,11 @@ def pull_data(conn, start_time, end_time, intersection, pull, key):
                 if check_dst(c_start_t, c_end_t):
                     logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
                     table_veh = [x for x in table_veh if
-                        datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
                     table_ped = [x for x in table_ped if
-                        datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
                     
                 table.extend(table_veh)
                 table.extend(table_ped)
