@@ -6,7 +6,7 @@ WITH RECURSIVE flows_combined AS (
     UNION
 
     SELECT
-        array_append(flow_ids, flows.replaced_by_flow_id) AS flow_ids
+        array_append(flows_combined.flow_ids, flows.replaced_by_flow_id) AS flow_ids
     FROM ecocounter.flows
     JOIN flows_combined
         ON flows.flow_id = flows_combined.flow_ids[array_upper(flows_combined.flow_ids, 1)]
