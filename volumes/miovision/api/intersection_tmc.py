@@ -76,9 +76,10 @@ def cli():
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
-@click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
+@click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
+@click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
 
-def run_api(start_date, end_date, path, intersection, pull):
+def run_api(start_date, end_date, path, intersection, pull, agg):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
@@ -93,12 +94,19 @@ def run_api(start_date, end_date, path, intersection, pull):
     end_time = dateutil.parser.parse(str(end_date))
     logger.info('Pulling from %s to %s' %(start_time, end_time))
 
-    try:
-        pull_data(conn, start_time, end_time, intersection, pull, key)
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        sys.exit(1)
+    if pull:
+        try:
+            pull_data(conn, start_time, end_time, intersection, key)
+        except Exception as e:
+            logger.critical(traceback.format_exc())
+            sys.exit(1)
+    else:
+        logger.info('Skipping pulling volume data.')
 
+    if agg:
+        process_data(conn, start_time, end_time, intersections=intersection)
+    else:
+        logger.info('Skipping aggregating and processing volume data')
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
@@ -550,10 +558,8 @@ def check_dst(start_time, end_time):
         return True
     return False
 
-def pull_data(conn, start_time, end_time, intersection, pull, key):
+def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
-    
-    Optionally aggregates raw data into downstream aggregate tables if pull=True. 
     """
     time_delta = datetime.timedelta(hours=6)
 
@@ -648,12 +654,7 @@ def pull_data(conn, start_time, end_time, intersection, pull, key):
             logger.exception(exc)
             sys.exit(1)
 
-    if pull:
-        logger.info('Skipping aggregating and processing volume data')
-    else:
-        process_data(conn, start_time, end_time, user_def_intersection, intersections)
-
-    logger.info('Done')
+    logger.info('Done pulling data.')
 
 if __name__ == '__main__':
     cli()
