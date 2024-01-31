@@ -35,7 +35,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
-    The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
+    The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
 		
 2. **date installed**  
     `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [Jupyter notebook](new_intersection_activation_dates.ipynb) in this folder. 
@@ -46,10 +46,27 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 4. **px**  
     `px` can be found by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
 
+	For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
+	```sql
+	WITH intersections(id, intersection_name_api) AS (
+	VALUES
+		--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
+		('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
+		('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
+	)
+
+	SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
+	FROM intersections AS i,
+	LATERAL (
+		SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
+	) AS agg
+	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
+	```
+
 	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="600"/>
 		
 4. **Restricted legs**  
-    In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
+    In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
 
 6. **Insert statement**  
     Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same, which may be helpful for adding a large number of intersections. 
@@ -118,7 +135,7 @@ We need to find out all valid movements for the new intersections from the data 
 			AND datetime_bin > 'now'::text::date - interval '10 days' -- or the date of data that you pulled
 			AND classification_uid IN (1,2,6,10) --will include other modes after this
 		GROUP BY intersection_uid, classification_uid, leg, movement_uid
-		WINDOW w AS (PARTITION BY classification_uid)
+		WINDOW w AS (PARTITION BY intersection_uid, classification_uid)
 	)
 
 	-- Uncomment when you're ready to insert.
@@ -130,7 +147,7 @@ We need to find out all valid movements for the new intersections from the data 
 		movement_uid
 	FROM counts
 	WHERE
-		bins >= 20
+		bins >= 20 --this filter may be irrelevant if using many days of data.
 		OR volume::numeric / classification_volume >= 0.005
 	```
 
@@ -398,16 +415,12 @@ with psycopg2.connect(**postgres_settings) as conn:
                                                         n_leg_restricted, e_leg_restricted,
                                                         s_leg_restricted, w_leg_restricted) VALUES %s"""
         execute_values(cur, insert_data, df_list)
+		update_geom = """UPDATE miovision_api.intersections a
+							SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
+							FROM miovision_api.intersections b
+							WHERE b.geom IS NULL
+								AND a.id = b.id;"""
+        cur.execute(update_geom)
         if conn.notices != []:
             print(conn.notices)
-```
-
-Finally, to populate the geometries table, run the following query:
-
-```sql
-UPDATE miovision_api.intersections a
-SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
-FROM miovision_api.intersections b
-WHERE a.intersection_uid = b.intersection_uid
-    AND a.intersection_uid IN ({INSERT NEW INTERSECTIONS HERE});
 ```
