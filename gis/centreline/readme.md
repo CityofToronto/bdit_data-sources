@@ -10,13 +10,19 @@ The centreline data is structured as an undirected graph with edges and nodes. B
 
 # Where It's Stored
 
-Centreline data are stored in the `gis_core` schema in the `bigdata` database. Nodes are stored separately from edges. 
+Centreline data are stored in the `gis_core` schema in the `bigdata` database. Nodes are stored separately from edges. There may be older copy of the various centreline tables in the `gis` schema but they are not updated and their use is deprecated.
 
-* edges are in the partitioned table `centreline`
-* nodes are in the partitioned table `intersection` (copied from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
-* OR nodes are in the partioned table `centreline_intersection_point`???
+## Edges
 
-Despite the term "intersection", nodes do not neccessarily indicate intersections in the transport sense, but rather are simply the intersection (points) of linear geometries. However Some of them however _are_ "intersection"s in both senses of the word.
+Edges are stored in the partitioned table `gis_core.centreline`. This is not the complete centreline dataset - it has had some pre-filtering done to it to remove things like administrative boundaries.
 
-There is an older copy of these tables in the `gis` schema but it is not updated and its use is deprecated.
+However not all transport related edges are included. Things like alleyways and footpaths have been filtered out.
 
+## Nodes
+
+Nodes are stored in either of two tables, each of which is copied from a separate GCC layer which in turn are maintained by different groups. The differences between these tables is not completely understood.
+
+* `gis_core.intersection` (copied from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
+* `gis_core.centreline_intersection_point` (copied from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/19))
+
+Despite the term "intersection", nodes do not neccessarily indicate intersections in the transport sense, but rather are simply the intersection (points) of linear geometries. However some of them however _are_ "intersection"s in both senses of the word.
