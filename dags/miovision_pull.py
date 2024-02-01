@@ -110,7 +110,7 @@ def pull_miovision_dag():
         mio_postgres = PostgresHook("miovision_api_bot")
 
         with mio_postgres.get_conn() as conn:
-            pull_data(conn, start_time, end_time, INTERSECTION, True, key)
+            pull_data(conn, start_time, end_time, INTERSECTION, key)
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
