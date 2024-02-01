@@ -137,11 +137,11 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval)
+ALTER FUNCTION miovision_api.identify_zero_counts(date)
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval)
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date)
 TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(timestamp, timestamp, interval)
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date)
 TO miovision_admins;

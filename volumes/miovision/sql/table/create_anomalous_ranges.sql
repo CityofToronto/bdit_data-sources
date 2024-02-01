@@ -26,7 +26,7 @@ CREATE TABLE miovision_api.anomalous_ranges (
     REFERENCES miovision_api.anomaly_investigation_levels (uid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
-    CONSTRAINT anomalous_ranges_range_order CHECK (
+    CONSTRAINT miovision_anomalous_ranges_range_order CHECK (
         range_start < range_end
     )
 );
@@ -41,8 +41,6 @@ GRANT SELECT ON TABLE miovision_api.anomalous_ranges TO bdit_humans;
 GRANT ALL ON TABLE miovision_api.anomalous_ranges TO miovision_admins;
 
 GRANT ALL ON TABLE miovision_api.anomalous_ranges TO miovision_data_detectives;
-
-GRANT ALL ON TABLE miovision_api.anomalous_ranges TO nwessel;
 
 -- Trigger: audit_trigger_row
 
