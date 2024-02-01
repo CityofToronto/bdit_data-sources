@@ -92,10 +92,10 @@ def run_api(start_date, end_date, path, intersection, pull, agg):
 
     start_time = dateutil.parser.parse(str(start_date))
     end_time = dateutil.parser.parse(str(end_date))
-    logger.info('Pulling from %s to %s' %(start_time, end_time))
 
     if pull:
         try:
+            logger.info('Pulling from %s to %s' %(start_time, end_time))
             pull_data(conn, start_time, end_time, intersection, key)
         except Exception as e:
             logger.critical(traceback.format_exc())
@@ -104,7 +104,9 @@ def run_api(start_date, end_date, path, intersection, pull, agg):
         logger.info('Skipping pulling volume data.')
 
     if agg:
-        process_data(conn, start_time, end_time, intersections=intersection)
+        logger.info('Aggregating data from %s to %s' %(start_time, end_time))
+        intersections = get_intersection_info(conn, intersection)
+        process_data(conn, start_time, end_time, intersections=intersections)
     else:
         logger.info('Skipping aggregating and processing volume data')
 
