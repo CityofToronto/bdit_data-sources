@@ -410,7 +410,8 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 | uid    | simple incrementing primary key |
 | intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
 | classification_uid | the classification; `NULL` if applies to all classifications e.g. a badly misaligned camera |
-| time_range | the `tsrange` in question; may be open-ended. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range slightly _past_ the problem area. |
+| range_start | the beginning of the anomalous range in question; may be open-ended (NULL). Inclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_start slightly _before_ the problem area. |
+| range_end | the end of the anomalous range in question; may be open-ended (NULL). Exclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_end slightly _past_ the problem area. |
 | notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
 | investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
 | problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
@@ -434,12 +435,16 @@ WHERE
         FROM miovision_api.anomalous_ranges
         WHERE
             anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
-            AND anomalous_ranges.time_range @> volumes.datetime_bin
             AND (
+                volumes.datetime_bin >= anomalous_ranges.range_start
+                OR anomalous_ranges.range_start IS NULL
+            ) AND (
+                volumes.datetime_bin < anomalous_ranges.range_end
+                OR anomalous_ranges.range_end IS NULL
+            ) AND (
                 anomalous_ranges.intersection_uid = volumes.intersection_uid
                 OR anomalous_ranges.intersection_uid IS NULL
-            )
-            AND (
+            ) AND (
                 anomalous_ranges.classification_uid = volumes.classification_uid
                 OR anomalous_ranges.classification_uid IS NULL
             )

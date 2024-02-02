@@ -27,7 +27,7 @@ try:
     from dags.common_tasks import check_jan_1st, check_1st_of_month
     from volumes.miovision.api.intersection_tmc import (
         pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
-        get_report_dates, get_intersection_info
+        get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -136,7 +136,14 @@ def pull_miovision_dag():
                 with mio_postgres.get_conn() as conn:
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
-            
+
+        @task
+        def zero_volume_anomalous_ranges_task(ds = None):
+            mio_postgres = PostgresHook("miovision_api_bot")
+            time_period = (ds, ds_add(ds, 1))
+            with mio_postgres.get_conn() as conn:
+                agg_zero_volume_anomalous_ranges(conn, time_period)
+
         @task
         def aggregate_15_min_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
@@ -174,7 +181,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     get_report_dates(conn, time_period=time_period, intersections=intersections)
 
-        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), zero_volume_anomalous_ranges_task()] >> aggregate_volumes_daily_task()
         get_report_dates_task()
 
     t_done = ExternalTaskMarker(

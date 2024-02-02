@@ -321,10 +321,11 @@ def process_data(conn, start_time, end_iteration_time, intersections):
     time_period = (start_time, end_iteration_time)
     find_gaps(conn, time_period)
     aggregate_15_min_mvt(conn, time_period, intersections)
+    agg_zero_volume_anomalous_ranges(conn, time_period)
     aggregate_15_min(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period)
     get_report_dates(conn, time_period, intersections)
- 
+
 def find_gaps(conn, time_period):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
     into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
@@ -439,6 +440,22 @@ def get_report_dates(conn, time_period, intersections = None):
                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
                 cur.execute(report_dates, query_params)
                 logger.info('report_dates done')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
+    
+def agg_zero_volume_anomalous_ranges(conn, time_period):
+    """Aggregate into miovision_api.anomalous_ranges.
+    Data is cleared from volumes_daily prior to insert.
+    """
+    try:
+        with conn.cursor() as cur:
+            #this function includes a delete query preceeding the insert.
+            anomalous_range_sql="""SELECT *
+                FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+                LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
+            cur.execute(anomalous_range_sql, time_period)
+            logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
