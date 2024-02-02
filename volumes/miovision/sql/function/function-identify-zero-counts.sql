@@ -101,11 +101,18 @@ BEGIN
         COALESCE(new_gaps.intersection_uid, 0) = COALESCE(updated_values.intersection_uid, 0)
         AND COALESCE(new_gaps.classification_uid, 0) = COALESCE(updated_values.classification_uid, 0)
         AND new_gaps.range_start = updated_values.range_start
-    --anti join existing open ended gaps
+    --anti join existing open ended/overlapping gaps
     LEFT JOIN miovision_api.anomalous_ranges AS existing ON
         COALESCE(existing.intersection_uid, 0) = COALESCE(new_gaps.intersection_uid, 0)
         AND COALESCE(existing.classification_uid, 0) = COALESCE(new_gaps.classification_uid, 0)
-        AND existing.range_end IS NULL
+        AND (
+                existing.range_start <= new_gaps.range_start
+                AND existing.end >= new_gaps.range_end)
+            OR (
+                existing.range_end IS NULL
+                AND existing.range_start <= new_gaps.range_start
+            )
+        )
     WHERE
         --anti joins
         existing.uid IS NULL
