@@ -10,7 +10,7 @@ CREATE VIEW miovision_api.volumes_daily AS (
         v.unacceptable_gap_minutes,
         v.avg_historical_gap_vol
     FROM miovision_api.volumes_daily_unfiltered AS v
-    --anti join anomalous_ranges VIEW
+    --anti join anomalous_ranges
     LEFT JOIN miovision_api.anomalous_ranges AS ar ON
         (
             ar.intersection_uid = v.intersection_uid
@@ -19,11 +19,14 @@ CREATE VIEW miovision_api.volumes_daily AS (
             ar.classification_uid = v.classification_uid
             OR ar.classification_uid IS NULL
         )
-        AND v.dt >= LOWER(ar.time_range)
-        AND v.dt < UPPER(ar.time_range)
+        AND v.dt >= ar.range_start
+        AND (
+            v.dt < ar.range_end
+            OR ar.range_end IS NULL
+        )
         AND ar.problem_level IN ('do-not-use', 'questionable')
     WHERE
-        ar.time_range IS NULL --anti join anomalous ranges
+        ar.uid IS NULL --anti join anomalous ranges
 );
 
 ALTER TABLE miovision_api.volumes_daily OWNER TO miovision_admins;
