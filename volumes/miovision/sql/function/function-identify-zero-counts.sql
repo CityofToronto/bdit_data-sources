@@ -107,12 +107,11 @@ BEGIN
         AND COALESCE(existing.classification_uid, 0) = COALESCE(new_gaps.classification_uid, 0)
         AND (
                 existing.range_start <= new_gaps.range_start
-                AND existing.end >= new_gaps.range_end)
+                AND existing.range_end >= new_gaps.range_end)
             OR (
                 existing.range_end IS NULL
                 AND existing.range_start <= new_gaps.range_start
             )
-        )
     WHERE
         --anti joins
         existing.uid IS NULL
