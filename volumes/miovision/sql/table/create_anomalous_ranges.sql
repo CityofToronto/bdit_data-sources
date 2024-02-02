@@ -5,7 +5,7 @@ CREATE TABLE miovision_api.anomalous_ranges (
     uid serial PRIMARY KEY,
     investigation_level text NOT NULL,
     problem_level text NOT NULL,
-    range_start timestamp,
+    range_start timestamp NOT NULL,
     range_end timestamp,
     CONSTRAINT miovision_qc_pkey PRIMARY KEY (uid),
     CONSTRAINT miovision_qc_intersection_uid_classification_uid_time_range_key
