@@ -15,18 +15,37 @@ SELECT
     END,
     ar.range_start::date,
     (current_timestamp AT TIME ZONE 'EST5EDT')::date - ar.range_start::date AS num_days,
-    ar.notes
+    ar.notes,
+    SUM(v.volume) AS last_week_volume
 FROM miovision_api.anomalous_ranges AS ar
+--keep rows with null classification_uid
 LEFT JOIN miovision_api.classifications AS c USING (classification_uid)
-LEFT JOIN miovision_api.intersections AS i USING (intersection_uid)
-WHERE
-    intersection_uid IS NOT NULL --these will go under discontinuities
+--omit null intersection_uids. These will go under discontinuities. 
+JOIN miovision_api.intersections AS i USING (intersection_uid)
+--find last week volume
+LEFT JOIN miovision_api.volumes AS v ON
+    ar.intersection_uid = v.intersection_uid
+    AND v.datetime_bin >= current_date - interval '7 days'
     AND (
-        range_end IS NULL
-        OR (notes LIKE '%identified by a daily airflow process%'
-            AND range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
-        )
+        ar.classification_uid = v.classification_uid
+        OR ar.classification_uid IS NULL
     )
+WHERE
+    --currently active
+    range_end IS NULL
+    OR (
+        notes LIKE '%identified by a daily airflow process%'
+        AND range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
+    )
+GROUP BY
+    ar.uid,
+    ar.intersection_uid,
+    i.id,
+    i.intersection_name,
+    ar.classification_uid,
+    c.classification,
+    ar.range_start,
+    ar.notes
 ORDER BY
     intersection_uid,
     range_start,
@@ -37,3 +56,6 @@ IS '''A view to export open ended anomalous_ranges for communication with Miovis
 Converts intersection_uid and classification_uid into formats familiar to Miovision
 (intersections.id, classifications.classification). anomalous_ranges.id col can be
 used to link response back to table.''';
+
+ALTER TABLE miovision_api.open_issues OWNER TO miovision_admins;
+GRANT SELECT ON TABLE miovision_api.open_issues TO bdit_humans;
