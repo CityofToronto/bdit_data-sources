@@ -135,27 +135,27 @@ to=to@email.com
 
 ## How to run the api
 
-In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
+The process to use the API to download data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
 
-The script can also customize the data it pulls and processes with various command line options.
-
-For example, to collect data from a custom date range, run `python3 intersection_tmc.py run_api --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
-
-`start_date` and `end_date` must be separated by at least 1 day, and `end_date` cannot be a future date. `start_date` is inclusive and `end_date` is exclusive.  
+In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run_api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run_api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
 ### Command Line Options
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
-|start_date|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
-|end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
+|start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
+|end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is|`/etc/airflow/data_scripts/volumes/miovision/api/config.cfg`||
-|pull|BOOLEAN flag|Data processing and gap finding will be skipped|--pull|false|
+|path|path|Specifies the directory where the `config.cfg` file is which stores the api key. |`/data/airflow/data_scripts/volumes/miovision/api/config.cfg`||
+|pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
+|agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
 
-`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --pull` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen.  
+`python3 intersection_tmc.py run_api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg` is an example with all the options specified:  
+- both data pulling and aggregation specified
+- multiple days
+- multiple, specific intersections
 
-If `--pull` is specified in the command line (which is equivalent to setting it to True), the script will skip the data processing and gaps finding process. This is useful when we want to just insert data into the volumes table and check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
+The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
 
 ## Classifications
 
@@ -347,7 +347,7 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 <!-- pull_miovision_doc_md -->
 ### **`pull_miovision`**  
 This deprecated Miovisiong DAG (replaced by [`miovision_pull`](#miovision_pull)) uses a single BashOperator to run the entire data pull and aggregation in one task.  
-The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg'`. 
+The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run_api --pull --agg --path /data/airflow/.../config.cfg'`. 
 <!-- pull_miovision_doc_md -->
 
 <!-- check_miovision_doc_md -->

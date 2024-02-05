@@ -449,16 +449,18 @@ WHERE
 ```
 
 #### Identifying new anomalies
-While initially populated by a script, currently the `anomalous_ranges` tables is populated/updated manually after usually visual inspection of graphed Miovision data. For write access to the table, please request permissions from your friendly neighborhood sysadmin.
-
-There is an intention to eventually flag times with unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). More details on QC work (including notebooks and code) can be found in the [dev_notebooks README.md](dev_notebooks/README.md).
-
+The `anomalous_ranges` table is populated in different ways:
+  - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
+  - automatically by a [daily script](sql/function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
+    - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
+  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](dev_notebooks/README.md) (including notebooks and code).
+  
 ## 4. Repulling data
 ### Deleting data to re-run the process
 
-The Miovision ETL DAG `miovision_pull` and the command line `run-api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
+The Miovision ETL DAG `miovision_pull` and the command line `run_api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
 
-The DAG & the data pulling script *does not support* deleting and re-processing data that is not in one-day blocks (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
+Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
 
 ## 5. Steps to Add or Remove Intersections
-For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md). 
+For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md).  
