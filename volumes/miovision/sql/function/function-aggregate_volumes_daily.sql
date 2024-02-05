@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_volumes_daily(
-	start_date date,
-	end_date date
+    start_date date,
+    end_date date
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -15,7 +15,7 @@ DECLARE n_inserted int;
 BEGIN
     
     WITH deleted AS (
-        DELETE FROM miovision_api.volumes_daily
+        DELETE FROM miovision_api.volumes_daily_unfiltered
         WHERE 
             dt >= start_date
             AND dt < end_date
@@ -25,7 +25,7 @@ BEGIN
     SELECT COUNT(*) INTO n_deleted
     FROM deleted;
 
-    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_daily for % to %.', n_deleted, start_date, end_date;
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_daily_unfiltered for % to %.', n_deleted, start_date, end_date;
  
     --identify duration of unacceptable gaps per day, intersection
     WITH unacceptable_gaps_summarized AS (
@@ -52,7 +52,7 @@ BEGIN
     ),
     
     inserted AS (
-        INSERT INTO miovision_api.volumes_daily (
+        INSERT INTO miovision_api.volumes_daily_unfiltered (
             intersection_uid, dt, classification_uid, daily_volume, isodow,
             holiday, unacceptable_gap_minutes, datetime_bins_missing, avg_historical_gap_vol
         )
@@ -96,13 +96,13 @@ BEGIN
     SELECT COUNT(*) INTO n_inserted
     FROM inserted;
 
-    RAISE NOTICE 'Inserted % rows into miovision_api.volumes_daily for % to %.', n_inserted, start_date, end_date;
+    RAISE NOTICE 'Inserted % rows into miovision_api.volumes_daily_unfiltered for % to %.', n_inserted, start_date, end_date;
 
 END;
 $BODY$;
 
 COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily(date, date)
-IS 'Function for inserting daily volumes into miovision_api.volumes_daily';
+IS 'Function for inserting daily volumes into miovision_api.volumes_daily_unfiltered';
 
 ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date)
 OWNER TO miovision_admins;
