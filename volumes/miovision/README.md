@@ -4,38 +4,6 @@
 
 - [1. Overview](#1-overview)
   - [Folder Structure](#folder-structure)
-- [2. Table Structure](#2-table-structure)
-  - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
-  - [Key Tables](#key-tables)
-    - [`intersections`](#intersections)
-    - [`classifications`](#classifications)
-    - [`movements`](#movements)
-    - [Aggregated Data](#aggregated-data)
-      - [`volumes_15min_mvt`](#volumes_15min_mvt)
-      - [`volumes_15min`](#volumes_15min)
-      - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
-      - [`unacceptable_gaps`](#unacceptable_gaps)
-      - [`gapsize_lookup`](#gapsize_lookup)
-  - [`volumes`](#volumes)
-  - [Reference Tables](#reference-tables)
-    - [`movement_map`](#movement_map)
-    - [`periods`](#periods)
-    - [`intersection_movements`](#intersection_movements)
-    - [`centreline_miovision`](#centreline_miovision)
-  - [Primary and Foreign Keys](#primary-and-foreign-keys)
-    - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-  - [Other Important Tables](#other-important-tables)
-    - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
-- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-  - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-  - [Part II - Working Machine](#part-ii---working-machine)
-  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
-    - [Fields in `miovision_api.anomalous_ranges`](#fields-in-miovision_apianomalous_ranges)
-    - [Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#fields-in-miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
-    - [An applied example](#an-applied-example)
-    - [Identifying new anomalies](#identifying-new-anomalies)
-- [4. Repulling data](#4-repulling-data)
-  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
 - [5. Steps to Add or Remove Intersections](#5-steps-to-add-or-remove-intersections)
 
 ## 1. Overview
@@ -45,6 +13,111 @@ Miovision currently provides volume counts gathered by cameras installed at spec
 The data described in this readme.md are stored in the bigdata RDS, in a schema called `miovision_api` for data automatically collected since January 2019. Data for the King Street Pilot were collected in batches from up to 21 intersections for a few days per month between October 2017 and August 2018. These can be found in the `miovision_csv` schema, which has a slightly different structure than the API data (see [7. Processing Data from CSV Dumps (NO LONGER IN USE) in `Archive.md`](Archive.md#7-processing-data-from-csv-dumps-no-longer-in-use))
 
 You can see the current locations of Miovision cameras [on this map.](geojson/mio_intersections.geojson)
+
+```geojson
+{
+    "type": "FeatureCollection",
+    "name": "mio_intersections",
+    "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+    "features": [
+    { "type": "Feature", "properties": { "intersection_uid": 1, "id": "8184ba7d-a2e3-4a1c-b70f-31da15e7462a", "intersection_name": "Adelaide / Bathurst", "date_installed": "2017-10-10", "date_decommissioned": null, "lat": 43.645225, "lng": -79.403185, "street_main": "Adelaide", "street_cross": "Bathurst", "int_id": 13467569, "px": 1883, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.403185, 43.645225 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 2, "id": "c3ebb880-a4ed-47ab-8079-a3e29fb1913e", "intersection_name": "Adelaide / Spadina", "date_installed": "2017-10-13", "date_decommissioned": null, "lat": 43.646774, "lng": -79.395521, "street_main": "Adelaide", "street_cross": "Spadina", "int_id": 13467308, "px": 274, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.395521, 43.646774 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 3, "id": "e9bec7a7-ec3e-4df9-a8e2-da35c08b0aa7", "intersection_name": "Adelaide / Bay", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.649924, "lng": -79.380738, "street_main": "Adelaide", "street_cross": "Bay", "int_id": 13466743, "px": 62, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.380738, 43.649924 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 4, "id": "94660b40-7034-42d0-8fb1-bba9179774a7", "intersection_name": "Adelaide / Jarvis", "date_installed": "2017-10-11", "date_decommissioned": null, "lat": 43.651518, "lng": -79.37227, "street_main": "Adelaide", "street_cross": "Jarvis", "int_id": 13466455, "px": 4, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.37227, 43.651518 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 5, "id": "f4cfdbdc-afea-4a8a-adc4-bb64a3e8e4af", "intersection_name": "Front / Bathurst", "date_installed": "2017-10-10", "date_decommissioned": null, "lat": 43.640752, "lng": -79.401359, "street_main": "Front", "street_cross": "Bathurst", "int_id": 13468126, "px": 297, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.401359, 43.640752 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 6, "id": "c04704a0-e1e2-4101-9c29-6823d0f41c52", "intersection_name": "Front / Spadina", "date_installed": "2017-10-17", "date_decommissioned": null, "lat": 43.642712, "lng": -79.393913, "street_main": "Front", "street_cross": "Spadina", "int_id": 13467856, "px": 272, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.393913, 43.642712 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 7, "id": "53bcff4d-ce96-4c88-9dd4-0890c3c0b3ba", "intersection_name": "Front / Bay", "date_installed": "2017-10-16", "date_decommissioned": null, "lat": 43.645993, "lng": -79.379118, "street_main": "Front", "street_cross": "Bay", "int_id": 13467389, "px": 59, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.379118, 43.645993 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 8, "id": "eff954a3-47fe-4bd3-900c-22ba5b8e60f0", "intersection_name": "Front / Jarvis", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.649481, "lng": -79.371472, "street_main": "Front", "street_cross": "Jarvis", "int_id": 13466793, "px": 2, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.371472, 43.649481 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 9, "id": "c3834b0e-7f87-458a-9742-0832048f04db", "intersection_name": "King / Strachan", "date_installed": "2017-10-17", "date_decommissioned": "2020-06-15", "lat": 43.64209, "lng": -79.411901, "street_main": "King", "street_cross": "Strachan", "int_id": 13467971, "px": 538, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.411901, 43.64209 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 10, "id": "990cd89a-430a-409a-b0e7-d37338394148", "intersection_name": "King / Bathurst", "date_installed": "2017-10-03", "date_decommissioned": null, "lat": 43.643945, "lng": -79.402667, "street_main": "King", "street_cross": "Bathurst", "int_id": 13467722, "px": 201, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.402667, 43.643945 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 11, "id": "a6bc2032-5c74-437d-80bf-89b0d3e722ed", "intersection_name": "King / Portland", "date_installed": "2017-10-23", "date_decommissioned": "2020-06-15", "lat": 43.644448, "lng": -79.400078, "street_main": "King", "street_cross": "Portland", "int_id": 13467654, "px": 1225, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.400078, 43.644448 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 12, "id": "151ee827-dd49-4ad4-af21-dde5d7032c21", "intersection_name": "King / Spadina", "date_installed": "2017-10-17", "date_decommissioned": null, "lat": 43.645468, "lng": -79.395004, "street_main": "King", "street_cross": "Spadina", "int_id": 13467505, "px": 273, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.395004, 43.645468 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 13, "id": "b663f373-9fe2-43ab-b75a-9a928396e4ae", "intersection_name": "King / Peter", "date_installed": "2017-10-17", "date_decommissioned": "2020-06-15", "lat": 43.646034, "lng": -79.392285, "street_main": "King", "street_cross": "Peter", "int_id": 13467412, "px": 1152, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.392285, 43.646034 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 14, "id": "1decb8d0-ba0e-4a48-9a5f-8bdd1457b490", "intersection_name": "King / Simcoe", "date_installed": "2017-10-17", "date_decommissioned": "2020-06-15", "lat": 43.647377, "lng": -79.386082, "street_main": "King", "street_cross": "Simcoe", "int_id": 13467173, "px": 199, "n_leg_restricted": true, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.386082, 43.647377 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 15, "id": "b620ee58-3626-4dbe-9f2f-8d3235172bff", "intersection_name": "King / University", "date_installed": "2017-10-18", "date_decommissioned": null, "lat": 43.647653, "lng": -79.384844, "street_main": "King", "street_cross": "University", "int_id": 13467123, "px": 77, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.384844, 43.647653 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 16, "id": "169471e1-c460-489a-9765-352c0803990b", "intersection_name": "King / York", "date_installed": "2017-10-23", "date_decommissioned": "2020-06-15", "lat": 43.64792, "lng": -79.383543, "street_main": "King", "street_cross": "York", "int_id": 13467083, "px": 72, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.383543, 43.64792 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 17, "id": "218ca562-44fc-41d3-80ac-213db6672c9e", "intersection_name": "King / Bay", "date_installed": "2017-10-16", "date_decommissioned": null, "lat": 43.648632, "lng": -79.380226, "street_main": "King", "street_cross": "Bay", "int_id": 13466960, "px": 61, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.380226, 43.648632 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 18, "id": "8eeecbf3-1d91-4ac9-8f08-ba95051ad77b", "intersection_name": "King / Yonge", "date_installed": "2017-10-18", "date_decommissioned": null, "lat": 43.649173, "lng": -79.377894, "street_main": "King", "street_cross": "Yonge", "int_id": 13466851, "px": 31, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.377894, 43.649173 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 19, "id": "f40a3677-31c9-445a-a339-7f35271a0e10", "intersection_name": "King / Church", "date_installed": "2017-10-23", "date_decommissioned": "2020-06-15", "lat": 43.64992, "lng": -79.374365, "street_main": "King", "street_cross": "Church", "int_id": 13466729, "px": 16, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.374365, 43.64992 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 20, "id": "02a90c2e-b428-4f89-9422-327c8c91671d", "intersection_name": "King / Jarvis", "date_installed": "2017-10-03", "date_decommissioned": null, "lat": 43.650456, "lng": -79.371867, "street_main": "King", "street_cross": "Jarvis", "int_id": 13466630, "px": 3, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.371867, 43.650456 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 21, "id": "7da56c2c-5405-4ebe-bc81-0807aace35da", "intersection_name": "King / Sherbourne", "date_installed": "2017-10-23", "date_decommissioned": null, "lat": 43.651257, "lng": -79.368238, "street_main": "King", "street_cross": "Sherbourne", "int_id": 13466482, "px": 254, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.368238, 43.651257 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 22, "id": "766135db-47db-4bbe-9206-4acfa739ea66", "intersection_name": "Queen / Bathurst", "date_installed": "2017-10-10", "date_decommissioned": null, "lat": 43.6472, "lng": -79.403967, "street_main": "Queen", "street_cross": "Bathurst", "int_id": 13467252, "px": 296, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.403967, 43.6472 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 23, "id": "782f174b-2552-4a4f-8ac8-3c0290f10e73", "intersection_name": "Queen / Spadina", "date_installed": "2017-10-16", "date_decommissioned": null, "lat": 43.648749, "lng": -79.396345, "street_main": "Queen", "street_cross": "Spadina", "int_id": 13466982, "px": 276, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.396345, 43.648749 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 24, "id": "cb911313-09cb-4c31-ba2e-0853541fc99f", "intersection_name": "Queen / Bay", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.651893, "lng": -79.38171, "street_main": "Queen", "street_cross": "Bay", "int_id": 13466418, "px": 64, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.38171, 43.651893 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 25, "id": "7bfc2622-6fe3-4956-b490-29086352bba3", "intersection_name": "Queen / Jarvis", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.6537, "lng": -79.373209, "street_main": "Queen", "street_cross": "Jarvis", "int_id": 13466110, "px": 6, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.373209, 43.6537 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 26, "id": "d1827ce7-71b7-41b9-b000-0a906e032532", "intersection_name": "Richmond / Bathurst", "date_installed": "2017-10-10", "date_decommissioned": null, "lat": 43.646483, "lng": -79.403687, "street_main": "Richmond", "street_cross": "Bathurst", "int_id": 13467372, "px": 298, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.403687, 43.646483 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 27, "id": "75772364-6260-4d2e-a39d-4532fc9204c0", "intersection_name": "Richmond / Spadina", "date_installed": "2017-10-13", "date_decommissioned": null, "lat": 43.647871, "lng": -79.395979, "street_main": "Richmond", "street_cross": "Spadina", "int_id": 13467124, "px": 275, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.395979, 43.647871 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 28, "id": "cc869625-3a14-447f-9156-38283845c47b", "intersection_name": "Richmond / Bay", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.651168, "lng": -79.38131, "street_main": "Richmond", "street_cross": "Bay", "int_id": 13466536, "px": 63, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.38131, 43.651168 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 29, "id": "abb877c1-e168-4b13-a1a5-a639b504e629", "intersection_name": "Richmond / Jarvis", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.652809, "lng": -79.372853, "street_main": "Richmond", "street_cross": "Jarvis", "int_id": 13466268, "px": 5, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.372853, 43.652809 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 30, "id": "60b79e55-6234-439e-ac3c-92b2617bd128", "intersection_name": "Wellington / Blue Jays", "date_installed": "2017-10-19", "date_decommissioned": "2020-06-15", "lat": 43.644715, "lng": -79.391774, "street_main": "Wellington", "street_cross": "Blue Jays", "int_id": 13467601, "px": 1682, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.391774, 43.644715 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 31, "id": "2cd73fbd-a5c2-4083-80f4-c487c114f48b", "intersection_name": "Wellington / Bay", "date_installed": "2017-10-12", "date_decommissioned": null, "lat": 43.647315, "lng": -79.379689, "street_main": "Wellington", "street_cross": "Bay", "int_id": 13467163, "px": 60, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.379689, 43.647315 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 32, "id": "059150cb-c0dc-417b-bfff-c0de23e7cc58", "intersection_name": "King / John", "date_installed": "2017-10-17", "date_decommissioned": "2020-06-15", "lat": 43.646594, "lng": -79.38974, "street_main": "King", "street_cross": "John", "int_id": 13467321, "px": 1320, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.38974, 43.646594 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 33, "id": "a7d2129f-5a4c-4bc7-823c-3b4db6d6ffed", "intersection_name": "Bloor / Avenue", "date_installed": "2020-06-23", "date_decommissioned": null, "lat": 43.66872, "lng": -79.394141, "street_main": "Bloor", "street_cross": "Avenue", "int_id": 13463747, "px": 86, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.394141004684386, 43.668720006521092 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 34, "id": "ab2516de-fce2-48f4-96d5-fb6df090a8f9", "intersection_name": "Bloor / Sherbourne", "date_installed": "2020-06-22", "date_decommissioned": null, "lat": 43.672358, "lng": -79.376854, "street_main": "Bloor", "street_cross": "Sherbourne", "int_id": 13463078, "px": 262, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.376853989790575, 43.672358004187458 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 35, "id": "fbebc948-ebba-4d8c-8c5c-1e9f55b54919", "intersection_name": "Bloor / Shaw", "date_installed": "2020-06-22", "date_decommissioned": null, "lat": 43.662509, "lng": -79.423268, "street_main": "Bloor", "street_cross": "Shaw", "int_id": 13464817, "px": 323, "n_leg_restricted": true, "e_leg_restricted": null, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.423268000027832, 43.662509005937466 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 36, "id": "cf26bb86-23b7-4123-83ee-2b1229473e47", "intersection_name": "Brimley / Eglinton", "date_installed": "2020-06-25", "date_decommissioned": null, "lat": 43.736696, "lng": -79.248084, "street_main": "Brimley", "street_cross": "Eglinton", "int_id": 13452119, "px": 462, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.248083999068498, 43.736696007298676 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 37, "id": "c044bece-2f2a-4673-bdbf-7e6fff744858", "intersection_name": "Danforth / Jones", "date_installed": "2020-06-23", "date_decommissioned": null, "lat": 43.679874, "lng": -79.340177, "street_main": "Danforth", "street_cross": "Jones", "int_id": 13461657, "px": 346, "n_leg_restricted": true, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.340177010148878, 43.679874004683818 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 38, "id": "6174c193-13a9-4056-832b-f80783eaf333", "intersection_name": "Danforth / Woodbine", "date_installed": "2020-06-23", "date_decommissioned": null, "lat": 43.685684, "lng": -79.312778, "street_main": "Danforth", "street_cross": "Woodbine", "int_id": 13460523, "px": 351, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.312778005607754, 43.685684001228132 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 39, "id": "e09cd479-0345-4356-83fa-da8783b3f41c", "intersection_name": "Danforth / Dawes", "date_installed": "2020-06-23", "date_decommissioned": null, "lat": 43.689305, "lng": -79.296771, "street_main": "Danforth", "street_cross": "Dawes", "int_id": 13459820, "px": 354, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.296770999962845, 43.689305007144014 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 40, "id": "7bea09c4-65a5-4a77-8cc7-ed3563b71e81", "intersection_name": "Dundas / River", "date_installed": "2020-06-24", "date_decommissioned": null, "lat": 43.661198, "lng": -79.358162, "street_main": "Dundas", "street_cross": "River", "int_id": 13464879, "px": 293, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.358161993697721, 43.6611979985476 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 67, "id": "11dcfdc5-2b37-45c0-ac79-3d6926553582", "intersection_name": "Sheppard Avenue West and Keele Street", "date_installed": "2021-06-16", "date_decommissioned": null, "lat": 43.744777, "lng": -79.486452, "street_main": "KEELE ST", "street_cross": "SHEPPARD AVE W", "int_id": 13451388, "px": 600, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.486452, 43.744777 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 41, "id": "0e574ac8-bb57-46f0-b2a1-49bd48e1a503", "intersection_name": "Bloor / Bay", "date_installed": "2020-10-16", "date_decommissioned": null, "lat": 43.669669, "lng": -79.389507, "street_main": "Bay", "street_cross": "Bloor", "int_id": 13463548, "px": 70, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.389507, 43.669669 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 42, "id": "1ebf4ec0-88fd-49ec-8cf4-3e0ae0af0128", "intersection_name": "College / University", "date_installed": "2020-10-27", "date_decommissioned": null, "lat": 43.659858, "lng": -79.390494, "street_main": "University", "street_cross": "College", "int_id": 13465166, "px": 83, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.390494, 43.659858 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 43, "id": "20249466-ff47-4517-b201-960fe2f361f6", "intersection_name": "Danforth / Logan", "date_installed": "2020-10-08", "date_decommissioned": null, "lat": 43.678012, "lng": -79.349623, "street_main": "Danforth", "street_cross": "Logan", "int_id": 13462012, "px": 343, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.349623, 43.678012 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 44, "id": "7ac38de1-6d72-4830-bfde-b07fa71746c5", "intersection_name": "Dundas / Bloor", "date_installed": "2020-10-09", "date_decommissioned": null, "lat": 43.656321, "lng": -79.452453, "street_main": "Dundas", "street_cross": "Bloor", "int_id": 13465876, "px": 327, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.452453, 43.656321 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 45, "id": "361d2fae-9e00-4760-8d50-bcf25e51cf10", "intersection_name": "Eglinton / Kingston", "date_installed": "2020-10-26", "date_decommissioned": null, "lat": 43.743722, "lng": -79.211663, "street_main": "Kingston", "street_cross": "Eglinton", "int_id": 13450880, "px": 147, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.211663, 43.743722 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 46, "id": "6a16f56b-ef35-4f67-a512-ff9643b6e53d", "intersection_name": "Ellesmere / Morningside", "date_installed": "2020-10-05", "date_decommissioned": null, "lat": 43.785344, "lng": -79.193342, "street_main": "Ellesmere", "street_cross": "Morningside", "int_id": 13445039, "px": 719, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.193342, 43.785344 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 47, "id": "dc9ba053-0c3c-4ce4-8fc6-73eae969195f", "intersection_name": "Greenwood / Danforth", "date_installed": "2020-10-08", "date_decommissioned": null, "lat": 43.681484, "lng": -79.332382, "street_main": "Danforth", "street_cross": "Greenwood", "int_id": 13461356, "px": 348, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.332382, 43.681484 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 48, "id": "bf2ffe72-0929-4598-a513-1dd1d0800e7d", "intersection_name": "Huntingwood / Warden", "date_installed": "2020-10-05", "date_decommissioned": null, "lat": 43.785477, "lng": -79.310952, "street_main": "Warden", "street_cross": "Huntingwood", "int_id": 13445257, "px": 871, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.310952, 43.785477 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 49, "id": "13711f91-de04-4fe7-9301-a12b2c2b68d3", "intersection_name": "Lawrence / Brimley", "date_installed": "2020-10-05", "date_decommissioned": null, "lat": 43.753526, "lng": -79.255367, "street_main": "Lawrence", "street_cross": "Brimley", "int_id": 13449501, "px": 414, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.255366999999893, 43.753526 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 50, "id": "6a37bdd3-4359-4eaf-ba25-d16504ed83b1", "intersection_name": "Morningside / Kingston", "date_installed": "2020-10-01", "date_decommissioned": null, "lat": 43.770612, "lng": -79.186865, "street_main": "Kingston", "street_cross": "Morningside", "int_id": 13446901, "px": 143, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.186865, 43.770612 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 51, "id": "e90d59c7-4794-415c-b203-9fe4acf9c3cb", "intersection_name": "Runnymede / Bloor", "date_installed": "2020-10-08", "date_decommissioned": null, "lat": 43.651135, "lng": -79.476304, "street_main": "Bloor", "street_cross": "Runnymede", "int_id": 13466753, "px": 331, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.476304, 43.651135 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 52, "id": "1114063a-bb6f-4c53-8200-8044ef2665e7", "intersection_name": "Sheppard / Wilmington", "date_installed": "2020-10-06", "date_decommissioned": null, "lat": 43.752688, "lng": -79.451918, "street_main": "Sheppard", "street_cross": "Wilmington", "int_id": 13450069, "px": 739, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.451918, 43.752688 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 53, "id": "620ee54f-0052-4b5b-8516-fa718f01f655", "intersection_name": "St. Clair / Brimley", "date_installed": "2020-09-30", "date_decommissioned": null, "lat": 43.720875, "lng": -79.241448, "street_main": "St Clair", "street_cross": "Brimley", "int_id": 13454486, "px": 497, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.241448, 43.720875 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 54, "id": "855dd119-7fe7-4827-9284-44aff971a46b", "intersection_name": "Thorncliffe Park / Overlea", "date_installed": "2020-10-13", "date_decommissioned": null, "lat": 43.707473, "lng": -79.343625, "street_main": "Overlea", "street_cross": "Thorncliffe Park", "int_id": 13456854, "px": 679, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.343625, 43.707473 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 55, "id": "0d062870-58af-464b-969d-33363a01d9a0", "intersection_name": "Danforth / Broadview", "date_installed": "2020-11-10", "date_decommissioned": null, "lat": 43.676202, "lng": -79.358872, "street_main": "Danforth", "street_cross": "Broadview", "int_id": 13462375, "px": 294, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.358872, 43.676202 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 56, "id": "5c952bf4-206d-4671-a142-89d86652819d", "intersection_name": "Don Mills / Overlea", "date_installed": "2020-11-13", "date_decommissioned": null, "lat": 43.709996, "lng": -79.334394, "street_main": "Don Mills", "street_cross": "Overlea", "int_id": 13456414, "px": 620, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.334394, 43.709996 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 57, "id": "7876a959-a1ab-48fe-ada6-0411c174643f", "intersection_name": "Queen / University", "date_installed": "2020-11-10", "date_decommissioned": null, "lat": 43.650852, "lng": -79.386628, "street_main": "University", "street_cross": "Queen", "int_id": 13466604, "px": 80, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.386628, 43.650852 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 58, "id": "fe26f2d1-41db-4079-9764-7405a4b189f2", "intersection_name": "Bloor Street West and Dufferin Street", "date_installed": "2020-12-22", "date_decommissioned": null, "lat": 43.659883, "lng": -79.435365, "street_main": "DUFFERIN ST", "street_cross": "BLOOR ST W", "int_id": 13465260, "px": 325, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.435365, 43.659883 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 59, "id": "67492dd1-ef98-4a9c-ac05-b2605b6a398d", "intersection_name": "Eglinton Avenue West and Jane Street", "date_installed": "2021-06-02", "date_decommissioned": null, "lat": 43.684476, "lng": -79.498823, "street_main": "EGLINTON AVE W", "street_cross": "JANE ST", "int_id": 13461228, "px": 905, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.498823, 43.684476 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 60, "id": "335c7cef-eb56-439f-907c-60189abffed3", "intersection_name": "Harbord Street/St. George Street/Hoskin Street", "date_installed": "2021-05-14", "date_decommissioned": null, "lat": 43.664109, "lng": -79.398444, "street_main": "ST GEORGE ST", "street_cross": "HARBORD ST / HOSKIN AVE", "int_id": 13464524, "px": 838, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.398444, 43.664109 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 61, "id": "0d9c7765-f74d-42c7-907e-1f483db51f56", "intersection_name": "Jane Street and Lawrence Avenue West", "date_installed": "2021-06-08", "date_decommissioned": null, "lat": 43.702878, "lng": -79.503838, "street_main": "JANE ST", "street_cross": "LAWRENCE AVE W", "int_id": 13457965, "px": 430, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.503838, 43.702878 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 62, "id": "2d1091bd-09c4-4d48-be84-153565290c88", "intersection_name": "Jane Street and Wilson Avenue", "date_installed": "2021-06-09", "date_decommissioned": null, "lat": 43.720915, "lng": -79.508634, "street_main": "WILSON AVE", "street_cross": "JANE ST", "int_id": 13455040, "px": 532, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.508634, 43.720915 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 63, "id": "1b9bad75-36d1-4886-b649-4d928bded1a7", "intersection_name": "Sheppard Avenue West and Weston Road", "date_installed": "2021-05-14", "date_decommissioned": null, "lat": 43.733746, "lng": -79.538228, "street_main": "WESTON RD", "street_cross": "SHEPPARD AVE W", "int_id": 13453198, "px": 588, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.538228, 43.733746 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 64, "id": "12a05fd1-3ac5-48af-9079-eb362128d697", "intersection_name": "Yonge Street / Davenport Road / Church St", "date_installed": "2021-05-14", "date_decommissioned": null, "lat": 43.672873, "lng": -79.387866, "street_main": "YONGE ST", "street_cross": "CHURCH ST / DAVENPORT RD", "int_id": 13463015, "px": 41, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.387866, 43.672873 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 65, "id": "dbf09553-c593-4bb2-90e5-7eb3bc7ebe08", "intersection_name": "Bayview Avenue and River Street", "date_installed": "2021-06-16", "date_decommissioned": null, "lat": 43.6658819, "lng": -79.357365, "street_main": "BAYVIEW AVE", "street_cross": "RIVER ST", "int_id": 13464116, "px": 177, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.357354005404474, 43.665868004081801 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 66, "id": "35425467-0e8d-4fe7-b35d-6ccc9b71b0cf", "intersection_name": "Sheppard Avenue West and Jane Street", "date_installed": "2021-05-12", "date_decommissioned": null, "lat": 43.73942, "lng": -79.51319, "street_main": "SHEPPARD AVE W", "street_cross": "JANE ST", "int_id": 13452283, "px": 533, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.513220998491903, 43.739388995645811 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 68, "id": "9ed9e7f3-9edc-4f58-ae5b-8c9add746886", "intersection_name": "Steeles Avenue West and Jane Street", "date_installed": "2021-05-12", "date_decommissioned": null, "lat": 43.77549, "lng": -79.52168, "street_main": "STEELES AVE W", "street_cross": "JANE ST", "int_id": 13446896, "px": 535, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.521734995470908, 43.775469998184846 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 69, "id": "78769d41-765a-4dbf-ae32-6908a2e04d52", "intersection_name": "College St / Bathurst St", "date_installed": "2023-08-09", "date_decommissioned": null, "lat": 43.656481958000001, "lng": -79.407722934999995, "street_main": "COLLEGE ST", "street_cross": "BATHURST ST", "int_id": 13465757, "px": 300, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.407722935, 43.656481958 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 70, "id": "ff494e5c-628e-4d83-9cc3-13af52dbb88f", "intersection_name": "Fort York Blvd / Bathurst St", "date_installed": "2023-08-09", "date_decommissioned": null, "lat": 43.638839462999996, "lng": -79.400649565999998, "street_main": "BATHURST ST", "street_cross": "FORT YORK BLVD", "int_id": 14255097, "px": 1919, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.400649566, 43.638839463 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 71, "id": "230f5e16-e112-4df9-8f65-951a39c42472", "intersection_name": "King St E / Lower River St", "date_installed": "2023-11-29", "date_decommissioned": null, "lat": 43.65686863, "lng": -79.356158586000006, "street_main": "KING ST E", "street_cross": "RIVER ST", "int_id": 13465557, "px": 2181, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.356158586, 43.65686863 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 72, "id": "6a5a251d-12a2-4ed8-97f2-970eb0fa88b7", "intersection_name": "Queen St E / River St", "date_installed": "2023-11-29", "date_decommissioned": null, "lat": 43.657375117999997, "lng": -79.356530972000002, "street_main": "QUEEN ST E", "street_cross": "RIVER ST", "int_id": 13465478, "px": 174, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.356530972, 43.657375118 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 73, "id": "03607dab-6921-4884-a6c5-09f1279280bd", "intersection_name": "Bloor St W / Islington Ave", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.644648578000002, "lng": -79.523438098, "street_main": "BLOOR ST W", "street_cross": "ISLINGTON AVE", "int_id": 13467841, "px": 339, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.523438098, 43.644648578 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 74, "id": "19f538eb-ceea-4aed-ab21-ef32760ce5df", "intersection_name": "Bloor St W / Jane St", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.649330368999998, "lng": -79.484483036, "street_main": "BLOOR ST W", "street_cross": "JANE ST", "int_id": 13467077, "px": 333, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.484483036, 43.649330369 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 75, "id": "555bda73-24fe-4fb6-88f0-9607c53b41ff", "intersection_name": "Lawrence Ave E / Birchmount Rd", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.74751869, "lng": -79.284836745000007, "street_main": "LAWRENCE AVE E", "street_cross": "BIRCHMOUNT RD", "int_id": 13450484, "px": 410, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.284836745, 43.74751869 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 76, "id": "b1f76b46-f347-4729-a85c-4ad83a10cc90", "intersection_name": "Triton Rd / Brimley Rd", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.773374253999997, "lng": -79.262430121999998, "street_main": "BRIMLEY RD", "street_cross": "TRITON RD", "int_id": 13446676, "px": 1171, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.262430122, 43.773374254 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 77, "id": "b79d6057-d895-4557-94cc-3e73d31a3594", "intersection_name": "St. Clair Ave W / Yonge St", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.688097061999997, "lng": -79.394077401000004, "street_main": "YONGE ST", "street_cross": "ST CLAIR AVE", "int_id": 13460295, "px": 46, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.394077401, 43.688097062 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 78, "id": "bb3be749-eb18-47e3-ac07-2b55d404bf1e", "intersection_name": "Bloor St W / The Kingsway", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.650065077000001, "lng": -79.499214029000001, "street_main": "BLOOR ST W", "street_cross": "THE KINGSWAY", "int_id": 13466999, "px": 336, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.499214029, 43.650065077 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 79, "id": "e92f628e-fa46-49c6-88c7-f8c715d243de", "intersection_name": "Eastern Ave / Cherry St", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.653861462000002, "lng": -79.358615487999998, "street_main": "EASTERN AVE", "street_cross": "CHERRY ST", "int_id": 13466055, "px": 816, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.358615488, 43.653861462 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 80, "id": "fe0550e0-ef27-49f2-a469-4e8511771e4a", "intersection_name": "Eglinton Ave E / Kennedy Rd", "date_installed": "2023-12-04", "date_decommissioned": null, "lat": 43.732201552, "lng": -79.26793172000001, "street_main": "EGLINTON AVE E", "street_cross": "KENNEDY RD", "int_id": 13452869, "px": 460, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.26793172, 43.732201552 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 81, "id": "0dc3a5ff-2c4c-4173-a2c2-18b5742f0e44", "intersection_name": "Ellesmere Rd / Borough Approach W", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.77076073, "lng": -79.258129093999997, "street_main": "ELLESMERE RD", "street_cross": "BOROUGH APPROACH W", "int_id": 13447031, "px": 2672, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": true, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.258129094, 43.77076073 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 82, "id": "61826dbc-ead9-4944-9b89-bd0f9121e0f8", "intersection_name": "Bloor St W / Royal York Rd", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.647362971, "lng": -79.511363322999998, "street_main": "BLOOR ST W", "street_cross": "ROYAL YORK RD", "int_id": 13467463, "px": 338, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.511363323, 43.647362971 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 83, "id": "aab69fd0-5b0c-43da-bdfc-82a1b8366b71", "intersection_name": "Lawrence Ave E / Kennedy Rd", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.749497972999997, "lng": -79.274934957, "street_main": "LAWRENCE AVE E", "street_cross": "KENNEDY RD", "int_id": 13450163, "px": 412, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.274934957, 43.749497973 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 84, "id": "b75d4167-7cb9-431d-b713-5ef4a8a8e7f4", "intersection_name": "Ellesmere Rd / Midland Ave", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.767924950999998, "lng": -79.271110441999994, "street_main": "ELLESMERE RD", "street_cross": "MIDLAND AVE", "int_id": 13447496, "px": 697, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.271110442, 43.767924951 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 85, "id": "b8386c90-67de-4517-8f65-09ab2b7bd4bd", "intersection_name": "Ellesmere Rd / McCowan Rd", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.772142023999997, "lng": -79.251498432000005, "street_main": "MCCOWAN RD", "street_cross": "ELLESMERE RD", "int_id": 13446827, "px": 699, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.251498432, 43.772142024 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 86, "id": "cc95be5a-0dd3-433e-afb7-228933326ef6", "intersection_name": "Lawrence Ave E / Midland Ave", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.751521701999998, "lng": -79.265052497, "street_main": "LAWRENCE AVE E", "street_cross": "MIDLAND AVE", "int_id": 13449830, "px": 413, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.265052497, 43.751521702 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 87, "id": "d882972b-511e-4df3-ba8c-98307d518bd1", "intersection_name": "Ellesmere Rd / Kennedy Rd", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.76580202, "lng": -79.281078252, "street_main": "KENNEDY RD", "street_cross": "ELLESMERE RD", "int_id": 13447843, "px": 696, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.281078252, 43.76580202 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 88, "id": "eeb3b35e-3d89-48d5-8c54-a809ef789a6f", "intersection_name": "Ellesmere Rd / Brimley Rd", "date_installed": "2023-12-06", "date_decommissioned": null, "lat": 43.770074104000003, "lng": -79.261304945000006, "street_main": "ELLESMERE RD", "street_cross": "BRIMLEY RD", "int_id": 13447139, "px": 698, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.261304945, 43.770074104 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 89, "id": "b97a73b6-ec00-4869-85ca-b57afdb9a479", "intersection_name": "Gordon Baker Rd / Victoria Park Ave", "date_installed": "2024-01-02", "date_decommissioned": null, "lat": 43.810639013, "lng": -79.339201677999995, "street_main": "VICTORIA PARK AVE", "street_cross": "GORDON BAKER RD", "int_id": 13442540, "px": 1252, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.339201678, 43.810639013 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 90, "id": "bae1ea62-14ff-40a2-8a0f-c41048b8e16b", "intersection_name": "Gerrard St E / River St", "date_installed": "2024-01-02", "date_decommissioned": null, "lat": 43.663707455999997, "lng": -79.359244950999994, "street_main": "GERRARD ST E", "street_cross": "RIVER ST", "int_id": 13464490, "px": 176, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.359244951, 43.663707456 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 91, "id": "08b52556-ef82-4ae2-a475-4dbe0a4fd6ab", "intersection_name": "Lake Shore Blvd W / Spadina Ave", "date_installed": "2024-01-03", "date_decommissioned": null, "lat": 43.638493318000002, "lng": -79.392241595000002, "street_main": "LAKE SHORE BLVD W", "street_cross": "SPADINA AVE", "int_id": 13468377, "px": 215, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.392241595, 43.638493318 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 92, "id": "0bf5b600-9da1-4193-9acd-42361fba8435", "intersection_name": "Dupont St / Davenport Rd", "date_installed": "2024-01-03", "date_decommissioned": null, "lat": 43.675796026, "lng": -79.402571195999997, "street_main": "DAVENPORT RD", "street_cross": "DUPONT ST", "int_id": 13462552, "px": 382, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.402571196, 43.675796026 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 93, "id": "4fd77e81-a418-406e-9cf2-b40ef596dd6e", "intersection_name": "Roxborough Dr / Mount Pleasant Rd", "date_installed": "2024-01-03", "date_decommissioned": null, "lat": 43.680737372000003, "lng": -79.382389145000005, "street_main": "MOUNT PLEASANT RD", "street_cross": "ROXBOROUGH DR", "int_id": 13461616, "px": 2445, "n_leg_restricted": null, "e_leg_restricted": null, "s_leg_restricted": null, "w_leg_restricted": true }, "geometry": { "type": "Point", "coordinates": [ -79.382389145, 43.680737372 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 94, "id": "844b164e-fe9f-4958-8e64-ce1c916d84cb", "intersection_name": "Robinson St / Bathurst St", "date_installed": "2024-01-03", "date_decommissioned": null, "lat": 43.648831393999998, "lng": -79.404649606999996, "street_main": "BATHURST ST", "street_cross": "ROBINSON ST", "int_id": 13466991, "px": 1808, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.404649607, 43.648831394 ] } },
+    { "type": "Feature", "properties": { "intersection_uid": 95, "id": "a9a437da-2d41-41d9-8c20-cff2eb2038e8", "intersection_name": "Wellington St W / Bathurst St", "date_installed": "2024-01-03", "date_decommissioned": null, "lat": 43.642655357000002, "lng": -79.402195895000006, "street_main": "BATHURST ST", "street_cross": "WELLINGTON ST W", "int_id": 13467884, "px": 2528, "n_leg_restricted": null, "e_leg_restricted": true, "s_leg_restricted": null, "w_leg_restricted": null }, "geometry": { "type": "Point", "coordinates": [ -79.402195895, 43.642655357 ] } }
+    ]
+    }    
+```
 
 ### Folder Structure
 
@@ -56,423 +129,6 @@ You can see the current locations of Miovision cameras [on this map.](geojson/mi
 - `sql` - scripts for producing tables.
 - `update_intersections` - contains up-to-date instructions for adding new intersections.
 
-## 2. Table Structure
-
-### Miovision Data Relationships at a Glance
-
-![Miovision Data Entity Relationship Diagram](img/Mio_ERD.png)
-
-### Key Tables 
-
-- [`intersections`](#intersections)
-- [`classifications`](#classifications)
-- [`movements`](#movements)
-- [Aggregated Data](#aggregated-data)
-  - [`volumes_15min_mvt`](#volumes_15min_mvt): TMC-style 15-minute aggregated data
-  - [`volumes_15min`](#volumes_15min): ATR-style 15-minute aggregated data
-  - [`unacceptable_gaps`](#unacceptable_gaps)
-
-#### `intersections`
-
-Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](geojson/miovision_intersections.geojson):
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-intersection_uid|integer|Unique identifier for table|10|
-id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
-date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
-date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
-lat|numeric|Latitude of intersection location|43.643945|
-lng|numeric|Longitude of intersection location|-79.402667|
-street_main|text|Name of primary street|King|
-street_cross|text|Name of secondary street|Bathurst|
-int_id|bigint|int_id linked to centrelines|13467722|
-px|integer|px linked to traffic lights|201|
-geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
-n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
-
-#### `classifications`
-
-Reference table for all classifications:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-classification_uid|serial|Unique identifier for table|2|
-classification|text|Textual description of mode|Bicycles|
-location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to road)|FALSE|
-class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
-
-Here is a description of the classification_uids and corresponding types. 
-Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
-
- classification_uid | classification | definition / notes |
-:-----|:-----|:-----|
-1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
-2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
-4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
-5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
-6|Pedestrian|A walker. May or may not include zombies...|
-7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. **do not use** aggregate volumes will be removed from tables |
-8|WorkVan|A van used for commercial purposes|
-9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
-
-#### `movements`
-
-Reference table for road user movements:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-movement_uid|integer|Identifier representing current turning movement|1|
-movement_name|text|Short description of movement|thru|
-crosswalk_movement|boolean|Whether the movement describes pedestrians on crosswalks|false|
-movement_pretty_name|text|Long description of movement|Through|
-
-
-Here is a description of the movement_uids and corresponding types:
-
-**movement_uid**|**movement_pretty_name**|**definition**|
-:-----|:-----|:-----|
-1|Through|Vehicle drove through the intersection (no turns)|
-2|Left|Vehicle turned left|
-3|Right|Vehicle turned right|
-4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
-5|Clockwise|Pedestrian (or bike in crosswalk) proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
-6|Counter Clockwise|Pedestrian (or bike in crosswalk) proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
-7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
-8|Bicycle Exit|Used to determine where bicycles exited the intersection|
-
-
-#### Aggregated Data
-
-Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables.
-
-##### `volumes_15min_mvt`
-
-`volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to
-make averaging hourly volumes simpler, the volume can be `NULL` (for all modes)
-or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles,
-bicycles (classifications 2 and 10) and pedestrians).
-
-The 1-min data do not identify if a camera is malfunctioning, so gaps in data
-could either mean there was no volume, or that the camera malfunctioned. Because
-we have continuous data from these counters, we no longer try to interpolate
-data during gaps. When our heuristics identify `unacceptable_gaps`, then the
-entire hour of data is thrown out and the volume is set to `NULL` to imply that
-the data has been processed for this hour, but the results have been discarded.
-
-A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
-
-The [`aggregate_15_min_mvt()`](sql/function/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|integer|Unique identifier for table from sequence `miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq`. |14524|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
-volume|integer|Total 15-minute volume|78|
-processed|boolean| Flag if data has been aggregated to `miovision_15min`| TRUE
-
-**Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
-
-Please see [this diagram](getting_started.md#Vehicle-Movements) for a visualization of turning movements for vehicles (including bicycles) and [this diagram](getting_started.md#Pedestrian-Movement) for a visualization of pedestrian movements.
-
-- A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
-
-**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
-##### `volumes_15min`
-
-Data table storing ATR versions of the 15-minute turning movement data. Data in
-`volumes` is stored in TMC format, so must be converted to ATR to be included in
-`volumes_15min`.
-                                                           
-**ATR movements define leg as the approach direction of vehicles (like TMCs)**,
-and **direction as the cardinal direction of traffic travelling through that
-side of the intersection**. For a typical '+' intersection, there will be 8
-possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
-
-If you are having trouble picturing it, check out [this
-diagram](getting_started.md#From-Movement-Counts-to-Segment-Counts).
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_uid|integer|Unique identifier for table from sequence `miovision_api.volumes_15min_volume_15min_uid_seq`. |12412|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Segment leg of intersection|E|
-dir|text|Direction of traffic on specific leg|EB|
-volume|integer|Total 15-minute volume|107|
-
-**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
-
-[`miovision_api.movement_map`](#movement_map) is used to convert the TMC data to the ATR data. 
-
-A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
-
-##### `miovision_api.volumes_daily`
-
-Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
-
-| Field Name               | Comments                                                                   | Data Type   | Exmple     |
-|:-------------------------|:---------------------------------------------------------------------------|:------------|:-----------|
-| dt                       |                                                                            | date        | 2023-09-05 |
-| intersection_uid         |                                                                            | integer     | 1          |
-| classification_uid       |                                                                            | integer     | 1          |
-| daily_volume             |                                                                            | integer     | 13830      |
-| isodow                   | Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.     | smallint    | 2          |
-| holiday                  |                                                                            | boolean     | False      |
-| datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
-| unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable based on avg intersection volume in that hour.                   | smallint    | 0          |
-| avg_historical_gap_vol   | Avg historical volume for that classification and gap duration based on averages from a 60 day lookback in that hour.             | integer     |            |
-
-
-##### `unacceptable_gaps`
-
-Data table storing all the hours containing gaps larger than 5-20 minutes (this minimum threshold is set based on `gapsize_lookup`) for each intersection, including those with no data. Generated daily using the `find_gaps(start_date)` function. 
-More information can be found at [#3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera). This table is used in the `aggregate_15_min_mvt` function to set any data during unacceptable hours to `null` to prevent it from being included in AVG calculations.
-
-| Field Name                   | Comments                                                                      | Data Type                   | Example              |
-|:------------------------------|:------------------------------------------------------------------------------|:----------------------------|:--------------------|
-| dt                            | The date for which the function `miovision_api.find_gaps` was run to insert this row.            | date                        | 2023-09-05          |
-| intersection_uid              |                                                                               | integer                     | 4                   |
-| gap_start                     | The timestamp when the unacceptable gap starts.                               | timestamp without time zone | 2023-09-05 07:57:00 |
-| gap_end                       | The timestamp when the unacceptable gap ends.                                 | timestamp without time zone | 2023-09-05 10:18:00 |
-| gap_minutes_total             | Duration of gap in minutes (gap_end - gap_start)                              | integer                     | 141                 |
-| allowable_total_gap_threshold | The minimum duration of zero volume to be considered an unacceptable gap for this intersection, hour, and day type (weekend/weekday) based on a 60 day lookback and calculated in miovision_api.gapsize_lookup_insert.     | integer                     | 5                   |
-| datetime_bin                  | A 15 datetime_bin which falls within the gap, to be used for joining to volumes_15min* tables.                                                            | timestamp without time zone | 2023-09-05 07:45:00 |
-| gap_minutes_15min             | The portion of the total gap which falls within the 15 minute bin starting with datetime_bin.            | integer                     | 3                   |
-
-##### `gapsize_lookup`
-
-Data table storing a 60 day lookback average hourly volume for each `intersection_uid`, `classification_uid`.
-Used to determine the maximum acceptable gap for use in `unacceptable_gaps` table and to determine the average historical volume associated with those gaps by mode. 
-
-| column_name        | Comments                                                                            | data_type   | sample             |
-|:-------------------|:------------------------------------------------------------------------------------|:------------|:-------------------|
-| dt                 | The date for which `miovision_api.gapsize_lookup_insert` was run to generate this row. The lookback period used to is the 60 days preceeding this date, matching the same day type (weekday/weekend)   | date        | 2023-11-01         |
-| intersection_uid   | nan                                                                                 | integer     | 20                 |
-| classification_uid | A null classification_uid refers to the total volume for that intersection which is used to determine the gap_tolerance.         | integer     | 5                  |
-| hour_bin           | Hour of the day from 0-23.                                                          | smallint    | 18                 |
-| weekend            | True if Saturday/Sunday or holiday (based on ref.holiday table).                    | boolean     | False              |
-| avg_hour_vol       | The average volume for this hour/intersection/weekend combination based on a 60 day lookback.                  | numeric     | 1.6666666666666667 |
-| gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid for the overall intersection volume (classification_uid IS NULL).           | smallint    |                    |
-
-### `volumes`
-
-Data table storing all 1-minute observations in its **transformed** form. Records represent total 1-minute volumes for each [intersection]-[classification]-[leg]-[turning movement] combination.  
-Partitioned by year and month using declarative partitioning.  
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_uid|serial|Unique identifier for table|5100431|
-intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
-datetime_bin|timestamp without time zone|Start of 1-minute time bin in EDT|2017-10-13 09:07:00|
-classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
-leg|text|Entry leg of movement|E|
-movement_uid|integer|Identifier linking to specific turning movement stored in `movements`|2|
-volume|integer|Total 1-minute volume|12|
-volume_15min_mvt_uid|serial|Unenforced foreign key to [`volumes_15min_mvt`](#volumes_15min_mvt) The foreign key constraint was removed to support partitioning. |14524|
-
-- A *Unique constraint* exists on `miovision_api.volumes` based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
-
-### Reference Tables
-
-#### `movement_map`
-
-Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`):
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
-dir|text|Direction on which 15-minute volume will be assigned|EB|
-leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
-movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
-
-Here are some example rows from the table:
-
-|leg_new|dir|leg_old|movement_uid|description of movement|
-|-------|---|-------|------------|-----------------------|
-| E | EB | E | 4 | Approached intersection from the east leg, u-turned, exited intersection from the east leg
-| E | EB | S | 3 | Approached intersection from the south leg, turned right, exited intersection from the east leg
-| E | EB | W | 1 | Approached intersection from the west leg, proceeded straight ahead, exited intersection from the east leg
-| E | EB | N | 2 | Approached intersection from the north leg, turned left, exited intersection from the east leg
-
-- `leg_new` (leg for ATR) - anything that crosses that side of the intersection
-- `dir` - heading of traffic crossing `leg_new`
-- `leg_old` (leg for TMC) - direction the vehicles approach into intersection
-- `movement_uid` - turning movement stored in `movements`
-
-The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](getting_started.md#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
-
-#### `periods`
-
-Reference table for all unique time periods. Used primarily to aggregate 15-minute data for reporting purposes:
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-period_id|integer|Unique identifier for table|3|
-day_type|text|Day type for date filter|[Weekday OR Weekend]|
-period_name|text|Textual description of period|14 Hour|
-period_range|timerange|Specific start and end times of period|[06:00:00,20:00:00)|
-report_flag|boolean|Indicates whether the period is used in a report|true|
-
-
-#### `intersection_movements`
-
-This was created using [`create-table-intersection_movements.sql`](sql/table/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
-
-Since this reference table must be updated every time a new intersection is added, there are several iterations of it. The earliest is `miovision_api.intersection_movements_20200805`; the latest is `intersection_movements_20210712`. Users should use `intersection_movements` and may find their permissions restricted on the dated versions of this table.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
- intersection_uid| integer | ID for intersection | 1 |
- classification_uid| integer | Identifier linking to specific mode class stored in `classifications`|1|
- leg| text | Entry leg of movement|E|
- movement_uid| integer | Identifier linking to specific turning movement stored in `movements`|2|
-
-#### `centreline_miovision`
-
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](sql/table/create-mv-mio_cent.sql) when intersections are added.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
-intersection_uid| integer | ID for intersection | 1 |
-leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
-
-### Primary and Foreign Keys
-
-To create explicit relationships between tables, `volumes`, `volume_15min_mvt`, `atr_mvt_uid` and `volume_15min` have primary and foreign keys. Primary keys are unique identifiers for each entry in the table, while foreign keys refer to a primary key in another table and show how an entry is related to that entry.
-
-#### List of primary and foreign keys
-
-* `volumes` has the primary key `volume_uid` and foreign key `volume_15min_mvt_uid` which refers to `volume_15min_mvt`
-* `volumes_15min_mvt` has the primary key `volume_15min_mvt_uid`
-* `volume_15min` has the primary key `volume_15min_uid` 
-
-The current primary purpose for the keys is so that on deletion, the delete cascades through all tables. The keys also indicate whether it is new data if the foreign key is null, and tells the function to aggregate the data if it is new data. The keys can also be used in selecting data.
-
-### Other Important Tables
-
-The tables below are produced using functions explained in the [API Puller](api/readme.md#postgresql-functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting.
-
-|Table|Purpose|
-|------|-------|
-|`api_log`|Contains a record of the `start_date` and `end_date` for an `intersection_uid` and when the data was pulled as `date_added`|
-|`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
-|`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
-
-
-#### `volumes_mvt_atr_xover`
-
-**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|int|Unique identifier for `volumes_15min_mvt` table|14524|
-volume_15min_uid|serial|Unique identifier for table|12412|
-## 3. Finding Gaps and Malfunctioning Camera
-
-In order to better determine if a camera is still working, we have decided to use the gaps and islands method to figure where the gaps are (gaps as in the unfilled space or interval between the 1min bins; a break in continuity) and their sizes. There are two parts of this in the whole process.
-
-### Part I - Unacceptable Gaps
-The following process is used to determine camera wide data outages and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
-
-1. Within `find_gaps` function, the `gapsize_lookup_insert` function is run to populate the table `gapsize_lookup` with acceptable gap sizes based on avg hourly volumes from a 60 day rolling lookback. 
-  - The set of acceptable `gap_tolerance` implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
-2. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these will instead be included in `anomalous_ranges` table with PR [#777](https://github.com/CityofToronto/bdit_data-sources/pull/777). 
-3. Unacceptable gaps are cross joined to 15 minute bins and inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
-4. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within within 15 minute periods matching unacceptable_gaps' `datetime_bin`.
-
-### Part II - Working Machine
-The following process is to determine if a Miovision camera is still working. It is different from the process above because the gap sizes used above are small and do not say much about whether a camera is still 
-working. We roughly define a camera to be malfunctioning if that camera/intersection has a gap greater than 4 hours. This is checked daily by `miovision_check` DAG, task `check_gaps`. A slack notification will be sent if there's at least 1 camera that is not working. The function also returns a list of intersections that are not working and from what time to what time that the gaps happen which is helpful in figuring out what has happened.
-
-### Identifying Questionable Data Quality
-
-The table `miovision_api.anomalous_ranges` is used to flag times and places in the data where counts are potentially questionable, suspicious, or irregular. Sometimes counts are clearly not valid or data are missing, and sometimes counts look very weird but have been investigated and confirmed as valid or subject to some specific caveat. This table helps us track the status of these investigations and their results. 
-The basic idea is to identify sections of data (by timerange, intersection, and classification) that have been flagged as suspicious/anomalous for whatever reason, and state what we know about that data-subset in a semi-structured way. This lets us further investigate where that is required and carve out data that has been formally cast into doubt from queries that need only-the-best.
-
-#### Fields in `miovision_api.anomalous_ranges`
-| Column | Description |
-| ------ | ----------- |
-| uid    | simple incrementing primary key |
-| intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
-| classification_uid | the classification; `NULL` if applies to all classifications e.g. a badly misaligned camera |
-| range_start | the beginning of the anomalous range in question; may be open-ended (NULL). Inclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_start slightly _before_ the problem area. |
-| range_end | the end of the anomalous range in question; may be open-ended (NULL). Exclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_end slightly _past_ the problem area. |
-| notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
-| investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
-| problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
-
-#### Fields in `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`
-| Column | Description |
-| ------ | ----------- |
-| uid    | very short descriptive text; primary key |
-| description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
-
-#### An applied example
-
-When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
-
-```sql
-SELECT volume_uid
-FROM miovision_api.volumes
-WHERE 
-    NOT EXISTS ( -- this is our one big filter for bad/dubious data
-        SELECT 1
-        FROM miovision_api.anomalous_ranges
-        WHERE
-            anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
-            AND (
-                volumes.datetime_bin >= anomalous_ranges.range_start
-                OR anomalous_ranges.range_start IS NULL
-            ) AND (
-                volumes.datetime_bin < anomalous_ranges.range_end
-                OR anomalous_ranges.range_end IS NULL
-            ) AND (
-                anomalous_ranges.intersection_uid = volumes.intersection_uid
-                OR anomalous_ranges.intersection_uid IS NULL
-            ) AND (
-                anomalous_ranges.classification_uid = volumes.classification_uid
-                OR anomalous_ranges.classification_uid IS NULL
-            )
-    )
-    AND NOT EXISTS ( -- also exclude official holidays
-        SELECT 1 FROM ref.holiday WHERE holiday.dt = volumes.datetime_bin::date
-    )
-    AND etc.
-```
-
-#### Identifying new anomalies
-The `anomalous_ranges` table is populated in different ways:
-  - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
-  - automatically by a [daily script](sql/function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
-    - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
-  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](dev_notebooks/README.md) (including notebooks and code).
-  
-## 4. Repulling data
-### Deleting data to re-run the process
-
-The Miovision ETL DAG `miovision_pull` and the command line `run_api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
-
-Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
 
 ## 5. Steps to Add or Remove Intersections
 For steps to add or remove intersections, please see documentation under update_intersections [here](./update_intersections/Readme.md).  
