@@ -1,5 +1,4 @@
-<!-- TOC -->
-
+<!-- /TOC -->
 - [1. Overview](#1-overview)
 - [2. Table Structure](#2-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -9,11 +8,11 @@
     - [`movements`](#movements)
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
-      - [`volumes_15min_mvt`](#volumes_15min_mvt)
-      - [`volumes_15min`](#volumes_15min)
-      - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
-      - [`unacceptable_gaps`](#unacceptable_gaps)
-      - [`gapsize_lookup`](#gapsize_lookup)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`volumes_15min`](#volumes_15min)
+    - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
+    - [`unacceptable_gaps`](#unacceptable_gaps)
+    - [`gapsize_lookup`](#gapsize_lookup)
   - [Reference Tables](#reference-tables)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
@@ -23,7 +22,7 @@
     - [`centreline_miovision`](#centreline_miovision)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-  - [Other Important Tables](#other-important-tables)
+  - [Other Tables](#other-tables)
     - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
 - [PostgreSQL Functions](#postgresql-functions)
   - [Aggregation Functions](#aggregation-functions)
@@ -37,8 +36,6 @@
   - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
     - [An applied example](#an-applied-example)
     - [Identifying new anomalies](#identifying-new-anomalies)
-- [4. Repulling data](#4-repulling-data)
-  - [Deleting data to re-run the process](#deleting-data-to-re-run-the-process)
 
 <!-- /TOC -->
 
@@ -50,7 +47,7 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 ## Miovision Data Relationships at a Glance
 
-![Miovision Data Entity Relationship Diagram](img/Mio_ERD.png)
+![Miovision Data Entity Relationship Diagram](../img/Mio_ERD.png)
 
 ## Key Tables 
 
@@ -64,7 +61,7 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 ### `intersections`
 
-Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](geojson/miovision_intersections.geojson):
+Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/miovision_intersections.geojson):
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -157,9 +154,59 @@ volume_15min_mvt_uid|serial|Unenforced foreign key to [`volumes_15min_mvt`](#vol
 
 ## Aggregated Data
 
-Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables.
+Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](../getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables. The diagram below briefly describes the flow of data between key aggregate tables. 
 
-#### `volumes_15min_mvt`
+```mermaid
+  erDiagram
+  volumes }|--|| volumes_15min_mvt : "aggregate into 15min TMC bins"
+  volumes 
+  volumes_15min_mvt ||--|{ volumes_15min : "transform into ATR style"
+  volumes_15min_mvt {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        integer movement_uid
+        text leg
+        integer volume
+  }
+  volumes }|--|| volumes_daily_unfiltered : "aggregate to daily"
+  volumes }|--|| unacceptable_gaps : "identify runs of zeros"
+  unacceptable_gaps }|--|| volumes_15min_mvt : "exclude 15min bins"
+  unacceptable_gaps {
+    integer intersection_uid
+    datetime datetime_bin
+  }
+  volumes_15min_mvt ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
+  anomalous_ranges ||--|{ volumes_daily : "exclude"
+  anomalous_ranges {
+        integer intersection_uid
+        integer classification_uid
+        datetime range_start
+        datetime range_end
+    }
+  volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
+  volumes_daily_unfiltered {
+        integer intersection_uid
+        integer classification_uid
+        date dt
+        integer volume
+    }
+  volumes_daily {
+        integer intersection_uid
+        integer classification_uid
+        date dt
+        integer volume
+    }
+  volumes_15min {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        text leg
+        integer volume
+  }
+```
+
+### `volumes_15min_mvt`
 
 `volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
@@ -168,7 +215,7 @@ data during gaps. When our heuristics identify `unacceptable_gaps`, then the ent
 
 A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
-The [`aggregate_15_min_mvt()`](sql/function/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
+The [`aggregate_15_min_mvt()`](function/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -183,7 +230,7 @@ processed|boolean| Flag if data has been aggregated to `miovision_15min`| TRUE
 
 **Please note that movements for vehicles (including bicycles) are different than those for pedestrians.**
 
-Please see [this diagram](getting_started.md#Vehicle-Movements) for a visualization of turning movements for vehicles (including bicycles) and [this diagram](getting_started.md#Pedestrian-Movement) for a visualization of pedestrian movements.
+Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visualization of turning movements for vehicles (including bicycles) and [this diagram](../getting_started.md#Pedestrian-Movement) for a visualization of pedestrian movements.
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
@@ -191,7 +238,7 @@ Please see [this diagram](getting_started.md#Vehicle-Movements) for a visualizat
 (23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
 22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
 
-#### `volumes_15min`
+### `volumes_15min`
 
 Data table storing ATR versions of the 15-minute turning movement data. Data in
 `volumes` is stored in TMC format, so must be converted to ATR to be included in
@@ -203,7 +250,7 @@ side of the intersection**. For a typical '+' intersection, there will be 8
 possible ATR since there are 4 legs and 2 directions of travel for each ATR leg.
 
 If you are having trouble picturing it, check out [this
-diagram](getting_started.md#From-Movement-Counts-to-Segment-Counts).
+diagram](../getting_started.md#From-Movement-Counts-to-Segment-Counts).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -224,7 +271,7 @@ volume|integer|Total 15-minute volume|107|
 
 A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
 
-#### `miovision_api.volumes_daily`
+### `miovision_api.volumes_daily`
 
 Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
 
@@ -241,7 +288,7 @@ Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_range
 | avg_historical_gap_vol   | Avg historical volume for that classification and gap duration based on averages from a 60 day lookback in that hour.             | integer     |            |
 
 
-#### `unacceptable_gaps`
+### `unacceptable_gaps`
 
 Data table storing all the hours containing gaps larger than 5-20 minutes (this minimum threshold is set based on `gapsize_lookup`) for each intersection, including those with no data. Generated daily using the `find_gaps(start_date)` function. 
 More information can be found at [#3. Finding gaps and malfunctioning camera](#3-finding-gaps-and-malfunctioning-camera). This table is used in the `aggregate_15_min_mvt` function to set any data during unacceptable hours to `null` to prevent it from being included in AVG calculations.
@@ -257,7 +304,7 @@ More information can be found at [#3. Finding gaps and malfunctioning camera](#3
 | datetime_bin                  | A 15 datetime_bin which falls within the gap, to be used for joining to volumes_15min* tables.                                                            | timestamp without time zone | 2023-09-05 07:45:00 |
 | gap_minutes_15min             | The portion of the total gap which falls within the 15 minute bin starting with datetime_bin.            | integer                     | 3                   |
 
-#### `gapsize_lookup`
+### `gapsize_lookup`
 
 Data table storing a 60 day lookback average hourly volume for each `intersection_uid`, `classification_uid`.
 Used to determine the maximum acceptable gap for use in `unacceptable_gaps` table and to determine the average historical volume associated with those gaps by mode. 
@@ -322,7 +369,7 @@ Here are some example rows from the table:
 - `leg_old` (leg for TMC) - direction the vehicles approach into intersection
 - `movement_uid` - turning movement stored in `movements`
 
-The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](getting_started.md#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
+The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](../getting_started.md#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
 
 ### `periods`
 
@@ -339,7 +386,7 @@ report_flag|boolean|Indicates whether the period is used in a report|true|
 
 ### `intersection_movements`
 
-This was created using [`create-table-intersection_movements.sql`](sql/table/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
+This was created using [`create-table-intersection_movements.sql`](table/create-table-intersection_movements.sql) and is a reference table of all observed movements for each classification at each intersection. This is used in aggregating to the 15-minute TMC's in order to [fill in 0s in the volumes](#volumes_15min_mvt). Subsequently, movements present in the volumes data [which were erroneous](https://github.com/CityofToronto/bdit_data-sources/issues/144#issuecomment-419545891) were deleted from the table. This table will include movements which are illegal, such as left turns at intersections with turn restrictions but not movements like a turn onto the wrong way of a one-way street. It will need to be manually updated when a new location is added.
 
 Since this reference table must be updated every time a new intersection is added, there are several iterations of it. The earliest is `miovision_api.intersection_movements_20200805`; the latest is `intersection_movements_20210712`. Users should use `intersection_movements` and may find their permissions restricted on the dated versions of this table.
 
@@ -352,7 +399,7 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](sql/table/create-mv-mio_cent.sql) when intersections are added.
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](table/create-mv-mio_cent.sql) when intersections are added.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -372,9 +419,9 @@ To create explicit relationships between tables, `volumes`, `volume_15min_mvt`, 
 
 The current primary purpose for the keys is so that on deletion, the delete cascades through all tables. The keys also indicate whether it is new data if the foreign key is null, and tells the function to aggregate the data if it is new data. The keys can also be used in selecting data.
 
-## Other Important Tables
+## Other Tables
 
-The tables below are produced using functions explained in the [API Puller](api/readme.md#postgresql-functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting.
+The tables below are produced using functions explained [here](#aggregate_functions). They produce a lookup table of date-intersection combinations to be used for checking purposes or even for formal reporting. They are not used regularly.  
 
 |Table|Purpose|
 |------|-------|
@@ -385,7 +432,7 @@ The tables below are produced using functions explained in the [API Puller](api/
 
 ### `volumes_mvt_atr_xover`
 
-**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](sql/function/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
+**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](function/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -400,43 +447,43 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 
 | Function | Comment |
 |---|---|
-| [`aggregate_15_min(start_date date, end_date date, intersections integer[])`](../sql/function/function-aggregate-volumes_15min.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into `miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates `miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_volumes_15min()` to remove existing values before summarizing. |
-| [`aggregate_15_min_mvt(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
-| [`aggregate_volumes_daily(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
-| [`api_log(start_date date, end_date date, intersections integer[])`](../sql/function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
-| [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
-| [`find_gaps(start_date date, end_date date)`](../sql/function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
+| [`aggregate_15_min(start_date date, end_date date, intersections integer[])`](function/function-aggregate-volumes_15min.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into `miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates `miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_volumes_15min()` to remove existing values before summarizing. |
+| [`aggregate_15_min_mvt(start_date date, end_date date)`](function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
+| [`aggregate_volumes_daily(start_date date, end_date date)`](function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
+| [`api_log(start_date date, end_date date, intersections integer[])`](function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
+| [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
+| [`find_gaps(start_date date, end_date date)`](function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
 
 ## Clear Functions  
 
 | Function | Comment |
 |---|---|
-| [`clear_15_min_mvt(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min_mvt.sql) | Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_volumes_15min(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min.sql) | Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |  
+| [`clear_15_min_mvt(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes_15min_mvt.sql) | Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+| [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+| [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+| [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
+| [`clear_volumes_15min(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes_15min.sql) | Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |  
 
 ## Helper Functions
 
 | Function | Comment |
 |---|---|
-| [`find_invalid_movements(start_date timestamp, end_date timestamp)`](../sql/function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
-| [`get_intersections_uids(intersections integer[])`](../sql/function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
+| [`find_invalid_movements(start_date timestamp, end_date timestamp)`](function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
+| [`get_intersections_uids(intersections integer[])`](function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
 
 ## Partitioning Functions  
 
 | Function | Comment |
 |---|---|
-| [`create_mm_nested_volumes_partitions(base_table text, year_ integer, mm_ integer)`](../sql/function/function-create_mm_nested_volumes_partitions.sql) | Create a new month partition under the parent year table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
-| [`create_yyyy_volumes_15min_partition(base_table text, year_ integer)`](../sql/function/function-create_yyyy_volumes_15min_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
-| [`create_yyyy_volumes_partition(base_table text, year_ integer, datetime_col text)`](../sql/function/function-create_yyyy_volumes_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes` table. Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes', 2023, 'datetime_bin')` |  
+| [`create_mm_nested_volumes_partitions(base_table text, year_ integer, mm_ integer)`](function/function-create_mm_nested_volumes_partitions.sql) | Create a new month partition under the parent year table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
+| [`create_yyyy_volumes_15min_partition(base_table text, year_ integer)`](function/function-create_yyyy_volumes_15min_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
+| [`create_yyyy_volumes_partition(base_table text, year_ integer, datetime_col text)`](function/function-create_yyyy_volumes_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes` table. Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes', 2023, 'datetime_bin')` |  
 
 ## Deprecated Functions
 
 | Function | Comment |
 |---|---|
-| [`determine_working_machine(start_date date, end_date date)`](../sql/function/function-determine_working_machine.sql) | Function no longer in use. Previously used in `check_miovision` DAG to determine if any cameras had gaps larger than 4 hours. See: `miovision_check` DAG `check_gaps` task for new implementation.  |
+| [`determine_working_machine(start_date date, end_date date)`](function/function-determine_working_machine.sql) | Function no longer in use. Previously used in `check_miovision` DAG to determine if any cameras had gaps larger than 4 hours. See: `miovision_check` DAG `check_gaps` task for new implementation.  |
 | `missing_dates(_date date)` | Function no longer in use. Previously used to log dates with missing data to `miovision_api.missing_dates`. |  
 
 # 3. Finding Gaps and Malfunctioning Camera
@@ -447,8 +494,8 @@ In order to better determine if a camera is still working, we have decided to us
 The following process is used to determine camera wide data outages and then find out if the gaps are within the acceptable range or not. The timebins exceeding the allowed gap_size will then be inserted an `unacceptable_gaps` table. Finding gaps is important so that we know how reliable the data is for that time period based on past volume and not include those bins found within the unacceptable gaps range.
 
 1. Within `find_gaps` function, the `gapsize_lookup_insert` function is run to populate the table `gapsize_lookup` with acceptable gap sizes based on avg hourly volumes from a 60 day rolling lookback. 
-  - The set of acceptable `gap_tolerance` implemented is based on an investigation stated in this [notebook](dev_notebooks/volume_vs_gaps.ipynb). 
-2. Then, the function [`miovision_api.find_gaps`](sql/function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these will instead be included in `anomalous_ranges` table with PR [#777](https://github.com/CityofToronto/bdit_data-sources/pull/777). 
+  - The set of acceptable `gap_tolerance` implemented is based on an investigation stated in this [notebook](../dev_notebooks/volume_vs_gaps.ipynb). 
+2. Then, the function [`miovision_api.find_gaps`](function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these will instead be included in `anomalous_ranges` table with PR [#777](https://github.com/CityofToronto/bdit_data-sources/pull/777). 
 3. Unacceptable gaps are cross joined to 15 minute bins and inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
 4. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within within 15 minute periods matching unacceptable_gaps' `datetime_bin`.
 
@@ -497,6 +544,6 @@ WHERE
 ### Identifying new anomalies
 The `anomalous_ranges` table is populated in different ways:
   - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
-  - automatically by a [daily script](sql/function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
+  - automatically by a [daily script](function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
     - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
-  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](dev_notebooks/README.md) (including notebooks and code).
+  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](../dev_notebooks/README.md) (including notebooks and code).
