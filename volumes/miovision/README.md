@@ -238,10 +238,8 @@ Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_range
 | isodow                   | Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.     | smallint    | 2          |
 | holiday                  |                                                                            | boolean     | False      |
 | datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
-| unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable                    | smallint    | 0          |
-|                          | based on avg intersection volume in that hour.                             |             |            |
-| avg_historical_gap_vol   | Avg historical volume for that classification and gap duration             | integer     |            |
-|                          | based on averages from a 60 day lookback in that hour.                     |             |            |
+| unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable based on avg intersection volume in that hour.                   | smallint    | 0          |
+| avg_historical_gap_vol   | Avg historical volume for that classification and gap duration based on averages from a 60 day lookback in that hour.             | integer     |            |
 
 
 ##### `unacceptable_gaps`
@@ -251,19 +249,14 @@ More information can be found at [#3. Finding gaps and malfunctioning camera](#3
 
 | Field Name                   | Comments                                                                      | Data Type                   | Example              |
 |:------------------------------|:------------------------------------------------------------------------------|:----------------------------|:--------------------|
-| dt                            | The date for which the function `miovision_api.find_gaps` was run             | date                        | 2023-09-05          |
-|                               | to insert this row.                                                           |                             |                     |
+| dt                            | The date for which the function `miovision_api.find_gaps` was run to insert this row.            | date                        | 2023-09-05          |
 | intersection_uid              |                                                                               | integer                     | 4                   |
 | gap_start                     | The timestamp when the unacceptable gap starts.                               | timestamp without time zone | 2023-09-05 07:57:00 |
 | gap_end                       | The timestamp when the unacceptable gap ends.                                 | timestamp without time zone | 2023-09-05 10:18:00 |
 | gap_minutes_total             | Duration of gap in minutes (gap_end - gap_start)                              | integer                     | 141                 |
-| allowable_total_gap_threshold | The minimum duration of zero volume to be considered an unacceptable gap      | integer                     | 5                   |
-|                               | for this intersection, hour, and day type (weekend/weekday) based on a 60 day |                             |                     |
-|                               | lookback and calculated in miovision_api.gapsize_lookup_insert.               |                             |                     |
-| datetime_bin                  | A 15 datetime_bin                                                             | timestamp without time zone | 2023-09-05 07:45:00 |
-|                               | which falls within the gap, to be used for joining to volumes_15min* tables.  |                             |                     |
-| gap_minutes_15min             | The portion of the total gap which falls within the 15 minute bin             | integer                     | 3                   |
-|                               | starting with datetime_bin.                                                   |                             |                     |
+| allowable_total_gap_threshold | The minimum duration of zero volume to be considered an unacceptable gap for this intersection, hour, and day type (weekend/weekday) based on a 60 day lookback and calculated in miovision_api.gapsize_lookup_insert.     | integer                     | 5                   |
+| datetime_bin                  | A 15 datetime_bin which falls within the gap, to be used for joining to volumes_15min* tables.                                                            | timestamp without time zone | 2023-09-05 07:45:00 |
+| gap_minutes_15min             | The portion of the total gap which falls within the 15 minute bin starting with datetime_bin.            | integer                     | 3                   |
 
 ##### `gapsize_lookup`
 
@@ -272,18 +265,13 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 
 | column_name        | Comments                                                                            | data_type   | sample             |
 |:-------------------|:------------------------------------------------------------------------------------|:------------|:-------------------|
-| dt                 | The date for which `miovision_api.gapsize_lookup_insert` was run to generate this row.    | date        | 2023-11-01         |
-|                    | The lookback period used to is the 60 days preceeding this date, matching the same  |             |                    |
-|                    | day type (weekday/weekend)                                                          |             |                    |
+| dt                 | The date for which `miovision_api.gapsize_lookup_insert` was run to generate this row. The lookback period used to is the 60 days preceeding this date, matching the same day type (weekday/weekend)   | date        | 2023-11-01         |
 | intersection_uid   | nan                                                                                 | integer     | 20                 |
-| classification_uid | A null classification_uid refers to the total volume for that intersection          | integer     | 5                  |
-|                    | which is used to determine the gap_tolerance.                                       |             |                    |
+| classification_uid | A null classification_uid refers to the total volume for that intersection which is used to determine the gap_tolerance.         | integer     | 5                  |
 | hour_bin           | Hour of the day from 0-23.                                                          | smallint    | 18                 |
 | weekend            | True if Saturday/Sunday or holiday (based on ref.holiday table).                    | boolean     | False              |
-| avg_hour_vol       | The average volume for this hour/intersection/weekend combination                   | numeric     | 1.6666666666666667 |
-|                    | based on a 60 day lookback.                                                         |             |                    |
-| gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid           | smallint    |                    |
-|                    | for the overall intersection volume (classification_uid IS NULL).                   |             |                    |
+| avg_hour_vol       | The average volume for this hour/intersection/weekend combination based on a 60 day lookback.                  | numeric     | 1.6666666666666667 |
+| gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid for the overall intersection volume (classification_uid IS NULL).           | smallint    |                    |
 
 ### `volumes`
 
