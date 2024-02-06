@@ -1,12 +1,7 @@
-# API Puller
+<!-- TOC -->
 
-## Table of Contents
-
-- [API Puller](#api-puller)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Input Parameters](#input-parameters)
-    - [API Key and URL](#api-key-and-url)
+- [Overview](#overview)
+- [API](#api)
   - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
     - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
     - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
@@ -18,35 +13,23 @@
     - [API Classifications](#api-classifications)
     - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
   - [PostgreSQL Functions](#postgresql-functions)
-    - [Aggregation Functions](#aggregation-functions)
-    - [Clear Functions](#clear-functions)
-    - [Helper Functions](#helper-functions)
-    - [Partitioning Functions](#partitioning-functions)
-    - [Deprecated Functions](#deprecated-functions)
   - [Invalid Movements](#invalid-movements)
   - [How the API works](#how-the-api-works)
-  - [Airflow](#airflow)
-    - [**`miovision_pull`**](#miovision_pull)
-      - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
-      - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
-      - [`data_checks` TaskGroup](#data_checks-taskgroup)
-    - [**`miovision_check`**](#miovision_check)
-  - [Airflow - Deprecated](#airflow---deprecated)
-    - [**`pull_miovision`**](#pull_miovision)
-    - [**`check_miovision`**](#check_miovision)
+  - [Repulling data](#repulling-data)
+- [Airflow DAGs](#airflow-dags)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
   - [Notes](#notes)
 
-## Overview
+<!-- /TOC -->
 
-The [intersection_tmc.py](./intersection_tmc.py) script can be used to pull Miovision TMC and crosswalk data from the Miovision API, insert the results into the `miovision_api` schema of the database, and perform various aggregations. The script can support date ranges of 1 or more days, and an intersection parameter specifying 1, multiple, or all intersections. This script is used by the `miovision_pull` daily Airflow DAG to pull and aggregate Miovision data.  
+# Overview
+This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/README.md#postgresql-functions) to pull and aggregate data.  
 
-## Input Parameters
-
-### API Key and URL
-
-Emailed from Miovision. Keep it secret. Keep it safe.
-
-The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [https://docs.api.miovision.com/](https://docs.api.miovision.com/) .
+# API
 
 ## Relevant Calls and Outputs
 
@@ -188,50 +171,7 @@ The script will return an error if a classificaiton received from the API does n
 
 ## PostgreSQL Functions
 
-To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the old csv dumps. More information about the database tables can be found in the [miovision readme](../README.md#2-table-structure). 
-
-### Aggregation Functions  
-
-| Function | Comment |
-|---|---|
-| [`aggregate_15_min(start_date date, end_date date, intersections integer[])`](../sql/function/function-aggregate-volumes_15min.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into `miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates `miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_volumes_15min()` to remove existing values before summarizing. |
-| [`aggregate_15_min_mvt(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
-| [`aggregate_volumes_daily(start_date date, end_date date)`](../sql/function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
-| [`api_log(start_date date, end_date date, intersections integer[])`](../sql/function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
-| [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
-| [`find_gaps(start_date date, end_date date)`](../sql/function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
-
-### Clear Functions  
-
-| Function | Comment |
-|---|---|
-| [`clear_15_min_mvt(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min_mvt.sql) | Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](../sql/function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_volumes_15min(start_date timestamp, end_date timestamp, intersections integer[])`](../sql/function/function-clear-volumes_15min.sql) | Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |  
-
-### Helper Functions
-
-| Function | Comment |
-|---|---|
-| [`find_invalid_movements(start_date timestamp, end_date timestamp)`](../sql/function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
-| [`get_intersections_uids(intersections integer[])`](../sql/function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
-
-### Partitioning Functions  
-
-| Function | Comment |
-|---|---|
-| [`create_mm_nested_volumes_partitions(base_table text, year_ integer, mm_ integer)`](../sql/function/function-create_mm_nested_volumes_partitions.sql) | Create a new month partition under the parent year table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
-| [`create_yyyy_volumes_15min_partition(base_table text, year_ integer)`](../sql/function/function-create_yyyy_volumes_15min_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes_15min` and `volumes_15min_mvt` tables. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes_15min', 2023)` |
-| [`create_yyyy_volumes_partition(base_table text, year_ integer, datetime_col text)`](../sql/function/function-create_yyyy_volumes_partition.sql) | Create a new year partition under the parent table `base_table`. Only to be used for miovision_api `volumes` table. Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`. Example: `SELECT miovision_api.create_yyyy_volumes_partition('volumes', 2023, 'datetime_bin')` |  
-
-### Deprecated Functions
-
-| Function | Comment |
-|---|---|
-| [`determine_working_machine(start_date date, end_date date)`](../sql/function/function-determine_working_machine.sql) | Function no longer in use. Previously used in `check_miovision` DAG to determine if any cameras had gaps larger than 4 hours. See: `miovision_check` DAG `check_gaps` task for new implementation.  |
-| `missing_dates(_date date)` | Function no longer in use. Previously used to log dates with missing data to `miovision_api.missing_dates`. |  
+To perform the data processing, the API script calls several Postgres functions in the `miovision_api` schema. More information about these functions and the database tables can be found in the [sql readme](../sql/README.md). 
 
 ## Invalid Movements
 
@@ -301,13 +241,21 @@ flowchart TB
     pull_data-->Q
   ```
 
-## Airflow
+## Repulling data
+
+The Miovision ETL DAG `miovision_pull` and the command line `run_api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
+
+Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
+
+# Airflow DAGs
+
+This section describes the Airflow DAGs which we use to pull, aggregate, and run data checks on Miovision data. Deprecated DAGs are described in the Archive [here](../Archive.md#11-deprecated-airflow-dags).
 
 <!-- miovision_pull_doc_md -->
-### **`miovision_pull`**  
+## **`miovision_pull`**  
 This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a specific intersections via a list of integer intersection_uids.  
 
-#### `check_partitions` TaskGroup  
+### `check_partitions` TaskGroup  
   - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`. 
   - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`. 
   - `create_annual_partitions` contains any partition creates necessary for a new year.
@@ -315,7 +263,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
 
-#### `miovision_agg` TaskGroup
+### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  
 - `find_gaps_task` clears and then populates `miovision_api.unacceptable_gaps` using `intersection_tmc.find_gaps` function. 
 - `aggregate_15_min_mvt_task` clears and then populates `miovision_api.volumes_15min_mvt` using `intersection_tmc.aggregate_15_min_mvt` function. 
@@ -325,37 +273,22 @@ This task group completes various Miovision aggregations.
 
 `done` signals that downstream `miovision_check` DAG can run.
 
-#### `data_checks` TaskGroup
+### `data_checks` TaskGroup
 This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param. 
  tasks perform checks on the aggregated data from the current data interval.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
-- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
+- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.  
 <!-- miovision_pull_doc_md -->
 
 <!-- miovision_check_doc_md -->
-### **`miovision_check`**
+## **`miovision_check`**
 
 This DAG replaces the old `check_miovision`. It is used to run daily data quality checks on Miovision data that would generally not require the pipeline to be re-run. 
 
 - `starting_point` waits for upstream `miovision_pull` DAG `done` task to run indicating aggregation of new data is completed.  
 - `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today. Uses [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
-- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.
+- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.  
 <!-- miovision_check_doc_md -->
-
-## Airflow - Deprecated
-
-<!-- pull_miovision_doc_md -->
-### **`pull_miovision`**  
-This deprecated Miovisiong DAG (replaced by [`miovision_pull`](#miovision_pull)) uses a single BashOperator to run the entire data pull and aggregation in one task.  
-The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run_api --pull --agg --path /data/airflow/.../config.cfg'`. 
-<!-- pull_miovision_doc_md -->
-
-<!-- check_miovision_doc_md -->
-### **`check_miovision`**
-
-The `check_miovision` DAG is deprecated by the addition of the [`data_checks` TaskGroup](#data_checks-taskgroup) to the main `miovision_pull` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
-This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
-<!-- check_miovision_doc_md -->
 
 ## Notes
 
@@ -364,3 +297,4 @@ This DAG previously was used to check if any Miovision camera had a gap of at le
 - In order to incorporate Miovision data into the volume model, miovision data prior to July 2019 was inserted as well. May 1st - June 30th, 2019 data was inserted into the schema on Dec 12th, 2019 whereas that of Jan 1st - Apr 30th, 2019 was inserted on Dec 13th, 2019. Therefore, **the `volume_uid` in the table might not be in the right sequence** based on the `datetime_bin`.
 
 - There are 8 Miovision cameras that got decommissioned on 2020-06-15 and the new ones are installed separately between 2020-06-22 and 2020-06-24. Note that all new intersections data were pulled on 2020-08-05 and the new gap-filling process has been applied to them. The old intersections 15min_tmc and 15min data was deleted and re-aggregated with the new gap-filling process on 2020-08-06.
+
