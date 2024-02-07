@@ -453,6 +453,7 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 | [`api_log(start_date date, end_date date, intersections integer[])`](function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
 | [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
 | [`find_gaps(start_date date, end_date date)`](function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
+| [`identify_zero_counts(start_date date)`](function/function-identify-zero-counts.sql) | Identifies intersection / classification (only classification_uids 1,2,6,10) combos with zero volumes for the start_date called. Inserts or updates anomaly into anomalous_range table unless an existing, overlapping, manual entery exists. | 
 
 ## Clear Functions  
 
@@ -495,7 +496,7 @@ The following process is used to determine camera wide data outages and then fin
 
 1. Within `find_gaps` function, the `gapsize_lookup_insert` function is run to populate the table `gapsize_lookup` with acceptable gap sizes based on avg hourly volumes from a 60 day rolling lookback. 
   - The set of acceptable `gap_tolerance` implemented is based on an investigation stated in this [notebook](../dev_notebooks/volume_vs_gaps.ipynb). 
-2. Then, the function [`miovision_api.find_gaps`](function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these will instead be included in `anomalous_ranges` table with PR [#777](https://github.com/CityofToronto/bdit_data-sources/pull/777). 
+2. Then, the function [`miovision_api.find_gaps`](function-find_gaps.sql) identifies all gaps of data in the table `miovision_api.volumes` and check if they are within the acceptable range of gap sizes or not based on the information from the `gapsize_lookup` table above. Sensors with no data are not identified - these are instead included in `anomalous_ranges` via [`identify_zero_counts` function](function/function-identify-zero-counts.sql).  
 3. Unacceptable gaps are cross joined to 15 minute bins and inserted into the table [`miovision_api.unacceptable_gaps`](#unacceptable_gaps). 
 4. Based on the `unacceptable_gaps` table, [`aggregate_15min_mvt`](#volumes_15min_mvt) function will not aggregate 1min bins found within within 15 minute periods matching unacceptable_gaps' `datetime_bin`.
 

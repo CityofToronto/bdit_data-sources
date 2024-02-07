@@ -27,7 +27,7 @@
 <!-- /TOC -->
 
 # Overview
-This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/README.md#postgresql-functions) to pull and aggregate data.  
+This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/README.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
 
 # API
 
@@ -101,19 +101,16 @@ There are other errors relating to inserting/processing the data on PostgreSQL a
 
 ## Input Files
 
-`config.cfg` is required to access the API, the database, and perform email notification. It has the following format:
+`config.cfg` is required to access the API and the database. It has the following format:
 
 ```ini
 [API]
-key=your api key
+key={api key}
 [DBSETTINGS]
-host=10.160.12.47
+host={host ip}
 dbname=bigdata
-user=database username
-password=database password
-[EMAIL]
-from=from@email.com
-to=to@email.com
+user={username}
+password={password}
 ```
 
 ## How to run the api
@@ -138,7 +135,7 @@ In command prompt, navigate to the folder where the python file is [located](../
 - multiple days
 - multiple, specific intersections
 
-The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
+The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/Readme.md#update-miovision_apiintersection_movements).  
 
 ## Classifications
 
@@ -187,24 +184,24 @@ flowchart TB
     B[" `pull_data` called via\n`miovision_pull` Airflow DAG\n`pull_data` task"]
     A & B-->pull_data
 
-    subgraph pull_data["`**pull_data**`" ]
+    subgraph pull_data["`pull_data`" ]
         direction TB
 
-        subgraph get_intersection_info["`**get_intersection_info**`" ]
+        subgraph get_intersection_info["`get_intersection_info`" ]
             direction LR
             D{Are specific\nintersections\n specified?}
             E[Grabs entire list of intersections\nfrom database]
             F["Grabs specified intersection(s)\nfrom database"]
-            D-->|Yes|E
-            D-->|No|F
+            D-->|Yes|F
+            D-->|No|E            
         end
 
-        exit[Exit if specified intersections inactive]
-        G["Pulls crosswalk data (table_ped) and\nvehichle/cyclist data (table_veh)"]
+        exit[Exit if specified intersections are inactive]
+        G["Pulls crosswalk data (table_ped) and\nvehicle/cyclist data (table_veh)"]
         H[Reformats data and appends\nit to temp tables]
         J[Checks if EDT -> EST occured\nand if so discards 2nd 1-2AM\nto prevent duplicates]
 
-        subgraph insert_data["`**insert_data**`"]
+        subgraph insert_data["`insert_data`"]
             direction LR
             insert[Inserts data into `volumes` table]
             api_log[Updates `api_log`]
@@ -223,7 +220,7 @@ flowchart TB
         P-->|No|Iterate
         Iterate-->G
 
-        subgraph process_data["`**process_data**`"]
+        subgraph process_data["`process_data`"]
             direction LR
             gaps["find_gaps\n(unacceptable_gaps)"]-->
             mvt["aggregate_15_min_mvt\n(volumes_15min_mvt)"]-->
@@ -256,10 +253,10 @@ This section describes the Airflow DAGs which we use to pull, aggregate, and run
 This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a specific intersections via a list of integer intersection_uids.  
 
 ### `check_partitions` TaskGroup  
-  - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`. 
-  - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`. 
-  - `create_annual_partitions` contains any partition creates necessary for a new year.
-  - `create_month_partition` contains any partition creates necessary for a new month.
+  - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`.  
+  - `create_annual_partitions` contains any partition creates necessary for a new year.  
+  - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`.  
+  - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
 
@@ -268,14 +265,14 @@ This task group completes various Miovision aggregations.
 - `find_gaps_task` clears and then populates `miovision_api.unacceptable_gaps` using `intersection_tmc.find_gaps` function. 
 - `aggregate_15_min_mvt_task` clears and then populates `miovision_api.volumes_15min_mvt` using `intersection_tmc.aggregate_15_min_mvt` function. 
 - `aggregate_15_min_task` clears and then populates `miovision_api.volumes_15min` using `intersection_tmc.aggregate_15_min` function. 
+- `zero_volume_anomalous_ranges_task` identifies intersection / classification combos with zero volumes and adds/updates `miovision_api.anomalous_ranges` accordingly.
 - `aggregate_volumes_daily_task` clears and then populates `miovision_api.volumes_daily` using `intersection_tmc.aggregate_volumes_daily` function.
 - `get_report_dates_task` clears and then populates `miovision_api.report_dates` using `intersection_tmc.get_report_dates` function.
 
 `done` signals that downstream `miovision_check` DAG can run.
 
 ### `data_checks` TaskGroup
-This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param. 
- tasks perform checks on the aggregated data from the current data interval.  
+This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
 - `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.  
 <!-- miovision_pull_doc_md -->
