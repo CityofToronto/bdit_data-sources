@@ -44,16 +44,15 @@ WITH temp AS (
         v.classification_uid,
         v.leg,
         v.movement_uid,
-        SUM(volume)    
-    --To get 1min bins
+        SUM(volume)
     FROM miovision_api.volumes AS v
-    --only common movements
-    JOIN miovision_api.intersection_movements USING (intersection_uid, classification_uid, leg, movement_uid)
+    --only aggregate common movements
+    JOIN miovision_api.intersection_movements USING (
+        intersection_uid, classification_uid, leg, movement_uid
+    )
     WHERE
         v.datetime_bin >= start_date
         AND v.datetime_bin < end_date
-        --exclude movements already aggregated
-        AND v.volume_15min_mvt_uid IS NULL
         AND v.intersection_uid = ANY(target_intersections)
     GROUP BY
         v.intersection_uid,
@@ -67,22 +66,26 @@ aggregate_insert AS (
     INSERT INTO miovision_api.volumes_15min_mvt(
         intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume
     )
-    SELECT DISTINCT ON (v.intersection_uid, v.datetime_bin, v.classification_uid, v.leg, v.movement_uid)
-    v.intersection_uid,
-    v.datetime_bin,
-    v.classification_uid,
-    v.leg,
-    v.movement_uid,
-    CASE
-        --set unacceptable gaps as nulls
-        WHEN un.datetime_bin IS NOT NULL THEN NULL
-        --gap fill with zeros (restricted to certain modes in temp CTE)
-        ELSE v.volume
-    END AS volume
+    SELECT DISTINCT ON (
+        v.intersection_uid, v.datetime_bin, v.classification_uid, v.leg, v.movement_uid
+    )
+        v.intersection_uid,
+        v.datetime_bin,
+        v.classification_uid,
+        v.leg,
+        v.movement_uid,
+        CASE
+            --set unacceptable gaps as nulls
+            WHEN un.datetime_bin IS NOT NULL THEN NULL
+            --gap fill with zeros (restricted to certain modes in temp CTE)
+            ELSE v.volume
+        END AS volume
     FROM temp AS v
     JOIN miovision_api.intersections AS i USING (intersection_uid)
     --set unacceptable gaps as null
-    LEFT JOIN miovision_api.unacceptable_gaps AS un USING (intersection_uid, datetime_bin)
+    LEFT JOIN miovision_api.unacceptable_gaps AS un USING (
+        intersection_uid, datetime_bin
+    )
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
