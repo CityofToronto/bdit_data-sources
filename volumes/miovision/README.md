@@ -13,6 +13,7 @@
     - [Aggregated Data](#aggregated-data)
       - [`volumes_15min_mvt`](#volumes_15min_mvt)
       - [`volumes_15min`](#volumes_15min)
+      - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
       - [`unacceptable_gaps`](#unacceptable_gaps)
       - [`gapsize_lookup`](#gapsize_lookup)
   - [`volumes`](#volumes)
@@ -224,6 +225,24 @@ volume|integer|Total 15-minute volume|107|
 
 A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
 
+##### `miovision_api.volumes_daily`
+
+Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
+
+| Field Name               | Comments                                                                   | Data Type   | Exmple     |
+|:-------------------------|:---------------------------------------------------------------------------|:------------|:-----------|
+| dt                       |                                                                            | date        | 2023-09-05 |
+| intersection_uid         |                                                                            | integer     | 1          |
+| classification_uid       |                                                                            | integer     | 1          |
+| daily_volume             |                                                                            | integer     | 13830      |
+| isodow                   | Use `WHERE isodow <= 5 AND holiday is False` for non-holiday weekdays.     | smallint    | 2          |
+| holiday                  |                                                                            | boolean     | False      |
+| datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
+| unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable                    | smallint    | 0          |
+|                          | based on avg intersection volume in that hour.                             |             |            |
+| avg_historical_gap_vol   | Avg historical volume for that classification and gap duration             | integer     |            |
+|                          | based on averages from a 60 day lookback in that hour.                     |             |            |
+
 
 ##### `unacceptable_gaps`
 
@@ -410,7 +429,8 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 | uid    | simple incrementing primary key |
 | intersection_uid | the intersection; `NULL` if applies to all intersections, e.g. an algorithm change |
 | classification_uid | the classification; `NULL` if applies to all classifications e.g. a badly misaligned camera |
-| time_range | the `tsrange` in question; may be open-ended. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range slightly _past_ the problem area. |
+| range_start | the beginning of the anomalous range in question; may be open-ended (NULL). Inclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_start slightly _before_ the problem area. |
+| range_end | the end of the anomalous range in question; may be open-ended (NULL). Exclusive. The precision here is to the second, so if you're unsure about alignment with time bins, it may be best to be conservative with this and extend the range_end slightly _past_ the problem area. |
 | notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
 | investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
 | problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
@@ -434,12 +454,16 @@ WHERE
         FROM miovision_api.anomalous_ranges
         WHERE
             anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
-            AND anomalous_ranges.time_range @> volumes.datetime_bin
             AND (
+                volumes.datetime_bin >= anomalous_ranges.range_start
+                OR anomalous_ranges.range_start IS NULL
+            ) AND (
+                volumes.datetime_bin < anomalous_ranges.range_end
+                OR anomalous_ranges.range_end IS NULL
+            ) AND (
                 anomalous_ranges.intersection_uid = volumes.intersection_uid
                 OR anomalous_ranges.intersection_uid IS NULL
-            )
-            AND (
+            ) AND (
                 anomalous_ranges.classification_uid = volumes.classification_uid
                 OR anomalous_ranges.classification_uid IS NULL
             )
