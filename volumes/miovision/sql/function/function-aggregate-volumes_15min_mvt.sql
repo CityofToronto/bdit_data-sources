@@ -86,7 +86,7 @@ aggregate_insert AS (
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
-        v.datetime_bin > i.date_installed + interval '1 day'
+        v.datetime_bin >= i.date_installed + interval '1 day'
         AND (
             i.date_decommissioned IS NULL
             OR (v.datetime_bin < i.date_decommissioned - interval '1 day')
