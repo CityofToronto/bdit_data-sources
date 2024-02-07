@@ -76,9 +76,10 @@ def cli():
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
 @click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
-@click.option('--pull' , is_flag=True, help='Data processing and gap finding will be skipped')
+@click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
+@click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
 
-def run_api(start_date, end_date, path, intersection, pull):
+def run_api(start_date, end_date, path, intersection, pull, agg):
 
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
@@ -91,14 +92,23 @@ def run_api(start_date, end_date, path, intersection, pull):
 
     start_time = dateutil.parser.parse(str(start_date))
     end_time = dateutil.parser.parse(str(end_date))
-    logger.info('Pulling from %s to %s' %(start_time, end_time))
 
-    try:
-        pull_data(conn, start_time, end_time, intersection, pull, key)
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        sys.exit(1)
+    if pull:
+        try:
+            logger.info('Pulling from %s to %s' %(start_time, end_time))
+            pull_data(conn, start_time, end_time, intersection, key)
+        except Exception as e:
+            logger.critical(traceback.format_exc())
+            sys.exit(1)
+    else:
+        logger.info('Skipping pulling volume data.')
 
+    if agg:
+        logger.info('Aggregating data from %s to %s' %(start_time, end_time))
+        intersections = get_intersection_info(conn, intersection)
+        process_data(conn, start_time, end_time, intersections=intersections)
+    else:
+        logger.info('Skipping aggregating and processing volume data')
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
@@ -311,10 +321,11 @@ def process_data(conn, start_time, end_iteration_time, intersections):
     time_period = (start_time, end_iteration_time)
     find_gaps(conn, time_period)
     aggregate_15_min_mvt(conn, time_period, intersections)
+    agg_zero_volume_anomalous_ranges(conn, time_period)
     aggregate_15_min(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period)
     get_report_dates(conn, time_period, intersections)
- 
+
 def find_gaps(conn, time_period):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
     into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
@@ -429,6 +440,22 @@ def get_report_dates(conn, time_period, intersections = None):
                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
                 cur.execute(report_dates, query_params)
                 logger.info('report_dates done')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
+    
+def agg_zero_volume_anomalous_ranges(conn, time_period):
+    """Aggregate into miovision_api.anomalous_ranges.
+    Data is cleared from volumes_daily prior to insert.
+    """
+    try:
+        with conn.cursor() as cur:
+            #this function includes a delete query preceeding the insert.
+            anomalous_range_sql="""SELECT *
+                FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+                LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
+            cur.execute(anomalous_range_sql, time_period)
+            logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -550,10 +577,8 @@ def check_dst(start_time, end_time):
         return True
     return False
 
-def pull_data(conn, start_time, end_time, intersection, pull, key):
+def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
-    
-    Optionally aggregates raw data into downstream aggregate tables if pull=True. 
     """
     time_delta = datetime.timedelta(hours=6)
 
@@ -648,12 +673,7 @@ def pull_data(conn, start_time, end_time, intersection, pull, key):
             logger.exception(exc)
             sys.exit(1)
 
-    if pull:
-        logger.info('Skipping aggregating and processing volume data')
-    else:
-        process_data(conn, start_time, end_time, user_def_intersection, intersections)
-
-    logger.info('Done')
+    logger.info('Done pulling data.')
 
 if __name__ == '__main__':
     cli()
