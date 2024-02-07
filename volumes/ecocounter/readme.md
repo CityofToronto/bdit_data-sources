@@ -46,7 +46,8 @@ From an email from Pierre, of Ecocounter:
 
 ## Discontinuities
 
-Sometime around January of 2024, we did a comparison between Ecocounter counts and bike counts using video from our short-term counting vendor. The results indicated that several ecocounter sites were seriously undercounting. We forwarded these results to Ecocounter and they were able to increase the sensitivity of those sites in an effort to miss fewer cyclists. As a result of the change in sensitivity though, we now have a discontinuity in the data where counts before and afeter a certain point in time are basically not directly comparable. 
+In January of 2024, it was determined that several sites were undercounting relative to other counting methods. To address this, the sensitivity of these sites was increased. 
+As a result of the change however, we now expect to have some degree of discontinuity in the data where counts before and after a certain point in time may not be directly comparable. 
 
 While we're still working through how best to handle this, we have recorded the times and sites that were effected in a new table, `ecocounter.discontinuities`.
 
