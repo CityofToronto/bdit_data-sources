@@ -15,7 +15,7 @@ AS $BODY$
     WHERE
         dt >= start_date
         AND dt < end_date
-        AND intersection_uid = ANY(intersections);
+        AND intersection_uid = ANY(gapsize_lookup_insert.intersections);
 
     WITH study_dates AS (
         SELECT
@@ -45,7 +45,7 @@ AS $BODY$
         WHERE
             v.datetime_bin >= start_date - interval '60 days'
             AND v.datetime_bin < end_date
-            AND v.intersection_uid = ANY(intersections)
+            AND v.intersection_uid = ANY(gapsize_lookup_insert.intersections)
         GROUP BY
             dates.dt,
             v.intersection_uid,
@@ -72,7 +72,7 @@ AS $BODY$
             UNION SELECT NULL::integer --represents all classifications
         ) AS classifications
         CROSS JOIN generate_series(0, 23, 1) AS hours(hour_bin)
-        WHERE intersection_uid = ANY(intersections)
+        WHERE intersection_uid = ANY(gapsize_lookup_insert.intersections)
     ),
     
     lookback_avgs AS (
@@ -130,13 +130,13 @@ AS $BODY$
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.gapsize_lookup_insert
+ALTER FUNCTION miovision_api.gapsize_lookup_insert(timestamp, timestamp, integer [])
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.gapsize_lookup_insert
+GRANT EXECUTE ON FUNCTION miovision_api.gapsize_lookup_insert(timestamp, timestamp, integer [])
 TO miovision_api_bot;
 
-COMMENT ON FUNCTION miovision_api.gapsize_lookup_insert
+COMMENT ON FUNCTION miovision_api.gapsize_lookup_insert(timestamp, timestamp, integer [])
 IS 'Determine the average volumes for each hour/intersection/daytype/classification
 based on a 60 day lookback. Uses GROUPING SETS to identify both volume for individual
 classifications and total interseciton volumes (classification_uid IS NULL).

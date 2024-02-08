@@ -19,7 +19,7 @@ BEGIN
     
     WITH deleted AS (
         DELETE FROM miovision_api.volumes_daily_unfiltered
-        WHERE 
+        WHERE
             dt >= start_date
             AND dt < end_date
             AND intersection_uid = ANY(target_intersections)
@@ -107,13 +107,15 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily
+COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
 IS 'Function for inserting daily volumes into miovision_api.volumes_daily_unfiltered.
 Contains an optional intersection parameter.';
 
-ALTER FUNCTION miovision_api.aggregate_volumes_daily OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
+OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
 TO miovision_api_bot;
 
-REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily FROM public;
+REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
+FROM public;

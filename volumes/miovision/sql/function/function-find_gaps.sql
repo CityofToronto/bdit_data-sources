@@ -178,8 +178,14 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.find_gaps
+COMMENT ON FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
 IS 'Function to identify gaps in miovision_api.volumes data and insert into
 miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
 lookback avg volumes and thresholds defined in miovision_api.gapsize_lookup.
 Contains optional intersection parameter.';
+
+ALTER FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
+TO miovision_api_bot;
