@@ -69,17 +69,18 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     LOGGER.info(f"Copying {table[0]} to {table[1]}.")
 
     con = PostgresHook(conn_id).get_conn()
+    # truncate the destination table
     truncate_query = sql.SQL(
         "TRUNCATE {}.{}"
         ).format(
             sql.Identifier(dst_schema), sql.Identifier(dst_table)
         )
-    insert_query = sql.SQL(
-        "INSERT INTO {}.{} SELECT * FROM {}.{}"
-        ).format(
-            sql.Identifier(dst_schema), sql.Identifier(dst_table),
-            sql.Identifier(src_schema), sql.Identifier(src_table)
+    # get the column names of the source table
+    source_columns_query = sql.SQL(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_schema = %s AND table_name = %s;"
         )
+    # copy the table's comment
     comment_query = sql.SQL(
         r"""
             DO $$
@@ -94,8 +95,22 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             sql.Identifier(dst_schema), sql.Identifier(dst_table),
         )
     with con, con.cursor() as cur:
+        # truncate the destination table
         cur.execute(truncate_query)
+        # get the column names of the source table
+        cur.execute(source_columns_query, [src_schema, src_table])
+        src_columns = [r[0] for r in cur.fetchall()]
+        # copy all the data
+        insert_query = sql.SQL(
+            "INSERT INTO {}.{} ({}) SELECT {} FROM {}.{}"
+            ).format(
+                sql.Identifier(dst_schema), sql.Identifier(dst_table),
+                sql.SQL(', ').join(map(sql.Identifier, src_columns)),
+                sql.SQL(', ').join(map(sql.Identifier, src_columns)),
+                sql.Identifier(src_schema), sql.Identifier(src_table)
+            )
         cur.execute(insert_query)
+        # copy the table's comment
         cur.execute(comment_query)
     
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
