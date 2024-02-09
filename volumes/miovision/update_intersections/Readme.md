@@ -32,7 +32,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 
 ## Update `miovision_api.intersections`:
 
-Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
     The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
@@ -44,7 +44,7 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
     `date_decommissioned` is described under (#removing-intersections). 
 		
 4. **px**  
-    `px` can be found by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
+    `px` is a uid used to identify signalized intersections. For 1 or 2 `px` is is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
 
 	**Alternate method** - For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
 	```sql
@@ -65,11 +65,11 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 
 	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="600"/>
 		
-4. **Restricted legs**  
+5. **Restricted legs**  
     In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
 
 6. **Insert statement**  
-    Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same, which may be helpful for adding a large number of intersections or if you want to insert with the help of the miovision_bot due to permissions issues. 
+    Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same via a spreadsheet, which may be helpful for adding a large number of intersections. 
 
 	```sql
 	INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
@@ -252,13 +252,13 @@ We need to find out all valid movements for the new intersections from the data 
         leg
     ```
 
-5. **Update geojson**
+5. **Update geojson**  
 	Update the [geojson intersections file](../geojson/mio_intersections.geojson) by exporting to file from QGIS with `GeoJSON` format. This geojson file is helpful as a publically accessible record of our Miovision intersections.   
 ![export to file from QGIS](geojson_export.png)
 
 ## Update `miovision_api.centreline_miovision`
 
-[`miovision_api.centreline_miovision`](../README.md) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
+[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
 
 This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
 - Segments are not aligned in a North-South or East-West direction (like Kingston Road)

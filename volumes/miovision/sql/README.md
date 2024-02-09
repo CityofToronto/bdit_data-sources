@@ -1,6 +1,6 @@
 <!-- /TOC -->
 - [1. Overview](#1-overview)
-- [2. Table Structure](#2-table-structure)
+- [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
   - [Key Tables](#key-tables)
     - [`intersections`](#intersections)
@@ -43,7 +43,7 @@
 
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
 
-# 2. Table Structure
+# 2. `miovision_api` Table Structure
 
 ## Miovision Data Relationships at a Glance
 
@@ -51,13 +51,17 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 ## Key Tables 
 
-- [`intersections`](#intersections)
-- [`classifications`](#classifications)
-- [`movements`](#movements)
-- [Aggregated Data](#aggregated-data)
-  - [`volumes_15min_mvt`](#volumes_15min_mvt): TMC-style 15-minute aggregated data
-  - [`volumes_15min`](#volumes_15min): ATR-style 15-minute aggregated data
-  - [`unacceptable_gaps`](#unacceptable_gaps)
+  - [Key Tables](#key-tables)
+    - [`intersections`](#intersections)
+    - [`classifications`](#classifications)
+    - [`movements`](#movements)
+    - [`volumes`](#volumes)
+  - [Aggregated Data](#aggregated-data)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`volumes_15min`](#volumes_15min)
+    - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
+    - [`unacceptable_gaps`](#unacceptable_gaps)
+    - [`gapsize_lookup`](#gapsize_lookup)
 
 ### `intersections`
 
@@ -234,10 +238,6 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
 ### `volumes_15min`
 
 Data table storing ATR versions of the 15-minute turning movement data. Data in
@@ -261,11 +261,6 @@ classification_uid|text|Identifier linking to specific mode class stored in `cla
 leg|text|Segment leg of intersection|E|
 dir|text|Direction of traffic on specific leg|EB|
 volume|integer|Total 15-minute volume|107|
-
-**NOTE:** data processing for each day happens from 23:00 the previous day to 22:59 current day. \
-(23:00 datetime_bin contains 1-min bin >= 23:00 and < 23:15 whereas \
-22:45 datetime_bin contains 1-min bin >= 22:45 and < 23:00)
-
 
 [`miovision_api.movement_map`](#movement_map) is used to convert the TMC data to the ATR data. 
 
@@ -399,7 +394,7 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](table/create-mv-mio_cent.sql) when intersections are added.
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](table/create-mv-mio_cent.sql) when intersections are added. **The process of updating this table is in need of an update, including updating references from `gis` to `gis_core`**
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
