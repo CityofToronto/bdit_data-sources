@@ -4,7 +4,8 @@
 
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
     start_date timestamp,
-    end_date timestamp
+    end_date timestamp,
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -13,18 +14,21 @@ COST 100
 VOLATILE
 AS $BODY$
 
-DECLARE tot_gaps integer;
+DECLARE
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
+    tot_gaps integer;
 
 BEGIN
     
-    --add to gapsize lookup table for this date.
-    PERFORM miovision_api.gapsize_lookup_insert(start_date, end_date);
+    --add to gapsize lookup table for this date/intersection.
+    PERFORM miovision_api.gapsize_lookup_insert(start_date, end_date, target_intersections);
     
     --clear table before inserting
     DELETE FROM miovision_api.unacceptable_gaps
     WHERE
         dt >= start_date::date
-        AND dt < end_date::date;
+        AND dt < end_date::date
+        AND intersection_uid = ANY(target_intersections);
     
     --find intersections active each day
     WITH daily_intersections AS (
@@ -41,6 +45,7 @@ BEGIN
                 v.datetime_bin < i.date_decommissioned
                 OR i.date_decommissioned IS NULL
             )
+            AND i.intersection_uid = ANY(target_intersections)
     ),
 
     --combine the artificial and actual datetime_bins. 
@@ -75,6 +80,7 @@ BEGIN
         WHERE
             datetime_bin >= start_date - interval '15 minutes'
             AND datetime_bin < end_date
+            AND intersection_uid = ANY(target_intersections)
     ),
 
     --looks at sequential bins to identify breaks larger than 1 minute.
@@ -172,7 +178,14 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.find_gaps
+COMMENT ON FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
 IS 'Function to identify gaps in miovision_api.volumes data and insert into
 miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
-lookback avg volumes and thresholds defined in miovision_api.gapsize_lookup.';
+lookback avg volumes and thresholds defined in miovision_api.gapsize_lookup.
+Contains optional intersection parameter.';
+
+ALTER FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.find_gaps(timestamp, timestamp, integer [])
+TO miovision_api_bot;
