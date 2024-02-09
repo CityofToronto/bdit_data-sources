@@ -152,7 +152,7 @@ For the King Street Transit Pilot, the volume datasets listed below were release
 <!-- pull_miovision_doc_md -->
 ### **`pull_miovision`**  
 This deprecated Miovisiong DAG (replaced by [`miovision_pull`](api/readme.md#miovision_pull) uses a single BashOperator to run the entire data pull and aggregation in one task.  
-The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run_api --pull --agg --path /data/airflow/.../config.cfg'`. 
+The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run-api --pull --agg --path /data/airflow/.../config.cfg'`. 
 <!-- pull_miovision_doc_md -->
 
 <!-- check_miovision_doc_md -->

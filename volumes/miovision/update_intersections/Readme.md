@@ -9,10 +9,10 @@ For the main Miovision readme, see [here](../README.md).
 - [Miovision Intersection Update Resources](#miovision-intersection-update-resources)
 - [Removing Intersections](#removing-intersections)
 - [Adding Intersections](#adding-intersections)
-	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
-	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
-	- [Update `miovision_api.centreline_miovision`](#update-miovision_apicentreline_miovision)
-	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
+    - [Update miovision_api.intersections:](#update-miovision_apiintersections)
+    - [Update miovision_api.intersection_movements](#update-miovision_apiintersection_movements)
+    - [Update miovision_api.centreline_miovision](#update-miovision_apicentreline_miovision)
+    - [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
 - [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
 - [Adding many intersections](#adding-many-intersections)
 
@@ -112,7 +112,7 @@ Now that the updated table of [`miovision_api.intersections`](../README.md#inter
 We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
 1. **Populate `miovision_api.volumes`**  
-    If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run_api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
+    If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
 	`--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
 
 2. **Insert into `intersection_movements`**  
