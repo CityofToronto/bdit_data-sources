@@ -2,6 +2,10 @@
 -- miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
 -- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
+--when run in 1 day increments (as in daily airflow), this function
+--will miss small gaps that overlap midnight, but that are deemed
+--OK when looking only at data before midnight.  
+
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
     start_date timestamp,
     end_date timestamp,
@@ -58,12 +62,12 @@ BEGIN
             bins.datetime_bin,
             interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
         FROM daily_intersections AS i
-        --add artificial data points at start and end of each day to find gaps overlapping start/end.
-        CROSS JOIN LATERAL (
-            VALUES
-                --catch gaps overlapping days
-                (i.dt - interval '15 minutes'),
-                (i.dt + interval '1 day')
+        --add artificial data points at start and end of each day to make
+        --gaps not overlap multiple days (exception: multi full-day outage). 
+        CROSS JOIN generate_series(
+                i.dt,
+                i.dt + interval '1 day',
+                interval '1 day'            
         ) AS bins(datetime_bin)
 
         --group by in next step takes care of duplicates
@@ -78,7 +82,7 @@ BEGIN
             interval '1 minute' AS gap_adjustment
         FROM miovision_api.volumes
         WHERE
-            datetime_bin >= start_date - interval '15 minutes'
+            datetime_bin >= start_date
             AND datetime_bin < end_date
             AND intersection_uid = ANY(target_intersections)
     ),
@@ -130,8 +134,7 @@ BEGIN
         FROM bin_times AS bt
         --match gaps to the 15 minute bins they intersect
         JOIN generate_series(
-                --catch gaps overlapping days
-                start_date - interval '15 minutes',
+                start_date,
                 end_date,
                 interval '15 minutes'
         ) AS bins(datetime_bin) ON
