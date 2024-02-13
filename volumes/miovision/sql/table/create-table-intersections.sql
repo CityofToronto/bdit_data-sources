@@ -15,9 +15,16 @@
     n_leg_restricted boolean,
     e_leg_restricted boolean,
     s_leg_restricted boolean,
-    w_leg_restricted boolean
+    w_leg_restricted boolean,
+    api_name text COLLATE pg_catalog."default"
 )
 WITH (
     OIDS = FALSE
 )
 TABLESPACE pg_default;
+
+COMMENT ON COLUMN miovision_api.intersections.intersection_name
+IS 'A short name for the intersection, following the convention [E / W street name] / [N / S street name].';
+
+COMMENT ON COLUMN miovision_api.intersections.api_name
+IS 'The intersection name used in the Miovision API, for communication with external parties.';
