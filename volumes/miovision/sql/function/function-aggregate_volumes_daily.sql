@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.aggregate_volumes_daily(
     start_date date,
-    end_date date
+    end_date date,
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -9,16 +10,19 @@ COST 100
 VOLATILE
 AS $BODY$
 
-DECLARE n_deleted int;
-DECLARE n_inserted int;
+DECLARE
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
+    n_deleted int;
+    n_inserted int;
 
 BEGIN
     
     WITH deleted AS (
         DELETE FROM miovision_api.volumes_daily_unfiltered
-        WHERE 
+        WHERE
             dt >= start_date
             AND dt < end_date
+            AND intersection_uid = ANY(target_intersections)
         RETURNING *
     )
     
@@ -45,6 +49,7 @@ BEGIN
         WHERE
             un.datetime_bin::date >= start_date
             AND un.datetime_bin::date < end_date
+            AND un.intersection_uid = ANY(target_intersections)
         GROUP BY
             un.intersection_uid,
             un.datetime_bin::date,
@@ -78,6 +83,7 @@ BEGIN
         WHERE
             v.datetime_bin >= start_date
             AND v.datetime_bin < end_date
+            AND v.intersection_uid = ANY(target_intersections)
         GROUP BY
             v.intersection_uid,
             v.classification_uid,
@@ -101,13 +107,15 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily(date, date)
-IS 'Function for inserting daily volumes into miovision_api.volumes_daily_unfiltered';
+COMMENT ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
+IS 'Function for inserting daily volumes into miovision_api.volumes_daily_unfiltered.
+Contains an optional intersection parameter.';
 
-ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date)
+ALTER FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date)
+GRANT EXECUTE ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
 TO miovision_api_bot;
 
-REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily(date, date) FROM public;
+REVOKE ALL ON FUNCTION miovision_api.aggregate_volumes_daily(date, date, integer [])
+FROM public;

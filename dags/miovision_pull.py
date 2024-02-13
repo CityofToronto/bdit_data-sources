@@ -116,11 +116,19 @@ def pull_miovision_dag():
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
         @task
-        def find_gaps_task(ds = None):
+        def find_gaps_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
             time_period = (ds, ds_add(ds, 1))
-            with mio_postgres.get_conn() as conn:
-                find_gaps(conn, time_period)
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    find_gaps(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    find_gaps(conn, time_period=time_period, intersections=intersections)
 
         @task
         def aggregate_15_min_mvt_task(ds = None, **context):
@@ -138,11 +146,19 @@ def pull_miovision_dag():
                     aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
 
         @task
-        def zero_volume_anomalous_ranges_task(ds = None):
-            mio_postgres = PostgresHook("miovision_api_bot")
-            time_period = (ds, ds_add(ds, 1))
-            with mio_postgres.get_conn() as conn:
-                agg_zero_volume_anomalous_ranges(conn, time_period)
+        def zero_volume_anomalous_ranges_task(ds = None, **context):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            time_period = (ds, ds_add(ds, 1))          
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    agg_zero_volume_anomalous_ranges(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])              
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    agg_zero_volume_anomalous_ranges(conn, time_period=time_period, intersections=intersections)
 
         @task
         def aggregate_15_min_task(ds = None, **context):
@@ -160,11 +176,19 @@ def pull_miovision_dag():
                     aggregate_15_min(conn, time_period=time_period, intersections=intersections)
 
         @task
-        def aggregate_volumes_daily_task(ds = None):
+        def aggregate_volumes_daily_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")  
-            time_period = (ds, ds_add(ds, 1))
-            with mio_postgres.get_conn() as conn:
-                aggregate_volumes_daily(conn, time_period)
+            time_period = (ds, ds_add(ds, 1))          
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    aggregate_volumes_daily(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])              
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    aggregate_volumes_daily(conn, time_period=time_period, intersections=intersections)
 
         @task
         def get_report_dates_task(ds = None, **context):
