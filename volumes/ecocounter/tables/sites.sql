@@ -3,6 +3,7 @@ CREATE TABLE ecocounter.sites (
     site_description text NOT NULL,
     geom geometry(POINT, 4326),
     facility_description text,
+    notes text,
     replaced_by_site_id numeric REFERENCES ecocounter.sites (site_id)
 );
 
