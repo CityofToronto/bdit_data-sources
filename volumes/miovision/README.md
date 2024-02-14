@@ -45,12 +45,12 @@ You can see the locations of Miovision cameras on [this map](geojson/mio_interse
 Internally to the Transportation Data & Analytics team, data is stored in the `bigdata` RDS. For data automatically collected since January 2019, see the `miovision_api` schema and related documentation [here](sql/README.md#2-table-structure). More limited data for the King Street Pilot from 2017 and 2018 can be found in the `miovision_csv` schema, which has a slightly different structure than the API data. 
 
 ## Limitations
-The data quality is evolving, so refer to the below general rule for dates at which different streams of the API (post 2019) data became reliable enough:
+The data quality for the automatically processed API data stream (not including the King St Pilot study data from pre-2019 which was processed independently) is evolving, but the below rules are general guidelines for when the data became reliable to use:
 - January 2019 for cars
 - June 2019 for pedestrians
-- September 2019 for bikes, however bikes validation/improvements are still ongoing in 2024 and quality continues to improve. 
+- Bike counts are still considered in development by Miovision in 2024 and should only used internally by D&A with extreme caution, or on analysis delivered by D&A. Any external sharing will be on a case by case basis depending on the purpose of the request.
 
-Internal users can see additional detail on limitations for individual intersections and classifications in the `miovision_api.anomalous_ranges`.
+Internal users can see additional detail on limitations for individual intersections and classifications in the `miovision_api.anomalous_ranges` table.
 
 ## Folder Structure
 
