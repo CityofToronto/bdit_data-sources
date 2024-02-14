@@ -107,7 +107,7 @@ SELECT
     dl.intersection_uid AS data_int,
     dl.leg AS data_leg
 FROM data_legs AS dl
-FULL JOIN miovision_api.centerline_miovision AS cm ON cm.intersection_uid = dl.intersection_uid AND cm.leg = dl.leg -- full join means I can see what's in each pile
+FULL JOIN miovision_api.centreline_miovision AS cm ON cm.intersection_uid = dl.intersection_uid AND cm.leg = dl.leg -- full join means I can see what's in each pile
 ORDER BY dl.intersection_uid;
 
 -- When you run this, it will look as though two intersections, in addition to the 9 listed below, have data but no corresponding centreline_id. They are:
