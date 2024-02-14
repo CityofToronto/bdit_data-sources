@@ -39,11 +39,11 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) IS
-'Create a new year partition under the parent table `base_table`.
-Only to be used for miovision_api `volumes` table. 
-Use parameter `datetime_col` to specify the partitioning timestamp column, ie. `datetime_bin`.
-Example: SELECT miovision_api.create_yyyy_volumes_partition(''volumes'', 2023, ''datetime_bin'')';
+COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text)
+IS '''Create a new year partition under the parent table `base_table`. Only to be used for
+miovision_api `volumes` table. Use parameter `datetime_col` to specify the partitioning 
+timestamp column, ie. `datetime_bin`.
+Example: `SELECT miovision_api.create_yyyy_volumes_partition(''volumes'', 2023, ''datetime_bin'')`''';
 
 ALTER FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_partition(text, integer, text) TO miovision_api_bot;

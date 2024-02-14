@@ -35,3 +35,8 @@ $BODY$;
 
 ALTER FUNCTION miovision_api.api_log(date, date, integer []) OWNER TO miovision_admins;
 GRANT EXECUTE ON FUNCTION miovision_api.api_log(date, date, integer []) TO miovision_api_bot;
+
+COMMENT ON FUNCTION miovision_api.api_log(date, date, integer [])
+IS '''Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table.
+Takes an optional intersection array parameter to aggregate only specific intersections.
+Use `clear_api_log()` to remove existing values before summarizing.''';

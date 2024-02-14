@@ -99,3 +99,10 @@ ALTER FUNCTION miovision_api.aggregate_15_min(date, date, integer []) OWNER TO m
 
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date, integer []) TO miovision_api_bot;
 GRANT EXECUTE ON FUNCTION miovision_api.aggregate_15_min(date, date, integer []) TO miovision_admins;
+
+COMMENT ON FUNCTION miovision_api.aggregate_15_min(date, date, integer [])
+IS '''Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into
+`miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates
+`miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column.
+Takes an optional intersection array parameter to aggregate only specific intersections. Use
+`clear_volumes_15min()` to remove existing values before summarizing.''';
