@@ -1,5 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.identify_zero_counts(
-    start_date date --run on multiple dates using a lateral query.
+    start_date date, --run on multiple dates using a lateral query.
+    intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
 LANGUAGE 'plpgsql'
@@ -9,6 +10,7 @@ VOLATILE
 AS $BODY$
 
 DECLARE
+    target_intersections integer [] = miovision_api.get_intersections_uids(intersections);
     n_inserted integer;
     n_updated integer;
 
@@ -24,6 +26,7 @@ BEGIN
         WHERE
             datetime_bin >= start_date
             AND datetime_bin < start_date + interval '1 day'
+            AND intersection_uid = ANY(target_intersections)
         GROUP BY intersection_uid
         HAVING COALESCE(SUM(volume), 0) = 0
     ),
@@ -48,6 +51,7 @@ BEGIN
             --this script will only catch zeros for classification_uid 1,2,6,10
             --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
             AND v15.classification_uid IN (1,2,6,10)
+            AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
             v15.classification_uid,
             v15.intersection_uid
@@ -145,13 +149,13 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.identify_zero_counts(date)
+ALTER FUNCTION miovision_api.identify_zero_counts(date, integer [])
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date)
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 TO miovision_api_bot;
 
-GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date)
+GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 TO miovision_admins;
 
 COMMENT ON FUNCTION miovision_api.identify_zero_counts(date)
