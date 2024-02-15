@@ -10,13 +10,14 @@ CREATE VIEW miovision_api.volumes_daily AS (
         v.unacceptable_gap_minutes,
         v.avg_historical_gap_vol,
         array_agg(ar.notes ORDER BY ar.range_start, ar.uid)
-            AS anomalous_range_caveats,
-        array_agg(ar.uid::text ORDER BY ar.range_start, ar.uid)
-            AS anomalous_range_uid
+        AS anomalous_range_caveats,
+        array_agg(ar.uid ORDER BY ar.range_start, ar.uid)
+        AS anomalous_range_uid
     FROM miovision_api.volumes_daily_unfiltered AS v
     --left join anomalous_ranges to get notes
     --exclude ['do-not-use', 'questionable'] in HAVING
-    LEFT JOIN miovision_api.anomalous_ranges AS ar ON
+    LEFT JOIN miovision_api.anomalous_ranges AS ar
+    ON
         (
             ar.intersection_uid = v.intersection_uid
             OR ar.intersection_uid IS NULL
@@ -39,7 +40,7 @@ CREATE VIEW miovision_api.volumes_daily AS (
         v.datetime_bins_missing,
         v.unacceptable_gap_minutes,
         v.avg_historical_gap_vol
-    HAVING NOT(array_agg(ar.problem_level) && ARRAY['do-not-use', 'questionable'])
+    HAVING NOT (array_agg(ar.problem_level) && ARRAY['do-not-use', 'questionable'])
     ORDER BY
         v.dt,
         v.intersection_uid,
