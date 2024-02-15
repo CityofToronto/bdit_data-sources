@@ -322,7 +322,7 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 The discontinuity table contains `Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable`.
 
 | column_name | Comments | data_type | sample |
-| ------ | ----------- |
+| ------ | ----------- | -- |  -- |
 | uid    | simple incrementing primary key | serial | 1 |
 | intersection_uid | Reference to intersections table. A null intersection_uid refers to all intersections. | integer
 | classification_uid | Reference to classifications table. A null classification_uid refers to all classifications. | integer
