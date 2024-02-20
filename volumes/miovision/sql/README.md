@@ -14,7 +14,7 @@
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
   - [Reference Tables](#reference-tables)
-    - [`miovision_api.discontinuities`](#miovision_apidiscontinuities)
+    - [`miovision_api.breaks`](#miovision_apibreaks)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
     - [`movement_map`](#movement_map)
@@ -318,15 +318,15 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 
 ## Reference Tables
 
-### `miovision_api.discontinuities`
-The discontinuity table contains `Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable`.
+### `miovision_api.breaks`
+The breaks table contains `Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable`.
 
 | column_name | Comments | data_type | sample |
 | ------ | ----------- | -- |  -- |
 | uid    | simple incrementing primary key | serial | 1 |
 | intersection_uid | Reference to intersections table. A null intersection_uid refers to all intersections. | integer
 | classification_uid | Reference to classifications table. A null classification_uid refers to all classifications. | integer
-| break | Moment the change takes place | timestamp
+| break_time | Moment the change takes place | timestamp
 | give_or_take | approximate bounds if the precise time is not known | interval
 | notes | required description of what changed - be verbose! | text
 
