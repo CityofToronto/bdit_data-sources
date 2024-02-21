@@ -31,11 +31,14 @@ LEFT JOIN miovision_api.volumes AS v ON
         OR ar.classification_uid IS NULL
     )
 WHERE
+    ar.problem_level <> 'valid-caveat'
     --currently active
-    range_end IS NULL
-    OR (
-        notes LIKE '%identified by a daily airflow process%'
-        AND range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
+    AND (
+        ar.range_end IS NULL
+        OR (
+            ar.notes LIKE '%identified by a daily airflow process%'
+            AND ar.range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
+        )
     )
 GROUP BY
     ar.uid,
