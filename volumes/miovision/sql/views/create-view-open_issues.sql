@@ -1,5 +1,5 @@
 --DROP VIEW miovision_api.open_issues;
-CREATE OR REPLACE VIEW miovision_api.open_issues AS 
+CREATE OR REPLACE VIEW miovision_api.open_issues AS
 
 SELECT
     ar.uid,
@@ -23,7 +23,8 @@ LEFT JOIN miovision_api.classifications AS c USING (classification_uid)
 --omit null intersection_uids. These will go under discontinuities. 
 JOIN miovision_api.intersections AS i USING (intersection_uid)
 --find last week volume
-LEFT JOIN miovision_api.volumes AS v ON
+LEFT JOIN miovision_api.volumes AS v
+ON
     ar.intersection_uid = v.intersection_uid
     AND v.datetime_bin >= current_date - interval '7 days'
     AND (
@@ -50,9 +51,9 @@ GROUP BY
     ar.range_start,
     ar.notes
 ORDER BY
-    intersection_uid,
-    range_start,
-    classification_uid;
+    ar.intersection_uid,
+    ar.range_start,
+    ar.classification_uid;
 
 COMMENT ON VIEW miovision_api.open_issues
 IS '''A view to export open ended anomalous_ranges for communication with Miovision.
