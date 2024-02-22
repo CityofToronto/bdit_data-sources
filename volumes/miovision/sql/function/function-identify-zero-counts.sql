@@ -16,7 +16,7 @@ DECLARE
 
 BEGIN
 
-    --identify intersections with zero volume regardless of mode
+    --intersections with zero volume
     WITH zero_intersections AS (
         SELECT
             intersection_uid,
@@ -26,48 +26,102 @@ BEGIN
         WHERE
             datetime_bin >= start_date
             AND datetime_bin < start_date + interval '1 day'
-            AND intersection_uid = ANY(target_intersections)
+            --AND intersection_uid = ANY(target_intersections)
         GROUP BY intersection_uid
         HAVING COALESCE(SUM(volume), 0) = 0
     ),
-    
-    new_gaps AS (
-        --identify intersections with zero volume for specific modes
+
+    --intersections with zero volume for specific classifications
+    zero_intersection_classification AS (
         SELECT
             v15.intersection_uid,
             v15.classification_uid,
             MIN(v15.datetime_bin) AS range_start,
             MAX(v15.datetime_bin) + interval '15 minutes' AS range_end
         FROM miovision_api.volumes_15min_mvt AS v15
-        --anti join intersections with periods of zero volume for all modes
-        LEFT JOIN zero_intersections AS zi ON 
-            zi.intersection_uid = v15.intersection_uid
-            AND v15.datetime_bin >= zi.range_start
-            AND v15.datetime_bin < zi.range_end
         WHERE
-            zi.intersection_uid IS NULL
-            AND v15.datetime_bin >= start_date
+            v15.datetime_bin >= start_date
             AND v15.datetime_bin < start_date + interval '1 day'
             --this script will only catch zeros for classification_uid 1,2,6,10
             --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
             AND v15.classification_uid IN (1,2,6,10)
-            AND v15.intersection_uid = ANY(target_intersections)
+            --AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
             v15.classification_uid,
             v15.intersection_uid
         HAVING COALESCE(SUM(volume), 0) = 0
+    ),
 
-        --union with intersections with zero volume regardless of mode
-        UNION
-
+    --intersections with zero volume for specific classifications and legs
+    zero_intersection_classification_leg AS (
+        SELECT
+            v15.intersection_uid,
+            v15.classification_uid,
+            v15.leg,
+            MIN(v15.datetime_bin) AS range_start,
+            MAX(v15.datetime_bin) + interval '15 minutes' AS range_end
+        FROM miovision_api.volumes_15min_mvt AS v15
+        WHERE
+            v15.datetime_bin >= start_date
+            AND v15.datetime_bin < start_date + interval '1 day'
+            --this script will only catch zeros for classification_uid 1,2,6,10
+            --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
+            AND v15.classification_uid IN (1,2,6,10)
+            --AND v15.intersection_uid = ANY(target_intersections)
+        GROUP BY
+            v15.classification_uid,
+            v15.intersection_uid,
+            v15.leg
+        HAVING COALESCE(SUM(volume), 0) = 0
+    ),
+    
+    new_gaps AS (
+        --zero volume, entire intersection
         SELECT
             intersection_uid,
             null::integer AS classification_uid,
+            null::char AS leg,
             range_start,
             range_end
         FROM zero_intersections
+
+        UNION
+
+        --intersections with zero volume for specific modes
+        SELECT
+            zic.intersection_uid,
+            zic.classification_uid,
+            null::char AS leg,
+            zic.range_start,
+            zic.range_end
+        FROM zero_intersection_classification AS zic
+        --anti join zero_intersections
+        LEFT JOIN zero_intersections AS zi USING (intersection_uid)
+        WHERE zi.intersection_uid IS NULL
+
+        UNION
+
+        --intersections with zero volume for specific modes and leg
+        SELECT
+            zicl.intersection_uid,
+            zicl.classification_uid,
+            zicl.leg,
+            zicl.range_start,
+            zicl.range_end
+        FROM zero_intersection_classification_leg AS zicl
+        --anti join zero_intersections
+        LEFT JOIN zero_intersections AS zi USING (intersection_uid)
+        --anti join zero_intersection_classification
+        LEFT JOIN zero_intersection_classification AS zic USING (intersection_uid, classification_uid)
+        WHERE
+            zi.intersection_uid IS NULL
+            AND zic.intersection_uid IS NULL
+        ORDER BY
+            intersection_uid,
+            classification_uid,
+            leg
     ),
-    
+
     updated_values AS (
         --update new outages which are contiguous with old outages
         UPDATE miovision_api.anomalous_ranges AS existing
@@ -75,9 +129,10 @@ BEGIN
             range_end = new_.range_end
         FROM new_gaps AS new_
         WHERE
-            --deal with null values in intersection, classification
+            --deal with null values in intersection, classification, leg
             COALESCE(existing.intersection_uid, 0) = COALESCE(new_.intersection_uid, 0)
             AND COALESCE(existing.classification_uid, 0) = COALESCE(new_.classification_uid, 0)
+            AND COALESCE(existing.leg, '0') = COALESCE(new_.leg, '0')
             --only merging ranges that overlap in (0)->(new) direction
             --otherwise if days run out of order we have to deal with
             --recursive situation of collapsing (0)<-(new)->(2)
@@ -90,10 +145,11 @@ BEGIN
     )
     
     INSERT INTO miovision_api.anomalous_ranges(
-        intersection_uid, classification_uid, range_start, range_end, notes, investigation_level, problem_level)
+        intersection_uid, classification_uid, leg, range_start, range_end, notes, investigation_level, problem_level)
     SELECT
         new_gaps.intersection_uid,
         new_gaps.classification_uid,
+        new_gaps.leg,
         new_gaps.range_start,
         new_gaps.range_end,
         'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts' AS notes,
@@ -104,11 +160,13 @@ BEGIN
     LEFT JOIN updated_values ON
         COALESCE(new_gaps.intersection_uid, 0) = COALESCE(updated_values.intersection_uid, 0)
         AND COALESCE(new_gaps.classification_uid, 0) = COALESCE(updated_values.classification_uid, 0)
+        AND COALESCE(new_gaps.leg, '0') = COALESCE(updated_values.leg, '0')
         AND new_gaps.range_start = updated_values.range_start
     --anti join existing open ended/overlapping gaps
     LEFT JOIN miovision_api.anomalous_ranges AS existing ON
         COALESCE(existing.intersection_uid, 0) = COALESCE(new_gaps.intersection_uid, 0)
         AND COALESCE(existing.classification_uid, 0) = COALESCE(new_gaps.classification_uid, 0)
+        AND COALESCE(existing.leg, '0') = COALESCE(new_gaps.leg, '0')
         AND (
             (
                 existing.range_start <= new_gaps.range_start
@@ -159,6 +217,6 @@ GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 TO miovision_admins;
 
 COMMENT ON FUNCTION miovision_api.identify_zero_counts(date)
-IS 'Identifies intersection / classification (only classification_uid 1,2,6,10)
+IS 'Identifies intersection / classification (only 1,2,6,10) / leg
 combos with zero volumes for the start_date called. Inserts or updates anomaly
 into anomalous_range table unless an existing, overlapping, manual entery exists.';
