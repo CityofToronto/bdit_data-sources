@@ -6,7 +6,11 @@ The centreline data are used by many other groups in the City and it's often imp
 
 ## How It's Structured
 
-The centreline data is structured as an undirected graph with edges and nodes. Both edges and nodes have a `centreline_id` identifier. A given `centreline_id` will refer to either an edge or a node. All edges have _from_ and _to_ nodes, though this should not be taken to indicate that edges are directed. A two-way street will be represented by a single edge and the _from_ and _to_ identifiers may be arbitrarily swapped.
+The centreline data is structured as an undirected graph with edges and nodes. Both edges and nodes have a `centreline_id` identifier. A given `centreline_id` will refer to either an edge or a node. All edges have _from_ and _to_ nodes, though this should not be taken to indicate that edges are directed. 
+
+A **two-way street** will be represented by a single edge and the _from_ and _to_ identifiers may be arbitrarily swapped.
+
+For **one-way streets** however, there is a column called `oneway_dir_code` that distinguishes whether its a two-way street and whether its being drawn with the digitization or against. This indicates only the direction for motor vehicle traffic and would not account for the presence of a contraflow bike lane. 
 
 # Where It's Stored
 
