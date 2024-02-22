@@ -94,6 +94,7 @@ def pull_wys_dag():
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
+            trigger_rule='none_failed_min_one_success',
             sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
             postgres_conn_id='wys_bot',
             autocommit=True

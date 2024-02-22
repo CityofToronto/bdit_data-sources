@@ -319,21 +319,30 @@ def process_data(conn, start_time, end_iteration_time, intersections):
     Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
     """
     time_period = (start_time, end_iteration_time)
-    find_gaps(conn, time_period)
+    find_gaps(conn, time_period, intersections)
     aggregate_15_min_mvt(conn, time_period, intersections)
+    agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
     aggregate_15_min(conn, time_period, intersections)
-    aggregate_volumes_daily(conn, time_period)
+    aggregate_volumes_daily(conn, time_period, intersections)
     get_report_dates(conn, time_period, intersections)
- 
-def find_gaps(conn, time_period):
+
+def find_gaps(conn, time_period, intersections = None):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
     into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
     try:
         with conn.cursor() as cur:
-            invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
-            cur.execute(invalid_gaps, time_period)
-            logger.info(conn.notices[-1])
-            logger.info('Updated gapsize table and found gaps exceeding allowable size')
+            #if intersections specified, clear/aggregate only those intersections.
+            if intersections is None:
+                invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
+                cur.execute(invalid_gaps, time_period)
+                logger.info(conn.notices[-1])
+                logger.info('Updated gapsize table and found gaps exceeding allowable size')
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp, %s::integer []);"
+                cur.execute(invalid_gaps, query_params)
+                logger.info('Updated gapsize table and found gaps exceeding allowable size for intersections %s',
+                            [x.uid for x in intersections]) 
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -400,18 +409,27 @@ def aggregate_15_min(
         logger.exception(exc)
         sys.exit(1)
 
-def aggregate_volumes_daily(conn, time_period):
+def aggregate_volumes_daily(conn, time_period, intersections = None):
     """Aggregate into miovision_api.volumes_daily.
 
     Data is cleared from volumes_daily prior to insert.
+    Takes optional intersection param to specify certain
+    intersections to clear/aggregate.
     """
     try:
         with conn.cursor() as cur:
-            #this function includes a delete query preceeding the insert.
-            daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
-            cur.execute(daily_aggregation, time_period)
-            logger.info('Aggregation into miovision_api.volumes_daily table complete for %s to %s',
-                        time_period[0], time_period[1])
+            if intersections is None:
+                #this function includes a delete query preceeding the insert.
+                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
+                cur.execute(daily_aggregation, time_period)
+                logger.info('Aggregation into miovision_api.volumes_daily table complete for %s to %s',
+                            time_period[0], time_period[1])
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date, %s::integer []);"
+                cur.execute(daily_aggregation, query_params)
+                logger.info('Aggregation into miovision_api.volumes_daily table complete for intersections %s from %s to %s.',
+                            [x.uid for x in intersections], time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
@@ -439,6 +457,31 @@ def get_report_dates(conn, time_period, intersections = None):
                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
                 cur.execute(report_dates, query_params)
                 logger.info('report_dates done')
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
+    
+def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
+    """Aggregate into miovision_api.anomalous_ranges.
+    Data is cleared from volumes_daily prior to insert.
+    """
+    try:
+        with conn.cursor() as cur:
+            if intersections is None:
+                #this function includes a delete query preceeding the insert.
+                anomalous_range_sql="""SELECT *
+                    FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
+                cur.execute(anomalous_range_sql, time_period)
+                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                anomalous_range_sql="""SELECT *
+                    FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date, %s::integer [])) AS agg"""
+                cur.execute(anomalous_range_sql, query_params)
+                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete for intersections %s',
+                            [x.uid for x in intersections])
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
