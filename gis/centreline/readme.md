@@ -8,10 +8,6 @@ The centreline data are used by many other groups in the City and it's often imp
 
 The centreline data is structured as an undirected graph with edges and nodes. Both edges and nodes have a `centreline_id` identifier. A given `centreline_id` will refer to either an edge or a node. All edges have _from_ and _to_ nodes, though this should not be taken to indicate that edges are directed. 
 
-A **two-way street** will be represented by a single edge and the _from_ and _to_ identifiers may be arbitrarily swapped.
-
-For **one-way streets** however, there is a column called `oneway_dir_code` that distinguishes whether its a two-way street and whether its being drawn with the digitization or against. This indicates only the direction for motor vehicle traffic and would not account for the presence of a contraflow bike lane. 
-
 # Where It's Stored
 
 Centreline data are stored in the `gis_core` schema in the `bigdata` database. Nodes are stored separately from edges. There may be older copy of the various centreline tables in the `gis` schema but they are not updated and their use is deprecated.
@@ -20,7 +16,25 @@ Centreline data are stored in the `gis_core` schema in the `bigdata` database. N
 
 Edges are stored in the partitioned table `gis_core.centreline`. This is not the complete centreline dataset - it has had some pre-filtering done to it to remove things like administrative boundaries.
 
-However not all transport related edges are included. Things like alleyways and footpaths have been filtered out.
+Currently we are including only the following types:
+
+* 'Collector'
+* 'Collector Ramp'
+* 'Expressway'
+* 'Expressway Ramp'
+* 'Local'
+* 'Major Arterial'
+* 'Major Arterial Ramp'
+* 'Minor Arterial'
+* 'Minor Arterial Ramp'
+* 'Pending'
+* 'Other'\* (Coming soon!)
+
+### Directionality
+
+A **two-way street** will be represented by a single edge and the _from_ and _to_ identifiers may be arbitrarily swapped.
+
+For **one-way streets** however, there is a column called `oneway_dir_code` that distinguishes whether its a two-way street and whether its being drawn with the digitization or against. This indicates only the direction for motor vehicle traffic and would not account for the presence of a contraflow bike lane. 
 
 ## Nodes
 
