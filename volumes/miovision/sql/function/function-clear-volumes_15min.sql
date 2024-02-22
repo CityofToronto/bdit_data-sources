@@ -47,3 +47,7 @@ TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.clear_volumes_15min(timestamp, timestamp)
 TO miovision_admins;
+
+COMMENT ON FUNCTION miovision_api.clear_volumes_15min(timestamp, timestamp, integer []) IS
+'''Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling.
+`intersections` param defaults to all intersections.''';

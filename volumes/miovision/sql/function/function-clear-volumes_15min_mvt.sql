@@ -57,5 +57,5 @@ GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, i
 TO miovision_admins;
 
 COMMENT ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
-IS 'Clears data from miovision_api.volumes_15min_mvt in order to facilitate re-pulling.
-Intersections value defaults to all intersections.'
+IS '''Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling.
+`intersections` param defaults to all intersections.''';

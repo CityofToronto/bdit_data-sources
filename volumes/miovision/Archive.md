@@ -1,15 +1,6 @@
-# Archived Miovision Info
+<!-- TOC -->
 
-## About the Archive
-
-**This document contains information that has been deleted from the Miovision README.md**
-It may prove useful to you at some time, perhaps in a somewhat bizarre set of circumstances.
-
-## Table of Contents
-- [Archived Miovision Info](#Archived-Miovision-Info)  
-    -[About the Archive](#About-the-Archive)  
-    -[Table of Contents](#Table-of-Contents)
-	- [6. Processing Data from API](#6-processing-data-from-api)
+- [About the Archive](#about-the-archive)
 	- [7. Processing Data from CSV Dumps (NO LONGER IN USE)](#7-processing-data-from-csv-dumps-no-longer-in-use)
 		- [`raw_data`](#raw_data)
 		- [A. Populate `volumes`](#a-populate-volumes)
@@ -24,10 +15,15 @@ It may prove useful to you at some time, perhaps in a somewhat bizarre set of ci
 		- [Variance check](#variance-check)
 		- [Invalid Movements](#invalid-movements)
 	- [10. Open Data](#10-open-data)
+	- [11. Deprecated Airflow DAGs](#11-deprecated-airflow-dags)
+		- [**`pull_miovision`**](#pull_miovision)
+		- [**`check_miovision`**](#check_miovision)
 
-## 6. Processing Data from API
+<!-- /TOC -->
+# About the Archive
 
-Refer to the [API README](api/readme.md) for more details.
+**This document contains information that has been deleted from other Miovision readmes**
+It may prove useful to you at some time, perhaps in a somewhat bizarre set of circumstances.
 
 ## 7. Processing Data from CSV Dumps (NO LONGER IN USE)
 
@@ -149,3 +145,19 @@ For the King Street Transit Pilot, the volume datasets listed below were release
 
 - [King St. Transit Pilot – Detailed Traffic & Pedestrian Volumes](https://open.toronto.ca/dataset/king-st-transit-pilot-detailed-traffic-pedestrian-volumes/) contains 15 minute aggregated [TMC](#turning-movement-counts-tmcs) data collected from Miovision readers during the King Street Pilot. The counts occurred at 31-32 locations at or around the King Street Pilot Area ([SQL](miovision\sql\open_data_views.sql)).
 - [King St. Transit Pilot - Traffic & Pedestrian Volumes Summary](https://open.toronto.ca/dataset/king-st-transit-pilot-traffic-pedestrian-volumes-summary/) is a monthly summary of the above data, only including peak period and east-west data ([SQL](miovision\sql\open_data_views.sql)). The data in this dataset goes into the [King Street Pilot Dashboard](https://www.toronto.ca/city-government/planning-development/planning-studies-initiatives/king-street-pilot/data-reports-background-materials/)
+
+
+## 11. Deprecated Airflow DAGs
+
+<!-- pull_miovision_doc_md -->
+### **`pull_miovision`**  
+This deprecated Miovisiong DAG (replaced by [`miovision_pull`](api/readme.md#miovision_pull) uses a single BashOperator to run the entire data pull and aggregation in one task.  
+The BashOperator runs one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/data/airflow/.../intersection_tmc.py run-api --pull --agg --path /data/airflow/.../config.cfg'`. 
+<!-- pull_miovision_doc_md -->
+
+<!-- check_miovision_doc_md -->
+### **`check_miovision`**
+
+The `check_miovision` DAG is deprecated by the addition of the [`data_checks` TaskGroup](api/readme.md#data_checks-taskgroup) to the main `miovision_pull` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
+This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+<!-- check_miovision_doc_md -->

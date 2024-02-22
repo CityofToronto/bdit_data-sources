@@ -77,3 +77,7 @@ FROM mis;
 END;
 
 $BODY$;
+
+COMMENT ON FUNCTION miovision_api.determine_working_machine(date, date) IS
+'''Function no longer in use. Previously used in `check_miovision` DAG to determine if any cameras
+had gaps larger than 4 hours. See: `miovision_check` DAG `check_gaps` task for new implementation.''';
