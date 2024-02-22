@@ -134,6 +134,10 @@ We need to find out all valid movements for the new intersections from the data 
 			intersection_uid IN (67, 68) --only include new intersection_uid
 			AND datetime_bin > 'now'::text::date - interval '10 days' -- or the date of data that you pulled
 			AND classification_uid IN (1,2,6,10) --will include other modes after this
+ 			AND NOT (
+ 			    --exclude bike exits from aggregation (duplicate with entrance volumes)
+			    classification_uid = 10 AND movement_uid = 8
+ 			)
 		GROUP BY intersection_uid, classification_uid, leg, movement_uid
 		WINDOW w AS (PARTITION BY intersection_uid, classification_uid)
 	)
