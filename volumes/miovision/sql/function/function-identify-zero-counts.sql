@@ -37,7 +37,7 @@ BEGIN
             MAX(v15.datetime_bin) + interval '15 minutes' AS range_end
         FROM miovision_api.volumes_15min_mvt AS v15
         --anti join intersections with periods of zero volume for all modes
-        LEFT JOIN zero_intersections AS zi ON 
+        LEFT JOIN zero_intersections AS zi ON
             zi.intersection_uid = v15.intersection_uid
             AND v15.datetime_bin >= zi.range_start
             AND v15.datetime_bin < zi.range_end
@@ -98,17 +98,17 @@ BEGIN
     FROM new_gaps
     --anti join values which were already used for above updates
     LEFT JOIN updated_values ON
+        --there are no null intersection values in new_gaps.intersection_uid so don't need a null case.
         new_gaps.intersection_uid = updated_values.intersection_uid
         AND COALESCE(new_gaps.classification_uid, 0) = COALESCE(updated_values.classification_uid, 0)
         AND new_gaps.range_start = updated_values.range_start
-    --anti join with existing open ended/overlapping gaps
+    --anti join with existing gaps to avoid adding new overlapping gaps
     LEFT JOIN miovision_api.anomalous_ranges AS existing ON
         existing.intersection_uid = new_gaps.intersection_uid
         --exclude if same classification_uid, or existing is null (all)
         AND (
             existing.classification_uid = new_gaps.classification_uid
             OR existing.classification_uid IS NULL
-            
         ) AND (
             --exclude any overlapping records
             (
@@ -121,8 +121,8 @@ BEGIN
         )
     WHERE
         --anti joins
-        existing.uid IS NULL
-        AND updated_values.range_start IS NULL
+        existing.uid IS NULL --an overlapping gap doesn't already exist 
+        AND updated_values.range_start IS NULL --row not already used for update
     ON CONFLICT
     DO NOTHING;
 
