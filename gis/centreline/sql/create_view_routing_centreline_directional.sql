@@ -24,7 +24,7 @@ WHERE centreline.oneway_dir_code = 0;
 ALTER TABLE gis_core.routing_centreline_directional OWNER TO gis_admins;
 
 COMMENT ON VIEW gis_core.routing_centreline_directional
-    IS 'A view that contains centreline streets for routing, with duplicated rows for two-way streets and flipped geometries when necessary. A new id has been assigned to each centreline to distinguish duplicated lines.';
+IS 'A view that contains centreline streets for routing, with duplicated rows for two-way streets and flipped geometries when necessary. A new id has been assigned to each centreline to distinguish duplicated lines.';
 
 GRANT SELECT ON TABLE gis_core.routing_centreline_directional TO bdit_humans;
 GRANT ALL ON TABLE gis_core.routing_centreline_directional TO gis_admins;

@@ -4,8 +4,9 @@ CREATE OR REPLACE FUNCTION gis_core.get_centreline_btwn_intersections(
     OUT _node_start_out integer,
     OUT _node_end integer,
     OUT links text [],
-    OUT geom geometry)
-    
+    OUT geom geometry
+)
+
 RETURNS record
 LANGUAGE 'sql'
 COST 100
@@ -27,7 +28,7 @@ $BODY$;
 ALTER FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) OWNER TO gis_admins;
 
 COMMENT ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer)
-    IS 'Routing function for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';
+IS 'Routing function for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';
 
 GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) TO bdit_humans;
 
