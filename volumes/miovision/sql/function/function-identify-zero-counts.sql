@@ -40,7 +40,7 @@ BEGIN
             )
         HAVING COALESCE(SUM(volume), 0) = 0
     ),
-    
+
     new_gaps AS (
         --get intersection outages
         SELECT
@@ -134,16 +134,24 @@ BEGIN
     FROM new_gaps
     --anti join values which were already used for above updates
     LEFT JOIN updated_values ON
-        COALESCE(new_gaps.intersection_uid, 0) = COALESCE(updated_values.intersection_uid, 0)
+        --there are no null intersection values in new_gaps.intersection_uid so don't need a null case.
+        new_gaps.intersection_uid = updated_values.intersection_uid
         AND COALESCE(new_gaps.classification_uid, 0) = COALESCE(updated_values.classification_uid, 0)
         AND COALESCE(new_gaps.leg, '0') = COALESCE(updated_values.leg, '0')
         AND new_gaps.range_start = updated_values.range_start
-    --anti join existing open ended/overlapping gaps
+    --anti join with existing gaps to avoid adding new overlapping gaps
     LEFT JOIN miovision_api.anomalous_ranges AS existing ON
-        COALESCE(existing.intersection_uid, 0) = COALESCE(new_gaps.intersection_uid, 0)
-        AND COALESCE(existing.classification_uid, 0) = COALESCE(new_gaps.classification_uid, 0)
-        AND COALESCE(existing.leg, '0') = COALESCE(new_gaps.leg, '0')
+        --there are no null intersections in new_gaps to deal with
+        existing.intersection_uid = new_gaps.intersection_uid
+        --exclude if same classification_uid, or existing is null (all)
         AND (
+            existing.classification_uid = new_gaps.classification_uid
+            OR existing.classification_uid IS NULL
+        ) AND (
+            existing.leg = new_gaps.leg
+            OR existing.leg IS NULL
+        ) AND (
+            --exclude any overlapping records
             (
                 existing.range_start <= new_gaps.range_start
                 AND existing.range_end >= new_gaps.range_end
@@ -154,8 +162,8 @@ BEGIN
         )
     WHERE
         --anti joins
-        existing.uid IS NULL
-        AND updated_values.range_start IS NULL
+        existing.uid IS NULL --an overlapping gap doesn't already exist 
+        AND updated_values.range_start IS NULL --row not already used for update
     ON CONFLICT
     DO NOTHING;
 
