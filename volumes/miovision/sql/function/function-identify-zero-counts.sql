@@ -17,43 +17,7 @@ DECLARE
 BEGIN
 
     --intersections with zero volume
-    WITH zero_intersections AS (
-        SELECT
-            intersection_uid,
-            MIN(datetime_bin) AS range_start,
-            MAX(datetime_bin) + interval '15 minutes' AS range_end
-        FROM miovision_api.volumes_15min_mvt
-        WHERE
-            datetime_bin >= start_date
-            AND datetime_bin < start_date + interval '1 day'
-            --AND intersection_uid = ANY(target_intersections)
-        GROUP BY intersection_uid
-        HAVING COALESCE(SUM(volume), 0) = 0
-    ),
-
-    --intersections with zero volume for specific classifications
-    zero_intersection_classification AS (
-        SELECT
-            v15.intersection_uid,
-            v15.classification_uid,
-            MIN(v15.datetime_bin) AS range_start,
-            MAX(v15.datetime_bin) + interval '15 minutes' AS range_end
-        FROM miovision_api.volumes_15min_mvt AS v15
-        WHERE
-            v15.datetime_bin >= start_date
-            AND v15.datetime_bin < start_date + interval '1 day'
-            --this script will only catch zeros for classification_uid 1,2,6,10
-            --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
-            AND v15.classification_uid IN (1,2,6,10)
-            --AND v15.intersection_uid = ANY(target_intersections)
-        GROUP BY
-            v15.classification_uid,
-            v15.intersection_uid
-        HAVING COALESCE(SUM(volume), 0) = 0
-    ),
-
-    --intersections with zero volume for specific classifications and legs
-    zero_intersection_classification_leg AS (
+    WITH all_new_gaps AS (
         SELECT
             v15.intersection_uid,
             v15.classification_uid,
@@ -67,60 +31,72 @@ BEGIN
             --this script will only catch zeros for classification_uid 1,2,6,10
             --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
             AND v15.classification_uid IN (1,2,6,10)
-            --AND v15.intersection_uid = ANY(target_intersections)
+            AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
-            v15.classification_uid,
-            v15.intersection_uid,
-            v15.leg
+            GROUPING SETS (
+                (v15.intersection_uid), --implies null class, leg
+                (v15.intersection_uid, v15.classification_uid), --implies null leg
+                (v15.intersection_uid, v15.classification_uid, v15.leg)
+            )
         HAVING COALESCE(SUM(volume), 0) = 0
     ),
     
     new_gaps AS (
-        --zero volume, entire intersection
+        --get intersection outages
         SELECT
-            intersection_uid,
-            null::integer AS classification_uid,
-            null::char AS leg,
-            range_start,
-            range_end
-        FROM zero_intersections
+            zero_int.intersection_uid,
+            zero_int.classification_uid,
+            zero_int.leg,
+            zero_int.range_start,
+            zero_int.range_end
+        FROM all_new_gaps AS zero_int
+        WHERE classification_uid IS NULL --identifies int outage
 
         UNION
 
-        --intersections with zero volume for specific modes
+        --get intersection-classification outages
         SELECT
-            zic.intersection_uid,
-            zic.classification_uid,
-            null::char AS leg,
-            zic.range_start,
-            zic.range_end
-        FROM zero_intersection_classification AS zic
-        --anti join zero_intersections
-        LEFT JOIN zero_intersections AS zi USING (intersection_uid)
-        WHERE zi.intersection_uid IS NULL
-
-        UNION
-
-        --intersections with zero volume for specific modes and leg
-        SELECT
-            zicl.intersection_uid,
-            zicl.classification_uid,
-            zicl.leg,
-            zicl.range_start,
-            zicl.range_end
-        FROM zero_intersection_classification_leg AS zicl
-        --anti join zero_intersections
-        LEFT JOIN zero_intersections AS zi USING (intersection_uid)
-        --anti join zero_intersection_classification
-        LEFT JOIN zero_intersection_classification AS zic USING (intersection_uid, classification_uid)
+            zero_int_class.intersection_uid,
+            zero_int_class.classification_uid,
+            zero_int_class.leg,
+            zero_int_class.range_start,
+            zero_int_class.range_end
+        FROM all_new_gaps AS zero_int_class
+        --anti join intersection outages
+        LEFT JOIN all_new_gaps AS zero_int
+        ON
+            zero_int.classification_uid IS NULL
+            AND zero_int.intersection_uid = zero_int_class.intersection_uid
         WHERE
-            zi.intersection_uid IS NULL
-            AND zic.intersection_uid IS NULL
-        ORDER BY
-            intersection_uid,
-            classification_uid,
-            leg
-    ),
+            zero_int_class.leg IS NULL --identifies int-class outage
+            AND zero_int.intersection_uid IS NULL --anti join
+
+        UNION
+
+        --get intersection-classification-leg outages
+        SELECT
+            zero_int_class_leg.intersection_uid,
+            zero_int_class_leg.classification_uid,
+            zero_int_class_leg.leg,
+            zero_int_class_leg.range_start,
+            zero_int_class_leg.range_end
+        FROM all_new_gaps AS zero_int_class_leg
+        --anti join intersection outages
+        LEFT JOIN all_new_gaps AS zero_int
+        ON
+            zero_int.classification_uid IS NULL
+            AND zero_int.classification_uid = zero_int_class_leg.classification_uid
+        --anti join intersection-classification-outages
+        LEFT JOIN all_new_gaps AS zero_int_class
+        ON
+            zero_int_class.leg IS NULL
+            AND zero_int_class.intersection_uid = zero_int_class_leg.intersection_uid
+            AND zero_int_class.classification_uid = zero_int_class_leg.classification_uid
+        WHERE
+            zero_int_class_leg.leg IS NOT NULL  --identifies int-class-leg outage
+            AND zero_int.intersection_uid IS NULL --anti join
+            AND zero_int_class.intersection_uid IS NULL  --anti join
+    )
 
     updated_values AS (
         --update new outages which are contiguous with old outages
