@@ -9,16 +9,15 @@ CREATE VIEW miovision_api.volumes_daily AS (
         v.datetime_bins_missing,
         v.unacceptable_gap_minutes,
         v.avg_historical_gap_vol,
-        array_agg(ar.notes ORDER BY ar.range_start, ar.uid)
+        array_agg(ar.notes ORDER BY ar.range_start, ar.uid) FILTER (WHERE ar.uid IS NOT NULL)
         AS anomalous_range_caveats,
-        array_agg(ar.uid ORDER BY ar.range_start, ar.uid)
-        AS anomalous_range_uid
+        array_agg(ar.uid ORDER BY ar.range_start, ar.uid) FILTER (WHERE ar.uid IS NOT NULL)
+        AS anomalous_range_uids
     FROM miovision_api.volumes_daily_unfiltered AS v
     --left join anomalous_ranges to get notes
     --exclude ['do-not-use', 'questionable'] in HAVING
     LEFT JOIN miovision_api.anomalous_ranges AS ar
-    ON
-        (
+        ON (
             ar.intersection_uid = v.intersection_uid
             OR ar.intersection_uid IS NULL
         ) AND (
@@ -68,3 +67,11 @@ IS 'Minutes with zero volumes out of a total of possible 1440 minutes per day.';
 COMMENT ON COLUMN miovision_api.volumes_daily.avg_historical_gap_vol
 IS 'Avg historical volume for that classification and gap duration 
 based on averages from a 60 day lookback in that hour.';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.anomalous_range_caveats
+IS 'Notes from relelvant anomalous_ranges that are not either
+    ''do-not-use'' or ''questionable''.';
+
+COMMENT ON COLUMN miovision_api.volumes_daily.anomalous_range_uids
+IS 'The `uid`s of relelvant anomalous_ranges that are not either
+    ''do-not-use'' or ''questionable''.';
