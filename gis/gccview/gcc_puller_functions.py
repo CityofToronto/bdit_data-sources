@@ -316,7 +316,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     
     # If the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending')",
+        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')",
              "outFields": "*",
              "outSR": '4326',
              "returnGeometry": "true",
