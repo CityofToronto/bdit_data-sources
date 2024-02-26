@@ -1,5 +1,5 @@
 CREATE TABLE miovision_api.breaks (
-    uid serial,
+    uid integer NOT NULL DEFAULT nextval('miovision_api.breaks_uid_seq'::regclass),
     intersection_uid integer,
     classification_uid integer,
     -- moment the change takes place
@@ -24,6 +24,7 @@ CREATE TABLE miovision_api.breaks (
 ALTER TABLE miovision_api.breaks OWNER TO miovision_admins;
 
 GRANT ALL ON TABLE miovision_api.breaks TO miovision_data_detectives;
+GRANT ALL ON SEQUENCE miovision_api.breaks_uid_seq TO miovision_data_detectives;
 
 GRANT SELECT ON miovision_api.breaks TO bdit_humans;
 
