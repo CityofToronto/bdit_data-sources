@@ -1,19 +1,17 @@
-# Vision Zero Google Sheets API 
+# Vision Zero Google Sheets API <!-- omit in toc -->
 This folder contains scripts to read Vision Zero google spreadsheets and put them into two postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [Vision Zero Google Sheets API](#vision-zero-google-sheets-api)
-  - [Table of Contents](#table-of-contents)
-  - [1. Data Source](#1-data-source)
-  - [2. The Automated Data Pipeline](#2-the-automated-data-pipeline)
-  - [3. Data pulling from the CLI](#3-data-pulling-from-the-cli)
-    - [3.1 Database Configuration File](#31-database-configuration-file)
-  - [4. Google Credentials](#4-google-credentials)
-  - [5. Adding a new year](#5-adding-a-new-year)
-    - [5.1 Create a New PostgreSQL Table](#51-create-a-new-postgresql-table)
-    - [5.2 Add the New Google Sheet to Airflow](#52-add-the-new-google-sheet-to-airflow)
-  - [6. Table generated](#6-table-generated)
+- [1. Data Source](#1-data-source)
+- [2. The Automated Data Pipeline](#2-the-automated-data-pipeline)
+- [3. Data pulling from the CLI](#3-data-pulling-from-the-cli)
+  - [3.1 Database Configuration File](#31-database-configuration-file)
+- [4. Google Credentials](#4-google-credentials)
+- [5. Adding a new year](#5-adding-a-new-year)
+  - [5.1 Create a New PostgreSQL Table](#51-create-a-new-postgresql-table)
+  - [5.2 Add the New Google Sheet to Airflow](#52-add-the-new-google-sheet-to-airflow)
+- [6. Table generated](#6-table-generated)
 
 > **Notes:** 
 > - Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
