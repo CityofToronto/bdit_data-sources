@@ -236,6 +236,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     # Date format _YYYYMMDD, to be attached at the end of output_table name
     date_attachment = datetime.date.today().strftime('_%Y%m%d')
     output_table_with_date = output_table + date_attachment
+    schema_parent_table_insert = schema_name +'.'+ output_table
     index_name = output_table_with_date + '_idx'
     
     with con:
@@ -249,7 +250,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
                                                                                                                 schema_child_table=sql.Identifier(schema_name, output_table_with_date))
             cur.execute(index_sql)
             
-    return insert_column, schema_parent_table
+    return insert_column, schema_parent_table_insert
 
 # Geometry Switcher 
 def line(geom):
@@ -442,13 +443,13 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
-def insert_partitioned_data(schema_parent_table, insert_column, return_json, schema_name, con):
+def insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con):
     """
     Function to insert data to our postgresql database (for partitioned tables)
 
     Parameters
     ----------
-    schema_parent_table : string
+    schema_parent_table_insert : string
         Table name for postgresql, returned from function create_partitioned_table
 
     insert_column : SQL composed
@@ -489,13 +490,13 @@ def insert_partitioned_data(schema_parent_table, insert_column, return_json, sch
 
     
     insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, schema_parent_table), 
+        schema_table = sql.Identifier(schema_name, schema_parent_table_insert), 
         columns = insert_column
     )
     with con:
         with con.cursor() as cur:
                execute_values(cur, insert, rows)
-    LOGGER.info('Successfully inserted %d records into %s', len(rows), schema_parent_table)
+    LOGGER.info('Successfully inserted %d records into %s', len(rows), schema_parent_table_insert)
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
@@ -652,7 +653,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
             else:
-                (insert_column, schema_parent_table) = create_partitioned_table(output_table, return_json, schema_name, con)
+                (insert_column, schema_parent_table_insert) = create_partitioned_table(output_table, return_json, schema_name, con)
             
             features = return_json['features']
             record_max=(len(features))
@@ -661,7 +662,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(schema_parent_table, insert_column, return_json, schema_name, con)
+                insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)
@@ -672,7 +673,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(schema_parent_table, insert_column, return_json, schema_name, con)
+                insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)
