@@ -40,7 +40,7 @@ bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
               "centreline": [0, 2, 'gis_core', False], # VFH Layers
               "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
               "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
-              #"intersection": [12, 42, 'gis_core', False],
+              "intersection": [12, 42, 'gis_core', False],
               "census_tract": [26, 7, 'gis_core', True],
               "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
               "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
