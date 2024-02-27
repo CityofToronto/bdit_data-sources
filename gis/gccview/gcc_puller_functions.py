@@ -236,7 +236,6 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     # Date format _YYYYMMDD, to be attached at the end of output_table name
     date_attachment = datetime.date.today().strftime('_%Y%m%d')
     output_table_with_date = output_table + date_attachment
-    schema_parent_table_insert = schema_name +'.'+ output_table
     index_name = output_table_with_date + '_idx'
     
     with con:
@@ -250,7 +249,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
                                                                                                                 schema_child_table=sql.Identifier(schema_name, output_table_with_date))
             cur.execute(index_sql)
             
-    return insert_column, schema_parent_table_insert
+    return insert_column, output_table
 
 # Geometry Switcher 
 def line(geom):
