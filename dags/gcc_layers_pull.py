@@ -9,25 +9,26 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+    from gis.gccview.gcc_puller_functions import get_layer
+except:
+    raise ImportError("Cannot import DAG helper functions.")
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from gis.gccview.gcc_puller_functions import get_layer
-from dags.dag_functions import task_fail_slack_alert
 # Credentials - to be passed through PythonOperator
 # bigdata connection credentials
 bigdata_cred = PostgresHook("gcc_bot_bigdata")
 # On-prem server connection credentials
 ptc_cred = PostgresHook("gcc_bot")
 
-dag_name = 'pull_gcc_layers'
+DAG_NAME = 'pull_gcc_layers'
 
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 DEFAULT_ARGS = {
-    'owner': ','.join(names),
+    'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
     'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
     'email_on_failure': False, 
@@ -92,7 +93,7 @@ ptc_layers = {"city_ward": [0, 0, 'gis', True],
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
 with DAG(
-    dag_id = dag_name,
+    dag_id = DAG_NAME,
     catchup=False,
     default_args=DEFAULT_ARGS,
     schedule='0 7 1 */3 *' #'@quarterly'
