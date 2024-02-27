@@ -3,11 +3,17 @@ This folder contains scripts to read Vision Zero google spreadsheets and put the
 
 ## Table of Contents
 
-- [Data Source](#1-data-source)
-- [Automated Data Pipeline](#2-the-automated-data-pipeline)
-- [Data Pulling from the CLI](#3-data-pulling-from-the-cli)
-- [Google Credentials](#4-google-credentials)
-- [Adding a New year](#5-adding-a-new-year)
+- [Vision Zero Google Sheets API](#vision-zero-google-sheets-api)
+  - [Table of Contents](#table-of-contents)
+  - [1. Data Source](#1-data-source)
+  - [2. The Automated Data Pipeline](#2-the-automated-data-pipeline)
+  - [3. Data pulling from the CLI](#3-data-pulling-from-the-cli)
+    - [3.1 Database Configuration File](#31-database-configuration-file)
+  - [4. Google Credentials](#4-google-credentials)
+  - [5. Adding a new year](#5-adding-a-new-year)
+    - [5.1 Create a New PostgreSQL Table](#51-create-a-new-postgresql-table)
+    - [5.2 Add the New Google Sheet to Airflow](#52-add-the-new-google-sheet-to-airflow)
+  - [6. Table generated](#6-table-generated)
 
 > **Notes:** 
 > - Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
@@ -95,38 +101,6 @@ CREATE TABLE vz_safety_programs_staging.school_safety_zone_yyyy_raw (
 
 Add the new year details to the Airflow variable `ssz_spreadsheets` as described [above](#2-the-automated-data-pipeline) so that the DAG would start pulling its data.
 
-### 5.3 Edit script that reads in the spreadsheets
-The `id` for each sheet is then called in `vz_google_sheets.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
-
-```
-from airflow.models import Variable
-dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
-ssz2018 = dag_config['ssz2018']
-...
-sszyyyy = dag_config['sszyyyy']
-```
-
-Next, add to the `sheets` dictionary just below the variable calls the details about the sheet for the new year:
-
-```
-sheets = {
-           2018: {'spreadsheet_id' : ssz2018,
-                  'range_name' : 'Master List!A4:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2018_raw'},
-                  ...
-           yyyy: {'spreadsheet_id' : sszyyyy,
-                  'range_name' : 'Master Sheet!A3:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_yyyy_raw'}
-         }
-```
-
-Finally, at the end of `schools.py`, add a new call to pull from the sheet for year `yyyy`:
-
-```
-pull_from_sheet(con, service, yyyy)
-```
 
 ## 6. Table generated
 The script reads information from columns A, B, E, F, Y, Z, AA, AB which are as shown below
