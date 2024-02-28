@@ -1,13 +1,12 @@
 #!/data/airflow/airflow_venv/bin/python3
 # -*- coding: utf-8 -*-
-""" This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
-2020 School Safety Zone, and 2021 School Safety Zone)
-and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
-'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
+"""The School Safety Zones Data Loader
 
-Note
-----
-This script is automated on Airflow and is run daily."""
+This script loads School Safety Zones (SSZ) data from multiple google sheets,
+where each sheet contains data of a single year. It is being called by a daily
+DAG and it can also be run from the CLI. Run the script with `--help` for more
+details.
+"""
 
 from __future__ import print_function
 import json
