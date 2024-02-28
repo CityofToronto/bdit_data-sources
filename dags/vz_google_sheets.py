@@ -26,7 +26,9 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert
-# pylint: enable=import-error
+from dags.common_tasks import get_variable
+from gis.school_safety_zones.schools import pull_from_sheet
+# pylint: enable=wrong-import-position
 
 DAG_NAME = 'vz_google_sheets'
 DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
@@ -55,11 +57,7 @@ DEFAULT_ARGS = {
 )
 def get_vz_data():
     """The main function of the SSZ DAG."""
-    # pylint: disable=wrong-import-position
-    from dags.common_tasks import get_variable
-    from gis.school_safety_zones.schools import pull_from_sheet
-    # pylint: enable=wrong-import-position
-
+    
     @task()
     def pull_data(
         engine: Engine,
