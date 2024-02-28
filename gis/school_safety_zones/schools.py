@@ -235,7 +235,7 @@ def pull_from_sheet(
     
     if not rows: # Only insert if there is at least one valid row to be inserted
         LOGGER.warning('There is no valid data for year: %i', year)
-        return
+        return False
     
     metadata = MetaData(schema = schema)
     t = Table(
