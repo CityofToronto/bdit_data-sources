@@ -16,9 +16,9 @@ from sqlalchemy.engine import Engine
 from googleapiclient.discovery import build
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
+from airflow.models.param import Param
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from airflow.decorators import dag, task
-from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 
 # import custom operators and helper functions
@@ -53,6 +53,15 @@ DEFAULT_ARGS = {
     max_active_tasks=5,
     schedule="@daily",
     doc_md=__doc__,
+    params={
+        "years": Param(
+            default=[0],
+            type="array",
+            title="An array of years to pull.",
+            description="Override the default years to pull (current and last) by passing an array of years.",
+            items={"type": "number"},
+        )
+    },
     tags=["Vision Zero"]
 )
 def get_vz_data():
@@ -103,17 +112,38 @@ def get_vz_data():
             )
 
             raise AirflowFailException('Invalid rows found. See errors documented above.')
-
+    
+    @task(task_id = task_id="get_list_of_years")
+    def filter_spreadsheets(ds = None, **context):
+        spreadsheets = Variable.get("ssz_spreadsheets", deserialize_json=True)
+        
+        YR = dateutil.parser.parse(str(ds)).year
+        if context["params"]["years"] == [0]:
+            years = (YR-1, YR)
+        else:
+            years = tuple(context["params"]["years"])
+        
+        sheets = []
+        for item in spreadsheets:
+            try:
+                if item['year'] in years:
+                    sheets.append(item)
+            except KeyError:
+                raise AirflowFailException('Year key not found.')
+        if sheets == []:
+            raise AirflowFailException('No sheets found.')
+        else:
+            return sheets
+            
     #to get credentials to access google sheets
     google_cred = GoogleBaseHook('vz_api_google').get_credentials()
-
-    spreadsheets = get_variable.override(task_id="get_list_of_years")("ssz_spreadsheets")
+    
     pull_data.partial(
         engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine(),
         service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
         schema="vz_safety_programs_staging"
     ).expand(
-        spreadsheet=spreadsheets
+        spreadsheet=filter_spreadsheets()
     )
 
 get_vz_data()
