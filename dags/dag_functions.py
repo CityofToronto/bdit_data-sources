@@ -3,6 +3,7 @@
 """Common functions used in most of the DAGs."""
 import os
 import re
+import json
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
