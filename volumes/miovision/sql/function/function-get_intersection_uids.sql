@@ -20,9 +20,9 @@ END;
 $BODY$;
 
 COMMENT ON FUNCTION miovision_api.get_intersections_uids(integer []) IS
-'Returns all intersection_uids if optional intersections param is omitted, otherwise
+'''Returns all intersection_uids if optional `intersections` param is omitted, otherwise
 returns only the intersection_uids provided as an integer array to intersections param.
-Used in miovision_api.clear_* functions. 
+Used in `miovision_api.clear_*` functions.
 Example usage:
-SELECT miovision_api.get_intersections_uids() --returns all intersection_uids
-SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}'
+`SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or
+`SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}`''';
