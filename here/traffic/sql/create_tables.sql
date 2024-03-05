@@ -29,6 +29,9 @@ SELECT  link_dir,
         length, 
         sample_size, 
         mean, 
+        harmonic_mean,
+        vdt,
+        probe_count,
         stddev, 
         min_spd, 
         max_spd, 
@@ -40,7 +43,7 @@ FROM here.ta
 
 ALTER TABLE here.ta_view OWNER TO here_admins;
 GRANT INSERT, UPDATE, SELECT, TRIGGER ON TABLE here_staging.ta TO here_bot;
-  
+
   
 -- Instead of inserting to ta_view, 
 -- insert to parent table
@@ -49,5 +52,3 @@ CREATE TRIGGER transform_trigger
         ON here.ta_view
         FOR EACH ROW
         EXECUTE PROCEDURE here.here_insert_trigger();
-
-
