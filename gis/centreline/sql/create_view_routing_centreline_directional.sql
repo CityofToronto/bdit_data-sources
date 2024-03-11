@@ -1,25 +1,32 @@
 CREATE OR REPLACE VIEW gis_core.routing_centreline_directional AS
 
-SELECT
-    centreline.centreline_id,
-    concat(centreline.centreline_id, 0)::integer AS id,
-    centreline.from_intersection_id AS source,
-    centreline.to_intersection_id AS target,
-    centreline.shape_length AS cost,
-    centreline.geom
-FROM gis_core.centreline_latest AS centreline
+SELECT 
+    centreline_id,
+    row_number() OVER () AS id, 
+    source,
+    target,
+    cost,
+    geom
 
-UNION
+FROM (
+    SELECT
+        centreline.centreline_id,
+        centreline.from_intersection_id AS source,
+        centreline.to_intersection_id AS target,
+        centreline.shape_length AS cost,
+        centreline.geom
+    FROM gis_core.centreline_latest AS centreline
 
-SELECT
-    centreline.centreline_id,
-    concat(centreline.centreline_id, 1)::integer AS id,
-    centreline.to_intersection_id AS source,
-    centreline.from_intersection_id AS target,
-    centreline.shape_length AS cost,
-    st_reverse(centreline.geom) AS geom
-FROM gis_core.centreline_latest AS centreline
-WHERE centreline.oneway_dir_code = 0;
+    UNION
+
+    SELECT
+        centreline.centreline_id,
+        centreline.to_intersection_id AS source,
+        centreline.from_intersection_id AS target,
+        centreline.shape_length AS cost,
+        st_reverse(centreline.geom) AS geom
+    FROM gis_core.centreline_latest AS centreline
+    WHERE centreline.oneway_dir_code = 0) AS dup;
 
 ALTER TABLE gis_core.routing_centreline_directional OWNER TO gis_admins;
 
