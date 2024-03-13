@@ -11,11 +11,11 @@ DAG.
 import os
 import sys
 from datetime import timedelta
-from functools import partial
 import pendulum
 # pylint: disable=import-error
 from airflow.decorators import dag, task
 from airflow.models import Variable
+from airflow.exceptions import AirflowFailException
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -45,7 +45,7 @@ default_args = {
     max_active_tasks=5,
     schedule=None,
     doc_md=__doc__,
-    tags=["counts"]
+    tags=["counts", "replicator"]
 )
 def counts_replicator():
     """The main function of the counts DAG."""
@@ -57,30 +57,32 @@ def counts_replicator():
     # Airflow variable.
     tables = get_variable.override(task_id="get_list_of_tables")("counts_tables")
 
+    # Copies tables
+    copy_tables = copy_table.override(task_id="copy_tables", on_failure_callback = None).partial(conn_id="traffic_bot").expand(table=tables)
+
     @task(
-        retries = 0,
-        doc_md = """A status message to report DAG success OR any failures from the `copy_tables` task."""
+        retries=0,
+        trigger_rule='all_done',
+        doc_md="""A status message to report DAG success OR any failures from the `copy_tables` task."""
     )
     def status_message(tables, **context):
         ti = context["ti"]
         failures = []
         #iterate through mapped tasks to find any failure messages
         for m_i in range(0, len(tables)):
-            failure_msg = ti.xcom_pull(key="extra_msg", task_ids="copy_tables", map_indexes=m_i)[0]
+            failure_msg = ti.xcom_pull(key="extra_msg", task_ids="copy_tables", map_indexes=m_i)
             if failure_msg is not None:
                 failures.append(failure_msg)
         if failures == []:
-            slack_msg = f"{DAG_NAME} DAG succeeded :white_check_mark:"
             send_slack_msg(
                 context=context,
-                msg=slack_msg
+                msg=f"{DAG_NAME} DAG succeeded :white_check_mark:"
             )
         else: #add details of failures to task_fail_slack_alert
-            context.get("task_instance").xcom_push(key="extra_msg", value=failures)
+            failure_extra_msg = ['One or more tables failed to copy:', failures]
+            context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
+            raise AirflowFailException('One or more tables failed to copy.')
         
-    # Copies tables
-    copy_tables = copy_table.override(task_id="copy_tables", on_failure_callback = None).partial(conn_id="traffic_bot").expand(table=tables)
-
     # Waits for an external trigger
     wait_for_external_trigger() >> tables >> copy_tables >> status_message(tables=tables)    
 
