@@ -6,8 +6,8 @@ ie. issues which suggest field maintenance of sensors required.
 import sys
 import os
 
-from airflow.decorators import dag
-from datetime import timedelta
+from airflow.decorators import dag, task
+from datetime import timedelta, datetime
 from airflow.models import Variable 
 from airflow.sensors.external_task import ExternalTaskSensor
 
@@ -17,7 +17,7 @@ import pendulum
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -27,6 +27,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'miovision_check'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -49,7 +52,7 @@ default_args = {
         os.path.join(repo_path,'dags/sql')
     ],
     tags=["miovision", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def miovision_check_dag():
 
@@ -95,6 +98,40 @@ def miovision_check_dag():
     Identify gaps larger than gap_threshold in intersections with values today.
     '''
 
-    t_upstream_done >> [check_distinct_intersection_uid, check_gaps]
+    @task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
+    def check_if_thursday(ds=None): #check if thursday to trigger weekly check. 
+        start_date = datetime.strptime(ds, '%Y-%m-%d')
+        return start_date.isoweekday() == 4
+    
+    check_open_anomalous_ranges = SQLCheckOperatorWithReturnValue(
+        task_id="check_open_anomalous_ranges",
+        sql="""WITH ars AS (
+            SELECT
+                uid,
+                intersection_name,
+                classification_uid,
+                notes
+            FROM miovision_api.open_issues
+            WHERE last_week_volume > 0
+            ORDER BY uid
+        )
+
+        SELECT
+            NOT(COUNT(*) > 0) AS _check,
+            CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END || COUNT(*) ||
+                ' open ended anomalous_range(s) with non-zero volumes in the last 7 days: (uid, intersection_name, classification_uid, notes)'
+            AS summ,
+            array_agg(ars || chr(10)) AS gaps
+        FROM ars""",
+        conn_id="miovision_api_bot"
+    )
+    check_open_anomalous_ranges.doc_md = '''
+    Identify open ended gaps that have non-zero volumes in the last week and notify DAG owners so ranges don't get stale.
+    '''
+
+    t_upstream_done >> [
+        check_distinct_intersection_uid, check_gaps,
+        [check_if_thursday() >> check_open_anomalous_ranges]
+    ]
 
 miovision_check_dag()
