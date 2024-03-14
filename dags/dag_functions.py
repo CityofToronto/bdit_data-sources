@@ -98,7 +98,7 @@ def task_fail_slack_alert(
         # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
-    if isinstance(extra_msg_str, tuple):
+    if isinstance(extra_msg_str, tuple) or isinstance(extra_msg_str, list):
         #recursively collapse extra_msg_str's which are in the form of a list with new lines.
         extra_msg_str = '\n'.join(
             ['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str]
@@ -152,3 +152,54 @@ def get_readme_docmd(readme_path, dag_name):
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
     return re.findall(doc_md_regex, contents)[0]
+
+def send_slack_msg(
+    context: dict,
+    msg: str,
+    attachments: Optional[list] = None,
+    blocks: Optional[list] = None,
+    use_proxy: Optional[bool] = False,
+    dev_mode: Optional[bool] = None
+) -> Any:
+    """Sends a message to Slack.
+
+    Args:
+        context: The calling Airflow task's context.
+        msg : A string message be sent to Slack.
+        slack_conn_id: ID of the Airflow connection with the details of the
+            Slack channel to send messages to.
+        attachments: List of dictionaries representing Slack attachments.
+        blocks: List of dictionaries representing Slack blocks.
+        use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
+            usage is required to make the Slack webhook call on on-premises
+            servers (default False).
+        dev_mode: A boolean to indicate if working in development mode to send
+            Slack alerts to data_pipeline_dev instead of the regular 
+            data_pipeline (default None, to be determined based on the location
+            of the file).
+    """
+    if dev_mode or (dev_mode is None and not is_prod_mode()):
+        SLACK_CONN_ID = "slack_data_pipeline_dev"
+    else:
+        SLACK_CONN_ID = "slack_data_pipeline"
+
+    if use_proxy:
+        # get the proxy credentials from the Airflow connection ``slack``. It
+        # contains username and password to set the proxy <username>:<password>
+        proxy=(
+            f"http://{BaseHook.get_connection('slack').password}"
+            f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
+        )
+    else:
+        proxy = None
+
+    slack_alert = SlackWebhookOperator(
+        task_id="slack_test",
+        slack_webhook_conn_id=SLACK_CONN_ID,
+        message=msg,
+        username="airflow",
+        attachments=attachments,
+        blocks=blocks,
+        proxy=proxy,
+    )
+    return slack_alert.execute(context=context)
