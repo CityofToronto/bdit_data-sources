@@ -83,7 +83,7 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             BEGIN
                 SELECT obj_description('{}.{}'::regclass)
                     || chr(10) || 'Copied from {}.{} by bigdata repliactor DAG at '
-                    || to_char(now() AT TIME ZONE 'EST5EDT', 'yyyy-mm-dd HH24:mm') || '.' INTO comment_;
+                    || to_char(now() AT TIME ZONE 'EST5EDT', 'yyyy-mm-dd HH24:MI') || '.' INTO comment_;
                 EXECUTE format('COMMENT ON TABLE {}.{} IS %L', comment_);
             END $$;
         """
