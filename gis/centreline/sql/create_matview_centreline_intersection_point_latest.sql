@@ -2,7 +2,10 @@ CREATE MATERIALIZED VIEW gis_core.centreline_intersection_point_latest AS
 
 SELECT *
 FROM gis_core.centreline_intersection_point
-WHERE version_date = (SELECT MAX(version_date) FROM gis_core.centreline_intersection_point);
+WHERE 
+	(intersection_id IN (SELECT from_intersection_id from gis_core.centreline_latest) OR 
+	intersection_id IN (SELECT to_intersection_id from gis_core.centreline_latest)) AND 
+	version_date = (SELECT MAX(version_date) FROM gis_core.centreline_intersection_point);
 
 CREATE TRIGGER refresh_trigger
 AFTER INSERT OR UPDATE OR DELETE
