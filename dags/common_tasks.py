@@ -81,12 +81,14 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             DO $$
             DECLARE comment_ text;
             BEGIN
-                SELECT obj_description('{}.{}'::regclass) INTO comment_;
+                SELECT obj_description('{}.{}'::regclass)
+                    || chr(10) || 'Sourced from {}.{}.' INTO comment_;
                 EXECUTE format('COMMENT ON TABLE {}.{} IS %L', comment_);
             END $$;
         """
         ).format(
             sql.Identifier(src_schema), sql.Identifier(src_table),
+            sql.Literal(src_schema), sql.Literal(src_table),
             sql.Identifier(dst_schema), sql.Identifier(dst_table),
         )
     
