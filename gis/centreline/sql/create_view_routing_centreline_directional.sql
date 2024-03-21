@@ -2,7 +2,7 @@ CREATE OR REPLACE VIEW gis_core.routing_centreline_directional AS
 
 SELECT 
     centreline_id,
-    row_number() OVER () AS id, 
+    concat(row_number() OVER (), dir)::bigint AS id,
     source,
     target,
     cost,
@@ -14,7 +14,8 @@ FROM (
         centreline.from_intersection_id AS source,
         centreline.to_intersection_id AS target,
         centreline.shape_length AS cost,
-        centreline.geom
+        centreline.geom,
+        0 as dir
     FROM gis_core.centreline_latest AS centreline
 
     UNION
@@ -24,7 +25,8 @@ FROM (
         centreline.to_intersection_id AS source,
         centreline.from_intersection_id AS target,
         centreline.shape_length AS cost,
-        st_reverse(centreline.geom) AS geom
+        st_reverse(centreline.geom) AS geom,
+        1 as dir
     FROM gis_core.centreline_latest AS centreline
     WHERE centreline.oneway_dir_code = 0) AS dup;
 
