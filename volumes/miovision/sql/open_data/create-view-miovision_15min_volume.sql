@@ -1,3 +1,14 @@
+--Review decisions:
+--Classification Grouping and naming
+--Include/Exclude bicycles?
+--Include/Exclude buses/streetcars?
+--Decision to not include manual anomalous_range 'valid_caveat' notes: SELECT 
+--Including entry/exit information to satisfy ATR related DRs.
+    --> providing exit leg and direction as extra columns rather
+    -- than extra rows to reduce potential for double counting.
+
+--DROP VIEW gwolofs.miovision_15min_open_data;
+
 CREATE OR REPLACE VIEW gwolofs.miovision_15min_open_data AS (
 
     SELECT
@@ -9,8 +20,12 @@ CREATE OR REPLACE VIEW gwolofs.miovision_15min_open_data AS (
             WHEN cl.classification IN ('SingleUnitTruck', 'ArticulatedTruck', 'MotorizedVehicle', 'Bus') THEN 'Truck/Bus'
             ELSE cl.classification -- 'Bicycle', 'Pedestrian'
         END AS classification_type,                
-        v15.leg AS approach,
+        v15.leg AS entry_leg,
+        entries.dir AS entry_dir,
         mov.movement_name AS movement,
+        --assign exits for peds, bike entry only movements
+        COALESCE(exits.leg_new, v15.leg) AS exit_leg,
+        COALESCE(exits.dir, entries.dir) AS exit_dir,
         SUM(v15.volume) AS volume_15min
         --exclude notes (manual text field)
         --array_agg(ar.notes ORDER BY ar.range_start, ar.uid) FILTER (WHERE ar.uid IS NOT NULL) AS anomalous_range_caveats
@@ -18,7 +33,17 @@ CREATE OR REPLACE VIEW gwolofs.miovision_15min_open_data AS (
     JOIN miovision_api.intersections AS i USING (intersection_uid)
     JOIN miovision_api.classifications AS cl USING (classification_uid)
     JOIN miovision_api.movements AS mov USING (movement_uid)
-    --anti-join anomalous_ranges
+    -- TMC to ATR crossover table for e
+    LEFT JOIN miovision_api.movement_map AS entries ON 
+        entries.leg_old = v15.leg
+        AND entries.movement_uid = v15.movement_uid
+        AND entries.leg_new <> substr(entries.dir, 1, 1) --eg. E leg going West is an entry
+    -- TMC to ATR crossover table
+    LEFT JOIN miovision_api.movement_map AS exits ON
+        exits.leg_old = v15.leg
+        AND exits.movement_uid = v15.movement_uid
+        AND exits.leg_new = substr(exits.dir, 1, 1) --eg. E leg going East is an exit
+    --anti-join anomalous_ranges. See HAVING clause.
     LEFT JOIN miovision_api.anomalous_ranges AS ar ON
         (
             ar.intersection_uid = v15.intersection_uid
@@ -37,8 +62,11 @@ CREATE OR REPLACE VIEW gwolofs.miovision_15min_open_data AS (
         i.api_name,
         v15.datetime_bin,
         classification_type,
-        v15.leg,
-        mov.movement_name
+        movement,
+        entry_leg,
+        entry_dir,
+        exit_dir,
+        exit_leg
     HAVING
         NOT array_agg(ar.problem_level) && ARRAY['do-not-use'::text, 'questionable'::text]
         AND SUM(v15.volume) > 0 --confirm
