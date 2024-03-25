@@ -30,6 +30,9 @@ GRANT ALL ON TABLE gwolofs.miovision_15min_open_data TO gwolofs;
 
 GRANT ALL ON TABLE gwolofs.miovision_15min_open_data TO miovision_admins;
 
+GRANT SELECT, INSERT, DELETE ON TABLE gwolofs.miovision_15min_open_data
+TO miovision_api_bot;
+
 COMMENT ON TABLE gwolofs.miovision_15min_open_data
 IS 'Table to store Miovision 15min open data. Updated monthly. 
 Schema is a blend of TMC and ATR style data to cover different

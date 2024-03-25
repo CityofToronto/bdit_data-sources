@@ -1,4 +1,4 @@
--- DROP TABLE gwolofs.miovision_open_data_monthly_summary;\
+-- DROP TABLE gwolofs.miovision_open_data_monthly_summary;
 
 CREATE TABLE gwolofs.miovision_open_data_monthly_summary (
     intersection_uid integer,
@@ -33,6 +33,9 @@ GRANT SELECT ON TABLE gwolofs.miovision_open_data_monthly_summary TO bdit_humans
 GRANT ALL ON TABLE gwolofs.miovision_open_data_monthly_summary TO gwolofs;
 
 GRANT ALL ON TABLE gwolofs.miovision_open_data_monthly_summary TO miovision_admins;
+
+GRANT SELECT, INSERT, DELETE ON TABLE gwolofs.miovision_open_data_monthly_summary
+TO miovision_api_bot;
 
 COMMENT ON TABLE gwolofs.miovision_open_data_monthly_summary
 IS 'Table to store Miovision monthly summary open data. 
