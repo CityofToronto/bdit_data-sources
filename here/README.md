@@ -105,7 +105,7 @@ Historical data are acquired through the Traffic Analytics download portal. Data
 | mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
 | stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
 | min_spd | integer | | Observed minimum speed |
-| max_spd | integer | | Observed maximum speed |
+| max_spd | integer | | Observed maximum speed. Note that HERE clips observations to 130 kilometers per hour. |
 | pct_50 | integer | | Observed median speed |
 | pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins |
 | confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
