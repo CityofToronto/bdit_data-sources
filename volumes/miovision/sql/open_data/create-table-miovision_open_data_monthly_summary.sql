@@ -23,6 +23,9 @@ CREATE TABLE gwolofs.miovision_open_data_monthly_summary (
 
 TABLESPACE pg_default;
 
+CREATE INDEX miovision_monthly_od_dt_idx ON
+gwolofs.miovision_open_data_monthly_summary USING brin (mnth);
+
 ALTER TABLE IF EXISTS gwolofs.miovision_open_data_monthly_summary 
 OWNER TO gwolofs;
 
