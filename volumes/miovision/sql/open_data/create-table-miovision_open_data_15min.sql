@@ -22,7 +22,7 @@ TABLESPACE pg_default;
 CREATE INDEX miovision_15min_od_dt_idx ON
 gwolofs.miovision_15min_open_data USING brin (datetime_15min);
 
-ALTER TABLE IF EXISTS gwolofs.miovision_15min_open_data 
+ALTER TABLE IF EXISTS gwolofs.miovision_15min_open_data
 OWNER TO gwolofs;
 
 REVOKE ALL ON TABLE gwolofs.miovision_15min_open_data FROM bdit_humans;

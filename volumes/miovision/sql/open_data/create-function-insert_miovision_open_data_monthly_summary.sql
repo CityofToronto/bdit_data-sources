@@ -1,12 +1,13 @@
 --DROP FUNCTION gwolofs.insert_miovision_open_data_monthly_summary;
 
 CREATE OR REPLACE FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(
-	_date date,
-	intersections integer[] DEFAULT ARRAY[]::integer[])
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+    _date date,
+    intersections integer [] DEFAULT ARRAY[]::integer []
+)
+RETURNS void
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
     
     DECLARE
@@ -180,19 +181,19 @@ AS $BODY$
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer[])
+ALTER FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer [])
 OWNER TO gwolofs;
 
-GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer[])
+GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer [])
 TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer[])
+GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer [])
 TO miovision_api_bot;
 
-REVOKE ALL ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer[])
-FROM PUBLIC;
+REVOKE ALL ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer [])
+FROM public;
 
-COMMENT ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer[])
+COMMENT ON FUNCTION gwolofs.insert_miovision_open_data_monthly_summary(date, integer [])
 IS 'Function for first deleting then inserting monthly summary miovision
 open data into gwolofs.miovision_open_data_monthly_summary.
 Contains an optional intersection parameter in case one just one

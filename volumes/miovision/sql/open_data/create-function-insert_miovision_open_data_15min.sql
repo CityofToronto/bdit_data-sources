@@ -4,18 +4,19 @@
 --Include/Exclude buses/streetcars?
 --Decision to not include manual anomalous_range 'valid_caveat' notes: SELECT 
 --Including entry/exit information to satisfy ATR related DRs.
-    --> providing exit leg and direction as extra columns rather
-    -- than extra rows to reduce potential for double counting.
+-->> providing exit leg and direction as extra columns rather
+-->> than extra rows to reduce potential for double counting.
 
 --DROP FUNCTION gwolofs.insert_miovision_15min_open_data;
 
 CREATE OR REPLACE FUNCTION gwolofs.insert_miovision_15min_open_data(
-	_date date,
-	intersections integer[] DEFAULT ARRAY[]::integer[])
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+    _date date,
+    integer [] DEFAULT ARRAY[]::integer []
+)
+RETURNS void
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
     
     DECLARE
@@ -136,19 +137,19 @@ AS $BODY$
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer[])
+ALTER FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer [])
 OWNER TO gwolofs;
 
-GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer[])
+GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer [])
 TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer[])
+GRANT EXECUTE ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer [])
 TO miovision_api_bot;
 
-REVOKE ALL ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer[])
-FROM PUBLIC;
+REVOKE ALL ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer [])
+FROM public;
 
-COMMENT ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer[])
+COMMENT ON FUNCTION gwolofs.insert_miovision_15min_open_data(date, integer [])
 IS 'Function for first deleting then inserting monthly 15
 minute open data volumes into gwolofs.miovision_15min_open_data.
 Contains an optional intersection parameter in case one just one
