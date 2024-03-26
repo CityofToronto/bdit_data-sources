@@ -40,6 +40,24 @@ AS $BODY$
 
         RAISE NOTICE 'Deleted % rows from gwolofs.miovision_15min_open_data for month %.', n_deleted, _month;
         
+        CREATE TEMP TABLE miovision_movement_map_new AS (
+            SELECT
+                entries.movement_uid,
+                entries.leg_old AS leg,
+                entries.dir AS entry_dir,
+                mov.movement_name AS movement,
+                --assign exits for peds, bike entry only movements
+                COALESCE(exits.leg_new, entries.leg_old) AS exit_leg,
+                COALESCE(exits.dir, entries.dir) AS exit_dir
+            FROM miovision_api.movement_map AS entries
+            JOIN miovision_api.movements AS mov USING (movement_uid)
+            LEFT JOIN miovision_api.movement_map AS exits ON
+                exits.leg_old = entries.leg_old
+                AND exits.movement_uid = entries.movement_uid
+                AND exits.leg_new = substr(exits.dir, 1, 1) --eg. E leg going East is an exit
+            WHERE entries.leg_new <> substr(entries.dir, 1, 1) --eg. E leg going West is an entry
+        );        
+
         WITH inserted AS (
             INSERT INTO gwolofs.miovision_15min_open_data (
                 intersection_uid, intersection_long_name, datetime_15min, classification_type,
@@ -55,30 +73,21 @@ AS $BODY$
                         'SingleUnitTruck', 'ArticulatedTruck', 'MotorizedVehicle', 'Bus'
                     ) THEN 'Truck/Bus'
                     ELSE cl.classification -- 'Bicycle', 'Pedestrian'
-                END AS classification_type,                
+                END AS classification_type,           
                 v15.leg AS entry_leg,
-                entries.dir AS entry_dir,
-                mov.movement_name AS movement,
+                mm.entry_dir,
+                mm.movement,
+                mm.exit_leg,
+                mm.exit_dir,
                 --assign exits for peds, bike entry only movements
-                COALESCE(exits.leg_new, v15.leg) AS exit_leg,
-                COALESCE(exits.dir, entries.dir) AS exit_dir,
                 SUM(v15.volume) AS volume_15min
                 --exclude notes (manual text field)
                 --array_agg(ar.notes ORDER BY ar.range_start, ar.uid) FILTER (WHERE ar.uid IS NOT NULL) AS anomalous_range_caveats
             FROM miovision_api.volumes_15min_mvt AS v15
-            JOIN miovision_api.intersections AS i USING (intersection_uid)
             JOIN miovision_api.classifications AS cl USING (classification_uid)
-            JOIN miovision_api.movements AS mov USING (movement_uid)
-            -- TMC to ATR crossover table for e
-            LEFT JOIN miovision_api.movement_map AS entries ON 
-                entries.leg_old = v15.leg
-                AND entries.movement_uid = v15.movement_uid
-                AND entries.leg_new <> substr(entries.dir, 1, 1) --eg. E leg going West is an entry
+            JOIN miovision_api.intersections AS i USING (intersection_uid)
             -- TMC to ATR crossover table
-            LEFT JOIN miovision_api.movement_map AS exits ON
-                exits.leg_old = v15.leg
-                AND exits.movement_uid = v15.movement_uid
-                AND exits.leg_new = substr(exits.dir, 1, 1) --eg. E leg going East is an exit
+            JOIN miovision_movement_map_new AS mm USING (movement_uid, leg)
             --anti-join anomalous_ranges. See HAVING clause.
             LEFT JOIN miovision_api.anomalous_ranges AS ar ON
                 (
@@ -93,6 +102,7 @@ AS $BODY$
                     v15.datetime_bin < ar.range_end
                     OR ar.range_end IS NULL
                 )
+                AND ar.problem_level IN ('do-not-use'::text, 'questionable'::text)
             WHERE
                 v15.datetime_bin >= _month
                 AND v15.datetime_bin < _month + interval '1 month'
@@ -102,11 +112,11 @@ AS $BODY$
                 i.api_name,
                 v15.datetime_bin,
                 classification_type,
-                movement,
-                entry_leg,
-                entry_dir,
-                exit_dir,
-                exit_leg
+                v15.leg,
+                mm.entry_dir,
+                mm.movement,
+                mm.exit_leg,
+                mm.exit_dir
             HAVING
                 NOT array_agg(ar.problem_level) && ARRAY['do-not-use'::text, 'questionable'::text]
                 AND SUM(v15.volume) > 0 --confirm
@@ -115,7 +125,6 @@ AS $BODY$
                 classification_type,
                 v15.datetime_bin,
                 v15.leg
-            --fail on conflict
             RETURNING *
         )
 
@@ -145,6 +154,5 @@ minute open data volumes into gwolofs.miovision_15min_open_data.
 Contains an optional intersection parameter in case one just one
 intersection needs to be refreshed.';
 
---testing, indexes work
---~50s for 1 day, ~40 minutes for 1 month (5M rows)
+--testing, around 50 minutes for 1 month (5M rows)
 SELECT gwolofs.insert_miovision_15min_open_data('2024-02-01'::date);
