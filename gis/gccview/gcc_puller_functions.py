@@ -189,7 +189,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
             create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns}, CONSTRAINT {pk_name} PRIMARY KEY ({pk}))").format(
                 schema_table = sql.Identifier(schema_name, temp_table_name),
                 columns = col_list_string,
-                pk_name = pk_name,
+                pk_name = sql.Identifier(pk_name),
                 pk = sql.Identifier(primary_key)
                 )
             LOGGER.info(create_sql.as_string(con))
