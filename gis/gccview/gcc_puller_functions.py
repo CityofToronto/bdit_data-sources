@@ -175,27 +175,29 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
     # Since this is a temporary table, name it '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
+    # Constraint name for table primary key
+    pk_name = temp_table_name + '_pkey'
+
     with con:
         with con.cursor() as cur:
             
             col_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) + sql.SQL(' ') + sql.SQL(get_fieldtype(field["type"])) for field in fields]
             col_list.append(sql.Identifier('geom') + sql.SQL(' ') + sql.SQL('geometry'))
             col_list_string = sql.SQL(',').join(col_list)
-            
+
             LOGGER.info(col_list_string.as_string(con))
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
-                                                                      columns = col_list_string)
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns}, CONSTRAINT {pk_name} PRIMARY KEY ({pk}))").format(
+                schema_table = sql.Identifier(schema_name, temp_table_name),
+                columns = col_list_string,
+                pk_name = pk_name,
+                pk = sql.Identifier(primary_key)
+                )
             LOGGER.info(create_sql.as_string(con))
             cur.execute(create_sql)
 
             owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema_table} OWNER to gis_admins").format(schema_table = sql.Identifier(schema_name, temp_table_name))
             cur.execute(owner_sql)
     
-    # Add a pk
-    with con:
-        with con.cursor() as cur:
-            cur.execute(sql.SQL("ALTER TABLE {schema_table} ADD PRIMARY KEY ({pk})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
-                                                                                               pk = sql.Identifier(primary_key)))
     return insert_column, excluded_column
 
 def create_partitioned_table(output_table, return_json, schema_name, con):
