@@ -13,6 +13,8 @@ GRANT SELECT ON ecocounter.counts TO bdit_humans;
 
 ALTER TABLE ecocounter.counts OWNER TO ecocounter_admins;
 
+GRANT SELECT, INSERT, DELETE ON ecocounter.counts TO ecocounter_bot;
+
 COMMENT ON TABLE ecocounter.counts
 IS 'Table contains the actual binned counts for ecocounter flows. Please note that bin size varies for older data, so averaging these numbers may not be straightforward.';
 
