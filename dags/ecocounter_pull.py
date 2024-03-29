@@ -11,12 +11,14 @@ import os
 import pendulum
 from datetime import timedelta
 import dateutil.parser
+import logging
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.macros import ds_add
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -34,6 +36,9 @@ DAG_NAME = 'ecocounter_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/config.cfg'
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -67,72 +72,69 @@ default_args = {
 def pull_ecocounter_dag():
 
     @task()
-    def pull_ecocounter(ds = None, **context):
+    def identify_sites_and_flows(**context):
+        token = getToken(API_CONFIG_PATH)
+        eco_postgres = PostgresHook("ecocounter_bot")
+
+        known_sites, unknown_sites, unknown_flows = [], [], []
+
+        #optional site param from airflow config
         if context["params"]["site_ids"] == [0]:
             SITE_IDS = ()
         else:
             SITE_IDS = tuple(context["params"]["site_ids"])
+
+        #identify any unknown sites and flows for slack alert
+        for site in getSites(token, SITE_IDS):
+            with eco_postgres.get_conn() as conn:
+                if not siteIsKnownToUs(site['id'], conn):
+                    unknown_sites.append(site)
+                else:
+                    known_sites.append(site)
+                    for channel in site['channels']:
+                        if not flowIsKnownToUs(channel['id'], conn):
+                            unknown_flows.append(channel)
+
+        failure_extra_msg = []
+        if unknown_sites != ():
+            failure_extra_msg.append(['One or more site_ids were unknown. Please fix before re-running:', unknown_sites])
+        if unknown_sites != ():
+            failure_extra_msg.append(['One or more flow_ids were unknown. Please fix before re-running:', unknown_flows])
+
+        if failure_extra_msg != []:
+            context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
+            raise AirflowFailException('One or more site/flow ids were unknown.')
+        
+        return known_sites
+
+    @task()
+    def pull_ecocounter(sites, ds = None):
         
         token = getToken(API_CONFIG_PATH)
-        start_time = dateutil.parser.parse(str(ds))
         eco_postgres = PostgresHook("ecocounter_bot")
-        unknown_flowids = []
-        unknown_siteids = []
+
+        start_time = dateutil.parser.parse(str(ds))
+        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
 
         with eco_postgres.get_conn() as conn:
-            for site in getSites(token, sites=SITE_IDS):
-                
-                # only update data for sites / channels in the database
-                # but announce unknowns for manual validation if necessary
-                if not siteIsKnownToUs(site['id'], conn):
-                    print('unknown site', site['id'], site['name'])
-                    unknown_siteids.append((site['id'], site['name'], ))
-                    continue
-
+            for site in sites:
                 for channel in site['channels']:
-                    if not flowIsKnownToUs(channel['id'], conn):
-                        print('unknown flow', channel['id'])
-                        unknown_flowids.append((channel['id'], channel['name'], ))
-                        continue
-
-                    # we do have this site and channel in the database; let's update its counts
                     channel_id = channel['id']
-                    print(f'starting on flow {channel_id}')
+                    LOGGER.debug(f'Starting on flow {channel_id}.')
 
                     # empty the count table for this flow
-                    truncateFlowSince(channel_id, conn, start_time)
+                    truncateFlowSince(channel_id, conn, start_time, end_time)
             
                     # and fill it back up!
-                    print(f'fetching data for flow {channel_id}')
-                    counts = getChannelData(token, channel_id, start_time)
-
-                    print(f'inserting data for flow {channel_id}')
+                    LOGGER.debug(f'Fetching data for flow {channel_id}.')
+                    counts = getChannelData(token, channel_id, start_time, end_time)
+                    
+                    volume=[]
                     for count in counts:
-                        volume = count['counts']
-                        insertFlowCount(channel_id, count['date'], volume, conn)
-            
-            context["task_instance"].xcom.push(key="unknown_siteids", value=unknown_siteids)
-            context["task_instance"].xcom.push(key="unknown_flowids", value=unknown_flowids)
-           
-    @task(
-        retries=0,
-        doc_md="""A status message to report any new site or flow ids."""
-    )
-    def report_missing_ids(**context):
-        ti = context["ti"]
-
-        unknown_siteids = ti.xcom_pull(key="unknown_siteids", task_ids="pull_ecocounter")
-        unknown_flowids = ti.xcom_pull(key="unknown_flowids", task_ids="pull_ecocounter")
-
-        if unknown_flowids == [] and unknown_siteids == []:
-            print("there were no missing ids.")
-            exit
-        else: #add details of failures to task_fail_slack_alert
-            failure_extra_msg = ['One or more site_ids was unknown:', unknown_siteids,
-                                 'One or more flow_ids was unknown:', unknown_flowids]
-            context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
-            raise AirflowFailException('One or more tables failed to copy.')
-
+                        volume = volume.append(count['counts'])
+                    insertFlowCount(channel_id, count['date'], volume, conn)
+                    LOGGER.info(f'Data inserted for flow {channel_id} of site {site}.')
+          
     @task_group(
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
     )
@@ -171,6 +173,7 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    pull_ecocounter() >> report_missing_ids() >> data_checks()
+    sites = identify_sites_and_flows()
+    pull_ecocounter(sites) >> data_checks()
 
 pull_ecocounter_dag()
