@@ -1,18 +1,28 @@
+"""
+Pipeline to run SQL data quality check on daily Miovision data pull.
+Uses `miovision_api.determine_working_machine` to check if there are gaps of 4 hours or more for any camera.
+Deprecated by `miovision_check` DAG. 
+"""
+import sys
+import os
+
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
-from psycopg2 import sql
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
+import pendulum
+
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from dags.dag_functions import task_fail_slack_alert
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
+
+dag_name = 'check_miovision'
 
 #To connect to pgadmin bot
 mio_bot = PostgresHook("miovision_api_bot")
@@ -32,34 +42,15 @@ def check_miovision(con, start_date, end_date):
             LOGGER.info(broken_flag)
             raise Exception ('A Miovision camera may be broken!')
 
-
 # Get slack member ids
-dag_config = Variable.get('slack_member_id', deserialize_json=True)
-list_names = dag_config['raphael'] + ' ' + dag_config['islam'] + ' ' + dag_config['natalie'] 
+dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    # print this task_msg and tag these users
-    task_msg = """The Task {task} failed. A miovision camera may be broken, don't panic. {slack_name} please check. """.format(
-        task=context.get('task_instance').task_id, slack_name = list_names,) 
-    
-    # this adds the error log url at the end of the msg
-    slack_msg = task_msg + """ (<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-default_args = {'owner':'jchew',
+default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
-                'start_date': datetime(2020, 7, 10),
-                'email': ['joven.chew@toronto.ca'],
+                'start_date': pendulum.datetime(2020, 7, 10, tz="America/Toronto"),
+                'end_date': pendulum.datetime(2023, 12, 21, tz="America/Toronto"),
                 'email_on_failure': False,
                  'email_on_success': False,
                  'retries': 0,
@@ -67,7 +58,13 @@ default_args = {'owner':'jchew',
                  'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG('check_miovision', default_args=default_args, schedule_interval='0 7 * * *', catchup=False)
+dag = DAG(dag_id = dag_name,
+          default_args=default_args,
+          schedule='0 7 * * *',
+          catchup=False,
+          tags = ['miovision', "data_checks", "archived"],
+          doc_md=__doc__
+)
 # Run at 7 AM local time every day
 
 task1 = PythonOperator(
@@ -80,4 +77,4 @@ task1 = PythonOperator(
       'start_date': '{{ ds }}', 
       'end_date' : '{{ macros.ds_add(ds, 1) }}'
     }
-    )
+)

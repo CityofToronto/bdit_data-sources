@@ -20,7 +20,7 @@ from psycopg2 import sql
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
-
+from requests.exceptions import RequestException
 
 class WYS_APIException(Exception):
     """Base class for exceptions."""
@@ -342,9 +342,7 @@ def api_main(start_date=default_start,
         try:    
             with conn.cursor() as cur:
                 logger.info('Inserting '+str(len(table))+' rows of data. Note: Insert gets roll back on error.')
-                yr = start_date.year
-                table_name = 'raw_data_'+str(yr)
-                insert_sql = sql.SQL("INSERT INTO wys.{table} VALUES %s ON CONFLICT DO NOTHING").format(table=sql.Identifier(table_name))                                  
+                insert_sql = sql.SQL("INSERT INTO wys.raw_data(api_id, datetime_bin, speed, count) VALUES %s ON CONFLICT DO NOTHING")
                 execute_values(cur, insert_sql, table)
                 
         except psycopg2.Error as exc:
@@ -376,18 +374,6 @@ def api_main(start_date=default_start,
 
     conn.commit()
 
-    try:
-        get_schedules(conn, api_key)
-        logger.info('Updated wys.sign_schedules_list')
-    except psycopg2.Error as exc:
-        logger.critical('Error updating schedules')
-        logger.critical(exc)
-        conn.close()
-        sys.exit(1)
-
-    conn.commit()
-
-    conn.close()
     logger.info('Done')
 
 def update_locations(conn, loc_table):
@@ -424,25 +410,30 @@ def update_locations(conn, loc_table):
             """
         cur.execute(calc_geom_temp_table)
         update_locations_sql="""
+            -- most recent record of each sign
             WITH locations AS (
                 SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom, id
                 FROM wys.locations 
                 ORDER BY api_id, start_date DESC
-            ),
-            differences AS (
+            )
+            -- New and moved signs
+            , differences AS (
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
                        a.loc, a.geom 
                 FROM daily_intersections A
-                JOIN locations B ON (A.api_id = B.api_id
-                                      AND (st_distance(A.geom, B.geom) > 100
-                                           OR A.dir <> B.dir))
-                                      OR A.api_id NOT IN (SELECT api_id FROM locations)
-            ), 
-            new_signs AS (
+                LEFT JOIN locations B ON A.api_id = B.api_id
+                WHERE
+                    st_distance(A.geom, B.geom) > 100 -- moved more than 100m
+                    OR A.dir <> B.dir -- changed direction
+                    OR A.api_id NOT IN (SELECT api_id FROM locations) -- new sign
+            )
+            -- Insert new & moved signs into wys.locations
+            , new_signs AS (
                 INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
                 SELECT * FROM differences
-            ),
-            updated_signs AS (
+            )
+            -- Signs with new name and/or address
+            , updated_signs AS (
                 SELECT a.api_id, a.address, a.sign_name, a.dir, a.loc, a.start_date, 
                        a.geom, b.id 
                 FROM daily_intersections A
@@ -452,6 +443,7 @@ def update_locations(conn, loc_table):
                                       AND (A.sign_name <> B.sign_name
                                         OR A.address <> B.address)
             )
+            -- Update name and/or address
             UPDATE wys.locations 
                 SET api_id = b.api_id,
                     address = b.address,
@@ -468,13 +460,25 @@ def update_locations(conn, loc_table):
 
 def get_schedules(conn, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+signs_endpoint+schedule_endpoint,
-                         headers=headers)
-    schedule_list = response.json()
     
-    rows = [(schedule['name'], api_id) for schedule in schedule_list if schedule['assigned_on_locations'] 
-            for api_id in schedule['assigned_on_locations'] if api_id]
-       
+    try: 
+        response=session.get(url+signs_endpoint+schedule_endpoint,
+                         headers=headers)
+        response.raise_for_status()
+        schedule_list = response.json()
+    except RequestException as exc: 
+        logger.critical('Error querying API, %s', exc)
+        logger.critical('Response: %s', exc.response)                        
+
+    try:
+        rows = [(schedule['name'], api_id)
+                    for schedule in schedule_list if schedule['assigned_on_locations']
+                        for api_id in schedule['assigned_on_locations'] if api_id]
+    except TypeError as e:
+        logger.critical('Error converting schedules response to values list.')
+        logger.critical('Return value: %s', schedule_list)
+        raise WYS_APIException(e)
+
     with conn.cursor() as cur:
         logger.debug('Inserting '+str(len(rows))+' rows of schedules')
         schedule_sql = '''
