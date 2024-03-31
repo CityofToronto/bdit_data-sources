@@ -22,6 +22,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
     - [Traffic Signals](#traffic-signals)
   - [School Safety Zones](#school-safety-zones)
   - [Street Centreline Geocoding](#street-centreline-geocoding)
+- [HERE Travel Time Data](#here-travel-time-data)
 - [Incidents (inactive)](#incidents-inactive)
 - [INRIX (inactive)](#inrix-inactive)
 - [Parking (inactive)](#parking-inactive)
@@ -29,8 +30,11 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [TTC (inactive)](#ttc-inactive)
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-  - [RESCU - Loop Detectors](#rescu---loop-detectors)
+  - [RESCU - Loop Detectors (inactive)](#rescu---loop-detectors-inactive)
+  - [Short-term Counting Program](#short-term-counting-program)  
+  - [VDS](#vehicle-detector-station-vds)  
 - [Watch Your Speed signs](#watch-your-speed-signs)
+- [Weather](#weather)
 - [Open Data Releases](#open-data-releases)
 
 ## Airflow DAGS
@@ -92,6 +96,12 @@ This dataset comes from Vision Zero which uses Google Sheets to track progress o
 
 Contains SQL used to transform text description of street (in bylaws) into centreline geometries.
 
+## HERE Travel Time Data
+
+[`here/`](here/)
+
+Travel time data provided by HERE Technologies from a mix of vehicle probes. Daily extracts of 5-min aggregated speed data for each link in the city (where data are available).
+
 ## Incidents (inactive)
 
 See [CityofToronto/bdit_incidents](https://github.com/CityofToronto/bdit_incidents)
@@ -126,19 +136,32 @@ This contains some valiant attempts at transforming CIS vehicle location data pr
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
 
-### RESCU - Loop Detectors
+### RESCU - Loop Detectors (inactive)
 [`volumes/rescu/`](volumes/rescu/)
 
-AKA Vehicle Detector Station (VDS)
+Deprecated. See [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds). 
 
-Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
-More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
+### Short-term Counting Program
+[`volumes/short_term_counting_program/`](volumes/short_term_counting_program/)
+
+Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through the internal application MOVE and data go as far back as 1994. 
+
+### Vehicle Detector Station (VDS)
+[`volumes/vds/`](volumes/vds/)
+
+The city operates various permanent Vehicle Detector Stations (VDS), employing different technologies, including RESCU, intersection detectors, Blue City and Smartmicro. The most frequently used for D&A context is the RESCU network which tracks traffic volumes on Toronto expressways, about which more information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+
 
 ## Watch Your Speed signs
 [`wys/`](wys/)
 
 The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 programs: the mobile watch your speed which has signs mounted on existing poles, moved every few weeks, and school watch your speed which has signs installed at high priority schools. The signs also collect continuous speed data.
+
+## Weather
+[`weather/`](weather/)
+
+Daily historical weather conditions and predictions from Environment Canada.
 
 ## Open Data Releases
 
