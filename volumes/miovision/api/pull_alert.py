@@ -98,7 +98,7 @@ updated AS (
         alerts.intersection_id = new_values.intersection_id
         AND alerts.alert = new_values.alert
         --where old end = new start
-        AND alerts.end_time = new_values.start_time::timestamp - interval '5 minutes'
+        AND alerts.end_time = new_values.start_time::timestamp
     RETURNING new_values.*
 )
 
@@ -109,8 +109,23 @@ EXCEPT
 SELECT intersection_id, alert, start_time, end_time FROM updated;
 """
 
-#revisit this function
 def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
+    """Miovision Alert Puller
+
+    Basic workflow is to initialize the class, then use `get_response` to
+    pull alerts all intersections at a point in time.
+
+    Parameters
+    ----------
+    conn : any
+        Postgres connection.
+    start_date : datetime
+        Start date to pull alerts from, inclusive.
+    end_date : datetime
+        End date to pull alerts to, inclusive.
+    key : str
+        Miovision API access key.
+    """
 
     STEP_SIZE = datetime.timedelta(minutes=5)
 

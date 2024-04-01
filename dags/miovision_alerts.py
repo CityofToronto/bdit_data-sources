@@ -17,7 +17,7 @@ from airflow.macros import ds_add
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    #from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert
     from volumes.miovision.api.pull_alert import pull_alerts
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -34,8 +34,8 @@ default_args = {
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5)
-    #'on_failure_callback': task_fail_slack_alert
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
