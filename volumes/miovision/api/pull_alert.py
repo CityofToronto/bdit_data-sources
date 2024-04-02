@@ -1,7 +1,6 @@
 import datetime
 import json
 from requests import Session
-import dateutil.parser
 import logging
 import configparser
 import pandas as pd
@@ -24,8 +23,6 @@ session = Session()
 session.proxies = {}
 url = 'https://api.miovision.com/alerts/'
 
-input_time = '2022-05-23 02:01:03'
-
 CONFIG = configparser.ConfigParser()
 CONFIG.read('/etc/airflow/data_scripts/volumes/miovision/api/config.cfg')
 api_key=CONFIG['API']
@@ -34,7 +31,7 @@ dbset = CONFIG['DBSETTINGS']
 conn = connect(**dbset)
 conn.autocommit = True
 
-class MiovPuller:
+class MiovAlertPuller:
     """Miovision API puller.
 
     Basic workflow is to initialize the class, then use `get_response` to
@@ -89,7 +86,7 @@ insert_data = """WITH new_values AS (
     FROM (VALUES %s) AS new_values(intersection_id, alert, start_time, end_time)
 ),
 
---extend to existing alerts
+--extend existing alerts
 updated AS (
     UPDATE miovision_api.alerts
     SET end_time = new_values.end_time
@@ -99,6 +96,7 @@ updated AS (
         AND alerts.alert = new_values.alert
         --where old end = new start
         AND alerts.end_time = new_values.start_time::timestamp
+    --returns the new values used for updates (to be excluded from insert)
     RETURNING new_values.*
 )
 
@@ -106,14 +104,15 @@ updated AS (
 INSERT INTO miovision_api.alerts (intersection_id, alert, start_time, end_time)
 SELECT intersection_id, alert, start_time, end_time FROM new_values
 EXCEPT
-SELECT intersection_id, alert, start_time, end_time FROM updated;
+SELECT intersection_id, alert, start_time, end_time FROM updated
+ON CONFLICT (intersection_id, alert, start_time) DO NOTHING;
 """
 
 def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     """Miovision Alert Puller
 
     Basic workflow is to initialize the class, then use `get_response` to
-    pull alerts all intersections at a point in time.
+    pull alerts all intersections at a point in time, tranform and insert.
 
     Parameters
     ----------
@@ -129,6 +128,7 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
 
     STEP_SIZE = datetime.timedelta(minutes=5)
 
+    #establish list of timestamps to iterate over
     if end_date < start_date:
         raise ValueError('end_time is not greater than start_time.')
     dt = start_date
@@ -137,21 +137,23 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
         dt = dt + STEP_SIZE
         dt_list.append(dt)
 
-    dfs = []
-
     logger.info('Pulling Miovision alerts from %s to %s.', start_date, end_date)
 
-    for t in dt_list: 
-        miovpull = MiovPuller(t, key)
+    #pull alerts at each timestamps and append to list
+    dfs = []
+    for dt in dt_list: 
+        miovpull = MiovAlertPuller(dt, key)
         test = miovpull.get_response()
         response = miovpull.process_response(test)
         df = pd.DataFrame(response).drop_duplicates()
         dfs.append(df)
-        
+
+    logger.info('Done pulling. Transforming alerts.')
+
+    #create pandas df and restructure        
     final = pd.concat(dfs, ignore_index=True)
     final.rename(columns={0: "time", 1: "intersection_id", 2: "alert"}, inplace = True)
     final['time'] = pd.to_datetime(final['time'])
-
     final.sort_values(by=['intersection_id', 'alert', 'time'], inplace = True)
     final.reset_index(drop = True)
     final.drop_duplicates(inplace = True, ignore_index = True)
@@ -166,11 +168,13 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
         if (row['time_lag'] == pd.Timedelta(f"{STEP_SIZE} minutes")): #lag = step size
             final.at[index, 'start_time'] = final.at[index-1, 'start_time'] #assign previous start time
 
-    #find start and end time of group 
+    #find start and end time of consecutive values 
     summary = final.groupby(by = ['intersection_id', 'alert', 'start_time']).agg({'time': ['max']})
     summary = summary.reset_index()
 
+    #convert to tuples for inserting
     values = list(summary.itertuples(index=False, name=None))  
     
+    logger.info('Inserting values into `miovision_api.alerts`.')
     with conn.cursor() as cur:
         execute_values(cur, insert_data, values)
