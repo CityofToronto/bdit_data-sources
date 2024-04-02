@@ -81,6 +81,7 @@ unpacked_tmcs AS (
     SELECT
         count_info_id,
         time_bin,
+        -- fun fact: 'KEY' is a ... KEYword. Thus: 'kee'
         (json_each(tmc)).key AS kee,
         substring((json_each(tmc)).key, '_([rtl])$') AS movement,
         substring((json_each(tmc)).key, '^._(cars|truck|bus|peds|bike|other)') AS trans_mode,
@@ -92,8 +93,9 @@ SELECT
     count_info_id,
     countinfomics.arterycode,
     countinfomics.count_date::date + u.time_bin AS datetime_bin,
-    -- fun fact: 'KEY' is a ... KEYword. Thus: 'kee'
     upper(substring(u.kee, '^([nsew])_')) AS leg,
+    kee as traffic_column_name,
+    trans_mode as traffic_classification, 
     CASE
         WHEN u.movement = 't' THEN 1
         WHEN u.movement = 'l' THEN 2
