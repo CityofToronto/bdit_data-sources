@@ -1,12 +1,12 @@
 --DROP VIEW vds.detector_inventory;
-CREATE VIEW vds.detector_inventory AS (
+CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT
         c.uid,
         c.detector_id,
         c.division_id,
         dtypes.det_type,
         CASE dtypes.det_type = 'RESCU Detectors'
-            WHEN TRUE THEN CASE substring(c.detector_id, 2, 1)
+            WHEN TRUE THEN CASE substring(substring(c.detector_id, 'D\w{8}'), 2, 1)
                 WHEN 'N' THEN 'DVP/Allen North' --North of Don Mills 
                 WHEN 'S' THEN 'DVP South' --South of Don Mills 
                 WHEN 'E' THEN 'Gardiner/Lakeshore East' --East of Yonge
@@ -15,7 +15,7 @@ CREATE VIEW vds.detector_inventory AS (
                 END
         END AS det_loc,
         CASE dtypes.det_type = 'RESCU Detectors'
-            WHEN TRUE THEN CASE substring(c.detector_id, 9, 1)
+            WHEN TRUE THEN CASE substring(substring(c.detector_id, 'D\w{8}'), 9, 1)
                 WHEN 'D' THEN 'DVP'
                 WHEN 'L' THEN 'Lakeshore'
                 WHEN 'G' THEN 'Gardiner'
@@ -25,7 +25,7 @@ CREATE VIEW vds.detector_inventory AS (
                 END
         END AS det_group,
         CASE dtypes.det_type = 'RESCU Detectors'
-            WHEN TRUE THEN CASE substring(c.detector_id, 8, 1)
+            WHEN TRUE THEN CASE substring(substring(c.detector_id, 'D\w{8}'), 8, 1)
                 WHEN 'E' THEN 'Eastbound'
                 WHEN 'W' THEN 'Westbound'
                 WHEN 'S' THEN 'Southbound'
@@ -36,20 +36,25 @@ CREATE VIEW vds.detector_inventory AS (
         CASE
             WHEN c.division_id = 8001 THEN 1 --15 min bins
             --remainder are division_id = 2
+            WHEN dtypes.det_type = 'Smartmicro Sensors'
+                OR c.detector_id SIMILAR TO 'SMARTMICRO - D\w{8}' THEN 3 --5 min bins
             WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
-            WHEN dtypes.det_type = 'Smartmicro Sensors' THEN 3 --5 min bins
         END AS expected_bins
     FROM vds.vdsconfig AS c,
         LATERAL(
             SELECT CASE
-                WHEN c.detector_id LIKE 'D%' AND c.division_id = 2 THEN 'RESCU Detectors'
+                WHEN c.division_id = 2 AND (
+                    c.detector_id SIMILAR TO 'D\w{8}%'
+                    --smartmicro installed in place of old rescu sensors on highways
+                    OR c.detector_id SIMILAR TO 'SMARTMICRO - D\w{8}'
+                ) THEN 'RESCU Detectors'
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-DET%' AND c.division_id = 8001 THEN 'Signal Detectors'
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-SF%' AND c.division_id = 8001 THEN 'Signal Special Function'
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND c.division_id = 8001 THEN 'Signal Preemption'
                 WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
                 WHEN c.detector_id LIKE ANY('{"%SMARTMICRO%", "%YONGE HEATH%", "%YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}')
-                    OR c.vds_id IN (6949838, 6949843, 6949845) --new lakeshore smartmicro sensors
+                    OR c.vds_id IN (6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577) --new lakeshore/spadina smartmicro sensors
                     OR (c.vds_id >= 7011490 AND c.vds_id <= 7011519) --new lakeshore smartmicro sensors
                     THEN 'Smartmicro Sensors'
                 END AS det_type
