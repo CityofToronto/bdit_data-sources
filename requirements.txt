@@ -984,7 +984,7 @@ pickleshare==0.7.5
     # via
     #   -c constraints.txt
     #   ipython
-pillow==10.1.0
+pillow==10.3.0
     # via
     #   env-canada
     #   imageio
