@@ -10,6 +10,7 @@ CREATE TABLE ecocounter.sites (
 ALTER TABLE ecocounter.sites OWNER TO ecocounter_admins;
 
 GRANT SELECT ON ecocounter.sites TO bdit_humans;
+GRANT SELECT ON ecocounter.sites TO ecocounter_bot;
 
 COMMENT ON TABLE ecocounter.sites
 IS 'Sites or "locations" of separate ecocounter
