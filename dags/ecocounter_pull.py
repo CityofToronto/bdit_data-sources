@@ -83,6 +83,7 @@ def pull_ecocounter_dag():
         
         start_time = dateutil.parser.parse(str(ds))
         end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
+        LOGGER.info(f'Pulling data from {start_time} to {end_time}.')
 
         #optional site param from airflow config
         if context["params"]["site_ids"] == [0]:
@@ -91,14 +92,15 @@ def pull_ecocounter_dag():
             SITE_IDS = tuple(context["params"]["site_ids"])
 
         unknown_sites, unknown_flows = [], []
-        with eco_postgres.get_conn() as conn:
+        #with eco_postgres.get_conn() as conn:
+        with eco_postgres as conn:
             for site in getSites(token, SITE_IDS):
                 site_id = site['id']
                 if not siteIsKnownToUs(site_id, conn):
                     unknown_sites.append(site)
                 for channel in site['channels']:
                     if not flowIsKnownToUs(channel['id'], conn):
-                            unknown_flows.append(channel)
+                        unknown_flows.append(channel)
                     channel_id = channel['id']
                     LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
 
@@ -109,25 +111,28 @@ def pull_ecocounter_dag():
                     LOGGER.debug(f'Fetching data for flow {channel_id}.')
                     counts = getChannelData(token, channel_id, start_time, end_time)
                     
+                    #convert response into a tuple for inserting
                     volume=[]
                     for count in counts:
                         row=(channel_id, count['date'], count['counts'])
                         volume.append(row)
                     insertFlowCounts(conn, volume)
-                    LOGGER.info(f'Data inserted for flow {channel_id} of site {site}.')
+                    LOGGER.debug(f'Data inserted for flow {channel_id} of site {site_id}.')
+                LOGGER.info(f'Data inserted for site {site_id} - {site['name']}.')
           
         missing_ids_msg = []
         if unknown_sites != ():
             missing_ids_msg.append(['One or more `site_ids` were unknown:', unknown_sites])
         if unknown_sites != ():
-            missing_ids_msg.append(['One or more `flow_ids` were unknown::', unknown_flows])
+            missing_ids_msg.append(['One or more `flow_ids` were unknown:', unknown_flows])
 
         if missing_ids_msg != []:
-            send_slack_msg(
+            '''send_slack_msg(
                 context=context,
                 msg=f"There were unknown ids when pulling ecocounter data :where:",
                 attachments=missing_ids_msg
-            )
+            )'''
+            return missing_ids_msg
 
     @task_group(
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
