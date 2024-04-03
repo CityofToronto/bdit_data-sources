@@ -23,6 +23,7 @@
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
     - [`centreline_miovision`](#centreline_miovision)
+    - [`alerts`](#alerts)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Tables](#other-tables)
@@ -416,6 +417,17 @@ This table maps all miovision intersection legs to centreline street segments. I
 centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
 intersection_uid| integer | ID for intersection | 1 |
 leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
+
+### `alerts`
+
+This table contains alerts for Miovision intersections pulled daily from the API by the [miovision_alert DAG](../api/readme.md#miovision_alerts). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. More detailed information is available in the Miovision One UI. 
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+intersection_id | text | The intersection id, corresponding to intersections.intersection_id column | c04704a0-e1e2-4101-9c29-6823d0f41c52 |
+alert | text | Short text description of the alert. Longer forms are available in the Miovision One UI | PERIPHERAL_UNAVAILABLE |
+start_time | timestamp | Start time of the alert to 5 minute accuracy. | 2024-01-12 10:20:00 | 
+end_time | timestamp | End time of the alert to 5 minute accuracy. Note this could be extended the following day. | 2024-01-21 15:35:00 | 
 
 ## Primary and Foreign Keys
 
