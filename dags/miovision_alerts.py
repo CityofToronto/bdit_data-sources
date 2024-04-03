@@ -17,13 +17,16 @@ from airflow.macros import ds_add
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from volumes.miovision.api.pull_alert import pull_alerts
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'miovision_alerts'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg'
 
@@ -44,7 +47,7 @@ default_args = {
     schedule='0 3 * * *',
     catchup=True,
     tags=["miovision", "data_pull", "alerts"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def pull_miovision_dag():
 
