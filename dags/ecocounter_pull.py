@@ -12,22 +12,23 @@ import pendulum
 from datetime import timedelta
 import dateutil.parser
 import logging
+from configparser import ConfigParser
+from psycopg2 import connect
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
-from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, send_slack_msg
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getToken, getSites, getChannelData, siteIsKnownToUs,
-        flowIsKnownToUs, truncateFlowSince, insertFlowCount    
+        flowIsKnownToUs, truncateFlowSince, insertFlowCounts    
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -35,7 +36,7 @@ except:
 DAG_NAME = 'ecocounter_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-API_CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/config.cfg'
+CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.config'
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +49,7 @@ default_args = {
     'email_on_success': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert
+    #'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -56,7 +57,7 @@ default_args = {
     default_args=default_args,
     schedule='0 3 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
-    catchup=True,
+    catchup=False,
     params={
         "site_ids": Param(
             default=[0],
@@ -72,11 +73,16 @@ default_args = {
 def pull_ecocounter_dag():
 
     @task()
-    def identify_sites_and_flows(**context):
-        token = getToken(API_CONFIG_PATH)
-        eco_postgres = PostgresHook("ecocounter_bot")
-
-        known_sites, unknown_sites, unknown_flows = [], [], []
+    def pull_ecocounter(ds, **context):
+        config = ConfigParser()
+        config.read(CONFIG_PATH)
+        eco_postgres = connect(**config['DBSETTINGS'])
+        eco_postgres.autocommit = True
+        token = getToken(CONFIG_PATH)
+        #eco_postgres = PostgresHook("ecocounter_bot")
+        
+        start_time = dateutil.parser.parse(str(ds))
+        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
 
         #optional site param from airflow config
         if context["params"]["site_ids"] == [0]:
@@ -84,43 +90,17 @@ def pull_ecocounter_dag():
         else:
             SITE_IDS = tuple(context["params"]["site_ids"])
 
-        #identify any unknown sites and flows for slack alert
-        for site in getSites(token, SITE_IDS):
-            with eco_postgres.get_conn() as conn:
-                if not siteIsKnownToUs(site['id'], conn):
-                    unknown_sites.append(site)
-                else:
-                    known_sites.append(site)
-                    for channel in site['channels']:
-                        if not flowIsKnownToUs(channel['id'], conn):
-                            unknown_flows.append(channel)
-
-        failure_extra_msg = []
-        if unknown_sites != ():
-            failure_extra_msg.append(['One or more site_ids were unknown. Please fix before re-running:', unknown_sites])
-        if unknown_sites != ():
-            failure_extra_msg.append(['One or more flow_ids were unknown. Please fix before re-running:', unknown_flows])
-
-        if failure_extra_msg != []:
-            context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
-            raise AirflowFailException('One or more site/flow ids were unknown.')
-        
-        return known_sites
-
-    @task()
-    def pull_ecocounter(sites, ds = None):
-        
-        token = getToken(API_CONFIG_PATH)
-        eco_postgres = PostgresHook("ecocounter_bot")
-
-        start_time = dateutil.parser.parse(str(ds))
-        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
-
+        unknown_sites, unknown_flows = [], []
         with eco_postgres.get_conn() as conn:
-            for site in sites:
+            for site in getSites(token, SITE_IDS):
+                site_id = site['id']
+                if not siteIsKnownToUs(site_id, conn):
+                    unknown_sites.append(site)
                 for channel in site['channels']:
+                    if not flowIsKnownToUs(channel['id'], conn):
+                            unknown_flows.append(channel)
                     channel_id = channel['id']
-                    LOGGER.debug(f'Starting on flow {channel_id}.')
+                    LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
 
                     # empty the count table for this flow
                     truncateFlowSince(channel_id, conn, start_time, end_time)
@@ -131,16 +111,30 @@ def pull_ecocounter_dag():
                     
                     volume=[]
                     for count in counts:
-                        volume = volume.append(count['counts'])
-                    insertFlowCount(channel_id, count['date'], volume, conn)
+                        row=(channel_id, count['date'], count['counts'])
+                        volume.append(row)
+                    insertFlowCounts(conn, volume)
                     LOGGER.info(f'Data inserted for flow {channel_id} of site {site}.')
           
+        missing_ids_msg = []
+        if unknown_sites != ():
+            missing_ids_msg.append(['One or more `site_ids` were unknown:', unknown_sites])
+        if unknown_sites != ():
+            missing_ids_msg.append(['One or more `flow_ids` were unknown::', unknown_flows])
+
+        if missing_ids_msg != []:
+            send_slack_msg(
+                context=context,
+                msg=f"There were unknown ids when pulling ecocounter data :where:",
+                attachments=missing_ids_msg
+            )
+
     @task_group(
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
     )
     def data_checks():
         data_check_params = {
-            "table": "ecocounter.counts",
+            "table": "gwolofs.ecocounter_counts_test",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
@@ -173,7 +167,6 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    sites = identify_sites_and_flows()
-    pull_ecocounter(sites) >> data_checks()
+    pull_ecocounter() >> data_checks()
 
 pull_ecocounter_dag()
