@@ -14,6 +14,8 @@ GRANT SELECT ON ecocounter.flows TO bdit_humans;
 
 ALTER TABLE ecocounter.flows OWNER TO ecocounter_admins;
 
+GRANT SELECT ON ecocounter.flows TO ecocounter_bot;
+
 COMMENT ON TABLE ecocounter.flows
 IS 'A flow is usually a direction of travel
 associated with a sensor at an ecocounter
