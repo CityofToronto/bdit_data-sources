@@ -75,17 +75,20 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_schema = %s AND table_name = %s;"
         )
-    # copy the table's comment
+    # copy the table's comment, extended with additional info (source, time)
     comment_query = sql.SQL(
         r"""
             DO $$
             DECLARE comment_ text;
             BEGIN
-                SELECT obj_description('{}.{}'::regclass) INTO comment_;
+                SELECT obj_description('{}.{}'::regclass)
+                    || 'Copied from {}.{} by bigdata repliactor DAG at '
+                    || to_char(now() AT TIME ZONE 'EST5EDT', 'yyyy-mm-dd HH24:MI') || '.' INTO comment_;
                 EXECUTE format('COMMENT ON TABLE {}.{} IS %L', comment_);
             END $$;
         """
         ).format(
+            sql.Identifier(src_schema), sql.Identifier(src_table),
             sql.Identifier(src_schema), sql.Identifier(src_table),
             sql.Identifier(dst_schema), sql.Identifier(dst_table),
         )
