@@ -95,22 +95,31 @@ def pull_ecocounter_dag():
         #with eco_postgres.get_conn() as conn:
         with eco_postgres as conn:
             for site in getSites(token, SITE_IDS):
-                site_id = site['id']
+                site_id, site_name = site['id'], site['name']
                 if not siteIsKnownToUs(site_id, conn):
-                    unknown_sites.append(site)
+                    (
+                        'site_id': site_id,
+                        'site_name': site_name,
+                        'channels': [channel['id'] for channel in site['channels']]
+                    )
+                    unknown_sites.append({
+                        'site_id': site_id,
+                        'site_name': site_name,
+                        'channels': [channel['id'] for channel in site['channels']]
+                    })
                 for channel in site['channels']:
+                    channel_id, channel_name = channel['id'], channel['name']
                     if not flowIsKnownToUs(channel['id'], conn):
-                        unknown_flows.append(channel)
-                    channel_id = channel['id']
+                        unknown_flows.append({
+                            'channel_id': channel_id,
+                            'site_name': channel_name
+                        })
                     LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
-
                     # empty the count table for this flow
-                    truncateFlowSince(channel_id, conn, start_time, end_time)
-            
+                    truncateFlowSince(channel_id, conn, start_time, end_time)          
                     # and fill it back up!
                     LOGGER.debug(f'Fetching data for flow {channel_id}.')
                     counts = getChannelData(token, channel_id, start_time, end_time)
-                    
                     #convert response into a tuple for inserting
                     volume=[]
                     for count in counts:
@@ -118,13 +127,16 @@ def pull_ecocounter_dag():
                         volume.append(row)
                     insertFlowCounts(conn, volume)
                     LOGGER.debug(f'Data inserted for flow {channel_id} of site {site_id}.')
-                LOGGER.info(f'Data inserted for site {site_id} - {site['name']}.')
+                LOGGER.info(f'Data inserted for site {site_id} - {site_name}.')
           
         missing_ids_msg = []
         if unknown_sites != ():
             missing_ids_msg.append(['One or more `site_ids` were unknown:', unknown_sites])
         if unknown_sites != ():
             missing_ids_msg.append(['One or more `flow_ids` were unknown:', unknown_flows])
+
+        [{site['id'], site['name']} for site in unknown_sites]
+        [site for site in unknown_sites]
 
         if missing_ids_msg != []:
             '''send_slack_msg(
