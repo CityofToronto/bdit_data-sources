@@ -173,7 +173,7 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     summary = summary.reset_index()
 
     #convert to tuples for inserting
-    values = list(summary.itertuples(index=False, name=None))  
+    values = list(summary.itertuples(index=False, name=None))
     
     logger.info('Inserting values into `miovision_api.alerts`.')
     with conn.cursor() as cur:

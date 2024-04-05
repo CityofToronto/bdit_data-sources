@@ -1,4 +1,3 @@
-
 <!-- TOC -->
 
 - [1. Overview](#1-overview)
@@ -42,6 +41,7 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
+
 # 1. Overview
 
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
@@ -426,8 +426,8 @@ This table contains alerts for Miovision intersections pulled daily from the API
 :-----|:-----|:-----|:-----|
 intersection_id | text | The intersection id, corresponding to intersections.intersection_id column | c04704a0-e1e2-4101-9c29-6823d0f41c52 |
 alert | text | Short text description of the alert. Longer forms are available in the Miovision One UI | PERIPHERAL_UNAVAILABLE |
-start_time | timestamp | Start time of the alert to 5 minute accuracy. | 2024-01-12 10:20:00 | 
-end_time | timestamp | End time of the alert to 5 minute accuracy. Note this could be extended the following day. | 2024-01-21 15:35:00 | 
+start_time | timestamp | First 5 minute interval at which the alert appeared. **Subtract 5 minutes to get earliest possible start time.** | 2024-01-12 10:20:00 | 
+end_time | timestamp | Final 5 minute interval at which the alert appeared. **Add 5 minutes to get latest possible end time.** Note this could be extended the following day. | 2024-01-21 15:35:00 | 
 
 ## Primary and Foreign Keys
 
