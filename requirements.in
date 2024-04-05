@@ -10,6 +10,9 @@ apache-airflow-providers-google==10.16.0
 apache-airflow-providers-postgres==5.10.2
 apache-airflow-providers-slack==8.6.1
 
+# Airflow dag list
+graphviz==0.20.2
+
 # Python dependency management
 pip-tools==7.3.0
 
