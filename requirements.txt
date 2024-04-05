@@ -731,6 +731,10 @@ googleapis-common-protos[grpc]==1.63.0
     #   grpcio-status
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
+graphviz==0.20.2
+    # via
+    #   -c constraints.txt
+    #   -r requirements.in
 greenlet==3.0.3
     # via
     #   -c constraints.txt
