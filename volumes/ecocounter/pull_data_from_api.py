@@ -53,8 +53,7 @@ def getChannelData(token, channel_id: int, startDate: datetime, endDate: datetim
             headers={'Authorization': f'Bearer {token}'},
             params={
                 'begin': requestStartDate.isoformat(timespec='seconds'),
-                #may need to truncate this to endDate.
-                'end':  (requestStartDate + requestChunkSize).isoformat(timespec='seconds'),
+                'end':  min(requestStartDate + requestChunkSize, endDate).isoformat(timespec='seconds'),
                 'complete': 'false',
                 'step': '15m'
             }
@@ -67,7 +66,7 @@ def getChannelData(token, channel_id: int, startDate: datetime, endDate: datetim
 def siteIsKnownToUs(site_id: int, conn):
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT 1 FROM ecocounter.sites WHERE site_id = %s",
+            "SELECT 1 FROM gwolofs.sites WHERE site_id = %s",
             (site_id,)
         )
         return cursor.rowcount > 0
@@ -76,7 +75,7 @@ def siteIsKnownToUs(site_id: int, conn):
 def flowIsKnownToUs(flow_id: int, conn):
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT 1 FROM ecocounter.flows WHERE flow_id = %s",
+            "SELECT 1 FROM gwolofs.flows WHERE flow_id = %s",
             (flow_id,)
         )
         return cursor.rowcount > 0
@@ -85,7 +84,7 @@ def flowIsKnownToUs(flow_id: int, conn):
 def truncateFlowSince(flow_id: int, conn: any, startDate: datetime, endDate: datetime):
     with conn.cursor() as cursor:
         cursor.execute(
-            """DELETE FROM gwolofs.ecocounter_counts_test
+            """DELETE FROM gwolofs.counts
             WHERE flow_id = %s
             AND datetime_bin >= %s
             AND datetime_bin < %s""",
@@ -94,9 +93,18 @@ def truncateFlowSince(flow_id: int, conn: any, startDate: datetime, endDate: dat
 
 # insert records
 def insertFlowCounts(conn, volume):
-    insert_query="INSERT INTO gwolofs.ecocounter_counts_test (flow_id, datetime_bin, volume) VALUES %s"
+    insert_query="INSERT INTO gwolofs.counts (flow_id, datetime_bin, volume) VALUES %s"
     with conn.cursor() as cur:
         execute_values(cur, insert_query, volume)
+
+# insert records
+def insertSite(conn, row):
+    insert_query="""
+    INSERT INTO gwolofs.sites (site_id, site_description, geom, validated)
+    VALUES (%s::numeric, %s::text, (%s, %s)::, False::boolean)
+    """
+    with conn.cursor() as cur:
+        execute_values(cur, insert_query, row)
 
 def run_api(
         start_date: datetime = default_start,
