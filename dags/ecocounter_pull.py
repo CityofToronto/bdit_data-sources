@@ -20,6 +20,7 @@ from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
+from airflow.exceptions import AirflowSkipException
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -27,8 +28,9 @@ try:
     from dags.dag_functions import task_fail_slack_alert, send_slack_msg
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
-        getToken, getSites, getChannelData, siteIsKnownToUs,
-        flowIsKnownToUs, truncateFlowSince, insertFlowCounts    
+        getToken, getSites, getChannelData, siteIsKnownToUs, insertSite,
+        insertFlow, flowIsKnownToUs, truncateFlowSince, insertFlowCounts,
+        getKnownSites, getKnownChannels
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -40,6 +42,7 @@ CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.co
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+LOGGER.setLevel('DEBUG')
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -58,62 +61,74 @@ default_args = {
     schedule='0 3 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=False,
-    params={
-        "site_ids": Param(
-            default=[0],
-            type="array",
-            title="An array of site_ids (integers).",
-            description="A list of site_ids to pull/aggregate for a single date. Default [0] will pull all flows.",
-            items={"type": "number"},
-        )
-    },
     tags=["ecocounter", "data_pull", "data_checks"],
     doc_md=__doc__
 )
 def pull_ecocounter_dag():
 
     @task()
-    def pull_ecocounter(ds, **context):
+    def update_sites_and_flows(**context):
         config = ConfigParser()
         config.read(CONFIG_PATH)
-        eco_postgres = connect(**config['DBSETTINGS'])
-        eco_postgres.autocommit = True
         token = getToken(CONFIG_PATH)
-        #eco_postgres = PostgresHook("ecocounter_bot")
+        eco_postgres = PostgresHook("ecocounter_bot")
+
+        new_sites, new_flows = [], []
+        with eco_postgres.get_conn() as conn:
+            for site in getSites(token):
+                site_id, site_name = site['id'], site['name']
+                if not siteIsKnownToUs(site_id, conn):
+                    insertSite(conn, site_id, site_name, site['longitude'], site['latitude'])
+                    new_sites.append({
+                        'site_id': site_id,
+                        'site_name': site_name
+                    })
+                for channel in site['channels']:
+                    channel_id, channel_name = channel['id'], channel['name']
+                    if not flowIsKnownToUs(channel['id'], conn):
+                        insertFlow(conn, channel_id, site_id, channel_name, channel['interval'])
+                        new_flows.append({
+                            'site_id': site_id,
+                            'channel_id': channel_id,
+                            'flow_name': channel_name
+                        })
+
+        if new_sites != ():
+            send_slack_msg(
+                context=context,
+                msg=f"There were new site_ids when pulling ecocounter data :where:",
+                attachments=new_sites #not working
+            )
+        if new_flows != ():
+            send_slack_msg(
+                context=context,
+                msg=f"There were new channel_ids when pulling ecocounter data :where:",
+                attachments=new_flows #not working
+            )
+        if new_flows == () and new_sites == ():
+            #Mark skipped to visually identify which days added new sites or flows in the UI.
+            raise AirflowSkipException('No new sites or channels to add.')
+
+    @task(trigger_rule='none_failed')
+    def pull_ecocounter(ds):
+        config = ConfigParser()
+        config.read(CONFIG_PATH)
+        #eco_postgres = connect(**config['DBSETTINGS'])
+        #eco_postgres.autocommit = True
+        token = getToken(CONFIG_PATH)
+        eco_postgres = PostgresHook("ecocounter_bot")
         
         start_time = dateutil.parser.parse(str(ds))
         end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
         LOGGER.info(f'Pulling data from {start_time} to {end_time}.')
 
-        #optional site param from airflow config
-        if context["params"]["site_ids"] == [0]:
-            SITE_IDS = ()
-        else:
-            SITE_IDS = tuple(context["params"]["site_ids"])
-
-        unknown_sites, unknown_flows = [], []
-        #with eco_postgres.get_conn() as conn:
-        with eco_postgres as conn:
-            for site in getSites(token, SITE_IDS):
-                site_id, site_name = site['id'], site['name']
-                if not siteIsKnownToUs(site_id, conn):
-                    (
-                        'site_id': site_id,
-                        'site_name': site_name,
-                        'channels': [channel['id'] for channel in site['channels']]
-                    )
-                    unknown_sites.append({
-                        'site_id': site_id,
-                        'site_name': site_name,
-                        'channels': [channel['id'] for channel in site['channels']]
-                    })
-                for channel in site['channels']:
-                    channel_id, channel_name = channel['id'], channel['name']
-                    if not flowIsKnownToUs(channel['id'], conn):
-                        unknown_flows.append({
-                            'channel_id': channel_id,
-                            'site_name': channel_name
-                        })
+        with eco_postgres.get_conn() as conn:
+        #with eco_postgres as conn:
+            for site_id in getKnownSites(conn):
+                LOGGER.debug(f'Starting on site {site_id}.')
+                if site_id != 300028589:
+                    continue
+                for channel_id in getKnownChannels(conn, site_id):
                     LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
                     # empty the count table for this flow
                     truncateFlowSince(channel_id, conn, start_time, end_time)          
@@ -125,33 +140,18 @@ def pull_ecocounter_dag():
                     for count in counts:
                         row=(channel_id, count['date'], count['counts'])
                         volume.append(row)
-                    insertFlowCounts(conn, volume)
+                    query = insertFlowCounts(conn, volume)
+                    LOGGER.debug(query)
+                    LOGGER.debug(volume)
                     LOGGER.debug(f'Data inserted for flow {channel_id} of site {site_id}.')
-                LOGGER.info(f'Data inserted for site {site_id} - {site_name}.')
+                LOGGER.info(f'Data inserted for site {site_id}.')
           
-        missing_ids_msg = []
-        if unknown_sites != ():
-            missing_ids_msg.append(['One or more `site_ids` were unknown:', unknown_sites])
-        if unknown_sites != ():
-            missing_ids_msg.append(['One or more `flow_ids` were unknown:', unknown_flows])
-
-        [{site['id'], site['name']} for site in unknown_sites]
-        [site for site in unknown_sites]
-
-        if missing_ids_msg != []:
-            '''send_slack_msg(
-                context=context,
-                msg=f"There were unknown ids when pulling ecocounter data :where:",
-                attachments=missing_ids_msg
-            )'''
-            return missing_ids_msg
-
     @task_group(
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
     )
     def data_checks():
         data_check_params = {
-            "table": "gwolofs.ecocounter_counts_test",
+            "table": "gwolofs.counts",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
@@ -184,6 +184,6 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    pull_ecocounter() >> data_checks()
+    update_sites_and_flows() >> pull_ecocounter() >> data_checks()
 
 pull_ecocounter_dag()
