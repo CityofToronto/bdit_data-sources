@@ -13,10 +13,8 @@ from datetime import timedelta
 import dateutil.parser
 import logging
 from configparser import ConfigParser
-from psycopg2 import connect
 
 from airflow.decorators import dag, task, task_group
-from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
@@ -42,7 +40,7 @@ CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.co
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-LOGGER.setLevel('DEBUG')
+#LOGGER.setLevel('DEBUG')
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -52,7 +50,7 @@ default_args = {
     'email_on_success': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    #'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -93,28 +91,30 @@ def pull_ecocounter_dag():
                             'flow_name': channel_name
                         })
 
-        if new_sites != ():
+        if new_sites != []:
+            LOGGER.info('New sites added: %s', new_sites)
+            extra_msg = '\n'.join([str(item) for item in new_sites])
             send_slack_msg(
                 context=context,
-                msg=f"There were new site_ids when pulling ecocounter data :where:",
-                attachments=new_sites #not working
+                msg=f"There were new site_ids when pulling ecocounter data :eco-counter:",
+                attachments=[{"text": extra_msg}]
             )
-        if new_flows != ():
+        if new_flows != []:
+            LOGGER.info('New flows added: %s', new_flows)
+            extra_msg = '\n'.join([str(item) for item in new_flows])
             send_slack_msg(
                 context=context,
-                msg=f"There were new channel_ids when pulling ecocounter data :where:",
-                attachments=new_flows #not working
+                msg=f"There were new channel_ids when pulling ecocounter data :eco-counter:",
+                attachments=[{"text": extra_msg}]
             )
-        if new_flows == () and new_sites == ():
+        if new_flows == [] and new_sites == []:
             #Mark skipped to visually identify which days added new sites or flows in the UI.
-            raise AirflowSkipException('No new sites or channels to add.')
+            raise AirflowSkipException('No new sites or channels to add. Marking task as skipped.')
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
         config = ConfigParser()
         config.read(CONFIG_PATH)
-        #eco_postgres = connect(**config['DBSETTINGS'])
-        #eco_postgres.autocommit = True
         token = getToken(CONFIG_PATH)
         eco_postgres = PostgresHook("ecocounter_bot")
         
@@ -123,11 +123,10 @@ def pull_ecocounter_dag():
         LOGGER.info(f'Pulling data from {start_time} to {end_time}.')
 
         with eco_postgres.get_conn() as conn:
-        #with eco_postgres as conn:
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
-                if site_id != 300028589:
-                    continue
+                #if site_id != 300028589:
+                #    continue
                 for channel_id in getKnownChannels(conn, site_id):
                     LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
                     # empty the count table for this flow
@@ -140,9 +139,7 @@ def pull_ecocounter_dag():
                     for count in counts:
                         row=(channel_id, count['date'], count['counts'])
                         volume.append(row)
-                    query = insertFlowCounts(conn, volume)
-                    LOGGER.debug(query)
-                    LOGGER.debug(volume)
+                    insertFlowCounts(conn, volume)
                     LOGGER.debug(f'Data inserted for flow {channel_id} of site {site_id}.')
                 LOGGER.info(f'Data inserted for site {site_id}.')
           
