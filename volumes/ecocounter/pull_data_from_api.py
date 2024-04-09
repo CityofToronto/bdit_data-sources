@@ -1,26 +1,20 @@
 import requests
-import logging
 from configparser import ConfigParser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
-#from tqdm import tqdm # this is a progress bar created by simply wrapping an iterable
 
 default_start = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)-timedelta(days=1)
 default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)
 
-url = 'https://apieco.eco-counter-tools.com'
-
-LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-LOGGER.setLevel('DEBUG')
+URL = 'https://apieco.eco-counter-tools.com'
 
 # get an authentication token for accessing the API
-def getToken(api_config_path):
+def getToken(api_config_path: str):
     config = ConfigParser()
     config.read(api_config_path)
     response = requests.post(
-        f'{url}/token',
+        f'{URL}/token',
         headers={
             'Authorization': 'Basic ' + config['API']['secret_api_hash']
         },
@@ -33,12 +27,13 @@ def getToken(api_config_path):
     return response.json()['access_token']
 
 # get a list of all sites from the API
-def getSites(token, sites=()):
+def getSites(token: str, sites: any = ()):
     response = requests.get(
-        f'{url}/api/site',
+        f'{URL}/api/site',
         headers={'Authorization': f'Bearer {token}'}
     )
     result = []
+    #filter sites using optional param.
     if not sites == ():
         for site in response.json():
             if site['id'] in sites:
@@ -48,32 +43,33 @@ def getSites(token, sites=()):
         return response.json()
 
 # get all of a channel/flow's data from the API
-def getChannelData(token, channel_id: int, startDate: datetime, endDate: datetime):
+def getChannelData(token: str, channel_id: int, startDate: datetime, endDate: datetime):
     requestChunkSize = timedelta(days=100)
-    requestStartDate = startDate
+    requestStart = startDate
     data = []
-    while requestStartDate < endDate:
+    while requestStart < endDate:
+        requestEnd = min(requestStart + requestChunkSize, endDate)
         response = requests.get(
-            f'{url}/api/data/site/{channel_id}',
+            f'{URL}/api/data/site/{channel_id}',
             headers={'Authorization': f'Bearer {token}'},
             params={
-                'begin': requestStartDate.isoformat(timespec='seconds'),
-                'end':  min(requestStartDate + requestChunkSize, endDate).isoformat(timespec='seconds'),
+                'begin': requestStart.isoformat(timespec='seconds'),
+                'end':  requestEnd.isoformat(timespec='seconds'),
                 'complete': 'false',
                 'step': '15m'
             }
         )
         data += response.json()
-        requestStartDate += requestChunkSize
+        requestStart += requestChunkSize
     return data
 
-def getKnownSites(conn):
+def getKnownSites(conn: any):
     with conn.cursor() as cur:
         cur.execute('SELECT site_id FROM gwolofs.sites;')
         sites = cur.fetchall()
         return [site[0] for site in sites]
 
-def getKnownChannels(conn, site):
+def getKnownChannels(conn: any, site: int):
     with conn.cursor() as cur:
         cur.execute('SELECT flow_id FROM gwolofs.flows WHERE site_id = %s;',
                     (site, )
@@ -82,7 +78,7 @@ def getKnownChannels(conn, site):
         return [channel[0] for channel in channels]
 
 # do we have a record of this site in the database?
-def siteIsKnownToUs(site_id: int, conn):
+def siteIsKnownToUs(site_id: int, conn: any):
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT 1 FROM gwolofs.sites WHERE site_id = %s;",
@@ -91,7 +87,7 @@ def siteIsKnownToUs(site_id: int, conn):
         return cursor.rowcount > 0
 
 # do we have a record of this flow in the database?
-def flowIsKnownToUs(flow_id: int, conn):
+def flowIsKnownToUs(flow_id: int, conn: any):
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT 1 FROM gwolofs.flows WHERE flow_id = %s;",
@@ -111,14 +107,14 @@ def truncateFlowSince(flow_id: int, conn: any, startDate: datetime, endDate: dat
         )
 
 # insert records
-def insertFlowCounts(conn, volume):
+def insertFlowCounts(conn: any, volume: any):
     insert_query="INSERT INTO gwolofs.counts (flow_id, datetime_bin, volume) VALUES %s"
     with conn.cursor() as cur:
         execute_values(cur, insert_query, volume)
     return cur.query
 
 # insert new site record
-def insertSite(conn, site_id, site_name, lon, lat):
+def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
     insert_query="""
     INSERT INTO gwolofs.sites (site_id, site_description, geom, validated)
     VALUES (
@@ -132,7 +128,7 @@ def insertSite(conn, site_id, site_name, lon, lat):
         cur.execute(insert_query, (site_id, site_name, lon, lat))
 
 # insert new flow record
-def insertFlow(conn, flow_id, site_id, flow_name, bin_size):
+def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, bin_size: int):
     insert_query="""
     INSERT INTO gwolofs.flows (flow_id, site_id, flow_direction, bin_size, validated)
     VALUES (
@@ -146,6 +142,7 @@ def insertFlow(conn, flow_id, site_id, flow_name, bin_size):
     with conn.cursor() as cur:
         cur.execute(insert_query, (flow_id, site_id, flow_name, bin_size))
 
+#for testing/pulling data without use of airflow.
 def run_api(
         start_date: datetime = default_start,
         end_date: datetime = default_end,
