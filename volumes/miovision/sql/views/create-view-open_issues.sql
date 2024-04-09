@@ -5,7 +5,7 @@ SELECT
     ar.uid,
     ar.intersection_uid,
     i.id AS intersection_id,
-    i.intersection_name,
+    i.api_name AS intersection_name,
     ar.classification_uid,
     CASE
         WHEN ar.classification_uid = 2 THEN 'Bicycle TMC'
@@ -16,7 +16,8 @@ SELECT
     ar.range_start::date,
     (current_timestamp AT TIME ZONE 'EST5EDT')::date - ar.range_start::date AS num_days,
     ar.notes,
-    SUM(v.volume) AS last_week_volume
+    SUM(v.volume) AS last_week_volume,
+    string_agg(DISTINCT alerts.alert, '; ') AS alerts
 FROM miovision_api.anomalous_ranges AS ar
 --keep rows with null classification_uid
 LEFT JOIN miovision_api.classifications AS c USING (classification_uid)
@@ -30,6 +31,13 @@ ON
     AND (
         ar.classification_uid = v.classification_uid
         OR ar.classification_uid IS NULL
+    )
+LEFT JOIN miovision_api.alerts ON
+    alerts.intersection_id = i.id
+    AND alerts.start_time >= ar.range_start
+    AND (
+        alerts.end_time < ar.range_end
+        OR ar.range_end IS NULL
     )
 WHERE
     ar.problem_level <> 'valid-caveat'
@@ -45,7 +53,7 @@ GROUP BY
     ar.uid,
     ar.intersection_uid,
     i.id,
-    i.intersection_name,
+    i.api_name,
     ar.classification_uid,
     c.classification,
     ar.range_start,
