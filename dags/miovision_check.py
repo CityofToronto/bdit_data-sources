@@ -111,7 +111,7 @@ def miovision_check_dag():
                 intersection_name,
                 classification_uid,
                 notes
-            FROM miovision_api.open_issues
+            FROM gwolofs.open_issues
             WHERE last_week_volume > 0
             ORDER BY uid
         )
@@ -131,7 +131,7 @@ def miovision_check_dag():
 
     t_upstream_done >> [
         check_distinct_intersection_uid, check_gaps,
-        [check_if_thursday() >> check_open_anomalous_ranges]
+        check_if_thursday() >> check_open_anomalous_ranges
     ]
 
 miovision_check_dag()
