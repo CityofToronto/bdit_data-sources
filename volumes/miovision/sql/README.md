@@ -1,4 +1,6 @@
-<!-- /TOC -->
+
+<!-- TOC -->
+
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -14,6 +16,7 @@
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
   - [Reference Tables](#reference-tables)
+    - [`miovision_api.breaks`](#miovision_apibreaks)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
     - [`movement_map`](#movement_map)
@@ -38,7 +41,6 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
-
 # 1. Overview
 
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
@@ -71,7 +73,7 @@ Reference table for each unique intersection at which data has been collected, y
 :-----|:-----|:-----|:-----|
 intersection_uid|integer|Unique identifier for table|10|
 id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+intersection_name|text|Intersection short name in format of [E / W street] / [N / S street]|King / Bathurst|
 date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
 date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
 lat|numeric|Latitude of intersection location|43.643945|
@@ -85,7 +87,7 @@ n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
+api_name|text|Intersection name from API|Bathurst Street and King Street West|
 
 ### `classifications`
 
@@ -316,6 +318,19 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 
 
 ## Reference Tables
+
+### `miovision_api.breaks`
+The breaks table contains `Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable`.
+
+| column_name | Comments | data_type | sample |
+| ------ | ----------- | -- |  -- |
+| uid    | simple incrementing primary key | serial | 1 |
+| intersection_uid | Reference to intersections table. A null intersection_uid refers to all intersections. | integer
+| classification_uid | Reference to classifications table. A null classification_uid refers to all classifications. | integer
+| break_time | Moment the change takes place | timestamp
+| give_or_take | approximate bounds if the precise time is not known | interval
+| notes | required description of what changed - be verbose! | text
+
 
 ### `miovision_api.anomalous_ranges`
 The `anomalous_ranges` table is used to log issues related to specific intersection / classification combos as identified either by a human or an automated process. See [below](#identifying-questionable-data-quality) for more information and examples of how to use this table. 
