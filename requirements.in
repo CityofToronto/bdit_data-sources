@@ -2,26 +2,29 @@
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.7.0
+apache-airflow==2.8.4
 
 # Airflow service providers
-apache-airflow-providers-celery==3.3.2
-apache-airflow-providers-google==10.6.0
-apache-airflow-providers-postgres==5.6.0
-apache-airflow-providers-slack==7.3.2
+apache-airflow-providers-celery==3.6.1
+apache-airflow-providers-google==10.16.0
+apache-airflow-providers-postgres==5.10.2
+apache-airflow-providers-slack==8.6.1
+
+# Airflow dag list
+graphviz==0.20.2
 
 # Python dependency management
 pip-tools==7.3.0
 
 # pipelines
 bs4==0.0.1
-env-canada==0.5.36
+env-canada==0.6.1
 geopandas==0.13.2
 holidays==0.31
 
 # development
-ipython==8.14.0
-ipykernel==6.27.1
+ipython==8.22.2
+ipykernel==6.29.3
 
 # linters
 pydocstyle==6.3.0
