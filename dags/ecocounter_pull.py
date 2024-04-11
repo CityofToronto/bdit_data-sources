@@ -26,9 +26,9 @@ try:
     from dags.dag_functions import task_fail_slack_alert, send_slack_msg
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
-        getToken, getSites, getChannelData, siteIsKnownToUs, insertSite,
+        getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
         insertFlow, flowIsKnownToUs, truncateFlowSince, insertFlowCounts,
-        getKnownSites, getKnownChannels
+        getKnownSites, getKnownFlows
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -81,17 +81,18 @@ def pull_ecocounter_dag():
                         'site_id': site_id,
                         'site_name': site_name
                     })
-                for channel in site['channels']:
-                    channel_id, channel_name = channel['id'], channel['name']
-                    if not flowIsKnownToUs(channel['id'], conn):
-                        insertFlow(conn, channel_id, site_id, channel_name, channel['interval'])
+                #"flow" == "channel"
+                for flow in site['channels']:
+                    flow_id, flow_name = flow['id'], flow['name']
+                    if not flowIsKnownToUs(flow_id, conn):
+                        insertFlow(conn, flow_id, site_id, flow_name, flow['interval'])
                         new_flows.append({
                             'site_id': site_id,
-                            'channel_id': channel_id,
-                            'flow_name': channel_name
+                            'flow_id': flow_id,
+                            'flow_name': flow_name
                         })
 
-        if new_sites != []:
+        if len(new_sites) > 0:
             LOGGER.info('New sites added: %s', new_sites)
             extra_msg = '\n'.join([str(item) for item in new_sites])
             send_slack_msg(
@@ -99,17 +100,17 @@ def pull_ecocounter_dag():
                 msg=f"There were new site_ids when pulling ecocounter data :eco-counter:",
                 attachments=[{"text": extra_msg}]
             )
-        if new_flows != []:
+        if len(new_flows) > 0:
             LOGGER.info('New flows added: %s', new_flows)
             extra_msg = '\n'.join([str(item) for item in new_flows])
             send_slack_msg(
                 context=context,
-                msg=f"There were new channel_ids when pulling ecocounter data :eco-counter:",
+                msg=f"There were new flow_ids when pulling ecocounter data :eco-counter:",
                 attachments=[{"text": extra_msg}]
             )
         if new_flows == [] and new_sites == []:
             #Mark skipped to visually identify which days added new sites or flows in the UI.
-            raise AirflowSkipException('No new sites or channels to add. Marking task as skipped.')
+            raise AirflowSkipException('No new sites or flows to add. Marking task as skipped.')
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
@@ -125,22 +126,20 @@ def pull_ecocounter_dag():
         with eco_postgres.get_conn() as conn:
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
-                #if site_id != 300028589:
-                #    continue
-                for channel_id in getKnownChannels(conn, site_id):
-                    LOGGER.debug(f'Starting on flow {channel_id} for site {site_id}.')
+                for flow_id in getKnownFlows(conn, site_id):
+                    LOGGER.debug(f'Starting on flow {flow_id} for site {site_id}.')
                     # empty the count table for this flow
-                    truncateFlowSince(channel_id, conn, start_time, end_time)          
+                    truncateFlowSince(flow_id, conn, start_time, end_time)          
                     # and fill it back up!
-                    LOGGER.debug(f'Fetching data for flow {channel_id}.')
-                    counts = getChannelData(token, channel_id, start_time, end_time)
+                    LOGGER.debug(f'Fetching data for flow {flow_id}.')
+                    counts = getFlowData(token, flow_id, start_time, end_time)
                     #convert response into a tuple for inserting
                     volume=[]
                     for count in counts:
-                        row=(channel_id, count['date'], count['counts'])
+                        row=(flow_id, count['date'], count['counts'])
                         volume.append(row)
                     insertFlowCounts(conn, volume)
-                    LOGGER.debug(f'Data inserted for flow {channel_id} of site {site_id}.')
+                    LOGGER.debug(f'Data inserted for flow {flow_id} of site {site_id}.')
                 LOGGER.info(f'Data inserted for site {site_id}.')
           
     @task_group(
