@@ -23,7 +23,9 @@ from airflow.exceptions import AirflowSkipException
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, send_slack_msg
+    from dags.dag_functions import (
+        task_fail_slack_alert, send_slack_msg, get_readme_docmd
+    )
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
@@ -35,6 +37,9 @@ except:
 
 DAG_NAME = 'ecocounter_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.config'
 
@@ -60,7 +65,7 @@ default_args = {
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=False,
     tags=["ecocounter", "data_pull", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def pull_ecocounter_dag():
 

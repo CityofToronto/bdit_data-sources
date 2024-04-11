@@ -57,7 +57,7 @@ The documentation for the Ecocounter API lives here: https://developers.eco-coun
 
 It took a bit of effort to figure out how to properly authenticate to receive a token, and the process for doing that is now embodied in code in the file [`pull-data-from-api.py`](./pull-data-from-api.py)
 
-To run this code, it's necessary to set up a configuration file with the API credentials. An example of the structure for this file is provided here: [sample-api-credentials.config](./sample-api-credentials.config)
+To run this code, it's necessary to set up a configuration file with the API credentials. An example of the structure for this file is provided here: [sample-api-credentials.config](./sample-api-credentials.config). Airflow uses a config file saved at `/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.config`. 
 
 ### Note
 
@@ -81,3 +81,14 @@ WHERE category_id = 7 -- bike counts
 ORDER BY cnt_det.timecount
 LIMIT 1000;
 ```
+
+## `ecocounter_pull` DAG
+The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
+
+- `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites` and `ecocounter.flows`. The new rows contain a flag `validated = False` indicating they still need to be manually validated. A notification is sent with any new additions.  
+- `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts` table. 
+
+### `data_checks` TaskGroup
+This task group runs data quality checks on the pipeline output.  
+- `check_volume` checks the sum of volume in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
+- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
