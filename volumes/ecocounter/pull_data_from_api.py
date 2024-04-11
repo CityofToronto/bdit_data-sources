@@ -42,15 +42,15 @@ def getSites(token: str, sites: any = ()):
     else:
         return response.json()
 
-# get all of a channel/flow's data from the API
-def getChannelData(token: str, channel_id: int, startDate: datetime, endDate: datetime):
+# get all of a flows ("channel") data from the API
+def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime):
     requestChunkSize = timedelta(days=100)
     requestStart = startDate
     data = []
     while requestStart < endDate:
         requestEnd = min(requestStart + requestChunkSize, endDate)
         response = requests.get(
-            f'{URL}/api/data/site/{channel_id}',
+            f'{URL}/api/data/site/{flow_id}',
             headers={'Authorization': f'Bearer {token}'},
             params={
                 'begin': requestStart.isoformat(timespec='seconds'),
@@ -69,13 +69,13 @@ def getKnownSites(conn: any):
         sites = cur.fetchall()
         return [site[0] for site in sites]
 
-def getKnownChannels(conn: any, site: int):
+def getKnownFlows(conn: any, site: int):
     with conn.cursor() as cur:
         cur.execute('SELECT flow_id FROM gwolofs.flows WHERE site_id = %s;',
                     (site, )
         )
-        channels = cur.fetchall()
-        return [channel[0] for channel in channels]
+        flows = cur.fetchall()
+        return [flow[0] for flow in flows]
 
 # do we have a record of this site in the database?
 def siteIsKnownToUs(site_id: int, conn: any):
@@ -155,26 +155,27 @@ def run_api(
     conn.autocommit = True
     token = getToken(CONFIG_PATH)
     for site in getSites(token, sites=sites): #optionally specify site_ids here. 
-        # only update data for sites / channels in the database
+        # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary
         if not siteIsKnownToUs(site['id'], conn):
             print('unknown site', site['id'], site['name'])
             continue
-        for channel in site['channels']:
-            if not flowIsKnownToUs(channel['id'], conn):
-                print('unknown flow', channel['id'])
+        #"flow" == "channel"
+        for flow in site['channels']:
+            flow_id = flow['id']
+            if not flowIsKnownToUs(flow_id, conn):
+                print('unknown flow', flow_id)
                 continue
-            # we do have this site and channel in the database; let's update its counts
-            channel_id = channel['id']
-            print(f'starting on flow {channel_id}')
+            # we do have this site and flow in the database; let's update its counts
+            print(f'starting on flow {flow_id}')
             # empty the count table for this flow
-            truncateFlowSince(channel_id, conn, start_date, end_date)
+            truncateFlowSince(flow_id, conn, start_date, end_date)
             # and fill it back up!
-            print(f'fetching data for flow {channel_id}')
-            counts = getChannelData(token, channel_id, start_date, end_date)
-            print(f'inserting data for flow {channel_id}')
+            print(f'fetching data for flow {flow_id}')
+            counts = getFlowData(token, flow_id, start_date, end_date)
+            print(f'inserting data for flow {flow_id}')
             volume=[]
             for count in counts:
-                row=(channel_id, count['date'], count['counts'])
+                row=(flow_id, count['date'], count['counts'])
                 volume.append(row)
             insertFlowCounts(conn, volume)
