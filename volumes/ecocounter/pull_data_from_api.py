@@ -10,18 +10,16 @@ default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microseco
 URL = 'https://apieco.eco-counter-tools.com'
 
 # get an authentication token for accessing the API
-def getToken(api_config_path: str):
-    config = ConfigParser()
-    config.read(api_config_path)
+def getToken(url: str, login: str, pw: str, secret: str):
     response = requests.post(
-        f'{URL}/token',
+        f'{url}/token',
         headers={
-            'Authorization': 'Basic ' + config['API']['secret_api_hash']
+            'Authorization': 'Basic ' + secret
         },
         data={
             'grant_type': 'password',
-            'username': config['API']['username'],
-            'password': config['API']['password']
+            'username': login,
+            'password': pw
         }
     )
     return response.json()['access_token']
@@ -153,7 +151,12 @@ def run_api(
     config.read(CONFIG_PATH)
     conn = connect(**config['DBSETTINGS'])
     conn.autocommit = True
-    token = getToken(CONFIG_PATH)
+    token = getToken(
+        URL,
+        config['API']['username'],
+        config['API']['password'],
+        config['API']['secret_api_hash']
+    )
     for site in getSites(token, sites=sites): #optionally specify site_ids here. 
         # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary

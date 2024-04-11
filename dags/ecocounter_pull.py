@@ -12,10 +12,10 @@ import pendulum
 from datetime import timedelta
 import dateutil.parser
 import logging
-from configparser import ConfigParser
 
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.macros import ds_add
@@ -43,8 +43,6 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
-CONFIG_PATH = '/data/airflow/data_scripts/volumes/ecocounter/.api-credentials.config'
-
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 #LOGGER.setLevel('DEBUG')
@@ -66,11 +64,12 @@ default_args = {
     schedule='0 3 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=True,
-    tags=["ecocounter", "data_pull", "data_checks"],
+    max_active_runs=1,
+    tags=["ecocounter", "data_pull", "data_checks", "partition_create"],
     doc_md=DOC_MD
 )
 def pull_ecocounter_dag():
-    
+
     @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
 
@@ -88,9 +87,13 @@ def pull_ecocounter_dag():
 
     @task()
     def update_sites_and_flows(**context):
-        config = ConfigParser()
-        config.read(CONFIG_PATH)
-        token = getToken(CONFIG_PATH)
+        api_conn = BaseHook.get_connection('ecocounter_api_key')
+        token = getToken(
+            api_conn.host,
+            api_conn.login,
+            api_conn.password,
+            api_conn.extra_dejson['secret_api_hash']
+        )
         eco_postgres = PostgresHook("ecocounter_bot")
 
         new_sites, new_flows = [], []
@@ -136,14 +139,18 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
-        config = ConfigParser()
-        config.read(CONFIG_PATH)
-        token = getToken(CONFIG_PATH)
+        api_conn = BaseHook.get_connection('ecocounter_api_key')
+        token = getToken(
+            api_conn.host,
+            api_conn.login,
+            api_conn.password,
+            api_conn.extra_dejson['secret_api_hash']
+        )
         eco_postgres = PostgresHook("ecocounter_bot")
         
-        start_time = dateutil.parser.parse(str(ds))
-        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
-        LOGGER.info(f'Pulling data from {start_time} to {end_time}.')
+        start_date = dateutil.parser.parse(str(ds))
+        end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
+        LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
 
         with eco_postgres.get_conn() as conn:
             for site_id in getKnownSites(conn):
@@ -151,10 +158,10 @@ def pull_ecocounter_dag():
                 for flow_id in getKnownFlows(conn, site_id):
                     LOGGER.debug(f'Starting on flow {flow_id} for site {site_id}.')
                     # empty the count table for this flow
-                    truncateFlowSince(flow_id, conn, start_time, end_time)          
+                    truncateFlowSince(flow_id, conn, start_date, end_date)          
                     # and fill it back up!
                     LOGGER.debug(f'Fetching data for flow {flow_id}.')
-                    counts = getFlowData(token, flow_id, start_time, end_time)
+                    counts = getFlowData(token, flow_id, start_date, end_date)
                     #convert response into a tuple for inserting
                     volume=[]
                     for count in counts:
@@ -169,7 +176,7 @@ def pull_ecocounter_dag():
     )
     def data_checks():
         data_check_params = {
-            "table": "gwolofs.counts",
+            "table": "ecocounter.counts",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
