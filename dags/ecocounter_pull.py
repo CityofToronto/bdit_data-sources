@@ -50,7 +50,7 @@ logging.basicConfig(level=logging.INFO)
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': pendulum.datetime(2024, 3, 20, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 4, 3, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 1,
@@ -63,7 +63,7 @@ default_args = {
     default_args=default_args,
     schedule='0 3 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
-    catchup=False,
+    catchup=True,
     tags=["ecocounter", "data_pull", "data_checks"],
     doc_md=DOC_MD
 )
@@ -86,7 +86,7 @@ def pull_ecocounter_dag():
                         'site_id': site_id,
                         'site_name': site_name
                     })
-                #"flow" == "channel"
+                # what we refer to as a flow is known as a "channel" in ecocounter API.
                 for flow in site['channels']:
                     flow_id, flow_name = flow['id'], flow['name']
                     if not flowIsKnownToUs(flow_id, conn):
