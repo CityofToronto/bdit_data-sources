@@ -17,6 +17,7 @@ from configparser import ConfigParser
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.macros import ds_add
 from airflow.exceptions import AirflowSkipException
 
@@ -26,6 +27,7 @@ try:
     from dags.dag_functions import (
         task_fail_slack_alert, send_slack_msg, get_readme_docmd
     )
+    from dags.common_tasks import check_jan_1st
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
@@ -68,6 +70,21 @@ default_args = {
     doc_md=DOC_MD
 )
 def pull_ecocounter_dag():
+    
+    @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
+    def check_partitions():
+
+        create_annual_partition = PostgresOperator(
+            task_id='create_annual_partitions',
+            sql="""SELECT ecocounter.create_yyyy_counts_unfiltered_partition(
+                    base_table := 'counts_unfiltered',
+                    year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int
+                )""",
+            postgres_conn_id='ecocounter_bot',
+            autocommit=True
+        )
+      
+        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
 
     @task()
     def update_sites_and_flows(**context):
@@ -185,6 +202,6 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    update_sites_and_flows() >> pull_ecocounter() >> data_checks()
+    check_partitions() >> update_sites_and_flows() >> pull_ecocounter() >> data_checks()
 
 pull_ecocounter_dag()

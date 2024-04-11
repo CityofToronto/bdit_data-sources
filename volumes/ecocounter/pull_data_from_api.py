@@ -65,13 +65,13 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
 
 def getKnownSites(conn: any):
     with conn.cursor() as cur:
-        cur.execute('SELECT site_id FROM gwolofs.sites;')
+        cur.execute('SELECT site_id FROM ecocounter.sites;')
         sites = cur.fetchall()
         return [site[0] for site in sites]
 
 def getKnownFlows(conn: any, site: int):
     with conn.cursor() as cur:
-        cur.execute('SELECT flow_id FROM gwolofs.flows WHERE site_id = %s;',
+        cur.execute('SELECT flow_id FROM ecocounter.flows WHERE site_id = %s;',
                     (site, )
         )
         flows = cur.fetchall()
@@ -81,7 +81,7 @@ def getKnownFlows(conn: any, site: int):
 def siteIsKnownToUs(site_id: int, conn: any):
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT 1 FROM gwolofs.sites WHERE site_id = %s;",
+            "SELECT 1 FROM ecocounter.sites WHERE site_id = %s;",
             (site_id,)
         )
         return cursor.rowcount > 0
@@ -90,7 +90,7 @@ def siteIsKnownToUs(site_id: int, conn: any):
 def flowIsKnownToUs(flow_id: int, conn: any):
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT 1 FROM gwolofs.flows WHERE flow_id = %s;",
+            "SELECT 1 FROM ecocounter.flows WHERE flow_id = %s;",
             (flow_id,)
         )
         return cursor.rowcount > 0
@@ -99,7 +99,7 @@ def flowIsKnownToUs(flow_id: int, conn: any):
 def truncateFlowSince(flow_id: int, conn: any, startDate: datetime, endDate: datetime):
     with conn.cursor() as cursor:
         cursor.execute(
-            """DELETE FROM gwolofs.counts
+            """DELETE FROM ecocounter.counts_unfiltered
             WHERE flow_id = %s
             AND datetime_bin >= %s
             AND datetime_bin < %s""",
@@ -108,7 +108,7 @@ def truncateFlowSince(flow_id: int, conn: any, startDate: datetime, endDate: dat
 
 # insert records
 def insertFlowCounts(conn: any, volume: any):
-    insert_query="INSERT INTO gwolofs.counts (flow_id, datetime_bin, volume) VALUES %s"
+    insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES %s"
     with conn.cursor() as cur:
         execute_values(cur, insert_query, volume)
     return cur.query
@@ -116,7 +116,7 @@ def insertFlowCounts(conn: any, volume: any):
 # insert new site record
 def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
     insert_query="""
-    INSERT INTO gwolofs.sites (site_id, site_description, geom, validated)
+    INSERT INTO ecocounter.sites (site_id, site_description, geom, validated)
     VALUES (
         %s::numeric,
         %s::text,
@@ -130,7 +130,7 @@ def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
 # insert new flow record
 def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, bin_size: int):
     insert_query="""
-    INSERT INTO gwolofs.flows (flow_id, site_id, flow_direction, bin_size, validated)
+    INSERT INTO ecocounter.flows (flow_id, site_id, flow_direction, bin_size, validated)
     VALUES (
         %s::numeric,
         %s::numeric,
