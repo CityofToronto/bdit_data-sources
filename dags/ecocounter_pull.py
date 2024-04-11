@@ -85,7 +85,7 @@ def pull_ecocounter_dag():
       
         check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
 
-    @task()
+    @task(trigger_rule='none_failed')
     def update_sites_and_flows(**context):
         api_conn = BaseHook.get_connection('ecocounter_api_key')
         token = getToken(
