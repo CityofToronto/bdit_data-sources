@@ -86,11 +86,15 @@ LIMIT 1000;
 ## `ecocounter_pull` DAG
 The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
 
+### `check_partitions` TaskGroup
+- `check_annual_partition` checks if execution date is January 1st.  
+- `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
+
 - `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites` and `ecocounter.flows`. The new rows contain a flag `validated = False` indicating they still need to be manually validated. A notification is sent with any new additions.  
-- `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts` table. 
+- `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts_unfiltered` table. 
 
 ### `data_checks` TaskGroup
 This task group runs data quality checks on the pipeline output.  
-- `check_volume` checks the sum of volume in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
-- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
+- `check_volume` checks the sum of volume in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
+- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
