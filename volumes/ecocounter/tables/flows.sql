@@ -2,7 +2,7 @@ CREATE TABLE gwolofs.flows (
     flow_id numeric NOT NULL,
     site_id numeric NOT NULL,
     flow_direction text COLLATE pg_catalog."default" NOT NULL,
-    flow_geom geometry(LineString,4326),
+    flow_geom GEOMETRY (LINESTRING, 4326),
     bin_size interval NOT NULL,
     notes text COLLATE pg_catalog."default",
     replaced_by_flow_id numeric,
@@ -11,17 +11,17 @@ CREATE TABLE gwolofs.flows (
     validated boolean,
     CONSTRAINT locations_pkey PRIMARY KEY (flow_id),
     CONSTRAINT flows_replaced_by_flow_id_fkey FOREIGN KEY (replaced_by_flow_id)
-        REFERENCES gwolofs.flows (flow_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES gwolofs.flows (flow_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT flows_replaces_flow_id_fkey FOREIGN KEY (replaces_flow_id)
-        REFERENCES gwolofs.flows (flow_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES gwolofs.flows (flow_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT site_id_fk FOREIGN KEY (site_id)
-        REFERENCES gwolofs.sites (site_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION,
+    REFERENCES gwolofs.sites (site_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION,
     CONSTRAINT locations_flow_geom_check CHECK (flow_geom IS NULL OR st_npoints(flow_geom) = 2)
 )
 TABLESPACE pg_default;
@@ -68,6 +68,5 @@ also counts travel going the wrong direction within
 that lane.';
 
 CREATE INDEX IF NOT EXISTS flows_flow_id_idx
-    ON gwolofs.flows USING btree
-    (flow_id ASC NULLS LAST)
-    TABLESPACE pg_default;
+ON gwolofs.flows USING btree (flow_id ASC NULLS LAST) 
+TABLESPACE pg_default;

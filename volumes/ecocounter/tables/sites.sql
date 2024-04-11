@@ -1,16 +1,16 @@
 CREATE TABLE gwolofs.sites (
     site_id numeric NOT NULL,
     site_description text COLLATE pg_catalog."default" NOT NULL,
-    geom geometry(Point,4326),
+    geom GEOMETRY (POINT, 4326),
     facility_description text COLLATE pg_catalog."default",
     notes text COLLATE pg_catalog."default",
     replaced_by_site_id numeric,
     validated boolean,
     CONSTRAINT sites_pkey PRIMARY KEY (site_id),
     CONSTRAINT sites_replaced_by_fkey FOREIGN KEY (replaced_by_site_id)
-        REFERENCES gwolofs.sites (site_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
+    REFERENCES gwolofs.sites (site_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
 )
 
 TABLESPACE pg_default;
