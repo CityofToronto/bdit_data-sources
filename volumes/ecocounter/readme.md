@@ -82,6 +82,7 @@ ORDER BY cnt_det.timecount
 LIMIT 1000;
 ```
 
+<!-- ecocounter_pull_doc_md -->
 ## `ecocounter_pull` DAG
 The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
 
@@ -92,3 +93,4 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
 This task group runs data quality checks on the pipeline output.  
 - `check_volume` checks the sum of volume in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
 - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` table and notifies if less than 70% of the 60 day lookback avg.  
+<!-- ecocounter_pull_doc_md -->
