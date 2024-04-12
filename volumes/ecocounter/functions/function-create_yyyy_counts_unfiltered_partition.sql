@@ -22,7 +22,7 @@ BEGIN
         PARTITION OF ecocounter.%I
         FOR VALUES FROM (%L) TO (%L);
         ALTER TABLE IF EXISTS ecocounter.%I OWNER TO ecocounter_admins;
-        GRANT SELECT ON TABLE ecocounter.%I TO bdit_humans;
+        REVOKE ALL ON TABLE ecocounter.%I FROM bdit_humans;
         GRANT SELECT, INSERT, DELETE ON TABLE ecocounter.%I TO ecocounter_bot;
         $$,
         year_table,
