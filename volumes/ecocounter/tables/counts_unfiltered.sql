@@ -20,7 +20,6 @@ ALTER TABLE ecocounter.counts_unfiltered OWNER TO ecocounter_admins;
 GRANT SELECT, INSERT, DELETE ON ecocounter.counts_unfiltered TO ecocounter_bot;
 
 REVOKE ALL ON TABLE ecocounter.counts_unfiltered FROM bdit_humans;
-GRANT SELECT ON ecocounter.counts_unfiltered TO bdit_humans;
 
 COMMENT ON TABLE ecocounter.counts_unfiltered
 IS 'CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
