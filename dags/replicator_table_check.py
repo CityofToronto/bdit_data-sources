@@ -67,18 +67,14 @@ def replicator_DAG():
         #find move_staging tables with comment like "last updated on {ds}"
         updated_tables_sql = """
         WITH move_staging_comments AS (
-            SELECT
-                table_schema::text || '.' || table_name::text AS tbl_name,
-                obj_description(
-                    (table_schema::text || '.' || table_name::text)::regclass
-                ) AS table_comment
+            SELECT table_schema::text || '.' || table_name::text AS tbl_name
             FROM information_schema.tables
             WHERE table_schema = 'move_staging'
         )
 
         SELECT tbl_name
         FROM move_staging_comments
-        WHERE table_comment LIKE %s"""
+        WHERE obj_description(tbl_name::regclass) LIKE %s"""
 
         #NEED TO CHANGE THIS TO REPLICATOR_BOT!!!
         con = PostgresHook("collisions_bot").get_conn()
