@@ -1,6 +1,9 @@
 CREATE VIEW ecocounter.counts AS (
-    SELECT flow_id, datetime_bin, volume
-    FROM ecocounter.counts_unfiltered
+    SELECT
+        counts_unfiltered.flow_id,
+        counts_unfiltered.datetime_bin,
+        counts_unfiltered.volume
+    FROM ecocounter.counts_unfiltered AS 
     JOIN ecocounter.flows USING (flow_id)
     WHERE flows.validated --is true
 );

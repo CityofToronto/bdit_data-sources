@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(
     base_table text,
-    year_ integer)
+    year_ integer
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 SECURITY DEFINER
@@ -42,5 +43,8 @@ COMMENT ON FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(text, int
 ecocounter `counts_unfiltered`.
 Example: `SELECT ecocounter.create_yyyy_counts_unfiltered_partition(''counts_unfiltered'', 2023)`''';
 
-ALTER FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(text, integer) OWNER TO ecocounter_admins;
-GRANT EXECUTE ON FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(text, integer) TO ecocounter_bot;
+ALTER FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(text, integer)
+OWNER TO ecocounter_admins;
+
+GRANT EXECUTE ON FUNCTION ecocounter.create_yyyy_counts_unfiltered_partition(text, integer)
+TO ecocounter_bot;

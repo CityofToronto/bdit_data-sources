@@ -68,5 +68,5 @@ also counts travel going the wrong direction within
 that lane.';
 
 CREATE INDEX IF NOT EXISTS flows_flow_id_idx
-ON ecocounter.flows USING btree (flow_id ASC NULLS LAST) 
+ON ecocounter.flows USING btree (flow_id ASC NULLS LAST)
 TABLESPACE pg_default;
