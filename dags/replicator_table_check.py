@@ -49,6 +49,10 @@ def replicator_DAG():
 
     @task()
     def tables_to_copy():
+        """This task finds all the replicators from `replicators` airflow variable,
+        and then finds all the tables listed for replication by looking at the Airflow variable
+        listed in the `tables` key item in the replicator dictionaries."""
+
         #a list of the replicators
         replicators = Variable.get('replicators', deserialize_json=True)
     
@@ -64,19 +68,18 @@ def replicator_DAG():
 
     @task()
     def updated_tables(ds):
-        #find move_staging tables with comment like "last updated on {ds}"
+        """This task finds tables in `move_staging` with comments
+        indicating they are up to date ("last updated on {ds}")."""
+
         updated_tables_sql = """
-        WITH move_staging_comments AS (
-            SELECT table_schema::text || '.' || table_name::text AS tbl_name
-            FROM information_schema.tables
-            WHERE table_schema = 'move_staging'
-        )
+        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
+        FROM pg_description AS pgd
+        JOIN pg_class AS pgc ON pgd.objoid = pgc.oid
+        JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
+        WHERE
+            pgn.nspname = 'move_staging'
+            AND pgd.description ILIKE %s"""
 
-        SELECT tbl_name
-        FROM move_staging_comments
-        WHERE obj_description(tbl_name::regclass) LIKE %s"""
-
-        #NEED TO CHANGE THIS TO REPLICATOR_BOT!!!
         con = PostgresHook("collisions_bot").get_conn()
         with con.cursor() as cur:
             cur.execute(updated_tables_sql, (f'%Last updated on {ds}%',))
@@ -86,25 +89,30 @@ def replicator_DAG():
 
     @task()
     def not_copied(updated_tables: list, tables_to_copy: list, **context):
-        
+        """This task finds tables which are up to date according to their comments in `move_staging` schema
+        but are not being copied by the replicator due to not being included in the Airflow variables."""
+
         failures = [value for value in updated_tables if value not in tables_to_copy]
         if failures != []:
             #send message with details of failure using task_fail_slack_alert
             failure_extra_msg = [
                 "The following tables are up to date in `move_staging` but not being copied by bigdata replicators:",
-                failures
+                sorted(failures)
             ]
             context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
             raise AirflowFailException('There were up to date tables in `move_staging` which were not copied by bigdata replicators.')
 
     @task()
     def not_up_to_date(updated_tables: list, tables_to_copy: list, **context):
+        """This task finds tables which are being copied by the bigdata replicator via Airflow variables
+        which are not up to date according to their comments in `move_staging` schema."""
+
         failures = [value for value in tables_to_copy if value not in updated_tables]
         if failures != []:
             #send message with details of failure using task_fail_slack_alert
             failure_extra_msg = [
                 "The following tables are being copied by bigdata replicators, but are not up to date in `move_staging`:" ,
-                failures
+                sorted(failures)
             ]
             context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
             raise AirflowFailException('There were tables copied from `move_staging` by bigdata replicators which were not up to date.')       
