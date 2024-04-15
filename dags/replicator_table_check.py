@@ -1,7 +1,8 @@
 """Health checks for the MOVE -> bigdata replication process.
 Checks for:
-- tables which are up to date in `move_staging` but not being copied downstream.
-- tables which are being erroneously copied from `move_staging` without being up to date.
+- `not_copied`: tables which are up to date in `move_staging` but not being copied downstream.
+- `not_up_to_date`: tables which are being erroneously copied from `move_staging` without being up to date.
+- `outdated_remove`: tables in `move_staging` which are outdated.
 """
 
 #!/data/airflow/airflow_venv/bin/python3
@@ -78,6 +79,7 @@ def replicator_DAG():
         JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
         WHERE
             pgn.nspname = 'move_staging'
+            AND pgc.relkind = 'r'
             AND pgd.description ILIKE %s"""
 
         con = PostgresHook("collisions_bot").get_conn()
@@ -115,12 +117,45 @@ def replicator_DAG():
                 sorted(failures)
             ]
             context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
-            raise AirflowFailException('There were tables copied from `move_staging` by bigdata replicators which were not up to date.')       
+            raise AirflowFailException('There were tables copied from `move_staging` by bigdata replicators which were not up to date.')
+
+    @task()
+    def outdated_remove(ds, **context):
+        """This task finds outdated tables in `move_staging` based on
+         comments not matching "last updated on {ds}"."""
+
+        outdated_tables_sql = """
+        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
+        FROM pg_namespace AS pgn
+        JOIN pg_class AS pgc ON pgc.relnamespace = pgn.oid
+        LEFT JOIN pg_description AS pgd ON pgd.objoid = pgc.oid
+        WHERE
+            pgn.nspname = 'move_staging'
+            AND (
+                pgd.description NOT ILIKE %s
+                OR pgd.description IS NULL
+            )
+            AND pgc.relkind = 'r';"""
+
+        con = PostgresHook("collisions_bot").get_conn()
+        with con.cursor() as cur:
+            cur.execute(outdated_tables_sql, (f'%Last updated on {ds}%',))
+            failures = [tbl[0] for tbl in cur.fetchall()]
+
+        if failures != []:
+            #send message with details of failure using task_fail_slack_alert
+            failure_extra_msg = [
+                "The following tables in `move_staging` are outdated and should be purged:" ,
+                sorted(failures)
+            ]
+            context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
+            raise AirflowFailException('There were outdated tables in bigdata `move_staging` schema.')
 
     updated_tables, tables_to_copy = updated_tables(), tables_to_copy()
     wait_for_external_trigger() >> (
         not_copied(updated_tables, tables_to_copy),
-        not_up_to_date(updated_tables, tables_to_copy)
+        not_up_to_date(updated_tables, tables_to_copy),
+        outdated_remove()
     )
     
 replicator_DAG()
