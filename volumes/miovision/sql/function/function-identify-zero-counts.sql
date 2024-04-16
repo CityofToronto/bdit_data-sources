@@ -157,3 +157,8 @@ TO miovision_api_bot;
 
 GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 TO miovision_admins;
+
+COMMENT ON FUNCTION miovision_api.identify_zero_counts(date)
+IS 'Identifies intersection / classification (only classification_uid 1,2,6,10)
+combos with zero volumes for the start_date called. Inserts or updates anomaly
+into anomalous_range table unless an existing, overlapping, manual entery exists.';
