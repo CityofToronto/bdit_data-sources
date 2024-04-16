@@ -9,10 +9,10 @@ For the main Miovision readme, see [here](../README.md).
 - [Miovision Intersection Update Resources](#miovision-intersection-update-resources)
 - [Removing Intersections](#removing-intersections)
 - [Adding Intersections](#adding-intersections)
-    - [Update miovision_api.intersections:](#update-miovision_apiintersections)
-    - [Update miovision_api.intersection_movements](#update-miovision_apiintersection_movements)
-    - [Update miovision_api.centreline_miovision](#update-miovision_apicentreline_miovision)
-    - [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
+	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
+	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
+	- [Update `miovision_api.centreline_miovision`](#update-miovision_apicentreline_miovision)
+	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
 - [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
 - [Adding many intersections](#adding-many-intersections)
 
@@ -35,7 +35,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
-    The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
+    The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
 2. **date installed**  
     `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [Jupyter notebook](new_intersection_activation_dates.ipynb) in this folder. 
@@ -74,21 +74,21 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 	```sql
 	INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
 	date_installed, lat, lng, geom, street_main, street_cross, int_id, px, 
-	n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted)
+	n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name)
 
 	WITH new_intersections (intersection_uid, id, intersection_name, date_installed, px,
-							n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted) AS (
+							n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name) AS (
 		VALUES
-			(67, '11dcfdc5-2b37-45c0-ac79-3d6926553582', 'Sheppard Avenue West and Keele Street',
-				'2021-06-16'::date, '0600', null, null, null, null),
-			(68, '9ed9e7f3-9edc-4f58-ae5b-8c9add746886', 'Steeles Avenue West and Jane Street',
-				'2021-05-12'::date, '0535', null, null, null, null)
+			(67, '11dcfdc5-2b37-45c0-ac79-3d6926553582', 'Sheppard / Keele', 
+				'2021-06-16'::date, '0600', null, null, null, null, 'Sheppard Avenue West and Keele Street'),
+			(68, '9ed9e7f3-9edc-4f58-ae5b-8c9add746886', 'Steeles / Jane', 
+				'2021-05-12'::date, '0535', null, null, null, null, 'Steeles Avenue West and Jane Street')
 	)
 
 	SELECT
 		ni.intersection_uid, --sequential 
 		ni.id, --from api
-		ni.intersection_name, --from api 
+		ni.intersection_name, --cleaned name
 		ni.date_installed, --identify via communication or new_intersection_activation_dates.ipynb
 		ts.latitude,
 		ts.longitude,
@@ -100,7 +100,8 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 		ni.n_leg_restricted,
 		ni.e_leg_restricted,
 		ni.s_leg_restricted,
-		ni.w_leg_restricted
+		ni.w_leg_restricted.
+		api_name --from api 
 	FROM new_intersections AS ni
 	JOIN gis.traffic_signal AS ts USING (px)
 	```
@@ -411,7 +412,7 @@ with psycopg2.connect(**postgres_settings) as conn:
                                                         date_installed, lat, lng,
                                                         street_main, street_cross, int_id, px,
                                                         n_leg_restricted, e_leg_restricted,
-                                                        s_leg_restricted, w_leg_restricted) VALUES %s"""
+                                                        s_leg_restricted, w_leg_restricted, api_name) VALUES %s"""
         execute_values(cur, insert_data, df_list)
 		update_geom = """UPDATE miovision_api.intersections a
 							SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
