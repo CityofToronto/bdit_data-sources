@@ -10,13 +10,13 @@
 - [Manually Accessing Data](#manually-accessing-data)
 
 ## Overview
-Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and forecast data of City of Toronto. These data is stored in the `weather.schema`, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
+Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and also forecast data for City of Toronto. These data are stored in the `weather` schema, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
 
 ## Historical Data
 
-We import two location's historical data on a daily basis, City of Toronto (Station_id = 31688) and Toronto Pearson Airport (Station_id = 51459). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
+We import the historical data for two locations on a daily basis, City of Toronto (Station_id = 31688) and Toronto Pearson Airport (Station_id = 51459). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
 
-**Please note** that City of Toronto's total rainfall and total snowfall fields are always `NULL` so be aware when you query that field, all other fields can be access in the table `weather.historical_city`. As an approximate, we import Toronto Pearson Airport's total rainfall and snowfall in a seperate table `weather.historical_daily_airport`. 
+**Please note** that the `total_rain` and `total_snow` fields for the city weather station are always `NULL`. All other fields can be accessed in the table `weather.historical_daily_city`. As an approximation, we import Toronto Pearson Airport's total rainfall and snowfall in a seperate table `weather.historical_daily_airport`. 
 
 ### Table Structure
 | Column name  | Description                                                                                                                      | example    |
