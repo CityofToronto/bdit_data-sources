@@ -4,20 +4,22 @@ WITH out_of_order AS (
         s.site_description,
         f.flow_id,
         s.site_description || ' (site_id: ' || s.site_id
-            || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_Id ELSE '' END)
-            || ') - data last received: ' || MAX(c.datetime_bin::date)
-            || ' (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) || ')' AS description
+        || (CASE WHEN f.flow_id IS NOT null THEN ', channel_id: ' || f.flow_Id ELSE '' END)
+        || ') - data last received: ' || MAX(c.datetime_bin::date)
+        || ' (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) || ')' AS description
     FROM ecocounter.counts AS c --only validated sites
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     WHERE
-        c.datetime_bin >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
-        AND c.datetime_bin < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+        c.datetime_bin >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}' -- noqa: TMP
+        AND c.datetime_bin < '{{ ds }} 00:00:00'::timestamp + interval '1 day' -- noqa: TMP
     GROUP BY
         --find both sites and site/flow combos which are out of order.
         GROUPING SETS ((s.site_id), (s.site_id, f.flow_id)),
         s.site_description
-    HAVING MAX(c.datetime_bin::date) < '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}'
+    HAVING
+        MAX(c.datetime_bin::date) <
+            '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}' -- noqa: TMP
 ),
 
 ongoing_outages AS (
@@ -39,9 +41,10 @@ ongoing_outages AS (
         ooo_flows.flow_id IS NOT NULL
         AND ooo_sites.site_id IS NULL --anti join
 )
-    
+
 SELECT
-    COUNT(ongoing_outages.*) < 1 AS check,
+    COUNT(ongoing_outages.*) < 1
+    AS check,
     CASE WHEN COUNT(ongoing_outages.*) = 1 THEN 'There is ' ELSE 'There are ' END ||
         COALESCE(COUNT(ongoing_outages.*), 0) ||
         CASE WHEN COUNT(ongoing_outages.*) = 1 THEN ' ongoing outage.' ELSE ' ongoing outages.'
