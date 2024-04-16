@@ -20,7 +20,7 @@
 
 ## What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](traffic/README.md) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index.
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](traffic/README.md) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/network_grid_v2/congestion_network_creation) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/master/archived/congestion_network_depreciated/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index.
 
 <details>
     <summary>Travel Time Index</summary>
@@ -115,11 +115,40 @@ For an exploratory description of coverage (or how much probe data there is) for
 
 #### Getting link attributes
 
-The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link_id` and a `travel direction` character (F,T). `F` and `T` represent "From" and "To" relative to each link's reference node, which is *always* the node with the lowest latitude. In the case of two nodes with equal latitude, the node with the lowest longitude is the reference node. To join `ta` data to the `here_gis.streets_att` table use the following:
+The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link_id` and a `travel direction` character (F,T). `F` and `T` represent "From" and "To" relative to each link's reference or start node.
+
+The geometries associated with a `link_id` are only given in one direction, so may need to be reversed. To join `link_dir`s to the `streets` table and get the correctly directed link geometries, you may do like:
 
 ```sql
-JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numeric
+SELECT
+    ta.link_dir, -- directed ID with 'T|F' character
+    streets.link_id, -- undirected ID, numeric
+    attributes.st_name,
+    CASE
+        -- F: From reference/start node
+        WHEN ta.link_dir ~ 'F' THEN streets.geom
+        -- T: To reference/start node 
+        ELSE ST_Reverse(streets.geom)
+    END AS geom 
+FROM here.ta
+JOIN here_gis.streets_22_2 AS streets ON
+    -- left(...,-1) removes the "T/F" character from the right of the string
+    left(ta.link_dir,-1)::numeric = streets.link_id
+-- attributes tables have things like names, lanes, speed limits, etc
+JOIN here_gis.streets_att_22_2 AS attributes USING (link_id)
 ```
+
+There is also a set of versioned tables for routing `here.routing_streets_xx_x`, which contain the directed geometries:
+
+```sql
+SELECT
+    link_dir,
+    geom AS directed_geom
+FROM here.ta
+JOIN here.routing_streets_22_2 USING (link_dir)
+```
+
+See also: [Routing with traffic data](#routing-with-traffic-data)
 
 #### Functional classes
 

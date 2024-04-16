@@ -7,10 +7,8 @@ import os
 
 import pendulum
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -33,7 +31,7 @@ default_args = {'owner':names,
                 'on_failure_callback': task_fail_slack_alert
                 }
 
-dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = '0 0 * * *')
+dag = DAG(dag_id = dag_name, default_args = default_args, schedule = '0 0 * * *')
 
 
 t1 = BashOperator(
