@@ -9,14 +9,15 @@ import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_functions import task_fail_slack_alert
+except:
+    raise ImportError("Cannot import slack alert functions")
 
 dag_name = 'pull_here'
 
@@ -40,7 +41,7 @@ default_args = {'owner': ','.join(names),
                        'LANG':'C.UTF-8'}
                 }
 
-dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = ' 30 16 * * * ')
+dag = DAG(dag_id = dag_name, default_args = default_args, schedule = ' 30 16 * * * ')
 #Every day at 1630
 
 # Execution date seems to be the day before this was run, so yesterday_ds_nodash
@@ -48,6 +49,6 @@ dag = DAG(dag_id = dag_name, default_args = default_args, schedule_interval = ' 
 
 pull_data = BashOperator(
         task_id = 'pull_here',
-        bash_command = '/etc/airflow/data_scripts/.venv/bin/python3 /etc/airflow/data_scripts/here/traffic/here_api.py -d /etc/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
+        bash_command = '/data/airflow/airflow_venv/bin/python3 /data/airflow/data_scripts/here/traffic/here_api.py -d /data/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
         dag=dag,
         )

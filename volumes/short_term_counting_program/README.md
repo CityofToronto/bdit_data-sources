@@ -225,6 +225,7 @@ Field Name|Type|Description
 count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
 count|bigint|vehicle count
 timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
+speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts
 
 #### countinfo
 
