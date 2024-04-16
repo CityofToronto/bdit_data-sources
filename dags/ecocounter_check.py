@@ -19,6 +19,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_if_dow
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -31,7 +32,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2024, 4, 15, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 4, 14, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -43,7 +44,7 @@ default_args = {
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 4 * * *', # Run at 4 AM local time every day
-    catchup=False,
+    catchup=True,
     template_searchpath=[
         os.path.join(repo_path,'volumes/ecocounter/data_checks')
     ],
@@ -62,19 +63,33 @@ def ecocounter_check_dag():
         execution_delta=timedelta(hours=1) #pull_ecocounter scheduled at '0 3 * * *'
     )
 
-    check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
-        task_id="check_intersection_outages",
-        sql="select-ongoing_intersection_outages.sql",
-        conn_id="ecocounter_api_bot",
+    check_site_outages = SQLCheckOperatorWithReturnValue(
+        task_id="check_site_outages",
+        sql="select-ongoing_outages.sql",
+        conn_id="ecocounter_bot",
         params={
             "lookback": '100 days',
             "min_duration": '1 days'
         }
     )
-    check_distinct_intersection_uid.doc_md = '''
+    check_site_outages.doc_md = '''
     Identify sites & flows which appeared within the lookback period that did not appear today.
     '''
-
-    t_upstream_done >> [check_distinct_intersection_uid]
+    
+    check_unvalidated_sites = SQLCheckOperatorWithReturnValue(
+        task_id="check_unvalidated_sites",
+        sql="select-unvalidated_sites.sql",
+        conn_id="ecocounter_bot",
+        params={
+            "lookback": '7 days'
+        }
+    )
+    check_unvalidated_sites.doc_md = '''
+    Identify new sites that have not been validated by a human with counts in the last 7 days.
+    '''
+    t_upstream_done >> [
+        check_site_outages,
+        check_if_dow(isodow=7) >> check_unvalidated_sites #ds = Sunday == notify on mondays
+    ]
 
 ecocounter_check_dag()
