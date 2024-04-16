@@ -23,32 +23,19 @@ Once we are informed of the decommissioned date of a Miovision camera, we can ca
 
 1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../README.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
-2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from tables `miovision_api.volumes_15min_mvt` and `miovision_api.volumes_15min`. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
+2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from aggregate tables using [function-clear-volumes_15min.sql](../sql/function/function-clear-volumes_15min.sql), [function-clear-volumes_15min_mvt.sql](../sql/function/function-clear-volumes_15min_mvt.sql). You can also manually delete `volumes_daily` table. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
-3) Update the below table of when intersections were decommissioned for future references.
-
-	|intersection_uid | last datetime_bin|
-	|-----------------|------------------|
-	9 | 2020-06-15 15:51:00|
-	11 | 2020-06-15 09:46:00|
-	13 | 2020-06-15 18:01:00|
-	14 | NULL|
-	16 | 2020-06-15 19:52:00|
-	19 | 2020-06-15 20:18:00|
-	30 | 2020-06-15 18:58:00|
-	32 | 2020-06-15 18:30:00|
-
-4) Done. Removing intersections is short and simple.
+3) Done. Removing intersections is short and simple.
 
 # Adding Intersections
 Adding intersections is not as simple as removing an intersection. We will first have to find out some information before proceeding to aggregating the data. The steps are outlined below.
 
 ## Update `miovision_api.intersections`:
 
-Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are descrived below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
-    The new intersection's `intersection_name`, `id`, can be found using the [Miovision API](https://docs.api.miovision.com/#!/Intersections/get_intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user.
+    The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
 2. **date installed**  
     `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [Jupyter notebook](new_intersection_activation_dates.ipynb) in this folder. 
@@ -57,34 +44,51 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
     `date_decommissioned` is described under (#removing-intersections). 
 		
 4. **px**  
-    `px` can be found by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
+    `px` is a uid used to identify signalized intersections. For 1 or 2 `px` is is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
+
+	**Alternate method** - For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
+	```sql
+	WITH intersections(id, intersection_name_api) AS (
+	VALUES
+		--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
+		('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
+		('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
+	)
+
+	SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
+	FROM intersections AS i,
+	LATERAL (
+		SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
+	) AS agg
+	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
+	```
 
 	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="600"/>
 		
-4. **Restricted legs**  
-    In order to find out which leg of that intersection is restricted, go to Google Map to find out the direction of traffic.
+5. **Restricted legs**  
+    In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
 
 6. **Insert statement**  
-    Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same, which may be helpful for adding a large number of intersections. 
+    Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same via a spreadsheet, which may be helpful for adding a large number of intersections. 
 
 	```sql
 	INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
 	date_installed, lat, lng, geom, street_main, street_cross, int_id, px, 
-	n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted)
+	n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name)
 
 	WITH new_intersections (intersection_uid, id, intersection_name, date_installed, px,
-							n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted) AS (
+							n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name) AS (
 		VALUES
-			(67, '11dcfdc5-2b37-45c0-ac79-3d6926553582', 'Sheppard Avenue West and Keele Street',
-				'2021-06-16'::date, '0600', null, null, null, null),
-			(68, '9ed9e7f3-9edc-4f58-ae5b-8c9add746886', 'Steeles Avenue West and Jane Street',
-				'2021-05-12'::date, '0535', null, null, null, null)
+			(67, '11dcfdc5-2b37-45c0-ac79-3d6926553582', 'Sheppard / Keele', 
+				'2021-06-16'::date, '0600', null, null, null, null, 'Sheppard Avenue West and Keele Street'),
+			(68, '9ed9e7f3-9edc-4f58-ae5b-8c9add746886', 'Steeles / Jane', 
+				'2021-05-12'::date, '0535', null, null, null, null, 'Steeles Avenue West and Jane Street')
 	)
 
 	SELECT
 		ni.intersection_uid, --sequential 
 		ni.id, --from api
-		ni.intersection_name, --from api 
+		ni.intersection_name, --cleaned name
 		ni.date_installed, --identify via communication or new_intersection_activation_dates.ipynb
 		ts.latitude,
 		ts.longitude,
@@ -96,7 +100,8 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 		ni.n_leg_restricted,
 		ni.e_leg_restricted,
 		ni.s_leg_restricted,
-		ni.w_leg_restricted
+		ni.w_leg_restricted.
+		api_name --from api 
 	FROM new_intersections AS ni
 	JOIN gis.traffic_signal AS ts USING (px)
 	```
@@ -111,8 +116,8 @@ We need to find out all valid movements for the new intersections from the data 
     If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
 	`--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
 
-2. **Insert into intersection_movements**  
-    Now that there is data in `miovision_api.volumes`, run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. `volume::numeric / classification_volume >= 0.005` is a suggested addition to make sure that for lower volume modes (bicycles), we don't filter out a small volume but large percentage (5 / 1000).  
+2. **Insert into `intersection_movements`**  
+    Now that there is data in `miovision_api.volumes`, run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. `volume::numeric / classification_volume >= 0.005` is a suggested addition to make sure that for lower volume modes (bicycles), we don't filter out a small volume but large percentage (> 5 / 1000).  
 	Next, INSERT INTO `intersection_movements` table which has all valid movements for intersections. These include decommissioned intersections, just in case we might need those in the future.
 
 	```sql
@@ -130,8 +135,12 @@ We need to find out all valid movements for the new intersections from the data 
 			intersection_uid IN (67, 68) --only include new intersection_uid
 			AND datetime_bin > 'now'::text::date - interval '10 days' -- or the date of data that you pulled
 			AND classification_uid IN (1,2,6,10) --will include other modes after this
+ 			AND NOT (
+ 			    --exclude bike exits from aggregation (duplicate with entrance volumes)
+			    classification_uid = 10 AND movement_uid = 8
+ 			)
 		GROUP BY intersection_uid, classification_uid, leg, movement_uid
-		WINDOW w AS (PARTITION BY classification_uid)
+		WINDOW w AS (PARTITION BY intersection_uid, classification_uid)
 	)
 
 	-- Uncomment when you're ready to insert.
@@ -143,11 +152,38 @@ We need to find out all valid movements for the new intersections from the data 
 		movement_uid
 	FROM counts
 	WHERE
-		bins >= 20
+		bins >= 20 --consider omitting if using many days of data.
 		OR volume::numeric / classification_volume >= 0.005
 	```
 
-3. **Add additional modes to intersection_movements**  
+	**Alternate method** - If you find you need to manually add movements to the above, download the output of the query into a CSV, manually edit the CSV, then
+	append it to `miovision_api.intersection_movements` by modifying the below python snippet, (or use an SQL INSERT statement):
+
+	```python
+	import pandas as pd
+	import psycopg2
+	from psycopg2.extras import execute_values
+
+	import configparser
+	import pathlib
+
+	# Insert code to read configuration settings.
+	postgres_settings = {your_postgres_config}
+
+	# Insert the name of your CSV file.
+	df = pd.read_csv({your_file.csv})
+	df_list = [list(row.values) for i, row in df.iterrows()]
+
+	with psycopg2.connect(**postgres_settings) as conn:
+		with conn.cursor() as cur:
+			insert_data = """INSERT INTO miovision_api.intersection_movements(intersection_uid, classification_uid, leg, movement_uid) VALUES %s"""
+			execute_values(cur, insert_data, df_list)
+			if conn.notices != []:
+				print(conn.notices)
+	```
+
+
+3. **Add additional modes to `intersection_movements`**  
     The step before only include valid intersection movements for
 	`classification_uid IN (1,2,6,10)` which are light vehicles, cyclists and
 	pedestrians. The reason is that the counts for other mode may not pass the
@@ -178,9 +214,9 @@ We need to find out all valid movements for the new intersections from the data 
 	ORDER BY 1, 2, 3, 4
 	```
 
-4. **Review intersection_movements**  
+4. **Review `intersection_movements`**  
     Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
-    Below is an example script + output you can use to aggregate movements into a more readable format for QC.
+    Below is an example script + output you can use to aggregate movements into a more readable format for QC. In particular look for intersections with very short lists of valid movements, or no valid movements for certain classifications.  
 
     | intersection_uid | leg | movements                                                                                                                                                                                    |
     |------------------|-----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -221,36 +257,13 @@ We need to find out all valid movements for the new intersections from the data 
         leg
     ```
 
-5. **Manual edits**  
-    If you find you need to manually add movements to the above,
-	download the output of the query into a CSV, manually edit the CSV, then
-	append it to `miovision_api.intersection_movements` by modifying the below python snippet, (or use an SQL INSERT statement):
+5. **Update geojson**  
+	Update the [geojson intersections file](../geojson/mio_intersections.geojson) by exporting to file from QGIS with `GeoJSON` format. This geojson file is helpful as a publically accessible record of our Miovision intersections.   
+![export to file from QGIS](geojson_export.png)
 
-	```python
-	import pandas as pd
-	import psycopg2
-	from psycopg2.extras import execute_values
-
-	import configparser
-	import pathlib
-
-	# Insert code to read configuration settings.
-	postgres_settings = {your_postgres_config}
-
-	# Insert the name of your CSV file.
-	df = pd.read_csv({your_file.csv})
-	df_list = [list(row.values) for i, row in df.iterrows()]
-
-	with psycopg2.connect(**postgres_settings) as conn:
-		with conn.cursor() as cur:
-			insert_data = """INSERT INTO miovision_api.intersection_movements(intersection_uid, classification_uid, leg, movement_uid) VALUES %s"""
-			execute_values(cur, insert_data, df_list)
-			if conn.notices != []:
-				print(conn.notices)
-	```
 ## Update `miovision_api.centreline_miovision`
 
-[`miovision_api.centreline_miovision`](../README.md) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
+[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
 
 This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
 - Segments are not aligned in a North-South or East-West direction (like Kingston Road)
@@ -272,19 +285,13 @@ WHERE intersection_uid = 72 -- change the number to match the new intersection_u
 Now that the intersection is configured and the raw volumes data is in the database, we have to finish aggregating the data.
 
 1. **Backfill `miovision_api.volumes`**   
-    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. 
+    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. Skip aggregating data by omitting `--agg` flag. 
 
 2. **Backfill additional tables**  
-    We now have to run a couple of functions manually with (%s::date, %s::date) being (start_date::date, end_date::date) to finish aggregating the backfilled data.  
-	```sql
-	SELECT miovision_api.find_gaps(%s::date, %s::date);
-	SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);
-	SELECT miovision_api.aggregate_15_min(%s::date, %s::date); 
-	SELECT miovision_api.report_dates(%s::date, %s::date);
-	```
+	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and previous day. Skip pulling data by omitting `--pull` flag. 
 
 3. **QC Aggregate Tables**  
-    Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter.
+    Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter. 
 
 	```sql
 	SELECT
@@ -300,8 +307,7 @@ Now that the intersection is configured and the raw volumes data is in the datab
     --need to remove unacceptable similar to `miovision_api.aggregate_15_min_tmc`;
 	LEFT JOIN miovision_api.unacceptable_gaps un
 		ON un.intersection_uid = v.intersection_uid
-		AND v.datetime_bin >= DATE_TRUNC('hour', gap_start)
-		AND v.datetime_bin < DATE_TRUNC('hour', gap_end) + interval '1 hour'
+		AND datetime_bin_ceil(v.datetime_bin, 15) - interval '15 minutes' = un.datetime_bin
     --identify volumes from miovision_api.volumes_15min_mvt
 	LEFT JOIN LATERAL (
 		SELECT
@@ -311,8 +317,8 @@ Now that the intersection is configured and the raw volumes data is in the datab
 		FROM miovision_api.volumes_15min_mvt
 		WHERE
             --adjust dates
-			datetime_bin >= '2023-08-01 00:00:00'::timestamp - interval '1 hour'
-			AND datetime_bin < '2023-08-02 00:00:00'::timestamp - interval '1 hour'
+			datetime_bin >= '2024-02-01 00:00:00'::timestamp - interval '1 hour'
+			AND datetime_bin < '2024-02-02 00:00:00'::timestamp - interval '1 hour'
 		GROUP BY
 			intersection_uid,
 			classification_uid
@@ -328,8 +334,8 @@ Now that the intersection is configured and the raw volumes data is in the datab
 		FROM miovision_api.volumes_15min
 		WHERE
             --adjust dates
-			datetime_bin >= '2023-08-01 00:00:00'::timestamp - interval '1 hour'
-			AND datetime_bin < '2023-08-02 00:00:00'::timestamp - interval '1 hour'
+			datetime_bin >= '2024-02-01 00:00:00'::timestamp - interval '1 hour'
+			AND datetime_bin < '2024-02-02 00:00:00'::timestamp - interval '1 hour'
 		GROUP BY
 			intersection_uid,
 			classification_uid
@@ -338,19 +344,16 @@ Now that the intersection is configured and the raw volumes data is in the datab
 		AND v.classification_uid = v15.classification_uid
 	WHERE
         --adjust dates
-		v.datetime_bin >= '2023-08-01 00:00:00'::timestamp - interval '1 hour'
-		AND v.datetime_bin < '2023-08-02 00:00:00'::timestamp - interval '1 hour'
-		AND v.intersection_uid IN (64) --adjust intersection here
-		AND (
-			un.accept is null
-			OR un.accept IS TRUE)
+		v.datetime_bin >= '2024-02-01 00:00:00'::timestamp - interval '1 hour'
+		AND v.datetime_bin < '2024-02-02 00:00:00'::timestamp - interval '1 hour'
+		AND v.intersection_uid >= 69 --adjust intersection here
+		AND un.datetime_bin IS NULL
 	GROUP BY
 		v.intersection_uid,
 		v.classification_uid,
-		un.accept,
+		un.datetime_bin,
 		v15.volume,
 		v15_mvmt.volume
-
 	```
 
 4. **Done!**  
@@ -409,18 +412,14 @@ with psycopg2.connect(**postgres_settings) as conn:
                                                         date_installed, lat, lng,
                                                         street_main, street_cross, int_id, px,
                                                         n_leg_restricted, e_leg_restricted,
-                                                        s_leg_restricted, w_leg_restricted) VALUES %s"""
+                                                        s_leg_restricted, w_leg_restricted, api_name) VALUES %s"""
         execute_values(cur, insert_data, df_list)
+		update_geom = """UPDATE miovision_api.intersections a
+							SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
+							FROM miovision_api.intersections b
+							WHERE b.geom IS NULL
+								AND a.id = b.id;"""
+        cur.execute(update_geom)
         if conn.notices != []:
             print(conn.notices)
-```
-
-Finally, to populate the geometries table, run the following query:
-
-```sql
-UPDATE miovision_api.intersections a
-SET geom = ST_SetSRID(ST_MakePoint(b.lng, b.lat), 4326)
-FROM miovision_api.intersections b
-WHERE a.intersection_uid = b.intersection_uid
-    AND a.intersection_uid IN ({INSERT NEW INTERSECTIONS HERE});
 ```
