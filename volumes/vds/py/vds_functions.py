@@ -23,19 +23,6 @@ def check_dst(start_date):
         LOGGER.info(f"Normal day.")
     return tz_1 == 'EDT' and tz_2 == 'EST'
 
-def fetch_pandas_df(conn, query, table_name):
-    #generic function to pull data in pandas dataframe format 
-    try:
-        with conn.get_conn() as con:
-            LOGGER.info(f"Fetching {table_name}")
-            data = pd.read_sql(query, con)
-            LOGGER.info(f"Number of rows fetched from {table_name} table: {data.shape[0]}")
-            return data
-    except Error as exc:
-        LOGGER.critical(f"Error fetching from {table_name}.")
-        LOGGER.critical(exc)
-        raise Exception()
-
 def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, table_name, batch_size = 100000):
     #generic function to pull and insert data using different connections and queries.
     batch=1

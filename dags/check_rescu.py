@@ -3,16 +3,12 @@ import os
 from functools import partial
 
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 from psycopg2 import sql
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
 import pendulum
 
@@ -62,7 +58,7 @@ default_args = {'owner': ','.join(names),
                     )
                 }
 
-dag = DAG(dag_id = dag_name, default_args=default_args, schedule_interval='0 6 * * *', catchup=False)
+dag = DAG(dag_id = dag_name, default_args=default_args, schedule='0 6 * * *', catchup=False)
 # Run at 6 AM local time every day
 
 task1 = PythonOperator(

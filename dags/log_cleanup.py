@@ -5,7 +5,6 @@ A maintenance workflow that you can deploy into Airflow to periodically clean ou
 to avoid those getting too big.
 """
 # pylint: disable=pointless-statement,anomalous-backslash-in-string
-from datetime import datetime
 import os
 import sys
 import pendulum
@@ -18,8 +17,6 @@ AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.models import Variable 
 
 dag_name = 'log_cleanup'
@@ -64,7 +61,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       catchup=False,
       # Prevent the same DAG from running concurrently more than once.
       max_active_runs=1,
-      schedule_interval=schedule_interval,
+      schedule=schedule_interval,
       # This allows us to simplify `create_bash_task` below.
       template_searchpath=AIRFLOW_TASKS
     )

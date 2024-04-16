@@ -37,7 +37,7 @@
 
 ## 1. Overview
 
-The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The live feed and archived data are available on the [Open Data Portal](https://open.toronto.ca/dataset/travel-times-bluetooth/). Because of differences in filtering between the live feed and historical data, values between the two datasets may not exactly match up.
+The City collects traffic data from strategically placed sensors at intersections and along highways. These detect Bluetooth MAC addresses of vehicles as they drive by, which are immediately anonymized. When a MAC address is detected at two sensors, the travel time between the two sensors is calculated. These travel times are aggregated up to a median within each 5-minute bin. The archived data (which are not being actively updated) are available on the [Open Data Portal](https://open.toronto.ca/dataset/travel-times-bluetooth/). 
 
 ## 2. Table Structure
 

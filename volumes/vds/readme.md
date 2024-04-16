@@ -408,48 +408,69 @@ Row count: 189
 VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs described below.  
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
-### [vds_pull_vdsdata](../../dags/vds_pull_vdsdata.py)
+<!-- vds_pull_vdsdata_doc_md -->
+### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
-  ![vds_pull_vdsdata DAG](vds_pull_vdsdata_dag.png)
+  ![](vds_pull_vdsdata_dag.png)
 
 </div>
 
-**`update_inventories`**  
-These tasks to update lookup tables `vdsconfig` and `entity_locations` run before downstream pull data tasks to ensure that 
-on-insert trigger has the latest detector information available. Also triggers other DAG `vds_pull_vdsvehicledata` for same reason. 
-- `pull_and_insert_detector_inventory` pulls `vdsconfig` table into RDS. On conflict, updates end_timestamp. 
-- `pull_and_insert_entitylocations` pulls `entitylocations` table into RDS. On conflict, updates end_timestamp. 
-- `done` marks `update_inventories` as done to trigger downstream data pull tasks
+A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/vds/readme.md) from ITS Central lookup tables `vdsconfig`, `entitylocations` into Bigdata `vds.vdsconfig`, `vds.entity_locations` tables and from `vdsdata` of ITS Central into Bigdata tables `vds.raw_vdsdata` and aggregate tables `vds.counts_15min`, `vds.counts_15min_bylane`. 
 
-`check_partitions` checks the necessary partitions are available for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. 
+**Tasks:**  
 
-**`pull_vdsdata`**  
-- `delete_vdsdata` deletes existing data from RDS `vds.raw_vdsdata` to enable easy rerunning of tasks.  
-- `pull_raw_vdsdata` pulls into RDS from ITS Central database table `vdsdata` including expanding binary `lanedata` column. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
+  **`update_inventories`**  
+  These tasks to update lookup tables `vdsconfig` and `entity_locations` run before downstream pull data tasks to ensure that on-insert trigger has the latest detector information available. Also triggers other DAG (`vds_pull_vdsvehicledata`) for same reason. 
+  - `pull_and_insert_detector_inventory` pulls `vdsconfig` table into RDS. On conflict, updates end_timestamp. 
+  - `pull_and_insert_entitylocations` pulls `entitylocations` table into RDS. On conflict, updates end_timestamp. 
+  - `done` marks `update_inventories` as done to trigger downstream data pull tasks + DAG
 
-**`summarize_v15`**  
-- `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
-- `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
+  **`check_partitions`**  
+  - `check_partitions` checks if the date is January 1st. If not, the next task is skipped.
+  - `create_partitions` creates new partitions for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. 
 
-### [vds_pull_vdsvehicledata](../../dags/vds_pull_vdsvehicledata.py)
+  **`pull_vdsdata`**  
+  - `delete_vdsdata` deletes existing data from RDS `vds.raw_vdsdata` to enable easy rerunning of tasks.  
+  - `pull_raw_vdsdata` pulls into RDS from ITS Central database table `vdsdata` including expanding binary `lanedata` column. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
+
+  **`summarize_v15`**  
+  - `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
+  - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
+
+  **`data_checks`**  
+  - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
+<!-- vds_pull_vdsdata_doc_md -->
+
+<!-- vds_pull_vdsvehicledata_doc_md -->
+### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
-  ![vds_pull_vdsvehicledata DAG](vds_pull_vdsvehicledata_dag.png)
+  ![](vds_pull_vdsvehicledata_dag.png)
 
 </div>
 
-`starting_point` senses for external `vds_pull_vdsdata` task `update_inventories.done` to finish to ensure detector inventory is up to date before `raw_vdsvehicledata` on-insert trigger is run to update foreign keys. 
+A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/vds/readme.md) from table `vdsvehicledata` of ITS Central into Bigdata tables `vds.raw_vdsvehicledata` and aggregate tables `vds.veh_speeds_15min`, `vds.veh_length_15min`. 
 
-`check_partitions` checks the necessary partitions are available for `raw_vdsvehicledata` before pulling data. 
+**Tasks:**  
 
-**`pull_vdsvehicledata`**  
-- `delete_vdsvehicledata` first deletes existing data from RDS `vds.raw_vdsvehicledata` to enable easy rerunning of tasks.
-- `pull_raw_vdsvehicledata` pulls into RDS from ITS Central database table `raw_vdsvehicledata`. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
+  `starting_point` senses for external `vds_pull_vdsdata` task `update_inventories.done` to finish to ensure detector inventory is up to date before `raw_vdsvehicledata` insert (due to on-insert trigger to update foreign keys). 
 
-**`summarize_vdsvehicledata`**  
-- `summarize_speeds` Deletes data from RDS `vds.veh_speeds_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`.  
-- `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
+  **`check_partitions`**  
+  - `check_partitions` checks if the date is January 1st. If not, the next task is skipped.
+  - `create_partitions` creates new partitions for `raw_vdsvehicledata` before pulling data. 
+
+  **`pull_vdsvehicledata`**  
+  - `delete_vdsvehicledata` first deletes existing data from RDS `vds.raw_vdsvehicledata` to enable easy rerunning of tasks.
+  - `pull_raw_vdsvehicledata` pulls into RDS from ITS Central database table `raw_vdsvehicledata`. After insert, a trigger function adds foreign keys referencing `vdsconfig` and `entity_locations` tables. 
+
+  **`summarize_vdsvehicledata`**  
+  - `summarize_speeds` Deletes data from RDS `vds.veh_speeds_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`.  
+  - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
+
+  **`data_checks`**  
+  - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
+<!-- vds_pull_vdsvehicledata_doc_md -->
 
 ## Data Ops: something went wrong predictably, how do I fix it?
 **Need to retry a task?**  
