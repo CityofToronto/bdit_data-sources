@@ -20,6 +20,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.macros import ds_add
 from airflow.exceptions import AirflowSkipException
+from airflow.sensors.external_task import ExternalTaskMarker
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -209,6 +210,18 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    check_partitions() >> update_sites_and_flows() >> pull_ecocounter() >> data_checks()
+    t_done = ExternalTaskMarker(
+            task_id="done",
+            external_dag_id="ecocounter_check",
+            external_task_id="starting_point"
+    )
+
+    (
+        check_partitions() >>
+        update_sites_and_flows() >>
+        pull_ecocounter() >>
+        data_checks() >>
+        t_done
+    )
 
 pull_ecocounter_dag()
