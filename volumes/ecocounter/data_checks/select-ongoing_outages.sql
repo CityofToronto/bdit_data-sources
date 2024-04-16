@@ -18,12 +18,6 @@ WITH out_of_order AS (
         GROUPING SETS ((s.site_id), (s.site_id, f.flow_id)),
         s.site_description
     HAVING MAX(c.datetime_bin::date) < '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}'
-
-    EXCEPT
-
-    SELECT * FROM
-        (VALUES (300031255::numeric, 'Bloor St W, between Palmerston & Markham'::text, null::numeric, 'Bloor St W, between Palmerston & Markham (site_id: 300031255) - data last received: 2024-04-11 (4 days)'::text))
-    AS test_exclusion
 ),
 
 ongoing_outages AS (
