@@ -38,5 +38,5 @@ ALTER FUNCTION miovision_api.clear_api_log(date, date, integer []) OWNER TO miov
 GRANT EXECUTE ON FUNCTION miovision_api.clear_api_log(date, date, integer []) TO miovision_api_bot;
 
 COMMENT ON FUNCTION miovision_api.clear_api_log(date, date, integer [])
-IS 'Clears data from miovision_api.api_log in order to facilitate re-pulling.
-Intersections value defaults to all intersections.'
+IS '''Clears data from `miovision_api.api_log` in order to facilitate re-pulling.
+`intersections` param defaults to all intersections.''';
