@@ -50,3 +50,9 @@ OWNER TO miovision_admins;
 
 GRANT EXECUTE ON FUNCTION miovision_api.report_dates(timestamp, timestamp, integer [])
 TO miovision_api_bot;
+
+COMMENT ON FUNCTION miovision_api.get_report_dates(timestamp, timestamp, integer []) IS
+'''Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to
+`miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate
+only specific intersections. Use `clear_report_dates()` to remove existing values before
+summarizing.''';
