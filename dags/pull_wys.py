@@ -10,8 +10,10 @@ import pendulum
 from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import task, dag, task_group
+from airflow.sensors.external_task import ExternalTaskMarker
 
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -23,6 +25,7 @@ try:
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_jan_1st, check_1st_of_month
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
@@ -50,34 +53,58 @@ def custom_fail_slack_alert(context: dict) -> str:
     else:
         return ""
 
-dag_name = 'pull_wys'
+DAG_NAME = 'pull_wys'
+DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
+default_args = {
+    'owner': ','.join(DAG_OWNERS),
+    'depends_on_past':False,
+    'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
+    'email_on_failure': False,
+    'email_on_success': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+    #progressive longer waits between retries
+    'retry_exponential_backoff': True,
+    'on_failure_callback': task_fail_slack_alert
+}
 
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
-default_args = {'owner': ','.join(names),
-                'depends_on_past':False,
-                'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
-                'email_on_failure': False,
-                 'email_on_success': False,
-                 'retries': 3,
-                 'retry_delay': timedelta(minutes=5),
-                 #progressive longer waits between retries
-                 'retry_exponential_backoff': True,
-                 'on_failure_callback': task_fail_slack_alert
-                }
-
-@dag(dag_id = dag_name,
-     default_args=default_args,
-     catchup=False,
-     max_active_runs=5,
-    template_searchpath=os.path.join(repo_path,'wys/api/sql'),
-     schedule_interval='0 15 * * *' # Run at 3 PM local time every day
-     )
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    catchup=False,
+    max_active_runs=5,
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
+    schedule='0 15 * * *', # Run at 3 PM local time every day
+    tags=["wys", "data_pull", "partition_create", "data_checks"],
+    doc_md=__doc__
+)
 def pull_wys_dag():
 
-    @task
+    #this task group checks if necessary to create new partitions and if so, exexcute.
+    @task_group
+    def check_partitions():
+
+        create_annual_partition = PostgresOperator(
+            task_id='create_annual_partitions',
+            sql="SELECT wys.create_yyyy_raw_data_partition('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
+            postgres_conn_id='wys_bot',
+            autocommit=True
+        )
+        
+        create_month_partition = PostgresOperator(
+            task_id='create_month_partition',
+            trigger_rule='none_failed_min_one_success',
+            sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
+            postgres_conn_id='wys_bot',
+            autocommit=True
+        )
+
+        check_jan_1st() >> create_annual_partition >> (
+            check_1st_of_month() >> create_month_partition
+        )
+
+    @task(trigger_rule='none_failed')
     def pull_wys(ds=None):
         #to connect to pgadmin bot
         wys_postgres = PostgresHook("wys_bot")
@@ -91,32 +118,30 @@ def pull_wys_dag():
                      end_date = ds,
                      conn = conn,
                      api_key=api_key)
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="check_miovision",
+        external_task_id="starting_point"
+    )
 
     @task_group()
     def data_checks():
-        data_check_params = {
-            "table": "wys.speed_counts_agg_5kph",
-            "lookback": '60 days',
-            "dt_col": 'datetime_bin',
-            "threshold": 0.7
-        }
         check_row_count = SQLCheckOperatorWithReturnValue(
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
-            params=data_check_params | {"col_to_sum": 'volume'},
-            retries=2
-        )
-        check_distinct_api_id = SQLCheckOperatorWithReturnValue(
-            task_id="check_distinct_api_id",
-            sql="select-api_id_count_lookback.sql",
-            conn_id="wys_bot",
-            params=data_check_params | {"sensor_id_col": "api_id"},
-            retries=2
+            retries=0,
+            params={
+                "table": "wys.speed_counts_agg_5kph",
+                "lookback": '60 days',
+                "dt_col": 'datetime_bin',
+                "col_to_sum": 'volume',
+                "threshold": 0.7
+            }
         )
 
         check_row_count
-        check_distinct_api_id
 
     @task
     def pull_schedules():
@@ -144,7 +169,8 @@ def pull_wys_dag():
 
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
-    pull_wys() >> data_checks()
+
+    check_partitions() >> pull_wys() >> t_done >> data_checks()
     pull_schedules()
     read_google_sheets()
 

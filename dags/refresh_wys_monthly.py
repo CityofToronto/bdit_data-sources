@@ -44,7 +44,7 @@ with DAG(dag_id = dag_name,
          user_defined_macros={
             'last_month' : last_month
           },
-         schedule_interval='0 3 2 * *') as monthly_summary:
+         schedule='0 3 2 * *') as monthly_summary:
     wys_view_stat_signs = PostgresOperator(
                             #sql in bdit_data-sources/wys/api/sql/mat-view-stationary-signs.sql
                             sql='SELECT wys.refresh_mat_view_stationary_signs()',

@@ -17,11 +17,8 @@ gis.traffic_signal
 Updated on 2022-09-12
 """
 
-from datetime import datetime
 import os
 import sys
-from threading import local
-import psycopg2
 from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
@@ -62,7 +59,7 @@ DEFAULT_ARGS = {
     'email_on_retry': True,
     'owner': 'airflow',
     'start_date': pendulum.datetime(2019, 9, 16, tz="America/Toronto"), # YYYY, MM, DD
-    'task_concurrency': 1,
+    'max_active_tis_per_dag': 1,
     'on_failure_callback': task_fail_slack_alert
 }
 
@@ -424,7 +421,7 @@ TRAFFIC_SIGNALS_DAG = DAG(
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
-    schedule_interval='0 4 * * 1-5')
+    schedule='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 
 PULL_RLC = PythonOperator(

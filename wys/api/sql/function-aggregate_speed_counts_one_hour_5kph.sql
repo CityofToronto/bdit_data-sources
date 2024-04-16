@@ -69,14 +69,28 @@ AS $BODY$
 
 BEGIN
     
-        --Aggregated into speed bins and 1 hour bin
-        INSERT INTO wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
-        SELECT api_id, date_trunc('hour', datetime_bin) dt, speed_id, sum(count) AS volume
-        FROM wys.raw_data
-        INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
-        WHERE    datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
-        GROUP BY api_id, dt,  speed_id
-        ON CONFLICT DO NOTHING;
+    --Aggregated into speed bins and 1 hour bin
+    INSERT INTO wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
+    SELECT
+        api_id,
+        date_trunc('hour', datetime_bin) AS dt,
+        speed_id,
+        sum(count) AS volume
+    FROM wys.raw_data
+    INNER JOIN wys.speed_bins_old AS sb ON
+        raw_data.speed >= lower(sb.speed_bin)
+        AND (
+            raw_data.speed < upper(sb.speed_bin)
+            OR upper(sb.speed_bin) IS NULL
+        )
+    WHERE
+        datetime_bin >= _mon
+        AND datetime_bin < _mon + interval '1 month'
+    GROUP BY
+        api_id,
+        dt,
+        speed_id
+    ON CONFLICT DO NOTHING;
         
 END;
 
