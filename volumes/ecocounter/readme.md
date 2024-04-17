@@ -1,3 +1,31 @@
+<!-- TOC -->
+
+- [Bicycle loop detectors](#bicycle-loop-detectors)
+  - [Installation types](#installation-types)
+  - [Ecocounter data](#ecocounter-data)
+    - [Flows - what we know](#flows---what-we-know)
+  - [Discontinuities](#discontinuities)
+  - [Using the Ecocounter API](#using-the-ecocounter-api)
+    - [Note](#note)
+  - [Historical data](#historical-data)
+  - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+- [SQL Tables](#sql-tables)
+  - [Main Tables](#main-tables)
+    - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
+    - [`ecocounter.counts_unfiltered`](#ecocountercounts_unfiltered)
+    - [`ecocounter.flows_unfiltered`](#ecocounterflows_unfiltered)
+  - [QC Tables](#qc-tables)
+    - [`ecocounter.discontinuities`](#ecocounterdiscontinuities)
+    - [`ecocounter.anomalous_ranges`](#ecocounteranomalous_ranges)
+  - [Validation](#validation)
+    - [`ecocounter.manual_counts_matched`](#ecocountermanual_counts_matched)
+    - [`ecocounter.manual_counts_info`](#ecocountermanual_counts_info)
+    - [`ecocounter.manual_counts_raw`](#ecocountermanual_counts_raw)
+
+<!-- /TOC -->
+
 # Bicycle loop detectors
 
 This dataset comes from a small but growing number of permanent [loop detectors](https://en.wikipedia.org/wiki/Induction_loop) installed within designated bicycle infrastructure such as bike lanes and multi-use paths. This is actually one of our older data collection programs, and the data have been handled in a number of ways over the years and now reside in a couple different places in the `bigdata` database.
@@ -19,7 +47,7 @@ Sometimes these paired sensors are themselves installed in pairs, giving four me
 
 ## Ecocounter data
 
-Data from these sensors is stored in the `ecocounter` schema in three tables:
+Data from these sensors is stored in the `ecocounter` schema in three **views**:
 
 * `sites`
 * `flows`
@@ -90,7 +118,7 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
 - `check_annual_partition` checks if execution date is January 1st.  
 - `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
 
-- `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites` and `ecocounter.flows`. The new rows contain a flag `validated = False` indicating they still need to be manually validated. A notification is sent with any new additions.  
+- `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`. The new rows contain a flag `validated = null` indicating they still need to be manually validated. A notification is sent with any new additions.  
 - `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts_unfiltered` table. 
 
 ### `data_checks` TaskGroup
@@ -98,3 +126,145 @@ This task group runs data quality checks on the pipeline output.
 - `check_volume` checks the sum of volume in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
 - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
+
+
+# SQL Tables
+
+## Main Tables
+Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocounter.counts_unfiltered` each have corresponding VIEWs filtered only to sites/flows marked as `validated` by a human: `ecocounter.sites`, `ecocounter.flows`, `ecocounter.counts`. They otherwise have the same structure as the parent tables described below. 
+
+### `ecocounter.sites_unfiltered`
+CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
+
+Row count: 30
+| column_name          | data_type    | sample                                             | Comments                                                                                                                                                                                                                    |
+|:---------------------|:-------------|:---------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| validated            | boolean      |                                                    | nan                                                                                                                                                                                                                         |
+| site_id              | numeric      | 100014226.0                                        | nan                                                                                                                                                                                                                         |
+| site_description     | text         | CIP 01                                             | nan                                                                                                                                                                                                                         |
+| geom                 | USER-DEFINED | 0101000020E610000000000000000000000000000000000000 | nan                                                                                                                                                                                                                         |
+| facility_description | text         |                                                    | description of bike-specific infrastructure which the sensor is installed within                                                                                                                                            |
+| notes                | text         |                                                    | nan                                                                                                                                                                                                                         |
+| replaced_by_site_id  | numeric      |                                                    | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+
+### `ecocounter.counts_unfiltered`
+CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
+This Table contains the actual binned counts for ecocounter flows. Please note that
+bin size varies for older data, so averaging these numbers may not be straightforward.
+
+Row count: 3,147,432
+| column_name   | data_type                   | sample              | Comments                                                                             |
+|:--------------|:----------------------------|:--------------------|:-------------------------------------------------------------------------------------|
+| flow_id       | numeric                     | 101052525.0         | nan                                                                                  |
+| datetime_bin  | timestamp without time zone | 2012-12-04 09:00:00 | indicates start time of the time bin. Note that not all time bins are the same size! |
+| volume        | smallint                    | 0                   | nan                                                                                  |
+
+### `ecocounter.flows_unfiltered`
+CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
+
+Row count: 73
+| column_name         | data_type    | sample                                                                                     | Comments                                                           |
+|:--------------------|:-------------|:-------------------------------------------------------------------------------------------|:-------------------------------------------------------------------|
+| validated           | boolean      | True                                                                                       | nan                                                                |
+| includes_contraflow | boolean      | True                                                                                       | Does the flow also count travel in the reverse of                  |
+|                     |              |                                                                                            | the indicated flow direction?                                      |
+|                     |              |                                                                                            | TRUE indicates that the flow, though installed                     |
+|                     |              |                                                                                            | in one-way infrastucture like a standard bike lane,                |
+|                     |              |                                                                                            | also counts travel going the wrong direction within                |
+|                     |              |                                                                                            | that lane.                                                         |
+| replaces_flow_id    | numeric      |                                                                                            | nan                                                                |
+| flow_id             | numeric      | 104042943.0                                                                                | nan                                                                |
+| site_id             | numeric      | 100042943.0                                                                                | nan                                                                |
+| flow_direction      | text         | westbound (includes contraflow)                                                            | nan                                                                |
+| flow_geom           | USER-DEFINED | 0102000020E6100000020000004EB43D5A70DA53C081462E0B17D54540C5DD408F71DA53C0BAD16D8616D54540 | A two-node line, where the first node                              |
+|                     |              |                                                                                            | indicates the position of the sensor and                           |
+|                     |              |                                                                                            | the second indicates the normal direction                          |
+|                     |              |                                                                                            | of travel over that sensor relative to the                         |
+|                     |              |                                                                                            | first node. I.e. the line segment is an                            |
+|                     |              |                                                                                            | arrow pointing in the direction of travel.                         |
+| bin_size            | interval     | 0 days 00:15:00                                                                            | temporal bins are either 15 or 30 minutes, depending on the sensor |
+| notes               | text         |                                                                                            | nan                                                                |
+| replaced_by_flow_id | numeric      | 353363669.0                                                                                | nan                                                                |
+
+## QC Tables
+These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.
+
+### `ecocounter.discontinuities`
+Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable.
+
+Row count: 7
+| column_name   | data_type                   | sample                                                                                                                                                                                  |   Comments |
+|:--------------|:----------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------:|
+| uid           | integer                     | 1                                                                                                                                                                                       |        nan |
+| site_id       | numeric                     | 300031255.0                                                                                                                                                                             |        nan |
+| break         | timestamp without time zone | 2024-01-11 00:00:00                                                                                                                                                                     |        nan |
+| give_or_take  | interval                    | 1 days 00:00:00                                                                                                                                                                         |        nan |
+| notes         | text                        | A validation study found that several sensors, including this one, were undercounting bikes. The correct this, the sensitivity of the sensors at this site were increased  by one unit. |        nan |
+
+### `ecocounter.anomalous_ranges`
+A means of flagging periods with questionable data.
+
+Row count: 9
+| column_name         | data_type   | sample                                                                                       |   Comments |
+|:--------------------|:------------|:---------------------------------------------------------------------------------------------|-----------:|
+| flow_id             | numeric     |                                                                                              |        nan |
+| site_id             | numeric     | 100042942.0                                                                                  |        nan |
+| time_range          | tsrange     | [2021-02-09 00:00:00, None)                                                                  |        nan |
+| notes               | text        | Goes from reporting in the hundreds daily to mostly single digits. What could have happened? |        nan |
+| investigation_level | text        | suspect                                                                                      |        nan |
+| problem_level       | text        | do-not-use                                                                                   |        nan |
+| uid                 | smallint    | 2                                                                                            |        nan |
+
+## Validation
+These tables were created to compare Ecocounter data with Spectrum counts. For more information see: [data_collection_automation/ecocounter_validation_counts](https://github.com/Toronto-Big-Data-Innovation-Team/data_collection_automation/tree/ecocounter_validation_counts/ecocounter_validation_counts). 
+
+### `ecocounter.manual_counts_matched`
+Spectrum manual count volumes matched to eco-counter volumes. 1 row per 15min bin. Used for eco-coounter data validation. 
+
+Row count: 2,944
+| column_name             | data_type              | sample     |   Comments |
+|:------------------------|:-----------------------|:-----------|-----------:|
+| ecocounter_site_id      | integer                | 300024437  |        nan |
+| ecocounter_approach     | text                   | N          |        nan |
+| spectrum_approach       | character varying      | N          |        nan |
+| ecocounter_direction    | text                   | Southbound |        nan |
+| count_date              | date                   | 2023-10-18 |        nan |
+| time_bin                | time without time zone | 06:00:00   |        nan |
+| bikes_road_spectrum     | integer                | 0          |        nan |
+| bikes_sidewalk_spectrum | integer                | 0          |        nan |
+| bikes_path_spectrum     | integer                | 0          |        nan |
+| ecocounter_bikes        | bigint                 | 0          |        nan |
+
+### `ecocounter.manual_counts_info`
+Spectrum manual bike count information, matched to eco-counter sites. Used for validation of eco-counter data. 1 row per manual count location.
+
+Row count: 21
+| column_name                     | data_type         | sample                                                                                     |   Comments |
+|:--------------------------------|:------------------|:-------------------------------------------------------------------------------------------|-----------:|
+| study_id                        | character varying | TOR23G9S                                                                                   |        nan |
+| spectrum_location               | text              | BLOOR ST W & MARKHAM ST - PALMERSTON BLVD                                                  |        nan |
+| count_date                      | date              | 2023-10-18                                                                                 |        nan |
+| request_id                      | integer           | 208001                                                                                     |        nan |
+| municipal_id                    | integer           | 8353520                                                                                    |        nan |
+| latitude                        | numeric           | 43.664748                                                                                  |        nan |
+| longitude                       | numeric           | -79.413012                                                                                 |        nan |
+| filename                        | text              | BLOOR ST W & MARKHAM ST - PALMERSTON BLVD_2023-10-18.xlsx                                  |        nan |
+| ecocounter_location             | text              | Bloor St W, between Palmerston & Markham                                                   |        nan |
+| ecocounter_site_id              | integer           | 300031255                                                                                  |        nan |
+| ecocounter_facility_description | text              | bike lane                                                                                  |        nan |
+| distance                        | numeric           | 6.98012450818035                                                                           |        nan |
+| count_geom                      | USER-DEFINED      | 0101000020E6100000C136E2C96EDA53C06C0A647616D54540                                         |        nan |
+| match_line_geom                 | USER-DEFINED      | 0102000020E610000002000000C136E2C96EDA53C06C0A647616D545406FEF6C1D70DA53C010E9EEBB15D54540 |        nan |
+
+### `ecocounter.manual_counts_raw`
+Spectrum manual bike counts at eco-counter locations - raw data, 15min bins
+
+Row count: 3,072
+| column_name             | data_type              | sample   |   Comments |
+|:------------------------|:-----------------------|:---------|-----------:|
+| request_id              | integer                | 208007   |        nan |
+| approach                | character varying      | N        |        nan |
+| time_bin                | time without time zone | 06:00:00 |        nan |
+| bikes_road_spectrum     | integer                | 0        |        nan |
+| bikes_sidewalk_spectrum | integer                | 0        |        nan |
+| bikes_path_spectrum     | integer                | 4        |        nan |
