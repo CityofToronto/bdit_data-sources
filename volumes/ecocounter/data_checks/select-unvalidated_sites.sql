@@ -1,7 +1,8 @@
 WITH unvalidated_sites AS (
     SELECT
         s.site_description || ' (site_id: ' || s.site_id
-        || ') - volume last {{ params.lookback }}: ' || SUM(counts.volume) AS descrip -- noqa: TMP
+        || ') - volume last {{ params.lookback }}: '
+        || SUM(counts.volume) AS descrip -- noqa: TMP
     FROM ecocounter.sites AS s
     LEFT JOIN ecocounter.flows USING (site_id)
     LEFT JOIN ecocounter.counts_unfiltered AS counts
@@ -17,8 +18,7 @@ WITH unvalidated_sites AS (
 )
 
 SELECT
-    COUNT(*) < 1
-    AS check,
+    COUNT(*) < 1 AS check,
     CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END ||
         COALESCE(COUNT(*), 0) ||
         CASE WHEN COUNT(*) = 1 THEN ' unvalidated site.' ELSE ' unvalidated sites.'
