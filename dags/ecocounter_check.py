@@ -5,14 +5,13 @@ ie. issues which suggest field maintenance of sensors required.
 """
 import sys
 import os
-
-from airflow.decorators import dag
-from datetime import timedelta
-from airflow.models import Variable
-from airflow.sensors.external_task import ExternalTaskSensor
-
 import logging
 import pendulum
+from datetime import timedelta
+
+from airflow.decorators import dag
+from airflow.models import Variable
+from airflow.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -31,7 +30,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
-    'depends_on_past':False,
+    'depends_on_past': False,
     'start_date': pendulum.datetime(2024, 4, 14, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
@@ -45,9 +44,7 @@ default_args = {
     default_args=default_args,
     schedule='0 4 * * *', # Run at 4 AM local time every day
     catchup=True,
-    template_searchpath=[
-        os.path.join(repo_path,'volumes/ecocounter/data_checks')
-    ],
+    template_searchpath=os.path.join(repo_path, 'volumes/ecocounter/data_checks'),
     tags=["ecocounter", "data_checks"],
     doc_md=__doc__
 )
