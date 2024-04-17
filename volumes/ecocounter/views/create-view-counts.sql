@@ -13,7 +13,7 @@ IS 'This view contains the actual binned counts for ecocounter flows. Only flows
 marked as validated by a human are included here. Please note that bin size varies
 for older data, so averaging these numbers may not be straightforward.';
 
-ALTER TABLE ecocounter.counts OWNER TO ecocounter_admins;
+ALTER VIEW ecocounter.counts OWNER TO ecocounter_admins;
 
 GRANT SELECT ON ecocounter.counts TO ecocounter_bot;
 GRANT SELECT ON ecocounter.counts TO bdit_humans;
