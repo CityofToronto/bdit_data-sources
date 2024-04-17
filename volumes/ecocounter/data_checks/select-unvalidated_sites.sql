@@ -1,20 +1,48 @@
 WITH unvalidated_sites AS (
     SELECT
-        s.site_description || ' (site_id: ' || s.site_id
-        || ') - volume last {{ params.lookback }}: '
-        || SUM(counts.volume) AS descrip -- noqa: TMP
-    FROM ecocounter.sites AS s
-    LEFT JOIN ecocounter.flows USING (site_id)
+        site.site_id,
+        site.site_description,
+        flow.flow_id,
+        site.site_description || ' (site_id: ' || site.site_id
+        || (CASE WHEN flow.flow_id IS NOT NULL THEN ', channel_id: ' || flow.flow_id ELSE '' END)
+        || ') - volume last {{ params.lookback }}: ' || COALESCE(SUM(counts.volume), 0)
+    AS descrip -- noqa: TMP
+    FROM ecocounter.sites_unfiltered AS site
+    LEFT JOIN ecocounter.flows_unfiltered AS flow USING (site_id)
     LEFT JOIN ecocounter.counts_unfiltered AS counts
         ON counts.datetime_bin >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
         + interval '1 day' - interval '{{ params.lookback }}' -- noqa: TMP
-        AND flows.flow_id = counts.flow_id
-    WHERE NOT (sites.validated)
+        AND flow.flow_id = counts.flow_id
+    WHERE
+        --validated = False is largely ignored
+        site.validated IS NULL
+        OR flow.validated IS NULL
     GROUP BY
-        s.site_id,
-        s.site_description
+        --find both sites and site/flow combos which are out of order.
+        GROUPING SETS ((site.site_id), (site.site_id, flow.flow_id)),
+        site.site_description
     HAVING SUM(counts.volume) > 0
-    ORDER BY s.site_id
+    ORDER BY site.site_id, flow.flow_id
+),
+
+dedup AS (
+    --out of order sites (all channels)
+    SELECT descrip
+    FROM unvalidated_sites
+    WHERE flow_id IS NULL
+
+    UNION
+
+    --out of order flows (where channel does not have overall outage)
+    SELECT ooo_flows.descrip
+    FROM unvalidated_sites AS ooo_flows
+    --anti join ooo_sites
+    LEFT JOIN unvalidated_sites AS ooo_sites
+        ON ooo_flows.site_id = ooo_sites.site_id
+        AND ooo_sites.flow_id IS NULL
+    WHERE
+        ooo_flows.flow_id IS NOT NULL
+        AND ooo_sites.site_id IS NULL --anti join
 )
 
 SELECT
@@ -24,4 +52,4 @@ SELECT
         CASE WHEN COUNT(*) = 1 THEN ' unvalidated site.' ELSE ' unvalidated sites.'
     END AS summ,
     array_agg(descrip) AS gaps
-FROM unvalidated_sites
+FROM dedup
