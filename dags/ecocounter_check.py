@@ -86,7 +86,8 @@ def ecocounter_check_dag():
     '''
     t_upstream_done >> [
         check_site_outages,
-        check_if_dow(isodow=7) >> check_unvalidated_sites #ds = Sunday == notify on mondays
+        check_if_dow.override(task_id='check_if_sunday')(isodow=7) >> #ds = Sunday == notify on mondays
+        check_unvalidated_sites
     ]
 
 ecocounter_check_dag()
