@@ -20,13 +20,13 @@ ALTER TABLE ecocounter.sites OWNER TO ecocounter_admins;
 REVOKE ALL ON TABLE ecocounter.sites FROM bdit_humans;
 REVOKE ALL ON TABLE ecocounter.sites FROM ecocounter_bot;
 
-GRANT SELECT ON TABLE ecocounter.sites TO bdit_humans;
 GRANT ALL ON TABLE ecocounter.sites TO ecocounter_admins;
 GRANT SELECT, INSERT ON TABLE ecocounter.sites TO ecocounter_bot;
 
 COMMENT ON TABLE ecocounter.sites
-IS 'Sites or "locations" of separate ecocounter
-installations. Each site may have one or more flows.';
+IS 'CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human.
+Sites or "locations" of separate ecocounter installations.
+Each site may have one or more flows.';
 
 COMMENT ON COLUMN ecocounter.sites.site_id
 IS 'unique site identifier used by ecocounter';
