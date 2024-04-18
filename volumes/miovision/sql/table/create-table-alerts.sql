@@ -8,13 +8,18 @@ CREATE TABLE IF NOT EXISTS miovision_api.alerts
     alert text COLLATE pg_catalog."default" NOT NULL,
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
-    CONSTRAINT miovision_alerts_pkey PRIMARY KEY (intersection_id, alert, start_time)
+    intersection_uid integer,
+    CONSTRAINT miovision_alerts_pkey PRIMARY KEY (intersection_id, alert, start_time),
+    CONSTRAINT miov_alert_intersection_fkey FOREIGN KEY (intersection_uid)
+    REFERENCES miovision_api.intersections (intersection_uid) MATCH FULL
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION;
 )
 
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS miovision_api.alerts
-OWNER to miovision_admins;
+OWNER TO miovision_admins;
 
 REVOKE ALL ON TABLE miovision_api.alerts FROM bdit_humans;
 REVOKE ALL ON TABLE miovision_api.alerts FROM miovision_api_bot;

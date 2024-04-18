@@ -95,7 +95,7 @@ updated AS (
         alerts.intersection_id = new_values.intersection_id
         AND alerts.alert = new_values.alert
         --where old end = new start
-        AND alerts.end_time = new_values.start_time::timestamp
+        AND alerts.end_time = new_values.start_time
     --returns the new values used for updates (to be excluded from insert)
     RETURNING new_values.*
 )
@@ -106,6 +106,14 @@ SELECT intersection_id, alert, start_time, end_time FROM new_values
 EXCEPT
 SELECT intersection_id, alert, start_time, end_time FROM updated
 ON CONFLICT (intersection_id, alert, start_time) DO NOTHING;
+
+--update foreign key referencing miovision_api.intersections
+--handles new records as well as old records with null intersection_uid (newly added intersections)
+UPDATE miovision_api.alerts
+SET intersection_uid = i.intersection_uid
+FROM miovision_api.intersections AS i
+WHERE alerts.intersection_id = i.id
+AND alerts.intersection_uid IS NULL;
 """
 
 def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
