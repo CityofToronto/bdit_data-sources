@@ -22,4 +22,6 @@ ALTER TABLE traffic.oti_class TO traffic_admins;
 GRANT SELECT ON TABLE traffic.oti_class TO bdit_humans;
 
 COMMENT ON TABLE traffic.oti_class
-IS '';
+IS 'Traffic classifications ids and their description as used by OTI.
+Join to `traffic.cnt_det` on `cnt_det.speed_class = `oti_class.oti_class`.
+Source: https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab'; -- noqa: L016
