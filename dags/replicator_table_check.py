@@ -16,6 +16,7 @@ from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.latest_only_operator import LatestOnlyOperator
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -50,6 +51,9 @@ default_args = {
     tags=["replicator", "data_checks"]
 )
 def replicator_DAG():
+
+    #backfill is meaningless since comparing to current table comments.
+    no_backfill = LatestOnlyOperator(task_id = 'no_backfill')
 
     @task()
     def tables_to_copy():
@@ -153,9 +157,9 @@ def replicator_DAG():
             ]
             context.get("task_instance").xcom_push(key="extra_msg", value=failure_extra_msg)
             raise AirflowFailException('There were outdated tables in bigdata `move_staging` schema.')
-
+    
     updated_tables, tables_to_copy = updated_tables(), tables_to_copy()
-    (
+    no_backfill >> (
         not_copied(updated_tables, tables_to_copy),
         not_up_to_date(updated_tables, tables_to_copy),
         outdated_remove()
