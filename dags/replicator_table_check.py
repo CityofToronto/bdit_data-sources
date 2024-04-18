@@ -22,7 +22,6 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
-from dags.common_tasks import wait_for_external_trigger
 # pylint: enable=import-error
 
 DAG_NAME = 'replicator_table_check'
@@ -156,7 +155,7 @@ def replicator_DAG():
             raise AirflowFailException('There were outdated tables in bigdata `move_staging` schema.')
 
     updated_tables, tables_to_copy = updated_tables(), tables_to_copy()
-    wait_for_external_trigger() >> (
+    (
         not_copied(updated_tables, tables_to_copy),
         not_up_to_date(updated_tables, tables_to_copy),
         outdated_remove()
