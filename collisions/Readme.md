@@ -60,13 +60,25 @@ All collision tables are copies of other tables, materialized views, and views i
 
 ![bigdata_replicator DAG Structure](./assets/bigdata_replicator_dag.png)
 
-The downstream replicator DAG that is maintained by the Data Operations team is called [`collisions_replicator`](../dags/collisions_replicator.py). It is only triggered by the upstream MOVE replicator using Airflow REST APIs. The `collisions_replicator` DAG reads the list of replicated tables from the Airflow variable `collisions_tables`, which contains pairs of source and destination tables. It usually copies tables from `move_staging` to either `collisions` or `collisions_factors`. Each of the tables loaded from `collisions_tables` is then copied to its final destination by the Airflow task `copy_table`, which is implemented as one of the  [common Airflow tasks](../dags/common_tasks.py).
+The downstream replicator DAG that is maintained by the Data Operations team is called `collisions_replicator` and is generated dynamically by [`replicator.py`](../dags/replicator.py) via the Airflow variable `replicators`. It is only triggered by the upstream MOVE replicator using Airflow REST APIs. The `collisions_replicator` DAG reads the list of replicated tables from the Airflow variable `collisions_tables`, which contains pairs of source and destination tables. It usually copies tables from `move_staging` to either `collisions` or `collisions_factors`. Each of the tables loaded from `collisions_tables` is then copied to its final destination by the Airflow task `copy_table`, which is implemented as one of the [common Airflow tasks](../dags/common_tasks.py). The `status_message` task sends either a "success" message, or lists out all the failures from the `copy_table` tasks. 
 
 ![collisions_replicator](./assets/collisions_replicator_dag.png)
 
+<!-- replicator_table_check_doc_md -->
+The [`replicator_table_check`](../dags/replicator_table_check.py) DAG keeps track of tables being replicated by MOVE replicator vs those by Bigdata replicators and sends Slack notifications when any issues are identified. This helps keep the MOVE/Bigdata replicator variables up to date with each other. Note: this one DAG covers tables included in both `collisions_replicator` and `traffic_replicator`. 
+- `wait_for_external_trigger`: triggered manually by MOVE replicator via REST API.
+- `updated_tables`: identifies up to date tables in Bigdata `move_staging` via table comments like `Last updated on {ds}`. 
+- `tables_to_copy`: identifies tables staged for copying via Airflow variables (`collisions_tables` and `traffic_tables`).
+- `not_copied`: identifies up to date tables which are not being copied. 
+- `not_up_to_date`: identifies **not** up to date tables which are being copied. 
+- `outdated_remove`: identifies out of date tables in `move_staging` which should be deleted.
+<!-- replicator_table_check_doc_md -->
+
+![replicator_table_check_dag](./assets/replicator_table_check_dag.png)
+
 ### Replicating New Tables
 
-If a new table or view needs to be replicated from MOVE, MOVE team should update their DAG first and replicate the new table/view into the `move_staging` schema. Then, you should create the new table in the appropriate schema to match the table in `move_staging` and then update the `collisions_tables` Airflow variable with the source and destination schema and table names. For instance, if you want to replicate table `collisions_a` from `move_staging` into the `collisions` schema and rename it to just `a`, you should add the following entry to the `collisions_tables` variable:
+If a new table or view needs to be replicated from MOVE, MOVE team should update their DAG first and replicate the new table/view into the Bigdata `move_staging` schema. Then, in Bigdata, you should create the new table in the appropriate schema to match the table definition in `move_staging` and then update the `collisions_tables` Airflow variable with the source and destination schema and table names. For instance, if you want to replicate table `collisions_a` from `move_staging` into the `collisions` schema and rename it to just `a`, you should add the following entry to the `collisions_tables` variable:
 
 ```JSON
 [
@@ -75,6 +87,13 @@ If a new table or view needs to be replicated from MOVE, MOVE team should update
 ]
 ```
 
+Then you will need to add appropriate permissions for the bot: 
+```
+GRANT SELECT ON TABLE move_staging.collisions_a TO collisions_bot;
+--the bot needs to own the downstream table in order to update the table comment
+ALTER TABLE collisions.a OWNER TO collisions_bot;
+```
+
 ### Updating Existing Tables
 
-If you need to update an existing table to match any new modifications introduced by the MOVE team, e.g., dropping columns or changing column types, you should update the replicated table definition according to these changes. If the updated table has dependencies, you need to save and drop them to apply the new changes and then update these dependencies and re-create them again. The `public.deps_save_and_drop_dependencies_dryrun` and `public.deps_restore_dependencies` functions might help updating the dependencies. Finally, if there is any changes in the table's name or schema, you should also update the `collisions_tables` variable.
+If you need to update an existing table to match any new modifications introduced by the MOVE team, e.g., dropping columns or changing column types, you should update the replicated table definition according to these changes. If the updated table has dependencies, you need to save and drop them to apply the new changes and then update these dependencies and re-create them again. The [`public.deps_save_and_drop_dependencies_dryrun`](https://github.com/CityofToronto/bdit_pgutils/blob/master/create-function-deps_save_and_drop_dependencies_dryrun.sql) and `public.deps_restore_dependencies` functions might help updating the dependencies in complex cases. Finally, if there is any changes in the table's name or schema, you should also update the `collisions_tables` variable.
