@@ -60,7 +60,10 @@ All collision tables are copies of other tables, materialized views, and views i
 
 ![bigdata_replicator DAG Structure](./assets/bigdata_replicator_dag.png)
 
-The downstream replicator DAG that is maintained by the Data Operations team is called `collisions_replicator` and is generated dynamically by [`replicator.py`](../dags/replicator.py) via the Airflow variable `replicators`. It is only triggered by the upstream MOVE replicator using Airflow REST APIs. The `collisions_replicator` DAG reads the list of replicated tables from the Airflow variable `collisions_tables`, which contains pairs of source and destination tables. It usually copies tables from `move_staging` to either `collisions` or `collisions_factors`. Each of the tables loaded from `collisions_tables` is then copied to its final destination by the Airflow task `copy_table`, which is implemented as one of the [common Airflow tasks](../dags/common_tasks.py). The `status_message` task sends either a "success" message, or lists out all the failures from the `copy_table` tasks. 
+The downstream replicator DAG that is maintained by the Data Operations team is called `collisions_replicator` and is generated dynamically by [`replicator.py`](../dags/replicator.py) via the Airflow variable `replicators`. It is only triggered by the upstream MOVE replicator using Airflow REST APIs. The `collisions_replicator` DAG contains the following tasks:
+- `wait_for_external_trigger` waits for a trigger from the upstream MOVE replicator DAG.
+- `get_list_of_tables` reads the list of replicated tables from the Airflow variable `collisions_tables`, which contains pairs of source and destination tables. It usually copies tables from `move_staging` to either `collisions` or `collisions_factors`. - `copy_tables` takes each of the tables loaded from `get_list_of_tables` and copies to its final destination. This is implemented by dynamically applying the `copy_tables` [common Airflow tasks](../dags/common_tasks.py) to each entry from `get_list_of_tables`.
+- `status_message` task sends either a "success" slack message, or lists out all the failures from the `copy_table` tasks. 
 
 ![collisions_replicator](./assets/collisions_replicator_dag.png)
 
