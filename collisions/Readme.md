@@ -68,8 +68,8 @@ The downstream replicator DAG that is maintained by the Data Operations team is 
 ![collisions_replicator](./assets/collisions_replicator_dag.png)
 
 <!-- replicator_table_check_doc_md -->
-The [`replicator_table_check`](../dags/replicator_table_check.py) DAG keeps track of tables being replicated by MOVE replicator vs those by Bigdata replicators and sends Slack notifications when any issues are identified. This helps keep the MOVE/Bigdata replicator variables up to date with each other. Note: this one DAG covers tables included in both `collisions_replicator` and `traffic_replicator`. 
-- `wait_for_external_trigger`: triggered manually by MOVE replicator via REST API.
+The [`replicator_table_check`](../dags/replicator_table_check.py) DAG runs daily and keeps track of tables being replicated by MOVE replicator vs those by Bigdata replicators and sends Slack notifications when any issues are identified. This helps keep the MOVE/Bigdata replicator variables up to date with each other. Note: this one DAG covers tables included in both `collisions_replicator` and `traffic_replicator`. 
+- `no_backfill`: a `LatestOnlyOperator` prevents old dates from running since this DAG involves comparison to current table comments. 
 - `updated_tables`: identifies up to date tables in Bigdata `move_staging` via table comments like `Last updated on {ds}`. 
 - `tables_to_copy`: identifies tables staged for copying via Airflow variables (`collisions_tables` and `traffic_tables`).
 - `not_copied`: identifies up to date tables which are not being copied. 
