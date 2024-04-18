@@ -420,7 +420,7 @@ leg| text | A segment that forms part of a miovision intersection, identified by
 
 ### `alerts`
 
-This table contains alerts for Miovision intersections pulled daily from the API by the [miovision_alert DAG](../api/readme.md#miovision_alerts). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. Higher accuracy alert records could be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
+This table contains alerts for Miovision intersections pulled daily from the API by the `pull_alerts` task in the [`miovision_pull` DAG](../api/readme.md#miovision_pull). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. Higher accuracy alert records could be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|

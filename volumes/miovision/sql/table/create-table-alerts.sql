@@ -39,8 +39,8 @@ COMMENT ON COLUMN miovision_api.alerts.intersection_id
 IS 'The intersection id, corresponding to intersections.intersection_id column';
 
 COMMENT ON COLUMN miovision_api.alerts.alert
-IS 'Short text description of the alert.
-Longer forms are available in the Miovision One UI';
+IS 'Short text description of the alert. More detail on the different alerts can be found here:
+https://help.miovision.com/s/article/Alert-and-Notification-Types';
 
 COMMENT ON COLUMN miovision_api.alerts.start_time
 IS 'First 5 minute interval at which the alert appeared.
