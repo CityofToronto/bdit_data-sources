@@ -89,7 +89,7 @@ def replicator_DAG():
             AND pgc.relkind = 'r'
             AND pgd.description ILIKE %s"""
 
-        con = PostgresHook("collisions_bot").get_conn()
+        con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
             cur.execute(updated_tables_sql, (f'%Last updated on {ds}%',))
             updated_tables = [tbl[0] for tbl in cur.fetchall()]
@@ -144,7 +144,7 @@ def replicator_DAG():
             )
             AND pgc.relkind = 'r';"""
 
-        con = PostgresHook("collisions_bot").get_conn()
+        con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
             cur.execute(outdated_tables_sql, (f'%Last updated on {ds}%',))
             failures = [tbl[0] for tbl in cur.fetchall()]
