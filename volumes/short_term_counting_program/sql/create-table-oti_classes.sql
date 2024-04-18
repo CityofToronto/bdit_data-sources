@@ -18,7 +18,7 @@ INSERT INTO traffic.oti_class VALUES
 (12, 'six axle multi-trailers'),
 (13, 'seven or more axle multi-trailers');
 
-ALTER TABLE traffic.oti_class TO traffic_admins;
+ALTER TABLE traffic.oti_class OWNER TO traffic_admins;
 GRANT SELECT ON TABLE traffic.oti_class TO bdit_humans;
 
 COMMENT ON TABLE traffic.oti_class
