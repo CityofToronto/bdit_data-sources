@@ -420,14 +420,27 @@ leg| text | A segment that forms part of a miovision intersection, identified by
 
 ### `alerts`
 
-This table contains alerts for Miovision intersections pulled daily from the API by the [miovision_alert DAG](../api/readme.md#miovision_alerts). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. More detailed information is available in the Miovision One UI. 
+This table contains alerts for Miovision intersections pulled daily from the API by the [miovision_alert DAG](../api/readme.md#miovision_alerts). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. Higher accuracy alert records could be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 intersection_id | text | The intersection id, corresponding to intersections.intersection_id column | c04704a0-e1e2-4101-9c29-6823d0f41c52 |
-alert | text | Short text description of the alert. Longer forms are available in the Miovision One UI | PERIPHERAL_UNAVAILABLE |
+intersection_uid | integer | The intersection uid, a foreign key referencing intersections.intersection_uid column | 6 |
+alert | text | Short text description of the alert. More detail and tips for resolution are available in this [Miovision help article](https://help.miovision.com/s/article/Alert-and-Notification-Types) | PERIPHERAL_UNAVAILABLE |
 start_time | timestamp | First 5 minute interval at which the alert appeared. **Subtract 5 minutes to get earliest possible start time.** | 2024-01-12 10:20:00 | 
 end_time | timestamp | Final 5 minute interval at which the alert appeared. **Add 5 minutes to get latest possible end time.** Note this could be extended the following day. | 2024-01-21 15:35:00 | 
+
+Below is an example of how to anti-join the alerts table, including the 5 minute buffer:
+```sql
+SELECT ...
+FROM miovision_api.volumes AS v
+--anti join alerts
+LEFT JOIN miovision_api.alerts AS a
+    ON a.intersection_uid = v.intersection_uid
+    AND v.datetime_bin >= a.start_time - interval '5 minutes'
+    AND v.datetime_bin < a.end_time + interval '5 minutes'
+WHERE a.intersection_uid IS NULL
+```
 
 ## Primary and Foreign Keys
 

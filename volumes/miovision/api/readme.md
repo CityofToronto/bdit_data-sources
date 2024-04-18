@@ -292,7 +292,7 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 <!-- miovision_alerts_doc_md -->
 ## **`miovision_alerts`**
 
-This DAG pulls alerts from the Miovision API. Since we are not able to query the API over a range, but only at a point in time, we query for the previous day at 5 minute increments. The records are then de-dupped and sorted and the start and end of a run of records are used as the alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
+This DAG pulls alerts from the Miovision API. Since we are not able to query the API over a range, but only at a point in time, we query for the previous day at 5 minute increments. The records are then de-dupped (duplicates are a result of the short-form alert title used by the API) and sorted and the start and end of a run of records are used as the alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
 
 - `pull_alerts` pulls alerts at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/README.md#alerts), extending existing alerts. 
 
