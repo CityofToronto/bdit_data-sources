@@ -21,12 +21,15 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
-from dags.dag_functions import task_fail_slack_alert
+from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.common_tasks import wait_for_external_trigger
 # pylint: enable=import-error
 
 DAG_NAME = 'replicator_table_check'
 DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'collisions/Readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
     "owner": ",".join(DAG_OWNERS),
@@ -42,8 +45,9 @@ default_args = {
     default_args=default_args,
     catchup=False,
     max_active_runs=1,
-    schedule=None, #triggered externally
-    doc_md=__doc__,
+    #loosely coupled with the two replicator DAGs which are externally triggered at 430am
+    schedule='0 4 * * *',
+    doc_md=DOC_MD,
     tags=["replicator", "data_checks"]
 )
 def replicator_DAG():
