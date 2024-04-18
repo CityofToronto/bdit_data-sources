@@ -22,7 +22,6 @@
     - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
     - [`data_checks` TaskGroup](#data_checks-taskgroup)
   - [**`miovision_check`**](#miovision_check)
-  - [**`miovision_alerts`**](#miovision_alerts)
   - [Notes](#notes)
 
 <!-- /TOC -->
@@ -261,6 +260,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
   - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
+- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/README.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
 
 ### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  
@@ -288,15 +288,6 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 - `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today. Uses [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
 - `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.  
 <!-- miovision_check_doc_md -->
-
-<!-- miovision_alerts_doc_md -->
-## **`miovision_alerts`**
-
-This DAG pulls alerts from the Miovision API. Since we are not able to query the API over a range, but only at a point in time, we query for the previous day at 5 minute increments. The records are then de-dupped (duplicates are a result of the short-form alert title used by the API) and sorted and the start and end of a run of records are used as the alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
-
-- `pull_alerts` pulls alerts at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/README.md#alerts), extending existing alerts. 
-
-<!-- miovision_alerts_doc_md -->
 
 ## Notes
 
