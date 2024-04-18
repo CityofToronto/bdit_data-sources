@@ -1,4 +1,6 @@
-<!-- /TOC -->
+
+<!-- TOC -->
+
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -39,7 +41,6 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
-
 # 1. Overview
 
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
@@ -72,7 +73,7 @@ Reference table for each unique intersection at which data has been collected, y
 :-----|:-----|:-----|:-----|
 intersection_uid|integer|Unique identifier for table|10|
 id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+intersection_name|text|Intersection short name in format of [E / W street] / [N / S street]|King / Bathurst|
 date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
 date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
 lat|numeric|Latitude of intersection location|43.643945|
@@ -86,7 +87,7 @@ n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
+api_name|text|Intersection name from API|Bathurst Street and King Street West|
 
 ### `classifications`
 
@@ -111,7 +112,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
 7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. **do not use** aggregate volumes will be removed from tables |
-8|WorkVan|A van used for commercial purposes|
+~~8~~|~~WorkVan~~|~~A van used for commercial purposes~~ Workvan classification was folded in to "Light" vehicles in the API. |
 9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
