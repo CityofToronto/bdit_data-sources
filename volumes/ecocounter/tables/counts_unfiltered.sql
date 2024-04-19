@@ -4,7 +4,7 @@ CREATE TABLE ecocounter.counts_unfiltered (
     volume smallint,
     CONSTRAINT counts_unfiltered_flow_id_datetime_bin_key UNIQUE (flow_id, datetime_bin),
     CONSTRAINT counts_flow_id_fkey FOREIGN KEY (flow_id)
-    REFERENCES ecocounter.flows (flow_id) MATCH SIMPLE
+    REFERENCES ecocounter.flows_unfiltered (flow_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
 ) PARTITION BY RANGE (datetime_bin);
