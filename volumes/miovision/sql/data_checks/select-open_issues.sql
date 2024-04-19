@@ -20,10 +20,10 @@ SELECT
     AS summ,
     array_agg(
         'ar.uid: `' || ars.uid || '`' || chr(10)
-        || ', intersection: `' || ars.intersection || '`' || chr(10)
-        || ', classification: `' || ars.classification || '`' || chr(10)
-        || ', volume: `' || ars.last_week_volume || '`' || chr(10)
-        || ', notes: `' || LEFT(ars.notes, 100)
+        || 'intersection: `' || ars.intersection || '`' || chr(10)
+        || 'classification: `' || ars.classification || '`' || chr(10)
+        || 'volume: `' || ars.last_week_volume || '`' || chr(10)
+        || 'notes: `' || LEFT(ars.notes, 100)
         || CASE WHEN LENGTH(ars.notes) > 100 THEN '...' ELSE '' END || '`' || chr(10)
     ) AS gaps
 FROM ars
