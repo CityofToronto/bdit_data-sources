@@ -128,5 +128,9 @@ LATERAL (
     ) )
 );
 ```
-## Sad news
-For top secret contract reasons, we are no longer receiving traffic patterns data. As of writing this (in August 2022) the latest (and last) traffic patterns dataset that we received is from 2019. As time goes by, and the street network evolves, traffic patterns will cease to be useful...
+## Generate Quarterly traffic patterns
+For top secret contract reasons, we are no longer receiving traffic patterns data. The latest (and last) traffic patterns dataset that we received is from 2019. As time goes by, and the street network evolves, traffic patterns will cease to be useful. We wil be creating quaterly traffic patterns for each version for routing purposes. 
+
+Depending on the date you are routing, you should use different quaters, years, and map version of traffic patterns. We will only include weekday (Tue - Thurs), and exclude holiday seasons to create a more [generalized traffic pattern layer](/sql/create_quaterly_traffic_patterns.sql).
+
+
