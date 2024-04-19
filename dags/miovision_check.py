@@ -19,6 +19,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import check_if_dow
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -131,7 +132,8 @@ def miovision_check_dag():
 
     t_upstream_done >> [
         check_distinct_intersection_uid, check_gaps,
-        check_if_thursday() >> check_open_anomalous_ranges
+        check_if_dow.override(task_id='check_if_thursday')(isodow=4) >> #ds = Thursday == notify on Fridays
+        check_open_anomalous_ranges
     ]
 
 miovision_check_dag()
