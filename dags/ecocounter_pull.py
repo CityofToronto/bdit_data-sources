@@ -172,6 +172,12 @@ def pull_ecocounter_dag():
                     LOGGER.debug(f'Data inserted for flow {flow_id} of site {site_id}.')
                 LOGGER.info(f'Data inserted for site {site_id}.')
           
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="ecocounter_check",
+        external_task_id="starting_point"
+    )
+
     @task_group(
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
     )
@@ -210,18 +216,12 @@ def pull_ecocounter_dag():
         check_volume
         check_distinct_flow_ids
 
-    t_done = ExternalTaskMarker(
-            task_id="done",
-            external_dag_id="ecocounter_check",
-            external_task_id="starting_point"
-    )
-
     (
         check_partitions() >>
         update_sites_and_flows() >>
         pull_ecocounter() >>
-        data_checks() >>
-        t_done
+        t_done >>
+        data_checks()
     )
 
 pull_ecocounter_dag()
