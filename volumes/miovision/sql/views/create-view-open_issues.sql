@@ -25,15 +25,14 @@ LEFT JOIN miovision_api.classifications AS c USING (classification_uid)
 JOIN miovision_api.intersections AS i USING (intersection_uid)
 --find last week volume
 LEFT JOIN miovision_api.volumes AS v
-ON
-    ar.intersection_uid = v.intersection_uid
+    ON ar.intersection_uid = v.intersection_uid
     AND v.datetime_bin >= current_date - interval '7 days'
     AND (
         ar.classification_uid = v.classification_uid
         OR ar.classification_uid IS NULL
     )
-LEFT JOIN miovision_api.alerts ON
-    alerts.intersection_id = i.id
+LEFT JOIN miovision_api.alerts
+    ON alerts.intersection_id = i.id
     AND alerts.start_time >= ar.range_start
     AND (
         alerts.end_time < ar.range_end

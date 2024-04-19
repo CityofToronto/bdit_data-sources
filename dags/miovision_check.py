@@ -109,10 +109,10 @@ def miovision_check_dag():
         sql="""WITH ars AS (
             SELECT
                 uid,
-                intersection_name,
-                classification_uid,
+                intersection_name || ' (' || intersection_uid || ')',
+                classification || ' (' || classification_uid || ')',
                 notes
-            FROM gwolofs.open_issues
+            FROM miovision_api.open_issues
             WHERE last_week_volume > 0
             ORDER BY uid
         )
@@ -120,7 +120,7 @@ def miovision_check_dag():
         SELECT
             NOT(COUNT(*) > 0) AS _check,
             CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END || COUNT(*) ||
-                ' open ended anomalous_range(s) with non-zero volumes in the last 7 days: (uid, intersection_name, classification_uid, notes)'
+                ' open ended anomalous_range(s) with non-zero volumes in the last 7 days: (ar.uid, intersection, classification, notes)'
             AS summ,
             array_agg(ars || chr(10)) AS gaps
         FROM ars""",
