@@ -19,7 +19,7 @@ CREATE TABLE ecocounter.flows_unfiltered (
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
     CONSTRAINT site_id_fk FOREIGN KEY (site_id)
-    REFERENCES ecocounter.sites (site_id) MATCH SIMPLE
+    REFERENCES ecocounter.sites_unfiltered (site_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION,
     CONSTRAINT locations_flow_geom_check CHECK (flow_geom IS NULL OR st_npoints(flow_geom) = 2)
