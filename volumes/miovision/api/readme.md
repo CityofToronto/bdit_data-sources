@@ -25,6 +25,7 @@
   - [Notes](#notes)
 
 <!-- /TOC -->
+<!-- /TOC -->
 
 # Overview
 This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/README.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
@@ -259,6 +260,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
   - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
+- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/README.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
 
 ### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  
