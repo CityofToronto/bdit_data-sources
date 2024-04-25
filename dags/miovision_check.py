@@ -5,14 +5,13 @@ ie. issues which suggest field maintenance of sensors required.
 """
 import sys
 import os
-
-from airflow.decorators import dag, task
-from datetime import timedelta, datetime
-from airflow.models import Variable 
-from airflow.sensors.external_task import ExternalTaskSensor
-
 import logging
 import pendulum
+from datetime import timedelta
+
+from airflow.decorators import dag
+from airflow.models import Variable 
+from airflow.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -98,12 +97,7 @@ def miovision_check_dag():
     check_gaps.doc_md = '''
     Identify gaps larger than gap_threshold in intersections with values today.
     '''
-
-    @task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
-    def check_if_thursday(ds=None): #check if thursday to trigger weekly check. 
-        start_date = datetime.strptime(ds, '%Y-%m-%d')
-        return start_date.isoweekday() == 4
-    
+   
     check_open_anomalous_ranges = SQLCheckOperatorWithReturnValue(
         task_id="check_open_anomalous_ranges",
         sql="select-open_issues.sql",
@@ -115,7 +109,7 @@ def miovision_check_dag():
 
     t_upstream_done >> [
         check_distinct_intersection_uid, check_gaps,
-        check_if_dow.override(task_id='check_if_thursday')(isodow=4) >> #ds = Thursday == notify on Fridays
+        check_if_dow.override(task_id='check_if_thursday')(isodow=4) >> #ds = Thursday == notify only on Fridays
         check_open_anomalous_ranges
     ]
 
