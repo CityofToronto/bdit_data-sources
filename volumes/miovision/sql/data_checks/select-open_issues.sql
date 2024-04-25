@@ -19,11 +19,11 @@ SELECT
         || ' open ended anomalous_range(s) with non-zero volumes in the last 7 days:'
     AS summ,
     array_agg(
-        'ar.uid: `' || ars.uid || '`, `'
+        'uid: `' || ars.uid || '`, `'
         || ars.intersection || '`, `'
         || ars.classification || '`, '
         || 'volume: `' || ars.last_week_volume || '`, '
-        || 'notes: `' || LEFT(ars.notes, 100)
-        || CASE WHEN LENGTH(ars.notes) > 100 THEN '...' ELSE '' END || '`'
+        || 'notes: `' || LEFT(ars.notes, 80)
+        || CASE WHEN LENGTH(ars.notes) > 80 THEN '...' ELSE '' END || '`'
     ) AS gaps
 FROM ars
