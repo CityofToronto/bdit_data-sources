@@ -3,11 +3,11 @@ WITH out_of_order AS (
         s.site_id,
         s.site_description,
         f.flow_id,
-        '`' || s.site_description || ' (site_id: ' || s.site_id
+        'Site: `' || s.site_description || ' (site_id: ' || s.site_id
         || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_id ELSE '' END)
-        || ')` - data last received: `' || MAX(c.datetime_bin::date)
-        || '` (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
-        || ')' AS description
+        || ')` - date last received: `' || MAX(c.datetime_bin::date)
+        || ' (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
+        || ')`' AS description
     FROM ecocounter.counts AS c --only validated sites
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
