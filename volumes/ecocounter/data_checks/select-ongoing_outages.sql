@@ -3,16 +3,16 @@ WITH out_of_order AS (
         s.site_id,
         s.site_description,
         f.flow_id,
-        s.site_description || ' (site_id: ' || s.site_id
+        '`' || s.site_description || ' (site_id: ' || s.site_id
         || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_id ELSE '' END)
-        || ') - data last received: ' || MAX(c.datetime_bin::date)
-        || ' (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
+        || ')` - data last received: `' || MAX(c.datetime_bin::date)
+        || '` (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
         || ')' AS description
     FROM ecocounter.counts AS c --only validated sites
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     WHERE
-        c.datetime_bin >= '{{ ds }} 00:00:00'::timestamp
+        c.datetime_bin >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
         - interval '{{ params.lookback }}' -- noqa: TMP
         AND c.datetime_bin < '{{ ds }} 00:00:00'::timestamp + interval '1 day' -- noqa: TMP
     GROUP BY
@@ -45,10 +45,10 @@ ongoing_outages AS (
 )
 
 SELECT
-    COUNT(ongoing_outages.*) < 1 AS check,
+    COUNT(ongoing_outages.*) < 1 AS _check,
     CASE WHEN COUNT(ongoing_outages.*) = 1 THEN 'There is ' ELSE 'There are ' END ||
         COALESCE(COUNT(ongoing_outages.*), 0) ||
         CASE WHEN COUNT(ongoing_outages.*) = 1 THEN ' ongoing outage.' ELSE ' ongoing outages.'
     END AS summ,
-    array_agg(ongoing_outages.description || chr(10)) AS gaps
+    array_agg(ongoing_outages.description) AS gaps
 FROM ongoing_outages

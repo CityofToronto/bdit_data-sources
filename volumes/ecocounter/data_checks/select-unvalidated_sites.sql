@@ -5,8 +5,8 @@ WITH unvalidated_sites AS (
         flow.flow_id,
         site.site_description || ' (site_id: ' || site.site_id
         || (CASE WHEN flow.flow_id IS NOT NULL THEN ', channel_id: ' || flow.flow_id ELSE '' END)
-        || ') - volume last {{ params.lookback }}: ' || COALESCE(SUM(counts.volume), 0)
-    AS descrip -- noqa: TMP
+        || ') - volume last {{ params.lookback }}: ' -- noqa: TMP
+        || COALESCE(SUM(counts.volume), 0) AS descrip
     FROM ecocounter.sites_unfiltered AS site
     LEFT JOIN ecocounter.flows_unfiltered AS flow USING (site_id)
     LEFT JOIN ecocounter.counts_unfiltered AS counts
@@ -46,7 +46,7 @@ dedup AS (
 )
 
 SELECT
-    COUNT(*) < 1 AS check,
+    COUNT(*) < 1 AS _check,
     CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END ||
         COALESCE(COUNT(*), 0) ||
         CASE WHEN COUNT(*) = 1 THEN ' unvalidated site.' ELSE ' unvalidated sites.'
