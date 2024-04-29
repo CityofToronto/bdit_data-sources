@@ -3,7 +3,7 @@ CREATE TABLE traffic.oti_class (
     class_desc text
 );
 
-INSERT INTO traffic.oti_class VALUES 
+INSERT INTO traffic.oti_class VALUES
 (1, 'motorcycles'),
 (2, 'passenger cars'),
 (3, 'two axle, 4 tire single units'),
@@ -21,7 +21,8 @@ INSERT INTO traffic.oti_class VALUES
 ALTER TABLE traffic.oti_class OWNER TO traffic_admins;
 GRANT SELECT ON TABLE traffic.oti_class TO bdit_humans;
 
-COMMENT ON TABLE traffic.oti_class
-IS 'Traffic classifications ids and their description as used by OTI. CAUTION: Need to confirm whether classification counts conducted by Spectrum (post mid-2023) adhere to this classification. -- noqa: L016
-Join to `traffic.cnt_det` on `cnt_det.speed_class = `oti_class.oti_class`.
+COMMENT ON TABLE traffic.oti_class IS E''
+'Traffic classifications ids and their description as used by OTI.'
+'CAUTION: Need to confirm whether classification counts conducted by Spectrum (post mid-2023) adhere to this classification. ' -- noqa: L016
+'Join to `traffic.cnt_det` on `cnt_det.speed_class = `oti_class.oti_class`.
 Source: https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab'; -- noqa: L016
