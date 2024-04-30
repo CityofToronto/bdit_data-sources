@@ -173,7 +173,7 @@ def pull_detector_inventory(rds_conn, itsc_conn):
                             insert_query=insert_query,
                             table_name='vdsconfig'
                             )
-    
+
 def pull_entity_locations(rds_conn, itsc_conn):
 #pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
 #very small table so OK to pull entire table daily. 
@@ -205,6 +205,38 @@ def pull_entity_locations(rds_conn, itsc_conn):
                           insert_query=insert_query,
                           table_name='entitylocations'
                           )
+
+def pull_commsdeviceconfig(rds_conn, itsc_conn):
+#pull the detector locations table (`commdeviceconfig`) from ITS Central and insert new rows into RDS `vds.config_comms_device`.
+#very small table so OK to pull entire table daily. 
+
+    # Pull data from the detector_inventory table
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_commdeviceconfig.sql')
+    commdevice_sql = sql.SQL(open(fpath, 'r').read())
+
+    # upsert data
+    insert_query = sql.SQL("""
+        INSERT INTO vds.config_comms_device AS e (
+            division_id, fss_id, source_id, start_timestamp,
+                           end_timestamp, has_gps_unit, device_type, description
+        )
+        VALUES %s
+        ON CONFLICT (division_id, fss_id, start_timestamp)
+        DO UPDATE
+        SET end_timestamp = EXCLUDED.end_timestamp
+        WHERE
+            e.division_id = EXCLUDED.division_id
+            AND e.fss_id = EXCLUDED.fss_id
+            AND e.start_timestamp = EXCLUDED.start_timestamp;
+    """)
+
+    fetch_and_insert_data(
+        select_conn=itsc_conn, 
+        insert_conn=rds_conn,
+        select_query=commdevice_sql,
+        insert_query=insert_query,
+        table_name='config_comms_device'
+    )
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column
