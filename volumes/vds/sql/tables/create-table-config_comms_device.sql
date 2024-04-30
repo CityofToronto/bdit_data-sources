@@ -27,6 +27,12 @@ This table is useful for determing which technology is used by a RESCU sensor.
 Join `vdsconfig.fss_id` to `config_comms_device.fss_id`. 
 Note there may be duplicates on division_id+fss_id corresponding to updated locations/details over time.';
 
+COMMENT ON COLUMN vds.config_comms_device.fss_id
+IS 'Field renamed to `fss_id` to match `vdsconfig` table. `deviceid` in ITSC.';
+
+COMMENT ON COLUMN vds.config_comms_device.source_id
+IS 'This text field can help identify Wavetronix/Smartmicro sensor technology.';
+
 CREATE INDEX IF NOT EXISTS ix_vdscommsdevice
 ON vds.config_comms_device
 USING btree(

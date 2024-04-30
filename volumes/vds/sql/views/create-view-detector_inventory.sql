@@ -43,16 +43,16 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
         END AS expected_bins,
         comms.source_id AS comms_desc,
-        CASE
-            WHEN dtypes.det_type = 'RESCU Detectors' THEN
-                CASE
-                    WHEN lower(comms.source_id) SIMILAR TO '%smartmicro%'
-                        OR lower(c.detector_id) SIMILAR TO '%smartmicro%'
-                        THEN 'Smartmicro'
-                    WHEN lower(comms.source_id) SIMILAR TO '%whd%'
-                        THEN 'Wavetronix'
-                    ELSE 'Inductive'
-                END
+        --rescu techology type, determined by communication device in some cases.
+        CASE dtypes.det_type = 'RESCU Detectors'
+            WHEN TRUE THEN CASE
+                WHEN lower(comms.source_id) SIMILAR TO '%smartmicro%'
+                    OR lower(c.detector_id) SIMILAR TO '%smartmicro%'
+                    THEN 'Smartmicro'
+                WHEN lower(comms.source_id) SIMILAR TO '%whd%'
+                    THEN 'Wavetronix'
+                ELSE 'Inductive'
+            END
         END AS det_tech
     FROM vds.vdsconfig AS c
     LEFT JOIN vds.config_comms_device AS comms
