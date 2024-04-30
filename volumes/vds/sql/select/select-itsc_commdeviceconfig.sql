@@ -12,6 +12,6 @@ WHERE divisionid IN (2, 8001) --only these have data in 'vdsdata' table
 
 /*columns excluded:
 managementurl, diagnosticsaddress, diagnosticsport, password, username, manufacturerserialnumber,
-networkserialnumber, phonenumber, lanmacaddress, lanipaddress, lansubnetmask, dhcpserverenabled, dmzaddress,
-keepaliveaddress, createdby, createdbystaffid
+networkserialnumber, phonenumber, lanmacaddress, lanipaddress, lansubnetmask, dhcpserverenabled,
+dmzaddress, keepaliveaddress, createdby, createdbystaffid
 */
