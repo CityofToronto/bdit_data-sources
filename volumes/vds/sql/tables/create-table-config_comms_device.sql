@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS vds.config_comms_device
     CONSTRAINT commdeviceconfig_pkey PRIMARY KEY (start_timestamp, division_id, fss_id)
 )
 WITH (
-    OIDS = FALSE
+    oids = FALSE
 )
 TABLESPACE pg_default;
 
@@ -35,9 +35,9 @@ IS 'This text field can help identify Wavetronix/Smartmicro sensor technology.';
 
 CREATE INDEX IF NOT EXISTS ix_vdscommsdevice
 ON vds.config_comms_device
-USING btree(
-    division_id ASC nulls last,
-    fss_id ASC nulls last,
-    start_timestamp ASC nulls last,
-    end_timestamp ASC nulls last
+USING btree (
+    division_id ASC NULLS LAST,
+    fss_id ASC NULLS LAST,
+    start_timestamp ASC NULLS LAST,
+    end_timestamp ASC NULLS LAST
 );
