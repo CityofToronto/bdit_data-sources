@@ -1,6 +1,6 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
-    SELECT
+    SELECT DISTINCT ON (c.uid, c.division_id)
         c.uid,
         c.detector_id,
         c.division_id,
@@ -41,8 +41,26 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 OR c.detector_id SIMILAR TO 'SMARTMICRO - D\w{8}' THEN 3 --5 min bins
             WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
-        END AS expected_bins
-    FROM vds.vdsconfig AS c,
+        END AS expected_bins,
+        comms.source_id AS comms_desc,
+        --rescu techology type, determined by communication device in some cases.
+        CASE dtypes.det_type = 'RESCU Detectors'
+            WHEN TRUE THEN CASE
+                WHEN
+                    lower(comms.source_id) SIMILAR TO '%smartmicro%'
+                    OR lower(c.detector_id) SIMILAR TO '%smartmicro%'
+                        THEN 'Smartmicro'
+                WHEN lower(comms.source_id) SIMILAR TO '%whd%'
+                    THEN 'Wavetronix'
+                ELSE 'Inductive'
+            END
+        END AS det_tech
+    FROM vds.vdsconfig AS c
+    LEFT JOIN vds.config_comms_device AS comms
+        ON comms.fss_id = c.fss_id
+        AND comms.division_id = c.division_id
+        AND tsrange(c.start_timestamp, COALESCE(c.end_timestamp, now()::timestamp))
+        && tsrange(comms.start_timestamp, COALESCE(comms.end_timestamp, now()::timestamp)),
         LATERAL (
             SELECT CASE
                 WHEN c.division_id = 2 AND (
@@ -59,7 +77,8 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
                 WHEN
                     c.detector_id LIKE ANY(
-                        '{"%SMARTMICRO%", "%YONGE HEATH%", "%YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}'
+                        '{"%SMARTMICRO%", "%YONGE HEATH%",
+                        "%YONGE DAVISVILLE%", "%YONGE AND ROXBOROUGH%"}'
                     )
                     --new lakeshore/spadina smartmicro sensors
                     OR c.vds_id IN (
@@ -69,9 +88,13 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                     OR (
                         c.vds_id >= 7011490 AND c.vds_id <= 7011519
                     )
-                        THEN 'Smartmicro Sensors'
+                    THEN 'Smartmicro Sensors'
             END AS det_type
         ) AS dtypes
+    ORDER BY
+        c.uid,
+        c.division_id,
+        comms.start_timestamp DESC --most recently installed comms
 );
 
 COMMENT ON VIEW vds.detector_inventory IS 'Centralize information about
