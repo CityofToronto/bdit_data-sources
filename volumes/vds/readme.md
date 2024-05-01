@@ -219,6 +219,24 @@ Row count: 10,540
 | det_group     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP', 'Lakeshore', 'Gardiner', 'Allen', 'Kingston Rd', 'On-Ramp' |
 | direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
 | expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
+| comms_desc | text | WHD - Glen Rouge | From `config_comms_device.souce_id` |
+| det_tech | text | Wavetronix | Manual field. Only defined for RESCU network. Possible values: 'Smartmicro','Wavetronix','Inductive' |
+
+### `vds.config_comms_device`
+Store raw data pulled from ITS Central `config_comms_device` table. This table is useful for determing which technology is used by a RESCU sensor.
+Join `vdsconfig.fss_id` to `config_comms_device.fss_id`. Note there may be duplicates on division_id+fss_id corresponding to updated locations/details over time.
+
+Row count: 666
+| column_name     | data_type                   | sample                     |   Comments |
+|:----------------|:----------------------------|:---------------------------|-----------:|
+| division_id     | smallint                    | 2                          | |
+| fss_id          | integer                     | 2000102                    | Field renamed to `fss_id` to match `vdsconfig` table. `deviceid` in ITSC. |
+| source_id       | character varying           | VDSFSS57                   | This text field can help identify Wavetronix/Smartmicro sensor technology. |
+| start_timestamp | timestamp without time zone | 2014-04-27 22:29:02.726812 |  |
+| end_timestamp   | timestamp without time zone | 2022-06-24 13:14:57.832010 |  |
+| has_gps_unit    | boolean                     | False                      |  |
+| device_type     | smallint                    | 10                         |  |
+| description     | character varying           |                            |  |
 
 ## Aggregate Tables
 
@@ -424,6 +442,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   These tasks to update lookup tables `vdsconfig` and `entity_locations` run before downstream pull data tasks to ensure that on-insert trigger has the latest detector information available. Also triggers other DAG (`vds_pull_vdsvehicledata`) for same reason. 
   - `pull_and_insert_detector_inventory` pulls `vdsconfig` table into RDS. On conflict, updates end_timestamp. 
   - `pull_and_insert_entitylocations` pulls `entitylocations` table into RDS. On conflict, updates end_timestamp. 
+  - `pull_and_insert_commsdeviceconfig` pulls `commdeviceconfig` table into RDS `vds.config_comms_device`. On conflict, updates end_timestamp. 
   - `done` marks `update_inventories` as done to trigger downstream data pull tasks + DAG
 
   **`check_partitions`**  
