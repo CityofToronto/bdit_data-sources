@@ -16,7 +16,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_if_dow
 except:
@@ -27,6 +27,9 @@ logging.basicConfig(level=logging.INFO)
 
 DAG_NAME = 'ecocounter_check'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -46,7 +49,7 @@ default_args = {
     catchup=True,
     template_searchpath=os.path.join(repo_path, 'volumes/ecocounter/data_checks'),
     tags=["ecocounter", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def ecocounter_check_dag():
 
