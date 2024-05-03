@@ -47,9 +47,9 @@ dedup AS (
 
 SELECT
     COUNT(*) < 1 AS _check,
-    CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END ||
-        COALESCE(COUNT(*), 0) ||
-        CASE WHEN COUNT(*) = 1 THEN ' unvalidated site.' ELSE ' unvalidated sites.'
+    CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END
+    || COALESCE(COUNT(*), 0)
+    || CASE WHEN COUNT(*) = 1 THEN ' unvalidated site.' ELSE ' unvalidated sites.'
     END AS summ,
     array_agg(descrip) AS gaps
 FROM dedup
