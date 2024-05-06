@@ -15,7 +15,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 
 from volumes.vds.py.vds_functions import (
-    pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
+    pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, pull_commsdeviceconfig
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
@@ -70,13 +70,24 @@ def vdsdata_dag():
             vds_bot = PostgresHook('vds_bot')
             pull_entity_locations(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
+        @task
+        def pull_and_insert_commsdeviceconfig():
+            "Get commsdeviceconfig from ITSC and insert into RDS `vds.config_comms_device`"
+            itsc_bot = PostgresHook('itsc_postgres')
+            vds_bot = PostgresHook('vds_bot')
+            pull_commsdeviceconfig(rds_conn = vds_bot, itsc_conn=itsc_bot)
+
         t_done = ExternalTaskMarker(
                 task_id="done",
                 external_dag_id="vds_pull_vdsvehicledata",
                 external_task_id="starting_point"
         )
 
-        [pull_and_insert_detector_inventory(), pull_and_insert_entitylocations()] >> t_done
+        [
+            pull_and_insert_detector_inventory(),
+            pull_and_insert_entitylocations(),
+            pull_and_insert_commsdeviceconfig()
+        ] >> t_done
 
     @task_group
     def check_partitions():
