@@ -152,11 +152,11 @@ This Table contains the actual binned counts for ecocounter flows. Please note t
 bin size varies for older data, so averaging these numbers may not be straightforward.
 
 Row count: 3,147,432
-| column_name   | data_type                   | sample              | Comments                                                                             |
-|:--------------|:----------------------------|:--------------------|:-------------------------------------------------------------------------------------|
-| flow_id       | numeric                     | 101052525.0         | nan                                                                                  |
+| column_name | data_type | sample | Comments |
+|:------------|:----------|:-------|:---------|
+| flow_id | numeric | 101052525 | |
 | datetime_bin  | timestamp without time zone | 2012-12-04 09:00:00 | indicates start time of the time bin. Note that not all time bins are the same size! |
-| volume        | smallint                    | 0                   | nan                                                                                  |
+| volume | smallint | | |
 
 ### `ecocounter.flows_unfiltered`
 CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
