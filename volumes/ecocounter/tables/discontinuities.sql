@@ -1,6 +1,6 @@
 CREATE TABLE ecocounter.discontinuities (
     uid serial PRIMARY KEY,
-    site_id numeric NOT NULL REFERENCES ecocounter.sites (site_id),
+    site_id numeric NOT NULL REFERENCES ecocounter.sites_unfiltered (site_id),
     -- moment the change takes place
     break timestamp NOT NULL,
     -- approximate bounds if the precise time is not known

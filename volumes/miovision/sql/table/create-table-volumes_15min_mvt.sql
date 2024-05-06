@@ -8,9 +8,9 @@
     movement_uid integer,
     volume numeric,
     processed boolean,
-    CONSTRAINT volumes_15min_mvt_int_uid_dt_bin_class_leg_mvmt_uid_pkey
+    CONSTRAINT volumes_15min_mvt_int_dt_bin_class_leg_mvmt_uid_pkey
     PRIMARY KEY (
-        volume_15min_mvt_uid, intersection_uid, datetime_bin, classification_uid, leg, movement_uid
+        intersection_uid, datetime_bin, classification_uid, leg, movement_uid
     )
 )
 PARTITION BY RANGE (datetime_bin)
