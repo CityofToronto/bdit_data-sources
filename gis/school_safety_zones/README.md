@@ -31,7 +31,9 @@ A daily Airflow pipeline (DAG) runs to pull the data from Google sheets into the
 
 The DAG consists of two main tasks as shown in the below figure:
 
-1. get_list_of_years: A Python operator that extracts the required details out of `ssz_spreadsheets`.
+1. get_list_of_years: A Python operator that extracts the required details out of `ssz_spreadsheets` and filters to specific years: 
+   - Defaults to current year and previous year based on execution date.
+   - Can override to pull past years by triggering DAG with `years` parameter specified.
 2. pull_data: An array of mapped tasks dynamically created based on the number of years retreived by the previous (upstream) task. Each of these mapped tasks pull the data of a specific year from the corresponding Google spreadsheet by calling the helper function `gis.school_safety_zones.schools.pull_from_sheet`. The Google spreadsheet credentials and the database connection details are stored encrypted in Airflow connections.
 
 ![vz_google_sheets DAG structure](dag_structure.png)

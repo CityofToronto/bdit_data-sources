@@ -100,8 +100,8 @@ def task_fail_slack_alert(
 
     if isinstance(extra_msg_str, tuple) or isinstance(extra_msg_str, list):
         #recursively collapse extra_msg_str's which are in the form of a list with new lines.
-        extra_msg_str = '\n'.join(
-            ['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str]
+        extra_msg_str = '\n> '.join(
+            ['\n> '.join(item) if isinstance(item, list) else item for item in extra_msg_str]
         )
 
     # Slack failure message
@@ -128,12 +128,15 @@ def task_fail_slack_alert(
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
     )
+    
+    if extra_msg_str != "":
+        slack_msg = slack_msg + extra_msg_str
+
     failed_alert = SlackWebhookOperator(
         task_id="slack_test",
         slack_webhook_conn_id=SLACK_CONN_ID,
         message=slack_msg,
         username="airflow",
-        attachments=[{"text": str(extra_msg_str)}],
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
