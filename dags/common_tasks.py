@@ -138,3 +138,14 @@ def check_1st_of_month(ds=None): #check if 1st of Month to trigger partition cre
     if start_date.day == 1:
         return True
     return False
+
+@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
+def check_if_dow(isodow, ds):
+    """Use to check if it's a specific day of week to trigger a weekly check.
+    Uses isodow: Monday (1) to Sunday (7)"""
+    
+    from datetime import datetime
+    assert (isodow >= 1 and isodow <= 7)
+
+    start_date = datetime.strptime(ds, '%Y-%m-%d')
+    return start_date.isoweekday() == isodow
