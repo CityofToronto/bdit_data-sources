@@ -147,16 +147,15 @@ Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocou
 ### `ecocounter.sites_unfiltered`
 CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
 
-Row count: 30
-| column_name          | data_type    | sample                                             | Comments                                                                                                                                                                                                                    |
-|:---------------------|:-------------|:---------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| validated            | boolean      |                                                    | nan                                                                                                                                                                                                                         |
-| site_id              | numeric      | 100014226.0                                        | nan                                                                                                                                                                                                                         |
-| site_description     | text         | CIP 01                                             | nan                                                                                                                                                                                                                         |
-| geom                 | USER-DEFINED | 0101000020E610000000000000000000000000000000000000 | nan                                                                                                                                                                                                                         |
-| facility_description | text         |                                                    | description of bike-specific infrastructure which the sensor is installed within                                                                                                                                            |
-| notes                | text         |                                                    | nan                                                                                                                                                                                                                         |
-| replaced_by_site_id  | numeric      |                                                    | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| column_name | data_type | sample | comments |
+|:------------|:----------|:-------|:---------|
+| validated | boolean | | |
+| site_id | numeric | | |
+| site_description | text | | |
+| geom | geometry |  | |
+| facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
+| notes | text | | |
+| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
 
 ### `ecocounter.counts_unfiltered`
 CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
@@ -164,28 +163,28 @@ This Table contains the actual binned counts for ecocounter flows. Please note t
 bin size varies for older data, so averaging these numbers may not be straightforward.
 
 Row count: 3,147,432
-| column_name   | data_type                   | sample              | Comments                                                                             |
-|:--------------|:----------------------------|:--------------------|:-------------------------------------------------------------------------------------|
-| flow_id       | numeric                     | 101052525.0         | nan                                                                                  |
+| column_name | data_type | sample | Comments |
+|:------------|:----------|:-------|:---------|
+| flow_id | numeric | 101052525 | |
 | datetime_bin  | timestamp without time zone | 2012-12-04 09:00:00 | indicates start time of the time bin. Note that not all time bins are the same size! |
-| volume        | smallint                    | 0                   | nan                                                                                  |
+| volume | smallint | | |
 
 ### `ecocounter.flows_unfiltered`
 CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
 
 Row count: 73
-| column_name         | data_type    | sample                                                                                     | Comments                                                           |
-|:--------------------|:-------------|:-------------------------------------------------------------------------------------------|:-------------------------------------------------------------------|
-| validated           | boolean      | True                                                                                       | nan                                                                |
-| includes_contraflow | boolean      | True                                                                                       | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
-| replaces_flow_id    | numeric      |                                                                                            | nan                                                                |
-| flow_id             | numeric      | 104042943.0                                                                                | nan                                                                |
-| site_id             | numeric      | 100042943.0                                                                                | nan                                                                |
-| flow_direction      | text         | westbound (includes contraflow)                                                            | nan                                                                |
-| flow_geom           | USER-DEFINED | 0102000020E6100000020000... | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
-| bin_size            | interval     | 0 days 00:15:00                                                                            | temporal bins are either 15 or 30 minutes, depending on the sensor |
-| notes               | text         |                                                                                            | nan                                                                |
-| replaced_by_flow_id | numeric      | 353363669.0                                                                                | nan                                                                |
+| column_name | data_type | sample | Comments |
+|:------------|:----------|:-------|:---------|
+| validated | boolean | True  | |
+| includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
+| replaces_flow_id | numeric | | |
+| flow_id | numeric | 104042943 | |
+| site_id | numeric | 100042943 | |
+| flow_direction | text | westbound (includes contraflow) |  |
+| flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
+| bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
+| notes | text | | |
+| replaced_by_flow_id | numeric | 353363669 | |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.
