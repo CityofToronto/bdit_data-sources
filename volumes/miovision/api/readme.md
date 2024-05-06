@@ -287,6 +287,8 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 - `starting_point` waits for upstream `miovision_pull` DAG `done` task to run indicating aggregation of new data is completed.  
 - `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today. Uses [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
 - `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.  
+- `check_if_thursday`: Skips downstream checks if execution date is not a Thursday (sends notification on Friday).
+- `check_open_anomalous_ranges`: Checks if any anomalous_range entries exist with non-zero volume in the last 7 days. Notifies if any found. 
 <!-- miovision_check_doc_md -->
 
 ## Notes
