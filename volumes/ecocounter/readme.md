@@ -136,16 +136,15 @@ Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocou
 ### `ecocounter.sites_unfiltered`
 CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
 
-Row count: 30
-| column_name          | data_type    | sample                                             | Comments                                                                                                                                                                                                                    |
-|:---------------------|:-------------|:---------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| validated            | boolean      |                                                    | nan                                                                                                                                                                                                                         |
-| site_id              | numeric      | 100014226.0                                        | nan                                                                                                                                                                                                                         |
-| site_description     | text         | CIP 01                                             | nan                                                                                                                                                                                                                         |
-| geom                 | USER-DEFINED | 0101000020E610000000000000000000000000000000000000 | nan                                                                                                                                                                                                                         |
-| facility_description | text         |                                                    | description of bike-specific infrastructure which the sensor is installed within                                                                                                                                            |
-| notes                | text         |                                                    | nan                                                                                                                                                                                                                         |
-| replaced_by_site_id  | numeric      |                                                    | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| column_name | data_type | sample | comments |
+|:------------|:----------|:-------|:---------|
+| validated | boolean | | |
+| site_id | numeric | | |
+| site_description | text | | |
+| geom | geometry |  | |
+| facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
+| notes | text | | |
+| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
 
 ### `ecocounter.counts_unfiltered`
 CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
