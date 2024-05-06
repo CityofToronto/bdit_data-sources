@@ -1,17 +1,24 @@
-CREATE TABLE ecocounter.sites (
-    site_id numeric PRIMARY KEY,
-    site_description text NOT NULL,
-    geom GEOMETRY (POINT, 4326),
-    facility_description text,
-    notes text,
-    replaced_by_site_id numeric REFERENCES ecocounter.sites (site_id)
+CREATE VIEW ecocounter.sites AS (
+    SELECT
+        site_id,
+        site_description,
+        geom,
+        facility_description,
+        notes,
+        replaced_by_site_id
+    FROM ecocounter.sites_unfiltered
+    WHERE validated
 );
 
-ALTER TABLE ecocounter.sites OWNER TO ecocounter_admins;
+ALTER VIEW ecocounter.sites OWNER TO ecocounter_admins;
+GRANT ALL ON TABLE ecocounter.sites TO ecocounter_admins;
 
-GRANT SELECT ON ecocounter.sites TO bdit_humans;
+REVOKE ALL ON TABLE ecocounter.sites FROM bdit_humans;
+GRANT SELECT ON TABLE ecocounter.sites TO bdit_humans;
 
-COMMENT ON TABLE ecocounter.sites
+GRANT SELECT ON TABLE ecocounter.sites TO ecocounter_bot;
+
+COMMENT ON VIEW ecocounter.sites
 IS 'Sites or "locations" of separate ecocounter
 installations. Each site may have one or more flows.';
 
