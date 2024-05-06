@@ -1,30 +1,31 @@
-""" This script reads 4 Vision Zero google spreadsheets ('2018 School Safety Zone', '2019 School Safety Zone',
-2020 School Safety Zone, and 2021 School Safety Zone)
-and puts them into 4 postgres tables ('school_safety_zone_2018_raw', 'school_safety_zone_2019_raw',
-'school_safety_zone_2020_raw', 'school_safety_zone_2021_raw') using the Google Sheet API.
+#!/data/airflow/airflow_venv/bin/python3
+# -*- coding: utf-8 -*-
+"""The School Safety Zones Data Loader
 
-Note
-----
-This script is automated on Airflow and is run daily."""
+This script loads School Safety Zones (SSZ) data from multiple google sheets,
+where each sheet contains data of a single year. It is being called by a daily
+DAG and it can also be run from the CLI. Run the script with `--help` for more
+details.
+"""
 
 from __future__ import print_function
 import json
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 
-import configparser
-from psycopg2 import connect
-from psycopg2.extras import execute_values
-from psycopg2 import sql
 import logging 
 
 import re
+from typing import Optional
 from dateutil.parser import parse
-from datetime import datetime
 import geopandas as gpd
-from shapely.geometry import Polygon, LineString, Point
+from shapely.geometry import Point
 
-from airflow.exceptions import AirflowFailException
+import click
+import configparser
+from sqlalchemy import create_engine, Table, Column, MetaData, delete
+from sqlalchemy.engine import URL
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from googleapiclient.discovery import build
+    
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -101,7 +102,7 @@ def within_toronto(con, coords):
     coords: str
         string that is either empty or contains at least one pair of coords
     """
-    if coords is '':
+    if coords == '':
         return True
     elif bool(re.match(r'^Cancel', coords)):
         return True
@@ -132,7 +133,7 @@ def enforce_date_format(date, fuzzy=False):
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
     date = date.strip()
-    if date is '':
+    if date == '':
         return date
     else:
         parsed_date = parse(date, fuzzy=fuzzy)
@@ -145,7 +146,7 @@ def is_int(n):
     
     :param n: str, string to check for if it's an integer
     """
-    if n is '':
+    if n == '':
         return True
     else:
         try:
@@ -154,9 +155,16 @@ def is_int(n):
             return False
         return True
 
-#--------------------------------------------------------------------------------------------------
 
-def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
+def pull_from_sheet(
+    engine,
+    service,
+    year,
+    spreadsheet_id,
+    spreadsheet_range,
+    schema,
+    table
+):
     """This function is to call the Google Sheets API, pull values from the Sheet using service
     and push them into the postgres table using con.
     Only information from columns A, B, E, F, Y, Z, AA, AB (which correspond to indices 0, 1, 4,
@@ -172,29 +180,28 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
     ----
     Can only read a single range of a spreadsheet with this function.
 
-    Parameters
-    ----------
-    con :
-        Connection to bigdata database.
-    service :
-        Credentials to access google sheets.
-    year : int
-        Indicates which year of data is being worked on.
-    *args 
-        Variable length argument list.
+    Args:
+        engine: Connection to bigdata database.
+        service: Credentials to access google sheets.
+        year: Indicates which year of data is being worked on.
+        spreadsheet_id: The iD iof the Google spreadsheet containing raw data.
+        spreadsheet_range: The range of data within the spreadsheet.
+        schema: PostgreSQL schema to load the data into.
+        table: PostgreSQL table to load the data into.
+    
+    Returns:
+        A boolean status of ``True``, if completed without any problems;
+            Otherwise, ``False``.
 
-    Raises
-    ------
-    IndexError
-        If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
-    TimeoutError
-        If the connection to Google sheets timed out.
+    Raises:
+        IndexError: If list index out of range which happens due to the presence of empty cells at the end of row or on the entire row.
+        TimeoutError: If the connection to Google sheets timed out.
     """
-    any_error = False
+    status = True
     try:
         sheet = service.spreadsheets()
-        request = sheet.values().get(spreadsheetId=spreadsheet['spreadsheet_id'],
-                                    range=spreadsheet['range_name'])
+        request = sheet.values().get(spreadsheetId=spreadsheet_id,
+                                    range=spreadsheet_range)
         result = request.execute()
         values = result.get('values', [])
     except TimeoutError as err:
@@ -213,46 +220,131 @@ def pull_from_sheet(con, service, year, spreadsheet, **kwargs):
                     continue
                 i = [row[0], row[1], row[4], row[5], row[24], row[25], row[26], row[27]]
                 
-                if validate_school_info(con, i): # return true or false
+                if validate_school_info(engine, i): # return true or false
                     rows.append(i)
                     LOGGER.info('Reading row #%i', ind)
                     LOGGER.debug(row)
                 else:
                     LOGGER.error('at row #%i: %s', ind, row)
-                    any_error = True
+                    status = False
             except (IndexError, KeyError) as err:
                 LOGGER.error('An error occurred at row #%i: %s', ind, row)
                 LOGGER.error(err)
-                any_error = True
+                status = False
     
-    schema = spreadsheet['schema_name']
-    table = spreadsheet['table_name']
-    
-    
-    truncate = sql.SQL('''TRUNCATE TABLE {}.{}''').format(sql.Identifier(schema),sql.Identifier(table))
-    LOGGER.info('Truncating existing table %s', table)
-    
-    
-    query = sql.SQL('''INSERT INTO {}.{} (school_name, address, work_order_fb, work_order_wyss, locations_zone, final_sign_installation,
-                       locations_fb, locations_wyss) VALUES %s''').format(sql.Identifier(schema), sql.Identifier(table))
-    
-    LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
-    LOGGER.debug(rows)
     
     if not rows: # Only insert if there is at least one valid row to be inserted
         LOGGER.warning('There is no valid data for year: %i', year)
-        return
-    with con:
-        with con.cursor() as cur:
-            cur.execute(truncate)  
-            execute_values(cur, query, rows)
-    LOGGER.info('Table %s is done', table)
-    task_instance = kwargs['task_instance']
-    if any_error:
-        # Custom slack message upon finding some (not all) invalid records
-        # `invalid_rows` is being pulled in the failure callback method (slack notification)
-        task_instance.xcom_push('invalid_rows', True)
-        raise AirflowFailException('Invalid rows found. See errors documented above.')
-    else:
-        task_instance.xcom_push('invalid_rows', False)
+        return False
     
+    metadata = MetaData(schema = schema)
+    t = Table(
+        table,
+        metadata,
+        *[Column(c) for c in [
+            "school_name",
+            "address",
+            "work_order_fb",
+            "work_order_wyss",
+            "locations_zone",
+            "final_sign_installation",
+            "locations_fb",
+            "locations_wyss"
+            ]
+        ]
+    )
+    truncate_stmt = delete(t)
+    insert_stmt = t.insert().values(rows)
+    with engine.connect() as conn:
+        LOGGER.info('Truncating existing table %s', table)
+        conn.execute(truncate_stmt)
+        LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
+        LOGGER.debug(rows)
+        conn.execute(insert_stmt)
+
+    LOGGER.info('Table %s is done', table)
+    return status
+
+@click.command()
+@click.argument("db-config")
+@click.option(
+    "--year",
+    "-y",
+    type=int,
+    required=True,
+    help="The year to pull its data",
+)
+@click.option(
+    "--spreadsheet-id",
+    "-d",
+    required=True,
+    help=(
+        "The Id of the spreadsheet to pull the data from. "
+        "Check the Airflow variable `ssz_spreadsheets` for more info."
+    ),
+)
+@click.option(
+    "--spreadsheet-range",
+    "-r",
+    required=True,
+    help=(
+        "The range of data within the spreadsheet. "
+        "Check the Airflow variable `ssz_spreadsheets` for more info."
+    ),
+)
+@click.option(
+    "--schema",
+    "-s",
+    default="vz_safety_programs_staging",
+    help="The schema to load the data into",
+)
+@click.option(
+    "--table",
+    "-t",
+    default=None,
+    help="The table to load the data into",
+)
+def pull_from_sheet_cli(
+    db_config: str,
+    year: int,
+    spreadsheet_id: str,
+    spreadsheet_range: str,
+    schema: Optional[str] = "vz_safety_programs_staging",
+    table: Optional[str] = None,
+) -> None:
+    """Loads SSZ data from Google Spreadsheets into the database.
+
+    Args:
+        db_config: A configurations file containing the database details.
+
+    Examples:
+        gis/school_safety_zones/schools.py ~/.db.cfg -y 2023 -d '1_eQXrilU' -r 'Master Sheet!A3:AC180'
+    """
+    logging.basicConfig(level=logging.ERROR)
+
+    config = configparser.ConfigParser()
+    config.read(db_config)
+    connect_url = URL.create("postgresql+psycopg2", **config['DBSETTINGS'])
+    engine = create_engine(connect_url)
+
+    google_cred = GoogleBaseHook('vz_api_google').get_credentials()
+
+    if table is None:
+        table = f"school_safety_zone_{year}_raw"
+
+    if pull_from_sheet(
+        engine = engine,
+        service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
+        year=year,
+        spreadsheet_id=spreadsheet_id,
+        spreadsheet_range=spreadsheet_range,
+        schema=schema,
+        table=table,
+    ):
+        print(f"Successfully pulled {year} data into {schema}.{table}.")
+    else:
+        print(f"Failed to pull {year} data into {schema}.{table}.")
+
+if __name__ == "__main__":
+    # pylint: disable-next=no-value-for-parameter
+    pull_from_sheet_cli()

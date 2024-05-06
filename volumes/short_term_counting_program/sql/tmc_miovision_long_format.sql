@@ -1,6 +1,6 @@
 /*
-This view transforms traffic.det's wide-format TMC table into a 
-long-format table that's more compatible with the way we store 
+This view transforms traffic.det's wide-format TMC table into a
+long-format table that's more compatible with the way we store
 Miovision TMCs, as in miovision_api.volumes_15min_tmc.
 */
 
@@ -81,6 +81,7 @@ unpacked_tmcs AS (
     SELECT
         count_info_id,
         time_bin,
+        -- fun fact: 'KEY' is a ... KEYword. Thus: 'kee'
         (json_each(tmc)).key AS kee,
         substring((json_each(tmc)).key, '_([rtl])$') AS movement,
         substring((json_each(tmc)).key, '^._(cars|truck|bus|peds|bike|other)') AS trans_mode,
@@ -92,13 +93,15 @@ SELECT
     count_info_id,
     countinfomics.arterycode,
     countinfomics.count_date::date + u.time_bin AS datetime_bin,
-    -- fun fact: 'KEY' is a ... KEYword. Thus: 'kee'
     upper(substring(u.kee, '^([nsew])_')) AS leg,
+    u.kee AS traffic_column_name,
+    u.trans_mode AS traffic_classification,
     CASE
         WHEN u.movement = 't' THEN 1
         WHEN u.movement = 'l' THEN 2
         WHEN u.movement = 'r' THEN 3
-        WHEN u.trans_mode IN ('bike', 'other') THEN 7 -- only indicates approach, not turning movement
+        -- only indicates approach, not turning movement
+        WHEN u.trans_mode IN ('bike', 'other') THEN 7
         -- peds could be either 5 or 6; no distinction is made about which way they are travelling
         WHEN u.trans_mode = 'peds' THEN -5
     END AS movement_uid,
@@ -128,14 +131,17 @@ CREATE UNIQUE INDEX ON traffic.tmc_miovision_long_format (
     count_info_id, datetime_bin, classification_uid, leg, movement_uid
 );
 
-COMMENT ON MATERIALIZED VIEW traffic.tmc_miovision_long_format
-IS 'converts traffic.det TMC table into a long format more compatible with the way we store Miovision TMC data';
+COMMENT ON MATERIALIZED VIEW traffic.tmc_miovision_long_format IS E''
+'converts traffic.det TMC table into a long format more '
+'compatible with the way we store Miovision TMC data';
 
-COMMENT ON COLUMN traffic.tmc_miovision_long_format.datetime_bin
-IS 'This indicates the START of a 15 minute bin for compatibility with Miovision data, NOT the end, as in traffic.det';
+COMMENT ON COLUMN traffic.tmc_miovision_long_format.datetime_bin IS E''
+'This indicates the START of a 15 minute bin for compatibility with Miovision '
+'data, NOT the end, as in traffic.det';
 
 COMMENT ON COLUMN traffic.tmc_miovision_long_format.movement_uid
 IS 'This maps the (_l, _t, _r) of traffic.det to the miovision_api.movements movement_uids';
 
-COMMENT ON COLUMN traffic.tmc_miovision_long_format.classification_uid
-IS 'This roughly maps the (peds, bikes, bus, cars, truck) of traffic.det to the numeric classification_uids of miovision_api.classifications';
+COMMENT ON COLUMN traffic.tmc_miovision_long_format.classification_uid IS E''
+'This roughly maps the (peds, bikes, bus, cars, truck) of traffic.det to '
+'the numeric classification_uids of miovision_api.classifications';

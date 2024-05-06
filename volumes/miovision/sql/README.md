@@ -1,4 +1,5 @@
-<!-- /TOC -->
+<!-- TOC -->
+
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -14,12 +15,14 @@
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
   - [Reference Tables](#reference-tables)
+    - [`miovision_api.breaks`](#miovision_apibreaks)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
     - [`movement_map`](#movement_map)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
     - [`centreline_miovision`](#centreline_miovision)
+    - [`alerts`](#alerts)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Tables](#other-tables)
@@ -71,7 +74,7 @@ Reference table for each unique intersection at which data has been collected, y
 :-----|:-----|:-----|:-----|
 intersection_uid|integer|Unique identifier for table|10|
 id|text|Unique id from Miovision API|990cd89a-430a-409a-b0e7-d37338394148|
-intersection_name|text|Intersection in format of [main street] / [cross street]|King / Bathurst|
+intersection_name|text|Intersection short name in format of [E / W street] / [N / S street]|King / Bathurst|
 date_installed|date|Installation date of the camera (date of the first available timestamp)|2017-10-03|
 date_decommissioned|date|Decommissioned date of the camera (date of the last available timestamp)|NULL|
 lat|numeric|Latitude of intersection location|43.643945|
@@ -85,7 +88,7 @@ n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
 w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-
+api_name|text|Intersection name from API|Bathurst Street and King Street West|
 
 ### `classifications`
 
@@ -110,7 +113,7 @@ Note that bicycles are available at both a turning movement level and at an appr
 5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
 6|Pedestrian|A walker. May or may not include zombies...|
 7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. **do not use** aggregate volumes will be removed from tables |
-8|WorkVan|A van used for commercial purposes|
+~~8~~|~~WorkVan~~|~~A van used for commercial purposes~~ Workvan classification was folded in to "Light" vehicles in the API. |
 9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
 10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
 
@@ -317,6 +320,19 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 
 ## Reference Tables
 
+### `miovision_api.breaks`
+The breaks table contains `Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable`.
+
+| column_name | Comments | data_type | sample |
+| ------ | ----------- | -- |  -- |
+| uid    | simple incrementing primary key | serial | 1 |
+| intersection_uid | Reference to intersections table. A null intersection_uid refers to all intersections. | integer
+| classification_uid | Reference to classifications table. A null classification_uid refers to all classifications. | integer
+| break_time | Moment the change takes place | timestamp
+| give_or_take | approximate bounds if the precise time is not known | interval
+| notes | required description of what changed - be verbose! | text
+
+
 ### `miovision_api.anomalous_ranges`
 The `anomalous_ranges` table is used to log issues related to specific intersection / classification combos as identified either by a human or an automated process. See [below](#identifying-questionable-data-quality) for more information and examples of how to use this table. 
 
@@ -401,6 +417,30 @@ This table maps all miovision intersection legs to centreline street segments. I
 centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
 intersection_uid| integer | ID for intersection | 1 |
 leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
+
+### `alerts`
+
+This table contains alerts for Miovision intersections pulled daily from the API by the `pull_alerts` task in the [`miovision_pull` DAG](../api/readme.md#miovision_pull). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. Higher accuracy alert records could be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
+
+**Field Name**|**Data Type**|**Description**|**Example**|
+:-----|:-----|:-----|:-----|
+intersection_id | text | The intersection id, corresponding to intersections.intersection_id column | c04704a0-e1e2-4101-9c29-6823d0f41c52 |
+intersection_uid | integer | The intersection uid, a foreign key referencing intersections.intersection_uid column | 6 |
+alert | text | Short text description of the alert. More detail and tips for resolution are available in this [Miovision help article](https://help.miovision.com/s/article/Alert-and-Notification-Types) | PERIPHERAL_UNAVAILABLE |
+start_time | timestamp | First 5 minute interval at which the alert appeared. **Subtract 5 minutes to get earliest possible start time.** | 2024-01-12 10:20:00 | 
+end_time | timestamp | Final 5 minute interval at which the alert appeared. **Add 5 minutes to get latest possible end time.** Note this could be extended the following day. | 2024-01-21 15:35:00 | 
+
+Below is an example of how to anti-join the alerts table, including the 5 minute buffer:
+```sql
+SELECT ...
+FROM miovision_api.volumes AS v
+--anti join alerts
+LEFT JOIN miovision_api.alerts AS a
+    ON a.intersection_uid = v.intersection_uid
+    AND v.datetime_bin >= a.start_time - interval '5 minutes'
+    AND v.datetime_bin < a.end_time + interval '5 minutes'
+WHERE a.intersection_uid IS NULL
+```
 
 ## Primary and Foreign Keys
 
