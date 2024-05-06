@@ -162,28 +162,18 @@ Row count: 3,147,432
 CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
 
 Row count: 73
-| column_name         | data_type    | sample                                                                                     | Comments                                                           |
-|:--------------------|:-------------|:-------------------------------------------------------------------------------------------|:-------------------------------------------------------------------|
-| validated           | boolean      | True                                                                                       | nan                                                                |
-| includes_contraflow | boolean      | True                                                                                       | Does the flow also count travel in the reverse of                  |
-|                     |              |                                                                                            | the indicated flow direction?                                      |
-|                     |              |                                                                                            | TRUE indicates that the flow, though installed                     |
-|                     |              |                                                                                            | in one-way infrastucture like a standard bike lane,                |
-|                     |              |                                                                                            | also counts travel going the wrong direction within                |
-|                     |              |                                                                                            | that lane.                                                         |
-| replaces_flow_id    | numeric      |                                                                                            | nan                                                                |
-| flow_id             | numeric      | 104042943.0                                                                                | nan                                                                |
-| site_id             | numeric      | 100042943.0                                                                                | nan                                                                |
-| flow_direction      | text         | westbound (includes contraflow)                                                            | nan                                                                |
-| flow_geom           | USER-DEFINED | 0102000020E6100000020000004EB43D5A70DA53C081462E0B17D54540C5DD408F71DA53C0BAD16D8616D54540 | A two-node line, where the first node                              |
-|                     |              |                                                                                            | indicates the position of the sensor and                           |
-|                     |              |                                                                                            | the second indicates the normal direction                          |
-|                     |              |                                                                                            | of travel over that sensor relative to the                         |
-|                     |              |                                                                                            | first node. I.e. the line segment is an                            |
-|                     |              |                                                                                            | arrow pointing in the direction of travel.                         |
-| bin_size            | interval     | 0 days 00:15:00                                                                            | temporal bins are either 15 or 30 minutes, depending on the sensor |
-| notes               | text         |                                                                                            | nan                                                                |
-| replaced_by_flow_id | numeric      | 353363669.0                                                                                | nan                                                                |
+| column_name | data_type | sample | Comments |
+|:------------|:----------|:-------|:---------|
+| validated | boolean | True  | |
+| includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
+| replaces_flow_id | numeric | | |
+| flow_id | numeric | 104042943 | |
+| site_id | numeric | 100042943 | |
+| flow_direction | text | westbound (includes contraflow) |  |
+| flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
+| bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
+| notes | text | | |
+| replaced_by_flow_id | numeric | 353363669 | |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.
