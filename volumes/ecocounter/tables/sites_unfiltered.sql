@@ -8,7 +8,7 @@ CREATE TABLE ecocounter.sites (
     validated boolean,
     CONSTRAINT sites_pkey PRIMARY KEY (site_id),
     CONSTRAINT sites_replaced_by_fkey FOREIGN KEY (replaced_by_site_id)
-    REFERENCES ecocounter.sites (site_id) MATCH SIMPLE
+    REFERENCES ecocounter.sites_unfiltered (site_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
 )
