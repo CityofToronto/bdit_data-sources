@@ -26,7 +26,8 @@ SELECT
     'Pass threshold: ' || to_char(
         FLOOR(thr.threshold * AVG(lb.count)),
         'FM9,999,999,999'
-    ) AS passing_value
+    ) AS passing_value,
+    weather.airport_weather_summary('{{ ds }}') AS weather_summary
 FROM lookback AS today
 JOIN lookback AS lb USING (is_weekend_or_holiday),
     LATERAL(
