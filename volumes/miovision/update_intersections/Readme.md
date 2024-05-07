@@ -262,14 +262,14 @@ We need to find out all valid movements for the new intersections from the data 
 
 6. **Update `miovision_api.centreline_miovision`**
 
-[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
+	[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
 
-The script used to add new intersections to this table is [**here**](../sql/updates/update-miovision_centreline.sql). This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
-- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
-- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
-- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
+	The script used to add new intersections to this table is [**here**](../sql/updates/update-miovision_centreline.sql). This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
+	- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
+	- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
+	- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
 
-The script above also contains checks for duplicates and values missing from the table. 
+	The script above also contains checks for duplicates and values missing from the table. 
 
 ## Backfill/Aggregate new intersection data
 
