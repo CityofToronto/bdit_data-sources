@@ -1,5 +1,4 @@
 <!-- TOC -->
-
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -410,13 +409,18 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](table/create-mv-mio_cent.sql) when intersections are added. **The process of updating this table is in need of an update, including updating references from `gis` to `gis_core`**
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](updates/update-miovision_centreline.sql) when intersections are added. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
+centreline_id| numeric | Corresponds to `centreline_id` in `gis_core.centreline` |14016757|
 intersection_uid| integer | ID for intersection | 1 |
 leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
+
+**Known issues:**
+- 91: Lakeshore and Spadina - Two centrelines matched to West leg are actually legit. One is for the Gardiner off-ramp (Left turns only) and one is for Lakeshore (Thru + Right). They could be differentiated by movement.
+- 78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road).
+- 68: Steels and Jane, N leg is outside of TO.
 
 ### `alerts`
 
