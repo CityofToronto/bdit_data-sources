@@ -2,7 +2,7 @@
 # Miovision Intersection Update Resources  
 
 This readme contains information and resources on how to add/remove Miovision intersections from our data pipeline.  
-For the main Miovision readme, see [here](../README.md). 
+For the main Miovision readme, see [here](../readme.md). 
 
 <!-- TOC -->
 
@@ -20,7 +20,7 @@ For the main Miovision readme, see [here](../README.md).
 # Removing Intersections
 Once we are informed of the decommissioned date of a Miovision camera, we can carry out the following steps.
 
-1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../README.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../readme.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
 2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from aggregate tables using [function-clear-volumes_15min.sql](../sql/function/function-clear-volumes_15min.sql), [function-clear-volumes_15min_mvt.sql](../sql/function/function-clear-volumes_15min_mvt.sql). You can also manually delete `volumes_daily` table. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
@@ -31,7 +31,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 
 ## Update `miovision_api.intersections`:
 
-Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+Look at the table [`miovision_api.intersections`](../readme.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
     The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
@@ -115,7 +115,7 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 
 8. **Update `miovision_api.centreline_miovision`**
 
-	[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
+	[`miovision_api.centreline_miovision`](../sql/readme.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
 
 	Use [**this script**](../sql/updates/update-miovision_centreline.sql) to add new intersections to `miovision_centreline`. The script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
 	- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
@@ -126,7 +126,7 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 
 ## Update `miovision_api.intersection_movements`  
 
-Now that the updated table of [`miovision_api.intersections`](../README.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). Intersection movements determines which movements should be aggregated, by classification, typically for reporting purposes. Yes, we can see all kinds of wacky behaviour out there, but analyzing that is rarer than reporting on the main movements, so this makes basic analysis a little bit easier.
+Now that the updated table of [`miovision_api.intersections`](../readme.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). Intersection movements determines which movements should be aggregated, by classification, typically for reporting purposes. Yes, we can see all kinds of wacky behaviour out there, but analyzing that is rarer than reporting on the main movements, so this makes basic analysis a little bit easier.
 
 We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
@@ -235,7 +235,7 @@ We need to find out all valid movements for the new intersections from the data 
 	```
 
 4. **Review `intersection_movements`**  
-    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
+    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
     Below is an example script + output you can use to aggregate movements into a more readable format for QC. In particular look for intersections with very short lists of valid movements, or no valid movements for certain classifications.  
 
     | intersection_uid | leg | movements                                                                                                                                                                                    |

@@ -159,5 +159,5 @@ The BashOperator runs one task named `pull_miovision` using a bash command that 
 ### **`check_miovision`**
 
 The `check_miovision` DAG is deprecated by the addition of the [`data_checks` TaskGroup](api/readme.md#data_checks-taskgroup) to the main `miovision_pull` DAG (and `miovision_check` DAG), in particular `miovision_check.check_gaps` which directly replaces `check_miovision.check_miovision`.  
-This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+This DAG previously was used to check if any Miovision camera had a gap of at least 4 hours. More information can be found at [this part of the readme.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
 <!-- check_miovision_doc_md -->

@@ -23,10 +23,10 @@ The program was initiated to support the King Street Transit Pilot by analysing 
 
 The data extracted from Miovision's API includes: 
 - Datetime aggregated to 1-minute bins
-- Type of user ([classification](sql/README.md#classifications)): Auto / Truck / Transit / Bicycle / Pedestrian
+- Type of user ([classification](sql/readme.md#classifications)): Auto / Truck / Transit / Bicycle / Pedestrian
 - Count of users
 - Intersection entrance leg: N / S / E / W
-- Type of ([movement](sql/README.md#movements)):
+- Type of ([movement](sql/readme.md#movements)):
   - Non-pedestrian: Through / Left / Right / U-Turn
   - Pedestrians: Clockwise / Counterclockwise
 
@@ -42,7 +42,7 @@ You can see the locations of Miovision cameras on [this map](geojson/mio_interse
 - In fall 2023 and into winter 2024, a large expansion is underway, including 21 new cameras to create a cordon around downtown (generally Bathurst / Dupont / Don Valley), 10 new cameras to monitor traffic related to the SRT closure in Scarborough, and 4 new cameras along Bloor West.  
 
 ## Where can I access the data?
-Internally to the Transportation Data & Analytics team, data is stored in the `bigdata` RDS. For data automatically collected since January 2019, see the `miovision_api` schema and related documentation [here](sql/README.md#2-table-structure). More limited data for the King Street Pilot from 2017 and 2018 can be found in the `miovision_csv` schema, which has a slightly different structure than the API data. 
+Internally to the Transportation Data & Analytics team, data is stored in the `bigdata` RDS. For data automatically collected since January 2019, see the `miovision_api` schema and related documentation [here](sql/readme.md#2-table-structure). More limited data for the King Street Pilot from 2017 and 2018 can be found in the `miovision_csv` schema, which has a slightly different structure than the API data. 
 
 ## Limitations
 The data quality for the automatically processed API data stream (not including the King St Pilot study data from pre-2019 which was processed independently) is evolving, but the below rules are general guidelines for when the data became reliable to use:
@@ -62,4 +62,4 @@ Internal users can see additional detail on limitations for individual intersect
 - [`dev_notebooks`](dev_notebooks/) - Jupyter Notebooks for development and testing.
 - [`geojson`](geojson/) - Contains a publicly accessible map of Miovision cameras.
 - [`img`](img/) - Contains images used in explanatory docs like this!
-- [`Archive`](Archive.md) - This document contains information that has been deleted from the Miovision readmes. 
+- [`Archive`](archive.md) - This document contains information that has been deleted from the Miovision readmes. 
