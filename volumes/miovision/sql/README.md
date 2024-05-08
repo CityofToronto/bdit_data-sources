@@ -346,6 +346,7 @@ The `anomalous_ranges` table is used to log issues related to specific intersect
 | notes | as detailed a description of the issue as reasonably possible; if there are unknowns or investigations in progress, describe them here also |
 | investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
 | problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
+| leg | Intersection leg which is affected by range. Null refers to all legs. |
 
 ### `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`
 These two tables are used to enforce standardized descriptions in the `investigation_level` and `problem_level` columns of `anomalous_ranges`. 
