@@ -68,15 +68,15 @@ IS 'Table to store anomalous ranges of Miovision data.
 Values are added to this table both manually by miovision_admins/miovision_data_detectives and
 automatically through a daily Airflow process that runs function miovision_api.identify_zero_counts(date).';
 
-COMMENT ON COLUMN miovision_api.intersection_uid
+COMMENT ON COLUMN miovision_api.anomalous_ranges.intersection_uid
 IS 'NULLs are allowed in the column intersection_uid to denote
 anomalies that affect all intersections.';
 
-COMMENT ON COLUMN miovision_api.classification_uid
+COMMENT ON COLUMN miovision_api.anomalous_ranges.classification_uid
 IS 'NULLs are allowed in the column classification_uid to denote
 anomalies that affect all classifications.';
 
-COMMENT ON COLUMN miovision_api.leg
+COMMENT ON COLUMN miovision_api.anomalous_ranges.leg
 IS 'NULLs are allowed in the column leg to denote
 anomalies that affect all legs.';
 
