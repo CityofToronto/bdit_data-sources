@@ -586,4 +586,4 @@ The `anomalous_ranges` table is populated in different ways:
   - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
   - automatically by a [daily script](function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
     - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
-  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](../dev_notebooks/README.md) (including notebooks and code).
+  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks readme.md](../dev_notebooks/readme.md) (including notebooks and code).
