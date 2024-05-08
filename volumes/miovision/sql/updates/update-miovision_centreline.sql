@@ -1,9 +1,9 @@
---use this script to prepare new inserts for the miovision_centreline table.
+--use this script to prepare new inserts for the centreline_miovision table.
 
 --use a temp table so you can examine the results before inserting.
-DROP TABLE miovision_centreline_temp;
+DROP TABLE centreline_miovision_temp;
 
-CREATE TEMP TABLE miovision_centreline_temp AS (
+CREATE TEMP TABLE centreline_miovision_temp AS (
     --find all the nodes in the centreline file that touch miovision intersections.
     --You have to match with "from" and "to" nodes to get all the segments
     WITH cent_int AS (
@@ -96,7 +96,7 @@ SELECT
     intersection_uid,
     leg,
     cl_geom
-FROM miovision_centreline_temp;
+FROM centreline_miovision_temp;
 
 --check for intersections with duplicates and fix
 SELECT mio.* --noqa
@@ -104,36 +104,36 @@ FROM (
     SELECT
         intersection_uid,
         leg
-    FROM miovision_centreline_temp
+    FROM centreline_miovision_temp
     GROUP BY
         intersection_uid,
         leg
     HAVING COUNT(*) > 1
 ) AS dupes
-JOIN miovision_centreline_temp AS mio USING (intersection_uid, leg)
+JOIN centreline_miovision_temp AS mio USING (intersection_uid, leg)
 ORDER BY
     mio.intersection_uid,
     mio.leg;
 
 --make adjustments as needed: 
 /*
-DELETE FROM miovision_centreline_temp
+DELETE FROM centreline_miovision_temp
 WHERE ...
 */
 
 /*
-UPDATE miovision_centreline_temp
+UPDATE centreline_miovision_temp
 SET centreline =
 WHERE ...
 */
 
---when ready, insert into miovision_centreline:
-INSERT INTO miovision_api.miovision_centreline (centreline_id, intersection_uid, leg)
+--when ready, insert into centreline_miovision:
+INSERT INTO miovision_api.centreline_miovision (centreline_id, intersection_uid, leg)
 SELECT
     centreline_id,
     intersection_uid,
     leg
-FROM miovision_centreline_temp;
+FROM centreline_miovision_temp;
 
 --USE THE FOLLOWING SCRIPTS TO QC:
 
@@ -148,13 +148,13 @@ FROM (
     SELECT
         intersection_uid,
         leg
-    FROM miovision_api.miovision_centreline
+    FROM miovision_api.centreline_miovision
     GROUP BY
         intersection_uid,
         leg
     HAVING COUNT(*) > 1
 ) AS dupes
-LEFT JOIN miovision_api.miovision_centreline AS mio USING (intersection_uid)
+LEFT JOIN miovision_api.centreline_miovision AS mio USING (intersection_uid)
 LEFT JOIN gis_core.centreline_latest AS cl USING (centreline_id)
 ORDER BY
     mio.intersection_uid,
@@ -173,7 +173,7 @@ WITH missing AS (
     SELECT DISTINCT
         intersection_uid,
         leg
-    FROM miovision_api.miovision_centreline
+    FROM miovision_api.centreline_miovision
 )
 SELECT
     missing.intersection_uid,

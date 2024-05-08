@@ -117,7 +117,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 
 	[`miovision_api.centreline_miovision`](../sql/readme.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
 
-	Use [**this script**](../sql/updates/update-miovision_centreline.sql) to add new intersections to `miovision_centreline`. The script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
+	Use [**this script**](../sql/updates/update-centreline_miovision.sql) to add new intersections to `centreline_miovision`. The script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
 	- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
 	- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
 	- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
