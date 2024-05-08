@@ -4,7 +4,8 @@
 DROP TABLE miovision_centreline_temp;
 
 CREATE TEMP TABLE miovision_centreline_temp AS (
-    --find all the nodes in the centreline file that touch miovision intersections. You have to match with "from" and "to" nodes to get all the segments
+    --find all the nodes in the centreline file that touch miovision intersections.
+    --You have to match with "from" and "to" nodes to get all the segments
     WITH cent_int AS (
         --to nodes
         SELECT DISTINCT
@@ -20,15 +21,16 @@ CREATE TEMP TABLE miovision_centreline_temp AS (
             ON i.int_id = cl.to_intersection_id
             AND cl.feature_code_desc NOT IN (
                 'Trail', 'Geostatistical line', 'Other', 'River', 'Major Railway', 'Hydro Line',
-                'Walkway', 'Major Shoreline', 'Creek/Tributary', 'Ferry Route', 'Minor Railway', 
+                'Walkway', 'Major Shoreline', 'Creek/Tributary', 'Ferry Route', 'Minor Railway',
                 'Minor Shoreline (Land locked)'
             )
-        LEFT JOIN gis_core.centreline_intersection_point_latest AS ci ON cl.from_intersection_id = ci.intersection_id
+        LEFT JOIN gis_core.centreline_intersection_point_latest AS ci
+            ON cl.from_intersection_id = ci.intersection_id
         --adjust intersection filter (in below UNION as well)
-        WHERE i.intersection_uid IN (...)
-        
+        WHERE i.intersection_uid IN (...) --noqa: PRS
+
         UNION ALL
-    
+
         --from nodes
         SELECT DISTINCT
             i.intersection_uid,
@@ -43,15 +45,17 @@ CREATE TEMP TABLE miovision_centreline_temp AS (
             ON i.int_id = cl.from_intersection_id
             AND cl.feature_code_desc NOT IN (
                 'Trail', 'Geostatistical line', 'Other', 'River', 'Major Railway', 'Hydro Line',
-                'Walkway', 'Major Shoreline', 'Creek/Tributary', 'Ferry Route', 'Minor Railway', 
+                'Walkway', 'Major Shoreline', 'Creek/Tributary', 'Ferry Route', 'Minor Railway',
                 'Minor Shoreline (Land locked)'
             )
-        LEFT JOIN gis_core.centreline_intersection_point_latest AS ci ON cl.to_intersection_id = ci.intersection_id
+        LEFT JOIN gis_core.centreline_intersection_point_latest AS ci
+            ON cl.to_intersection_id = ci.intersection_id
         --adjust intersection filter
-        WHERE i.intersection_uid IN (...)
+        WHERE i.intersection_uid IN (...) --noqa: PRS
     ),
-    
-    --determine difference in the "non-miovision node" co-ordinates - figure out if we're dealing with the north-south or east-west street in the intersection
+
+    --determine difference in the "non-miovision node" co-ordinates - figure out if
+    --we're dealing with the north-south or east-west street in the intersection
     ll_diff AS (
         SELECT
             intersection_uid,
@@ -69,8 +73,9 @@ CREATE TEMP TABLE miovision_centreline_temp AS (
             END AS nsew
         FROM cent_int
     )
-    
-    --determine which segments are N, S, E, W so that we can match with miovision leg + intersection_uid
+
+    --determine which segments are N, S, E, W so that we
+    --can match with miovision leg + intersection_uid
     SELECT
         centreline_id,
         intersection_uid,
@@ -103,8 +108,8 @@ FROM (
     GROUP BY
         intersection_uid,
         leg
-    HAVING COUNT(1) > 1
-) dupes
+    HAVING COUNT(*) > 1
+) AS dupes
 JOIN miovision_centreline_temp AS mio USING (intersection_uid, leg)
 ORDER BY
     mio.intersection_uid,
@@ -118,34 +123,37 @@ WHERE ...
 
 /*
 UPDATE miovision_centreline_temp
-SET centreline = 
+SET centreline =
 WHERE ...
 */
 
 --when ready, insert into miovision_centreline:
 INSERT INTO miovision_api.miovision_centreline (centreline_id, intersection_uid, leg)
-SELECT centreline_id, intersection_uid, leg
+SELECT
+    centreline_id,
+    intersection_uid,
+    leg
 FROM miovision_centreline_temp;
 
 --USE THE FOLLOWING SCRIPTS TO QC:
 
 --examine intersections with dupes
---91: Lakeshore and Spadina. These two western legs are actually legit. We could only differentiate by movement.
+--91: Lakeshore and Spadina. Both western legs are actually legit. Could differentiate by movement.
 SELECT
     mio.centreline_id,
     mio.intersection_uid,
     mio.leg,
     cl.geom
 FROM (
-    SELECT DISTINCT
+    SELECT
         intersection_uid,
         leg
     FROM miovision_api.miovision_centreline
     GROUP BY
         intersection_uid,
         leg
-    HAVING COUNT(1) > 1
-) dupes
+    HAVING COUNT(*) > 1
+) AS dupes
 LEFT JOIN miovision_api.miovision_centreline AS mio USING (intersection_uid)
 LEFT JOIN gis_core.centreline_latest AS cl USING (centreline_id)
 ORDER BY
@@ -153,7 +161,7 @@ ORDER BY
     mio.leg;
 
 --identified some intersections with missing legs that are in intersection_movements:
---78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road)
+--78: Bloor and Kingsway is 4 legged, but the S leg is not in the centreline (private rd)
 --68: Steels and Jane, N leg is outside of TO.
 WITH missing AS (
     SELECT DISTINCT
