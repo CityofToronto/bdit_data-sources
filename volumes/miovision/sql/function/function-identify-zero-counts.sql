@@ -96,7 +96,7 @@ BEGIN
             zero_int_class_leg.leg IS NOT NULL  --identifies int-class-leg outage
             AND zero_int.intersection_uid IS NULL --anti join
             AND zero_int_class.intersection_uid IS NULL  --anti join
-    )
+    ),
 
     updated_values AS (
         --update new outages which are contiguous with old outages
@@ -200,7 +200,7 @@ TO miovision_api_bot;
 GRANT EXECUTE ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 TO miovision_admins;
 
-COMMENT ON FUNCTION miovision_api.identify_zero_counts(date)
+COMMENT ON FUNCTION miovision_api.identify_zero_counts(date, integer [])
 IS 'Identifies intersection / classification (only 1,2,6,10) / leg
 combos with zero volumes for the start_date called. Inserts or updates anomaly
 into anomalous_range table unless an existing, overlapping, manual entery exists.';
