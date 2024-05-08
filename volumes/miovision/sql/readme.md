@@ -409,7 +409,7 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](updates/update-miovision_centreline.sql) when intersections are added. 
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](updates/update-centreline_miovision.sql) when intersections are added. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
