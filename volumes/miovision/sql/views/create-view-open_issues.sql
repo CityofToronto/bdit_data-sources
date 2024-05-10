@@ -13,6 +13,7 @@ SELECT
         WHEN ar.classification_uid IS NULL THEN 'All modes'
         ELSE c.classification
     END,
+    ar.leg,
     ar.range_start::date,
     (current_timestamp AT TIME ZONE 'EST5EDT')::date - ar.range_start::date AS num_days,
     ar.notes,
@@ -26,10 +27,15 @@ JOIN miovision_api.intersections AS i USING (intersection_uid)
 --find last week volume
 LEFT JOIN miovision_api.volumes AS v
     ON ar.intersection_uid = v.intersection_uid
-    AND v.datetime_bin >= current_date - interval '7 days'
+    --last 7 day filter in the WHERE clause occurs first
+    AND v.datetime_bin >= ar.range_start
     AND (
         ar.classification_uid = v.classification_uid
         OR ar.classification_uid IS NULL
+    )
+    AND (
+        ar.leg = v.leg
+        OR ar.leg IS NULL
     )
 LEFT JOIN miovision_api.alerts
     ON alerts.intersection_id = i.id
@@ -48,6 +54,8 @@ WHERE
             AND ar.range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
         )
     )
+    --prune the partitions
+    AND v.datetime_bin >= current_date - interval '7 days'
 GROUP BY
     ar.uid,
     ar.intersection_uid,
