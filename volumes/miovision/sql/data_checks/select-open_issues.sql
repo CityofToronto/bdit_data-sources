@@ -22,9 +22,9 @@ SELECT
     array_agg(
         'uid: `' || ars.uid || '`, `'
         || ars.intersection || '`, `'
-        || ars.classification || '`, `'
-        || CASE WHEN ars.leg IS NOT NULL THEN ars.leg || ' leg`, ' ELSE '' END
-        || 'volume: `' || ars.last_week_volume || '`, '
+        || ars.classification || '`, '
+        || CASE WHEN ars.leg IS NOT NULL THEN '`' || ars.leg || ' leg`, ' ELSE '' END
+        || 'volume: `' || to_char(ars.last_week_volume, 'FM9,999,999') || '`, '
         || 'notes: `' || LEFT(ars.notes, 80)
         || CASE WHEN LENGTH(ars.notes) > 80 THEN '...' ELSE '' END || '`'
     ) AS gaps
