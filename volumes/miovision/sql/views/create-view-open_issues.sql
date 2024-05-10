@@ -1,6 +1,23 @@
 --DROP VIEW miovision_api.open_issues;
 CREATE OR REPLACE VIEW miovision_api.open_issues AS
 
+--DROP VIEW miovision_api.open_issues;
+
+WITH alerts AS (
+    SELECT
+        ar.uid,
+        string_agg(DISTINCT alerts.alert, '; ') AS alerts
+    FROM miovision_api.anomalous_ranges AS ar
+    LEFT JOIN miovision_api.alerts
+        ON alerts.intersection_uid = ar.intersection_uid
+        AND alerts.start_time >= ar.range_start
+        AND (
+            alerts.end_time < ar.range_end
+            OR ar.range_end IS NULL
+        )
+    GROUP BY ar.uid
+)
+    
 SELECT
     ar.uid,
     ar.intersection_uid,
@@ -18,7 +35,7 @@ SELECT
     (current_timestamp AT TIME ZONE 'EST5EDT')::date - ar.range_start::date AS num_days,
     ar.notes,
     SUM(v.volume) AS last_week_volume,
-    string_agg(DISTINCT alerts.alert, '; ') AS alerts
+    alerts.alerts
 FROM miovision_api.anomalous_ranges AS ar
 --keep rows with null classification_uid
 LEFT JOIN miovision_api.classifications AS c USING (classification_uid)
@@ -27,8 +44,10 @@ JOIN miovision_api.intersections AS i USING (intersection_uid)
 --find last week volume
 LEFT JOIN miovision_api.volumes AS v
     ON ar.intersection_uid = v.intersection_uid
-    --last 7 day filter in the WHERE clause occurs first
+    --volume within the last 7 days and after AR started
     AND v.datetime_bin >= ar.range_start
+    --prune the partitions
+    AND v.datetime_bin >= current_date - interval '7 days'
     AND (
         ar.classification_uid = v.classification_uid
         OR ar.classification_uid IS NULL
@@ -37,13 +56,7 @@ LEFT JOIN miovision_api.volumes AS v
         ar.leg = v.leg
         OR ar.leg IS NULL
     )
-LEFT JOIN miovision_api.alerts
-    ON alerts.intersection_id = i.id
-    AND alerts.start_time >= ar.range_start
-    AND (
-        alerts.end_time < ar.range_end
-        OR ar.range_end IS NULL
-    )
+LEFT JOIN alerts ON alerts.uid = ar.uid
 WHERE
     ar.problem_level <> 'valid-caveat'
     --currently active
@@ -54,8 +67,6 @@ WHERE
             AND ar.range_end = (current_timestamp AT TIME ZONE 'EST5EDT')::date --today
         )
     )
-    --prune the partitions
-    AND v.datetime_bin >= current_date - interval '7 days'
 GROUP BY
     ar.uid,
     ar.intersection_uid,
@@ -64,7 +75,8 @@ GROUP BY
     ar.classification_uid,
     c.classification,
     ar.range_start,
-    ar.notes
+    ar.notes,
+    alerts.alerts
 ORDER BY
     ar.intersection_uid,
     ar.range_start,
