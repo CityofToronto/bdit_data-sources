@@ -11,6 +11,7 @@
   - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
     - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
     - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [`ecocounter_check` DAG](#ecocounter_check-dag)
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
     - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
@@ -120,13 +121,23 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
 
 - `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`. The new rows contain a flag `validated = null` indicating they still need to be manually validated. A notification is sent with any new additions.  
 - `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts_unfiltered` table. 
-
+- `done` is an external task marker to trigger the `ecocounter_check` DAG for additional "yellow card" data checks.  
+   
 ### `data_checks` TaskGroup
 This task group runs data quality checks on the pipeline output.  
-- `check_volume` checks the sum of volume in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
-- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` view and notifies if less than 70% of the 60 day lookback avg.  
+- `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
+- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
 
+<!-- ecocounter_check_doc_md -->
+## `ecocounter_check` DAG
+The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter_pull` to perform additional "yellow card" data checks on the new data.  
+
+- `starting_point` is an external task sensor to ensure `ecocounter_pull` DAG is complete before running.  
+- `check_site_outages` runs a `SQLCheckOperatorWithReturnValue` to check for sites with zero volumes and send a slack notification with their details. Does not trigger until day 2 of outage. 
+- `check_if_sunday` checks if execution date is Sunday in order to only trigger the following check once weekly on Mondays.
+- `check_unvalidated_sites` runs a `SQLCheckOperatorWithReturnValue` to check for unvalidated sites or flows with non-zero volumes this week and send a slack notification with their details. 
+<!-- ecocounter_check_doc_md -->
 
 # SQL Tables
 
