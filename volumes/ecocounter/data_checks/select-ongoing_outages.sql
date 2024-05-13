@@ -21,7 +21,7 @@ WITH out_of_order AS (
         s.site_description
     HAVING
         MAX(c.datetime_bin::date)
-        < '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}' -- noqa: TMP
+        < '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}' -- noqa: TMP, LT05
 ),
 
 ongoing_outages AS (

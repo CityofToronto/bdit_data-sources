@@ -1,8 +1,8 @@
 CREATE OR REPLACE FUNCTION weather.airport_weather_summary(
     dt date
 )
-    
-RETURNS TEXT
+
+RETURNS text
 LANGUAGE sql
 COST 100
 VOLATILE
@@ -11,7 +11,7 @@ AS $BODY$
 
         SELECT
             'Weather for ' || dt || ': '
-            || temp_min || ' - ' || temp_max || 'C, '
+            || temp_min || ' to ' || temp_max || 'C, '
             || CASE
                 WHEN COALESCE(total_precip,0) = 0 THEN 'No precip.'
                 WHEN COALESCE(total_snow,0) = 0 THEN COALESCE(total_rain,0) || 'mm rain. '
@@ -23,10 +23,11 @@ AS $BODY$
     
 $BODY$;
 
-ALTER FUNCTION weather.airport_weather_summary OWNER TO weather_admins;
+ALTER FUNCTION weather.airport_weather_summary(date)
+OWNER TO weather_admins;
 
-GRANT EXECUTE ON FUNCTION weather.airport_weather_summary TO bdit_humans;
-GRANT EXECUTE ON FUNCTION weather.airport_weather_summary TO bdit_bots;
+GRANT EXECUTE ON FUNCTION weather.airport_weather_summary(date) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION weather.airport_weather_summary(date) TO bdit_bots;
 
-COMMENT ON FUNCTION weather.airport_weather_summary
+COMMENT ON FUNCTION weather.airport_weather_summary(date)
 IS '''Function to return a human readable weather summary for a date.''';
