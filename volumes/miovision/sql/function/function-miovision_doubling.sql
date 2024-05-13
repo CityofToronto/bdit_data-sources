@@ -35,7 +35,8 @@ $$
             c.classification
         HAVING
             --doubling of volume week over week
-            SUM(vd.daily_volume) FILTER (WHERE w.this_week) >= 2 * SUM(vd.daily_volume) FILTER (WHERE NOT w.this_week)
+            SUM(vd.daily_volume) FILTER (WHERE w.this_week)
+            >= 2 * SUM(vd.daily_volume) FILTER (WHERE NOT w.this_week)
             --last week (denominator) has all 7 days of data
             --this week having less than 7 days is OK (=worse)
             AND COUNT(DISTINCT vd.dt::date) FILTER (WHERE NOT w.this_week) = 7
@@ -46,11 +47,16 @@ $$
         'Volumes have doubled week over week in the following ' || COUNT(*)
         || CASE WHEN COUNT(*) = 1 THEN ' cases:' ELSE ' case:' END AS summ,
         array_agg(
-            '`' || d.intersection || '`, `'
-            || d.classification
-            || '`, volume: `' || to_char(d.this_week_volume, 'FM9,999,999')
-            || ' (last week: ' || to_char(d.previous_week_volume, 'FM9,999,999') || ')`'
+            '`' || intersection || '`, `'
+            || classification
+            || '`, volume: `' || to_char(this_week_volume, 'FM9,999,999')
+            || ' (last week: ' || to_char(previous_week_volume, 'FM9,999,999') || ')`'
         ) AS summary
-    FROM doublings AS d;
+    FROM doublings;
 $$
 LANGUAGE SQL;
+
+ALTER FUNCTION gwolofs.miovision_doubling OWNER TO miovision_admins;
+
+COMMENT ON FUNCTION gwolofs.miovision_doubling
+IS '(in development) Function to identify when Miovision volumes have doubled week over week.'
