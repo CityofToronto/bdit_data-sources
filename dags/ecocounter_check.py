@@ -18,7 +18,6 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_if_dow
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -45,7 +44,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 4 * * *', # Run at 4 AM local time every day
+    schedule='0 4 * * MON', # Run at 4 AM on Monday
     catchup=True,
     template_searchpath=os.path.join(repo_path, 'volumes/ecocounter/data_checks'),
     tags=["ecocounter", "data_checks"],
@@ -60,7 +59,7 @@ def ecocounter_check_dag():
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
-        execution_delta=timedelta(hours=1) #pull_ecocounter scheduled at '0 3 * * *'
+        execution_delta=timedelta(days=-7, hours=1) #pull_ecocounter scheduled at '0 3 * * *'
     )
 
     check_site_outages = SQLCheckOperatorWithReturnValue(
@@ -89,7 +88,6 @@ def ecocounter_check_dag():
     '''
     t_upstream_done >> [
         check_site_outages,
-        check_if_dow.override(task_id='check_if_sunday')(isodow=7) >> #ds = Sunday == notify on mondays
         check_unvalidated_sites
     ]
 
