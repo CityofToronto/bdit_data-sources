@@ -6,22 +6,22 @@ WITH out_of_order AS (
         'Site: `' || s.site_description || ' (site_id: ' || s.site_id
         || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_id ELSE '' END)
         || ')` - date last received: `' || MAX(c.datetime_bin::date)
-        || ' (' || '{{ ds }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
+        || ' (' || '{{ data_interval_end }} 00:00:00'::timestamp - MAX(c.datetime_bin::date) -- noqa: TMP
         || ')`' AS description
     FROM ecocounter.counts AS c --only validated sites
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     WHERE
-        c.datetime_bin >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
+        c.datetime_bin >= '{{ data_interval_end }} 00:00:00'::timestamp -- noqa: TMP
         - interval '{{ params.lookback }}' -- noqa: TMP
-        AND c.datetime_bin < '{{ ds }} 00:00:00'::timestamp + interval '1 day' -- noqa: TMP
+        AND c.datetime_bin < '{{ data_interval_end }} 00:00:00'::timestamp + interval '1 day' -- noqa: TMP
     GROUP BY
         --find both sites and site/flow combos which are out of order.
         GROUPING SETS ((s.site_id), (s.site_id, f.flow_id)),
         s.site_description
     HAVING
         MAX(c.datetime_bin::date)
-        < '{{ ds }} 00:00:00'::timestamp - interval '{{ params.min_duration }}' -- noqa: TMP, LT05
+        < '{{ data_interval_end }} 00:00:00'::timestamp - interval '{{ params.min_duration }}' -- noqa: TMP, LT05
 ),
 
 ongoing_outages AS (
