@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     offset_direction_degrees double precision,
     location_source smallint,
     location_description_overwrite character varying,
+    geom geometry,
     UNIQUE(division_id, entity_id, start_timestamp)
 );
 
