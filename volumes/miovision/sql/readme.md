@@ -1,5 +1,4 @@
 <!-- TOC -->
-
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -68,7 +67,7 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 ### `intersections`
 
-Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/miovision_intersections.geojson):
+Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/mio_intersections.geojson):
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -411,13 +410,18 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](table/create-mv-mio_cent.sql) when intersections are added. **The process of updating this table is in need of an update, including updating references from `gis` to `gis_core`**
+This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](updates/update-centreline_miovision.sql) when intersections are added. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-centreline_id| numeric | Corresponds to `geo_id` in `gis.centreline`|14016757|
+centreline_id| numeric | Corresponds to `centreline_id` in `gis_core.centreline` |14016757|
 intersection_uid| integer | ID for intersection | 1 |
 leg| text | A segment that forms part of a miovision intersection, identified by its location relative to the centre of the intersection|W|
+
+**Known issues:**
+- 91: Lakeshore and Spadina - Two centrelines matched to West leg are actually legit. One is for the Gardiner off-ramp (Left turns only) and one is for Lakeshore (Thru + Right). They could be differentiated by movement.
+- 78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road / cemetery entrance).
+- 68: Steeles and Jane, N leg is outside of TO.
 
 ### `alerts`
 
@@ -583,4 +587,4 @@ The `anomalous_ranges` table is populated in different ways:
   - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
   - automatically by a [daily script](function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
     - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
-  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks README.md](../dev_notebooks/README.md) (including notebooks and code).
+  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks readme.md](../dev_notebooks/readme.md) (including notebooks and code).
