@@ -67,7 +67,7 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 ### `intersections`
 
-Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/miovision_intersections.geojson):
+Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/mio_intersections.geojson):
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -420,8 +420,8 @@ leg| text | A segment that forms part of a miovision intersection, identified by
 
 **Known issues:**
 - 91: Lakeshore and Spadina - Two centrelines matched to West leg are actually legit. One is for the Gardiner off-ramp (Left turns only) and one is for Lakeshore (Thru + Right). They could be differentiated by movement.
-- 78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road).
-- 68: Steels and Jane, N leg is outside of TO.
+- 78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road / cemetery entrance).
+- 68: Steeles and Jane, N leg is outside of TO.
 
 ### `alerts`
 
