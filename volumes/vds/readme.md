@@ -1,35 +1,39 @@
 # Vehicle Detector System (VDS) data  
 
 # Table of contents
-1. [Introduction](#introduction)
-    - [Overview of Sensor Classes](#overview-of-sensor-classes)
-      - [Division_id 2](#division_id2)
-      - [Division_id 8001](#division_id8001)
-    - [How do I access it?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
-    - [Data Availability](#data-availability)
-    - [How was it aggregated and filtered?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
-    - [Future Work](#future-work)
-2. [Table Structure](#table-structure)
-    - [Tips for Use](#tips-for-use)
-    - [Lookup Tables and Views](#lookup-tables-and-views)
-      - [vds.vdsconfig](#vdsvdsconfig)
-      - [vds.entity_locations](#vdsentity_locations)
-      - [vds.detector_inventory](#vdsdetector_inventory)
-    - [Aggregate Tables](#aggregate-tables)
-      - [vds.counts_15min](#vdscounts_15min)
-      - [vds.counts_15min_bylane](#vdscounts_15min_bylane)
-      - [vds.veh_speeds_15min](#vdsveh_speeds_15min)
-      - [vds.veh_length_15min](#vdsveh_length_15min)
-    - [Raw Data](#raw-data)
-      - [vds.raw_vdsdata](#vdsraw_vdsdata)
-      - [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
-    - [Cursed](#cursed)
-      - [vds.detector_inventory_cursed](#vdsdetector_inventory_cursed)
-3. [Data Ops](#Data-Ops)
+- [Vehicle Detector System (VDS) data](#vehicle-detector-system-vds-data)
+- [Table of contents](#table-of-contents)
+- [Introduction](#introduction)
+  - [Overview of Sensor Classes](#overview-of-sensor-classes)
+    - [division\_id=2](#division_id2)
+    - [division\_id=8001](#division_id8001)
+  - [How do I access it? Where is the OpenData (if it exists)?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
+  - [Data Availability](#data-availability)
+  - [How was it aggregated \& filtered? What pitfalls should I avoid?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
+  - [Future Work](#future-work)
+- [Table Structure](#table-structure)
+  - [Tips for Use](#tips-for-use)
+  - [Lookup Tables and Views](#lookup-tables-and-views)
+    - [vds.vdsconfig](#vdsvdsconfig)
+    - [vds.entity\_locations](#vdsentity_locations)
+    - [vds.detector\_inventory](#vdsdetector_inventory)
+    - [`vds.config_comms_device`](#vdsconfig_comms_device)
+  - [Aggregate Tables](#aggregate-tables)
+    - [vds.counts\_15min](#vdscounts_15min)
+    - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
+    - [vds.veh\_speeds\_15min](#vdsveh_speeds_15min)
+    - [vds.veh\_length\_15min](#vdsveh_length_15min)
+  - [Raw Data](#raw-data)
+    - [vds.raw\_vdsdata](#vdsraw_vdsdata)
+    - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
+  - [Cursed](#cursed)
+    - [vds.detector\_inventory\_cursed](#vdsdetector_inventory_cursed)
+- [Data Ops](#data-ops)
   - [DAG Design](#dag-design)
-    - [vds_pull_vdsdata](#vds_pull_vdsdata)
-    - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
-  - [Something went wrong](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
+    - [vds\_pull\_vdsdata DAG](#vds_pull_vdsdata-dag)
+    - [vds\_pull\_vdsvehicledata DAG](#vds_pull_vdsvehicledata-dag)
+    - [vds\_check DAG](#vds_check-dag)
+  - [Data Ops: something went wrong predictably, how do I fix it?](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
 
 # Introduction 
 
@@ -430,7 +434,7 @@ The DAGs need to be run on-prem to access ITSC database and are hosted for now o
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
-  ![](vds_pull_vdsdata_dag.png)
+  ![](img/vds_pull_vdsdata_dag.png)
 
 </div>
 
@@ -465,7 +469,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
-  ![](vds_pull_vdsvehicledata_dag.png)
+  ![](img/vds_pull_vdsvehicledata_dag.png)
 
 </div>
 
@@ -490,6 +494,15 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   **`data_checks`**  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
+<!-- vds_check_doc_md -->
+### vds_check DAG 
+
+- `t_upstream_done` waits for the `vds_inventory` update task to be completed in `vds_pull` DAG before running the data checks.  
+- `check_missing_centreline_id` checks for rows in `vds_inventory` with missing `centreline_id`.
+- `check_missing_expected_bins` checks for rows in `vds_inventory` with missing `expected_bins`.
+
+<!-- vds_check_doc_md -->
 
 ## Data Ops: something went wrong predictably, how do I fix it?
 **Need to retry a task?**  
