@@ -161,7 +161,20 @@ def vdsdata_dag():
             retries=1
         )
 
-        summarize_v15_task
+        refresh_vds_inventory = PostgresOperator(
+            task_id="refresh_vds_inventory",
+            sql="REFRESH MATERIALIZED VIEW vds.vds_inventory WITH DATA;",
+            postgres_conn_id='vds_bot',
+            autocommit=True
+        )
+
+        t_done = ExternalTaskMarker(
+            task_id="done",
+            external_dag_id="vds_check",
+            external_task_id="starting_point"
+        )
+
+        summarize_v15_task >> refresh_vds_inventory >> t_done
         summarize_v15_bylane_task
 
     @task_group
