@@ -14,6 +14,7 @@
 - [Table Structure](#table-structure)
   - [Tips for Use](#tips-for-use)
   - [Lookup Tables and Views](#lookup-tables-and-views)
+    - [vds.vds\_inventory](#vdsvds_inventory)
     - [vds.vdsconfig](#vdsvdsconfig)
     - [vds.entity\_locations](#vdsentity_locations)
     - [vds.detector\_inventory](#vdsdetector_inventory)
@@ -131,12 +132,38 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 ## Tips for Use
 - The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
-- For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.  
+- For RESCU requests, make use of the manually defined fields in `vds.vds_inventory` for easy filtering.  
 - Data quality checks have not been implemented in this new schema. For examples of past work see:  
       - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).
       - @gabrielwol did work to identify periods of network wide or individual sensor outages on the RESCU network which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/3ba3af5068e96191caffab524d42ae52fe7be7b2/volumes/rescu/README.md#1--are-there-known-data-gapsincomplete-data)  
 
 ## Lookup Tables and Views
+
+### vds.vds_inventory
+**The main table for filtering and identifying VDS/RESCU sensors.**
+This mat view draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. It is updated daily via Airflow `vds_pull_vdsdata` DAG.  
+Use the geoms and `first_active` and `last_active` fields in this view to select your sensors and then join to `counts_15min_div2` using `vdsconfig_uid` and `entity_location_uid`. 
+
+Row count: 363
+| column_name   | data_type         | sample           | description   |
+|:--------------|:------------------|:-----------------|:--------------|
+| vdsconfig_uid  | integer           | 382             |               |
+| entity_location_uid | integer      | 10350           |               |
+| detector_id   | character varying | DW0130DWG        |               |
+| det_type      | text              | Signal Detectors | Manual field. Possible values: 'RESCU Detectors', 'Blue City AI', 'Smartmicro Sensors' |
+| det_loc       | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP/Allen North', 'DVP South', 'Gardiner/Lakeshore East', 'Gardiner/Lakeshore West', 'Kingston Rd' |
+| det_group     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP', 'Lakeshore', 'Gardiner', 'Allen', 'Kingston Rd', 'On-Ramp' |
+| direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
+| expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
+| comms_desc | text | WHD - Glen Rouge | From `config_comms_device.souce_id` |
+| det_tech | text | Wavetronix | Manual field. Only defined for RESCU network. Possible values: 'Smartmicro','Wavetronix','Inductive' |
+| detector_loc | text   | WESTBOUND GARDINER and COLBORNE LODGE | |
+| sensor_geom | geom    | | geom from `vds.entity_locations` |  
+| centreline_id | integer |  | `centreline_id` from `vds.centreline_vds` | 
+| centreline_geom | geom    |  | geom from `gis_core.centreline_latest` | 
+| first_active | timestamp  | | first timestamp the sensor produced data |
+| last_active | timestamp  | | last timestamp the sensor has produced data to date | 
+
 
 ### vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
