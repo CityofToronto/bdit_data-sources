@@ -2,33 +2,32 @@
 
 - [Overview](#overview)
 - [API](#api)
-  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
-    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
-    - [Error responses](#error-responses)
-  - [Input Files](#input-files)
-  - [How to run the api](#how-to-run-the-api)
-    - [Command Line Options](#command-line-options)
-  - [Classifications](#classifications)
-    - [API Classifications](#api-classifications)
-    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
-  - [PostgreSQL Functions](#postgresql-functions)
-  - [Invalid Movements](#invalid-movements)
-  - [How the API works](#how-the-api-works)
-  - [Repulling data](#repulling-data)
+    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+        - [Turning Movement Count TMC](#turning-movement-count-tmc)
+        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
+        - [Error responses](#error-responses)
+    - [Input Files](#input-files)
+    - [How to run the api](#how-to-run-the-api)
+        - [Command Line Options](#command-line-options)
+    - [Classifications](#classifications)
+        - [API Classifications](#api-classifications)
+        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
+    - [PostgreSQL Functions](#postgresql-functions)
+    - [Invalid Movements](#invalid-movements)
+    - [How the API works](#how-the-api-works)
+    - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-  - [**`miovision_pull`**](#miovision_pull)
-    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
-    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
-    - [`data_checks` TaskGroup](#data_checks-taskgroup)
-  - [**`miovision_check`**](#miovision_check)
-  - [Notes](#notes)
+    - [**miovision_pull**](#miovision_pull)
+        - [check_partitions TaskGroup](#check_partitions-taskgroup)
+        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
+        - [data_checks TaskGroup](#data_checks-taskgroup)
+    - [**miovision_check**](#miovision_check)
+    - [Notes](#notes)
 
-<!-- /TOC -->
 <!-- /TOC -->
 
 # Overview
-This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/README.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
+This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/readme.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
 
 # API
 
@@ -136,7 +135,7 @@ In command prompt, navigate to the folder where the python file is [located](../
 - multiple days
 - multiple, specific intersections
 
-The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/Readme.md#update-miovision_apiintersection_movements).  
+The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/readme.md#update-miovision_apiintersection_movements).  
 
 ## Classifications
 
@@ -169,7 +168,7 @@ The script will return an error if a classificaiton received from the API does n
 
 ## PostgreSQL Functions
 
-To perform the data processing, the API script calls several Postgres functions in the `miovision_api` schema. More information about these functions and the database tables can be found in the [sql readme](../sql/README.md). 
+To perform the data processing, the API script calls several Postgres functions in the `miovision_api` schema. More information about these functions and the database tables can be found in the [sql readme](../sql/readme.md). 
 
 ## Invalid Movements
 
@@ -247,7 +246,7 @@ Neither method supports deleting and re-processing data that is not in **daily b
 
 # Airflow DAGs
 
-This section describes the Airflow DAGs which we use to pull, aggregate, and run data checks on Miovision data. Deprecated DAGs are described in the Archive [here](../Archive.md#11-deprecated-airflow-dags).
+This section describes the Airflow DAGs which we use to pull, aggregate, and run data checks on Miovision data. Deprecated DAGs are described in the Archive [here](../archive.md#11-deprecated-airflow-dags).
 
 <!-- miovision_pull_doc_md -->
 ## **`miovision_pull`**  
@@ -260,7 +259,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
   - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
-- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/README.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
+- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
 
 ### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  
