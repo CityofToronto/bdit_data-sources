@@ -33,7 +33,7 @@ DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2023, 12, 18, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 5, 10, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -54,7 +54,7 @@ def vds_check_dag():
 
     t_upstream_done = ExternalTaskSensor(
         task_id="starting_point",
-        external_dag_id="vds_pull",
+        external_dag_id="vds_pull_vdsdata",
         external_task_id="summarize_v15.done",
         poke_interval=3600, #retry hourly
         mode="reschedule",
