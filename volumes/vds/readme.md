@@ -1,8 +1,6 @@
-# Vehicle Detector System (VDS) data  
+<!-- TOC -->
 
-# Table of contents
 - [Vehicle Detector System (VDS) data](#vehicle-detector-system-vds-data)
-- [Table of contents](#table-of-contents)
 - [Introduction](#introduction)
   - [Overview of Sensor Classes](#overview-of-sensor-classes)
     - [division\_id=2](#division_id2)
@@ -19,6 +17,7 @@
     - [vds.entity\_locations](#vdsentity_locations)
     - [vds.detector\_inventory](#vdsdetector_inventory)
     - [`vds.config_comms_device`](#vdsconfig_comms_device)
+    - [`vds.centreline_vds`](#vdscentreline_vds)
   - [Aggregate Tables](#aggregate-tables)
     - [vds.counts\_15min](#vdscounts_15min)
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
@@ -35,6 +34,15 @@
     - [vds\_pull\_vdsvehicledata DAG](#vds_pull_vdsvehicledata-dag)
     - [vds\_check DAG](#vds_check-dag)
   - [Data Ops: something went wrong predictably, how do I fix it?](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
+    - [**New sensor type added?**](#new-sensor-type-added)
+    - [**Sensor type incorrectly classified?**](#sensor-type-incorrectly-classified)
+    - [**Raw data missing fkeys?**](#raw-data-missing-fkeys)
+    - [**No/low data system wide?**](#nolow-data-system-wide)
+    - [**No data for a specific sensor?**](#no-data-for-a-specific-sensor)
+    - [Updating `vds.centreline_vds`](#updating-vdscentreline_vds)
+
+<!-- /TOC -->
+# Vehicle Detector System (VDS) data 
 
 # Introduction 
 
@@ -272,6 +280,7 @@ Row count: 666
 ### `vds.centreline_vds`
 Table to store VDS sensors - centreline equivalency. See `vds.vds_inventory` mat view for ease of use.
 Can be joined using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
+See update instructions [below](#updating-vdscentreline_vds). 
 
 Row count: 392
 | column_name     | data_type                   | sample                     |   Comments |
