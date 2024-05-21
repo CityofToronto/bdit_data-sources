@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.miovision_doubling(end_date date)
+CREATE OR REPLACE FUNCTION gwolofs.miovision_doubling_summary(end_date date)
 RETURNS TABLE (
     _check boolean,
     summ text,
@@ -8,40 +8,66 @@ $$
 
     WITH doublings AS (
         SELECT
-            i.intersection_name || ' (' || vd.intersection_uid || ')' AS intersection,
+            dt,
+            intersection_uid,
+            classification_uid,
+            this_week_volume,
+            previous_week_volume,
+            CASE WHEN dt = 1 + lag(dt, 1) OVER (
+                PARTITION BY intersection_uid, classification_uid ORDER BY dt
+            ) THEN 0 ELSE 1 END AS run_bool
+        FROM gwolofs.miovision_doublings
+    ),
+
+    runs AS (
+        SELECT
+            intersection_uid,
+            classification_uid,
+            dt,
+            this_week_volume,
+            previous_week_volume,
+            SUM(run_bool) OVER (
+                PARTITION BY intersection_uid, classification_uid ORDER BY dt
+            ) AS run_id
+        FROM doublings
+        ORDER BY intersection_uid, classification_uid, dt
+    ),
+
+    runs_ranked AS (
+        SELECT
+            intersection_uid,
+            classification_uid,
+            dt,
+            this_week_volume,
+            previous_week_volume,
+            rank() OVER (
+                PARTITION BY intersection_uid, classification_uid, run_id ORDER BY dt
+            ) AS run_rank
+        FROM runs
+    ),
+
+    warnings AS (
+        SELECT
+            i.intersection_name || ' (' || rr.intersection_uid || ')' AS intersection,
             CASE
-                WHEN vd.classification_uid = 2 THEN 'Bicycle TMC'
-                WHEN vd.classification_uid = 10 THEN 'Bicycle Approach'
+                WHEN rr.classification_uid = 2 THEN 'Bicycle TMC'
+                WHEN rr.classification_uid = 10 THEN 'Bicycle Approach'
                 ELSE c.classification
-            END,
-            SUM(vd.daily_volume) FILTER (WHERE w.this_week) AS this_week_volume,
-            SUM(vd.daily_volume) FILTER (WHERE NOT w.this_week) AS previous_week_volume,
-            COUNT(DISTINCT vd.dt::date) FILTER (WHERE w.this_week) AS this_week_days,
-            COUNT(DISTINCT vd.dt::date) FILTER (WHERE NOT w.this_week) AS previous_week_days
-        FROM miovision_api.volumes_daily_unfiltered AS vd
+            END AS classification,
+            dt,
+            this_week_volume,
+            previous_week_volume
+        FROM runs_ranked AS rr
         JOIN miovision_api.intersections AS i USING (intersection_uid)
-        JOIN miovision_api.classifications AS c USING (classification_uid),
-        LATERAL(
-            SELECT dt >= end_date::date + interval '1 day' - interval '7 days' AS this_week
-        ) AS w
+        JOIN miovision_api.classifications AS c USING (classification_uid)
         WHERE
-            vd.classification_uid IN (1,2,6,10)
-            AND vd.dt >= end_date::date + interval '1 day' - interval '14 days'
-            AND vd.dt < end_date::date + interval '1 day'
-        GROUP BY
-            vd.intersection_uid,
-            i.intersection_name,
-            vd.classification_uid,
-            c.classification
-        HAVING
-            --doubling of volume week over week
-            SUM(vd.daily_volume) FILTER (WHERE w.this_week)
-            >= 2 * SUM(vd.daily_volume) FILTER (WHERE NOT w.this_week)
-            --last week (denominator) has all 7 days of data
-            --this week having less than 7 days is OK (=worse)
-            AND COUNT(DISTINCT vd.dt::date) FILTER (WHERE NOT w.this_week) = 7
+            --notify on every 7th day
+            mod(run_rank-1, 7) = 0
+            --alerts in last 7 days
+            AND dt >= end_date - interval '7 days'
+
     )
-    
+
     SELECT
         NOT(COUNT(*) > 0) AS _check,
         'Volumes have doubled week over week in the following ' || COUNT(*)
@@ -52,11 +78,13 @@ $$
             || '`, volume: `' || to_char(this_week_volume, 'FM9,999,999')
             || ' (last week: ' || to_char(previous_week_volume, 'FM9,999,999') || ')`'
         ) AS summary
-    FROM doublings;
+    FROM warnings;
+
 $$
 LANGUAGE SQL;
 
-ALTER FUNCTION gwolofs.miovision_doubling OWNER TO miovision_admins;
+ALTER FUNCTION gwolofs.miovision_doubling_summary(date) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION gwolofs.miovision_doubling_summary(date) TO miovision_api_bot;
 
-COMMENT ON FUNCTION gwolofs.miovision_doubling
-IS '(in development) Function to identify when Miovision volumes have doubled week over week.'
+COMMENT ON FUNCTION gwolofs.miovision_doubling_summary(date)
+IS '(in development) Function to identify when Miovision volumes have doubled week over week.';
