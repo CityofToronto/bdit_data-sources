@@ -3,15 +3,14 @@ import os
 
 from airflow import DAG
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.python_operator import PythonOperator, ShortCircuitOperator
+from airflow.operators.python_operator import ShortCircuitOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.sensors.external_task import ExternalTaskSensor
-from airflow.operators.sql import SQLCheckOperator
+from airflow.models import Variable
+from airflow.decorators import dag, task
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -19,7 +18,6 @@ from psycopg2 import connect, Error
 import logging
 import pendulum
 try:
-    
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
@@ -80,8 +78,8 @@ def citywide_tti_aggregate():
                                        task_id='aggregate_daily',
                                        postgres_conn_id='natalie',
                                        autocommit=True,
-                                       retries = 0,
-                                       dag=dag)
+                                       retries = 0
+                                       )
 
     wait_for_here >> aggregate_daily
 
