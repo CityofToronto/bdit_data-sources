@@ -21,5 +21,5 @@ REVOKE ALL ON TABLE vds.centreline_vds FROM vds_bot;
 GRANT SELECT ON TABLE vds.centreline_vds TO vds_bot;
 
 COMMENT ON TABLE vds.centreline_vds IS E''
-'Use for joining VDS sensors to the centreline. Join using: '
-'`vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.';
+'Table to store VDS sensors - centreline equivalency. '
+'See `vds.vds_inventory` mat view for ease of use.'

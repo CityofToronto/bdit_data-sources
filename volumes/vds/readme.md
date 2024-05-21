@@ -140,7 +140,7 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 ## Lookup Tables and Views
 
 ### vds.vds_inventory
-**The main table for filtering and identifying VDS/RESCU sensors.**
+**The main table for filtering and identifying VDS/RESCU sensors locations.**
 This mat view draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. It is updated daily via Airflow `vds_pull_vdsdata` DAG.  
 Use the geoms and `first_active` and `last_active` fields in this view to select your sensors and then join to `counts_15min_div2` using `vdsconfig_uid` and `entity_location_uid`. 
 
@@ -268,6 +268,16 @@ Row count: 666
 | has_gps_unit    | boolean                     | False                      |  |
 | device_type     | smallint                    | 10                         |  |
 | description     | character varying           |                            |  |
+
+### `vds.centreline_vds`
+Table to store VDS sensors - centreline equivalency. See `vds.vds_inventory` mat view for ease of use.
+Can be joined using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
+
+Row count: 392
+| column_name     | data_type                   | sample                     |   Comments |
+|:----------------|:----------------------------|:---------------------------|-----------:|
+| centreline_id     | bigint                    |                           | |
+| vdsconfig_uid     | integer                    |                           | |
 
 ## Aggregate Tables
 
@@ -535,20 +545,30 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
 **Need to retry a task?**  
 - Task groups are organized to include "delete" statements prior to each insert, so you should safely be able to re-run any failed **task group**.  
 
-**New sensor type added?**  
+### **New sensor type added?**  
 - If new sensor types are added, you may need to update `vds.detector_inventory` `expected_bins` [case statement](sql/views/create-view-detector_inventory.sql)
 and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).  
 
-**Sensor type incorrectly classified?**  
+### **Sensor type incorrectly classified?**  
 - If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`  
 
-**Raw data missing fkeys?**  
+### **Raw data missing fkeys?**  
 - If there are updates to the `vdsconfig` or `entity_locations` tables following inserts to raw_* tables (this shouldn't happen anymore since there are now task dependencies),
 you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).  
 
-**No/low data system wide?**  
+### **No/low data system wide?**  
 - The pipeline is running succesfully but producing low/no volumes of data? First double check Transnomis Database and ITS Central, then contact Simon Foo (ITS Central/Transnomis) and Steven Bon (City of Toronto).  
 
-**No data for a specific sensor?**  
+### **No data for a specific sensor?**  
 - Traffic Plant / Installation and Maintenance (TPIM) is responsible for Hardware. 
 - There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management.   
+
+### Updating `vds.centreline_vds`
+See script [here](sql/adhoc_updates/update-missing_vds_centreline.sql) for an example of spatially joining sensors to the centreline.  
+Additionally, here is an example QGIS map used to verify results / manually identify centreline_ids. 
+
+<div style="width: 75%";>
+
+  ![](img/centreline_vds_manual_edits.png)
+
+</div>
