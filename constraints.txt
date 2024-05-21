@@ -584,7 +584,7 @@ requests-mock==1.11.0
 requests-ntlm==1.2.0
 requests-oauthlib==1.4.0
 requests-toolbelt==1.0.0
-requests==2.31.0
+requests==2.32.0
 responses==0.25.0
 restructuredtext-lint==1.4.0
 rfc3339-validator==0.1.4
