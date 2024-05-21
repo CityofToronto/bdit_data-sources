@@ -11,7 +11,7 @@ WITH missing AS (
 SELECT
     NOT(COUNT(*) > 0) AS _check,
     CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END || COUNT(*)
-        || ' vds detector with missing centreline_id. Please update in `vds.centreline_vds`.'
+    || ' vds detector with missing centreline_id. Please update in `vds.centreline_vds`.'
     AS summ,
     array_agg(
         'vdsconfig_uid: `' || vdsconfig_uid
