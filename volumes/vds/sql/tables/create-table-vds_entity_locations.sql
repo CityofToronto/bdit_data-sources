@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS vds.entity_locations (
-    uid serial PRIMARY KEY, 
+    uid serial PRIMARY KEY,
     division_id smallint,
     entity_type smallint,
     entity_id integer,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS vds.entity_locations (
     location_source smallint,
     location_description_overwrite character varying,
     geom geometry,
-    UNIQUE(division_id, entity_id, start_timestamp)
+    UNIQUE (division_id, entity_id, start_timestamp)
 );
 
 ALTER TABLE vds.entity_locations OWNER TO vds_admins;
@@ -39,9 +39,9 @@ duplicates on entity_id corresponding to updated locations over time.';
 -- DROP INDEX IF EXISTS vds.ix_entity_locations_full;
 CREATE INDEX IF NOT EXISTS ix_entity_locations_full
 ON vds.entity_locations
-USING btree(
-    division_id ASC nulls last,
-    entity_id ASC nulls last, -- noqa: PRS
-    start_timestamp ASC nulls last,
-    end_timestamp ASC nulls last
+USING btree (
+    division_id ASC NULLS LAST,
+    entity_id ASC NULLS LAST,
+    start_timestamp ASC NULLS LAST,
+    end_timestamp ASC NULLS LAST
 );
