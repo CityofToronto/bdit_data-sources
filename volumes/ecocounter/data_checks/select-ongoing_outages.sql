@@ -6,7 +6,7 @@ WITH out_of_order AS (
         'Site: `' || s.site_description || ' (site_id: ' || s.site_id
         || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_id ELSE '' END)
         || ')` - date last received: `' || MAX(c.datetime_bin::date)
-        || ' (' || '{{ data_interval_end }}'::date - MAX(c.datetime_bin::date) -- noqa: TMP
+        || ' (' || '{{ data_interval_end }}'::date - MAX(c.datetime_bin::date) -- noqa: TMP, LT05
         || ' days)`' AS description
     FROM ecocounter.counts AS c --only validated sites
     JOIN ecocounter.flows AS f USING (flow_id)
@@ -14,7 +14,7 @@ WITH out_of_order AS (
     WHERE
         c.datetime_bin >= '{{ data_interval_end }}'::date -- noqa: TMP
         - interval '{{ params.lookback }}' -- noqa: TMP
-        AND c.datetime_bin < '{{ data_interval_end }}'::date + interval '1 day' -- noqa: TMP
+        AND c.datetime_bin < '{{ data_interval_end }}'::date + interval '1 day' -- noqa: TMP, LT05
     GROUP BY
         --find both sites and site/flow combos which are out of order.
         GROUPING SETS ((s.site_id), (s.site_id, f.flow_id)),
