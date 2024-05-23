@@ -10,7 +10,7 @@ WITH unvalidated_sites AS (
     FROM ecocounter.sites_unfiltered AS site
     LEFT JOIN ecocounter.flows_unfiltered AS flow USING (site_id)
     LEFT JOIN ecocounter.counts_unfiltered AS counts
-        ON counts.datetime_bin >= '{{ ds_add(ds, 7) }}'::date -- noqa: TMP, LT05
+        ON counts.datetime_bin >= '{{ macros.ds_add(ds, 7) }}'::date -- noqa: TMP, LT05
         + interval '1 day' - interval '{{ params.lookback }}' -- noqa: TMP
         AND flow.flow_id = counts.flow_id
     WHERE
