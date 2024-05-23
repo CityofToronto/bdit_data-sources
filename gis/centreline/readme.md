@@ -10,7 +10,7 @@ The centreline data is structured as an undirected graph with edges and nodes. B
 
 ## Where It's Stored
 
-Centreline data are stored in the `gis_core` schema in the `bigdata` database. Both the interection and centreline segment layer are stored in partitioned tables, where we pull in a new version of these layer quarterly from GCCview through an automatic [airflow process](/dags/gcc_layers_pull.py). Other centreline layers not stored in the `gis_core` schema has been deprecated. 
+Centreline data are stored in the `gis_core` schema in the `bigdata` database. Both the interection and centreline segment layer are stored in partitioned tables, where we pull in a new version of these layer quarterly from GCCview through an automatic [airflow process](/dags/gcc_layers_pull.py). Other centreline layers not stored in the `gis_core` schema (for example: `gis`) has been deprecated. 
 
 ### Centreline Segments (edges)
 
