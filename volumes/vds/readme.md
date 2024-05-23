@@ -558,6 +558,26 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
 - If new sensor types are added, you may need to update `vds.detector_inventory` `expected_bins` [case statement](sql/views/create-view-detector_inventory.sql)
 and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).  
 
+You may use this query as a base for identifying the expected_bins of a new sensor:  
+```sql
+WITH data_ AS (
+        SELECT DISTINCT dt, vdsconfig_uid, dt - lag(dt, 1) OVER (PARTITION BY vdsconfig_uid ORDER BY dt) AS dif
+        FROM vds.raw_vdsdata WHERE vdsconfig_uid IN 
+        ( --edit sensors here!
+            2374388,3672168,3683400,3683402,3683403
+        )
+        ORDER BY vdsconfig_uid, dt
+)
+
+SELECT DISTINCT ON (vdsconfig_uid) vdsconfig_uid, dif, cnt
+FROM (
+    SELECT vdsconfig_uid, dif, COUNT(*) AS cnt
+    FROM data_
+    GROUP BY 1, 2
+) a
+ORDER BY vdsconfig_uid, cnt DESC
+```
+
 ### **Sensor type incorrectly classified?**  
 - If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`  
 
