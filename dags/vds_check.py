@@ -8,6 +8,7 @@ import os
 import logging
 import pendulum
 from datetime import timedelta
+from functools import partial
 
 from airflow.decorators import dag
 from airflow.models import Variable 
@@ -38,7 +39,7 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True)
 }
 
 @dag(
