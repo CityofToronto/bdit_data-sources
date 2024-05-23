@@ -73,7 +73,7 @@ def vds_check_dag():
 
     check_missing_expected_bins = SQLCheckOperatorWithReturnValue(
         task_id="check_missing_expected_bins",
-        sql="select-missing_centreline.sql",
+        sql="select-missing_expected_bins.sql",
         conn_id="vds_bot"
     )
     check_missing_expected_bins.doc_md = '''

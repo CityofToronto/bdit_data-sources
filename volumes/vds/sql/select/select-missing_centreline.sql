@@ -3,8 +3,7 @@ WITH missing AS (
         vdsconfig_uid,
         detector_id
     FROM vds.vds_inventory
-    --change this after testing!
-    WHERE centreline_id IS NOT NULL LIMIT 3;
+    WHERE centreline_id IS NULL
     ORDER BY vdsconfig_uid
 )
 
