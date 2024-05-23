@@ -1,10 +1,10 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT DISTINCT ON (c.uid, c.division_id)
-        pairs.detector_uid,
-        pairs.division_id,
+        pairs.vdsconfig_uid AS uid, --maintain this duplicate column for backwards compatibility
         pairs.vdsconfig_uid,
         pairs.entity_location_uid,
+        pairs.division_id,
         c.detector_id,
         pairs.first_active,
         pairs.last_active,
@@ -49,6 +49,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 OR c.detector_id SIMILAR TO 'SMARTMICRO - D\w{8}' THEN 3 --5 min bins
             WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
+            WHEN dtypes.det_type = 'Houston Radar' THEN 1 --15 min bins
         END AS expected_bins,
         comms.source_id AS comms_desc,
         --rescu techology type, determined by communication device in some cases.
@@ -90,6 +91,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND c.division_id = 8001
                     THEN 'Signal Preemption'
                 WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
+                WHEN c.detector_id LIKE 'WHALESPOUT' THEN 'Houston Radar'
                 WHEN
                     c.detector_id LIKE ANY(
                         '{"%SMARTMICRO%", "%YONGE HEATH%",
@@ -97,7 +99,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                     )
                     --new lakeshore/spadina smartmicro sensors
                     OR c.vds_id IN (
-                        6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577
+                        6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577, 2374388
                     )
                     --new lakeshore smartmicro sensors
                     OR (
