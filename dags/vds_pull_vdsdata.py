@@ -161,21 +161,13 @@ def vdsdata_dag():
             retries=1
         )
 
-        refresh_vds_inventory = PostgresOperator(
-            task_id="refresh_vds_inventory",
-            sql="REFRESH MATERIALIZED VIEW vds.vds_inventory WITH DATA;",
-            postgres_conn_id='vds_bot',
-            autocommit=True
-        )
-
-        t_done = ExternalTaskMarker(
-            task_id="done",
-            external_dag_id="vds_check",
-            external_task_id="starting_point"
-        )
-
-        summarize_v15_task >> refresh_vds_inventory >> t_done
-        summarize_v15_bylane_task
+        summarize_v15_task, summarize_v15_bylane_task
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="vds_check",
+        external_task_id="starting_point"
+    )
 
     @task_group
     def data_checks():
@@ -196,6 +188,11 @@ def vdsdata_dag():
             )
             check_avg_rows
 
-    [update_inventories(), check_partitions()] >> pull_vdsdata() >> summarize_v15() >> data_checks()
+    (
+        [update_inventories(), check_partitions()] >>
+        pull_vdsdata() >>
+        summarize_v15() >> t_done >>
+        data_checks()
+    )
 
 vdsdata_dag()
