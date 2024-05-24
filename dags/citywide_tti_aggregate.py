@@ -42,10 +42,9 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 # Slack alert
 SLACK_CONN_ID = 'slack_data_pipeline'
 
-default_args = {'owner':'natalie',
+default_args = {'owner': ','.join(DAG_OWNERS),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2024, 5, 16, tz="America/Toronto"),
-                'email': ['natalie.chan@toronto.ca'],
                 'email_on_failure': False,
                 'email_on_success': False,
                 'retries': 0,
@@ -65,7 +64,6 @@ default_args = {'owner':'natalie',
 ## Tasks ##
 ## ExternalTaskSensor to wait for pull_here
 def citywide_tti_aggregate():
-    
     wait_for_here = ExternalTaskSensor(task_id='wait_for_here',
                                        external_dag_id='pull_here',
                                        external_task_id='pull_here',
@@ -74,11 +72,12 @@ def citywide_tti_aggregate():
 
 ## Postgres Tasks
 # Task to aggregate citwyide tti
-    aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti('{{ yesterday_ds }}')''',
+    aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti('%(agg_date)s')''',
                                        task_id='aggregate_daily',
-                                       postgres_conn_id='natalie',
+                                       postgres_conn_id='congestion_bot',
                                        autocommit=True,
-                                       retries = 0
+                                       retries = 0,
+                                       params={"agg_date": ds_add(ds, -1)},
                                        )
 
     wait_for_here >> aggregate_daily
