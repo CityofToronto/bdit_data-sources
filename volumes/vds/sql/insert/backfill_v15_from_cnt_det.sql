@@ -188,6 +188,8 @@ FROM generate_series(1993, 2016) AS years(yr);
 
 --for data 2017-2021, let's only fill in the sensors x days that
 --don't currently have data, but do in old FLOW data.
+--INSERT 0 559356
+--Query returned successfully in 2 min 23 secs.
 INSERT INTO vds.counts_15min (
     division_id, vdsconfig_uid, entity_location_uid, num_lanes, datetime_15min, count_15min, expected_bins
 )
@@ -209,6 +211,8 @@ WHERE
     AND orc.vds_sum IS NULL;
 
 --then insert the records pre-2017. 
+--INSERT 0 38429396
+--Query returned successfully in 17 min 24 secs.
 INSERT INTO vds.counts_15min (
     division_id, vdsconfig_uid, entity_location_uid, num_lanes, datetime_15min, count_15min, expected_bins
 )
