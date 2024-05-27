@@ -226,3 +226,28 @@ SELECT
     expected_bins
 FROM gwolofs.old_rescu_staging
 WHERE datetime_15min_rounded < '2017-01-01';
+
+--update vdsconfig_x_entity_locations with first and last dates.
+WITH updated_dates AS (
+    SELECT
+        division_id,
+        vdsconfig_uid,
+        entity_location_uid,
+        MIN(datetime_15min_rounded) AS min_dt,
+        MAX(datetime_15min_rounded) AS max_dt
+    FROM gwolofs.old_rescu_staging
+    GROUP BY
+        division_id,
+        vdsconfig_uid,
+        entity_location_uid
+)
+
+UPDATE vds.vdsconfig_x_entity_locations AS x
+SET
+    first_active = LEAST(ud.min_dt, x.first_active),
+    last_active = GREATEST(ud.max_dt, x.last_active)
+FROM updated_dates AS ud
+WHERE
+    x.division_id = ud.division_id
+    AND x.vdsconfig_uid = ud.vdsconfig_uid
+    AND x.entity_location_uid = ud.entity_location_uid;
