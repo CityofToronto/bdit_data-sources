@@ -1,14 +1,16 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT DISTINCT ON (c.uid, c.division_id)
-        pairs.vdsconfig_uid AS uid, --maintain this duplicate column for backwards compatibility
+        --maintain this duplicate column for backwards compatibility
+        pairs.vdsconfig_uid AS uid, --noqa: disable=L029
         pairs.vdsconfig_uid,
         pairs.entity_location_uid,
         pairs.division_id,
         c.detector_id,
         pairs.first_active,
         pairs.last_active,
-        (upper(e.main_road_name::text) || ' and '::text) || upper(e.cross_road_name::text) AS detector_loc,
+        (upper(e.main_road_name::text) || ' and '::text) || upper(e.cross_road_name::text)
+        AS detector_loc,
         e.geom AS sensor_geom,
         cl_vds.centreline_id,
         cl.geom AS centreline_geom,
@@ -20,7 +22,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN 'E' THEN 'Gardiner/Lakeshore East' --East of Yonge
                 WHEN 'W' THEN 'Gardiner/Lakeshore West' --West of Yonge
                 WHEN 'K' THEN 'Kingston Rd'
-                END
+            END
         END AS det_loc,
         CASE dtypes.det_type = 'RESCU Detectors'
             WHEN TRUE THEN CASE substring(substring(c.detector_id, 'D\w{8}'), 9, 1)
@@ -30,7 +32,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN 'A' THEN 'Allen'
                 WHEN 'K' THEN 'Kingston Rd'
                 WHEN 'R' THEN 'On-Ramp'
-                END
+            END
         END AS det_group,
         CASE dtypes.det_type = 'RESCU Detectors'
             WHEN TRUE THEN CASE substring(substring(c.detector_id, 'D\w{8}'), 8, 1)
@@ -38,7 +40,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN 'W' THEN 'Westbound'
                 WHEN 'S' THEN 'Southbound'
                 WHEN 'N' THEN 'Northbound'
-                END
+            END
         END AS direction,
         --new cases need to be updated manually and then updated in vds.count_15min%.
         CASE
@@ -62,7 +64,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN lower(comms.source_id) SIMILAR TO '%whd%'
                     THEN 'Wavetronix'
                 ELSE 'Inductive'
-                END
+            END
         END AS det_tech
     FROM vds.vdsconfig_x_entity_locations AS pairs
     LEFT JOIN vds.vdsconfig AS c
@@ -76,8 +78,8 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
         ON comms.fss_id = c.fss_id
         AND comms.division_id = c.division_id
         AND tsrange(c.start_timestamp, COALESCE(c.end_timestamp, now()::timestamp))
-            && tsrange(comms.start_timestamp, COALESCE(comms.end_timestamp, now()::timestamp)),
-        LATERAL(
+        && tsrange(comms.start_timestamp, COALESCE(comms.end_timestamp, now()::timestamp)),
+        LATERAL (
             SELECT CASE
                 WHEN c.division_id = 2 AND (
                     c.detector_id SIMILAR TO 'D\w{8}%'
@@ -99,14 +101,15 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                     )
                     --new lakeshore/spadina smartmicro sensors
                     OR c.vds_id IN (
-                        6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577, 2374388
+                        6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577,
+                        2374388
                     )
                     --new lakeshore smartmicro sensors
                     OR (
                         c.vds_id >= 7011490 AND c.vds_id <= 7011519
                     )
                     THEN 'Smartmicro Sensors'
-                END AS det_type
+            END AS det_type
         ) AS dtypes
     ORDER BY
         c.uid ASC,

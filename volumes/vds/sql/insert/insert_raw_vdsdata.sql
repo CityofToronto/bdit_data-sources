@@ -18,9 +18,9 @@ updated_dates AS (
     GROUP BY
         division_id,
         vdsconfig_uid,
-        entity_location_uid   
+        entity_location_uid
 )
-    
+
 UPDATE vds.vdsconfig_x_entity_locations AS x
 SET
     first_active = LEAST(ud.min_dt, x.first_active),
