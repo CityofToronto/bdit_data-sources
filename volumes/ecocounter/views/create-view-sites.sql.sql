@@ -5,7 +5,8 @@ CREATE VIEW ecocounter.sites AS (
         geom,
         facility_description,
         notes,
-        replaced_by_site_id
+        replaced_by_site_id,
+        centreline_id
     FROM ecocounter.sites_unfiltered
     WHERE validated
 );
