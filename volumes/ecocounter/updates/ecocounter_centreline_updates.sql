@@ -2,18 +2,18 @@
 
 CREATE TEMP TABLE ecocounter_centrelines AS (
     WITH centrelines AS (
-            SELECT
-                centreline_id,
-                linear_name_full,
-                ST_SetSRID(geom, 4326) AS geom,
-                feature_code_desc
-            FROM gis_core.centreline_latest
-            WHERE feature_code_desc NOT IN (
-                'Expressway',
-                'Expressway Ramp'
-            ) -- definitely no ecocounters here!
-        )
-    
+        SELECT
+            centreline_id,
+            linear_name_full,
+            ST_SetSRID(geom, 4326) AS geom,
+            feature_code_desc
+        FROM gis_core.centreline_latest
+        WHERE feature_code_desc NOT IN (
+            'Expressway',
+            'Expressway Ramp'
+        ) -- definitely no ecocounters here!
+    )
+
     SELECT DISTINCT ON (det.site_id)
         rank() OVER (ORDER BY det.site_id) AS _rank, --uid needed for plotting in qgis
         det.site_id,
