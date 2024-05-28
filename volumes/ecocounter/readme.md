@@ -156,6 +156,7 @@ CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a hum
 | facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
 | notes | text | | |
 | replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| centreline_id | integer | | Join to gis_core.centreline_latest USING (centreline_id) |
 
 ### `ecocounter.counts_unfiltered`
 CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
