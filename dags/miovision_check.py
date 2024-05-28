@@ -59,7 +59,7 @@ def miovision_check_dag():
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
-        execution_delta=timedelta(days=-7, hours=1) #pull_miovision scheduled at '0 3 * * *'
+        execution_delta=timedelta(days=-6, hours=1) #pull_miovision scheduled at '0 3 * * *'
     )
 
     check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
