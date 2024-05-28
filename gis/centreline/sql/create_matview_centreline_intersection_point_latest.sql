@@ -1,6 +1,8 @@
 CREATE MATERIALIZED VIEW gis_core.centreline_intersection_point_latest AS
 
-SELECT *
+SELECT
+    ROW_NUMBER() OVER (ORDER BY 1) AS rn,
+    *
 FROM gis_core.centreline_intersection_point
 WHERE 
 	(intersection_id IN (SELECT from_intersection_id from gis_core.centreline_latest) OR 

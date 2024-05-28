@@ -1,6 +1,8 @@
 CREATE MATERIALIZED VIEW gis_core.centreline_latest AS
 
-SELECT *
+SELECT
+    ROW_NUMBER() OVER (ORDER BY 1) AS rn,
+    *
 FROM gis_core.centreline
 WHERE version_date = (SELECT MAX(version_date) FROM gis_core.centreline);
 
