@@ -146,6 +146,7 @@ Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocou
 
 ### `ecocounter.sites_unfiltered`
 CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
+When you want to update new rows with missing `centreline_id`s, use [this script](./updates/ecocounter_centreline_updates.sql).  
 
 | column_name | data_type | sample | comments |
 |:------------|:----------|:-------|:---------|
