@@ -60,7 +60,7 @@ def vds_check_dag():
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
-        execution_delta=timedelta(days=-7, hours=1) #pull_vds scheduled at '0 4 * * *'
+        execution_delta=timedelta(days=-6, hours=1) #pull_vds scheduled at '0 4 * * *'
     )
 
     check_missing_centreline_id = SQLCheckOperatorWithReturnValue(
