@@ -1,8 +1,6 @@
 CREATE MATERIALIZED VIEW gis_core.centreline_intersection_point_latest AS
 
-SELECT
-    ROW_NUMBER() OVER (ORDER BY 1) AS rn,
-    *
+SELECT *
 FROM gis_core.centreline_intersection_point
 WHERE 
     intersection_id IN (
@@ -25,6 +23,11 @@ EXECUTE PROCEDURE gis_core.centreline_intersection_point_latest_trigger();
 
 CREATE INDEX gis_core_centreline_intersection_point_latest_geom
 ON gis_core.centreline_intersection_point_latest USING gist (geom);
+
+CREATE UNIQUE INDEX centreline_intersection_point_latest_unique
+ON gis_core.centreline_intersection_point_latest USING btree(
+    intersection_id ASC
+);
 
 ALTER MATERIALIZED VIEW gis_core.centreline_intersection_point_latest OWNER TO gis_admins;
 
