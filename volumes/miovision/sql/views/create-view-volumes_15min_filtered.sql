@@ -19,9 +19,9 @@ CREATE VIEW miovision_api.volumes_15min_filtered AS (
             OR ar.leg IS NULL
         ) AND v15.datetime_bin >= ar.range_start
         AND (
-                v15.datetime_bin <= ar.range_end
-                OR ar.range_end IS NULL
-            )
+            v15.datetime_bin <= ar.range_end
+            OR ar.range_end IS NULL
+        )
     WHERE ar.uid IS NULL
 );
 

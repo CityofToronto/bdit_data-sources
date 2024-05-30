@@ -3,7 +3,8 @@
 -- DROP TABLE miovision_api.volumes_15min;
 CREATE TABLE miovision_api.volumes_15min
 (
-    volume_15min_uid integer NOT NULL DEFAULT nextval('miovision_api.volumes_15min_volume_15min_uid_seq'::regclass),
+    volume_15min_uid integer NOT NULL
+    DEFAULT nextval('miovision_api.volumes_15min_volume_15min_uid_seq'::regclass),
     intersection_uid integer,
     datetime_bin timestamp without time zone,
     classification_uid integer,
@@ -15,12 +16,13 @@ CREATE TABLE miovision_api.volumes_15min
 )
 PARTITION BY RANGE (datetime_bin)
 WITH (
-    OIDS=FALSE
+    oids = FALSE
 );
 
 ALTER TABLE miovision_api.volumes_15min OWNER TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
-GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min
+TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min TO miovision_api_bot;
 
 COMMENT ON TABLE miovision_api.volumes_15min IS E''

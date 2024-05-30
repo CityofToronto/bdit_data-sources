@@ -1,6 +1,7 @@
 ﻿CREATE TABLE miovision_api.volumes_15min_mvt
 (
-    volume_15min_mvt_uid integer NOT NULL DEFAULT nextval('miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq'::regclass),
+    volume_15min_mvt_uid integer NOT NULL
+    DEFAULT nextval('miovision_api.volumes_15min_mvt_volume_15min_mvt_uid_seq'::regclass),
     intersection_uid integer,
     datetime_bin timestamp without time zone,
     classification_uid integer,
@@ -15,7 +16,7 @@
 )
 PARTITION BY RANGE (datetime_bin)
 WITH (
-    OIDS = False
+    oids = FALSE
 );
 
 ALTER TABLE miovision_api.volumes_15min_mvt OWNER TO miovision_admins;
