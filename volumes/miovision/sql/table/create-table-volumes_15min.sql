@@ -23,6 +23,10 @@ GRANT ALL ON TABLE miovision_api.volumes_15min TO dbadmin;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min TO miovision_api_bot;
 
+COMMENT ON TABLE miovision_api.volumes_15min IS E''
+'NOTE: Refer instead to view volumes_15min_filtered to exclude anomalous_ranges. '
+'ATR formatted Miovision data in 15 minute bins.'
+
 COMMENT ON COLUMN miovision_api.volumes_15min.leg
 IS 'leg location, e.g. E leg means both entry and exit traffic across the east side of the intersection. ';
 
