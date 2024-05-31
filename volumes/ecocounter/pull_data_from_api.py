@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
+from airflow.exceptions import AirflowFailException
 
 default_start = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)-timedelta(days=1)
 default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)
@@ -30,15 +31,17 @@ def getSites(token: str, sites: any = ()):
         f'{URL}/api/site',
         headers={'Authorization': f'Bearer {token}'}
     )
-    result = []
-    #filter sites using optional param.
-    if not sites == ():
-        for site in response.json():
-            if site['id'] in sites:
-                result.append(site)
-        return result
-    else:
+    if response.status_code!=200:
+        raise AirflowFailException(f"{response.status_code}: {response.reason}")
+    if sites == ():
         return response.json()
+    
+    #otherwise filter sites using optional param.        
+    result = []
+    for site in response.json():
+        if site['id'] in sites:
+            result.append(site)
+    return result        
 
 # get all of a flows ("channel") data from the API
 def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime):
@@ -57,8 +60,13 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
                 'step': '15m'
             }
         )
-        data += response.json()
-        requestStart += requestChunkSize
+        if response.status_code==200:
+            data += response.json()
+            requestStart += requestChunkSize
+        elif response.status_code==401:
+            raise AirflowFailException(f"{response.status_code}: {response.reason}")
+        else:
+            raise AirflowFailException(f"{response.status_code}: {response.reason}")
     return data
 
 def getKnownSites(conn: any):
