@@ -4,7 +4,7 @@ WITH hourly_time_cost AS (
     SELECT
         routing_streets.link_dir,
         dt,
-        datetime_bin(ta.tod, 60) AS hr,
+        date_trunc('hour', ta.tod)::time AS hr,
         harmean(ta.pct_50) AS daily_cost
     FROM here.routing_streets_yy_q AS routing_streets
     LEFT JOIN here.ta USING (link_dir)
