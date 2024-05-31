@@ -10,9 +10,9 @@ WITH hourly_time_cost AS (
     LEFT JOIN here.ta USING (link_dir)
     LEFT JOIN ref.holiday USING (dt)
     WHERE
-        dt >= _start_date AND dt < _end_date AND
-        EXTRACT(ISODOW FROM dt) IN (2,3,4) AND -- only include tues-thurs traffic
-        holiday.dt IS NULL -- excluding holidays
+        dt >= _start_date AND dt < _end_date
+        AND EXTRACT(ISODOW FROM dt) IN (2, 3, 4) -- only include tues-thurs traffic
+        AND holiday.dt IS NULL -- excluding holidays
     GROUP BY routing_streets.link_dir, dt, hr
 )
 
@@ -20,5 +20,5 @@ SELECT
     link_dir,
     hr,
     harmean(daily_cost)::int AS cost
-FROM daily_time_cost
+FROM hourly_time_cost
 GROUP BY link_dir, hr;
