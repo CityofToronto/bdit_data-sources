@@ -30,7 +30,7 @@ CREATE TABLE gwolofs.old_rescu_sensors AS (
     SELECT
         stat_code AS detector_id,
         MIN(datetime_15min) AS start_timestamp,
-        MAX(datetime_15min) AS end_timestamp,
+        MAX(datetime_15min) AS end_timestamp
     FROM (
         SELECT
             arterydata.stat_code,
@@ -47,9 +47,9 @@ CREATE TABLE gwolofs.old_rescu_sensors AS (
                 cnt_det.timecount < v.end_timestamp
                 OR v.end_timestamp IS NULL --no end date
             ),
-        LATERAL (
-            SELECT countinfo.count_date + cnt_det.timecount::time AS datetime_15min
-        ) dt
+            LATERAL (
+                SELECT countinfo.count_date + cnt_det.timecount::time AS datetime_15min
+            ) AS dt
         WHERE
             countinfo.count_date >= '1993-01-01'::date --there is a lot of bogus data from 1899
             AND countinfo.count_date < '2021-11-01'::date --data beyond 2021 is available in VDS
@@ -61,7 +61,9 @@ CREATE TABLE gwolofs.old_rescu_sensors AS (
     GROUP BY stat_code
 );
 
-INSERT INTO vds.vdsconfig (detector_id,start_timestamp,end_timestamp,division_id,vds_id)
+INSERT INTO vds.vdsconfig (
+    detector_id, start_timestamp, end_timestamp, division_id, vds_id
+)
 SELECT
     detector_id,
     start_timestamp,
@@ -71,14 +73,16 @@ SELECT
     dense_rank() OVER (ORDER BY detector_id) + 18868730 AS vds_id
 FROM gwolofs.old_rescu_sensors;
 
-INSERT INTO vds.entity_locations (start_timestamp,end_timestamp,division_id,entity_id)
+INSERT INTO vds.entity_locations (
+    start_timestamp, end_timestamp, division_id, entity_id
+)
 SELECT
     start_timestamp,
     end_timestamp,
     2 AS division_id,
     --offset the new id by 10M from the current max
     --(SELECT MAX(vds_id) + 10000000 FROM vds.vdsconfig) == 18868730
-    dense_rank() OVER (ORDER BY detector_id) + 18868730 AS vds_id 
+    dense_rank() OVER (ORDER BY detector_id) + 18868730 AS vds_id
 FROM gwolofs.old_rescu_sensors;
 
 
@@ -102,9 +106,9 @@ CREATE TABLE gwolofs.old_rescu_staging AS (
         FROM traffic.arterydata
         JOIN traffic.countinfo USING (arterycode)
         JOIN traffic.cnt_det USING (count_info_id),
-        LATERAL (
-            SELECT countinfo.count_date + cnt_det.timecount::time AS datetime_15min
-        ) dt
+            LATERAL (
+                SELECT countinfo.count_date + cnt_det.timecount::time AS datetime_15min
+            ) AS dt
         WHERE
             countinfo.count_date >= '1993-01-01'::date
             --data from 2021-11 onwards is available in ITS Central
