@@ -101,7 +101,7 @@ def task_fail_slack_alert(
     if isinstance(extra_msg_str, tuple) or isinstance(extra_msg_str, list):
         #recursively collapse extra_msg_str's which are in the form of a list with new lines.
         extra_msg_str = '\n> '.join(
-            ['\n> '.join(item) if isinstance(item, list) else item for item in extra_msg_str]
+            ['\n> '.join(str(item)) if isinstance(item, list) else str(item) for item in extra_msg_str]
         )
 
     # Slack failure message
