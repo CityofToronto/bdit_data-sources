@@ -167,7 +167,8 @@ def pull_ecocounter_dag():
                     for count in counts:
                         row=(flow_id, count['date'], count['counts'])
                         volume.append(row)
-                    LOGGER.debug(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
+                    if len(volume) == 0:
+                        LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
                     insertFlowCounts(conn, volume)
                 LOGGER.info(f'Data inserted for site {site_id}.')
           
