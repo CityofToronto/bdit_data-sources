@@ -188,11 +188,14 @@ def vdsdata_dag():
             )
             check_avg_rows
 
-    (
-        [update_inventories(), check_partitions()] >>
+    [
+        [
+            update_inventories(),
+            check_partitions()
+        ] >>
         pull_vdsdata() >>
         summarize_v15() >> t_done >>
         data_checks()
-    )
+    ]
 
 vdsdata_dag()
