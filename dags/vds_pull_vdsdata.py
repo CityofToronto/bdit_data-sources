@@ -30,7 +30,7 @@ default_args = {
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 5,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
@@ -184,7 +184,7 @@ def vdsdata_dag():
                         "dt_col": 'datetime_15min',
                         "col_to_sum": 'num_obs',
                         "threshold": 0.7},
-                retries=2,
+                retries=0,
             )
             check_avg_rows
 
