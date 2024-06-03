@@ -1,6 +1,6 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
-    SELECT DISTINCT ON (c.uid, c.division_id)
+    SELECT DISTINCT ON (pairs.vdsconfig_uid, pairs.entity_location_uid, pairs.division_id)
         --maintain this duplicate column for backwards compatibility
         pairs.vdsconfig_uid AS uid, --noqa: disable=L029
         pairs.vdsconfig_uid,
@@ -112,8 +112,9 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
             END AS det_type
         ) AS dtypes
     ORDER BY
-        c.uid ASC,
-        c.division_id ASC,
+        pairs.vdsconfig_uid ASC,
+        pairs.entity_location_uid ASC,
+        pairs.division_id ASC,
         comms.start_timestamp DESC --most recently installed comms
 );
 

@@ -29,7 +29,9 @@ INNER JOIN vds.entity_locations AS e ON
         v15.datetime_bin < e.end_timestamp
         OR e.end_timestamp IS NULL
     )
-LEFT JOIN vds.detector_inventory AS di ON di.uid = c.uid
+LEFT JOIN vds.detector_inventory AS di
+    ON di.vdsconfig_uid = c.uid
+    AND di.entity_location_uid = e.uid
 WHERE v15.datetime_bin < '2021-11-01'
 ORDER BY
     v15.detector_id ASC,

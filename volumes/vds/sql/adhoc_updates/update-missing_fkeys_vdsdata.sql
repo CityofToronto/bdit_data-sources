@@ -77,7 +77,7 @@ counts_15min_update AS ( --noqa: L045
         COUNT(DISTINCT d.lane) AS num_distinct_lanes
     FROM updated AS d
     JOIN vds.vdsconfig AS c ON d.vdsconfig_uid = c.uid
-    JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
+    JOIN vds.detector_inventory AS di USING (vdsconfig_uid, entity_location_uid)
     WHERE
         d.division_id = 2
         AND d.vdsconfig_uid IS NOT NULL
@@ -109,7 +109,7 @@ SELECT
     di.expected_bins,
     COUNT(*) AS num_obs
 FROM updated AS d
-JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
+JOIN vds.detector_inventory AS di USING (vdsconfig_uid, entity_location_uid)
 WHERE
     d.division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into view counts_15min_div8001.
     AND d.vdsconfig_uid IS NOT NULL
