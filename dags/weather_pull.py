@@ -18,9 +18,6 @@ from airflow.macros import ds_add
 DAG_NAME = 'weather_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-#connection credentials
-cred = PostgresHook("weather_bot")
-
 #import python scripts
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -59,22 +56,22 @@ def weather_pull_dag():
 
     @task()
     def pull_prediction():
-        prediction_upsert(cred = PostgresHook("weather_bot"))
+        prediction_upsert(cred=PostgresHook("weather_bot"))
     pull_prediction.doc_md = "Pull weather forcast for 5 days ahead of run date"
 
     @task()
-    def pull_historical_city(ds = None):
+    def pull_historical_city(ds=None):
         historical_upsert(
-            cred = PostgresHook("weather_bot"),
+            cred=PostgresHook("weather_bot"),
             run_date=ds_add(ds, -1),
             station_id=31688
         )
     pull_historical_city.doc_md = "Pull yesterday's historical data for Toronto city centre"
 
     @task()
-    def pull_historical_airport(ds = None):
+    def pull_historical_airport(ds=None):
         historical_upsert(
-            cred = PostgresHook("weather_bot"),
+            cred=PostgresHook("weather_bot"),
             run_date=ds_add(ds, -1),
             station_id=51459
         )
