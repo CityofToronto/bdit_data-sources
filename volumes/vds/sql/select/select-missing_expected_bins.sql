@@ -2,7 +2,7 @@ WITH missing AS (
     SELECT
         vdsconfig_uid,
         detector_id
-    FROM vds.vds_inventory
+    FROM vds.detector_inventory
     WHERE expected_bins IS NULL
     ORDER BY detector_id
 )

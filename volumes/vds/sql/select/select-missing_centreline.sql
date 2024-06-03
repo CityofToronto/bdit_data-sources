@@ -2,8 +2,10 @@ WITH missing AS (
     SELECT
         vdsconfig_uid,
         detector_id
-    FROM vds.vds_inventory
-    WHERE centreline_id IS NULL
+    FROM vds.detector_inventory
+    WHERE
+        centreline_id IS NULL
+        AND division_id = 2
     ORDER BY vdsconfig_uid
 )
 
