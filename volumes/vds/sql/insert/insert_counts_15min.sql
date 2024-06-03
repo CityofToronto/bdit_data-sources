@@ -21,7 +21,9 @@ SELECT
     COUNT(DISTINCT d.lane) AS num_distinct_lanes
 FROM vds.raw_vdsdata AS d
 JOIN vds.vdsconfig AS c ON d.vdsconfig_uid = c.uid
-JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
+JOIN vds.detector_inventory AS di
+    ON di.vdsconfig_uid = d.vdsconfig_uid
+    AND di.entity_location_uid = d.entity_location_uid
 WHERE
     d.division_id = 2
     AND d.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
