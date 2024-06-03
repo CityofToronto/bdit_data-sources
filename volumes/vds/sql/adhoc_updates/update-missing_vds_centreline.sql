@@ -34,7 +34,9 @@ CREATE MATERIALIZED VIEW gwolofs.vds_centreline_temp AS (
         LEFT JOIN vds.entity_locations AS e ON e.uid = i.entity_location_uid
         LEFT JOIN vds.vdsconfig AS v ON v.uid = i.vdsconfig_uid
         --fitler here
-        WHERE i.centreline_id IS NULL
+        WHERE
+            i.centreline_id IS NULL
+            AND i.division_id = 2
     )
 
     -- spatially join buffered detectors and segments
