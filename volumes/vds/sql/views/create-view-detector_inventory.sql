@@ -93,7 +93,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND c.division_id = 8001
                     THEN 'Signal Preemption'
                 WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
-                WHEN c.detector_id LIKE 'WHALESPOUT' THEN 'Houston Radar'
+                WHEN c.detector_id LIKE '%WHALESPOUT%' THEN 'Houston Radar'
                 WHEN
                     c.detector_id LIKE ANY(
                         '{"%SMARTMICRO%", "%YONGE HEATH%",
@@ -102,7 +102,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                     --new lakeshore/spadina smartmicro sensors
                     OR c.vds_id IN (
                         6949838, 6949843, 6949845, 7030552, 7030554, 7030564, 7030575, 7030577,
-                        2374388
+                        7030578, 7030591
                     )
                     --new lakeshore smartmicro sensors
                     OR (
