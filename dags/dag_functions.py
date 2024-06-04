@@ -98,10 +98,10 @@ def task_fail_slack_alert(
         # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
-    if isinstance(extra_msg_str, tuple) or isinstance(extra_msg_str, list):
-        #recursively collapse extra_msg_str's which are in the form of a list with new lines.
+    #recursively join list/tuple extra_msg_str into string
+    if isinstance(extra_msg_str, (list, tuple)):
         extra_msg_str = '\n> '.join(
-            ['\n> '.join(str(item)) if isinstance(item, list) else str(item) for item in extra_msg_str]
+            ['\n> '.join(item) if isinstance(item, (list, tuple)) else str(item) for item in extra_msg_str]
         )
 
     # Slack failure message
