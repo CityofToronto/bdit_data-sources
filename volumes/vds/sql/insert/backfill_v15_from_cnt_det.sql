@@ -3,7 +3,7 @@ SELECT
     arterydata.stat_code,
     arterydata.street1,
     arterydata.street2,
-    array_agg(DISTINCT countinfo.count_type) AS count_types,
+    array_agg(DISTINCT arterydata.count_type) AS count_types,
     array_agg(DISTINCT category.category_id) AS category_ids,
     array_agg(DISTINCT category.category_name) AS category_name,
     MIN(countinfo.count_date) AS min_count_date,
@@ -23,9 +23,10 @@ ORDER BY
     arterydata.stat_code ASC;
 
 
---185 VDS sensors that do not exist in ITS Central (at least for that time period)
+--30 VDS sensors that do not exist in ITS Central (at least for that time period)
 --184 are pre-2007 > 15 years old. 1 is a ramp that goes up to 2014.
 --add entries for these into vdsconfig and entity_locations tables.
+--DROP TABLE gwolofs.old_rescu_sensors;
 CREATE TABLE gwolofs.old_rescu_sensors AS (
     SELECT
         stat_code AS detector_id,
@@ -42,9 +43,9 @@ CREATE TABLE gwolofs.old_rescu_sensors AS (
         --anti join
         LEFT JOIN vds.vdsconfig AS v
             ON arterydata.stat_code = substring(v.detector_id, 'D\w{8}')
-            AND cnt_det.timecount >= v.start_timestamp
+            AND countinfo.count_date + cnt_det.timecount::time >= v.start_timestamp
             AND (
-                cnt_det.timecount < v.end_timestamp
+                countinfo.count_date + cnt_det.timecount::time < v.end_timestamp
                 OR v.end_timestamp IS NULL --no end date
             ),
             LATERAL (
@@ -60,7 +61,8 @@ CREATE TABLE gwolofs.old_rescu_sensors AS (
     ) AS missing
     GROUP BY stat_code
 );
-
+   
+--insert these 
 INSERT INTO vds.vdsconfig (
     detector_id, start_timestamp, end_timestamp, division_id, vds_id
 )
@@ -85,8 +87,21 @@ SELECT
     dense_rank() OVER (ORDER BY detector_id) + 18868730 AS vds_id
 FROM gwolofs.old_rescu_sensors;
 
+--add new sensors to centreline_vds table where match exists in centreline_latest.
+--INSERT 0 29
+INSERT INTO vds.centreline_vds (centreline_id, vdsconfig_uid)
+SELECT centreline_id, vdsconfig.uid
+FROM gwolofs.old_rescu_sensors AS ors
+LEFT JOIN traffic.arterydata ON arterydata.stat_code = ors.detector_id
+LEFT JOIN traffic.arteries_centreline USING (arterycode)
+--only 4 don't match in centreline_latest, acceptable.
+--JOIN gis_core.centreline_latest
+--ON centreline_latest.centreline_id = arteries_centreline.centreline_id   
+LEFT JOIN vds.vdsconfig USING (detector_id, start_timestamp, end_timestamp)
+WHERE centreline_id IS NOT NULL
 
---SELECT 66940290
+    
+--SELECT 56726480
 --Query returned successfully in 4 min 45 secs.
 
 DROP TABLE IF EXISTS gwolofs.old_rescu_staging;
@@ -151,7 +166,9 @@ CREATE TABLE gwolofs.old_rescu_staging AS (
             dd.datetime_15min_rounded < e.end_timestamp
             OR e.end_timestamp IS NULL --no end date
         )
-    LEFT JOIN vds.detector_inventory AS di ON di.uid = v.uid
+    LEFT JOIN vds.detector_inventory AS di
+        ON di.vdsconfig_uid = v.uid
+        AND di.entity_location_uid = e.uid
     ORDER BY v.vds_id, dd.datetime_15min_rounded
 );
 
@@ -171,6 +188,7 @@ ON gwolofs.old_rescu_staging USING btree (
 
 
 --compare the new and old data during overlapping period! (count_15min vs vds_counts_15min_count)
+--SELECT 175336
 DROP TABLE IF EXISTS gwolofs.old_rescu_compare;
 CREATE TABLE gwolofs.old_rescu_compare AS (
     WITH ors AS (
@@ -259,8 +277,8 @@ WHERE
     AND orc.vds_sum IS NULL;
 
 --then insert the records pre-2017. 
---INSERT 0 58864734
---Query returned successfully in 26 min 21 secs.
+--INSERT 0 48650924
+--Query returned successfully in 22 min 23 secs.
 INSERT INTO vds.counts_15min (
     division_id, vdsconfig_uid, entity_location_uid,
     num_lanes, datetime_15min, count_15min, expected_bins
@@ -277,6 +295,8 @@ FROM gwolofs.old_rescu_staging
 WHERE datetime_15min_rounded < '2017-01-01';
 
 --update vdsconfig_x_entity_locations with first and last dates for new sensors
+--UPDATE 308
+--Query returned successfully in 17 secs 385 msec.
 WITH updated_dates AS (
     SELECT
         division_id,
@@ -302,6 +322,7 @@ WHERE
     AND x.entity_location_uid = ud.entity_location_uid;
 
 --insert any new sensors into vdsconfig_x_entity_locations
+--INSERT 0 30
 INSERT INTO vds.vdsconfig_x_entity_locations (
     division_id, vdsconfig_uid, entity_location_uid, first_active, last_active
 )
@@ -318,3 +339,11 @@ GROUP BY
     entity_location_uid
 ON CONFLICT (vdsconfig_uid, entity_location_uid)
 DO NOTHING;
+
+--check row counts for verification
+SELECT
+    date_part('year', datetime_15min) AS yr,
+    COUNT(*)
+FROM vds.counts_15min_div2
+GROUP BY yr
+ORDER BY yr;
