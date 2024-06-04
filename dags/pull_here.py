@@ -9,8 +9,10 @@ import pendulum
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
+from airflow.utils.task_group import TaskGroup
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -52,3 +54,21 @@ pull_data = BashOperator(
         bash_command = '/data/airflow/airflow_venv/bin/python3 /data/airflow/data_scripts/here/traffic/here_api.py -d /data/airflow/data_scripts/here/traffic/config.cfg -s {{ yesterday_ds_nodash }} -e {{ yesterday_ds_nodash }} ', 
         dag=dag,
         )
+
+#get dags to trigger from airflow variable 
+DAGS_TO_TRIGGER = Variable.get('here_dag_triggers', deserialize_json=True)
+
+# Create a task group for triggering the DAGs
+with TaskGroup(group_id='trigger_dags_tasks', dag=dag) as trigger_dags_group:
+    # Define TriggerDagRunOperator for each dag to trigger
+    trigger_operators = []
+    for dag_id in DAGS_TO_TRIGGER:
+        trigger_operator = TriggerDagRunOperator(
+            task_id=f'trigger_{dag_id}',
+            trigger_dag_id=dag_id,
+            reset_dag_run = True, # Clear existing dag if already exists (for backfilling)
+            dag=dag,
+        )
+        trigger_operators.append(trigger_operator)
+
+pull_data >> trigger_operators
