@@ -6,13 +6,14 @@ A Slack notification is raised when the airflow process fails.
 import os
 import sys
 import pendulum
-from datetime import timedelta
+from datetime import timedelta, time
 
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
 from airflow.macros import ds_add
+from airflow.sensors.time_sensor import TimeSensor
 
 # DAG Information
 DAG_NAME = 'weather_pull'
@@ -54,6 +55,14 @@ def weather_pull_dag():
     no_backfill = LatestOnlyOperator(task_id="no_backfill")
     no_backfill.doc_md = "Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill."
 
+    wait_till_1045 = TimeSensor(
+        task_id="wait_till_1045am",
+        timeout=10*3600,
+        mode="reschedule",
+        poke_interval=3600,
+        target_time=time(hour = 10, minute = 45),
+    )
+
     @task()
     def pull_prediction():
         prediction_upsert(cred=PostgresHook("weather_bot"))
@@ -77,7 +86,7 @@ def weather_pull_dag():
         )
     pull_historical_airport.doc_md = "Pull yesterday's historical data for Toronto Peason Airport"
     
-    no_backfill >> pull_prediction()
+    no_backfill >> wait_till_1045 >> pull_prediction()
     pull_historical_city()
     pull_historical_airport()
 
