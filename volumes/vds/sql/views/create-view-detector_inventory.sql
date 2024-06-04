@@ -1,8 +1,6 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT DISTINCT ON (pairs.vdsconfig_uid, pairs.entity_location_uid, pairs.division_id)
-        --maintain this duplicate column for backwards compatibility
-        pairs.vdsconfig_uid AS uid, --noqa: disable=L029
         pairs.vdsconfig_uid,
         pairs.entity_location_uid,
         pairs.division_id,
