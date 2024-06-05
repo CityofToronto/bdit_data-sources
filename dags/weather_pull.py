@@ -1,6 +1,8 @@
 """
 Pipeline to pull weather prediction data from Envrionment Canada and upsert into weather.prediction_daily table.
-Then, 
+Also scrapes historical weather for city and airport locations. Note the historical pull is run at 2:30AM to be
+used in volume data check slack notifications, but the prediction is run at 830pm to better align with travel
+making decisions (Note it needs to be run at least after 10:30AM to have access to next day evening forecast).
 A Slack notification is raised when the airflow process fails.
 """
 import os
@@ -55,13 +57,14 @@ def weather_pull_dag():
     no_backfill = LatestOnlyOperator(task_id="no_backfill")
     no_backfill.doc_md = "Pull predicted weather data - can ONLY pull 5 days ahead of run date - no backfill."
 
-    wait_till_1045 = TimeSensor(
-        task_id="wait_till_1045am",
-        timeout=10*3600,
+    wait_till_830pm = TimeSensor(
+        task_id="wait_till_830pm",
+        timeout=24*3600,
         mode="reschedule",
-        poke_interval=3600,
-        target_time=time(hour = 10, minute = 45),
+        poke_interval=6*3600,
+        target_time=time(hour = 20, minute = 30),
     )
+    wait_till_830pm.doc_md = "The forecast for next day is pulled at 830pm to align with next day travel making decisions."
 
     @task()
     def pull_prediction():
@@ -86,7 +89,7 @@ def weather_pull_dag():
         )
     pull_historical_airport.doc_md = "Pull yesterday's historical data for Toronto Peason Airport"
     
-    no_backfill >> wait_till_1045 >> pull_prediction()
+    no_backfill >> wait_till_830pm >> pull_prediction()
     pull_historical_city()
     pull_historical_airport()
 
