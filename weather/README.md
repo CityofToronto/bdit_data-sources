@@ -1,13 +1,16 @@
 # Weather Data
 ## Table of Content
-- [Overview](#overview)
-- [Historical Data](#historical-data)
+- [Weather Data](#weather-data)
+  - [Table of Content](#table-of-content)
+  - [Overview](#overview)
+  - [Historical Data](#historical-data)
     - [Table Structure](#table-structure)
-- [Forecast Data](#forecast-data)
-    - [Table Structure](#table-structure)
-- [Data Pipeline](#data-pipeline)
-- [Backfill Data](#backfill-data)
-- [Manually Accessing Data](#manually-accessing-data)
+  - [Forecast Data](#forecast-data)
+    - [Table Structure](#table-structure-1)
+  - [Data Pipeline - `weather_pull` DAG](#data-pipeline---weather_pull-dag)
+  - [Backfill Data](#backfill-data)
+  - [Manually Accessing Data](#manually-accessing-data)
+    - [Uploading Manually Accessed Historical Data into the Database](#uploading-manually-accessed-historical-data-into-the-database)
 
 ## Overview
 Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and also forecast data for City of Toronto. These data are stored in the `weather` schema, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
@@ -32,7 +35,8 @@ We import the historical data for two locations on a daily basis, City of Toront
 
 ## Forecast Data
 
-Forecast Data is inserted into `weather.prediction_daily` on a daily basis from Environment Canada's [Local Forecast website](https://weather.gc.ca/city/pages/on-143_metric_e.html). Location is set as Toronto, ON with `s0000458` station_id. Every day we pull forecast data for tomorrow and 4 days in the future (e.g. If today is Monday, we will pull in data for Tuesday to Saturday). Since past forecast data is not being stored in Environment Canada, this task cannot be backfilled. Thus, we pull 5 future days to limit the chance of not having any data for days when the pipeline fails.
+Forecast Data is inserted into `weather.prediction_daily` on a daily basis from Environment Canada's [Local Forecast website](https://weather.gc.ca/city/pages/on-143_metric_e.html). Location is set as Toronto, ON with `s0000458` station_id. Every day we pull forecast data for tomorrow and 4 days in the future (e.g. If today is Monday, we will pull in data for Tuesday to Saturday). Since past forecast data is not being stored in Environment Canada, this task cannot be backfilled. Thus, we pull 5 future days to limit the chance of not having any data for days when the pipeline fails.  
+Note: on 2024-06-05, the prediction pull time was switched from 10:30AM to 8:30PM to align better with next-day travel decision making.  
 
 ### Table Structure
 | Column name        | Description                                                       | example                                                            |
@@ -47,29 +51,24 @@ Forecast Data is inserted into `weather.prediction_daily` on a daily basis from 
 | date_pulled        | Day of when the data is pulled                                    | 05/03/2023                                                         |
 
 
-## Data Pipeline
+## Data Pipeline - `weather_pull` DAG
 
-The data pipeline runs at 2:30 AM daily on airflow with the DAG `weather_pull`. There are four tasks: 1) `no_backfill` 2), `pull_prediction`, 3) `pull_historical_city`, and 4) `pull_historical_airport`. All tasks are run by `weather_bot`.
-Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [minor changes](https://github.com/CityofToronto/bdit_data-sources/pull/976). 
+The data pipeline runs at 2:30 AM daily on airflow with the DAG `weather_pull` using the bigdata `weather_bot` for inserts.  
+Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [minor changes](https://github.com/CityofToronto/bdit_data-sources/pull/976) including delaying the prediction pull from 10:30AM to 8:30PM. 
 
-![image](https://user-images.githubusercontent.com/46324452/235770699-275ea663-5035-4799-984b-5eb0e09878b1.png)
+<p align="center">
+    <img src="weather_pull_graph.png" alt="weather_pull DAG graph" width="50%"/>
+</p>
 
-1) `no_backfill`
-
-Uses `LatestOnlyOperator` that disable downstream tasks for backfill. This is set as an upstream for `pull_prediction` as forecast data cannot be backfilled.
-
-2) `pull_prediction`
-
-Runs script `prediction_import.py` which uses package `env_canada` to pull City of Toronto's forecast data of the next 5 days and insert into `weather.prediction_daily`. 
-
-2) `pull_historical_city`
-
-Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for City of toronto. The day before execution date's data will be pulled and inserted into `weather.historical_daily_city`.
-
-
-3) `pull_historical_airport`
-
-Runs script `historical_scrape.py` which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. The day before execution date's data will be pulled and inserted into `weather.historical_daily_airport`.
+- **`no_backfill`**: Uses `LatestOnlyOperator` that disable downstream tasks for backfill. This is set as an upstream for `pull_prediction` as forecast data cannot be backfilled.
+ 
+- **`wait_till_830pm`**: Uses `TimeSensor` operator to delay the excution of this task to 830pm to align better with next day travel decision making.  
+ 
+- **`pull_prediction`**: Runs script [`prediction_import.py`](./prediction_import.py) which uses package `env_canada` to pull City of Toronto's forecast data of the next 5 days and insert into `weather.prediction_daily`. 
+ 
+- **`pull_historical_city`**: Runs script [`historical_scrape.py`](./historical_scrape.py) which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for City of toronto. The day before execution date's data will be pulled and inserted into `weather.historical_daily_city`.
+ 
+- **`pull_historical_airport`**: Runs script [`historical_scrape.py`](./historical_scrape.py) which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. The day before execution date's data will be pulled and inserted into `weather.historical_daily_airport`.
 
 ## Backfill Data
 
@@ -91,8 +90,9 @@ To access weather data outside of the stations & dates provided in the database,
 Access Environment Canada's [**Historical Data**](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html) Website. Then, proceed with the following stpes:
 
 1. In the search boxes, enter the desired parameters, including station and date range:
-![historical1](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/a899a6f7-beee-451d-b9a3-916be7cf76d0)
-
+<p align="center">
+    <img src="https://github.com/CityofToronto/bdit_data-sources/assets/10802231/a899a6f7-beee-451d-b9a3-916be7cf76d0" alt="historical1" width="70%"/>
+</p>
 
 2. Select the desired station from the list (there can be quite a few, so try limiting the search 'year' in the previous step. Then, select 'Daily' from the data dropdown (hourly and monthly data can also be accessed) , and desired month/year:
 ![historical2](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/e54cb6b4-cfb9-458e-90ab-4ae1018ed7a1)
@@ -108,14 +108,16 @@ If the backfill process is not working, or cannot find the desired data, histori
 **Please Note** that this script is only to be used as a last resort. It does not contain any backstops for duplicate/NULL entries, broken data, etc. Raw data and duplicates will have to be checked manually.
 
 1. Visit the desired weather station page, containing historical data, using the steps above. Then, you will see this prompt:
-![historical4](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/c1b08bfe-ae12-4487-9bb4-efed3602fb64)
+<p align="center">
+    <img src="https://github.com/CityofToronto/bdit_data-sources/assets/10802231/c1b08bfe-ae12-4487-9bb4-efed3602fb64" alt="historical4" width="40%"/>
+</p>
 
     From here, you can select the format to download an entire year's worth of weather data for the current station. For our purposes, we will download in the CSV format.
 
-2. Open the script `csv_import.py` in a text editor. Here, on Line 24, you can change the directoryto match the filepath of the CSV just downloaded. If uploading several weather CSV files, you can create a new folder containg those files - the script will process all CSV files.
+1. Open the script `csv_import.py` in a text editor. Here, on Line 24, you can change the directoryto match the filepath of the CSV just downloaded. If uploading several weather CSV files, you can create a new folder containg those files - the script will process all CSV files.
 ![csvimport2](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/23d24ee8-f7f2-4388-a8fc-225ee1c90ac7)
 
-3. On Line 30, the table to insert into can be changed. 
+1. On Line 30, the table to insert into can be changed. 
 ![csvimport1](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/2b959cb9-e39e-417f-b6b6-2a6dddea67d9)
 
-4. Navigate to the script directory in a new terminal and run the script using `python csv_import.py`
+1. Navigate to the script directory in a new terminal and run the script using `python csv_import.py`
