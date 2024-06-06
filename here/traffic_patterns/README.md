@@ -133,9 +133,9 @@ For top secret contract reasons, we are no longer receiving traffic patterns dat
 
 Depending on the date you are routing, you should use different quarters, years, and map version of traffic patterns. We will only include weekday (Tue - Thurs), and exclude holiday seasons to create a more [generalized traffic pattern layer](/sql/create_quarterly_traffic_patterns.sql).
 
-Usage of function `create_quarterly_traffic_patterns`:
+Example usage of `create_quarterly_traffic_patterns`:
 
-For example, to create a table for routing version 22_2_b, for the dates between 2021 Jan 4 to 2021 Apr 5th aka 2021 quarter 1. Reminder: the quarter number is generated from the _start_date input and doesn't consider which quarter the _end_date is in. 
+For example, to create a quarterly traffic patterns table for routing version 22_2_b, for dates between 2021 Jan 4 to 2021 Apr 5th. **Reminder: the quarter number is generated from the _start_date input and doesn't consider which quarter the _end_date is in.**
 
 ```sql
 SELECT here.create_quarterly_traffic_patterns('22_2_b', 2021-01-04', '2021-04-05'); 
