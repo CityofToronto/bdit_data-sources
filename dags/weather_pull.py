@@ -84,7 +84,7 @@ def weather_pull_dag():
     pull_historical.doc_md = "Pull yesterday's historical data for a given station id."
    
     no_backfill >> wait_till_1030am >> pull_prediction()
-    pull_historical(station_id=31688).override(task_id = 'pull_historical_city')
-    pull_historical(station_id=51459).override(task_id = 'pull_historical_airport')
+    pull_historical.override(task_id = 'pull_historical_city')(station_id=31688)
+    pull_historical.override(task_id = 'pull_historical_airport')(station_id=51459)
 
 weather_pull_dag()
