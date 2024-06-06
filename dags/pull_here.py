@@ -117,6 +117,7 @@ def pull_here():
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',
                 trigger_dag_id=dag_id,
+                execution_date = '{{ ds }}', 
                 reset_dag_run = True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
             )
             trigger_operators.append(trigger_operator)
