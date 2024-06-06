@@ -75,25 +75,16 @@ def weather_pull_dag():
     pull_prediction.doc_md = "Pull weather forcast for 5 days ahead of run date"
 
     @task()
-    def pull_historical_city(ds=None):
+    def pull_historical(station_id, ds=None):
         historical_upsert(
             cred=PostgresHook("weather_bot"),
-            run_date=ds_add(ds, -1),
-            station_id=31688
+            run_date=ds,
+            station_id=station_id
         )
-    pull_historical_city.doc_md = "Pull yesterday's historical data for Toronto city centre"
-
-    @task()
-    def pull_historical_airport(ds=None):
-        historical_upsert(
-            cred=PostgresHook("weather_bot"),
-            run_date=ds_add(ds, -1),
-            station_id=51459
-        )
-    pull_historical_airport.doc_md = "Pull yesterday's historical data for Toronto Peason Airport"
-    
+    pull_historical.doc_md = "Pull yesterday's historical data for a given station id."
+   
     no_backfill >> wait_till_1030am >> pull_prediction()
-    pull_historical_city()
-    pull_historical_airport()
+    pull_historical(station_id=31688).override(task_id = 'pull_historical_city')
+    pull_historical(station_id=51459).override(task_id = 'pull_historical_airport')
 
 weather_pull_dag()
