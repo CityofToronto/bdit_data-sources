@@ -36,7 +36,6 @@ We import the historical data for two locations on a daily basis, City of Toront
 ## Forecast Data
 
 Forecast Data is inserted into `weather.prediction_daily` on a daily basis from Environment Canada's [Local Forecast website](https://weather.gc.ca/city/pages/on-143_metric_e.html). Location is set as Toronto, ON with `s0000458` station_id. Every day we pull forecast data for tomorrow and 4 days in the future (e.g. If today is Monday, we will pull in data for Tuesday to Saturday). Since past forecast data is not being stored in Environment Canada, this task cannot be backfilled. Thus, we pull 5 future days to limit the chance of not having any data for days when the pipeline fails.  
-Note: on 2024-06-05, the prediction pull time was switched from 10:30AM to 8:30PM to align better with next-day travel decision making.  
 
 ### Table Structure
 | Column name        | Description                                                       | example                                                            |
@@ -54,7 +53,7 @@ Note: on 2024-06-05, the prediction pull time was switched from 10:30AM to 8:30P
 ## Data Pipeline - `weather_pull` DAG
 
 The data pipeline runs at 2:30 AM daily on airflow with the DAG `weather_pull` using the bigdata `weather_bot` for inserts.  
-Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [minor changes](https://github.com/CityofToronto/bdit_data-sources/pull/976) including delaying the prediction pull from 10:30AM to 8:30PM. 
+Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [minor changes](https://github.com/CityofToronto/bdit_data-sources/pull/976).
 
 <p align="center">
     <img src="weather_pull_graph.png" alt="weather_pull DAG graph" width="50%"/>
@@ -62,7 +61,7 @@ Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [m
 
 - **`no_backfill`**: Uses `LatestOnlyOperator` that disable downstream tasks for backfill. This is set as an upstream for `pull_prediction` as forecast data cannot be backfilled.
  
-- **`wait_till_830pm`**: Uses `TimeSensor` operator to delay the excution of this task to 830pm to align better with next day travel decision making.  
+- **`wait_till_1030am`**: Uses `TimeSensor` operator to delay the excution of this task to 1030am which is when forecast becomes available.  
  
 - **`pull_prediction`**: Runs script [`prediction_import.py`](./prediction_import.py) which uses package `env_canada` to pull City of Toronto's forecast data of the next 5 days and insert into `weather.prediction_daily`. 
  
