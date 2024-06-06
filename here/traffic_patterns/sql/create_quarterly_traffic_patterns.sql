@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION here.create_quarterly_traffic_patterns(
     _routing_table_version text,
-    _start_date date, 
+    _start_date date,
     _end_date date)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -16,31 +16,31 @@ BEGIN
     output_table := 'traffic_pattern_'||_routing_table_version||'_'||EXTRACT(YEAR FROM _start_date)::text||'q'||EXTRACT(QUARTER FROM _start_date)::text;
     routing_table := 'routing_streets_'||_routing_table_version;
 
-	EXECUTE format($$CREATE TABLE here.%I AS
-					WITH hourly_time_cost AS (
-						SELECT
-							routing_streets.link_dir,
-							dt,
-							date_trunc('hour', ta.tod)::time AS hr,
-							harmean(ta.pct_50) AS daily_cost
-						FROM here.%I AS routing_streets
-						LEFT JOIN here.ta USING (link_dir)
-						LEFT JOIN ref.holiday USING (dt)
-						WHERE
-							dt >= %L AND dt < %L
-							AND EXTRACT(ISODOW FROM dt) IN (2, 3, 4) -- only include tues-thurs traffic
-							AND holiday.dt IS NULL -- excluding holidays
-						GROUP BY routing_streets.link_dir, dt, hr
-					)
+    EXECUTE format($$CREATE TABLE here.%I AS
+                    WITH hourly_time_cost AS (
+                        SELECT
+                            routing_streets.link_dir,
+                            dt,
+                            date_trunc('hour', ta.tod)::time AS hr,
+                            harmean(ta.pct_50) AS daily_cost
+                        FROM here.%I AS routing_streets
+                        LEFT JOIN here.ta USING (link_dir)
+                        LEFT JOIN ref.holiday USING (dt)
+                        WHERE
+                            dt >= %L AND dt < %L
+                            AND EXTRACT(ISODOW FROM dt) IN (2, 3, 4) -- only include tues-thurs traffic
+                            AND holiday.dt IS NULL -- excluding holidays
+                        GROUP BY routing_streets.link_dir, dt, hr
+                    )
 
-					SELECT
-						link_dir,
-						hr,
-						harmean(daily_cost)::int AS spd
-					FROM hourly_time_cost
-					GROUP BY link_dir, hr; $$,  
-				   					output_table, routing_table,  _start_date, _end_date
-   									);
+                    SELECT
+                        link_dir,
+                        hr,
+                        harmean(daily_cost)::int AS spd
+                    FROM hourly_time_cost
+                    GROUP BY link_dir, hr; $$,  
+                                       output_table, routing_table,  _start_date, _end_date
+                                       );
 END;
 $BODY$;
 

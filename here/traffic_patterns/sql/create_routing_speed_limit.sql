@@ -6,16 +6,16 @@ CREATE OR REPLACE FUNCTION here.create_speed_limit(_routing_table_version text)
 AS $BODY$
 
 DECLARE
-	output_table TEXT;
-	routing_table TEXT;
-    streets_att_table TEXT:
+    output_table TEXT;
+    routing_table TEXT;
+    streets_att_table TEXT;
 
 BEGIN
-	output_table := 'routing_streets_'||_routing_table_version||'_speed_limit';
-	routing_table := 'routing_streets_'||_routing_table_version;
+    output_table := 'routing_streets_'||_routing_table_version||'_speed_limit';
+    routing_table := 'routing_streets_'||_routing_table_version;
     street_att_table := 'streets_att_'||SUBSTRING(_routing_table_version FROM 1 FOR 4)::text; -- for when routing_streets has a suffix, e.g. _b, _tc
 
-	EXECUTE format($$CREATE TABLE here.%I AS
+    EXECUTE format($$CREATE TABLE here.%I AS
                     SELECT
                         routing_streets.link_dir,
                         COALESCE(
@@ -32,8 +32,8 @@ BEGIN
 END;
 $BODY$;
 
-
 ALTER FUNCTION here.create_speed_limit(text) OWNER TO here_admins;
+
 COMMENT ON FUNCTION here.create_speed_limit(text) IS '''
     Function to create speed limit table based on the input routing_street version. 
     If no speed limit information is available, a speed limit of 50 kmh is applied.
