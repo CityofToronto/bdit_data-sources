@@ -45,7 +45,7 @@ default_args = {'owner': ','.join(names),
                 'start_date': pendulum.datetime(2020, 1, 5, tz="America/Toronto"),
                 'email_on_failure': False,
                 'email_on_success': False,
-                'retries': 0, #Retry 3 times
+                'retries': 3, #Retry 3 times
                 'retry_delay': timedelta(minutes=60), #Retry after 60 mins
                 'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
                 'on_failure_callback': task_fail_slack_alert,
@@ -70,9 +70,8 @@ def pull_here():
         return access_token
 
     @task
-    def get_request_id(access_token: str, **kwargs):
+    def get_request_id(access_token: str, ds=None):
         api_conn = BaseHook.get_connection('here_api_key')
-        ds = kwargs["ds"]
         pull_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
         return request_id
