@@ -18,13 +18,11 @@ BEGIN
     EXECUTE format($$CREATE TABLE here.%I AS
                     SELECT
                         routing_streets.link_dir,
-                        COALESCE(
-                            CASE
-                                WHEN RIGHT(routing_streets.link_dir, 1) = 'T' AND att.to_spd_lim > 0 THEN att.to_spd_lim
-                                WHEN RIGHT(routing_streets.link_dir, 1) = 'F' AND att.fr_spd_lim > 0 THEN att.fr_spd_lim
-                                ELSE NULL
-                            END, 50
-                        ) AS spd_lim
+                        CASE
+                            WHEN RIGHT(routing_streets.link_dir, 1) = 'T' AND att.to_spd_lim > 0 THEN att.to_spd_lim
+                            WHEN RIGHT(routing_streets.link_dir, 1) = 'F' AND att.fr_spd_lim > 0 THEN att.fr_spd_lim
+                            ELSE 50
+                        END AS spd_lim
                     FROM here.%I AS routing_streets
                     LEFT JOIN here_gis.%I AS att ON LEFT(routing_streets.link_dir, -1)::int = att.link_id; $$,
                     output_table, routing_table, streets_att_table);
