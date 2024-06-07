@@ -14,7 +14,6 @@ from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
-from airflow.macros import ds_add
 from airflow.sensors.time_sensor import TimeSensor
 
 # DAG Information
@@ -47,7 +46,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args, 
-    schedule='30 2 * * *', #daily at 2:30AM
+    schedule='0 7 * * *', #daily at 7:00AM
     catchup=False,
     tags=['weather', 'data_pull'],
     doc_md=__doc__
@@ -59,9 +58,9 @@ def weather_pull_dag():
 
     wait_till_1030am = TimeSensor(
         task_id="wait_till_1030am",
-        timeout=8*3600,
+        timeout=5*3600,
         mode="reschedule",
-        poke_interval=2*3600,
+        poke_interval=3600,
         target_time=time(hour = 10, minute = 30),
     )
     wait_till_1030am.doc_md = """
