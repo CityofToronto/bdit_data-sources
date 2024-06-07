@@ -28,7 +28,7 @@ try:
     from dags.dag_functions import (
         task_fail_slack_alert, send_slack_msg, get_readme_docmd
     )
-    from dags.common_tasks import check_jan_1st
+    from dags.common_tasks import check_jan_1st, wait_for_weather
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
@@ -213,8 +213,10 @@ def pull_ecocounter_dag():
         Compare the count of flow_ids appearing in today's pull vs the lookback period.
         '''
 
-        check_volume
-        check_distinct_flow_ids
+        wait_for_weather >> [
+            check_volume,
+            check_distinct_flow_ids
+        ]
 
     (
         check_partitions() >>
