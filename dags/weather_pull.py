@@ -7,7 +7,7 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
-import pendulum
+from pendulum import datetime, duration
 from datetime import timedelta, time
 
 from airflow.decorators import dag, task
@@ -35,7 +35,7 @@ except:
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2024, 6, 3, tz="America/Toronto"),
+    'start_date': datetime(2024, 6, 3, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -46,7 +46,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args, 
-    schedule='0 7 * * *', #daily at 7:00AM
+    schedule='30 5 * * *', #Historical weather is available at 1000UTC which is 4AM EDT and 5AM EST: https://climate.weather.gc.ca/FAQ_e.html#Q17
     catchup=False,
     tags=['weather', 'data_pull'],
     doc_md=__doc__
@@ -64,7 +64,7 @@ def weather_pull_dag():
         target_time=time(hour = 10, minute = 30),
     )
     wait_till_1030am.doc_md = """
-    The forecast for next 5 days is pulled at 1030am which is
+    The forecast for next 5 days is pulled at 1030am which is approximately
     when the forecast for next day evening becomes available.
     """
 
@@ -73,7 +73,10 @@ def weather_pull_dag():
         prediction_upsert(cred=PostgresHook("weather_bot"))
     pull_prediction.doc_md = "Pull weather forcast for 5 days ahead of run date"
 
-    @task()
+    @task(
+        retries=1,
+        retry_delay=duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
+    )
     def pull_historical(station_id, ds=None):
         historical_upsert(
             cred=PostgresHook("weather_bot"),
