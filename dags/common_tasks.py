@@ -152,14 +152,17 @@ def check_if_dow(isodow, ds):
     start_date = datetime.strptime(ds, '%Y-%m-%d')
     return start_date.isoweekday() == isodow
 
-wait_for_weather = TimeSensor(
-    task_id="wait_for_weather",
-    timeout=6*3600,
-    mode="reschedule",
-    poke_interval=3600,
-    target_time=datetime.time(hour = 5, minute = 35),
-)
-wait_for_weather.doc_md = """
-Historical weather is pulled at 5:30AM daily through the `weather_pull` DAG.
-Use this sensor to have a soft link to that DAG.
-"""
+def wait_for_weather_timesensor(timeout=6*3600):
+    """Use to delay a data check until after yesterdays weather is available."""
+    wait_for_weather = TimeSensor(
+        task_id="wait_for_weather",
+        timeout=timeout,
+        mode="reschedule",
+        poke_interval=3600,
+        target_time=datetime.time(hour = 5, minute = 35)
+    )
+    wait_for_weather.doc_md = """
+    Historical weather is pulled at 5:30AM daily through the `weather_pull` DAG.
+    Use this sensor to have a soft link to that DAG.
+    """
+    return wait_for_weather
