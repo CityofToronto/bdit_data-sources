@@ -24,7 +24,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather
+    from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
@@ -261,7 +261,7 @@ def pull_miovision_dag():
         Compare the count of classification_uids appearing in today's pull vs the lookback period.
         '''
 
-        wait_for_weather >> check_row_count
+        wait_for_weather_timesensor() >> check_row_count
         check_distinct_classification_uid
 
     (
