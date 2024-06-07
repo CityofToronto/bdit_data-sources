@@ -1,13 +1,15 @@
 
 from psycopg2 import sql, Error
 from typing import Tuple
-import logging 
+import logging
+import datetime
 # pylint: disable=import-error
 from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException
 from airflow.models import Variable
+from airflow.sensors.time_sensor import TimeSensor
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -149,3 +151,15 @@ def check_if_dow(isodow, ds):
 
     start_date = datetime.strptime(ds, '%Y-%m-%d')
     return start_date.isoweekday() == isodow
+
+wait_for_weather = TimeSensor(
+    task_id="wait_for_weather",
+    timeout=6*3600,
+    mode="reschedule",
+    poke_interval=3600,
+    target_time=datetime.time(hour = 5, minute = 35),
+)
+wait_for_weather.doc_md = """
+Historical weather is pulled at 5:30AM daily through the `weather_pull` DAG.
+Use this sensor to have a soft link to that DAG.
+"""
