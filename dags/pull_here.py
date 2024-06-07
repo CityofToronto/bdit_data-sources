@@ -105,7 +105,7 @@ def pull_here():
     #    return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
-    def trigger_dags():
+    def trigger_dags(**kwargs):
         # Define TriggerDagRunOperator for each dag to trigger
         trigger_operators = []
         DAGS_TO_TRIGGER = Variable.get('here_dag_triggers', deserialize_json=True)
