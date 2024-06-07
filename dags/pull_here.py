@@ -105,18 +105,15 @@ def pull_here():
     #    return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
-    def trigger_dags(**kwargs):
+    def trigger_dags():
         # Define TriggerDagRunOperator for each dag to trigger
         trigger_operators = []
-        #ds = kwargs['ds']
-        #upstream_dag = kwargs['dag'].dag_id
-        #get dags to trigger from airflow variable 
         DAGS_TO_TRIGGER = Variable.get('here_dag_triggers', deserialize_json=True)
         for dag_id in DAGS_TO_TRIGGER:
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',
                 trigger_dag_id=dag_id,
-                execution_date = '{{ ds }}', 
+                execution_date = '{{ ds }}',
                 reset_dag_run = True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
             )
             trigger_operators.append(trigger_operator)
