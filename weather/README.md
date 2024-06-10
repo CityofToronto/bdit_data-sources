@@ -52,7 +52,7 @@ Forecast Data is inserted into `weather.prediction_daily` on a daily basis from 
 
 ## Data Pipeline - `weather_pull` DAG
 
-The data pipeline runs at 2:30 AM daily on airflow with the DAG `weather_pull` using the bigdata `weather_bot` for inserts.  
+The data pipeline runs at 6:30 AM daily on airflow with the DAG `weather_pull` using the bigdata `weather_bot` for inserts.  
 Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [minor changes](https://github.com/CityofToronto/bdit_data-sources/pull/976).
 
 <p align="center">
