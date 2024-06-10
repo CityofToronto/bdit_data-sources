@@ -64,7 +64,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 ELSE 'Inductive'
             END
         END AS det_tech
-    FROM vds.vdsconfig_x_entity_locations AS pairs
+    FROM vds.last_active AS pairs
     LEFT JOIN vds.vdsconfig AS c
         ON pairs.vdsconfig_uid = c.uid
     LEFT JOIN vds.entity_locations AS e

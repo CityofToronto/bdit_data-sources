@@ -21,7 +21,7 @@ updated_dates AS (
         entity_location_uid
 )
 
-UPDATE vds.vdsconfig_x_entity_locations AS x
+UPDATE vds.last_active AS x
 SET
     first_active = LEAST(ud.min_dt, x.first_active),
     last_active = GREATEST(ud.max_dt, x.last_active)
