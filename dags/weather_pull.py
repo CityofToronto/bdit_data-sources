@@ -27,6 +27,7 @@ try:
     from weather.prediction_import import prediction_upsert
     from weather.historical_scrape import historical_upsert
     from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("script import failed")
 
@@ -49,6 +50,7 @@ default_args = {
     schedule='30 6 * * *', #Historical weather is available at 1000UTC which is 6AM EDT and 5AM EST: https://climate.weather.gc.ca/FAQ_e.html#Q17
     catchup=False,
     tags=['weather', 'data_pull'],
+    template_searchpath=os.path.join(repo_path, 'weather/sql'),
     doc_md=__doc__
 )
 def weather_pull_dag():
@@ -85,8 +87,19 @@ def weather_pull_dag():
         )
     pull_historical.doc_md = "Pull yesterday's historical data for a given station id."
    
+    check_nulls = SQLCheckOperatorWithReturnValue(
+        task_id="check_null_historical",
+        sql="select-historical_all_nulls.sql",
+        conn_id="weather_bot"
+    )
+    check_nulls.doc_md = '''
+    Checks if historical inputs do not exist or are all nulls.
+    '''
+
     no_backfill >> wait_till_1030am >> pull_prediction()
-    pull_historical.override(task_id = 'pull_historical_city')(station_id=31688)
-    pull_historical.override(task_id = 'pull_historical_airport')(station_id=51459)
+    [
+        pull_historical.override(task_id = 'pull_historical_city')(station_id=31688),
+        pull_historical.override(task_id = 'pull_historical_airport')(station_id=51459)
+    ] >> check_nulls
 
 weather_pull_dag()
