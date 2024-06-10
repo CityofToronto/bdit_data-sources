@@ -35,13 +35,15 @@ airport_check AS (
 SELECT
     (SELECT
         (SELECT NOT(all_nulls) FROM city_check)
-        AND (SELECT NOT(all_nulls) FROM airport_check))
-    AS check_,
+        AND (SELECT NOT(all_nulls) FROM airport_check)
+    ) AS check_,
     CASE (SELECT all_nulls FROM city_check)
-        WHEN TRUE THEN '`weather.historical_daily_city` input for `' 
-        || '{{ ds }}'::date || '` is all nulls.'
-    END AS city_check, --noqa: TMP
+        WHEN TRUE THEN
+            '`weather.historical_daily_city` input for `'
+            || '{{ ds }}'::date || '` is all nulls.' --noqa: TMP
+    END AS city_check,
     CASE (SELECT all_nulls FROM airport_check)
-        WHEN TRUE THEN '`weather.historical_daily_airport` input for `' --noqa: TMP
-        || '{{ ds }}'::date || '` is all nulls.'
+        WHEN TRUE THEN
+            '`weather.historical_daily_airport` input for `'
+            || '{{ ds }}'::date || '` is all nulls.' --noqa: TMP
     END AS airport_check;
