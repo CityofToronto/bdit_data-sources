@@ -1,12 +1,14 @@
 --Aggregate `vds.raw_vdsdata` into table `vds.counts_15min` by detector / 15min bins. (all lanes)
-INSERT INTO vds.counts_15min (division_id, vdsconfig_uid, entity_location_uid, num_lanes, datetime_15min,
-    count_15min, expected_bins, num_obs, num_distinct_lanes)
+INSERT INTO vds.counts_15min (
+    division_id, vdsconfig_uid, entity_location_uid, num_lanes, datetime_15min,
+    count_15min, expected_bins, num_obs, num_distinct_lanes
+)
 
 /* Conversion of hourly volumes to count depends on size of bin.
 These bin counts were determined by looking at the most common bin gap using:
 bdit_data-sources/volumes/vds/exploration/time_gaps.sql */
 
-SELECT 
+SELECT
     d.division_id,
     d.vdsconfig_uid,
     d.entity_location_uid,
