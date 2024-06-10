@@ -69,6 +69,8 @@ Note: Around 2024-06-03, the weather DAG was renamed from `pull_weather` with [m
  
 - **`pull_historical_airport`**: Runs script [`historical_scrape.py`](./historical_scrape.py) which uses package [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the HTML content returned from [request](https://docs.python-requests.org/en/master/user/quickstart/#make-a-request) for Toronto Pearson Airport. The day before execution date's data will be pulled and inserted into `weather.historical_daily_airport`.
 
+- **`check_null_historical`**: Runs a SQL check to see if a row of all nulls (or no data) was inserted into either of the historical tables. Cannot be turned into a constraint because there are some valid days where no data is avaialable. 
+
 ## Backfill Data
 
 As mentioned before, only historical data can be backfilled. Other than backfilling from airflow's cli, you can also use the script `backfill_historical.py` for when you backfill a lot of dates (since you will have to backfill day by day in airflow). Note: Make sure you have a `db.cfg` in your home folder, and you have `weather_admins` permissions.
