@@ -22,4 +22,4 @@ GRANT SELECT ON TABLE vds.centreline_vds TO vds_bot;
 
 COMMENT ON TABLE vds.centreline_vds IS E''
 'Table to store VDS sensors - centreline equivalency. '
-'See `vds.vds_inventory` mat view for ease of use.'
+'See `vds.detector_inventory` mat view for ease of use.';
