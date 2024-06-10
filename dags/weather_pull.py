@@ -46,7 +46,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args, 
-    schedule='30 5 * * *', #Historical weather is available at 1000UTC which is 4AM EDT and 5AM EST: https://climate.weather.gc.ca/FAQ_e.html#Q17
+    schedule='30 6 * * *', #Historical weather is available at 1000UTC which is 6AM EDT and 5AM EST: https://climate.weather.gc.ca/FAQ_e.html#Q17
     catchup=False,
     tags=['weather', 'data_pull'],
     doc_md=__doc__

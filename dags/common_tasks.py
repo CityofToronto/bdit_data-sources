@@ -159,10 +159,10 @@ def wait_for_weather_timesensor(timeout=6*3600):
         timeout=timeout,
         mode="reschedule",
         poke_interval=3600,
-        target_time=datetime.time(hour = 5, minute = 35)
+        target_time=datetime.time(hour = 6, minute = 35)
     )
     wait_for_weather.doc_md = """
-    Historical weather is pulled at 5:30AM daily through the `weather_pull` DAG.
+    Historical weather is pulled at 6:30AM daily through the `weather_pull` DAG.
     Use this sensor to have a soft link to that DAG.
     """
     return wait_for_weather
