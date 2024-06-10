@@ -30,7 +30,7 @@ default_args = {
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 5,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
@@ -161,8 +161,13 @@ def vdsdata_dag():
             retries=1
         )
 
-        summarize_v15_task
-        summarize_v15_bylane_task
+        summarize_v15_task, summarize_v15_bylane_task
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="vds_check",
+        external_task_id="starting_point"
+    )
 
     @task_group
     def data_checks():
@@ -179,10 +184,18 @@ def vdsdata_dag():
                         "dt_col": 'datetime_15min',
                         "col_to_sum": 'num_obs',
                         "threshold": 0.7},
-                retries=2,
+                retries=0,
             )
             check_avg_rows
 
-    [update_inventories(), check_partitions()] >> pull_vdsdata() >> summarize_v15() >> data_checks()
+    [
+        [
+            update_inventories(),
+            check_partitions()
+        ] >>
+        pull_vdsdata() >>
+        summarize_v15() >> t_done >>
+        data_checks()
+    ]
 
 vdsdata_dag()
