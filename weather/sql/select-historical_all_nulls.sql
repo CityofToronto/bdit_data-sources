@@ -33,9 +33,10 @@ airport_check AS (
 )
 
 SELECT
-    (SELECT
-        (SELECT NOT(all_nulls) FROM city_check)
-        AND (SELECT NOT(all_nulls) FROM airport_check)
+    (
+        SELECT
+            (SELECT NOT(all_nulls) FROM city_check)
+            AND (SELECT NOT(all_nulls) FROM airport_check)
     ) AS check_,
     CASE (SELECT all_nulls FROM city_check)
         WHEN TRUE THEN
