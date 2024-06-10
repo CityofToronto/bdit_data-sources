@@ -28,5 +28,6 @@ GRANT ALL ON TABLE vds.last_active TO vds_admins;
 
 GRANT SELECT, UPDATE, INSERT ON TABLE vds.last_active TO vds_bot;
 
-COMMENT ON TABLE vds.last_active
-IS 'All combinations of vdsconfig_uid x entity_location_uid which appear in counts_15min data.';
+COMMENT ON TABLE vds.last_active IS E''
+'All combinations of vdsconfig_uid x entity_location_uid which appear in counts_15min '
+'data with first and last active dates.';
