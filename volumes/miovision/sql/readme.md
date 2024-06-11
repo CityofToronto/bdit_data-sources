@@ -8,8 +8,8 @@
     - [`movements`](#movements)
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
-    - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`volumes_15min`](#volumes_15min)
+    - [`volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous\_ranges)](#volumes_15min_mvt-use-view-volumes_15min_mvt_filtered-to-exclude-anomalous_ranges)
+    - [`volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous\_ranges)](#volumes_15min-use-view-volumes_15min_filtered-to-exclude-anomalous_ranges)
     - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
@@ -212,7 +212,7 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
 ```
 
-### `volumes_15min_mvt`
+### `volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous_ranges)
 
 `volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
@@ -240,7 +240,7 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `volumes_15min`
+### `volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous_ranges)
 
 Data table storing ATR versions of the 15-minute turning movement data. Data in
 `volumes` is stored in TMC format, so must be converted to ATR to be included in
@@ -271,6 +271,7 @@ A *Unique constraint* was added to the `miovision_api.volumes_15min` table based
 ### `miovision_api.volumes_daily`
 
 Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
+Note the table `volumes_daily_unfiltered` can be used (with caution) to include data labelled as anomalous. 
 
 | Field Name               | Comments                                                                   | Data Type   | Exmple     |
 |:-------------------------|:---------------------------------------------------------------------------|:------------|:-----------|
@@ -551,35 +552,34 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 
 ### An applied example
 
-When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
+When looking for only "typical" data, you can use filtered views `volumes_daily`, `volumes_15min_filtered`, `volumes_15min_mvt_filtered` which filter out anomalous ranges with an anti-join like so: 
 
 ```sql
-SELECT volume_uid
-FROM miovision_api.volumes
-WHERE 
-    NOT EXISTS ( -- this is our one big filter for bad/dubious data
-        SELECT 1
-        FROM miovision_api.anomalous_ranges
-        WHERE
-            anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
-            AND (
-                volumes.datetime_bin >= anomalous_ranges.range_start
-                OR anomalous_ranges.range_start IS NULL
-            ) AND (
-                volumes.datetime_bin < anomalous_ranges.range_end
-                OR anomalous_ranges.range_end IS NULL
-            ) AND (
-                anomalous_ranges.intersection_uid = volumes.intersection_uid
-                OR anomalous_ranges.intersection_uid IS NULL
-            ) AND (
-                anomalous_ranges.classification_uid = volumes.classification_uid
-                OR anomalous_ranges.classification_uid IS NULL
-            )
+--anti join anomalous_ranges
+LEFT JOIN miovision_api.anomalous_ranges AS ar
+    ON ar.problem_level = ANY(ARRAY['do-not-use', 'questionable'])
+    AND ar.intersection_uid = v15.intersection_uid
+    AND (
+        ar.classification_uid = v15.classification_uid
+        OR ar.classification_uid IS NULL
+    ) AND (
+        ar.leg = v15.leg
+        OR ar.leg IS NULL
+    ) AND v15.datetime_bin >= ar.range_start
+    AND (
+        v15.datetime_bin <= ar.range_end
+        OR ar.range_end IS NULL
     )
-    AND NOT EXISTS ( -- also exclude official holidays
-        SELECT 1 FROM ref.holiday WHERE holiday.dt = volumes.datetime_bin::date
+WHERE ar.uid IS NULL
+```
+
+You may also wish to use `ref.holiday` to filter out holidays. 
+
+```
+WHERE
+    NOT EXISTS ( -- also exclude official holidays
+        SELECT 1 FROM ref.holiday WHERE holiday.dt = v.datetime_bin::date
     )
-    AND etc.
 ```
 
 ### Identifying new anomalies
