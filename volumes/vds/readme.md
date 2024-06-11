@@ -1,35 +1,38 @@
 # Vehicle Detector System (VDS) data  
 
 # Table of contents
-1. [Introduction](#introduction)
-    - [Overview of Sensor Classes](#overview-of-sensor-classes)
-      - [Division_id 2](#division_id2)
-      - [Division_id 8001](#division_id8001)
-    - [How do I access it?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
-    - [Data Availability](#data-availability)
-    - [How was it aggregated and filtered?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
-    - [Future Work](#future-work)
-2. [Table Structure](#table-structure)
-    - [Tips for Use](#tips-for-use)
-    - [Lookup Tables and Views](#lookup-tables-and-views)
-      - [vds.vdsconfig](#vdsvdsconfig)
-      - [vds.entity_locations](#vdsentity_locations)
-      - [vds.detector_inventory](#vdsdetector_inventory)
-    - [Aggregate Tables](#aggregate-tables)
-      - [vds.counts_15min](#vdscounts_15min)
-      - [vds.counts_15min_bylane](#vdscounts_15min_bylane)
-      - [vds.veh_speeds_15min](#vdsveh_speeds_15min)
-      - [vds.veh_length_15min](#vdsveh_length_15min)
-    - [Raw Data](#raw-data)
-      - [vds.raw_vdsdata](#vdsraw_vdsdata)
-      - [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
-    - [Cursed](#cursed)
-      - [vds.detector_inventory_cursed](#vdsdetector_inventory_cursed)
-3. [Data Ops](#Data-Ops)
+- [Vehicle Detector System (VDS) data](#vehicle-detector-system-vds-data)
+- [Table of contents](#table-of-contents)
+- [Introduction](#introduction)
+  - [Overview of Sensor Classes](#overview-of-sensor-classes)
+    - [division\_id=2](#division_id2)
+    - [division\_id=8001](#division_id8001)
+  - [How do I access it? Where is the OpenData (if it exists)?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
+  - [Data Availability](#data-availability)
+  - [How was it aggregated \& filtered? What pitfalls should I avoid?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
+  - [Future Work](#future-work)
+- [Table Structure](#table-structure)
+  - [Tips for Use](#tips-for-use)
+  - [Lookup Tables and Views](#lookup-tables-and-views)
+    - [vds.vdsconfig](#vdsvdsconfig)
+    - [vds.entity\_locations](#vdsentity_locations)
+    - [vds.detector\_inventory](#vdsdetector_inventory)
+    - [`vds.config_comms_device`](#vdsconfig_comms_device)
+  - [Aggregate Tables](#aggregate-tables)
+    - [vds.counts\_15min](#vdscounts_15min)
+    - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
+    - [vds.veh\_speeds\_15min](#vdsveh_speeds_15min)
+    - [vds.veh\_length\_15min](#vdsveh_length_15min)
+  - [Raw Data](#raw-data)
+    - [vds.raw\_vdsdata](#vdsraw_vdsdata)
+    - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
+  - [Cursed](#cursed)
+    - [vds.detector\_inventory\_cursed](#vdsdetector_inventory_cursed)
+- [Data Ops](#data-ops)
   - [DAG Design](#dag-design)
-    - [vds_pull_vdsdata](#vds_pull_vdsdata)
-    - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
-  - [Something went wrong](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
+    - [vds\_pull\_vdsdata DAG](#vds_pull_vdsdata-dag)
+    - [vds\_pull\_vdsvehicledata DAG](#vds_pull_vdsvehicledata-dag)
+  - [Data Ops: something went wrong predictably, how do I fix it?](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
 
 # Introduction 
 
@@ -393,6 +396,7 @@ Row count: 1,148,765 (7 days)
 
 
 ## Cursed
+
 ### vds.detector_inventory_cursed
 Outdated detector inventory from old `rescu` schema with unknown origin, likely manual. Archiving in this schema in case some of this information is useful in the future. Only contains information about RESCU network. 
 
@@ -427,6 +431,7 @@ VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs de
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
 <!-- vds_pull_vdsdata_doc_md -->
+
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
@@ -458,10 +463,12 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsdata_doc_md -->
 
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
@@ -488,6 +495,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsvehicledata_doc_md -->
 
