@@ -57,12 +57,12 @@ def citywide_tti_aggregate():
 
 # Task to aggregate citwyide tti
 
-    aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti('%(agg_date)s')''',
+    aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti(''{{ macros.ds_add(ds, -1) }}'')''',
                                        task_id='aggregate_daily',
                                        postgres_conn_id='congestion_bot',
                                        autocommit=True,
-                                       retries = 0,
-                                       params={"agg_date": ds_format(ds_add('{{ ds }}', -1), "%Y-%m-%d", "%Y%m%d")},
+                                       retries = 0
+                                       #params={"agg_date": ds_format(ds_add('{{ ds }}', -1), "%Y-%m-%d", "%Y%m%d")},
                                        )
     aggregate_daily
 
