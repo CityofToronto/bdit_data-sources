@@ -1,18 +1,35 @@
 # Getting Started
 
-- [Understanding Legs, Movement and Direction of Travel](#Understanding-Legs,-Movement-and-Direction-of-Travel)
-	- [Vehicle Movements](#Vehicle-Movements)
-	- [Pedestrian Movement](#Pedestrian-Movement)
-	- [From Movement Counts to Segment Counts](#From-Movement-Counts-to-Segment-Counts)
-    - [All the East Leg Crossings!](#All-the-East-Leg-Crossings!)
-	- [Comparing TMC and ATR Counts](#Comparing-TMC-and-ATR-Counts)
-- [See it in Code!](#See-it-in-Code!)
-    - [Scenario 1: Left Turns from a Specific Street](#Scenario-1:-Left-Turns-from-a-Specific-Street)
-    - [Scenario 2: Total Volume at an Intersection](#Scenario-2:-Total-Volume-at-an-Intersection)
-    - [Scenario 3: Volume Counts Across a Screenline](#Scenario-3:-Volume-Counts-Across-a-Screenline)
-- [Important Things to Remember](#Important-Things-to-Remember)
-    - [Data Accuracy Dates by Mode](#Data-Accuracy-Dates-by-Mode)
-    - [Use `classification_uid = 10` for cyclists](#Use-classification_uid-=-10-for-cyclists)
+- [Getting Started](#getting-started)
+  - [Where should I look for data?](#where-should-i-look-for-data)
+  - [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
+    - [Vehicle Movements](#vehicle-movements)
+    - [Pedestrian Movement](#pedestrian-movement)
+    - [From Movement Counts to Segment Counts](#from-movement-counts-to-segment-counts)
+    - [All the East Leg Crossings!](#all-the-east-leg-crossings)
+      - [Comparing TMC and ATR Counts](#comparing-tmc-and-atr-counts)
+  - [See it in Code!](#see-it-in-code)
+    - [Scenario 1: Left Turns from a Specific Street](#scenario-1-left-turns-from-a-specific-street)
+    - [Scenario 2: Total Volume at an Intersection](#scenario-2-total-volume-at-an-intersection)
+    - [Scenario 3: Volume Counts Across a Screenline](#scenario-3-volume-counts-across-a-screenline)
+  - [Important Things to Remember](#important-things-to-remember)
+    - [Data Accuracy Dates by Mode](#data-accuracy-dates-by-mode)
+    - [Use `classification_uid = 10` for cyclists](#use-classification_uid--10-for-cyclists)
+
+## Where should I look for data?
+
+After identifying relevant intersection_uids in [`miovision_api.intersections`](sql/readme.md#intersections), you can look to the following **filtered** aggregations:
+
+| View Name                                | Time bins  | Aggregation Style | Excludes days with `anomalous_ranges`* | Excludes hours with `unacceptable_gaps`** | Date Time Column | Use for |
+|------------------------------------------|------------|-------------------|-------------------------------------|---------------------------------------|-------------------------|---------|
+| [miovision_api.volumes_daily](sql/readme.md#miovision_apivolumes_daily)              | 1 day      | By day / classification     | X                                   |      | `dt` | Prefiltering days with reasonable data. |
+| [miovision_api.volumes_15min_mvt_filtered](sql/readme.md#volumes_15min_mvt) | 15 minutes | TMC               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly TMC aggregations | 
+| [miovision_api.volumes_15min_filtered](sql/readme.md#volumes_15min)    | 15 minutes | ATR               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly TMC aggregations |
+ 
+\*`anomalous_range`: manual or automatically labelled date ranges of unusual or zero volumes.  
+\*\*`unacceptable_gaps`: short periods of at least 5 minutes with zero volumes across all modes which are assumed to be camera outages.  
+
+Need help 
 
 ## Understanding Legs, Movement and Direction of Travel
 
