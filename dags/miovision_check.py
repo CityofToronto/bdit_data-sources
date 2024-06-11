@@ -5,28 +5,30 @@ ie. issues which suggest field maintenance of sensors required.
 """
 import sys
 import os
-
-from airflow.decorators import dag
-from datetime import timedelta
-from airflow.models import Variable 
-from airflow.sensors.external_task import ExternalTaskSensor
-
 import logging
 import pendulum
+from datetime import timedelta
+
+from airflow.decorators import dag
+from airflow.models import Variable 
+from airflow.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 DAG_NAME = 'miovision_check'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -42,14 +44,11 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 4 * * *', # Run at 4 AM local time every day
+    schedule='0 4 * * MON', # Run at 4 AM on Monday
     catchup=False,
-    template_searchpath=[
-        os.path.join(repo_path,'volumes/miovision/sql/data_checks'),
-        os.path.join(repo_path,'dags/sql')
-    ],
+    template_searchpath=os.path.join(repo_path,'volumes/miovision/sql/data_checks'),
     tags=["miovision", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def miovision_check_dag():
 
@@ -60,7 +59,9 @@ def miovision_check_dag():
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
-        execution_delta=timedelta(hours=1) #pull_miovision scheduled at '0 3 * * *'
+        #when this DAG runs on Monday (day 7 - at the end of it's week long schedule interval),
+        #it should check for the Sunday (day 6) _pull DAG, which gets executed on the Monday.
+        execution_delta=timedelta(days=-6, hours=1) #pull_miovision scheduled at '0 3 * * *'
     )
 
     check_distinct_intersection_uid = SQLCheckOperatorWithReturnValue(
@@ -75,26 +76,19 @@ def miovision_check_dag():
     check_distinct_intersection_uid.doc_md = '''
     Identify intersections which appeared within the lookback period that did not appear today.
     '''
-
-    check_gaps = SQLCheckOperatorWithReturnValue(
-        task_id="check_gaps",
-        sql="""SELECT _check, summ, gaps
-            FROM public.summarize_gaps_data_check(
-                start_date := '{{ ds }}'::date,
-                end_date := '{{ ds }}'::date,
-                id_col := 'intersection_uid'::text,
-                dt_col := 'datetime_bin'::text,
-                sch_name := 'miovision_api'::text,
-                tbl_name := 'volumes'::text,
-                gap_threshold := '4 hours'::interval,
-                default_bin := '1 minute'::interval
-            )""",
+  
+    check_open_anomalous_ranges = SQLCheckOperatorWithReturnValue(
+        task_id="check_open_anomalous_ranges",
+        sql="select-open_issues.sql",
         conn_id="miovision_api_bot"
     )
-    check_gaps.doc_md = '''
-    Identify gaps larger than gap_threshold in intersections with values today.
+    check_open_anomalous_ranges.doc_md = '''
+    Identify open ended gaps that have non-zero volumes in the last week and notify DAG owners so ranges don't get stale.
     '''
 
-    t_upstream_done >> [check_distinct_intersection_uid, check_gaps]
+    t_upstream_done >> [
+        check_distinct_intersection_uid,
+        check_open_anomalous_ranges
+    ]
 
 miovision_check_dag()

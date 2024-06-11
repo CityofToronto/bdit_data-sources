@@ -12,13 +12,14 @@ import sys
 import pendulum
 from datetime import timedelta
 from typing import Any
+from dateutil.parser import parse
 from sqlalchemy.engine import Engine
 from googleapiclient.discovery import build
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
+from airflow.models.param import Param
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from airflow.decorators import dag, task
-from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 
 # import custom operators and helper functions
@@ -26,7 +27,6 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
 from dags.dag_functions import task_fail_slack_alert
-from dags.common_tasks import get_variable
 from gis.school_safety_zones.schools import pull_from_sheet
 # pylint: enable=wrong-import-position
 
@@ -53,6 +53,15 @@ DEFAULT_ARGS = {
     max_active_tasks=5,
     schedule="@daily",
     doc_md=__doc__,
+    params={
+        "years": Param(
+            default=[0],
+            type="array",
+            title="An array of years to pull.",
+            description="Override the default years to pull (current and last) by passing an array of years. ie. [2019, 2020, 2021]",
+            items={"type": "number"},
+        )
+    },
     tags=["Vision Zero"]
 )
 def get_vz_data():
@@ -103,17 +112,44 @@ def get_vz_data():
             )
 
             raise AirflowFailException('Invalid rows found. See errors documented above.')
-
+    
+    """Gets list of spreadsheets to process.
+    
+    Pulls from Airflow variable `ssz_spreadsheets`. 
+    By default filters to only current year and previous year based on execution date.
+    Can override by triggering with DAG Parameters."""
+    @task(task_id = "get_list_of_years")
+    def filter_spreadsheets(ds = None, **context):
+        spreadsheets = Variable.get("ssz_spreadsheets", deserialize_json=True)
+        
+        YR = parse(str(ds)).year
+        if context["params"]["years"] == [0]:
+            #defaults to current year and previous year if not specified as a param
+            years = (YR-1, YR)
+        else:
+            years = tuple(context["params"]["years"])
+        
+        sheets = []
+        for item in spreadsheets:
+            try:
+                if item['year'] in years:
+                    sheets.append(item)
+            except KeyError:
+                raise AirflowFailException('Year key not found.')
+        if sheets == []:
+            raise AirflowFailException('No sheets found.')
+        
+        return sheets
+            
     #to get credentials to access google sheets
     google_cred = GoogleBaseHook('vz_api_google').get_credentials()
-
-    spreadsheets = get_variable.override(task_id="get_list_of_years")("ssz_spreadsheets")
+    
     pull_data.partial(
         engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine(),
         service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
         schema="vz_safety_programs_staging"
     ).expand(
-        spreadsheet=spreadsheets
+        spreadsheet=filter_spreadsheets()
     )
 
 get_vz_data()
