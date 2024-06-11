@@ -184,6 +184,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
   volumes_15min_mvt ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
   anomalous_ranges ||--|{ volumes_daily : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_filtered : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_mvt_filtered : "exclude"
   anomalous_ranges {
         integer intersection_uid
         integer classification_uid
@@ -191,6 +193,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
+  volumes_15min ||--|{ volumes_15min_filtered : "filtered"
+  volumes_15min_mvt ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -207,6 +211,21 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         integer intersection_uid
         integer classification_uid
         date datetime_bin
+        text leg
+        integer volume
+  }
+  volumes_15min_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        text leg
+        integer volume
+  }
+  volumes_15min_mvt_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        integer movement_uid
         text leg
         integer volume
   }
