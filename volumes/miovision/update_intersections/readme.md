@@ -2,7 +2,7 @@
 # Miovision Intersection Update Resources  
 
 This readme contains information and resources on how to add/remove Miovision intersections from our data pipeline.  
-For the main Miovision readme, see [here](../README.md). 
+For the main Miovision readme, see [here](../readme.md). 
 
 <!-- TOC -->
 
@@ -11,7 +11,6 @@ For the main Miovision readme, see [here](../README.md).
 - [Adding Intersections](#adding-intersections)
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
 	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
-	- [Update `miovision_api.centreline_miovision`](#update-miovision_apicentreline_miovision)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
 - [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
 - [Adding many intersections](#adding-many-intersections)
@@ -21,7 +20,7 @@ For the main Miovision readme, see [here](../README.md).
 # Removing Intersections
 Once we are informed of the decommissioned date of a Miovision camera, we can carry out the following steps.
 
-1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../README.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
+1) Update the column `date_decommissioned` on table [`miovision_api.intersections`](../readme.md#intersections) to include the decommissioned date. The `date_decommissioned` is the date of the *last timestamp from the location* (so if the last row has a `datetime_bin` of '2020-06-15 18:39', the `date_decommissioned` is '2020-06-15').
 
 2) Remove aggregated data on the date the camera is decommissioned. Manually remove decommissioned machines' data from aggregate tables using [function-clear-volumes_15min.sql](../sql/function/function-clear-volumes_15min.sql), [function-clear-volumes_15min_mvt.sql](../sql/function/function-clear-volumes_15min_mvt.sql). You can also manually delete `volumes_daily` table. Dont worry about other tables that they are linked to since we have set up the ON DELETE CASCADE functionality. If the machine is taken down on 2020-06-15, we are not aggregating any of the data on 2020-06-15 as it may stop working at any time of the day on that day.
 
@@ -32,7 +31,7 @@ Adding intersections is not as simple as removing an intersection. We will first
 
 ## Update `miovision_api.intersections`:
 
-Look at the table [`miovision_api.intersections`](../README.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+Look at the table [`miovision_api.intersections`](../readme.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
 
 1. **Name and ID**  
     The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
@@ -62,9 +61,10 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 	) AS agg
 	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
 	```
+<p align="center">
+	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
+</p>
 
-	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="600"/>
-		
 5. **Restricted legs**  
     In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
 
@@ -106,15 +106,35 @@ Look at the table [`miovision_api.intersections`](../README.md#intersections) to
 	JOIN gis.traffic_signal AS ts USING (px)
 	```
 
+7. **Update geojson**  
+	Update the [geojson intersections file](../geojson/mio_intersections.geojson) by exporting to file from QGIS with `GeoJSON` format. This geojson file is helpful as a publically accessible record of our Miovision intersections.   
+	
+<p align="center">
+	<img src="geojson_export.png" alt="Export to file from QGIS" width="70%"/>
+</p>
+
+8. **Update `miovision_api.centreline_miovision`**
+
+	[`miovision_api.centreline_miovision`](../sql/readme.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
+
+	Use [**this script**](../sql/updates/update-centreline_miovision.sql) to add new intersections to `centreline_miovision`. The script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
+	- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
+	- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
+	- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
+
+	The script above also contains checks for duplicates and values missing from the table. 
+
 ## Update `miovision_api.intersection_movements`  
 
-Now that the updated table of [`miovision_api.intersections`](../README.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). Intersection movements determines which movements should be aggregated, by classification, typically for reporting purposes. Yes, we can see all kinds of wacky behaviour out there, but analyzing that is rarer than reporting on the main movements, so this makes basic analysis a little bit easier.
+Now that the updated table of [`miovision_api.intersections`](../readme.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). Intersection movements determines which movements should be aggregated, by classification, typically for reporting purposes. Yes, we can see all kinds of wacky behaviour out there, but analyzing that is rarer than reporting on the main movements, so this makes basic analysis a little bit easier.
 
 We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
 1. **Populate `miovision_api.volumes`**  
-    If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process: `python3 intersection_tmc.py run-api --start_date=2020-06-15 --end_date=2020-06-16 --intersection=35 --intersection=38 --intersection=40  --pull`.  
-	`--pull` has to be included in order to skip data processing and gaps finding since we are only interested in finding invalid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. Recommend to test it out with a day's worth of data first.
+    If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process:  
+		`python3 intersection_tmc.py run-api --start_date={DATE INSTALLED} --end_date={TODAYS DATE} --intersection=35 --intersection=38 --pull --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg`  
+
+	Include `--pull` and not `--agg` to only pull data and skip data processing and gaps finding since we are only interested in finding valid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. 
 
 2. **Insert into `intersection_movements`**  
     Now that there is data in `miovision_api.volumes`, run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. `volume::numeric / classification_volume >= 0.005` is a suggested addition to make sure that for lower volume modes (bicycles), we don't filter out a small volume but large percentage (> 5 / 1000).  
@@ -144,7 +164,7 @@ We need to find out all valid movements for the new intersections from the data 
 	)
 
 	-- Uncomment when you're ready to insert.
-	-- INSERT INTO miovision_api.intersection_movements
+	-- INSERT INTO miovision_api.intersection_movements (intersection_uid, classification_uid, leg, movement_uid)
 	SELECT
 		intersection_uid,
 		classification_uid,
@@ -215,7 +235,7 @@ We need to find out all valid movements for the new intersections from the data 
 	```
 
 4. **Review `intersection_movements`**  
-    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../README.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
+    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
     Below is an example script + output you can use to aggregate movements into a more readable format for QC. In particular look for intersections with very short lists of valid movements, or no valid movements for certain classifications.  
 
     | intersection_uid | leg | movements                                                                                                                                                                                    |
@@ -257,38 +277,15 @@ We need to find out all valid movements for the new intersections from the data 
         leg
     ```
 
-5. **Update geojson**  
-	Update the [geojson intersections file](../geojson/mio_intersections.geojson) by exporting to file from QGIS with `GeoJSON` format. This geojson file is helpful as a publically accessible record of our Miovision intersections.   
-![export to file from QGIS](geojson_export.png)
-
-## Update `miovision_api.centreline_miovision`
-
-[`miovision_api.centreline_miovision`](../sql/README.md#centreline_miovision) links Miovision intersection legs to `gis.centreline` street segments. The script used to create this table is [here](../sql/table/create-mv-mio_cent.sql). 
-
-This script can automatically identify the correct direction and centreline segment for most Miovision intersections, but manual adjustments are needed for the following situations:
-- Segments are not aligned in a North-South or East-West direction (like Kingston Road)
-- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
-- One or more "legs" is not a street segment (like the entrance to the shopping centre at Danforth and Jones)
-
-Manually check that the correct segments have been identified for new Miovision intersections using:
-```
-SELECT
-	cm.*,
-	cl.geom
-FROM miovision_api.centreline_miovision AS cm
-LEFT JOIN gis.centreline AS cl ON cm.centreline_id = cl.geo_id
-WHERE intersection_uid = 72 -- change the number to match the new intersection_uid(s)
-```
-
 ## Backfill/Aggregate new intersection data
 
 Now that the intersection is configured and the raw volumes data is in the database, we have to finish aggregating the data.
 
 1. **Backfill `miovision_api.volumes`**   
-    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and previous day. Skip aggregating data by omitting `--agg` flag. 
+    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and current date (exclusive). Skip aggregating data by omitting `--agg` flag. 
 
 2. **Backfill additional tables**  
-	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and previous day. Skip pulling data by omitting `--pull` flag. 
+	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and current date (exclusive). Skip pulling data by omitting `--pull` flag. 
 
 3. **QC Aggregate Tables**  
     Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter. 

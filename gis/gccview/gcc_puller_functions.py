@@ -534,8 +534,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     # Name the temporary table '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
-    now = datetime.datetime.now()
-    date = (str(now.year)+str(now.month)+str(now.day))
+    date = datetime.date.today().strftime('%Y-%m-%d')
     
     # Find if old table exists
     with con:

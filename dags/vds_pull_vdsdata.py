@@ -15,7 +15,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 
 from volumes.vds.py.vds_functions import (
-    pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations
+    pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, pull_commsdeviceconfig
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
@@ -30,7 +30,7 @@ default_args = {
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 5,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
@@ -70,13 +70,24 @@ def vdsdata_dag():
             vds_bot = PostgresHook('vds_bot')
             pull_entity_locations(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
+        @task
+        def pull_and_insert_commsdeviceconfig():
+            "Get commsdeviceconfig from ITSC and insert into RDS `vds.config_comms_device`"
+            itsc_bot = PostgresHook('itsc_postgres')
+            vds_bot = PostgresHook('vds_bot')
+            pull_commsdeviceconfig(rds_conn = vds_bot, itsc_conn=itsc_bot)
+
         t_done = ExternalTaskMarker(
                 task_id="done",
                 external_dag_id="vds_pull_vdsvehicledata",
                 external_task_id="starting_point"
         )
 
-        [pull_and_insert_detector_inventory(), pull_and_insert_entitylocations()] >> t_done
+        [
+            pull_and_insert_detector_inventory(),
+            pull_and_insert_entitylocations(),
+            pull_and_insert_commsdeviceconfig()
+        ] >> t_done
 
     @task_group
     def check_partitions():
@@ -150,8 +161,13 @@ def vdsdata_dag():
             retries=1
         )
 
-        summarize_v15_task
-        summarize_v15_bylane_task
+        summarize_v15_task, summarize_v15_bylane_task
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="vds_check",
+        external_task_id="starting_point"
+    )
 
     @task_group
     def data_checks():
@@ -168,10 +184,18 @@ def vdsdata_dag():
                         "dt_col": 'datetime_15min',
                         "col_to_sum": 'num_obs',
                         "threshold": 0.7},
-                retries=2,
+                retries=0,
             )
             check_avg_rows
 
-    [update_inventories(), check_partitions()] >> pull_vdsdata() >> summarize_v15() >> data_checks()
+    [
+        [
+            update_inventories(),
+            check_partitions()
+        ] >>
+        pull_vdsdata() >>
+        summarize_v15() >> t_done >>
+        data_checks()
+    ]
 
 vdsdata_dag()

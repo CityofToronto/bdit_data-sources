@@ -6,7 +6,7 @@ WITH lookback AS ( --noqa: L045
     SELECT
         {{ params.dt_col }}::date AS _dt, --noqa: L039
         SUM({{ params.col_to_sum }}) AS count,
-		ref.is_weekend_or_holiday({{ params.dt_col }}::date) AS is_weekend_or_holiday
+        ref.is_weekend_or_holiday({{ params.dt_col }}::date) AS is_weekend_or_holiday
     FROM {{ params.table }}
     WHERE
         {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
@@ -16,7 +16,7 @@ WITH lookback AS ( --noqa: L045
 )
 
 SELECT
-    today.count >= FLOOR(thr.threshold * AVG(lb.count)) AS check, 
+    today.count >= FLOOR(thr.threshold * AVG(lb.count)) AS _check, 
     'Daily count: ' || to_char(
         today.count, 'FM9,999,999,999'
     ) AS ds_count,
@@ -26,12 +26,15 @@ SELECT
     'Pass threshold: ' || to_char(
         FLOOR(thr.threshold * AVG(lb.count)),
         'FM9,999,999,999'
-    ) AS passing_value
+    ) AS passing_value,
+    weather.airport_weather_summary('{{ ds }}') AS weather_summary
 FROM lookback AS today
 JOIN lookback AS lb USING (is_weekend_or_holiday),
-    LATERAL(
+    LATERAL (
         --change threshold if holiday is not null
-        SELECT CASE (SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = today._dt) IS NOT NULL
+        SELECT CASE(
+            SELECT hol.holiday FROM ref.holiday AS hol WHERE hol.dt = today._dt
+            ) IS NOT NULL
             WHEN False THEN {{ params.threshold }}::numeric
             WHEN True THEN 0.5::numeric --50% of weekend volumes for holidays is acceptable
         END
