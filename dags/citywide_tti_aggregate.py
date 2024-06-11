@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task
-from airflow.macros import ds_add
+from airflow.macros import ds_add, ds_format
 
 import logging
 import pendulum
@@ -62,7 +62,7 @@ def citywide_tti_aggregate():
                                        postgres_conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0,
-                                       params={"agg_date": '{{ ds_add(ds, -1) }}'},
+                                       params={"agg_date": ds_format(ds_add('{{ ds }}', -1), "%Y-%m-%d", "%Y%m%d")},
                                        )
     aggregate_daily
 
