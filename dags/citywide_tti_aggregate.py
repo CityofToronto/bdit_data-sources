@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task
+from airflow.macros import ds_add
 
 import logging
 import pendulum
