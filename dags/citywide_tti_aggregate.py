@@ -61,7 +61,7 @@ def citywide_tti_aggregate():
                                        postgres_conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0,
-                                       params={"agg_date": ds_add(ds, -1)},
+                                       params={"agg_date": ds_add('{{ ds }}', -1)},
                                        )
     aggregate_daily
 
