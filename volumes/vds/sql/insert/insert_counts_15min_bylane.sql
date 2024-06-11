@@ -1,11 +1,13 @@
 --aggregate `vds.raw_vdsdata` into `vds.counts_15min_bylane` table by detector / lane / 15min bins.'
-INSERT INTO vds.counts_15min_bylane (division_id, vdsconfig_uid, entity_location_uid, lane, datetime_15min,
-    count_15min, expected_bins, num_obs)
+INSERT INTO vds.counts_15min_bylane (
+    division_id, vdsconfig_uid, entity_location_uid, lane, datetime_15min,
+    count_15min, expected_bins, num_obs
+)
 
 /* Conversion of hourly volumes to count depends on size of bin.
 These bin counts were determined by looking at the most common bin gap using:
 bdit_data-sources/volumes/vds/exploration/time_gaps.sql */
-SELECT 
+SELECT
     d.division_id,
     d.vdsconfig_uid,
     d.entity_location_uid,
@@ -18,9 +20,10 @@ SELECT
     di.expected_bins,
     COUNT(*) AS num_obs
 FROM vds.raw_vdsdata AS d
-JOIN vds.detector_inventory AS di ON d.vdsconfig_uid = di.uid
+JOIN vds.detector_inventory AS di USING (vdsconfig_uid, entity_location_uid)
 WHERE
-    d.division_id = 2 --division 8001 sensors have only 1 lane, aggregate only into view counts_15min_div8001.
+    --division 8001 sensors have only 1 lane, aggregate only into view counts_15min_div8001.
+    d.division_id = 2
     AND d.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
     AND d.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
     AND d.vdsconfig_uid IS NOT NULL
