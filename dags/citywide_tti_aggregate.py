@@ -52,16 +52,17 @@ default_args = {'owner': ','.join(DAG_OWNERS),
     catchup=False
 )
 
-## Tasks ##
-def citywide_tti_aggregate(ds=None):
-## Postgres Tasks
+
+def citywide_tti_aggregate():
+
 # Task to aggregate citwyide tti
+
     aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti('%(agg_date)s')''',
                                        task_id='aggregate_daily',
                                        postgres_conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0,
-                                       params={"agg_date": ds_add(ds, -1)},
+                                       params={"agg_date": '{{ ds_add(ds, -1) }}'},
                                        )
     aggregate_daily
 
