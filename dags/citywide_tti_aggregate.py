@@ -1,18 +1,11 @@
 import sys
 import os
 
-from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task
 
-from psycopg2 import sql
-from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
 import pendulum
 try:
