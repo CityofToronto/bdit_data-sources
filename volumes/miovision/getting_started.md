@@ -2,6 +2,7 @@
 
 - [Getting Started](#getting-started)
   - [Where should I look for data?](#where-should-i-look-for-data)
+  - [Where do I find info about data quality?](#where-do-i-find-info-about-data-quality)
   - [Understanding Legs, Movement and Direction of Travel](#understanding-legs-movement-and-direction-of-travel)
     - [Vehicle Movements](#vehicle-movements)
     - [Pedestrian Movement](#pedestrian-movement)
@@ -29,7 +30,17 @@ After identifying relevant intersection_uids in [`miovision_api.intersections`](
 \*`anomalous_range`: manual or automatically labelled date ranges of unusual or zero volumes.  
 \*\*`unacceptable_gaps`: short periods of at least 5 minutes with zero volumes across all modes which are assumed to be camera outages.  
 
-Need help 
+## Where do I find info about data quality?
+
+**`miovision_api.anomalous_ranges`**
+
+This table contains date ranges of zero volumes, or suspicious low/high volumes. Zero volumes ranges are automated by a daily Airflow process, while other suspicious data is labelled manually by a dbadmin. If you want to avoid suspicious data altogether, use the filtered views mentioned above. 
+Anomalous ranges may apply to:
+- an entire intersection
+- specific intersection + classification
+- specific intersection + classification + leg
+
+If you find suspicious looking data, contact a Miovision dbadmin to record this as a new anomalous_range and for follow up with Miovision!
 
 ## Understanding Legs, Movement and Direction of Travel
 
