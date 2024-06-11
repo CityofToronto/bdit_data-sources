@@ -2,27 +2,27 @@
 
 - [Overview](#overview)
 - [API](#api)
-    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-        - [Turning Movement Count TMC](#turning-movement-count-tmc)
-        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
-        - [Error responses](#error-responses)
-    - [Input Files](#input-files)
-    - [How to run the api](#how-to-run-the-api)
-        - [Command Line Options](#command-line-options)
-    - [Classifications](#classifications)
-        - [API Classifications](#api-classifications)
-        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
-    - [PostgreSQL Functions](#postgresql-functions)
-    - [Invalid Movements](#invalid-movements)
-    - [How the API works](#how-the-api-works)
-    - [Repulling data](#repulling-data)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [Command Line Options](#command-line-options)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-    - [**miovision_pull**](#miovision_pull)
-        - [check_partitions TaskGroup](#check_partitions-taskgroup)
-        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
-        - [data_checks TaskGroup](#data_checks-taskgroup)
-    - [**miovision_check**](#miovision_check)
-    - [Notes](#notes)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [Notes](#notes)
 
 <!-- /TOC -->
 
@@ -274,6 +274,7 @@ This task group completes various Miovision aggregations.
 
 ### `data_checks` TaskGroup
 This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param.  
+- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
 - `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.  
 <!-- miovision_pull_doc_md -->
