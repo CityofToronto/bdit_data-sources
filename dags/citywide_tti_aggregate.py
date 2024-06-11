@@ -3,12 +3,10 @@ import os
 
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.python_operator import ShortCircuitOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.models import Variable
 from airflow.decorators import dag, task
 
@@ -36,7 +34,6 @@ Slack notifications is raised when the airflow process fails.
 
 """
 DAG_NAME = 'citywide_tti_aggregate'
-
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
 
 # Slack alert
@@ -62,14 +59,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 )
 
 ## Tasks ##
-## ExternalTaskSensor to wait for pull_here
 def citywide_tti_aggregate():
-    wait_for_here = ExternalTaskSensor(task_id='wait_for_here',
-                                       external_dag_id='pull_here',
-                                       external_task_id='pull_here',
-                                       start_date=datetime(2024, 5, 16)
-                                       )
-
 ## Postgres Tasks
 # Task to aggregate citwyide tti
     aggregate_daily = PostgresOperator(sql='''SELECT covid.generate_citywide_tti('%(agg_date)s')''',
@@ -79,7 +69,6 @@ def citywide_tti_aggregate():
                                        retries = 0,
                                        params={"agg_date": ds_add(ds, -1)},
                                        )
-
-    wait_for_here >> aggregate_daily
+    aggregate_daily
 
 citywide_tti_aggregate()
