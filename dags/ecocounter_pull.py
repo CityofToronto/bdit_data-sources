@@ -62,7 +62,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 3 * * *',
+    schedule='0 10 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=True,
     max_active_runs=1,
