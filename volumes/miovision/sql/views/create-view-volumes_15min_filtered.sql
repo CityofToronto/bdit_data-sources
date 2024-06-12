@@ -25,7 +25,7 @@ CREATE VIEW miovision_api.volumes_15min_filtered AS (
     WHERE ar.uid IS NULL
 );
 
-COMMENT ON TABLE miovision_api.volumes_15min_filtered IS E''
+COMMENT ON VIEW miovision_api.volumes_15min_filtered IS E''
 'miovision_api.volumes_15min with anomalous_ranges labeled '
 '''do-not-use'' or ''questionable'' filtered out.';
 
