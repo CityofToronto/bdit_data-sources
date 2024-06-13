@@ -17,6 +17,7 @@
     - [vds.entity\_locations](#vdsentity_locations)
     - [`vds.config_comms_device`](#vdsconfig_comms_device)
     - [`vds.centreline_vds`](#vdscentreline_vds)
+    - [`vds.last_active`](#vdslast_active)
   - [Aggregate Tables](#aggregate-tables)
     - [vds.counts\_15min](#vdscounts_15min)
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
@@ -437,6 +438,7 @@ Row count: 1,148,765 (7 days)
 
 
 ## Cursed
+
 ### vds.detector_inventory_cursed
 Outdated detector inventory from old `rescu` schema with unknown origin, likely manual. Archiving in this schema in case some of this information is useful in the future. Only contains information about RESCU network. 
 
@@ -471,6 +473,7 @@ VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs de
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
 <!-- vds_pull_vdsdata_doc_md -->
+
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
@@ -502,10 +505,12 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsdata_doc_md -->
 
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
@@ -534,6 +539,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `done` acts as a starting point for downstream `vds_check` DAG.  
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsvehicledata_doc_md -->
 

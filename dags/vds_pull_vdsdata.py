@@ -19,7 +19,7 @@ from volumes.vds.py.vds_functions import (
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
-from dags.common_tasks import check_jan_1st
+from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -186,7 +186,7 @@ def vdsdata_dag():
                         "threshold": 0.7},
                 retries=0,
             )
-            check_avg_rows
+            wait_for_weather_timesensor() >> check_avg_rows
 
     [
         [

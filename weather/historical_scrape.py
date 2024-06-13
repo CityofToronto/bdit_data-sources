@@ -1,33 +1,19 @@
 # Pulls historical daily weather from Environment Canada
  
 import requests
-from requests import exceptions
-from pathlib import Path
 from bs4 import BeautifulSoup
-
-#logger
 import logging
-from logging import exception
-
-#sql
-from psycopg2 import connect, sql
+from psycopg2 import sql
 from psycopg2.extras import execute_values
-
-#other packages
-import os
-import sys
 import datetime
 import pandas as pd
-import numpy as np
-import click
-import datetime
-from configparser import ConfigParser
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level = logging.INFO)
 
-
 # Uncomment when running script directly
+#from configparser import ConfigParser
+#from psycopg2 import connect
 #CONFIG=ConfigParser()
 #CONFIG.read(str(Path.home().joinpath('db.cfg')))
 #dbset = CONFIG['DBSETTINGS']
