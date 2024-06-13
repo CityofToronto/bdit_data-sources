@@ -125,6 +125,7 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
    
 ### `data_checks` TaskGroup
 This task group runs data quality checks on the pipeline output.  
+- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
 - `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
