@@ -1,35 +1,48 @@
-# Vehicle Detector System (VDS) data  
+<!-- TOC -->
 
-# Table of contents
-1. [Introduction](#introduction)
-    - [Overview of Sensor Classes](#overview-of-sensor-classes)
-      - [Division_id 2](#division_id2)
-      - [Division_id 8001](#division_id8001)
-    - [How do I access it?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
-    - [Data Availability](#data-availability)
-    - [How was it aggregated and filtered?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
-    - [Future Work](#future-work)
-2. [Table Structure](#table-structure)
-    - [Tips for Use](#tips-for-use)
-    - [Lookup Tables and Views](#lookup-tables-and-views)
-      - [vds.vdsconfig](#vdsvdsconfig)
-      - [vds.entity_locations](#vdsentity_locations)
-      - [vds.detector_inventory](#vdsdetector_inventory)
-    - [Aggregate Tables](#aggregate-tables)
-      - [vds.counts_15min](#vdscounts_15min)
-      - [vds.counts_15min_bylane](#vdscounts_15min_bylane)
-      - [vds.veh_speeds_15min](#vdsveh_speeds_15min)
-      - [vds.veh_length_15min](#vdsveh_length_15min)
-    - [Raw Data](#raw-data)
-      - [vds.raw_vdsdata](#vdsraw_vdsdata)
-      - [vds.raw_vdsvehicledata](#vdsraw_vdsvehicledata)
-    - [Cursed](#cursed)
-      - [vds.detector_inventory_cursed](#vdsdetector_inventory_cursed)
-3. [Data Ops](#Data-Ops)
+- [Vehicle Detector System (VDS) data](#vehicle-detector-system-vds-data)
+- [Introduction](#introduction)
+  - [Overview of Sensor Classes](#overview-of-sensor-classes)
+    - [division\_id=2](#division_id2)
+    - [division\_id=8001](#division_id8001)
+  - [How do I access it? Where is the OpenData (if it exists)?](#how-do-i-access-it-where-is-the-opendata-if-it-exists)
+  - [Data Availability](#data-availability)
+  - [How was it aggregated \& filtered? What pitfalls should I avoid?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
+  - [Future Work](#future-work)
+- [Table Structure](#table-structure)
+  - [Tips for Use](#tips-for-use)
+  - [Lookup Tables and Views](#lookup-tables-and-views)
+    - [vds.detector\_inventory](#vdsdetector_inventory)
+    - [vds.vdsconfig](#vdsvdsconfig)
+    - [vds.entity\_locations](#vdsentity_locations)
+    - [`vds.config_comms_device`](#vdsconfig_comms_device)
+    - [`vds.centreline_vds`](#vdscentreline_vds)
+    - [`vds.last_active`](#vdslast_active)
+  - [Aggregate Tables](#aggregate-tables)
+    - [vds.counts\_15min](#vdscounts_15min)
+    - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
+    - [vds.veh\_speeds\_15min](#vdsveh_speeds_15min)
+    - [vds.veh\_length\_15min](#vdsveh_length_15min)
+  - [Raw Data](#raw-data)
+    - [vds.raw\_vdsdata](#vdsraw_vdsdata)
+    - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
+  - [Cursed](#cursed)
+    - [vds.detector\_inventory\_cursed](#vdsdetector_inventory_cursed)
+- [Data Ops](#data-ops)
   - [DAG Design](#dag-design)
-    - [vds_pull_vdsdata](#vds_pull_vdsdata)
-    - [vds_pull_vdsvehicledata](#vds_pull_vdsvehicledata)
-  - [Something went wrong](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
+    - [vds\_pull\_vdsdata DAG](#vds_pull_vdsdata-dag)
+    - [vds\_pull\_vdsvehicledata DAG](#vds_pull_vdsvehicledata-dag)
+    - [vds\_check DAG](#vds_check-dag)
+  - [Data Ops: something went wrong predictably, how do I fix it?](#data-ops-something-went-wrong-predictably-how-do-i-fix-it)
+    - [**New sensor type added?**](#new-sensor-type-added)
+    - [**Sensor type incorrectly classified?**](#sensor-type-incorrectly-classified)
+    - [**Raw data missing fkeys?**](#raw-data-missing-fkeys)
+    - [**No/low data system wide?**](#nolow-data-system-wide)
+    - [**No data for a specific sensor?**](#no-data-for-a-specific-sensor)
+    - [Updating `vds.centreline_vds`](#updating-vdscentreline_vds)
+
+<!-- /TOC -->
+# Vehicle Detector System (VDS) data 
 
 # Introduction 
 
@@ -134,6 +147,33 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 ## Lookup Tables and Views
 
+### vds.detector_inventory
+**The main table for filtering and identifying VDS/RESCU sensors locations.**
+This view draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. These dates are updated daily via Airflow `vds_pull_vdsdata` DAG.   
+Use the geoms and `first_active` and `last_active` fields in this view to select your sensors and then join to `counts_15min USING (vdsconfig_uid, entity_location_uid)`. 
+- Criteria for manual fields are defined within case statements [here](<sql/views/create-view-detector_inventory.sql>).  
+- If you add new rules to `expected_bins` to reflect new sensor types, see the heading `New sensor type added?` or `Sensor type incorrectly classified?` under [Data Ops](#data-ops-something-went-wrong-predictably-how-do-i-fix-it) heading. 
+
+Row count: 11,558
+| column_name   | data_type         | sample           | description   |
+|:--------------|:------------------|:-----------------|:--------------|
+| vdsconfig_uid  | integer           | 382             |               |
+| entity_location_uid | integer      | 10350           |               |
+| detector_id   | character varying | DW0130DWG        |               |
+| det_type      | text              | Signal Detectors | Manual field. Possible values: 'RESCU Detectors', 'Blue City AI', 'Smartmicro Sensors' |
+| det_loc       | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP/Allen North', 'DVP South', 'Gardiner/Lakeshore East', 'Gardiner/Lakeshore West', 'Kingston Rd' |
+| det_group     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP', 'Lakeshore', 'Gardiner', 'Allen', 'Kingston Rd', 'On-Ramp' |
+| direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
+| expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
+| comms_desc | text | WHD - Glen Rouge | From `config_comms_device.souce_id` |
+| det_tech | text | Wavetronix | Manual field. Only defined for RESCU network. Possible values: 'Smartmicro','Wavetronix','Inductive' |
+| detector_loc | text   | WESTBOUND GARDINER and COLBORNE LODGE | |
+| sensor_geom | geom    | | geom from `vds.entity_locations` |  
+| centreline_id | integer |  | `centreline_id` from `vds.centreline_vds` | 
+| centreline_geom | geom    |  | geom from `gis_core.centreline_latest` | 
+| first_active | timestamp  | | first timestamp the sensor produced data |
+| last_active | timestamp  | | last timestamp the sensor has produced data to date | 
+
 ### vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
 
@@ -203,25 +243,6 @@ Row count: 16,013
 | location_description_overwrite | character varying           | JARVIS ST and FRONT ST E / LOWER JARVIS ST |               |
 | uid                            | integer                     | 1                                          |               |
 
-### vds.detector_inventory
-A new manually defined detector inventory for ease of filtering `vds.vdsconfig`. For more information see CASE statements in the [definition file](<sql/views/create-view-detector_inventory.sql>)
-
-- If you add new rules to `expected_bins` to reflect new sensor types, see the heading `New sensor type added?` or `Sensor type incorrectly classified?` under [Data Ops](#data-ops-something-went-wrong-predictably-how-do-i-fix-it) heading. 
-
-Row count: 10,540
-| column_name   | data_type         | sample           | description   |
-|:--------------|:------------------|:-----------------|:--------------|
-| uid           | integer           | 1                |               |
-| detector_id   | character varying | PX1408-DET019    |               |
-| division_id   | smallint          | 8001             |               |
-| det_type      | text              | Signal Detectors | Manual field. Possible values: 'RESCU Detectors', 'Blue City AI', 'Smartmicro Sensors' |
-| det_loc       | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP/Allen North', 'DVP South', 'Gardiner/Lakeshore East', 'Gardiner/Lakeshore West', 'Kingston Rd' |
-| det_group     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'DVP', 'Lakeshore', 'Gardiner', 'Allen', 'Kingston Rd', 'On-Ramp' |
-| direction     | text              |                  | Manual field. Only defined for RESCU network. Possible values: 'Eastbound','Westbound', 'Southbound', 'Northbound' |
-| expected_bins | integer           | 1                | Manual field. Expected bins per 15 minute period. Possible values: 1, 3, 5, 45 |
-| comms_desc | text | WHD - Glen Rouge | From `config_comms_device.souce_id` |
-| det_tech | text | Wavetronix | Manual field. Only defined for RESCU network. Possible values: 'Smartmicro','Wavetronix','Inductive' |
-
 ### `vds.config_comms_device`
 Store raw data pulled from ITS Central `config_comms_device` table. This table is useful for determing which technology is used by a RESCU sensor.
 Join `vdsconfig.fss_id` to `config_comms_device.fss_id`. Note there may be duplicates on division_id+fss_id corresponding to updated locations/details over time.
@@ -237,6 +258,30 @@ Row count: 666
 | has_gps_unit    | boolean                     | False                      |  |
 | device_type     | smallint                    | 10                         |  |
 | description     | character varying           |                            |  |
+
+### `vds.centreline_vds`
+Table to store VDS sensors - centreline equivalency. See `vds.detector_inventory` mat view for ease of use.
+Can be joined using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
+See update instructions [below](#updating-vdscentreline_vds). 
+
+Row count: 392
+| column_name     | data_type                   | sample                     |   Comments |
+|:----------------|:----------------------------|:---------------------------|-----------:|
+| centreline_id     | bigint                    |                           | |
+| vdsconfig_uid     | integer                    |                           | |
+
+### `vds.last_active`
+A table updated daily during the [insert](sql/insert/insert_raw_vdsdata.sql) into `vds.raw_vdsdata` to maintain an up to date list of sensor first and last active dates. See instead `vds.detector_inventory` which contains additional sensor details. 
+
+Row count: 11,558
+| column_name     | data_type                   | sample                     |   Comments |
+|:----------------|:----------------------------|:---------------------------|-----------:|
+| detector_uid | integer                    |                           | |
+| division_id | smallint                    |                           | |
+| vdsconfig_uid | integer                    |                           | |
+| entity_location_uid | integer                    |                           | |
+| first_active | timestamp without time zone  |                           | First timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
+| last_active | timestamp without time zone |                           | Last timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
 
 ## Aggregate Tables
 
@@ -393,6 +438,7 @@ Row count: 1,148,765 (7 days)
 
 
 ## Cursed
+
 ### vds.detector_inventory_cursed
 Outdated detector inventory from old `rescu` schema with unknown origin, likely manual. Archiving in this schema in case some of this information is useful in the future. Only contains information about RESCU network. 
 
@@ -427,10 +473,11 @@ VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs de
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
 <!-- vds_pull_vdsdata_doc_md -->
+
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
-  ![](vds_pull_vdsdata_dag.png)
+  ![](img/vds_pull_vdsdata_dag.png)
 
 </div>
 
@@ -458,14 +505,16 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsdata_doc_md -->
 
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
-  ![](vds_pull_vdsvehicledata_dag.png)
+  ![](img/vds_pull_vdsvehicledata_dag.png)
 
 </div>
 
@@ -487,28 +536,70 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_speeds` Deletes data from RDS `vds.veh_speeds_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`.  
   - `summarize_lengths` Deletes data from RDS `vds.veh_length_15min` for specific date and then inserts summary from `vds.raw_vdsvehicledata`. 
 
+  - `done` acts as a starting point for downstream `vds_check` DAG.  
+
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
+<!-- vds_check_doc_md -->
+### vds_check DAG 
+
+- `t_upstream_done` waits for the `done` task to be completed in `vds_pull` DAG before running the data checks.  
+- `check_missing_centreline_id` checks for rows in `detector_inventory` with missing `centreline_id`.
+- `check_missing_expected_bins` checks for rows in `detector_inventory` with missing `expected_bins`.
+
+<!-- vds_check_doc_md -->
 
 ## Data Ops: something went wrong predictably, how do I fix it?
 **Need to retry a task?**  
 - Task groups are organized to include "delete" statements prior to each insert, so you should safely be able to re-run any failed **task group**.  
 
-**New sensor type added?**  
+### **New sensor type added?**  
 - If new sensor types are added, you may need to update `vds.detector_inventory` `expected_bins` [case statement](sql/views/create-view-detector_inventory.sql)
 and run inserts to add those records to [`conuts_15min`](sql/insert/insert_counts_15min.sql) and [`conuts_15min_bylane`](sql/insert/insert_counts_15min_bylane.sql). (This process could be improved with use of triggers, but would require many other changes).  
 
-**Sensor type incorrectly classified?**  
+You may use this query as a base for identifying the expected_bins of a new sensor:  
+```sql
+WITH data_ AS (
+        SELECT DISTINCT dt, vdsconfig_uid, dt - lag(dt, 1) OVER (PARTITION BY vdsconfig_uid ORDER BY dt) AS dif
+        FROM vds.raw_vdsdata WHERE vdsconfig_uid IN 
+        ( --edit sensors here!
+            2374388,3672168,3683400,3683402,3683403
+        )
+        ORDER BY vdsconfig_uid, dt
+)
+
+SELECT DISTINCT ON (vdsconfig_uid) vdsconfig_uid, dif, cnt
+FROM (
+    SELECT vdsconfig_uid, dif, COUNT(*) AS cnt
+    FROM data_
+    GROUP BY 1, 2
+) a
+ORDER BY vdsconfig_uid, cnt DESC
+```
+
+### **Sensor type incorrectly classified?**  
 - If you find yourself updating an incorrect value for `expected_bins`, see [example](sql/adhoc_updates/update-incorrect_expected_bins.sql). You will need to manually update those rows in `counts_15min` and `counts_15min_bylane`  
 
-**Raw data missing fkeys?**  
+### **Raw data missing fkeys?**  
 - If there are updates to the `vdsconfig` or `entity_locations` tables following inserts to raw_* tables (this shouldn't happen anymore since there are now task dependencies),
 you may need to update those rows to add manually fkeys and then summarize those records into downstream tables. See examples for [`vdsdata`](sql/adhoc_updates/update-missing_fkeys_vdsdata.sql) and [`vdsvehicledata`](sql/adhoc_updates/update-missing_fkeys_vdsvehicledata.sql).  
 
-**No/low data system wide?**  
+### **No/low data system wide?**  
 - The pipeline is running succesfully but producing low/no volumes of data? First double check Transnomis Database and ITS Central, then contact Simon Foo (ITS Central/Transnomis) and Steven Bon (City of Toronto).  
 
-**No data for a specific sensor?**  
+### **No data for a specific sensor?**  
 - Traffic Plant / Installation and Maintenance (TPIM) is responsible for Hardware. 
 - There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management.   
+
+### Updating `vds.centreline_vds`
+See script [here](sql/adhoc_updates/update-missing_vds_centreline.sql) for an example of spatially joining sensors to the centreline.  
+Additionally, here is an example QGIS map used to verify results / manually identify centreline_ids. 
+
+<div style="width: 75%";>
+
+  ![](img/centreline_vds_manual_edits.png)
+
+</div>
