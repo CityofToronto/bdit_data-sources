@@ -19,7 +19,7 @@ from volumes.vds.py.vds_functions import (
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
-from dags.common_tasks import check_jan_1st
+from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -30,7 +30,7 @@ default_args = {
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 5,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
@@ -161,8 +161,13 @@ def vdsdata_dag():
             retries=1
         )
 
-        summarize_v15_task
-        summarize_v15_bylane_task
+        summarize_v15_task, summarize_v15_bylane_task
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="vds_check",
+        external_task_id="starting_point"
+    )
 
     @task_group
     def data_checks():
@@ -179,10 +184,18 @@ def vdsdata_dag():
                         "dt_col": 'datetime_15min',
                         "col_to_sum": 'num_obs',
                         "threshold": 0.7},
-                retries=2,
+                retries=0,
             )
-            check_avg_rows
+            wait_for_weather_timesensor() >> check_avg_rows
 
-    [update_inventories(), check_partitions()] >> pull_vdsdata() >> summarize_v15() >> data_checks()
+    [
+        [
+            update_inventories(),
+            check_partitions()
+        ] >>
+        pull_vdsdata() >>
+        summarize_v15() >> t_done >>
+        data_checks()
+    ]
 
 vdsdata_dag()
