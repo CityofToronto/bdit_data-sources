@@ -7,6 +7,8 @@ CREATE TABLE ecocounter.sites_unfiltered (
     replaced_by_site_id numeric,
     validated boolean,
     centreline_id integer,
+    first_active timestamp without time zone,
+    last_active timestamp without time zone,
     CONSTRAINT sites_pkey PRIMARY KEY (site_id),
     CONSTRAINT sites_replaced_by_fkey FOREIGN KEY (replaced_by_site_id)
     REFERENCES ecocounter.sites_unfiltered (site_id) MATCH SIMPLE
@@ -43,3 +45,11 @@ COMMENT ON COLUMN ecocounter.sites_unfiltered.centreline_id IS E''
 'The nearest street centreline_id, noting that ecocounter sensors are only configured to count '
 'bike-like objects on a portion of the roadway ie. cycletrack or multi-use-path. '
 'Join using `JOIN gis_core.centreline_latest USING (centreline_id)`.';
+
+COMMENT ON COLUMN ecocounter.sites_unfiltered.first_active IS E''
+'First timestamp site_id appears in ecocounter.counts_unfiltered. '
+'Updated using trigger with each insert on ecocounter.counts_unfiltered. ';
+
+COMMENT ON COLUMN ecocounter.sites_unfiltered.last_active IS E''
+'Last timestamp site_id appears in ecocounter.counts_unfiltered. '
+'Updated using trigger with each insert on ecocounter.counts_unfiltered. ';
