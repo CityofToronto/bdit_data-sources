@@ -50,3 +50,7 @@ COMMENT ON FUNCTION ecocounter.fn_update_last_active IS E''
 'This function is called using a trigger after each statement on insert or update to '
 'ecocounter.counts_unfiltered. It uses newly inserted/updated rows to update the first_active and'
 'last_active columns in ecocounter.sites and ecocounter.flows.';
+
+GRANT EXECUTE ON FUNCTION ecocounter.fn_update_last_active() TO ecocounter_bot;
+
+ALTER FUNCTION ecocounter.fn_update_last_active OWNER TO ecocounter_admins;
