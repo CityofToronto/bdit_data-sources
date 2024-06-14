@@ -1,6 +1,7 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT DISTINCT ON (pairs.vdsconfig_uid, pairs.entity_location_uid, pairs.division_id)
+        row_number() OVER (), --uid to make this view mappable in QGIS
         pairs.vdsconfig_uid,
         pairs.entity_location_uid,
         pairs.division_id,
