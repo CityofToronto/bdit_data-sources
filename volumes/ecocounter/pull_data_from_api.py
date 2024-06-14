@@ -1,12 +1,15 @@
 import requests
+import logging
 from configparser import ConfigParser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
-from airflow.exceptions import AirflowFailException
+from airflow.exceptions import AirflowFailException, AirflowException
 
 default_start = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)-timedelta(days=1)
 default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+
+LOGGER = logging.getLogger(__name__)
 
 URL = 'https://apieco.eco-counter-tools.com'
 
@@ -171,22 +174,30 @@ def run_api(
         if not siteIsKnownToUs(site['id'], conn):
             print('unknown site', site['id'], site['name'])
             continue
-        #"flow" == "channel"
-        for flow in site['channels']:
-            flow_id = flow['id']
-            if not flowIsKnownToUs(flow_id, conn):
-                print('unknown flow', flow_id)
-                continue
-            # we do have this site and flow in the database; let's update its counts
-            print(f'starting on flow {flow_id}')
+        pull_ecocounter_counts(start_date, end_date, site['id'], conn, token)
+        
+
+def pull_ecocounter_counts(start_date, end_date, site_id, conn, token):
+    
+    LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
+    total_rows = 0
+    with conn.get_conn() as con:
+        for flow_id in getKnownFlows(con, site_id):
+            LOGGER.debug(f'Starting on flow {flow_id} for site {site_id}.')
             # empty the count table for this flow
-            truncateFlowSince(flow_id, conn, start_date, end_date)
+            truncateFlowSince(flow_id, con, start_date, end_date)          
             # and fill it back up!
-            print(f'fetching data for flow {flow_id}')
+            LOGGER.debug(f'Fetching data for flow {flow_id}.')
             counts = getFlowData(token, flow_id, start_date, end_date)
-            print(f'inserting data for flow {flow_id}')
+            #convert response into a tuple for inserting
             volume=[]
             for count in counts:
                 row=(flow_id, count['date'], count['counts'])
                 volume.append(row)
-            insertFlowCounts(conn, volume)
+            if len(volume) == 0:
+                LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
+            insertFlowCounts(con, volume)
+            total_rows += len(volume)
+        LOGGER.info(f'{len(volume)} rows inserted for site {site_id}.')
+        if total_rows == 0:
+            raise AirflowException(f'{len(volume)} rows inserted for site {site_id}.')

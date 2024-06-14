@@ -10,8 +10,8 @@ import sys
 import os
 import pendulum
 from datetime import timedelta
-import dateutil.parser
 import logging
+import dateutil.parser
 
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
@@ -31,9 +31,8 @@ try:
     from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
-        getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
-        insertFlow, flowIsKnownToUs, truncateFlowSince, insertFlowCounts,
-        getKnownSites, getKnownFlows
+        getToken, getSites, siteIsKnownToUs, insertSite, insertFlow, flowIsKnownToUs,
+        pull_ecocounter_counts, getKnownSites
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -53,7 +52,6 @@ default_args = {
     'depends_on_past': False,
     'start_date': pendulum.datetime(2024, 4, 3, tz="America/Toronto"),
     'email_on_failure': False,
-    'email_on_success': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'on_failure_callback': task_fail_slack_alert
@@ -66,6 +64,7 @@ default_args = {
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=True,
     max_active_runs=1,
+    max_active_tasks=2,
     tags=["ecocounter", "data_pull", "data_checks", "partition_create"],
     doc_md=DOC_MD
 )
@@ -138,8 +137,18 @@ def pull_ecocounter_dag():
             #Mark skipped to visually identify which days added new sites or flows in the UI.
             raise AirflowSkipException('No new sites or flows to add. Marking task as skipped.')
 
-    @task(trigger_rule='none_failed')
-    def pull_ecocounter(ds):
+    @task()
+    def get_active_sites():
+        eco_postgres = PostgresHook("ecocounter_bot")
+        with eco_postgres.get_conn() as conn:
+            return getKnownSites(conn)
+
+    @task(
+        trigger_rule='none_failed',
+        retry_delay=timedelta(seconds=86400),
+        on_failure_callback = None #don't want one failure per site!
+    )
+    def pull_ecocounter(site_id, ds):
         api_conn = BaseHook.get_connection('ecocounter_api_key')
         token = getToken(
             api_conn.host,
@@ -148,29 +157,9 @@ def pull_ecocounter_dag():
             api_conn.extra_dejson['secret_api_hash']
         )
         eco_postgres = PostgresHook("ecocounter_bot")
-        
         start_date = dateutil.parser.parse(str(ds))
         end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
-        LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
-        with eco_postgres.get_conn() as conn:
-            for site_id in getKnownSites(conn):
-                LOGGER.debug(f'Starting on site {site_id}.')
-                for flow_id in getKnownFlows(conn, site_id):
-                    LOGGER.debug(f'Starting on flow {flow_id} for site {site_id}.')
-                    # empty the count table for this flow
-                    truncateFlowSince(flow_id, conn, start_date, end_date)          
-                    # and fill it back up!
-                    LOGGER.debug(f'Fetching data for flow {flow_id}.')
-                    counts = getFlowData(token, flow_id, start_date, end_date)
-                    #convert response into a tuple for inserting
-                    volume=[]
-                    for count in counts:
-                        row=(flow_id, count['date'], count['counts'])
-                        volume.append(row)
-                    if len(volume) == 0:
-                        LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
-                    insertFlowCounts(conn, volume)
-                LOGGER.info(f'Data inserted for site {site_id}.')
+        pull_ecocounter_counts(start_date, end_date, site_id, eco_postgres, token)
           
     t_done = ExternalTaskMarker(
         task_id="done",
@@ -221,7 +210,7 @@ def pull_ecocounter_dag():
     (
         check_partitions() >>
         update_sites_and_flows() >>
-        pull_ecocounter() >>
+        pull_ecocounter.override().expand(site_id=get_active_sites()) >>
         t_done >>
         data_checks()
     )
