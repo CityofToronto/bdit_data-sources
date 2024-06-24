@@ -40,6 +40,31 @@ def get_variable(var_name:str) -> list:
     return Variable.get(var_name, deserialize_json=True)
 
 @task()
+def check_not_empty(conn_id:str, table:str, **context) -> None:
+    con = PostgresHook(conn_id).get_conn()
+    sch, tbl = table.split(".")
+    check_query = sql.SQL("SELECT True FROM {}.{} LIMIT 1;").format(sql.Identifier(sch), sql.Identifier(tbl))
+    try:
+        with con.cursor() as cur:
+            # check for non-empty table
+            cur.execute(check_query)
+            check = cur.fetchone()[0]
+            if check != True:
+                context["task_instance"].xcom_push(
+                    key="extra_msg",
+                    value=f"`{table}` is empty. Copying not completed."
+                )
+                raise AirflowFailException(e)
+    #catch psycopg2 errors:
+    except Error as e:
+        # push an extra failure message to be sent to Slack in case of failing
+        context["task_instance"].xcom_push(
+            key="extra_msg",
+            value=f"Failed to check `{table}` non-empty: `{str(e).strip()}`."
+        )
+        raise AirflowFailException(e)
+
+@task()
 def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
