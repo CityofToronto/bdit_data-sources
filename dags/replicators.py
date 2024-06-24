@@ -31,15 +31,27 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
     def replicator_DAG():
         f"""The main function of the {short_name} DAG."""
         from dags.common_tasks import (
-            wait_for_external_trigger, get_variable, copy_table
+            wait_for_external_trigger, get_variable, copy_table, check_not_empty
         )
 
         # Returns a list of source and destination tables stored in the given
         # Airflow variable.
         tables = get_variable.override(task_id="get_list_of_tables")(tables_var)
-
+        
+        @task()
+        def get_source_tables(tables):
+            return [tbl[0] for tbl in tables]
+        
+        @task()
+        def get_dest_tables(tables):
+            return [tbl[1] for tbl in tables]
+        
         # Copies tables
         copy_tables = copy_table.override(task_id="copy_tables", on_failure_callback = None).partial(conn_id=conn).expand(table=tables)
+
+        # Check if empty
+        check_source_table = check_not_empty.override(task_id="check_source_table", on_failure_callback=None).partial(conn_id=conn).expand(table=get_source_tables(tables))
+        check_dest_table = check_not_empty.override(task_id="check_dest_table", on_failure_callback=None).partial(conn_id=conn).expand(table=get_dest_tables(tables))
 
         @task(
             retries=0,
@@ -65,7 +77,7 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
                 raise AirflowFailException('One or more tables failed to copy.')
             
         # Waits for an external trigger
-        wait_for_external_trigger() >> tables >> copy_tables >> status_message(tables=tables)    
+        wait_for_external_trigger() >> tables >> check_source_table >> copy_tables >> check_dest_table >> status_message(tables=tables)
 
     generated_dag = replicator_DAG()
 
