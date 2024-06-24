@@ -1,8 +1,8 @@
-CREATE FUNCTION ecocounter.fn_update_last_active ()
-    RETURNS trigger
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+CREATE OR REPLACE FUNCTION ecocounter.fn_update_last_active()
+RETURNS trigger
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
 
 BEGIN
@@ -33,7 +33,6 @@ BEGIN
             last_active = GREATEST(last_active, max_dt)
         FROM new_site_dates
         WHERE new_site_dates.site_id = sites_unfiltered.site_id
-        RETURNING *
     )
     
     UPDATE ecocounter.flows_unfiltered
@@ -46,7 +45,7 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION ecocounter.fn_update_last_active IS E''
+COMMENT ON FUNCTION ecocounter.fn_update_last_active() IS E''
 'This function is called using a trigger after each statement on insert or update to '
 'ecocounter.counts_unfiltered. It uses newly inserted/updated rows to update the first_active and'
 'last_active columns in ecocounter.sites and ecocounter.flows.';
