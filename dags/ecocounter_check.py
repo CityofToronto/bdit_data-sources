@@ -44,7 +44,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 4 * * MON', # Run at 4 AM on Monday
+    schedule='5 10 * * MON', # Run at 10:05 AM on Monday
     catchup=True,
     template_searchpath=os.path.join(repo_path, 'volumes/ecocounter/data_checks'),
     tags=["ecocounter", "data_checks"],
@@ -61,7 +61,7 @@ def ecocounter_check_dag():
         timeout=86400, #one day
         #when this DAG runs on Monday (day 7 - at the end of it's week long schedule interval),
         #it should check for the Sunday (day 6) _pull DAG, which gets executed on the Monday.
-        execution_delta=timedelta(days=-6, hours=1) #pull_ecocounter scheduled at '0 3 * * *'
+        execution_delta=timedelta(days=-6, minutes=5) #pull_ecocounter scheduled at '0 10 * * *'
     )
 
     check_site_outages = SQLCheckOperatorWithReturnValue(
