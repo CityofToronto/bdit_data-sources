@@ -5,7 +5,15 @@ CREATE VIEW ecocounter.counts AS (
         counts_unfiltered.volume
     FROM ecocounter.counts_unfiltered
     JOIN ecocounter.flows_unfiltered USING (flow_id)
-    WHERE flows_unfiltered.validated --is true
+    WHERE
+        flows_unfiltered.validated --is true
+        AND NOT EXISTS (
+            SELECT 1
+            FROM ecocounter.anomalous_ranges
+            WHERE
+                counts_unfiltered.flow_id = anomalous_ranges.flow_id
+                AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
+        )
 );
 
 COMMENT ON VIEW ecocounter.counts
