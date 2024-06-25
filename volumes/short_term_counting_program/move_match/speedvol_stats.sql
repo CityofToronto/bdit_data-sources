@@ -65,7 +65,7 @@ In this CTE, two WINDOWs are used:
     cumulative: creates windows based on count_info_id and speed bin
     _all: creates windows based on count_info_id
 Here is an explanation of the first SUM(SUM()) line:
-    Part 1 - SUM(SUM(spd_vol.volume_15min)) OVER cumulative: 
+    Part 1 - SUM(SUM(spd_vol.volume_15min)) OVER cumulative:
         The inside SUM() adds up 15 minute volume data (resulting in daily volumes by speed bin).
         The outside SUM() adds up the bins over the cumulative window.
         In plain language: sum daily totals by speed bin, then calculate a cumulative sum for
@@ -79,8 +79,8 @@ Here is an explanation of the first SUM(SUM()) line:
 Here is an explanation of the second SUM(SUM()) line:
     SUM(spd_vol.volume_15min) / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS pct:
     Calculate daily volumes by speed bin and divide it by...
-    Daily total volumes (15 minute volume data are aggregated to speed bins in the inside sum, then they
-    are totalled in the outside sum).
+    Daily total volumes (15 minute volume data are aggregated to speed bins in the inside sum, then
+    they are totalled in the outside sum).
     You end up with the proportion of daily volume in each speed bin.
 */
 
@@ -99,12 +99,12 @@ per_15 AS (
             - spd_bin_vol.cum_pct -- the cumulative % for that bin
             + spd_bin_vol.pct -- munis the non-cumulative % from that bin
         )
-            -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
+        -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
         / spd_bin_vol.pct AS pctile_speed_15
     FROM spd_bin_vol
     WHERE
         spd_bin_vol.cum_pct >= 0.15
-        AND pct <> 0
+        AND spd_bin_vol.pct <> 0
     ORDER BY
         spd_bin_vol.count_info_id,
         spd_bin_vol.cum_pct
@@ -126,7 +126,7 @@ per_50 AS (
     FROM spd_bin_vol
     WHERE
         spd_bin_vol.cum_pct >= 0.50
-        AND pct <> 0
+        AND spd_bin_vol.pct <> 0
     ORDER BY
         spd_bin_vol.count_info_id,
         spd_bin_vol.cum_pct
@@ -143,12 +143,12 @@ per_85 AS (
         spd_bin_vol.pct,
         LOWER(spd_bin_vol.speed_kph)
         + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
-        * (0.85 - spd_bin_vol.cum_pct + spd_bin_vol.pct) 
+        * (0.85 - spd_bin_vol.cum_pct + spd_bin_vol.pct)
         / spd_bin_vol.pct AS pctile_speed_85
     FROM spd_bin_vol
     WHERE
         spd_bin_vol.cum_pct >= 0.85
-        AND pct <> 0
+        AND spd_bin_vol.pct <> 0
     ORDER BY
         spd_bin_vol.count_info_id,
         spd_bin_vol.cum_pct
@@ -170,7 +170,7 @@ per_95 AS (
     FROM spd_bin_vol
     WHERE
         spd_bin_vol.cum_pct >= 0.95
-        AND pct <> 0
+        AND spd_bin_vol.pct <> 0
     ORDER BY
         spd_bin_vol.count_info_id,
         spd_bin_vol.cum_pct
@@ -213,8 +213,10 @@ ave_vol AS (
         ave_calcs.count_info_id,
         ave_calcs.arterycode,
         ave_calcs.dt,
-        ROUND(SUM(ave_calcs.bin_vol * ave_calcs.mid_bin)
-        / SUM(ave_calcs.bin_vol), 1) AS mean_spd
+        ROUND(
+            SUM(ave_calcs.bin_vol * ave_calcs.mid_bin) / SUM(ave_calcs.bin_vol),
+            1
+        ) AS mean_spd
     FROM ave_calcs
     GROUP BY
         ave_calcs.count_info_id,
