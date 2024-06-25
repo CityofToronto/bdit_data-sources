@@ -8,7 +8,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
         c.detector_id,
         pairs.first_active,
         pairs.last_active,
-        (upper(e.main_road_name::text) || ' and '::text) || upper(e.cross_road_name::text)
+        upper(e.main_road_name::text) || COALESCE(' and '::text || upper(e.cross_road_name::text), ''::text)
         AS detector_loc,
         e.geom AS sensor_geom,
         cl_vds.centreline_id,
