@@ -3,9 +3,9 @@ CREATE VIEW ecocounter.counts AS (
         counts_unfiltered.flow_id,
         counts_unfiltered.datetime_bin,
         counts_unfiltered.volume
-    FROM ecocounter.counts_unfiltered AS 
-    JOIN ecocounter.flows USING (flow_id)
-    WHERE flows.validated --is true
+    FROM ecocounter.counts_unfiltered
+    JOIN ecocounter.flows_unfiltered USING (flow_id)
+    WHERE flows_unfiltered.validated --is true
 );
 
 COMMENT ON VIEW ecocounter.counts
