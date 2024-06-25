@@ -6,7 +6,9 @@ WITH tmc_match AS (
         countinfomics.count_date
     FROM traffic.arterydata
     INNER JOIN traffic.countinfomics USING (arterycode)
-    WHERE countinfomics.count_date >= '2023-01-01' AND countinfomics.count_date < '2023-01-15' -- super short date range for testing purposes
+    WHERE -- super short date range for testing purposes
+        countinfomics.count_date >= '2023-01-01'
+        AND countinfomics.count_date < '2023-01-15'
 ),
 
 -- Add up vehicle totals in 15 minute bins (MOVE uses vehicle totals to calculate peak hours)
@@ -43,10 +45,11 @@ hour_sums AS (
         arterycode,
         count_time,
         veh_sum,
-        LAG(veh_sum, 3) OVER (PARTITION BY count_info_id ORDER BY count_time)
-        + LAG(veh_sum, 2) OVER (PARTITION BY count_info_id ORDER BY count_time)
-        + LAG(veh_sum, 1) OVER (PARTITION BY count_info_id ORDER BY count_time)
-        + veh_sum AS hour_tot
+        SUM(veh_sum) OVER (
+            PARTITION BY count_info_id
+            ORDER BY count_time
+            RANGE BETWEEN '45 minutes' PRECEDING AND CURRENT ROW
+        ) AS hour_tot
     FROM veh_tot
 ),
 
@@ -55,13 +58,14 @@ am_peak_ct AS (
     SELECT DISTINCT
         count_info_id,
         arterycode,
-        FIRST_VALUE(count_time) OVER (PARTITION BY count_info_id ORDER BY hour_tot DESC) AS am_peak_hr_start,
-        FIRST_VALUE(hour_tot) OVER (PARTITION BY count_info_id ORDER BY hour_tot DESC) AS am_peak_count
+        FIRST_VALUE(count_time) OVER vol_desc AS am_peak_hr_start,
+        FIRST_VALUE(hour_tot) OVER vol_desc AS am_peak_count
     FROM hour_sums
     WHERE
         count_time::time >= '07:30' -- as per MOVE
         AND count_time::time < '9:30' -- as per MOVE
         AND hour_tot IS NOT NULL
+    WINDOW vol_desc AS (PARTITION BY count_info_id ORDER BY hour_tot DESC)
 ),
 
 -- Determine the PM peak (using MOVE's methodology)
@@ -69,13 +73,14 @@ pm_peak_ct AS (
     SELECT DISTINCT
         count_info_id,
         arterycode,
-        FIRST_VALUE(count_time) OVER (PARTITION BY count_info_id ORDER BY hour_tot DESC) AS pm_peak_hr_start,
-        FIRST_VALUE(hour_tot) OVER (PARTITION BY count_info_id ORDER BY hour_tot DESC) AS pm_peak_count
+        FIRST_VALUE(count_time) OVER vol_desc AS pm_peak_hr_start,
+        FIRST_VALUE(hour_tot) OVER vol_desc AS pm_peak_count
     FROM hour_sums
     WHERE
         count_time::time >= '14:15' -- as per MOVE
         AND count_time::time < '18:00' --as per MOVE
         AND hour_tot IS NOT NULL
+    WINDOW vol_desc AS (PARTITION BY count_info_id ORDER BY hour_tot DESC)
 ),
 
 -- Union AM and PM peak times
