@@ -3,10 +3,11 @@
 # noqa: D415
 import os
 import sys
+from functools import partial
 from datetime import timedelta
 import pendulum
 # pylint: disable=import-error
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 
@@ -14,7 +15,7 @@ from airflow.exceptions import AirflowFailException
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
-from dags.dag_functions import task_fail_slack_alert, send_slack_msg
+from dags.dag_functions import task_fail_slack_alert, send_slack_msg, check_not_empty
 # pylint: enable=import-error
 
 def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_args): 
@@ -37,9 +38,19 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
         # Returns a list of source and destination tables stored in the given
         # Airflow variable.
         tables = get_variable.override(task_id="get_list_of_tables")(tables_var)
+        
+        @task_group
+        def copy_tables_with_checks(conn_id, tables):          
+            @task(on_failure_callback = None)
+            def check_tbl_not_empty(conn_id, tables, tbl_index, **context):
+                table = tables[tbl_index]
+                check_not_empty(context, conn_id, table)
 
-        # Copies tables
-        copy_tables = copy_table.override(task_id="copy_tables", on_failure_callback = None).partial(conn_id=conn).expand(table=tables)
+            [
+                check_tbl_not_empty.override(task_id="check_source_not_empty")(conn_id, tables, 0) >>
+                copy_table.override(task_id="copy_tables", on_failure_callback = None)(conn_id, tables) >>
+                check_tbl_not_empty.override(task_id="check_dest_not_empty")(conn_id, tables, 1)
+            ]
 
         @task(
             retries=0,
@@ -51,7 +62,12 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
             failures = []
             #iterate through mapped tasks to find any failure messages
             for m_i in range(0, len(tables)):
-                failure_msg = ti.xcom_pull(key="extra_msg", task_ids="copy_tables", map_indexes=m_i)
+                extra_msg = partial(ti.xcom_pull, key="extra_msg", map_indexes=m_i)
+                failure_0 = extra_msg(task_ids="copy_tables_with_checks.check_source_not_empty")
+                failure_1 = extra_msg(task_ids="copy_tables_with_checks.copy_tables")
+                failure_2 = extra_msg(task_ids="copy_tables_with_checks.check_dest_not_empty")
+                #pick the first non empty failure message from each mapped index.
+                failure_msg = failure_0 or failure_1 or failure_2
                 if failure_msg is not None:
                     failures.append(failure_msg)
             if failures == []:
@@ -65,7 +81,11 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
                 raise AirflowFailException('One or more tables failed to copy.')
             
         # Waits for an external trigger
-        wait_for_external_trigger() >> tables >> copy_tables >> status_message(tables=tables)    
+        [
+            wait_for_external_trigger() >>
+            copy_tables_with_checks.partial(conn_id=conn).expand(tables=tables) >>
+            status_message(tables=tables)
+        ]
 
     generated_dag = replicator_DAG()
 
