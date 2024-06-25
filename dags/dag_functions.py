@@ -4,10 +4,17 @@
 import os
 import re
 import json
+import logging
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+from airflow.exceptions import AirflowFailException
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from psycopg2 import sql, Error
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def is_prod_mode() -> bool:
     """Returns True if the code is running from the PROD ENV directory."""
@@ -206,3 +213,28 @@ def send_slack_msg(
         proxy=proxy,
     )
     return slack_alert.execute(context=context)
+
+def check_not_empty(context: dict, conn_id:str, table:str) -> None:
+    con = PostgresHook(conn_id).get_conn()
+    sch, tbl = table.split(".")
+    check_query = sql.SQL("SELECT True FROM {}.{} LIMIT 1;").format(sql.Identifier(sch), sql.Identifier(tbl))
+    try:
+        with con.cursor() as cur:
+            # check for non-empty table
+            LOGGER.info(f"Checking for rows in {table}.")
+            cur.execute(check_query)
+            check = cur.fetchone()
+            if check is None:
+                context["task_instance"].xcom_push(
+                    key="extra_msg",
+                    value=f"`{table}` is empty. Copying not completed."
+                )
+                raise AirflowFailException(f"`{table}` is empty. Copying not completed.")
+    #catch psycopg2 errors:
+    except Error as e:
+        # push an extra failure message to be sent to Slack in case of failing
+        context["task_instance"].xcom_push(
+            key="extra_msg",
+            value=f"Failed to check `{table}` non-empty: `{str(e).strip()}`."
+        )
+        raise AirflowFailException(e)
