@@ -20,6 +20,7 @@ WITH spd_vol AS (
     JOIN traffic.cnt_det USING (count_info_id)
     JOIN prj_volume.speed_classes USING (speed_class)
     WHERE
+        --filter studies here.
         countinfo.count_date >= '2023-01-01'
         AND countinfo.count_date < '2023-01-15' -- short time period for testing purposes
 ),
@@ -46,6 +47,7 @@ spd_bin_vol AS (
         spd_vol.location,
         spd_vol.datetime_bin::date,
         spd_vol.speed_kph
+    HAVING SUM(spd_vol.volume_15min) > 0
     WINDOW
         cumulative AS (
             PARTITION BY spd_vol.count_info_id
@@ -90,24 +92,22 @@ per_15 AS (
         spd_bin_vol.dt,
         spd_bin_vol.cum_pct,
         spd_bin_vol.pct,
-        (
-            LOWER(spd_bin_vol.speed_kph) -- lower speed bound of bin
-            + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
-            * (
-                0.15 -- multiplied by the desired percentile (for which you want speed)
-                - ( -- minus
-                    spd_bin_vol.cum_pct -- the cumulative % for that bin
-                    - spd_bin_vol.pct -- munis the non-cumulative % from that bin
-                )
-                -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
-                ) / (spd_bin_vol.pct + 0.00000001
-            )
-        ) AS pctile_speed_15
+        LOWER(spd_bin_vol.speed_kph) -- lower speed bound of bin
+        + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) --range
+        * (
+            0.15 -- multiplied by the desired percentile (for which you want speed)
+            - spd_bin_vol.cum_pct -- the cumulative % for that bin
+            + spd_bin_vol.pct -- munis the non-cumulative % from that bin
+        )
+            -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
+        / spd_bin_vol.pct AS pctile_speed_15
     FROM spd_bin_vol
-    WHERE spd_bin_vol.cum_pct >= 0.15
+    WHERE
+        spd_bin_vol.cum_pct >= 0.15
+        AND pct <> 0
     ORDER BY
-        spd_bin_vol.count_info_id
-
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.cum_pct
 ),
 
 -- Calculate 50th percentile speed (see comments for 15th percentile
@@ -121,10 +121,15 @@ per_50 AS (
         spd_bin_vol.pct,
         LOWER(spd_bin_vol.speed_kph)
         + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
-        * (0.50 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
-        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_50
+        * (0.50 - spd_bin_vol.cum_pct + spd_bin_vol.pct)
+        / spd_bin_vol.pct AS pctile_speed_50
     FROM spd_bin_vol
-    WHERE spd_bin_vol.cum_pct >= 0.50
+    WHERE
+        spd_bin_vol.cum_pct >= 0.50
+        AND pct <> 0
+    ORDER BY
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.cum_pct
 ),
 
 -- Calculate 85th percentile speed (see comments for 15th percentile
@@ -138,10 +143,15 @@ per_85 AS (
         spd_bin_vol.pct,
         LOWER(spd_bin_vol.speed_kph)
         + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
-        * (0.85 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
-        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_85
+        * (0.85 - spd_bin_vol.cum_pct + spd_bin_vol.pct) 
+        / spd_bin_vol.pct AS pctile_speed_85
     FROM spd_bin_vol
-    WHERE spd_bin_vol.cum_pct >= 0.85
+    WHERE
+        spd_bin_vol.cum_pct >= 0.85
+        AND pct <> 0
+    ORDER BY
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.cum_pct
 ),
 
 -- Calculate 95th percentile speed (see comments for 15th percentile
@@ -155,10 +165,15 @@ per_95 AS (
         spd_bin_vol.pct,
         LOWER(spd_bin_vol.speed_kph)
         + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
-        * (0.95 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
-        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_95
+        * (0.95 - spd_bin_vol.cum_pct + spd_bin_vol.pct)
+        / spd_bin_vol.pct AS pctile_speed_95
     FROM spd_bin_vol
-    WHERE spd_bin_vol.cum_pct >= 0.95
+    WHERE
+        spd_bin_vol.cum_pct >= 0.95
+        AND pct <> 0
+    ORDER BY
+        spd_bin_vol.count_info_id,
+        spd_bin_vol.cum_pct
 ),
 
 -- Calculate daily volumes
@@ -232,7 +247,7 @@ am_peak AS (
         FIRST_VALUE(hr_sums.hr_vol) OVER cumulative AS am_peak_vol
     FROM spd_bin_vol
     LEFT JOIN hr_sums USING (count_info_id)
-    WHERE date_part('hour', timestamp) < 12
+    WHERE date_part('hour', hr_sums.hr) < 12
     WINDOW cumulative AS (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC)
 ),
 
@@ -246,7 +261,7 @@ pm_peak AS (
         FIRST_VALUE(hr_sums.hr_vol) OVER cumulative AS pm_peak_vol
     FROM spd_bin_vol
     LEFT JOIN hr_sums USING (count_info_id)
-    WHERE date_part('hour', timestamp) >= 12
+    WHERE date_part('hour', hr_sums.hr) >= 12
     WINDOW cumulative AS (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC)
 )
 
