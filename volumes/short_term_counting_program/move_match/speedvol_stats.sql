@@ -1,5 +1,10 @@
--- This code replicates statistics from the speed volume Speed Percentile Report: https://move.intra.prod-toronto.ca/view/location/s1:Ab_DAA/POINTS/reports/ATR_SPEED_VOLUME
--- Note that am and pm peak hours as presented in this report are based on clock face hours (not 15 minute bins)
+/*
+This code replicates statistics from the speed volume Speed Percentile Report:
+https://move.intra.prod-toronto.ca/view/location/s1:Ab_DAA/POINTS/reports/ATR_SPEED_VOLUME
+Note that am and pm peak hours as presented in this report are based on clock face hours
+and not 15 minute bins.
+*/
+
 -- Grab speed volume study data
 WITH spd_vol AS (
     SELECT
@@ -14,10 +19,10 @@ WITH spd_vol AS (
     JOIN traffic.countinfo USING (arterycode)
     JOIN traffic.cnt_det USING (count_info_id)
     JOIN prj_volume.speed_classes USING (speed_class)
-    WHERE 
-        countinfo.count_date >= '2023-01-01' 
+    WHERE
+        countinfo.count_date >= '2023-01-01'
         AND countinfo.count_date < '2023-01-15' -- short time period for testing purposes
-), 
+),
 
 -- Calculate volume percentages and cumulative percentages by speed bin
 spd_bin_vol AS (
@@ -29,10 +34,12 @@ spd_bin_vol AS (
         spd_vol.datetime_bin::date AS dt,
         spd_vol.speed_kph,
         SUM(spd_vol.volume_15min) AS spd_vol, -- aggregate 15 minute bins into a daily count
-        SUM(SUM(spd_vol.volume_15min)) OVER cumulative / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS cum_pct, -- SUM(SUM()) explained below
-        SUM(spd_vol.volume_15min) / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS pct -- SUM(SUM()) explained below
+        -- SUM(SUM()) explained below
+        SUM(SUM(spd_vol.volume_15min)) OVER cumulative
+        / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS cum_pct,
+        SUM(spd_vol.volume_15min) / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS pct
     FROM spd_vol
-    GROUP BY 
+    GROUP BY
         spd_vol.arterycode,
         spd_vol.count_info_id,
         spd_vol.direction,
@@ -40,31 +47,38 @@ spd_bin_vol AS (
         spd_vol.datetime_bin::date,
         spd_vol.speed_kph
     WINDOW
-        cumulative AS (PARTITION BY spd_vol.count_info_id ORDER BY spd_vol.speed_kph RANGE UNBOUNDED PRECEDING),
+        cumulative AS (
+            PARTITION BY spd_vol.count_info_id
+            ORDER BY spd_vol.speed_kph RANGE UNBOUNDED PRECEDING
+        ),
         _all AS (PARTITION BY spd_vol.count_info_id)
 ),
 
 /*
 SUM(SUM()) Explained
 There are two lines in the CTE above that use a nested aggregate function within a WINDOW function.
-A WINDOW function allows calculations to be performed on subsets of data (or WINDOWs of data) without collapsing the data into aggregated forms (like GROUP BY).
-In this CTE, two WINDOWs are used: 
+A WINDOW function allows calculations to be performed on subsets of data (or WINDOWs of data)
+without collapsing the data into aggregated forms (like GROUP BY).
+In this CTE, two WINDOWs are used:
     cumulative: creates windows based on count_info_id and speed bin
     _all: creates windows based on count_info_id
 Here is an explanation of the first SUM(SUM()) line:
     Part 1 - SUM(SUM(spd_vol.volume_15min)) OVER cumulative: 
         The inside SUM() adds up 15 minute volume data (resulting in daily volumes by speed bin).
         The outside SUM() adds up the bins over the cumulative window.
-        In plain language: sum daily totals by speed bin, then calculate a cumulative sum for ascending speed bins.
+        In plain language: sum daily totals by speed bin, then calculate a cumulative sum for
+        ascending speed bins.
     Part 2 - / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001):
         The inside SUM() adds up 15 minute volume data (resulting daily volumes by speed bin).
         The outside SUM() adds up all of the speed bin volumes (resulting in daily volumes).
         In plain language: calculate daily volumes.
-    Since Part 1 is divided by Part 2, you end up with cumulative proportions of daily volume by speed bin.
+    Since Part 1 is divided by Part 2, you end up with cumulative proportions of daily
+    volume by speed bin.
 Here is an explanation of the second SUM(SUM()) line:
     SUM(spd_vol.volume_15min) / (SUM(SUM(spd_vol.volume_15min)) OVER _all + 0.00000001) AS pct:
     Calculate daily volumes by speed bin and divide it by...
-    Daily total volumes (15 minute volume data are aggregated to speed bins in the inside sum, then they are totalled in the outside sum).
+    Daily total volumes (15 minute volume data are aggregated to speed bins in the inside sum, then they
+    are totalled in the outside sum).
     You end up with the proportion of daily volume in each speed bin.
 */
 
@@ -85,14 +99,19 @@ per_15 AS (
                     spd_bin_vol.cum_pct -- the cumulative % for that bin
                     - spd_bin_vol.pct -- munis the non-cumulative % from that bin
                 )
-                ) / (spd_bin_vol.pct + 0.00000001 -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
-            ) 
+                -- all dividded by the bin volume % plus that decimal to avoid a divide by zero error
+                ) / (spd_bin_vol.pct + 0.00000001
+            )
         ) AS pctile_speed_15
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.15
+    ORDER BY
+        spd_bin_vol.count_info_id
+
 ),
 
--- Calculate 50th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
+-- Calculate 50th percentile speed (see comments for 15th percentile
+-- speed for an explanation of the calculation)
 per_50 AS (
     SELECT DISTINCT ON (spd_bin_vol.count_info_id)
         spd_bin_vol.count_info_id,
@@ -100,13 +119,16 @@ per_50 AS (
         spd_bin_vol.dt,
         spd_bin_vol.cum_pct,
         spd_bin_vol.pct,
-        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) 
-        * (0.50 - (spd_bin_vol.cum_pct - spd_bin_vol.pct)) / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_50
+        LOWER(spd_bin_vol.speed_kph)
+        + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
+        * (0.50 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
+        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_50
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.50
 ),
 
--- Calculate 85th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
+-- Calculate 85th percentile speed (see comments for 15th percentile
+-- speed for an explanation of the calculation)
 per_85 AS (
     SELECT DISTINCT ON (spd_bin_vol.count_info_id)
         spd_bin_vol.count_info_id,
@@ -114,13 +136,16 @@ per_85 AS (
         spd_bin_vol.dt,
         spd_bin_vol.cum_pct,
         spd_bin_vol.pct,
-        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) 
-        * (0.85 - (spd_bin_vol.cum_pct - spd_bin_vol.pct)) / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_85
+        LOWER(spd_bin_vol.speed_kph)
+        + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
+        * (0.85 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
+        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_85
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.85
 ),
 
--- Calculate 95th percentile speed (see comments for 15th percentile speed for an explanation of the calculation)
+-- Calculate 95th percentile speed (see comments for 15th percentile
+-- speed for an explanation of the calculation)
 per_95 AS (
     SELECT DISTINCT ON (spd_bin_vol.count_info_id)
         spd_bin_vol.count_info_id,
@@ -128,8 +153,10 @@ per_95 AS (
         spd_bin_vol.dt,
         spd_bin_vol.cum_pct,
         spd_bin_vol.pct,
-        LOWER(spd_bin_vol.speed_kph) + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph)) 
-        * (0.95 - (spd_bin_vol.cum_pct - spd_bin_vol.pct)) / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_95
+        LOWER(spd_bin_vol.speed_kph)
+        + (UPPER(spd_bin_vol.speed_kph) - LOWER(spd_bin_vol.speed_kph))
+        * (0.95 - (spd_bin_vol.cum_pct - spd_bin_vol.pct))
+        / (spd_bin_vol.pct + 0.00000001) AS pctile_speed_95
     FROM spd_bin_vol
     WHERE spd_bin_vol.cum_pct >= 0.95
 ),
@@ -171,7 +198,8 @@ ave_vol AS (
         ave_calcs.count_info_id,
         ave_calcs.arterycode,
         ave_calcs.dt,
-        ROUND(SUM(ave_calcs.bin_vol * ave_calcs.mid_bin) / SUM(ave_calcs.bin_vol), 1) AS mean_spd
+        ROUND(SUM(ave_calcs.bin_vol * ave_calcs.mid_bin)
+        / SUM(ave_calcs.bin_vol), 1) AS mean_spd
     FROM ave_calcs
     GROUP BY
         ave_calcs.count_info_id,
@@ -200,11 +228,12 @@ am_peak AS (
         spd_bin_vol.count_info_id,
         spd_bin_vol.arterycode,
         spd_bin_vol.dt,
-        FIRST_VALUE(hr_sums.hr) OVER (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC) AS am_peak_hr,
-        FIRST_VALUE(hr_sums.hr_vol) OVER (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC) AS am_peak_vol
+        FIRST_VALUE(hr_sums.hr) OVER cumulative AS am_peak_hr,
+        FIRST_VALUE(hr_sums.hr_vol) OVER cumulative AS am_peak_vol
     FROM spd_bin_vol
     LEFT JOIN hr_sums USING (count_info_id)
-    WHERE hr_sums.hr::time < '12:00'
+    WHERE date_part('hour', timestamp) < 12
+    WINDOW cumulative AS (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC)
 ),
 
 -- Find PM Peak
@@ -213,11 +242,12 @@ pm_peak AS (
         spd_bin_vol.count_info_id,
         spd_bin_vol.arterycode,
         spd_bin_vol.dt,
-        FIRST_VALUE(hr_sums.hr) OVER (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC) AS pm_peak_hr,
-        FIRST_VALUE(hr_sums.hr_vol) OVER (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC) AS pm_peak_vol
+        FIRST_VALUE(hr_sums.hr) OVER cumulative AS pm_peak_hr,
+        FIRST_VALUE(hr_sums.hr_vol) OVER cumulative AS pm_peak_vol
     FROM spd_bin_vol
     LEFT JOIN hr_sums USING (count_info_id)
-    WHERE hr_sums.hr::time >= '12:00'
+    WHERE date_part('hour', timestamp) >= 12
+    WINDOW cumulative AS (PARTITION BY spd_bin_vol.count_info_id ORDER BY hr_sums.hr_vol DESC)
 )
 
 -- Put all the stats together in one big happy table!!!
