@@ -1,4 +1,4 @@
-CREATE VIEW ecocounter.counts AS
+CREATE OR REPLACE VIEW ecocounter.counts AS
 SELECT
     counts_unfiltered.flow_id,
     counts_unfiltered.datetime_bin,
