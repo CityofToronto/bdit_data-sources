@@ -164,7 +164,11 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 
 
 ### `ecocounter.counts_unfiltered`
-CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
+CAUTION: Use VIEW `ecocounter.counts` instead to see only data that has been screened for
+* manually validated sites
+* manually validated flows
+* absence of manually identified anomalous ranges (in the `do-not-use` `problem_level`)
+
 This Table contains the actual binned counts for ecocounter flows. Please note that
 bin size varies for older data, so averaging these numbers may not be straightforward.
 
