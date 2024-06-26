@@ -48,13 +48,13 @@ Centreline gets updated regularly by the GCC, the changes are logged in `gis_cor
 
 ### Intersections (nodes)
 
-Intersections are stored in either of two tables, each of which is copied from a separate GCC layer which in turn are maintained by different groups. Each intersections represents the intersecting point of two or more centreline segments.
+Intersections are stored in either of two tables, each of which is copied from a separate GCC layer which in turn are maintained by different groups. Each intersections represents the intersecting point of two or more centreline segments. For both of these layers you may want to filter `WHERE classification_desc IN ('Major-Multi Level', 'Major-Single Level', 'Minor-Multi Level', 'Minor-Single Level')` which excludes things like pseudo intersections. 
 
-* `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
-    - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
-    - does not include cul-de-sacs, overpass/underpass
 * `gis_core.centreline_intersection_point` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial/FeatureServer/19))
+    - **Almost** unique on `intersection_id`: **generally the preferred intersection layer**.
     - contains additional boundary information such as ward, and municpality
     - include trails and ferry routes
-
-
+* `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
+    - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
+    - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
+    - does not include cul-de-sacs, overpass/underpass
