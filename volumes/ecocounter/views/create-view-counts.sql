@@ -16,16 +16,10 @@ WHERE
         FROM ecocounter.anomalous_ranges
         WHERE
             anomalous_ranges.problem_level = 'do-not-use'
+            AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
             AND (
-                (
-                    -- flow has a problem is this time range
-                    counts_unfiltered.flow_id = anomalous_ranges.flow_id
-                    AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
-                ) OR (
-                    -- site has a problem in this time range
-                    sites_unfiltered.site_id = anomalous_ranges.site_id
-                    AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
-                )
+                counts_unfiltered.flow_id = anomalous_ranges.flow_id
+                OR sites_unfiltered.site_id = anomalous_ranges.site_id
             )
     );
 
