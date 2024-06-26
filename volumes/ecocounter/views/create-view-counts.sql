@@ -13,8 +13,16 @@ CREATE VIEW ecocounter.counts AS (
             SELECT 1
             FROM ecocounter.anomalous_ranges
             WHERE
-                counts_unfiltered.flow_id = anomalous_ranges.flow_id
-                AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
+                anomalous_ranges.problem_level = 'do-not-use'
+                AND (
+                    (
+                        counts_unfiltered.flow_id = anomalous_ranges.flow_id
+                        AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
+                    ) OR (
+                        sites_unfiltered.site_id = anomalous_ranges.site_id
+                        AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
+                    )
+                )
         )
 );
 
