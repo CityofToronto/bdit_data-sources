@@ -1,30 +1,29 @@
-CREATE VIEW ecocounter.counts AS (
-    SELECT
-        counts_unfiltered.flow_id,
-        counts_unfiltered.datetime_bin,
-        counts_unfiltered.volume
-    FROM ecocounter.counts_unfiltered
-    JOIN ecocounter.flows_unfiltered USING (flow_id)
-    JOIN ecocounter.sites_unfiltered USING (site_id)
-    WHERE
-        flows_unfiltered.validated --is true
-        AND sites_unfiltered.validated
-        AND NOT EXISTS (
-            SELECT 1
-            FROM ecocounter.anomalous_ranges
-            WHERE
-                anomalous_ranges.problem_level = 'do-not-use'
-                AND (
-                    (
-                        counts_unfiltered.flow_id = anomalous_ranges.flow_id
-                        AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
-                    ) OR (
-                        sites_unfiltered.site_id = anomalous_ranges.site_id
-                        AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
-                    )
+CREATE VIEW ecocounter.counts AS
+SELECT
+    counts_unfiltered.flow_id,
+    counts_unfiltered.datetime_bin,
+    counts_unfiltered.volume
+FROM ecocounter.counts_unfiltered
+JOIN ecocounter.flows_unfiltered USING (flow_id)
+JOIN ecocounter.sites_unfiltered USING (site_id)
+WHERE
+    flows_unfiltered.validated --is true
+    AND sites_unfiltered.validated
+    AND NOT EXISTS (
+        SELECT 1
+        FROM ecocounter.anomalous_ranges
+        WHERE
+            anomalous_ranges.problem_level = 'do-not-use'
+            AND (
+                (
+                    counts_unfiltered.flow_id = anomalous_ranges.flow_id
+                    AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
+                ) OR (
+                    sites_unfiltered.site_id = anomalous_ranges.site_id
+                    AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
                 )
-        )
-);
+            )
+    );
 
 COMMENT ON VIEW ecocounter.counts
 IS 'This view contains the actual binned counts for ecocounter flows. Only flows
