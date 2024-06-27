@@ -1,15 +1,15 @@
 --DROP VIEW vds.detector_inventory;
 CREATE OR REPLACE VIEW vds.detector_inventory AS (
     SELECT DISTINCT ON (pairs.vdsconfig_uid, pairs.entity_location_uid, pairs.division_id)
-        row_number() OVER (), --uid to make this view mappable in QGIS
+        row_number() OVER () AS row_number, --uid to make this view mappable in QGIS
         pairs.vdsconfig_uid,
         pairs.entity_location_uid,
         pairs.division_id,
         c.detector_id,
         pairs.first_active,
         pairs.last_active,
-        (upper(e.main_road_name::text) || ' and '::text) || upper(e.cross_road_name::text)
-        AS detector_loc,
+        upper(e.main_road_name::text)
+        || COALESCE(' and '::text || upper(e.cross_road_name::text), ''::text) AS detector_loc,
         e.geom AS sensor_geom,
         cl_vds.centreline_id,
         cl.geom AS centreline_geom,
