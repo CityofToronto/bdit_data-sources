@@ -100,15 +100,15 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             # truncate the destination table
             cur.execute(truncate_query)
             # get the column names of the source table
-            cur.execute(source_columns_query, [src_schema, src_table])
-            src_columns = [r[0] for r in cur.fetchall()]
+            cur.execute(source_columns_query, [dst_schema, dst_table])
+            dst_columns = [r[0] for r in cur.fetchall()]
             # copy all the data
             insert_query = sql.SQL(
                 "INSERT INTO {}.{} ({}) SELECT {} FROM {}.{}"
                 ).format(
                     sql.Identifier(dst_schema), sql.Identifier(dst_table),
-                    sql.SQL(', ').join(map(sql.Identifier, src_columns)),
-                    sql.SQL(', ').join(map(sql.Identifier, src_columns)),
+                    sql.SQL(', ').join(map(sql.Identifier, dst_columns)),
+                    sql.SQL(', ').join(map(sql.Identifier, dst_columns)),
                     sql.Identifier(src_schema), sql.Identifier(src_table)
                 )
             cur.execute(insert_query)
