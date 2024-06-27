@@ -1,8 +1,16 @@
-# City Centreline Data
+# City Centreline Data <!-- omit in toc -->
 
 The centreline data is one of the City's core GIS products. It delineates street centrelines as well as other entity types like waterways or political boundaries. Our unit filters out certain classes of these other entity types which are not directy related to transportation.
 
 The centreline data are used by many other groups in the City and it's often important to be able to relate various data products or infrastructure back to the centreline entities they describe or are located on.
+
+- [How It's Structured](#how-its-structured)
+- [Where It's Stored](#where-its-stored)
+  - [Centreline Segments (edges)](#centreline-segments-edges)
+    - [Directionality](#directionality)
+    - [Lineage](#lineage)
+  - [Intersections (nodes)](#intersections-nodes)
+
 
 ## How It's Structured
 

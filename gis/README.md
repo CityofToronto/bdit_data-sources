@@ -1,17 +1,15 @@
-# GIS - Geographic Information System
+# GIS - Geographic Information System <!-- omit in toc -->
 
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [GIS - Geographic Information System](#gis---geographic-information-system)
-  - [Table of Contents](#table-of-contents)
-  - [1. Overview](#1-overview)
-  - [2. text\_to\_centreline](#2-text_to_centreline)
-  - [3. Centreline Dataset](#3-centreline-dataset)
-  - [4. gccview](#4-gccview)
-  - [5. speed\_limit](#5-speed_limit)
-  - [6. school\_safety\_zones](#6-school_safety_zones)
-  - [7. assets](#7-assets)
+- [1. Overview](#1-overview)
+- [2. text\_to\_centreline](#2-text_to_centreline)
+- [3. Centreline Dataset](#3-centreline-dataset)
+- [4. gccview](#4-gccview)
+- [5. speed\_limit](#5-speed_limit)
+- [6. school\_safety\_zones](#6-school_safety_zones)
+- [7. assets](#7-assets)
 
 ## 1. Overview
 
