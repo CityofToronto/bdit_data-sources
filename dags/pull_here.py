@@ -89,7 +89,7 @@ def pull_here():
     @task.bash(env={"DOWNLOAD_URL": download_url,
                     "HOST":  BaseHook.get_connection("here_bot").host,
                     "USER" :  BaseHook.get_connection("here_bot").login,
-               "        PGPASSWORD": BaseHook.get_connection("here_bot").password})
+                    "PGPASSWORD": BaseHook.get_connection("here_bot").password})
     def load_data_run()->str:
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
@@ -108,6 +108,6 @@ def pull_here():
             )
             trigger_operators.append(trigger_operator)
 
-    load_data_run >> trigger_dags()
+    load_data_run() >> trigger_dags()
 
 pull_here()
