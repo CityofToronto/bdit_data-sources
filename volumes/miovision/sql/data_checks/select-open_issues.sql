@@ -6,6 +6,7 @@ WITH ars AS (
             classification || ' (' || classification_uid || ')',
             'All classifications'
         ) AS classification,
+        leg,
         last_week_volume,
         notes
     FROM miovision_api.open_issues
@@ -22,7 +23,8 @@ SELECT
         'uid: `' || ars.uid || '`, `'
         || ars.intersection || '`, `'
         || ars.classification || '`, '
-        || 'volume: `' || ars.last_week_volume || '`, '
+        || CASE WHEN ars.leg IS NOT NULL THEN '`' || ars.leg || ' leg`, ' ELSE '' END
+        || 'volume: `' || to_char(ars.last_week_volume, 'FM9,999,999') || '`, '
         || 'notes: `' || LEFT(ars.notes, 80)
         || CASE WHEN LENGTH(ars.notes) > 80 THEN '...' ELSE '' END || '`'
     ) AS gaps
