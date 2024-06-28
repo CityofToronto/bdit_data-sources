@@ -10,6 +10,7 @@ import pendulum
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
+from airflow.operators.python import get_current_context
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -39,10 +40,16 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
         # Airflow variable.
         tables = get_variable.override(task_id="get_list_of_tables")(tables_var)
         
-        @task_group
-        def copy_tables_with_checks(conn_id, tables):          
-            @task(on_failure_callback = None)
+        @task_group()
+        def copy_tables_with_checks(conn_id, tables):
+
+            @task(on_failure_callback = None, map_index_template="{{ dest_table_name }}")
             def check_tbl_not_empty(conn_id, tables, tbl_index, **context):
+                #name mapped task
+                context = get_current_context()
+                context["dest_table_name"] = tables[tbl_index]
+                
+                #check table is not empty
                 table = tables[tbl_index]
                 check_not_empty(context, conn_id, table)
 
