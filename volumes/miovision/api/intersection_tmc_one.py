@@ -55,6 +55,7 @@ logger.debug('Start')
 time_delta = datetime.timedelta(days=1)
 default_start = str(datetime.date.today()-time_delta)
 default_end = str(datetime.date.today())
+TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
@@ -74,13 +75,20 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
-@click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
+@click.option('--path' , default='/data/airflow/data_scripts/volumes/miovision/api/config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
 @click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
 
 def run_api(start_date, end_date, path, intersection, pull, agg):
     
+    #start_date = '2024-06-01',
+    #end_date = '2024-06-02',
+    #path = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg',
+    #intersection = (12,),
+    #pull = True,
+    #agg = False
+
     CONFIG = configparser.ConfigParser()
     CONFIG.read(path)
     api_key=CONFIG['API']
@@ -89,10 +97,8 @@ def run_api(start_date, end_date, path, intersection, pull, agg):
     conn = connect(**dbset)
     conn.autocommit = True
     logger.debug('Connected to DB')
-
     start_time = dateutil.parser.parse(str(start_date))
     end_time = dateutil.parser.parse(str(end_date))
-
     if pull:
         try:
             logger.info('Pulling from %s to %s' %(start_time, end_time))
@@ -102,17 +108,15 @@ def run_api(start_date, end_date, path, intersection, pull, agg):
             sys.exit(1)
     else:
         logger.info('Skipping pulling volume data.')
-
-    if agg:
-        logger.info('Aggregating data from %s to %s' %(start_time, end_time))
-        intersections = get_intersection_info(conn, intersection)
-        process_data(conn, start_time, end_time, intersections=intersections)
-    else:
-        logger.info('Skipping aggregating and processing volume data')
+    #if agg:
+    #    logger.info('Aggregating data from %s to %s' %(start_time, end_time))
+    #    intersections = get_intersection_info(conn, intersection)
+    #    process_data(conn, start_time, end_time, intersections=intersections)
+    #else:
+    #    logger.info('Skipping aggregating and processing volume data')
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
-
 
 class MiovPuller:
     """Miovision API puller.
@@ -265,15 +269,16 @@ class MiovPuller:
         """Process one row of TMC API output."""
         classification = self.get_road_class(row)
         (leg, movement) = self.get_road_leg_and_movement(row)
+        timestamp = self.process_timestamp(row)
         # Return time, classification_uid, leg, movement, volume.
-        return (row['timestamp'], classification, leg, movement, row['qty'])
+        return (timestamp, classification, leg, movement, row['qty'])
     def process_crosswalk_row(self, row):
         """Process one row of crosswalk API output."""
         classification = self.get_crosswalk_class(row)
         movement = self.get_crosswalk_movement(row)
+        timestamp = self.process_timestamp(row)
         # Return time, classification_uid, leg, movement, volume.
-        return (row['timestamp'], classification, row['crosswalkSide'],
-                movement, row['qty'])
+        return (timestamp, classification, row['crosswalkSide'], movement, row['qty'])
     def process_response(self, apitype, response):
         """Process the output of self.get_response."""
         data = json.loads(response.content.decode('utf-8'))
@@ -282,6 +287,14 @@ class MiovPuller:
                     + self.process_crosswalk_row(row) for row in data]
         return [(self.intersection_uid, )
                 + self.process_tmc_row(row) for row in data]
+    def process_timestamp(self, row):
+        utc_timestamp = row['timestamp']
+        if utc_timestamp is None:
+            return None
+        utc_timestamp = dateutil.parser.parse(str(utc_timestamp))
+        #convert timestamp from utc to local TZ
+        local_timestamp = utc_timestamp.replace(tzinfo=pytz.utc).astimezone(TZ)
+        return local_timestamp.replace(tzinfo=None)
     def get_intersection(self, start_time, end_time):
         """Get all data for one intersection between start and end time."""
         """
@@ -290,190 +303,185 @@ class MiovPuller:
         start_time = datetime.datetime(2024, 6, 5)
         end_time = datetime.datetime(2024, 6, 6)
         """
-        tz = pytz.timezone("EST5EDT")
-        start_time = start_time.replace(tzinfo=tz).isoformat()
-        #start_time = start_time.isoformat() + 'Z'
-        end_time = (end_time - datetime.timedelta(milliseconds=1)).replace(tzinfo=tz).isoformat()
-        #end_time = (end_time - datetime.timedelta(milliseconds=1)).isoformat()  + 'Z'
-        #response_tmc = self.get_response('tmc', start_time, end_time)
-        #table_veh = self.process_response('tmc', response_tmc)
+        start_time = start_time.isoformat()
+        end_time = end_time.isoformat()
+        response_tmc = self.get_response('tmc', start_time, end_time)
+        table_veh = self.process_response('tmc', response_tmc)
         response_crosswalk = self.get_response('crosswalk', start_time, end_time)
         table_ped = self.process_response('crosswalk', response_crosswalk)
-        #return table_veh, table_ped
-        return table_ped
+        return table_veh, table_ped
 
-def process_data(conn, start_time, end_time, intersections):
-    """Process Miovision into aggregate tables.
-    
-    Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
-    """
-    time_period = (start_time, end_time)
-    find_gaps(conn, time_period, intersections)
-    aggregate_15_min_mvt(conn, time_period, intersections)
-    agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
-    aggregate_15_min(conn, time_period, intersections)
-    aggregate_volumes_daily(conn, time_period, intersections)
-    get_report_dates(conn, time_period, intersections)
-
-def find_gaps(conn, time_period, intersections = None):
-    """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
-    into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
-    try:
-        with conn.cursor() as cur:
-            #if intersections specified, clear/aggregate only those intersections.
-            if intersections is None:
-                invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
-                cur.execute(invalid_gaps, time_period)
-                logger.info(conn.notices[-1])
-                logger.info('Updated gapsize table and found gaps exceeding allowable size')
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp, %s::integer []);"
-                cur.execute(invalid_gaps, query_params)
-                logger.info('Updated gapsize table and found gaps exceeding allowable size for intersections %s',
-                            [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def aggregate_15_min_mvt(
-        conn, time_period, intersections = None
-):
-    """Process data from raw volumes table into miovision_api.volumes_15min_mvt.
-    
-    First clears previous inserts.
-    Separate branches for single intersection or all intersection data. 
-    """
-    try:
-        with conn.cursor() as cur:
-            #if intersections specified, clear/aggregate only those intersections.
-            if intersections is None:
-                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp);"
-                cur.execute(delete_sql, time_period)
-                update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);"
-                cur.execute(update, time_period)
-                logger.info('Aggregated to 15 minute movement bins')
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer []);"
-                cur.execute(delete_sql, query_params)
-                update="""SELECT miovision_api.aggregate_15_min_mvt(
-                            %s::date, %s::date, %s::integer []);"""
-                cur.execute(update, query_params)
-                logger.info('Aggregated intersections %s to 15 minute movement bins',
-                            [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def aggregate_15_min(
-        conn, time_period, intersections = None
-):
-    """Aggregate into miovision_api.volumes_15min.
-
-    First clears previous inserts for the date range and
-    sets processed column to null for corresponding values in
-    volumes_15min_mvt. Takes optional intersection param to 
-    specify certain intersections to clear/aggregate.
-    """
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
-                cur.execute(delete_sql, time_period)
-                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
-                cur.execute(atr_aggregation, time_period)
-                logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
-                            time_period[0], time_period[1])
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp, %s::integer []);"
-                cur.execute(delete_sql, query_params)
-                update="""SELECT miovision_api.aggregate_15_min(
-                            %s::date, %s::date, %s::integer []);"""
-                cur.execute(update, query_params)
-                logger.info('Completed aggregating intersections %s into miovision_api.volumes_15min for %s to %s',
-                            [x.uid for x in intersections], time_period[0], time_period[1])
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def aggregate_volumes_daily(conn, time_period, intersections = None):
-    """Aggregate into miovision_api.volumes_daily.
-
-    Data is cleared from volumes_daily prior to insert.
-    Takes optional intersection param to specify certain
-    intersections to clear/aggregate.
-    """
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                #this function includes a delete query preceeding the insert.
-                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
-                cur.execute(daily_aggregation, time_period)
-                logger.info('Aggregation into miovision_api.volumes_daily table complete for %s to %s',
-                            time_period[0], time_period[1])
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date, %s::integer []);"
-                cur.execute(daily_aggregation, query_params)
-                logger.info('Aggregation into miovision_api.volumes_daily table complete for intersections %s from %s to %s.',
-                            [x.uid for x in intersections], time_period[0], time_period[1])
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def get_report_dates(conn, time_period, intersections = None):
-    """Aggregate into miovision_api.report_Dates.
-
-    First clears previous inserts for the date range.
-    Takes optional intersection param to clear/aggregate specific
-    for specific report dates. 
-    """
-    
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date);"
-                cur.execute(delete_sql, time_period)
-                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date);"
-                cur.execute(report_dates, time_period)
-                logger.info('report_dates done')
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
-                cur.execute(delete_sql, query_params)
-                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
-                cur.execute(report_dates, query_params)
-                logger.info('report_dates done')
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-    
-def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
-    """Aggregate into miovision_api.anomalous_ranges.
-    Data is cleared from volumes_daily prior to insert.
-    """
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                #this function includes a delete query preceeding the insert.
-                anomalous_range_sql="""SELECT *
-                    FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
-                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
-                cur.execute(anomalous_range_sql, time_period)
-                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                anomalous_range_sql="""SELECT *
-                    FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
-                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date, %s::integer [])) AS agg"""
-                cur.execute(anomalous_range_sql, query_params)
-                logger.info('Aggregation of zero volume periods into anomalous_ranges table complete for intersections %s',
-                            [x.uid for x in intersections])
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
+# def process_data(conn, start_time, end_time, intersections):
+#     """Process Miovision into aggregate tables.
+#     
+#     Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
+#     """
+#     time_period = (start_time, end_time)
+#     find_gaps(conn, time_period, intersections)
+#     aggregate_15_min_mvt(conn, time_period, intersections)
+#     agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
+#     aggregate_15_min(conn, time_period, intersections)
+#     aggregate_volumes_daily(conn, time_period, intersections)
+#     get_report_dates(conn, time_period, intersections)
+# 
+# def find_gaps(conn, time_period, intersections = None):
+#     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
+#     into miovision_api.unacceptable_gaps. miovision_api.find_gaps function contains a delete clause."""
+#     try:
+#         with conn.cursor() as cur:
+#             #if intersections specified, clear/aggregate only those intersections.
+#             if intersections is None:
+#                 invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
+#                 cur.execute(invalid_gaps, time_period)
+#                 logger.info(conn.notices[-1])
+#                 logger.info('Updated gapsize table and found gaps exceeding allowable size')
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp, %s::integer []);"
+#                 cur.execute(invalid_gaps, query_params)
+#                 logger.info('Updated gapsize table and found gaps exceeding allowable size for intersections %s',
+#                             [x.uid for x in intersections]) 
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
+# 
+# def aggregate_15_min_mvt(
+#         conn, time_period, intersections = None
+# ):
+#     """Process data from raw volumes table into miovision_api.volumes_15min_mvt.
+#     
+#     First clears previous inserts.
+#     Separate branches for single intersection or all intersection data. 
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             #if intersections specified, clear/aggregate only those intersections.
+#             if intersections is None:
+#                 delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp);"
+#                 cur.execute(delete_sql, time_period)
+#                 update="SELECT miovision_api.aggregate_15_min_mvt(%s::date, %s::date);"
+#                 cur.execute(update, time_period)
+#                 logger.info('Aggregated to 15 minute movement bins')
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 delete_sql="SELECT miovision_api.clear_15_min_mvt(%s::timestamp, %s::timestamp, %s::integer []);"
+#                 cur.execute(delete_sql, query_params)
+#                 update="""SELECT miovision_api.aggregate_15_min_mvt(
+#                             %s::date, %s::date, %s::integer []);"""
+#                 cur.execute(update, query_params)
+#                 logger.info('Aggregated intersections %s to 15 minute movement bins',
+#                             [x.uid for x in intersections]) 
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
+# 
+# def aggregate_15_min(
+#         conn, time_period, intersections = None
+# ):
+#     """Aggregate into miovision_api.volumes_15min.
+# 
+#     First clears previous inserts for the date range and
+#     sets processed column to null for corresponding values in
+#     volumes_15min_mvt. Takes optional intersection param to 
+#     specify certain intersections to clear/aggregate.
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             if intersections is None:
+#                 delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
+#                 cur.execute(delete_sql, time_period)
+#                 atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
+#                 cur.execute(atr_aggregation, time_period)
+#                 logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
+#                             time_period[0], time_period[1])
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp, %s::integer []);"
+#                 cur.execute(delete_sql, query_params)
+#                 update="""SELECT miovision_api.aggregate_15_min(
+#                             %s::date, %s::date, %s::integer []);"""
+#                 cur.execute(update, query_params)
+#                 logger.info('Completed aggregating intersections %s into miovision_api.volumes_15min for %s to %s',
+#                             [x.uid for x in intersections], time_period[0], time_period[1])
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
+# 
+# def aggregate_volumes_daily(conn, time_period, intersections = None):
+#     """Aggregate into miovision_api.volumes_daily.
+# 
+#     Data is cleared from volumes_daily prior to insert.
+#     Takes optional intersection param to specify certain
+#     intersections to clear/aggregate.
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             if intersections is None:
+#                 #this function includes a delete query preceeding the insert.
+#                 daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date)"
+#                 cur.execute(daily_aggregation, time_period)
+#                 logger.info('Aggregation into miovision_api.volumes_daily table complete for %s to %s',
+#                             time_period[0], time_period[1])
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 daily_aggregation="SELECT miovision_api.aggregate_volumes_daily(%s::date, %s::date, %s::integer []);"
+#                 cur.execute(daily_aggregation, query_params)
+#                 logger.info('Aggregation into miovision_api.volumes_daily table complete for intersections %s from %s to %s.',
+#                             [x.uid for x in intersections], time_period[0], time_period[1])
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
+# 
+# def get_report_dates(conn, time_period, intersections = None):
+#     """Aggregate into miovision_api.report_Dates.
+# 
+#     First clears previous inserts for the date range.
+#     Takes optional intersection param to clear/aggregate specific
+#     for specific report dates. 
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             if intersections is None:
+#                 delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date);"
+#                 cur.execute(delete_sql, time_period)
+#                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date);"
+#                 cur.execute(report_dates, time_period)
+#                 logger.info('report_dates done')
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
+#                 cur.execute(delete_sql, query_params)
+#                 report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
+#                 cur.execute(report_dates, query_params)
+#                 logger.info('report_dates done')
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
+#     
+# def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
+#     """Aggregate into miovision_api.anomalous_ranges.
+#     Data is cleared from volumes_daily prior to insert.
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             if intersections is None:
+#                 #this function includes a delete query preceeding the insert.
+#                 anomalous_range_sql="""SELECT *
+#                     FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+#                     LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
+#                 cur.execute(anomalous_range_sql, time_period)
+#                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
+#             else:
+#                 query_params = time_period + ([x.uid for x in intersections], )
+#                 anomalous_range_sql="""SELECT *
+#                     FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
+#                     LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date, %s::integer [])) AS agg"""
+#                 cur.execute(anomalous_range_sql, query_params)
+#                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete for intersections %s',
+#                             [x.uid for x in intersections])
+#     except psycopg2.Error as exc:
+#         logger.exception(exc)
+#         sys.exit(1)
 
 def insert_data(conn, time_period, table, intersections):
     """Inserts new data into miovision_api.volumes, pulled from API.
@@ -487,7 +495,7 @@ def insert_data(conn, time_period, table, intersections):
             query_params = time_period + ([x.uid for x in intersections], )
             delete_sql="SELECT gwolofs.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
             cur.execute(delete_sql, query_params)
-            insert_data = '''INSERT INTO gwolofs.miovision_volumes_test(intersection_uid, datetime_bin, classification_uid,
+            insert_data = '''INSERT INTO miovision_api.miovision_volumes_test(intersection_uid, datetime_bin, classification_uid,
                                 leg,  movement_uid, volume) VALUES %s'''
             execute_values(cur, insert_data, table)
     except psycopg2.errors.UniqueViolation:
@@ -518,7 +526,6 @@ def daterange(start_time, end_time, time_delta):
     while curr_time < end_time:
         yield curr_time
         curr_time += time_delta
-
 
 class Intersection:
     def __init__(self, uid, id1, name, date_installed,
@@ -581,9 +588,8 @@ def get_intersection_info(conn, intersection=()):
 
 def check_dst(start_time, end_time):
     'check if fall back (EDT -> EST) occured between two timestamps.'
-    tz = pytz.timezone("EST5EDT")
-    tz_1 = start_time.astimezone(tz).tzname()
-    tz_2 = end_time.astimezone(tz).tzname()
+    tz_1 = start_time.astimezone(TZ).tzname()
+    tz_2 = end_time.astimezone(TZ).tzname()
     if tz_1 == 'EDT' and tz_2 == 'EST':
         logger.info(f"EDT -> EST time change occured today.")
         return True
@@ -593,8 +599,11 @@ def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     """
     time_delta = datetime.timedelta(hours=24)
-    
     intersections = get_intersection_info(conn, intersection=intersection)
+
+    #adjust format of start and end times
+    start_time = TZ.localize(start_time)
+    end_time = TZ.localize(end_time)
 
     if len(intersections) == 0:
         logger.critical('No intersections found in '
@@ -631,8 +640,7 @@ def pull_data(conn, start_time, end_time, intersection, key):
                 miovpull = MiovPuller(c_intersec.id1, c_intersec.uid, key)
                 for _ in range(3):
                     try:
-                        #table_veh, 
-                        table_ped = miovpull.get_intersection(c_start_t, c_end_t)
+                        table_veh, table_ped = miovpull.get_intersection(c_start_t, c_end_t)
                         break
                     except (exceptions.ProxyError,
                             exceptions.RequestException, RetryError) as err:
@@ -654,13 +662,13 @@ def pull_data(conn, start_time, end_time, intersection, key):
                 #discard the 2nd 1AM hour of data to avoid duplicates
                 if check_dst(c_start_t, c_end_t):
                     logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
-                    #table_veh = [x for x in table_veh if
-                    #    datetime.datetime.fromisoformat(x[1]).hour != 1 and
-                    #    datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                    table_veh = [x for x in table_veh if
+                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
+                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
                     table_ped = [x for x in table_ped if
                         datetime.datetime.fromisoformat(x[1]).hour != 1 and
                         datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
-                #table.extend(table_veh)
+                table.extend(table_veh)
                 table.extend(table_ped)
                 # Hack to slow down API hit rate.
                 sleep(1)
