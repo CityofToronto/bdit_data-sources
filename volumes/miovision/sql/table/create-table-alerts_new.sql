@@ -10,11 +10,11 @@ CREATE TABLE IF NOT EXISTS miovision_api.alerts_new
     start_time timestamp without time zone NOT NULL,
     end_time  timestamp without time zone,
     intersection_uid integer,
-    CONSTRAINT miovision_alerts_pkey PRIMARY KEY (alert_id),
-    CONSTRAINT miov_alert_intersection_fkey FOREIGN KEY (intersection_uid)
+    CONSTRAINT miovision_alerts_pkey_new PRIMARY KEY (alert_id),
+    CONSTRAINT miov_alert_intersection_fkey_new FOREIGN KEY (intersection_uid)
     REFERENCES miovision_api.intersections (intersection_uid) MATCH FULL
     ON UPDATE NO ACTION
-    ON DELETE NO ACTION;
+    ON DELETE NO ACTION
 )
 
 TABLESPACE pg_default;
