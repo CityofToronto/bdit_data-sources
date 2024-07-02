@@ -67,7 +67,7 @@ DEFAULT_ARGS = {
 def get_vz_data():
     """The main function of the SSZ DAG."""
     
-    @task()
+    @task(map_index_template="{{ task_year }}")
     def pull_data(
         engine: Engine,
         service: Any,
@@ -90,6 +90,11 @@ def get_vz_data():
         Raises:
             AirflowFailException: If any invalid record is found.
         """
+        #get name for mapped task 
+        from airflow.operators.python import get_current_context
+        context = get_current_context()
+        context["task_year"] = spreadsheet["year"]
+        
         year = spreadsheet["year"]
         context["task_instance"].xcom_push(
             "extra_msg",

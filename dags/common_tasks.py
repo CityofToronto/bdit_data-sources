@@ -39,7 +39,7 @@ def get_variable(var_name:str) -> list:
     """
     return Variable.get(var_name, deserialize_json=True)
 
-@task()
+@task(map_index_template="{{ dest_table_name }}")
 def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
@@ -49,6 +49,11 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             ``schema.table``, and the destination table in the same format
             ``schema.table``.
     """
+    #name mapped task
+    from airflow.operators.python import get_current_context
+    context = get_current_context()
+    context["dest_table_name"] = table[1]
+    
     # separate tables and schemas
     try:
         src_schema, src_table = table[0].split(".")
