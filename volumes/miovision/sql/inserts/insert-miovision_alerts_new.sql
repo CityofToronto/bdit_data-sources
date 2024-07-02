@@ -6,8 +6,8 @@ ON CONFLICT (alert_id)
 DO UPDATE
 SET
     intersection_id = EXCLUDED.intersection_id,
-    alert = EXCLUDED.alert
-    start_time = EXCLUDED.start_time
+    alert = EXCLUDED.alert,
+    start_time = EXCLUDED.start_time,
     end_time = EXCLUDED.end_time
 WHERE n.alert_id = EXCLUDED.alert_id;
 
