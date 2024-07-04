@@ -63,7 +63,8 @@ def run_api(start_date, end_date, intersection, pull, agg):
     if pull:
         try:
             logger.info('Pulling from %s to %s' %(start_date, end_date))
-            pull_data(mio_postgres, start_date, end_date, intersection, key)
+            with mio_postgres.get_conn() as conn:
+                pull_data(conn, start_date, end_date, intersection, key)
         except Exception as e:
             logger.critical(traceback.format_exc())
             sys.exit(1)
