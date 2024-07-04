@@ -83,7 +83,8 @@ def pull_miovision_dag():
         mio_postgres = PostgresHook("miovision_api_bot")
 
         with mio_postgres.get_conn() as conn:
-            pull_data(conn, start_time, end_time, (100,101), key)
+            pull_data(conn, start_time, end_time, INTERSECTION, key)
+            #pull_data(conn, start_time, end_time, (100,101), key)
 
     @task(task_id = 'pull_alerts', trigger_rule='none_failed', retries = 1)
     def pull_alerts_task(ds):       

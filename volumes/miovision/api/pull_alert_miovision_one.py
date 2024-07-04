@@ -117,8 +117,6 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     """
     pageSize = 10
     pageNumber = 0
-    start_date = datetime.datetime(2024,6,2)
-    end_date = datetime.datetime(2024,6,3)
     start_date = TZ.localize(start_date)
     end_date = TZ.localize(end_date)
     if end_date < start_date:
