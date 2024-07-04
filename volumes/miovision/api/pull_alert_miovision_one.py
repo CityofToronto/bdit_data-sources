@@ -5,11 +5,14 @@ import pytz
 import json
 from requests import Session
 import logging
-import configparser
 import pandas as pd
 import numpy as np
+import click
 from psycopg2 import connect, sql
 from psycopg2.extras import execute_values
+
+from airflow.hooks.base_hook import BaseHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 def logger():
     logger = logging.getLogger(__name__)
@@ -25,19 +28,37 @@ logger.debug('Start')
 
 session = Session()
 session.proxies = {}
-url_base = 'https://api.miovision.one/api/v1'
+URL_BASE = 'https://api.miovision.one/api/v1'
 TZ = pytz.timezone("Canada/Eastern")
+time_delta = datetime.timedelta(days=1)
+default_start = str(datetime.date.today()-time_delta)
+default_end = str(datetime.date.today())
 
-CONFIG = configparser.ConfigParser()
-CONFIG.read('/etc/airflow/data_scripts/volumes/miovision/api/config.cfg')
-api_key=CONFIG['API']
-key=api_key['key']
-dbset = CONFIG['DBSETTINGS']
-conn = connect(**dbset)
-conn.autocommit = True
+SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
 
-#SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
-SQL_DIR = '/data/home/gwolofs/bdit_data-sources/volumes/miovision/sql'
+CONTEXT_SETTINGS = dict(
+    default_map={'run_alerts_api_cli': {'flag': 0}}
+)
+
+def run_alerts_api(start_date: str, end_date: str):
+    api_key = BaseHook.get_connection('miovision_api_key')
+    key = api_key.extra_dejson['key']
+    mio_postgres = PostgresHook("miovision_api_bot")
+    start_date = dateutil.parser.parse(str(start_date))
+    end_date = dateutil.parser.parse(str(end_date))
+    with mio_postgres.get_conn() as conn:
+        pull_alerts(conn, start_date, end_date, key)
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.command()
+@click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
+
+def run_alerts_api_cli(start_date, end_date):
+    return run_alerts_api(start_date, end_date)
 
 class MiovAlertPuller:
     """Miovision API puller.
@@ -93,11 +114,6 @@ class MiovAlertPuller:
         data = json.loads(response.content.decode('utf-8'))
         return [self.process_alert(row) for row in data['alerts']], data['links']['next']
 
-#sql insert data script
-fpath = os.path.join(SQL_DIR, 'inserts/insert-miovision_alerts_new.sql')
-with open(fpath, 'r', encoding='utf-8') as file:
-    insert_query = sql.SQL(file.read())
-
 def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     """Miovision Alert Puller
 
@@ -115,8 +131,6 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     key : str
         Miovision API access key.
     """
-    pageSize = 10
-    pageNumber = 0
     start_date = TZ.localize(start_date)
     end_date = TZ.localize(end_date)
     if end_date < start_date:
@@ -124,7 +138,8 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     logger.info('Pulling Miovision alerts from %s to %s.', start_date, end_date)
     #pull alerts from each page and append to list
     dfs = []
-    url = f"{url_base}/alerts?pageSize={pageSize}&pageNumber={pageNumber}"
+    pageSize = 100
+    url = f"{URL_BASE}/alerts?pageSize={pageSize}&pageNumber=0"
     while url is not None: 
         miovpull = MiovAlertPuller(url, start_date, end_date, key)
         response = miovpull.get_response()
@@ -138,8 +153,15 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     final.replace({np.NaN: None}, inplace = True)
     #convert to tuples for inserting
     values = list(final.itertuples(index=False, name=None))
+
+    #sql insert data script
+    fpath = os.path.join(SQL_DIR, 'inserts/insert-miovision_alerts_new.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        insert_query = sql.SQL(file.read())
+
     logger.info('Inserting values into `miovision_api.alerts_new`.')
     with conn.cursor() as cur:
         execute_values(cur, insert_query, values)
 
-pull_alerts(conn, datetime.datetime(2024,6,2), datetime.datetime(2024,6,3), key)
+if __name__ == '__main__':
+    cli()
