@@ -1,43 +1,37 @@
 import sys
 import json
-from requests import Session
-from requests import exceptions
+from requests import Session, exceptions
 import datetime
 import pytz
 import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
-import configparser
 import click
 import traceback
 from time import sleep
 from collections import namedtuple
 
+from airflow.hooks.base_hook import BaseHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
-
 
 class MiovisionAPIException(BreakingError):
     """Base class for exceptions."""
 
-
 class NotFoundError(BreakingError):
     """Exception for a 404 error."""
-
 
 class RetryError(Exception):
     """Base class for exceptions that warrant a retry."""
 
-
 class TimeoutException(RetryError):
     """Exception if API gives a 504 error"""
 
-
 class ServerException(RetryError):
     """Exception if API gives a 500 error"""
-
 
 def logger():
     logger = logging.getLogger(__name__)
@@ -47,7 +41,6 @@ def logger():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     return logger
-
 
 logger = logger()
 logger.debug('Start')
@@ -59,10 +52,29 @@ TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
-url = 'https://api.miovision.one/api/v1/intersections/'
-tmc_endpoint = '/tmc'
-ped_endpoint = '/tmc/crosswalk'
+URL_BASE = 'https://api.miovision.one/api/v1'
 
+def run_api(start_date, end_date, intersection, pull, agg):
+    api_key = BaseHook.get_connection('miovision_api_key')
+    key = api_key.extra_dejson['key']
+    mio_postgres = PostgresHook("miovision_api_bot")
+    start_date = dateutil.parser.parse(str(start_date))
+    end_date = dateutil.parser.parse(str(end_date))
+    if pull:
+        try:
+            logger.info('Pulling from %s to %s' %(start_date, end_date))
+            pull_data(mio_postgres, start_date, end_date, intersection, key)
+        except Exception as e:
+            logger.critical(traceback.format_exc())
+            sys.exit(1)
+    else:
+        logger.info('Skipping pulling volume data.')
+    #if agg:
+    #    logger.info('Aggregating data from %s to %s' %(start_time, end_time))
+    #    intersections = get_intersection_info(conn, intersection)
+    #    process_data(conn, start_time, end_time, intersections=intersections)
+    #else:
+    #    logger.info('Skipping aggregating and processing volume data')
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -75,45 +87,12 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
-@click.option('--path' , default='/data/airflow/data_scripts/volumes/miovision/api/config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
 @click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
 
-def run_api(start_date, end_date, path, intersection, pull, agg):
-    
-    #start_date = '2024-06-01',
-    #end_date = '2024-06-02',
-    #path = '/data/airflow/data_scripts/volumes/miovision/api/config.cfg',
-    #intersection = (12,),
-    #pull = True,
-    #agg = False
-
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
-    api_key=CONFIG['API']
-    key=api_key['key']
-    dbset = CONFIG['DBSETTINGS']
-    conn = connect(**dbset)
-    conn.autocommit = True
-    logger.debug('Connected to DB')
-    start_time = dateutil.parser.parse(str(start_date))
-    end_time = dateutil.parser.parse(str(end_date))
-    if pull:
-        try:
-            logger.info('Pulling from %s to %s' %(start_time, end_time))
-            pull_data(conn, start_time, end_time, intersection, key)
-        except Exception as e:
-            logger.critical(traceback.format_exc())
-            sys.exit(1)
-    else:
-        logger.info('Skipping pulling volume data.')
-    #if agg:
-    #    logger.info('Aggregating data from %s to %s' %(start_time, end_time))
-    #    intersections = get_intersection_info(conn, intersection)
-    #    process_data(conn, start_time, end_time, intersections=intersections)
-    #else:
-    #    logger.info('Skipping aggregating and processing volume data')
+def run_api_cli(start_date, end_date, intersection, pull, agg):
+    return run_api(start_date, end_date, intersection, pull, agg)
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
@@ -136,8 +115,8 @@ class MiovPuller:
     """
     headers = {'Content-Type': 'application/json',
                'apikey': ''}
-    tmc_template = url + "{int_id1}" + tmc_endpoint
-    ped_template = url + "{int_id1}" + ped_endpoint
+    tmc_template = '{URL_BASE}/intersections/{int_id1}/tmc'
+    ped_template = tmc_template + '/crosswalk'
     roaduser_class = {
         'Light': '1',
         'BicycleTMC': '2',
@@ -187,8 +166,8 @@ class MiovPuller:
             request_url = self.tmc_template.format(int_id1=self.int_id1)
         else:
             raise ValueError("apitype must be either 'tmc' or 'crosswalk'!")
-        logger.info(f'params:{params}')
-        logger.info(f'request_url:{request_url}')
+        logger.debug(f'params:{params}')
+        logger.debug(f'request_url:{request_url}')
         response = session.get(
             request_url,
             params=params,

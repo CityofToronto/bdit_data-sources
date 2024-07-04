@@ -2,27 +2,28 @@
 
 - [Overview](#overview)
 - [API](#api)
-    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-        - [Turning Movement Count TMC](#turning-movement-count-tmc)
-        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
-        - [Error responses](#error-responses)
-    - [Input Files](#input-files)
-    - [How to run the api](#how-to-run-the-api)
-        - [Command Line Options](#command-line-options)
-    - [Classifications](#classifications)
-        - [API Classifications](#api-classifications)
-        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
-    - [PostgreSQL Functions](#postgresql-functions)
-    - [Invalid Movements](#invalid-movements)
-    - [How the API works](#how-the-api-works)
-    - [Repulling data](#repulling-data)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [Command Line Options](#command-line-options)
+  - [Alerts API](#alerts-api)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-    - [**miovision_pull**](#miovision_pull)
-        - [check_partitions TaskGroup](#check_partitions-taskgroup)
-        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
-        - [data_checks TaskGroup](#data_checks-taskgroup)
-    - [**miovision_check**](#miovision_check)
-    - [Notes](#notes)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [Notes](#notes)
 
 <!-- /TOC -->
 
@@ -136,6 +137,9 @@ In command prompt, navigate to the folder where the python file is [located](../
 - multiple, specific intersections
 
 The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/readme.md#update-miovision_apiintersection_movements).  
+
+## Alerts API
+`python3 pull_alert_miovision_one.py run-alerts-api-cli --start_date=2024-06-01 --end_date=2024-07-01`
 
 ## Classifications
 
