@@ -41,20 +41,6 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
-- [PostgreSQL Functions](#postgresql-functions)
-  - [Aggregation Functions](#aggregation-functions)
-  - [Clear Functions](#clear-functions)
-  - [Helper Functions](#helper-functions)
-  - [Partitioning Functions](#partitioning-functions)
-  - [Deprecated Functions](#deprecated-functions)
-- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
-  - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-  - [Part II - Working Machine](#part-ii---working-machine)
-  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
-    - [An applied example](#an-applied-example)
-    - [Identifying new anomalies](#identifying-new-anomalies)
-
-<!-- /TOC -->
 
 # 1. Overview
 
