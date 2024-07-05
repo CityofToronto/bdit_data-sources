@@ -581,10 +581,6 @@ def pull_data(conn, start_time, end_time, intersection, key):
     time_delta = datetime.timedelta(hours=24)
     intersections = get_intersection_info(conn, intersection=intersection)
 
-    #adjust format of start and end times
-    start_time = TZ.localize(start_time)
-    end_time = TZ.localize(end_time)
-
     if len(intersections) == 0:
         logger.critical('No intersections found in '
                         'miovision_api.intersections for the specified '
@@ -620,7 +616,10 @@ def pull_data(conn, start_time, end_time, intersection, key):
                 miovpull = MiovPuller(c_intersec.id1, c_intersec.uid, key)
                 for _ in range(3):
                     try:
-                        table_veh, table_ped = miovpull.get_intersection(c_start_t, c_end_t)
+                        #provide API with dts with TZ
+                        c_start_t_TZ = TZ.localize(c_start_t)
+                        c_end_t_TZ = TZ.localize(c_end_t)
+                        table_veh, table_ped = miovpull.get_intersection(c_start_t_TZ, c_end_t_TZ)
                         break
                     except (exceptions.ProxyError,
                             exceptions.RequestException, RetryError) as err:
