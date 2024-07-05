@@ -1,4 +1,4 @@
-INSERT INTO miovision_api.alerts_new AS n (
+INSERT INTO miovision_api.alerts AS n (
     alert_id, start_time, end_time, intersection_id, alert
 )
 VALUES %s
@@ -13,7 +13,7 @@ WHERE n.alert_id = EXCLUDED.alert_id;
 
 --update foreign key referencing miovision_api.intersections
 --handles new records as well as old records with null intersection_uid (newly added intersections)
-UPDATE miovision_api.alerts_new AS n
+UPDATE miovision_api.alerts AS n
 SET intersection_uid = i.intersection_uid
 FROM miovision_api.intersections AS i
 WHERE

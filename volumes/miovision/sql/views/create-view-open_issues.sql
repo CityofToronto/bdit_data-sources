@@ -6,7 +6,7 @@ WITH alerts AS (
         ar.uid,
         string_agg(DISTINCT alerts.alert, '; ') AS alerts
     FROM miovision_api.anomalous_ranges AS ar
-    LEFT JOIN miovision_api.alerts_new AS alerts
+    LEFT JOIN miovision_api.alerts
         ON alerts.intersection_uid = ar.intersection_uid
         AND alerts.start_time >= ar.range_start
         AND (
