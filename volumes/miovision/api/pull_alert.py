@@ -147,7 +147,7 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
         df = pd.DataFrame(alerts)
         dfs.append(df)
     logger.info('Done pulling. Transforming alerts.')
-    #create pandas df and restructure        
+    #create pandas df and restructure
     final = pd.concat(dfs, ignore_index=True)
     final.rename(columns={0: "alertId", 1: "alertStartDateTime", 2: "alertEndDateTime", 3: "intersection_id", 4: "type"}, inplace = True)
     final.replace({np.NaN: None}, inplace = True)
@@ -155,11 +155,11 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     values = list(final.itertuples(index=False, name=None))
 
     #sql insert data script
-    fpath = os.path.join(SQL_DIR, 'inserts/insert-miovision_alerts_new.sql')
+    fpath = os.path.join(SQL_DIR, 'inserts/insert-miovision_alerts.sql')
     with open(fpath, 'r', encoding='utf-8') as file:
         insert_query = sql.SQL(file.read())
 
-    logger.info('Inserting values into `miovision_api.alerts_new`.')
+    logger.info('Inserting values into `miovision_api.alerts`.')
     with conn.cursor() as cur:
         execute_values(cur, insert_query, values)
 
