@@ -1,38 +1,35 @@
-# API Puller
-
-## Table of Contents
+<!-- TOC -->
 
 - [Overview](#overview)
-- [Input Parameters](#input-parameters)
-  - [API Key and URL](#api-key-and-url)
-- [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-  - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
-  - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
-  - [Error responses](#error-responses)
-- [Input Files](#input-files)
-- [How to run the api](#how-to-run-the-api)
-  - [Virtual Environment](#virtual-environment)
-  - [Command Line Options](#command-line-options)
-- [Classifications](#classifications)
-  - [Exisiting Classification (csv dumps and datalink)](#exisiting-classification-csv-dumps-and-datalink)
-  - [API Classifications](#api-classifications)
-- [PostgreSQL Functions](#postgresql-functions)
-- [Invalid Movements](#invalid-movements)
-- [How the API works](#how-the-api-works)
-- [Airflow](#airflow)
-- [Notes](#notes)
+- [API](#api)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [Command Line Options](#command-line-options)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
+- [Airflow DAGs](#airflow-dags)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [Notes](#notes)
 
-## Overview
+<!-- /TOC -->
 
-The puller can currently grab crosswalk and TMC data from the Miovision API using specified intersections and dates, upload the results to the database and aggregates data to 15 minute bins. The puller can support date ranges longer than 24 hours. The output is the same format as existing csv dumps sent by miovision. This script creates a continuous stream of volume data from Miovision.
+# Overview
+This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/readme.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
 
-## Input Parameters
-
-### API Key and URL
-
-Emailed from Miovision. Keep it secret. Keep it safe.
-
-The API can be accessed at [https://api.miovision.com/intersections/](https://api.miovision.com/intersections/). The general structure is the `base url+intersection id+tmc or crosswalk endpoint`. Additional documentation can be found in here: [http://beta.docs.api.miovision.com/](http://beta.docs.api.miovision.com/) .
+# API
 
 ## Relevant Calls and Outputs
 
@@ -85,7 +82,7 @@ Through the API, the script converts it to a table like this:
 1|2018-07-03 23:16:00|1|N|1|3
 1|2018-07-03 23:08:00|1|N|1|8
 
-which is the same format as the `miovision.volumes` table, and directly inserts it to `miovision_api.volumes`. The script converts the movements, classifications and intersections given by the API to uids using the same lookup table structure that exists in the `miovision` schema.
+which is the same format as the `miovision_api.volumes` table, and directly inserts it to `miovision_api.volumes`. The script converts the movements, classifications and intersections given by the API to uids using the same lookup table structure that exists in the `miovision_api` schema.
 
 ### Error responses
 
@@ -102,80 +99,48 @@ There is also a currently unkown `504` error. The script has measures to handle 
 
 There are other errors relating to inserting/processing the data on PostgreSQL and requesting the data. Instead of an error code, details about these kinds of errors are usually found in the logs and in the traceback. 
 
-All errors the API encounters are logged in the `logging.log` file, and emailed to the user. The log also logs the time each intersection is pulled, and the time when each task in PostgreSQL is completed. This makes it useful to check if any single processes is causing delays. 
-
 ## Input Files
 
-`config.cfg` is required to access the API, the database, and perform email notification. It has the following format:
+`config.cfg` is required to access the API and the database. It has the following format:
 
 ```ini
 [API]
-key=your api key
+key={api key}
 [DBSETTINGS]
-host=10.160.12.47
+host={host ip}
 dbname=bigdata
-user=database username
-password=database password
-[EMAIL]
-from=from@email.com
-to=to@email.com
+user={username}
+password={password}
 ```
 
 ## How to run the api
 
-In command prompt, navigate to the folder where the python file is located and run `python intersection_tmc.py run_api`. This will collect data from the previous day as the default date range.
+The process to use the API to download data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
 
-The script can also customize the data it pulls and processes with various command line options.
-
-For example, to collect data from a custom date range, run `python intersection_tmc.py run_api --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
-
-`start_date` and `end_date` must be separated by at least 1 day, and `end_date` cannot be a future date. Specifying `end` as today will mean the script will pull data until the start of today (Midnight, 00:00). 
-
-If the API runs into an error, an email will be sent notifying the general error category along with the traceback. The logging file also logs the error. For some minor errors that can be fixed by repulling the data, the API will email which intersection-date combination could not be pulled. 
-
-### Virtual Environment
-
-If the script is running on the EC2, then a virtual environment is required to run the script. In addition, it is no longer necessary to specify the proxy since the script is being run outside the firewall. 
-
-First, install pipenv by running `pip install --user pipenv`. The script is written around python 3.x, so run `pipenv --three` to setup a python 3.x virtual environment. To install the required packages such as the click module, run `pipenv intstall click`. 
-
-To run the python script, or any python commands, replace `python` at the start of your command with `pipenv run python`. For example, to run this script, run `pipenv run python intersection_tmc.py run_api`.
-
-More information can be found [here](https://python-docs.readthedocs.io/en/latest/dev/virtualenvs.html).
+In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
 ### Command Line Options
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
-|start_date|YYYY-MM-DD|Specifies the start date to pull data from|2018-08-01|The previous day|
-|end_date|YYYY-MM-DD|Specifies the end date to pull data from|2018-08-05|Today|
-|intersection|integer|Specifies the `intersection_uid` from the `miovision.intersections` table to pull data for|12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is|`/etc/airflow/data_scripts/volumes/miovision/api/config.cfg`|`config.cfg` is located in the same directory as the `intersection_tmc.py` file.|
-|pull|BOOLEAN flag|Data processing and gap finding will be skipped|--pull|false|
-|dupes|BOOLEAN flag|Script will fail if duplicates detected|--dupes|false|
+|start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
+|end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
+|intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
+|path|path|Specifies the directory where the `config.cfg` file is which stores the api key. |`/data/airflow/data_scripts/volumes/miovision/api/config.cfg`||
+|pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
+|agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
 
-`python3 intersection_tmc.py run-api --start_date=2018-08-01 --end_date=2018-08-05 --intersection=12 --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --pull --dupes` is an example with all the options specified. However, the usual command line that we run daily is `python3 intersection_tmc.py run-api --path=/etc/airflow/data_scripts/volumes/miovision/api/config.cfg --dupes` since we are only interested in a day worth of data on the day before on ALL working intersections and we want data processing to happen as well as the script to fail if duplicates are detected.
+`python3 intersection_tmc.py run-api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg` is an example with all the options specified:  
+- both data pulling and aggregation specified
+- multiple days
+- multiple, specific intersections
 
-If `--pull` is specified in the command line (which is equivalent to setting it to True), the script will skip the data processing and gaps finding process. This is useful when we want to just insert data into the volumes table and check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#4-steps-to-add-or-remove-intersections).
-
-If `--dupes` is specified in the command line (which is equivalent to setting it to True), the script will fail if duplicates are detected and exit with an exit code of 2. This is set up particularly for Airflow to fail if duplicates are detected so that we would be notified of the issue via Slack message. More can be found in the [Airflow](#airflow) section.\
-If `--dupes` is false, we would only get a warning message but the script will continue to run.
+The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/readme.md#update-miovision_apiintersection_movements).  
 
 ## Classifications
 
 The classification given in the api is different than the ones given in the csv dumps, or the datalink. 
-
-### Exisiting Classification (csv dumps and datalink)
-
-|classification_uid|classification|location_only|class_type|
-|-----|-----|-----|-----|
-1|Lights|f|Vehicles
-2|Bicycles|f|Cyclists
-3|Buses|f||
-4|Single-Unit Trucks|f|Vehicles
-5|Articulated Trucks|f|Vehicles
-6|Pedestrians|t|Pedestrians
-7|Bicycles|t|Cyclists
+The script will return an error if a classificaiton received from the API does not match any from the below list. 
 
 ### API Classifications
 
@@ -189,57 +154,142 @@ The classification given in the api is different than the ones given in the csv 
 6|Pedestrian|t|Pedestrians"
 8|WorkVan|f|Vehicles"
 
-The API assigns a classification of 0 if the classification matches none of the above. This is possible if the classification given from the API does not exactly match any of the ones in the script. One example is if `Light` is pluralized as `Lights`, like in the CSV dumps.
+### Old Classifications (csv dumps and datalink)
+
+|classification_uid|classification|location_only|class_type|
+|-----|-----|-----|-----|
+1|Lights|f|Vehicles
+2|Bicycles|f|Cyclists
+3|Buses|f||
+4|Single-Unit Trucks|f|Vehicles
+5|Articulated Trucks|f|Vehicles
+6|Pedestrians|t|Pedestrians
+7|Bicycles|t|Cyclists
 
 ## PostgreSQL Functions
 
-To perform the data processing, the API script calls several postgres functions in the `miovision_api` schema. These functions are the same/very similar to the ones used to process the csv dumps. More information can be found in the [miovision readme](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/README.md)
-
-|Function|Purpose|
-|-----|-----|
-|[`aggregate_15_min_tmc`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min_tmc.sql)|Aggregates data with valid movementsto 15 minutes turning movement count (TMC) bins and fills in gaps with 0-volume bins. |
-|[`aggregate_15_min`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-aggregate-volumes_15min.sql)|Turns 15 minute TMC bins to 15 minute automatic traffic recorder (ATR) bins|
-[`find_invalid_movments`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-find_invalid_movments.sql)|Finds the number of invalid movements|
-[`api_log`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-api_log.sql)|Populates when the data is pulled|
-[`refresh_gapsize_lookup`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-refresh_gapsize_lookup.sql)|Refresh materialized view `miovision_api.gapsize_lookup`|
-[`find_gaps`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api_bugfix/volumes/miovision/sql/function-find_gaps.sql)|Find unacceptabl gaps and insert into table `miovision_api.unacceptable_gaps`|
-[`report_dates`](https://github.com/CityofToronto/bdit_data-sources/blob/miovision_api/volumes/miovision/sql/function-report_dates.sql)|Populates `report_dates`|
+To perform the data processing, the API script calls several Postgres functions in the `miovision_api` schema. More information about these functions and the database tables can be found in the [sql readme](../sql/readme.md). 
 
 ## Invalid Movements
 
-The API also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](https://github.com/CityofToronto/bdit_data-sources/blob/automate_miovision_aggregation/volumes/miovision/sql/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000. A warning is also emailed to the user if the number of invalid movements is over 1000.
+The API script also checks for invalid movements by calling the [`miovision_api.find_invalid_movements`](../sql/function/function-find_invalid_movements.sql) PostgreSQL function. This function will evaluate whether the number of invalid movements is above or below 1000 in a single day, and warn the user if it is. The function does not stop the API script with an exception so manual QC would be required if the count is above 1000.  
 
 ## How the API works
 
 This flow chart provides a high level overview of the script:
-![Flow Chart of the API](img/api_script1.png)
 
-Below shows an overview of functions used in the script:
-![Python Functions](img/python_functions.png)
+```mermaid
+flowchart TB
+    A[" `pull_data` called via\ncommand line `run-api`"]
+    B[" `pull_data` called via\n`miovision_pull` Airflow DAG\n`pull_data` task"]
+    A & B-->pull_data
 
-Below shows a list of tables used (separated by source table and results table):
-![Source Tables](img/tables_1.png)
-![Results Tables](img/tables_2.png)
+    subgraph pull_data["`pull_data`" ]
+        direction TB
 
-Below shows a list of SQL functions used:
-![SQL Functions](img/functions.png)
+        subgraph get_intersection_info["`get_intersection_info`" ]
+            direction LR
+            D{Are specific\nintersections\n specified?}
+            E[Grabs entire list of intersections\nfrom database]
+            F["Grabs specified intersection(s)\nfrom database"]
+            D-->|Yes|F
+            D-->|No|E            
+        end
 
-Below shows a list of SQL trigger functions, materialized view and sequences used:
-![Trigger Functions and Sequences](img/others.png)
+        exit[Exit if specified intersections are inactive]
+        G["Pulls crosswalk data (table_ped) and\nvehicle/cyclist data (table_veh)"]
+        H[Reformats data and appends\nit to temp tables]
+        J[Checks if EDT -> EST occured\nand if so discards 2nd 1-2AM\nto prevent duplicates]
 
-## Airflow
+        subgraph insert_data["`insert_data`"]
+            direction LR
+            insert[Inserts data into `volumes` table]
+            api_log[Updates `api_log`]
+            invalid["Alerts if invalid movements\nfound (`find_invalid_movements`)"]
+            insert-->api_log-->invalid
+        end
 
-### **`pull_miovision`**
+        P{Does current iteration\ndate exceed specified\ndate range?}
+        get_intersection_info-->exit-->G-->H-->J-->insert_data-->P
+        
 
-The Airflow is set up to run every day at 3am using the dag named `pull_miovision`. This is to ensure that the data are at least 2 hours old. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. Upload the required Python script in the dag file to `/etc/airflow/data_scripts/`. 
+        Iterate[Iterate to next 6 hour block.]
+        L{Was it\nspecified to not\nprocess the data?}
 
-Since there is this function on Airflow script to send slack notifications when the Airflow task fails, an airflow connection has to be set up first. More instructions on that can be found [here](https://github.com/CityofToronto/bdit_team_wiki/wiki/Automating-Stuff#integrating-slack-alert). 
+        P-->|Yes|L
+        P-->|No|Iterate
+        Iterate-->G
 
-The Airflow uses BashOperator and run one task named `pull_miovision` using a bash command that looks something like this bash_command = `'/etc/airflow/.../intersection_tmc.py run-api --path /etc/airflow/.../config.cfg --dupes'`. `--dupes` is used to catch duplicates and fail the script when that happen.
+        subgraph process_data["`process_data`"]
+            direction LR
+            gaps["find_gaps\n(unacceptable_gaps)"]-->
+            mvt["aggregate_15_min_mvt\n(volumes_15min_mvt)"]-->
+            v15["aggregate_15_min\n(volumes_15min)"]-->
+            volumes_daily["aggregate_volumes_daily\n(volumes_daily)"]-->
+            report_dates["get_report_dates\n(report_dates)"]
+        end
+        
+        L---->|No|process_data
+        L-->|Yes|skip[Skip aggregation]
+    end
+    
+    Q[End of Script]
+    
+    pull_data-->Q
+  ```
 
-### **`check_miovision`**
+## Repulling data
 
-There is another Airflow process related to Miovision named `check_miovision` which is to check if all Miovision cameras are working and send notifications when there is at least one malfunctioning camera. More information can be found at [this part of the README.](https://github.com/CityofToronto/bdit_data-sources/tree/miovision_api_bugfix/volumes/miovision#3-finding-gaps-and-malfunctioning-camera)
+The Miovision ETL DAG `miovision_pull` and the command line `run-api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
+
+Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
+
+# Airflow DAGs
+
+This section describes the Airflow DAGs which we use to pull, aggregate, and run data checks on Miovision data. Deprecated DAGs are described in the Archive [here](../archive.md#11-deprecated-airflow-dags).
+
+<!-- miovision_pull_doc_md -->
+## **`miovision_pull`**  
+This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a specific intersections via a list of integer intersection_uids.  
+
+### `check_partitions` TaskGroup  
+  - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`.  
+  - `create_annual_partitions` contains any partition creates necessary for a new year.  
+  - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`.  
+  - `create_month_partition` contains any partition creates necessary for a new month.  
+ 
+`pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
+- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
+
+### `miovision_agg` TaskGroup
+This task group completes various Miovision aggregations.  
+- `find_gaps_task` clears and then populates `miovision_api.unacceptable_gaps` using `intersection_tmc.find_gaps` function. 
+- `aggregate_15_min_mvt_task` clears and then populates `miovision_api.volumes_15min_mvt` using `intersection_tmc.aggregate_15_min_mvt` function. 
+- `aggregate_15_min_task` clears and then populates `miovision_api.volumes_15min` using `intersection_tmc.aggregate_15_min` function. 
+- `zero_volume_anomalous_ranges_task` identifies intersection / classification combos with zero volumes and adds/updates `miovision_api.anomalous_ranges` accordingly.
+- `aggregate_volumes_daily_task` clears and then populates `miovision_api.volumes_daily` using `intersection_tmc.aggregate_volumes_daily` function.
+- `get_report_dates_task` clears and then populates `miovision_api.report_dates` using `intersection_tmc.get_report_dates` function.
+
+`done` signals that downstream `miovision_check` DAG can run.
+
+### `data_checks` TaskGroup
+This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param.  
+- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
+- `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
+- `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.  
+<!-- miovision_pull_doc_md -->
+
+<!-- miovision_check_doc_md -->
+## **`miovision_check`**
+
+This DAG replaces the old `check_miovision`. It is used to run daily data quality checks on Miovision data that would generally not require the pipeline to be re-run. 
+
+- `starting_point` waits for upstream `miovision_pull` DAG `done` task to run indicating aggregation of new data is completed.  
+- `check_distinct_intersection_uid`: Checks the distinct intersection_uid appearing in todays pull compared to those appearing within the last 60 days. Notifies if any intersections are absent today. Uses [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.
+- `check_gaps`: Checks if any intersections had data gaps greater than 4 hours (configurable using `gap_threshold` parameter). Does not identify intersections with no data today. Notifies if any gaps found. Uses [this](../../../dags/sql/create-function-summarize_gaps_data_check.sql) generic sql.  
+- `check_if_thursday`: Skips downstream checks if execution date is not a Thursday (sends notification on Friday).
+- `check_open_anomalous_ranges`: Checks if any anomalous_range entries exist with non-zero volume in the last 7 days. Notifies if any found. 
+<!-- miovision_check_doc_md -->
 
 ## Notes
 
@@ -248,3 +298,4 @@ There is another Airflow process related to Miovision named `check_miovision` wh
 - In order to incorporate Miovision data into the volume model, miovision data prior to July 2019 was inserted as well. May 1st - June 30th, 2019 data was inserted into the schema on Dec 12th, 2019 whereas that of Jan 1st - Apr 30th, 2019 was inserted on Dec 13th, 2019. Therefore, **the `volume_uid` in the table might not be in the right sequence** based on the `datetime_bin`.
 
 - There are 8 Miovision cameras that got decommissioned on 2020-06-15 and the new ones are installed separately between 2020-06-22 and 2020-06-24. Note that all new intersections data were pulled on 2020-08-05 and the new gap-filling process has been applied to them. The old intersections 15min_tmc and 15min data was deleted and re-aggregated with the new gap-filling process on 2020-08-06.
+

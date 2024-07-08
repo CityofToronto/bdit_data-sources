@@ -4,11 +4,28 @@ Help us document all the data that we use in our work! Fork this repo and then a
 
 ## What should go in this repo  
 
- - sample data
- - documentation documentation documentation, everything about the data, where it comes from, what its good for, how to import it
- - basic code for importing into the PostgreSQL database or basic processing.
- 
-**Code that is specific to a project should go in that project's repo**
+ - documentation documentation documentation, everything about the data
+   - where it comes from,
+   - what its good for,
+   - how to import it,
+   - where to find it,
+   - how to use it,
+   - what to watch out for when using it.
+ - code for the extracting, transforming, validating, and loading of the data into our PostgreSQL data warehouse
+
+## What should not go in this repo
+
+* Code that is specific to an analysis project: this should go in that project's repo
+* Information that might be hard to maintain: e.g. numbers of sensors, where they are located
+
+### A reminder this repository is public
+
+* Don't commit API keys or passwords
+* Don't use specific names of other City staff to contact about issues, try instead to refer to units
+* Don't include individual email addresses that could get scraped
+* We want to maintain good working relationships with our vendors so try to avoid airing dirty laundary
+  * Details of validation work should go in the validation repository
+  * Yes our code and documentation will reflect data quality issues, but try to write about these in a neutral manner
 
 ## Folder structure
 
@@ -26,6 +43,7 @@ drone-registrations/
 ```
 
 ## Issues  
+
 Feel free to open issues for project management or to request help. Each Issue title should probably be of the format `Data-Name: Issue Title`
 
 ## Dependency Management

@@ -128,5 +128,17 @@ LATERAL (
     ) )
 );
 ```
-## Sad news
-For top secret contract reasons, we are no longer receiving traffic patterns data. As of writing this (in August 2022) the latest (and last) traffic patterns dataset that we received is from 2019. As time goes by, and the street network evolves, traffic patterns will cease to be useful...
+## Generate Quarterly traffic patterns
+For top secret contract reasons, we are no longer receiving traffic patterns data. The latest (and last) traffic patterns dataset that we received is from 2019. As time goes by, and the street network evolves, traffic patterns will cease to be useful. We wil be creating quarterly traffic patterns for each version for routing purposes. 
+
+Depending on the date you are routing, you should use different quarters, years, and map version of traffic patterns. We will only include weekday (Tue - Thurs), and exclude holiday seasons to create a more [generalized traffic pattern layer](/sql/create_quarterly_traffic_patterns.sql).
+
+Example usage of `create_quarterly_traffic_patterns`:
+
+For example, to create a quarterly traffic patterns table for routing version 22_2_b, for dates between 2021 Jan 4 to 2021 Apr 5th. **Reminder: the quarter number is generated from the _start_date input and doesn't consider which quarter the _end_date is in.**
+
+```sql
+SELECT here.create_quarterly_traffic_patterns('22_2_b', 2021-01-04', '2021-04-05'); 
+```
+
+
