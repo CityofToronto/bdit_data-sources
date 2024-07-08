@@ -87,15 +87,13 @@ here_admin_bot = PostgresHook('here_admin_bot')
 bt_bot = PostgresHook('bt_bot')
 
 try:
-    sys.path.append('/etc/airflow/data_scripts/here/traffic/')
-    from here_eoy_create_tables import create_here_ta_tables
+    from here.traffic.here_eoy_create_tables import create_here_ta_tables
 except Exception as exc:
     err_msg = "Error importing functions for end of year HERE maintenance \n" + str(exc)
     raise ImportError(err_msg)
     
 try:
-    sys.path.append('/etc/airflow/data_scripts/bluetooth/sql/') 
-    from bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
+    from bluetooth.sql.bt_eoy_create_tables import create_bt_obs_tables, replace_bt_trigger
 except Exception as exc:
     err_msg = "Error importing functions for end of year Bluetooth maintenance \n" + str(exc)
     raise ImportError(err_msg)
