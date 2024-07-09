@@ -163,7 +163,7 @@ def get_readme_docmd(readme_path, dag_name):
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
     try:
         doc_md = re.findall(doc_md_regex, contents)[0]
-    except KeyError:
+    except IndexError: #soft fail without breaking DAG.
         doc_md = "doc_md not found in {readme_path}. Looking between {doc_md_key} tags."
     return doc_md
 
