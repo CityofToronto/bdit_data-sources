@@ -23,6 +23,7 @@ session = Session()
 session.proxies = {}
 url = 'https://api.miovision.com/alerts/'
 
+"""
 CONFIG = configparser.ConfigParser()
 CONFIG.read('/etc/airflow/data_scripts/volumes/miovision/api/config.cfg')
 api_key=CONFIG['API']
@@ -30,6 +31,7 @@ key=api_key['key']
 dbset = CONFIG['DBSETTINGS']
 conn = connect(**dbset)
 conn.autocommit = True
+"""
 
 class MiovAlertPuller:
     """Miovision API puller.
