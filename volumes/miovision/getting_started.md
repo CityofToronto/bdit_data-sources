@@ -25,7 +25,7 @@ After identifying relevant intersection_uids in [`miovision_api.intersections`](
 |------------------------------------------|------------|-------------------|-------------------------------------|---------------------------------------|-------------------------|---------|
 | [miovision_api.volumes_daily](sql/readme.md#miovision_apivolumes_daily)              | 1 day      | By day / classification     | X                                   |      | `dt` | Prefiltering days with reasonable data. |
 | [miovision_api.volumes_15min_mvt_filtered](sql/readme.md#volumes_15min_mvt) | 15 minutes | TMC               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly TMC aggregations | 
-| [miovision_api.volumes_15min_filtered](sql/readme.md#volumes_15min)    | 15 minutes | ATR               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly TMC aggregations |
+| [miovision_api.volumes_15min_filtered](sql/readme.md#volumes_15min)    | 15 minutes | ATR               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly ATR aggregations |
  
 \*`anomalous_range`: manual or automatically labelled date ranges of unusual or zero volumes.  
 \*\*`unacceptable_gaps`: short periods of at least 5 minutes with zero volumes across all modes which are assumed to be camera outages.  
@@ -58,7 +58,7 @@ Vehicle movement is quite straightforward - upon approaching an intersection, a 
 Here is a diagram that shows the all vehicle movements from the eastern leg of an intersection:
 <img src = "img/mio_mvt.png" alt= "Legs and Vehicle Movements from the East Leg" width = "500" height = "500" title = "Legs and Vehicle Movements from the East Leg">
 
-You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits. Th
+You may have noticed that there are two entries for bicycles in the `classifications` table - one for turning movement counts (aka `classification_uid = 2`) and one for bicycle entrances and exits (aka `classification_uid = 10`). There are also entries in the `movements` table that represent bicycle entries and exits.  
 
 ### Pedestrian Movement
 
