@@ -143,7 +143,7 @@ The `--pull` and `--agg` commands allow us to run data pulling and aggregation t
 
 ### Alerts
 
-Although it it typically run daily through the Airflow DAG [miovision_pull](../../../dags/miovision_pull.py) `pull_alerts` task, you can also pull from the Alerts API using the command line. This is  helpful for backfilling multiple dates at once. An example command is: 
+Although it it typically run daily through the Airflow DAG [miovision_pull](../../../dags/miovision_pull.py) `pull_alerts` task, you can also pull from the Alerts API using the command line within the airflow venv (since Airflow Connections are used for database connection and API key). This is helpful for backfilling multiple dates at once. An example command is: 
 `python3 pull_alert.py run-alerts-api-cli --start_date=2024-06-01 --end_date=2024-07-01`
 
 **Alerts Command Line Options**
