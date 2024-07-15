@@ -106,6 +106,7 @@ apache-airflow-providers-sqlite==3.8.1
 apispec[yaml]==6.6.1
     # via
     #   -c constraints.txt
+    #   apispec
     #   flask-appbuilder
 argcomplete==3.3.0
     # via
@@ -181,6 +182,7 @@ celery[redis]==5.4.0
     # via
     #   -c constraints.txt
     #   apache-airflow-providers-celery
+    #   celery
     #   flower
 certifi==2024.6.2
     # via
@@ -254,6 +256,7 @@ connexion[flask]==2.14.2
     # via
     #   -c constraints.txt
     #   apache-airflow
+    #   connexion
 cron-descriptor==1.4.3
     # via
     #   -c constraints.txt
@@ -322,6 +325,7 @@ exceptiongroup==1.2.1
     #   anyio
     #   cattrs
     #   ipython
+    #   pytest
 executing==2.0.1
     # via
     #   -c constraints.txt
@@ -848,6 +852,10 @@ inflection==0.5.1
     # via
     #   -c constraints.txt
     #   connexion
+iniconfig==2.0.0
+    # via
+    #   -c constraints.txt
+    #   pytest
 ipykernel==6.29.4
     # via
     #   -c constraints.txt
@@ -1073,6 +1081,7 @@ packaging==24.0
     #   marshmallow
     #   marshmallow-sqlalchemy
     #   pandas-gbq
+    #   pytest
     #   sqlalchemy-bigquery
 pandas==2.1.4
     # via
@@ -1117,6 +1126,7 @@ pluggy==1.5.0
     # via
     #   -c constraints.txt
     #   apache-airflow
+    #   pytest
 prison==0.2.1
     # via
     #   -c constraints.txt
@@ -1300,6 +1310,15 @@ pyproj==3.6.1
     # via geopandas
 pyproject-hooks==1.0.0
     # via build
+pytest==7.4.4
+    # via
+    #   -c constraints.txt
+    #   -r requirements.in
+    #   pytest-mock
+pytest-mock==3.14.0
+    # via
+    #   -c constraints.txt
+    #   -r requirements.in
 python-daemon==3.0.1
     # via
     #   -c constraints.txt
@@ -1386,6 +1405,7 @@ rfc3986[idna2008]==1.5.0
     # via
     #   -c constraints.txt
     #   httpx
+    #   rfc3986
 rich==13.7.1
     # via
     #   -c constraints.txt
@@ -1506,6 +1526,7 @@ tomli==2.0.1
     #   pip-tools
     #   pylint
     #   pyproject-hooks
+    #   pytest
 tomlkit==0.12.5
     # via
     #   -c constraints.txt

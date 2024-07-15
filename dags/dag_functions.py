@@ -161,7 +161,11 @@ def get_readme_docmd(readme_path, dag_name):
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
-    return re.findall(doc_md_regex, contents)[0]
+    try:
+        doc_md = re.findall(doc_md_regex, contents)[0]
+    except IndexError: #soft fail without breaking DAG.
+        doc_md = "doc_md not found in {readme_path}. Looking between {doc_md_key} tags."
+    return doc_md
 
 def send_slack_msg(
     context: dict,
