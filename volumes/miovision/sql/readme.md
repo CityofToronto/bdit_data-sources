@@ -102,20 +102,20 @@ location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to r
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
 Here is a description of the classification_uids and corresponding types. 
-Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
+Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts (`classification_uid = 10`) should be used for the large majority of applications as the data is considered more accurate.
 
- classification_uid | classification | definition / notes |
-:-----|:-----|:-----|
-1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
-2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
-4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
-5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
-6|Pedestrian|A walker. May or may not include zombies...|
-7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. **do not use** aggregate volumes will be removed from tables |
-~~8~~|~~WorkVan~~|~~A van used for commercial purposes~~ Workvan classification was folded in to "Light" vehicles in the API. |
-9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
+| classification_uid | classification   | location_only | class_type    | definition / notes |
+|--------------------|------------------|---------------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1                  | Light            | false         | "Vehicles"    | Cars and other passenger vehicles (like vans, SUVs or pick-up trucks) |
+| 2                  | Bicycle          | false         | "Cyclists"    | do not use - poor data quality. Tracks bicycle turning movements |
+| 3                  | Bus              | false         |               | A large vehicle that provides transportation for many  humans. Since 2019-08-22 this includes streetcars, however initially  they were classified under 9, MotorizedVehicle.<br>**Note:** This classification is excluded from "Vehicles" `class_type` because transit vehicle volumes are irrelevant to most of our analyses. |
+| 4                  | SingleUnitTruck  | false         | "Vehicles"    | A truck that has a non-detachable cab and trailer system |
+| 5                  | ArticulatedTruck | false         | "Vehicles"    | A truck that has a detachable cab and trailer system |
+| 6                  | Pedestrian       | true          | "Pedestrians" | A walker. May or may not include zombies... |
+| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. do not use aggregate volumes will be removed from tables |
+| 8                  | WorkVan          |               |               | A van used for commercial purposes Workvan classification was folded in to "Light" vehicles in the API. |
+| 9                  | MotorizedVehicle | false         | "Vehicles"    | Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars. |
+| 10                 | Bicycle          | false         | "Cyclists"    | Tracks bicycle entrances and exits. There are currently  no exits in the aggregated tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
 
 ### `movements`
 
@@ -185,6 +185,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
   volumes_15min_mvt ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
   anomalous_ranges ||--|{ volumes_daily : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_filtered : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_mvt_filtered : "exclude"
   anomalous_ranges {
         integer intersection_uid
         integer classification_uid
@@ -192,6 +194,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
+  volumes_15min ||--|{ volumes_15min_filtered : "filtered"
+  volumes_15min_mvt ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -208,6 +212,21 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         integer intersection_uid
         integer classification_uid
         date datetime_bin
+        text leg
+        integer volume
+  }
+  volumes_15min_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        text leg
+        integer volume
+  }
+  volumes_15min_mvt_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        integer movement_uid
         text leg
         integer volume
   }
