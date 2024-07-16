@@ -8,7 +8,8 @@
     - [Error responses](#error-responses)
   - [Input Files](#input-files)
   - [How to run the api](#how-to-run-the-api)
-    - [Command Line Options](#command-line-options)
+    - [TMCs (Volumes)](#tmcs-volumes)
+    - [Alerts](#alerts)
   - [Classifications](#classifications)
     - [API Classifications](#api-classifications)
     - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
@@ -24,6 +25,7 @@
   - [**`miovision_check`**](#miovision_check)
   - [Notes](#notes)
 
+<!-- /TOC -->
 <!-- /TOC -->
 
 # Overview
@@ -115,11 +117,13 @@ password={password}
 
 ## How to run the api
 
-The process to use the API to download data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
+### TMCs (Volumes)
+
+The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
 
 In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
-### Command Line Options
+**TMC Command Line Options**
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
@@ -136,6 +140,18 @@ In command prompt, navigate to the folder where the python file is [located](../
 - multiple, specific intersections
 
 The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/readme.md#update-miovision_apiintersection_movements).  
+
+### Alerts
+
+Although it it typically run daily through the Airflow DAG [miovision_pull](../../../dags/miovision_pull.py) `pull_alerts` task, you can also pull from the Alerts API using the command line within the airflow venv (since Airflow Connections are used for database connection and API key). This is helpful for backfilling multiple dates at once. An example command is: 
+`python3 pull_alert.py run-alerts-api-cli --start_date=2024-06-01 --end_date=2024-07-01`
+
+**Alerts Command Line Options**
+
+|Option|Format|Description|Example|Default|
+|-----|-------|-----|-----|-----|
+|start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
+|end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 
 ## Classifications
 
@@ -259,7 +275,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
   - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
-- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
+- `pull_alerts` pulls alerts occuring on this day from the API and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), updating `end_time` of existing alerts.  
 
 ### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  

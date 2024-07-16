@@ -29,7 +29,7 @@ try:
         pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
     )
-    from volumes.miovision.api.pull_alert import pull_alerts
+    from volumes.miovision.api.pull_alert import run_alerts_api
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -114,18 +114,12 @@ def pull_miovision_dag():
         with mio_postgres.get_conn() as conn:
             pull_data(conn, start_time, end_time, INTERSECTION, key)
 
-    @task(task_id = 'pull_alerts', trigger_rule='none_failed', retries = 1)
-    def pull_alerts_task(ds):       
-        CONFIG = configparser.ConfigParser()
-        CONFIG.read(API_CONFIG_PATH)
-        api_key=CONFIG['API']
-        key=api_key['key']
-        start_date = dateutil.parser.parse(str(ds))
-        end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
-        mio_postgres = PostgresHook("miovision_api_bot")
-
-        with mio_postgres.get_conn() as conn:
-            pull_alerts(conn, start_date, end_date, key)
+    @task(trigger_rule='none_failed', retries = 1)
+    def pull_alerts(ds):
+        run_alerts_api(
+            start_date=ds,
+            end_date=ds_add(ds, 1)
+        )
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
@@ -266,7 +260,7 @@ def pull_miovision_dag():
 
     (
         check_partitions() >>
-        [pull_miovision(), pull_alerts_task()] >>
+        [pull_miovision(), pull_alerts()] >>
         miovision_agg() >>
         t_done >>
         data_checks()
