@@ -88,15 +88,7 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def update_sites_and_flows(**context):
-        api_conn = BaseHook.get_connection('ecocounter_api_key')
-        token = getToken(
-            api_conn.host,
-            api_conn.login,
-            api_conn.password,
-            api_conn.extra_dejson['secret_api_hash']
-        )
-        eco_postgres = PostgresHook("ecocounter_bot")
-
+        eco_postgres, token = get_connections()
         new_sites, new_flows = [], []
         with eco_postgres.get_conn() as conn:
             for site in getSites(token):
@@ -140,15 +132,7 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
-        api_conn = BaseHook.get_connection('ecocounter_api_key')
-        token = getToken(
-            api_conn.host,
-            api_conn.login,
-            api_conn.password,
-            api_conn.extra_dejson['secret_api_hash']
-        )
-        eco_postgres = PostgresHook("ecocounter_bot")
-        
+        eco_postgres, token = get_connections()
         start_date = dateutil.parser.parse(str(ds))
         end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
         LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
@@ -171,7 +155,45 @@ def pull_ecocounter_dag():
                         LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
                     insertFlowCounts(conn, volume)
                 LOGGER.info(f'Data inserted for site {site_id}.')
-          
+
+    def get_connections():
+        api_conn = BaseHook.get_connection('ecocounter_api_key')
+        token = getToken(
+            api_conn.host,
+            api_conn.login,
+            api_conn.password,
+            api_conn.extra_dejson['secret_api_hash']
+        )
+        eco_postgres = PostgresHook("ecocounter_bot")
+        return eco_postgres, token
+
+    @task(trigger_rule='none_failed')
+    def pull_recent_outages():
+        eco_postgres, token = get_connections()
+        outage_query = "SELECT flow_id, site_id, date_start, date_end FROM ecocounter.recent_outages;"
+        LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
+        with eco_postgres.get_conn() as conn:
+            with conn.cursor() as curr:
+                curr.execute(outage_query)
+                recent_outages = curr.fetchall()
+            for outage in recent_outages:
+                flow_id = outage[0]
+                start_date = outage[2]
+                end_date = outage[3]
+                # empty the count table for this flow
+                truncateFlowSince(flow_id, conn, start_date, end_date)          
+                # and fill it back up!
+                LOGGER.info(f'Attempting to fetch data for flow {flow_id} from {start_date} to {end_date}.')
+                counts = getFlowData(token, flow_id, start_date, end_date)
+                #convert response into a tuple for inserting
+                volume=[]
+                for count in counts:
+                    row=(flow_id, count['date'], count['counts'])
+                    volume.append(row)
+                if len(volume) > 0:
+                    LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} from {start_date} to {end_date}.')
+                insertFlowCounts(conn, volume)
+
     t_done = ExternalTaskMarker(
         task_id="done",
         external_dag_id="ecocounter_check",
@@ -219,6 +241,7 @@ def pull_ecocounter_dag():
         ]
 
     (
+        pull_recent_outages(),
         check_partitions() >>
         update_sites_and_flows() >>
         pull_ecocounter() >>
