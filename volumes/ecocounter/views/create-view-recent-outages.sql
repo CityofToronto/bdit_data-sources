@@ -1,4 +1,4 @@
-CREATE VIEW ecocounter.recent_outages AS (
+CREATE OR REPLACE VIEW ecocounter.recent_outages AS (
 
     WITH ongoing_outages AS (
         SELECT
@@ -7,18 +7,19 @@ CREATE VIEW ecocounter.recent_outages AS (
             dates.dt,
             dates.dt - lag(dates.dt) OVER w = interval '1 day' AS consecutive
         FROM ecocounter.flows_unfiltered AS f
-        CROSS JOIN generate_series(
-            now()::date - interval '16 days',
-            now()::date - interval '2 day',
-            interval '1 day'
-        ) AS dates(dt)
-        LEFT JOIN ecocounter.counts_unfiltered AS c ON
-            c.flow_id = f.flow_id
+        CROSS JOIN
+            generate_series(
+                now()::date - interval '31 days',
+                now()::date - interval '2 day',
+                interval '1 day'
+            ) AS dates (dt)
+        LEFT JOIN ecocounter.counts_unfiltered AS c
+            ON c.flow_id = f.flow_id
             AND c.datetime_bin >= dates.dt
             AND c.datetime_bin < dates.dt + interval '1 day'
             --select counts partitions
-            AND c.datetime_bin >= now()::date - interval '60 days'
-            AND c.datetime_bin < now()::date
+            AND c.datetime_bin >= now()::date - interval '31 days'
+            AND c.datetime_bin < now()::date - interval '1 day'
         WHERE
             f.validated
             AND dates.dt < COALESCE(f.date_decommissioned, now()::date - interval '1 day')
@@ -36,17 +37,17 @@ CREATE VIEW ecocounter.recent_outages AS (
             f.flow_id,
             dates.dt
     ),
-    
+
     group_ids AS (
         SELECT
             flow_id,
             site_id,
             dt,
-            SUM(CASE WHEN consecutive IS True THEN 0 ELSE 1 END) OVER w AS group_id
+            SUM(CASE WHEN consecutive IS TRUE THEN 0 ELSE 1 END) OVER w AS group_id
         FROM ongoing_outages
         WINDOW w AS (PARTITION BY flow_id ORDER BY dt)
     )
-    
+
     SELECT
         flow_id,
         site_id,
