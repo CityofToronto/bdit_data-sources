@@ -68,4 +68,5 @@ GRANT SELECT ON TABLE ecocounter.recent_outages TO bdit_humans;
 GRANT SELECT ON TABLE ecocounter.recent_outages TO ecocounter_bot;
 
 COMMENT ON VIEW ecocounter.recent_outages
-IS 'A view to identify recent outages in Ecocounter data.';
+IS 'A view to identify recent outages in Ecocounter data and group
+them into runs for ease of pulling.';
