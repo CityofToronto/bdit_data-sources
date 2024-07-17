@@ -1,28 +1,22 @@
-WITH RECURSIVE flows_combined AS (
-    SELECT
-        ARRAY[flow_id] AS flow_ids
-    FROM ecocounter.flows
+WITH RECURSIVE recursive_flows AS (
+    --flows which have never been replaced
+    SELECT flow_id, replaced_by_flow_id
+    FROM ecocounter.flows_unfiltered
+    WHERE replaced_by_flow_id IS NULL
 
     UNION
 
+    --flows replaced by those in above recursive CTE.
     SELECT
-        array_append(flows_combined.flow_ids, flows.replaced_by_flow_id) AS flow_ids
-    FROM ecocounter.flows
-    JOIN flows_combined
-        ON flows.flow_id = flows_combined.flow_ids[array_upper(flows_combined.flow_ids, 1)]
-    WHERE flows.replaced_by_flow_id IS NOT NULL
+        f.flow_id,
+        COALESCE(rf.replaced_by_flow_id, rf.flow_id)
+    FROM ecocounter.flows_unfiltered AS f
+    JOIN recursive_flows AS rf ON rf.flow_id = f.replaced_by_flow_id
 )
 
-SELECT flow_ids
-FROM flows_combined AS a
-WHERE
-    NOT EXISTS (
-        SELECT 1
-        FROM flows_combined AS b
-        WHERE
-            -- overlaps another array/set
-            a.flow_ids && b.flow_ids
-            -- but is smaller than that array/set
-            AND cardinality(a.flow_ids) < cardinality(b.flow_ids)
-    )
-ORDER BY flow_ids;
+--all flows and their current replacement
+SELECT
+    flow_id,
+    COALESCE(replaced_by_flow_id, flow_id) AS current_flow_id
+FROM recursive_flows
+ORDER BY flow_id;
