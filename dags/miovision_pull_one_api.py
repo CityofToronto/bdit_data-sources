@@ -78,15 +78,7 @@ def pull_miovision_dag():
             pull=True,
             agg=False
         )
-
-    @task(trigger_rule='none_failed', retries = 1)
-    def pull_alerts(ds):
-        run_alerts_api(
-            start_date=ds,
-            end_date=ds_add(ds, 1)
-        )
     
     pull_miovision()
-    pull_alerts()
 
 pull_miovision_dag()
