@@ -19,7 +19,7 @@ WITH ongoing_outages AS (
     SELECT
         f.flow_id,
         f.site_id,
-        dates.dt,
+        dates.dt::date,
         dates.dt - lag(dates.dt) OVER w = interval '1 day' AS consecutive
     FROM ecocounter.flows_unfiltered AS f
     CROSS JOIN
@@ -63,8 +63,8 @@ group_ids AS (
 
 SELECT
     flow_id,
-    MIN(dt) AS date_start,
-    MAX(dt) + interval '1 day' AS date_end
+    MIN(dt)::date AS date_start,
+    (MAX(dt) + interval '1 day')::date AS date_end
 FROM group_ids
 GROUP BY
     flow_id,
