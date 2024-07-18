@@ -66,14 +66,15 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata.sql')
     else:
         fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsdata_dst_safe.sql')
-    file = open(fpath, 'r')
-    raw_sql = sql.SQL(file.read()).format( 
-         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
-    )
+    with open(fpath, 'r', encoding="utf-8") as file:
+        raw_sql = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+        )
 
-    insert_query = sql.SQL("""INSERT INTO vds.raw_vdsdata (
-                                 division_id, vds_id, dt, datetime_15min, lane, speed_kmh, volume_veh_per_hr, occupancy_percent
-                                ) VALUES %s;""")
+    fpath = os.path.join(SQL_DIR, 'insert/insert_raw_vdsdata.sql')
+    with open(fpath, 'r', encoding="utf-8") as file:
+        insert_query = sql.SQL(file.read())
+    
     batch_size = 100000
     
     #pull data in batches and transform + insert.
@@ -124,12 +125,13 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
         fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata.sql')
     else:
         fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsvehicledata_dst_safe.sql')
-        
-    file = open(fpath, 'r')
-    raw_sql = sql.SQL(file.read()).format( 
-         start = sql.Literal(start_date + " 00:00:00 EST5EDT")
-    )
-    
+
+    with open(fpath, 'r', encoding='utf-8') as file:
+        raw_sql = sql.SQL(file.read())
+        raw_sql = raw_sql.format(
+            start = sql.Literal(start_date + " 00:00:00 EST5EDT")
+        )
+
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
                                     ) VALUES %s;""")
@@ -149,62 +151,63 @@ def pull_detector_inventory(rds_conn, itsc_conn):
 
     # Pull data from the detector_inventory table
     fpath = os.path.join(SQL_DIR, 'select/select-itsc_vdsconfig.sql')
-    detector_sql = sql.SQL(open(fpath, 'r').read())
+    with open(fpath, 'r', encoding='utf-8') as file:
+        detector_sql = sql.SQL(file.read())
 
     # upsert data
-    insert_query = sql.SQL("""
-        INSERT INTO vds.vdsconfig AS c (
-            division_id, vds_id, detector_id, start_timestamp, end_timestamp, lanes, has_gps_unit, 
-            management_url, description, fss_division_id, fss_id, rtms_from_zone, rtms_to_zone, detector_type, 
-            created_by, created_by_staffid, signal_id, signal_division_id, movement)
-        VALUES %s
-        ON CONFLICT (division_id, vds_id, start_timestamp)
-        DO UPDATE
-        SET end_timestamp = EXCLUDED.end_timestamp
-        WHERE
-            c.division_id = EXCLUDED.division_id
-            AND c.vds_id = EXCLUDED.vds_id
-            AND c.start_timestamp = EXCLUDED.start_timestamp;
-    """)
+    fpath = os.path.join(SQL_DIR, 'insert/insert_vdsconfig.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        insert_query = sql.SQL(file.read())
 
-    fetch_and_insert_data(select_conn=itsc_conn, 
+    fetch_and_insert_data(select_conn=itsc_conn,
                             insert_conn=rds_conn,
                             select_query=detector_sql,
                             insert_query=insert_query,
                             table_name='vdsconfig'
                             )
-    
+
 def pull_entity_locations(rds_conn, itsc_conn):
 #pull the detector locations table (`entitylocations`) from ITS Central and insert new rows into RDS `vds.entity_locations`.
 #very small table so OK to pull entire table daily. 
 
     # Pull data from the detector_inventory table
     fpath = os.path.join(SQL_DIR, 'select/select-itsc_entitylocations.sql')
-    entitylocation_sql = sql.SQL(open(fpath, 'r').read())
+    with open(fpath, 'r', encoding='utf-8') as file:
+        entitylocation_sql = sql.SQL(file.read())
 
     # upsert data
-    insert_query = sql.SQL("""
-        INSERT INTO vds.entity_locations AS e (
-            division_id, entity_type, entity_id, start_timestamp, end_timestamp, latitude, longitude, altitude_meters_asl, 
-            heading_degrees, speed_kmh, num_satellites, dilution_of_precision, main_road_id, cross_road_id,
-            second_cross_road_id, main_road_name, cross_road_name, second_cross_road_name, street_number,
-            offset_distance_meters, offset_direction_degrees, location_source, location_description_overwrite)
-        VALUES %s
-        ON CONFLICT (division_id, entity_id, start_timestamp)
-        DO UPDATE
-        SET end_timestamp = EXCLUDED.end_timestamp
-        WHERE
-            e.division_id = EXCLUDED.division_id
-            AND e.entity_id = EXCLUDED.entity_id
-            AND e.start_timestamp = EXCLUDED.start_timestamp;
-    """)
+    fpath = os.path.join(SQL_DIR, 'insert/insert_entity_locations.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        insert_query = sql.SQL(file.read())
 
-    fetch_and_insert_data(select_conn=itsc_conn, 
+    fetch_and_insert_data(select_conn=itsc_conn,
                           insert_conn=rds_conn,
                           select_query=entitylocation_sql,
                           insert_query=insert_query,
                           table_name='entitylocations'
                           )
+
+def pull_commsdeviceconfig(rds_conn, itsc_conn):
+#pull the detector locations table (`commdeviceconfig`) from ITS Central and insert new rows into RDS `vds.config_comms_device`.
+#very small table so OK to pull entire table daily. 
+
+    # Pull data from the detector_inventory table
+    fpath = os.path.join(SQL_DIR, 'select/select-itsc_commdeviceconfig.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        commdevice_sql = sql.SQL(file.read())
+
+    fpath = os.path.join(SQL_DIR, 'insert/insert_commdeviceconfig.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        # upsert data
+        insert_query = sql.SQL(file.read())
+
+    fetch_and_insert_data(
+        select_conn=itsc_conn,
+        insert_conn=rds_conn,
+        select_query=commdevice_sql,
+        insert_query=insert_query,
+        table_name='config_comms_device'
+    )
 
 def parse_lane_data(laneData):
 # Parse binary vdsdata.lanedata column

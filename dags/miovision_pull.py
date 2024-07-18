@@ -24,11 +24,12 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_jan_1st, check_1st_of_month
+    from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
-        get_report_dates, get_intersection_info
+        get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
     )
+    from volumes.miovision.api.pull_alert import run_alerts_api
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -87,7 +88,8 @@ def pull_miovision_dag():
             task_id='create_month_partition',
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
             postgres_conn_id='miovision_api_bot',
-            autocommit=True
+            autocommit=True,
+            trigger_rule='none_failed_min_one_success'
         )
 
         check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition >> (
@@ -110,16 +112,31 @@ def pull_miovision_dag():
         mio_postgres = PostgresHook("miovision_api_bot")
 
         with mio_postgres.get_conn() as conn:
-            pull_data(conn, start_time, end_time, INTERSECTION, True, key)
+            pull_data(conn, start_time, end_time, INTERSECTION, key)
+
+    @task(trigger_rule='none_failed', retries = 1)
+    def pull_alerts(ds):
+        run_alerts_api(
+            start_date=ds,
+            end_date=ds_add(ds, 1)
+        )
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
         @task
-        def find_gaps_task(ds = None):
+        def find_gaps_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
             time_period = (ds, ds_add(ds, 1))
-            with mio_postgres.get_conn() as conn:
-                find_gaps(conn, time_period)
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    find_gaps(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    find_gaps(conn, time_period=time_period, intersections=intersections)
 
         @task
         def aggregate_15_min_mvt_task(ds = None, **context):
@@ -135,7 +152,22 @@ def pull_miovision_dag():
                 with mio_postgres.get_conn() as conn:
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
-            
+
+        @task
+        def zero_volume_anomalous_ranges_task(ds = None, **context):
+            mio_postgres = PostgresHook("miovision_api_bot")  
+            time_period = (ds, ds_add(ds, 1))          
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    agg_zero_volume_anomalous_ranges(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])              
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    agg_zero_volume_anomalous_ranges(conn, time_period=time_period, intersections=intersections)
+
         @task
         def aggregate_15_min_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")
@@ -152,11 +184,19 @@ def pull_miovision_dag():
                     aggregate_15_min(conn, time_period=time_period, intersections=intersections)
 
         @task
-        def aggregate_volumes_daily_task(ds = None):
+        def aggregate_volumes_daily_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")  
-            time_period = (ds, ds_add(ds, 1))
-            with mio_postgres.get_conn() as conn:
-                aggregate_volumes_daily(conn, time_period)
+            time_period = (ds, ds_add(ds, 1))          
+            #no user specified intersection
+            if context["params"]["intersection"] == [0]:
+                with mio_postgres.get_conn() as conn:
+                    aggregate_volumes_daily(conn, time_period=time_period)
+            #user specified intersection
+            else:
+                INTERSECTIONS = tuple(context["params"]["intersection"])              
+                with mio_postgres.get_conn() as conn:
+                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
+                    aggregate_volumes_daily(conn, time_period=time_period, intersections=intersections)
 
         @task
         def get_report_dates_task(ds = None, **context):
@@ -173,7 +213,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     get_report_dates(conn, time_period=time_period, intersections=intersections)
 
-        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), aggregate_volumes_daily_task()]
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), zero_volume_anomalous_ranges_task()] >> aggregate_volumes_daily_task()
         get_report_dates_task()
 
     t_done = ExternalTaskMarker(
@@ -215,9 +255,15 @@ def pull_miovision_dag():
         Compare the count of classification_uids appearing in today's pull vs the lookback period.
         '''
 
-        check_row_count
+        wait_for_weather_timesensor() >> check_row_count
         check_distinct_classification_uid
 
-    check_partitions() >> pull_miovision() >> miovision_agg() >> t_done >> data_checks()
+    (
+        check_partitions() >>
+        [pull_miovision(), pull_alerts()] >>
+        miovision_agg() >>
+        t_done >>
+        data_checks()
+    )
 
 pull_miovision_dag()
