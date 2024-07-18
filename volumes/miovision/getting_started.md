@@ -175,7 +175,7 @@ SELECT
 FROM miovision_api.volumes_15min
 WHERE 
     intersection_uid = 10 -- 10 = King and Bathurst
-    AND leg <> dir -- count approaches only
+    AND leg != left(dir, 1) -- count approaches only
     AND classification_uid = 1 -- light vehicles
     AND datetime_bin >= '2020-03-13' 
     AND datetime_bin < '2020-03-20'
