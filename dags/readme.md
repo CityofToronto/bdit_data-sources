@@ -44,12 +44,12 @@ You may notice that many older DAGs have not been renamed to this standard: it i
 ### Here
 - **[pull_here.py](pull_here.py)**: [readme](../here/traffic/README.md#probe_path).  
 - **[pull_here_path.py](pull_here_path.py)**: [readme](../here/traffic/README.md#path).  
-- HERE Aggregations: [citywide_tti_aggregate.py](citywide_tti_aggregate.py), [traffic_transfer.py](traffic_transfer.py).
+- HERE Aggregations: [citywide_tti_aggregate.py](citywide_tti_aggregate.py).
 
 ### Replication
 - [**replicators.py**](replicators.py): creates collisions and counts replicator DAGs as part of the MOVE -> bigdata replication process.   
 - [**replicator_table_check.py**](replicator_table_check.py): Monitors the results of the collisions and counts replicator DAGs.  
-- Deprecated: [collisions_replicator_transfer.py](collisions_replicator_transfer.py)
+- Deprecated: [collisions_replicator_transfer.py](collisions_replicator_transfer.py), [traffic_transfer.py](traffic_transfer.py).
 
 ### Ecocounter
 - [**ecocounter_pull.py**](ecocounter_pull.py): [readme](../volumes/ecocounter/readme.md#ecocounter_pull-dag).  
