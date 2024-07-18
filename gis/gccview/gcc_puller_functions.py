@@ -249,7 +249,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
                                                                                                                 schema_child_table=sql.Identifier(schema_name, output_table_with_date))
             cur.execute(index_sql)
             
-    return insert_column, output_table_with_date
+    return insert_column, output_table
 
 # Geometry Switcher 
 def line(geom):
@@ -316,7 +316,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     
     # If the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending')",
+        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')",
              "outFields": "*",
              "outSR": '4326',
              "returnGeometry": "true",
@@ -442,13 +442,13 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
-def insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con):
+def insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con):
     """
     Function to insert data to our postgresql database (for partitioned tables)
 
     Parameters
     ----------
-    output_table_with_date : string
+    schema_parent_table_insert : string
         Table name for postgresql, returned from function create_partitioned_table
 
     insert_column : SQL composed
@@ -489,13 +489,13 @@ def insert_partitioned_data(output_table_with_date, insert_column, return_json, 
 
     
     insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, output_table_with_date), 
+        schema_table = sql.Identifier(schema_name, schema_parent_table_insert), 
         columns = insert_column
     )
     with con:
         with con.cursor() as cur:
                execute_values(cur, insert, rows)
-    LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table_with_date)
+    LOGGER.info('Successfully inserted %d records into %s', len(rows), schema_parent_table_insert)
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
@@ -534,8 +534,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     # Name the temporary table '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
-    now = datetime.datetime.now()
-    date = (str(now.year)+str(now.month)+str(now.day))
+    date = datetime.date.today().strftime('%Y-%m-%d')
     
     # Find if old table exists
     with con:
@@ -652,7 +651,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
             else:
-                (insert_column, output_table_with_date) = create_partitioned_table(output_table, return_json, schema_name, con)
+                (insert_column, schema_parent_table_insert) = create_partitioned_table(output_table, return_json, schema_name, con)
             
             features = return_json['features']
             record_max=(len(features))
@@ -661,7 +660,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
+                insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)
@@ -672,7 +671,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             if is_audited:
                 insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
+                insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
             
             counter += 1
             keep_adding = find_limit(return_json)

@@ -24,3 +24,7 @@ END
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+COMMENT ON FUNCTION miovision_api.find_invalid_movements(timestamp, timestamp) IS
+'''Used exclusively within `intersection_tmc.py` `insert_data` function to raise
+notice in the logs about invalid movements.''';

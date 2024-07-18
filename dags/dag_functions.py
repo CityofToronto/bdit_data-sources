@@ -3,10 +3,18 @@
 """Common functions used in most of the DAGs."""
 import os
 import re
+import json
+import logging
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+from airflow.exceptions import AirflowFailException
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from psycopg2 import sql, Error
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def is_prod_mode() -> bool:
     """Returns True if the code is running from the PROD ENV directory."""
@@ -97,10 +105,10 @@ def task_fail_slack_alert(
         # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
-    if isinstance(extra_msg_str, tuple):
-        #recursively collapse extra_msg_str's which are in the form of a list with new lines.
-        extra_msg_str = '\n'.join(
-            ['\n'.join(item) if isinstance(item, list) else item for item in extra_msg_str]
+    #recursively join list/tuple extra_msg_str into string
+    if isinstance(extra_msg_str, (list, tuple)):
+        extra_msg_str = '\n> '.join(
+            ['\n> '.join(item) if isinstance(item, (list, tuple)) else str(item) for item in extra_msg_str]
         )
 
     # Slack failure message
@@ -127,12 +135,15 @@ def task_fail_slack_alert(
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
     )
+    
+    if extra_msg_str != "":
+        slack_msg = slack_msg + extra_msg_str
+
     failed_alert = SlackWebhookOperator(
         task_id="slack_test",
         slack_webhook_conn_id=SLACK_CONN_ID,
         message=slack_msg,
         username="airflow",
-        attachments=[{"text": str(extra_msg_str)}],
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
@@ -150,4 +161,84 @@ def get_readme_docmd(readme_path, dag_name):
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
-    return re.findall(doc_md_regex, contents)[0]
+    try:
+        doc_md = re.findall(doc_md_regex, contents)[0]
+    except IndexError: #soft fail without breaking DAG.
+        doc_md = "doc_md not found in {readme_path}. Looking between {doc_md_key} tags."
+    return doc_md
+
+def send_slack_msg(
+    context: dict,
+    msg: str,
+    attachments: Optional[list] = None,
+    blocks: Optional[list] = None,
+    use_proxy: Optional[bool] = False,
+    dev_mode: Optional[bool] = None
+) -> Any:
+    """Sends a message to Slack.
+
+    Args:
+        context: The calling Airflow task's context.
+        msg : A string message be sent to Slack.
+        slack_conn_id: ID of the Airflow connection with the details of the
+            Slack channel to send messages to.
+        attachments: List of dictionaries representing Slack attachments.
+        blocks: List of dictionaries representing Slack blocks.
+        use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
+            usage is required to make the Slack webhook call on on-premises
+            servers (default False).
+        dev_mode: A boolean to indicate if working in development mode to send
+            Slack alerts to data_pipeline_dev instead of the regular 
+            data_pipeline (default None, to be determined based on the location
+            of the file).
+    """
+    if dev_mode or (dev_mode is None and not is_prod_mode()):
+        SLACK_CONN_ID = "slack_data_pipeline_dev"
+    else:
+        SLACK_CONN_ID = "slack_data_pipeline"
+
+    if use_proxy:
+        # get the proxy credentials from the Airflow connection ``slack``. It
+        # contains username and password to set the proxy <username>:<password>
+        proxy=(
+            f"http://{BaseHook.get_connection('slack').password}"
+            f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
+        )
+    else:
+        proxy = None
+
+    slack_alert = SlackWebhookOperator(
+        task_id="slack_test",
+        slack_webhook_conn_id=SLACK_CONN_ID,
+        message=msg,
+        username="airflow",
+        attachments=attachments,
+        blocks=blocks,
+        proxy=proxy,
+    )
+    return slack_alert.execute(context=context)
+
+def check_not_empty(context: dict, conn_id:str, table:str) -> None:
+    con = PostgresHook(conn_id).get_conn()
+    sch, tbl = table.split(".")
+    check_query = sql.SQL("SELECT True FROM {}.{} LIMIT 1;").format(sql.Identifier(sch), sql.Identifier(tbl))
+    try:
+        with con.cursor() as cur:
+            # check for non-empty table
+            LOGGER.info(f"Checking for rows in {table}.")
+            cur.execute(check_query)
+            check = cur.fetchone()
+            if check is None:
+                context["task_instance"].xcom_push(
+                    key="extra_msg",
+                    value=f"`{table}` is empty. Copying not completed."
+                )
+                raise AirflowFailException(f"`{table}` is empty. Copying not completed.")
+    #catch psycopg2 errors:
+    except Error as e:
+        # push an extra failure message to be sent to Slack in case of failing
+        context["task_instance"].xcom_push(
+            key="extra_msg",
+            value=f"Failed to check `{table}` non-empty: `{str(e).strip()}`."
+        )
+        raise AirflowFailException(e)
