@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION ecocounter.identify_outages(
     num_days interval
 )
 RETURNS TABLE (
-    flow_id integer,
+    flow_id numeric,
     date_start date,
     date_end date
 )
@@ -54,21 +54,21 @@ WITH ongoing_outages AS (
 
 group_ids AS (
     SELECT
-        flow_id,
-        dt,
-        SUM(CASE WHEN consecutive IS TRUE THEN 0 ELSE 1 END) OVER w AS group_id
-    FROM ongoing_outages
-    WINDOW w AS (PARTITION BY flow_id ORDER BY dt)
+        oo.flow_id,
+        oo.dt,
+        SUM(CASE WHEN oo.consecutive IS TRUE THEN 0 ELSE 1 END) OVER w AS group_id
+    FROM ongoing_outages AS oo
+    WINDOW w AS (PARTITION BY oo.flow_id ORDER BY oo.dt)
 )
 
 SELECT
-    flow_id,
-    MIN(dt)::date AS date_start,
-    (MAX(dt) + interval '1 day')::date AS date_end
-FROM group_ids
+    gi.flow_id,
+    MIN(gi.dt)::date AS date_start,
+    (MAX(gi.dt) + interval '1 day')::date AS date_end
+FROM group_ids AS gi
 GROUP BY
-    flow_id,
-    group_id;
+    gi.flow_id,
+    gi.group_id;
 
 END;
 $BODY$;
