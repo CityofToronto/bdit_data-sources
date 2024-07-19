@@ -54,6 +54,24 @@ session = Session()
 session.proxies = {}
 URL_BASE = 'https://api.miovision.one/api/v1'
 
+CONTEXT_SETTINGS = dict(
+    default_map={'run_api': {'flag': 0}}
+)
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+def cli():
+    pass
+
+@cli.command()
+@click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
+@click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
+@click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
+@click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
+@click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
+
+def run_api_cli(start_date, end_date, intersection, pull, agg):
+    return run_api(start_date, end_date, intersection, pull, agg)
+
 def run_api(start_date, end_date, intersection, pull, agg):
     api_key = BaseHook.get_connection('miovision_api_key')
     key = api_key.extra_dejson['key']
@@ -76,24 +94,6 @@ def run_api(start_date, end_date, intersection, pull, agg):
         process_data(conn, start_date, end_date, intersections=intersections)
     else:
         logger.info('Skipping aggregating and processing volume data')
-
-CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'flag': 0}}
-)
-
-@click.group(context_settings=CONTEXT_SETTINGS)
-def cli():
-    pass
-
-@cli.command()
-@click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
-@click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
-@click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
-@click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
-@click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
-
-def run_api_cli(start_date, end_date, intersection, pull, agg):
-    return run_api(start_date, end_date, intersection, pull, agg)
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
