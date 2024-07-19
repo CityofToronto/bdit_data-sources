@@ -220,7 +220,7 @@ def pull_here_data(ctx, startdate, enddate):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, startdate, enddate, apis['query_url'], apis['user_id'], apis['user_email'])
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
 

@@ -28,7 +28,7 @@ try:
     from dags.dag_functions import (
         task_fail_slack_alert, send_slack_msg, get_readme_docmd
     )
-    from dags.common_tasks import check_jan_1st
+    from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
@@ -62,7 +62,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 3 * * *',
+    schedule='0 10 * * *',
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=True,
     max_active_runs=1,
@@ -152,7 +152,6 @@ def pull_ecocounter_dag():
         start_date = dateutil.parser.parse(str(ds))
         end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
         LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
-
         with eco_postgres.get_conn() as conn:
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
@@ -168,8 +167,9 @@ def pull_ecocounter_dag():
                     for count in counts:
                         row=(flow_id, count['date'], count['counts'])
                         volume.append(row)
+                    if len(volume) == 0:
+                        LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
                     insertFlowCounts(conn, volume)
-                    LOGGER.debug(f'Data inserted for flow {flow_id} of site {site_id}.')
                 LOGGER.info(f'Data inserted for site {site_id}.')
           
     t_done = ExternalTaskMarker(
@@ -206,15 +206,17 @@ def pull_ecocounter_dag():
             retries=0,
             params=data_check_params | {
                     "id_col": "flow_id",
-                    "threshold": 0.7
+                    "threshold": 0.85
                 },
         )
         check_distinct_flow_ids.doc_md = '''
         Compare the count of flow_ids appearing in today's pull vs the lookback period.
         '''
 
-        check_volume
-        check_distinct_flow_ids
+        wait_for_weather_timesensor() >> [
+            check_volume,
+            check_distinct_flow_ids
+        ]
 
     (
         check_partitions() >>
