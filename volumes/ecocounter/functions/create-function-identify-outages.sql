@@ -3,8 +3,8 @@ CREATE OR REPLACE FUNCTION ecocounter.identify_outages(
 )
 RETURNS TABLE (
     flow_id numeric,
-    date_start date,
-    date_end date
+    start_time timestamp,
+    end_time timestamp
 )
 LANGUAGE plpgsql
 COST 100
@@ -63,8 +63,8 @@ group_ids AS (
 
 SELECT
     gi.flow_id,
-    MIN(gi.dt)::date AS date_start,
-    (MAX(gi.dt) + interval '1 day')::date AS date_end
+    MIN(gi.dt) AS start_time,
+    MAX(gi.dt) + interval '1 day' AS end_time
 FROM group_ids AS gi
 GROUP BY
     gi.flow_id,
