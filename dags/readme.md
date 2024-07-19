@@ -157,7 +157,7 @@ ln -sf <PATH-TO-DAG-ON-YOUR-HOME-FOLDER> airflow/dags/<DAG-FILE>
 - Moving the DAG from your personal home folder to `/data/airflow/data_scripts`
 - Mentioning any DAGs that this DAG depends on, or other DAGs that depend on this DAG
 
-11) **For sys admins only:** Once the PR is approved and merged, complete all of the sys admin tasks listed in the PR. Then, navigate to `/data/airflow/data_scripts` and git pull from master using:
+11) Once the PR is approved and merged, and a sys-admin has completed all the sys-admin tasks listed in the PR, navigate to `/data/airflow/data_scripts` and git pull from master using:
 
 ```
 git pull origin master
