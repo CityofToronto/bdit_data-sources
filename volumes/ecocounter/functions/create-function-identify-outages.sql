@@ -63,7 +63,7 @@ group_ids AS (
 
 SELECT
     gi.flow_id,
-    MIN(gi.dt) AS start_time,
+    MIN(gi.dt)::timestamp AS start_time,
     MAX(gi.dt) + interval '1 day' AS end_time
 FROM group_ids AS gi
 GROUP BY
