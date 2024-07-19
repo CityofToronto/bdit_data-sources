@@ -1,4 +1,5 @@
 <!-- TOC -->
+
 - [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
@@ -8,8 +9,8 @@
     - [`movements`](#movements)
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
-    - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`volumes_15min`](#volumes_15min)
+    - [`volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous\_ranges)](#volumes_15min_mvt-use-view-volumes_15min_mvt_filtered-to-exclude-anomalous_ranges)
+    - [`volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous\_ranges)](#volumes_15min-use-view-volumes_15min_filtered-to-exclude-anomalous_ranges)
     - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
@@ -101,20 +102,20 @@ location_only|boolean|If TRUE, represents movement on crosswalk (as opposed to r
 class_type|text|General class category (Vehicles, Pedestrians, or Cyclists)|Cyclists|
 
 Here is a description of the classification_uids and corresponding types. 
-Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts should be used for the large majority of applications as the data is considered more accurate.
+Note that bicycles are available at both a turning movement level and at an approach level. Approach level bicycle counts (`classification_uid = 10`) should be used for the large majority of applications as the data is considered more accurate.
 
- classification_uid | classification | definition / notes |
-:-----|:-----|:-----|
-1|Light|Cars and other passenger vehicles (like vans, SUVs or pick-up trucks)|
-2|Bicycle|do not use - poor data quality. Tracks bicycle turning movements|
-3|Bus|A large vehicle that provides transportation for many humans. Since 2019-08-22 this includes streetcars, however initially they were classified under `9`, MotorizedVehicle.|
-4|SingleUnitTruck|A truck that has a non-detachable cab and trailer system|
-5|ArticulatedTruck|A truck that has a detachable cab and trailer system|
-6|Pedestrian|A walker. May or may not include zombies...|
-7|Bicycle|Bicycle in crosswalk. Same `movement_uid`s as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. **do not use** aggregate volumes will be removed from tables |
-~~8~~|~~WorkVan~~|~~A van used for commercial purposes~~ Workvan classification was folded in to "Light" vehicles in the API. |
-9|MotorizedVehicle|Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars.|
-10|Bicycle|Tracks bicycle entrances and exits. There are currently no exits in the aggregated tables. This classification is only available from 2021-07-11 on. Bicycle data is not great - stay tuned.|
+| classification_uid | classification   | location_only | class_type    | definition / notes |
+|--------------------|------------------|---------------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1                  | Light            | false         | "Vehicles"    | Cars and other passenger vehicles (like vans, SUVs or pick-up trucks) |
+| 2                  | Bicycle          | false         | "Cyclists"    | do not use - poor data quality. Tracks bicycle turning movements |
+| 3                  | Bus              | false         |               | A large vehicle that provides transportation for many  humans. Since 2019-08-22 this includes streetcars, however initially  they were classified under 9, MotorizedVehicle.<br>**Note:** This classification is excluded from "Vehicles" `class_type` because transit vehicle volumes are irrelevant to most of our analyses. |
+| 4                  | SingleUnitTruck  | false         | "Vehicles"    | A truck that has a non-detachable cab and trailer system |
+| 5                  | ArticulatedTruck | false         | "Vehicles"    | A truck that has a detachable cab and trailer system |
+| 6                  | Pedestrian       | true          | "Pedestrians" | A walker. May or may not include zombies... |
+| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. do not use aggregate volumes will be removed from tables |
+| 8                  | WorkVan          |               |               | A van used for commercial purposes Workvan classification was folded in to "Light" vehicles in the API. |
+| 9                  | MotorizedVehicle | false         | "Vehicles"    | Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars. |
+| 10                 | Bicycle          | false         | "Cyclists"    | Tracks bicycle entrances and exits. There are currently  no exits in the aggregated tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
 
 ### `movements`
 
@@ -184,6 +185,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
   volumes_15min_mvt ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
   anomalous_ranges ||--|{ volumes_daily : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_filtered : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_mvt_filtered : "exclude"
   anomalous_ranges {
         integer intersection_uid
         integer classification_uid
@@ -191,6 +194,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
+  volumes_15min ||--|{ volumes_15min_filtered : "filtered"
+  volumes_15min_mvt ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -210,9 +215,24 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         text leg
         integer volume
   }
+  volumes_15min_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        text leg
+        integer volume
+  }
+  volumes_15min_mvt_filtered {
+        integer intersection_uid
+        integer classification_uid
+        date datetime_bin
+        integer movement_uid
+        text leg
+        integer volume
+  }
 ```
 
-### `volumes_15min_mvt`
+### `volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous_ranges)
 
 `volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
@@ -240,7 +260,7 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `volumes_15min`
+### `volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous_ranges)
 
 Data table storing ATR versions of the 15-minute turning movement data. Data in
 `volumes` is stored in TMC format, so must be converted to ATR to be included in
@@ -271,6 +291,7 @@ A *Unique constraint* was added to the `miovision_api.volumes_15min` table based
 ### `miovision_api.volumes_daily`
 
 Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
+Note the table `volumes_daily_unfiltered` can be used (with caution) to include data labelled as anomalous. 
 
 | Field Name               | Comments                                                                   | Data Type   | Exmple     |
 |:-------------------------|:---------------------------------------------------------------------------|:------------|:-----------|
@@ -425,25 +446,26 @@ leg| text | A segment that forms part of a miovision intersection, identified by
 
 ### `alerts`
 
-This table contains alerts for Miovision intersections pulled daily from the API by the `pull_alerts` task in the [`miovision_pull` DAG](../api/readme.md#miovision_pull). Due to the API structure, alerts are only queried every 5 minutes, meaning accuracy is limited and a short alert lasting less than 5 minutes could be missed entirely - or an alert ending and then beginning again within the same 5 minute interval would be merged into one. Higher accuracy alert records could be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
+This table contains alerts for Miovision intersections pulled daily from the API by the `pull_alerts` task in the [`miovision_pull` DAG](../api/readme.md#miovision_pull). Both ongoing and closed issues that intersect with the current day are pulled. The alerts can also be found in Miovision Alert emails or in the in the [Miovision One UI](https://miovision.one/intersection-monitoring/#/alerts).  
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
+alert_id | text | A unique id for the alert, from the API. | 75dc5b77-faa4-487e-a3de-a6b11358fdf5 |
 intersection_id | text | The intersection id, corresponding to intersections.intersection_id column | c04704a0-e1e2-4101-9c29-6823d0f41c52 |
 intersection_uid | integer | The intersection uid, a foreign key referencing intersections.intersection_uid column | 6 |
 alert | text | Short text description of the alert. More detail and tips for resolution are available in this [Miovision help article](https://help.miovision.com/s/article/Alert-and-Notification-Types) | PERIPHERAL_UNAVAILABLE |
-start_time | timestamp | First 5 minute interval at which the alert appeared. **Subtract 5 minutes to get earliest possible start time.** | 2024-01-12 10:20:00 | 
-end_time | timestamp | Final 5 minute interval at which the alert appeared. **Add 5 minutes to get latest possible end time.** Note this could be extended the following day. | 2024-01-21 15:35:00 | 
+start_time | timestamp | Start of the alert. | 2024-01-12 10:20:00 | 
+end_time | timestamp | Start of the alert. Note when the end_time is null it means the alert is ongoing. | 2024-01-21 15:35:00 | 
 
-Below is an example of how to anti-join the alerts table, including the 5 minute buffer:
+Below is an example of how to anti-join the alerts table:
 ```sql
 SELECT ...
 FROM miovision_api.volumes AS v
 --anti join alerts
 LEFT JOIN miovision_api.alerts AS a
     ON a.intersection_uid = v.intersection_uid
-    AND v.datetime_bin >= a.start_time - interval '5 minutes'
-    AND v.datetime_bin < a.end_time + interval '5 minutes'
+    AND v.datetime_bin >= a.start_time
+    AND v.datetime_bin < a.end_time
 WHERE a.intersection_uid IS NULL
 ```
 
@@ -551,35 +573,34 @@ The basic idea is to identify sections of data (by timerange, intersection, and 
 
 ### An applied example
 
-When looking for only "typical" data, `anomalous_ranges` should be used along with tables like `ref.holiday` to filter data. 
+When looking for only "typical" data, you can use filtered views `volumes_daily`, `volumes_15min_filtered`, `volumes_15min_mvt_filtered` which filter out anomalous ranges with an anti-join like so: 
 
 ```sql
-SELECT volume_uid
-FROM miovision_api.volumes
-WHERE 
-    NOT EXISTS ( -- this is our one big filter for bad/dubious data
-        SELECT 1
-        FROM miovision_api.anomalous_ranges
-        WHERE
-            anomalous_ranges.problem_level IN ('do-not-use', 'questionable')
-            AND (
-                volumes.datetime_bin >= anomalous_ranges.range_start
-                OR anomalous_ranges.range_start IS NULL
-            ) AND (
-                volumes.datetime_bin < anomalous_ranges.range_end
-                OR anomalous_ranges.range_end IS NULL
-            ) AND (
-                anomalous_ranges.intersection_uid = volumes.intersection_uid
-                OR anomalous_ranges.intersection_uid IS NULL
-            ) AND (
-                anomalous_ranges.classification_uid = volumes.classification_uid
-                OR anomalous_ranges.classification_uid IS NULL
-            )
+--anti join anomalous_ranges
+LEFT JOIN miovision_api.anomalous_ranges AS ar
+    ON ar.problem_level = ANY(ARRAY['do-not-use', 'questionable'])
+    AND ar.intersection_uid = v15.intersection_uid
+    AND (
+        ar.classification_uid = v15.classification_uid
+        OR ar.classification_uid IS NULL
+    ) AND (
+        ar.leg = v15.leg
+        OR ar.leg IS NULL
+    ) AND v15.datetime_bin >= ar.range_start
+    AND (
+        v15.datetime_bin <= ar.range_end
+        OR ar.range_end IS NULL
     )
-    AND NOT EXISTS ( -- also exclude official holidays
-        SELECT 1 FROM ref.holiday WHERE holiday.dt = volumes.datetime_bin::date
+WHERE ar.uid IS NULL
+```
+
+You may also wish to use `ref.holiday` to filter out holidays. 
+
+```
+WHERE
+    NOT EXISTS ( -- also exclude official holidays
+        SELECT 1 FROM ref.holiday WHERE holiday.dt = v.datetime_bin::date
     )
-    AND etc.
 ```
 
 ### Identifying new anomalies

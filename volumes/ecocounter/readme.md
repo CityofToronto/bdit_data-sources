@@ -125,6 +125,7 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
    
 ### `data_checks` TaskGroup
 This task group runs data quality checks on the pipeline output.  
+- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
 - `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
@@ -146,6 +147,7 @@ Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocou
 
 ### `ecocounter.sites_unfiltered`
 CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
+When you want to update new rows with missing `centreline_id`s, use [this script](./updates/ecocounter_centreline_updates.sql).  
 
 | column_name | data_type | sample | comments |
 |:------------|:----------|:-------|:---------|
@@ -156,9 +158,17 @@ CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a hum
 | facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
 | notes | text | | |
 | replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| centreline_id | integer | | The nearest street centreline_id, noting that ecocounter sensors are only configured to count bike like objects on a portion of the roadway ie. cycletrack or multi-use-path. Join using `JOIN gis_core.centreline_latest USING (centreline_id)`. |
+| first_active | timestamp without time zone | | First timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| last_active | timestamp without time zone | | Last timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+
 
 ### `ecocounter.counts_unfiltered`
-CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
+CAUTION: Use VIEW `ecocounter.counts` instead to see only data that has been screened for
+* manually validated sites
+* manually validated flows
+* absence of manually identified anomalous ranges (in the `do-not-use` `problem_level`)
+
 This Table contains the actual binned counts for ecocounter flows. Please note that
 bin size varies for older data, so averaging these numbers may not be straightforward.
 
@@ -185,6 +195,8 @@ Row count: 73
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
 | replaced_by_flow_id | numeric | 353363669 | |
+| first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.

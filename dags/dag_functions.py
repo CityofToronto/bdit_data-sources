@@ -4,10 +4,17 @@
 import os
 import re
 import json
+import logging
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+from airflow.exceptions import AirflowFailException
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from psycopg2 import sql, Error
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def is_prod_mode() -> bool:
     """Returns True if the code is running from the PROD ENV directory."""
@@ -98,10 +105,10 @@ def task_fail_slack_alert(
         # in case of a string (or the default empty string)
         extra_msg_str = extra_msg
 
-    if isinstance(extra_msg_str, tuple) or isinstance(extra_msg_str, list):
-        #recursively collapse extra_msg_str's which are in the form of a list with new lines.
+    #recursively join list/tuple extra_msg_str into string
+    if isinstance(extra_msg_str, (list, tuple)):
         extra_msg_str = '\n> '.join(
-            ['\n> '.join(item) if isinstance(item, list) else item for item in extra_msg_str]
+            ['\n> '.join(item) if isinstance(item, (list, tuple)) else str(item) for item in extra_msg_str]
         )
 
     # Slack failure message
@@ -154,7 +161,11 @@ def get_readme_docmd(readme_path, dag_name):
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
     doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
-    return re.findall(doc_md_regex, contents)[0]
+    try:
+        doc_md = re.findall(doc_md_regex, contents)[0]
+    except IndexError: #soft fail without breaking DAG.
+        doc_md = "doc_md not found in {readme_path}. Looking between {doc_md_key} tags."
+    return doc_md
 
 def send_slack_msg(
     context: dict,
@@ -206,3 +217,28 @@ def send_slack_msg(
         proxy=proxy,
     )
     return slack_alert.execute(context=context)
+
+def check_not_empty(context: dict, conn_id:str, table:str) -> None:
+    con = PostgresHook(conn_id).get_conn()
+    sch, tbl = table.split(".")
+    check_query = sql.SQL("SELECT True FROM {}.{} LIMIT 1;").format(sql.Identifier(sch), sql.Identifier(tbl))
+    try:
+        with con.cursor() as cur:
+            # check for non-empty table
+            LOGGER.info(f"Checking for rows in {table}.")
+            cur.execute(check_query)
+            check = cur.fetchone()
+            if check is None:
+                context["task_instance"].xcom_push(
+                    key="extra_msg",
+                    value=f"`{table}` is empty. Copying not completed."
+                )
+                raise AirflowFailException(f"`{table}` is empty. Copying not completed.")
+    #catch psycopg2 errors:
+    except Error as e:
+        # push an extra failure message to be sent to Slack in case of failing
+        context["task_instance"].xcom_push(
+            key="extra_msg",
+            value=f"Failed to check `{table}` non-empty: `{str(e).strip()}`."
+        )
+        raise AirflowFailException(e)
