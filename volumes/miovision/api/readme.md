@@ -1,31 +1,33 @@
 <!-- TOC -->
 
 - [Overview](#overview)
-- [API](#api)
-    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-        - [Turning Movement Count TMC](#turning-movement-count-tmc)
-        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
-        - [Error responses](#error-responses)
-    - [Input Files](#input-files)
-    - [How to run the api](#how-to-run-the-api)
-        - [TMCs Volumes](#tmcs-volumes)
-        - [Alerts](#alerts)
-    - [Classifications](#classifications)
-        - [API Classifications](#api-classifications)
-        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
-    - [PostgreSQL Functions](#postgresql-functions)
-    - [Invalid Movements](#invalid-movements)
-    - [How the API works](#how-the-api-works)
-    - [Repulling data](#repulling-data)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [TMCs (Volumes)](#tmcs-volumes)
+    - [Alerts](#alerts)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-    - [**miovision_pull**](#miovision_pull)
-        - [check_partitions TaskGroup](#check_partitions-taskgroup)
-        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
-        - [data_checks TaskGroup](#data_checks-taskgroup)
-    - [**miovision_check**](#miovision_check)
-    - [Notes](#notes)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [Notes](#notes)
 
 <!-- /TOC -->
+
+# Overview
+This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/readme.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
 
 ## Relevant Calls and Outputs
 
@@ -113,7 +115,7 @@ password={password}
 
 ### TMCs (Volumes)
 
-The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
+The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line from within the airflow venv (since Airflow Connections are used for database connection and API key). This can be useful when adding new intersections, or when troubleshooting. 
 
 In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
@@ -124,11 +126,10 @@ In command prompt, navigate to the folder where the python file is [located](../
 |start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is which stores the api key. |`/data/airflow/data_scripts/volumes/miovision/api/config.cfg`||
 |pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
 |agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
 
-`python3 intersection_tmc.py run-api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg` is an example with all the options specified:  
+`python3 intersection_tmc.py run-api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12` is an example with all the options specified:  
 - both data pulling and aggregation specified
 - multiple days
 - multiple, specific intersections
