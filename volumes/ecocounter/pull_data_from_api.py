@@ -57,8 +57,8 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
             f'{URL}/api/data/site/{flow_id}',
             headers={'Authorization': f'Bearer {token}'},
             params={
-                'begin': requestStart.isoformat(),
-                'end':  requestEnd.isoformat(),
+                'begin': requestStart.isoformat(timespec='seconds'),
+                'end':  requestEnd.isoformat(timespec='seconds'),
                 'complete': 'false',
                 'step': '15m'
             }
