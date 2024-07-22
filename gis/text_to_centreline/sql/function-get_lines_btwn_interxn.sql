@@ -1,14 +1,24 @@
 --USING centrelines aka GIS network
 CREATE OR REPLACE FUNCTION gis._get_lines_btwn_interxn(
-	_highway2 text,
-	_int_start integer,
-	_int_end integer)
-    RETURNS TABLE(int_start integer, int_end integer, seq integer, geo_id numeric, lf_name character varying, objectid numeric, geom geometry, fcode integer, fcode_desc character varying) 
-    LANGUAGE 'plpgsql'
+    _highway2 text,
+    _int_start integer,
+    _int_end integer)
+RETURNS TABLE(
+    int_start integer,
+    int_end integer,
+    seq integer,
+    geo_id numeric,
+    lf_name character varying,
+    objectid numeric,
+    geom geometry,
+    fcode integer,
+    fcode_desc character varying
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    STABLE STRICT 
-    ROWS 1000
+COST 100
+STABLE STRICT
+ROWS 1000
 AS $BODY$
 
 BEGIN

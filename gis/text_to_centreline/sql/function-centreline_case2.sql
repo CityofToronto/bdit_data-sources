@@ -1,24 +1,38 @@
-DROP FUNCTION gis._centreline_case2(text,text,text,double precision,text,text,double precision,text,text);
+DROP FUNCTION gis._centreline_case2(
+    text, text, text, double precision, text, text, double precision, text, text
+);
 CREATE OR REPLACE FUNCTION gis._centreline_case2(
-	highway2 text,
+    highway2 text,
     btwn1 text,
-    direction_btwn1 text, 
+    direction_btwn1 text,
     metres_btwn1 double precision,
-	btwn2 text,
-	direction_btwn2 text,
-	metres_btwn2 double precision,
+    btwn2 text,
+    direction_btwn2 text,
+    metres_btwn2 double precision,
     btwn2_orig text,
     btwn2_check text)
-    RETURNS TABLE(int_start integer, int_end integer, seq integer, geo_id numeric, lf_name character varying, 
-    ind_line_geom geometry, line_geom geometry, line_geom_cut geometry, 
-    section numrange, 
-    oid1_geom geometry, oid1_geom_translated geometry, oid2_geom geometry, oid2_geom_translated geometry, 
-    objectid numeric, fcode integer, fcode_desc character varying, lev_sum integer)
-    LANGUAGE 'plpgsql'
+RETURNS TABLE(
+    int_start integer,
+    int_end integer,
+    seq integer,
+    geo_id numeric,
+    lf_name character varying,
+    ind_line_geom geometry, line_geom geometry, line_geom_cut geometry,
+    section numrange,
+    oid1_geom geometry,
+    oid1_geom_translated geometry,
+    oid2_geom geometry,
+    oid2_geom_translated geometry,
+    objectid numeric,
+    fcode integer,
+    fcode_desc character varying,
+    lev_sum integer
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
-    ROWS 1000
+COST 100
+VOLATILE
+ROWS 1000
 AS $BODY$
 
 DECLARE

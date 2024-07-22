@@ -1,16 +1,31 @@
-DROP FUNCTION gis._centreline_case1(text,text,text,double precision) ;
+DROP FUNCTION gis._centreline_case1(text, text, text, double precision);
 
 CREATE OR REPLACE FUNCTION gis._centreline_case1(
-	highway2 text,
-	btwn2 text,
-	direction_btwn2 text,
-	metres_btwn2 double precision)
-    RETURNS TABLE(int1 integer, geo_id numeric, lf_name character varying, ind_line_geom geometry, line_geom geometry, line_geom_cut geometry, section numrange, combined_section numrange, oid1_geom geometry, oid1_geom_translated geometry, objectid numeric, fcode integer, fcode_desc character varying, lev_sum integer)
-    LANGUAGE 'plpgsql'
+    highway2 text,
+    btwn2 text,
+    direction_btwn2 text,
+    metres_btwn2 double precision)
+RETURNS TABLE(
+    int1 integer,
+    geo_id numeric,
+    lf_name character varying,
+    ind_line_geom geometry,
+    line_geom geometry,
+    line_geom_cut geometry,
+    section numrange,
+    combined_section numrange,
+    oid1_geom geometry,
+    oid1_geom_translated geometry,
+    objectid numeric,
+    fcode integer,
+    fcode_desc character varying,
+    lev_sum integer
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
-    ROWS 1000
+COST 100
+VOLATILE
+ROWS 1000
 AS $BODY$
 
 BEGIN
@@ -197,4 +212,4 @@ END;
 $BODY$;
 
 ALTER FUNCTION gis._centreline_case1(text, text, text, double precision)
-    OWNER TO gis_admins;
+OWNER TO gis_admins;

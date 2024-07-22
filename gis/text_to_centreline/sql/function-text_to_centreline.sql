@@ -1,14 +1,30 @@
 CREATE OR REPLACE FUNCTION gis.text_to_centreline(
-	_bylaw_id integer,
-	highway text,
-	frm text,
-	t text)
-    RETURNS TABLE(int1 integer, int2 integer, geo_id numeric, lf_name character varying, con text, note text, line_geom geometry, section numrange, oid1_geom geometry, oid1_geom_translated geometry, oid2_geom geometry, oid2_geom_translated geometry, objectid numeric, fcode integer, fcode_desc character varying) 
-    LANGUAGE 'plpgsql'
+    _bylaw_id integer,
+    highway text,
+    frm text,
+    t text)
+RETURNS TABLE(
+    int1 integer,
+    int2 integer,
+    geo_id numeric,
+    lf_name character varying,
+    con text,
+    note text,
+    line_geom geometry,
+    section numrange,
+    oid1_geom geometry,
+    oid1_geom_translated geometry,
+    oid2_geom geometry,
+    oid2_geom_translated geometry,
+    objectid numeric,
+    fcode integer,
+    fcode_desc character varying
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
-    ROWS 1000
+COST 100
+VOLATILE
+ROWS 1000
 AS $BODY$
 
 DECLARE
@@ -142,14 +158,20 @@ $BODY$;
 ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
 OWNER TO gis_admins;
 
-GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(
+    integer, text, text, text
+) TO bdit_humans;
 
-GRANT EXECUTE ON FUNCTION gis.text_to_centreline(integer, text, text, text) TO gis_admins;
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(
+    integer, text, text, text
+) TO gis_admins;
 
-REVOKE ALL ON FUNCTION gis.text_to_centreline(integer, text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION gis.text_to_centreline(
+    integer, text, text, text
+) FROM public;
 
 COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
-    IS '
+IS '
 The main function for converting text descriptions of locations where bylaws are in effect to centreline segment geometry
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline for more information
 ';

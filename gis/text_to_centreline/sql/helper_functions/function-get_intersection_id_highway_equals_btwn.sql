@@ -3,7 +3,9 @@
 -- some cases have a road that starts and ends in a cul de sac, so not_int_id is the intersection_id of the
 -- first intersection in the bylaw text (or 0 if we are trying to find the first intersection).
 -- not_int_id is there so we dont ever get the same intersections matched twice
-CREATE OR REPLACE FUNCTION gis._get_intersection_id_highway_equals_btwn(highway2 TEXT, btwn TEXT, not_int_id INT)
+CREATE OR REPLACE FUNCTION gis._get_intersection_id_highway_equals_btwn(
+    highway2 TEXT, btwn TEXT, not_int_id INT
+)
 RETURNS INT[] AS $$
 DECLARE
 oid INT;
@@ -39,11 +41,13 @@ RETURN ARRAY[oid, lev_sum, int_id_found];
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(TEXT, TEXT, INT) IS '
+COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(
+    TEXT, TEXT, INT
+) IS '
 Get intersection id from a text street name when intersection is a cul de sac or a dead end or a pseudo intersection.
 In these cases the intersection name (intersec5 of gis.centreline_intersection) would just be the name of the street.
 
 Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the
 first returned intersection id into the function on the second time the function is called).
-This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.' ;
+This function returns the objectid and intersection id of the intersection, as well as how close the match was. Closeness is measued by levenshtein distance.';

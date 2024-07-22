@@ -1,5 +1,7 @@
 -- Modified the function so that the translation is happening at an angle 17.5 like the Toronto map
-CREATE OR REPLACE FUNCTION gis._translate_intersection_point(oid_geom GEOMETRY, metres FLOAT, direction TEXT)
+CREATE OR REPLACE FUNCTION gis._translate_intersection_point(
+    oid_geom GEOMETRY, metres FLOAT, direction TEXT
+)
 RETURNS GEOMETRY AS $translated_geom$
 DECLARE
 translated_geom TEXT := (
@@ -22,7 +24,9 @@ END;
 $translated_geom$ LANGUAGE plpgsql;
 
 
-COMMENT ON FUNCTION gis._translate_intersection_point(oid_geom GEOMETRY, metres FLOAT, direction TEXT) IS '
+COMMENT ON FUNCTION gis._translate_intersection_point(
+    oid_geom GEOMETRY, metres FLOAT, direction TEXT
+) IS '
 Inputs are the geometry of a point, the number of units that you would like the point to be translated, and the direction that you would like the point to be translated.
 The function returns the input point geometry translated in the direction inputted, by the number of metres inputted.
 Note: if you would like to move your geometry by a certian number of metres, make sure the point geometry has a projection that has metres as the unit.

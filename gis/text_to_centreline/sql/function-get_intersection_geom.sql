@@ -1,6 +1,13 @@
-DROP FUNCTION gis._get_intersection_geom(text, text, text, double precision, integer);
-CREATE OR REPLACE FUNCTION gis._get_intersection_geom(highway2 TEXT, btwn TEXT, direction TEXT, metres FLOAT, not_int_id INT,
-OUT oid_geom GEOMETRY, OUT oid_geom_translated GEOMETRY, OUT int_id_found INT, OUT lev_sum INT)
+DROP FUNCTION gis._get_intersection_geom(
+    text, text, text, double precision, integer
+);
+CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
+    highway2 text, btwn text, direction text, metres float, not_int_id int,
+    OUT oid_geom geometry,
+    OUT oid_geom_translated geometry,
+    OUT int_id_found int,
+    OUT lev_sum int
+)
 
 LANGUAGE 'plpgsql'
 AS $BODY$
@@ -46,7 +53,9 @@ oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres:
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gis._get_intersection_geom(TEXT, TEXT, TEXT, FLOAT, INT) IS '
+COMMENT ON FUNCTION gis._get_intersection_geom(
+    text, text, text, float, int
+) IS '
 Input values of the names of two intersections, direction (may be NULL), number of units the intersection should be translated,
 and the intersection id of an intersection that you do not want the function to return (or 0).
 
