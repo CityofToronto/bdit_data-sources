@@ -15,13 +15,13 @@ AS $BODY$
 
 DECLARE
 
-highway2 TEXT :=
-	CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
-	THEN 'F G Gardiner Xy W'
-	WHEN highway2_before_editing = 'Don Valley Pky'
-	THEN 'Don Valley Parkway'
-	ELSE highway2_before_editing
-	END;
+highway2 text :=
+    CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
+    THEN 'F G Gardiner Xy W'
+    WHEN highway2_before_editing = 'Don Valley Pky'
+    THEN 'Don Valley Parkway'
+    ELSE highway2_before_editing
+    END;
 
 BEGIN
 

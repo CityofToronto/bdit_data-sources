@@ -7,7 +7,7 @@ COST 100
 VOLATILE
 AS $BODY$
 DECLARE
-    _abbrev_street TEXT;
+    _abbrev_street text;
 begin
 _abbrev_street := regexp_REPLACE(_input_street,  '[\t\v\b\r\n\u00a0]', ' ');
 _abbrev_street := regexp_REPLACE(_abbrev_street, '(?<=[A-Z][a-z]+ )([Cc]ourt)(?![a-z])(?! [A-Z])', 'Crt', 'g');

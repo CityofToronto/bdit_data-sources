@@ -3,10 +3,10 @@
 DROP FUNCTION gis.text_to_centreline_geom(text, text, text);
 
 CREATE OR REPLACE FUNCTION gis.text_to_centreline_geom(
-	_street text,
-	_from_loc text,
-	_to_loc text,
-	_return_geom OUT geometry)
+    _street text,
+    _from_loc text,
+    _to_loc text,
+    _return_geom OUT geometry)
 --     RETURNS geometry
     LANGUAGE 'plpgsql'
 
@@ -18,9 +18,9 @@ BEGIN
 
 _return_geom := ST_LINEMERGE(ST_Union(line_geom)) AS geom FROM 
 gis.text_to_centreline(0,
-								 _street ,
-								 _from_loc ,
-								 _to_loc);
+                                 _street ,
+                                 _from_loc ,
+                                 _to_loc);
 END;
 $BODY$;
 

@@ -1,7 +1,7 @@
-DROP FUNCTION gis._get_intersection_geom(
+DROP FUNCTION gis._get_intersection_geom (
     text, text, text, double precision, integer
 );
-CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
+CREATE OR REPLACE FUNCTION gis._get_intersection_geom (
     highway2 text, btwn text, direction text, metres float, not_int_id int,
     OUT oid_geom geometry,
     OUT oid_geom_translated geometry,
@@ -13,16 +13,16 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 
 DECLARE
-geom TEXT;
+geom text;
 int_arr INT[];
 oid_int INT;
 oid_geom_test GEOMETRY;
 
 BEGIN
 int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
-	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
-	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
-	END);
+    THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
+    ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
+    END);
 
 oid_int := int_arr[1];
 int_id_found := int_arr[3];
@@ -30,25 +30,25 @@ lev_sum := int_arr[2];
 
 --needed geom to be in SRID = 2952 for the translation
 oid_geom_test := (
-		SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
-		FROM gis.centreline_intersection gis
-		WHERE objectid = oid_int
-		);
+        SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
+        FROM gis.centreline_intersection gis
+        WHERE objectid = oid_int
+        );
 oid_geom_translated := (
-		CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
-	   	THEN (SELECT *
+        CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
+           THEN (SELECT *
            FROM gis._translate_intersection_point(oid_geom_test, metres, direction) translated_geom)
-		ELSE NULL
-		END
-		);
+        ELSE NULL
+        END
+        );
 oid_geom := (
-		SELECT gis.geom 
-		FROM gis.centreline_intersection gis
-		WHERE objectid = oid_int
-		);
+        SELECT gis.geom 
+        FROM gis.centreline_intersection gis
+        WHERE objectid = oid_int
+        );
 
 RAISE NOTICE '(get_intersection_geom) oid: %, geom: %, geom_translated: %, direction %, metres %, not_int_id: %', 
-oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres::TEXT, not_int_id;
+oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres::text, not_int_id;
 
 END;
 $BODY$;
