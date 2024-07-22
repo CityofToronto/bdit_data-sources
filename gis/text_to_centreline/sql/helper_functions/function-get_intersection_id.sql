@@ -2,35 +2,38 @@ CREATE OR REPLACE FUNCTION gis._get_intersection_id(
     highway2 text, btwn text, not_int_id int
 )
 RETURNS int [] AS $$
+
 DECLARE
 oid int;
 lev_sum int;
 int_id_found int;
 
 BEGIN
-SELECT intersections.objectid, 
 
-SUM(LEAST
-(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)))
+WITH intersections AS (
+    SELECT DISTINCT
+        objectid,
+        trim(unnest(string_to_array(intersection_desc::text, '/'::text))) AS street,
+        intersection_id AS int_id,
+        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) AS levenshtein_1,
+        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) AS levenshtein_2
+    FROM gis_core.centreline_intersection_point_latest
+)
 
-, intersections.int_id
+SELECT
+    intersections.objectid, 
+    SUM(LEAST(levenshtein_1, levenshtein_2)),
+    intersections.int_id
 INTO oid, lev_sum, int_id_found
-FROM
-(gis.centreline_intersection_streets --to get street name
-LEFT JOIN gis.centreline_intersection --to get int_id 
-USING(objectid)) AS intersections
-
-
-WHERE (levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
-OR levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) < 4) 
-AND intersections.int_id  <> not_int_id
-
-
-GROUP BY intersections.objectid, intersections.int_id
+FROM intersections
+WHERE
+    (levenshtein_1 < 4  OR levenshtein_2 < 4) 
+    --AND intersections.int_id <> not_int_id
+GROUP BY
+    intersections.objectid,
+    intersections.int_id
 HAVING COUNT(DISTINCT TRIM(intersections.street)) > 1
-ORDER BY AVG(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1), levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1)))
-
+ORDER BY AVG(LEAST(levenshtein_1, levenshtein_2))
 LIMIT 1;
 
 RAISE NOTICE 'highway2 being matched: %, btwn being matched: %, not_int_id: %, intersection arr: %', highway2, btwn, not_int_id, ARRAY[oid, lev_sum];

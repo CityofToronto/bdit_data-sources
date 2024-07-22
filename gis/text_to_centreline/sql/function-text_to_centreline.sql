@@ -36,13 +36,18 @@ DECLARE
     con text;
     note text;
     text_var1 text;
-      text_var2 text;
-      text_var3 text;
+    text_var2 text;
+    text_var3 text;
 
 BEGIN 
 --STEP 1 
     -- clean bylaws text
-    clean_bylaws := gis._clean_bylaws_text(_bylaw_id, highway, frm, t);
+    clean_bylaws := gis._clean_bylaws_text(
+        _bylaw_id := text_to_centreline._bylaw_id,
+        highway := initcap(text_to_centreline.highway),
+        frm := initcap(text_to_centreline.frm),
+        t := initcap(text_to_centreline.t)
+    );
 
 --STEP 2
     -- get centrelines geoms
@@ -70,8 +75,8 @@ BEGIN
     IF TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL
         THEN
         INSERT INTO _results(geo_id, lf_name, objectid, line_geom, fcode, fcode_desc)
-        SELECT *
-        FROM gis._get_entire_length(clean_bylaws.highway2) ;
+        SELECT centreline_id, linear_name_full, objectid, geom, feature_code, feature_code_desc
+        FROM gis._get_entire_length(clean_bylaws.highway2);
         --lev_total := NULL
 
     --normal cases
