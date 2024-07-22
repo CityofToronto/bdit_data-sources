@@ -1,7 +1,7 @@
 DROP FUNCTION gis._get_intersection_geom (
     text, text, text, double precision, integer
 );
-CREATE OR REPLACE FUNCTION gis._get_intersection_geom (
+CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
     highway2 text, btwn text, direction text, metres float, not_int_id int,
     OUT oid_geom geometry,
     OUT oid_geom_translated geometry,

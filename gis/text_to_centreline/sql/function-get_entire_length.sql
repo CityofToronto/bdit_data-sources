@@ -1,6 +1,6 @@
-DROP FUNCTION gis._get_entire_length(text);
+DROP FUNCTION gis._get_entire_length (text);
 CREATE OR REPLACE FUNCTION gis._get_entire_length(highway2_before_editing text)
-RETURNS TABLE(
+RETURNS TABLE (
     geo_id numeric,
     lf_name varchar,
     objectid numeric,

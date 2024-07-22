@@ -2,8 +2,9 @@
 CREATE OR REPLACE FUNCTION gis._get_lines_btwn_interxn(
     _highway2 text,
     _int_start integer,
-    _int_end integer)
-RETURNS TABLE(
+    _int_end integer
+)
+RETURNS TABLE (
     int_start integer,
     int_end integer,
     seq integer,

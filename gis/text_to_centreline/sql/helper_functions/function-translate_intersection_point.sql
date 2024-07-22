@@ -1,8 +1,8 @@
 -- Modified the function so that the translation is happening at an angle 17.5 like the Toronto map
 CREATE OR REPLACE FUNCTION gis._translate_intersection_point(
-    oid_geom GEOMETRY, metres float, direction text
+    oid_geom geometry, metres float, direction text
 )
-RETURNS GEOMETRY AS $translated_geom$
+RETURNS geometry AS $translated_geom$
 DECLARE
 translated_geom text := (
     (CASE WHEN TRIM(direction) = 'west' THEN ST_Translate(oid_geom, -metres, 0)
@@ -25,7 +25,7 @@ $translated_geom$ LANGUAGE plpgsql;
 
 
 COMMENT ON FUNCTION gis._translate_intersection_point(
-    oid_geom GEOMETRY, metres float, direction text
+    oid_geom geometry, metres float, direction text
 ) IS '
 Inputs are the geometry of a point, the number of units that you would like the point to be translated, and the direction that you would like the point to be translated.
 The function returns the input point geometry translated in the direction inputted, by the number of metres inputted.

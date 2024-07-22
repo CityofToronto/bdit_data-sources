@@ -17,7 +17,7 @@ DROP FUNCTION gis._clean_bylaws_text(int, text, text, text);
 CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(
     _bylaw_id int, highway text, frm text, t text
 )
-RETURNS gis.CLEANED_BYLAWS_text
+RETURNS gis.cleaned_bylaws_text
 LANGUAGE 'plpgsql'
 AS $$
 
