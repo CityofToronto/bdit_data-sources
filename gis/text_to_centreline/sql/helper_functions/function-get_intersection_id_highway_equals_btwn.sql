@@ -4,7 +4,7 @@
 -- first intersection in the bylaw text (or 0 if we are trying to find the first intersection).
 -- not_int_id is there so we dont ever get the same intersections matched twice
 CREATE OR REPLACE FUNCTION gis._get_intersection_id_highway_equals_btwn(
-    highway2 TEXT, btwn TEXT, not_int_id INT
+    highway2 text, btwn text, not_int_id INT
 )
 RETURNS INT[] AS $$
 DECLARE
@@ -42,7 +42,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(
-    TEXT, TEXT, INT
+    text, text, INT
 ) IS '
 Get intersection id from a text street name when intersection is a cul de sac or a dead end or a pseudo intersection.
 In these cases the intersection name (intersec5 of gis.centreline_intersection) would just be the name of the street.

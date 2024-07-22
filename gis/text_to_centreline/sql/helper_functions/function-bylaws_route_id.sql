@@ -19,7 +19,7 @@ ROWS 1000
 AS $BODY$
 
 BEGIN
-	
+    
 RETURN QUERY    
 SELECT _bylaw_id, rout.int_start, rout.int_end, rout.geom AS line_geom, rout.seq, rout.geo_id, rout.lf_name,
 rout.objectid, rout.fcode, rout.fcode_desc

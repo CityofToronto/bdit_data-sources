@@ -1,11 +1,12 @@
-DROP FUNCTION gis._centreline_case1(text, text, text, double precision);
+DROP FUNCTION gis._centreline_case1 (text, text, text, double precision);
 
 CREATE OR REPLACE FUNCTION gis._centreline_case1(
     highway2 text,
     btwn2 text,
     direction_btwn2 text,
-    metres_btwn2 double precision)
-RETURNS TABLE(
+    metres_btwn2 double precision
+)
+RETURNS TABLE (
     int1 integer,
     geo_id numeric,
     lf_name character varying,
@@ -31,7 +32,7 @@ AS $BODY$
 BEGIN
 
 CREATE TEMP TABLE IF NOT EXISTS _wip(
-    int1 INTEGER, 
+    int1 int, 
     geo_id NUMERIC, 
     lf_name VARCHAR, 
     ind_line_geom GEOMETRY,
@@ -41,9 +42,9 @@ CREATE TEMP TABLE IF NOT EXISTS _wip(
     oid1_geom GEOMETRY, 
     oid1_geom_translated GEOMETRY, 
     objectid NUMERIC, 
-    fcode INTEGER, 
+    fcode int, 
     fcode_desc VARCHAR, 
-    lev_sum INTEGER, 
+    lev_sum int, 
     line_geom_cut GEOMETRY,
     line_geom_reversed GEOMETRY,
     combined_section NUMRANGE,
@@ -63,16 +64,16 @@ FROM gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 
 get_lines AS (
 SELECT cl.geo_id, cl.lf_name, cl.objectid, cl.fcode, cl.fcode_desc, cl.geom, get_int.oid1_geom, get_int.oid1_geom_translated,
 ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
-		   10) AS dwithin
+           ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+           10) AS dwithin
 FROM gis.centreline cl, get_int
 WHERE ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
-		   10) = TRUE 
+           ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+           10) = TRUE 
 --as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
 AND ST_Length(ST_Intersection(
-	ST_Buffer(ST_Transform(get_int.new_line, 2952), 3*(ST_Length(ST_Transform(get_int.new_line, 2952))), 'endcap=flat join=round') , 
-	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
+    ST_Buffer(ST_Transform(get_int.new_line, 2952), 3*(ST_Length(ST_Transform(get_int.new_line, 2952))), 'endcap=flat join=round') , 
+    ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
 )
 
 SELECT get_int.int1, get_lines.geo_id, get_lines.lf_name, ST_LineMerge(get_lines.geom) AS ind_line_geom, get_int.new_line, 
@@ -205,7 +206,7 @@ FROM _wip;
 DROP TABLE _wip;
 
 EXCEPTION WHEN SQLSTATE 'XX000' THEN
-	RAISE WARNING 'Internal error at case2 for highway2 = % , btwn2 = % : ''%'' ', 
+    RAISE WARNING 'Internal error at case2 for highway2 = % , btwn2 = % : ''%'' ', 
     highway2, btwn2, SQLERRM ;
 
 END;

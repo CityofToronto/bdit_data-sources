@@ -1,7 +1,7 @@
-DROP FUNCTION gis._centreline_case2(
+DROP FUNCTION gis._centreline_case2 (
     text, text, text, double precision, text, text, double precision, text, text
 );
-CREATE OR REPLACE FUNCTION gis._centreline_case2(
+CREATE OR REPLACE FUNCTION gis._centreline_case2 (
     highway2 text,
     btwn1 text,
     direction_btwn1 text,
@@ -10,8 +10,9 @@ CREATE OR REPLACE FUNCTION gis._centreline_case2(
     direction_btwn2 text,
     metres_btwn2 double precision,
     btwn2_orig text,
-    btwn2_check text)
-RETURNS TABLE(
+    btwn2_check text
+)
+RETURNS TABLE (
     int_start integer,
     int_end integer,
     seq integer,
@@ -42,9 +43,9 @@ _int2_result record;
 BEGIN
 
 CREATE TEMP TABLE IF NOT EXISTS _wip2 (
-    int1 INTEGER, 
-    int2 INTEGER,
-    seq INTEGER,
+    int1 int, 
+    int2 int,
+    seq int,
     geo_id NUMERIC, 
     lf_name VARCHAR, 
     ind_line_geom GEOMETRY,
@@ -57,9 +58,9 @@ CREATE TEMP TABLE IF NOT EXISTS _wip2 (
     oid2_geom GEOMETRY, 
     oid2_geom_translated GEOMETRY, 
     objectid NUMERIC, 
-    fcode INTEGER, 
+    fcode int, 
     fcode_desc VARCHAR, 
-    lev_sum INTEGER, 
+    lev_sum int, 
     line_geom_cut GEOMETRY,
     line_geom_reversed GEOMETRY,
     whole_centreline GEOMETRY,
@@ -76,7 +77,7 @@ TRUNCATE TABLE _wip2;
                 END);
                 
     INSERT INTO _wip2(int1, int2, seq, geo_id, lf_name, ind_line_geom,
-    oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid,	fcode, fcode_desc, lev_sum)
+    oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid,    fcode, fcode_desc, lev_sum)
     SELECT rout.int_start, rout.int_end, rout.seq, rout.geo_id, rout.lf_name, geom AS ind_line_geom, 
     _int1_result.oid_geom AS oid1_geom, _int1_result.oid_geom_translated AS oid1_geom_translated,
     _int2_result.oid_geom AS oid2_geom, _int2_result.oid_geom_translated AS oid2_geom_translated,
@@ -97,30 +98,30 @@ FROM _wip2
 --The columns I want are all the same for each row anyway besides the centreline information ie geo_id
 LIMIT 1) 
 SELECT cl.geo_id, cl.lf_name, cl.geom, 
-	get_int.new_line1, get_int.new_line2,
-	get_int.oid1_geom, get_int.oid1_geom_translated, 
-	get_int.oid2_geom, get_int.oid2_geom_translated, 
-	cl.objectid, cl.fcode, cl.fcode_desc
+    get_int.new_line1, get_int.new_line2,
+    get_int.oid1_geom, get_int.oid1_geom_translated, 
+    get_int.oid2_geom, get_int.oid2_geom_translated, 
+    cl.objectid, cl.fcode, cl.fcode_desc
 FROM gis.centreline cl
 INNER JOIN get_int USING (lf_name) --only get those with desired street names
 WHERE cl.geo_id NOT IN (SELECT _wip2.geo_id FROM _wip2)  --not repeating those found from pgrouting
 AND (ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line1, 2952), 3*metres_btwn1, 'endcap=flat join=round'),
-		   10) = TRUE 
-	  OR
-	   ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line2, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
-		   10) = TRUE 
-	   )
+           ST_BUFFER(ST_Transform(get_int.new_line1, 2952), 3*metres_btwn1, 'endcap=flat join=round'),
+           10) = TRUE 
+      OR
+       ST_DWithin(ST_Transform(cl.geom, 2952), 
+           ST_BUFFER(ST_Transform(get_int.new_line2, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+           10) = TRUE 
+       )
 --as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
 AND (ST_Length(ST_Intersection(
-	ST_Buffer(ST_Transform(get_int.new_line1, 2952), 3*(ST_Length(ST_Transform(get_int.new_line1, 2952))), 'endcap=flat join=round') , 
-	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
-	OR
-	ST_Length(ST_Intersection(
-	ST_Buffer(ST_Transform(get_int.new_line2, 2952), 3*(ST_Length(ST_Transform(get_int.new_line2, 2952))), 'endcap=flat join=round') , 
-	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1
-	 ) ;
+    ST_Buffer(ST_Transform(get_int.new_line1, 2952), 3*(ST_Length(ST_Transform(get_int.new_line1, 2952))), 'endcap=flat join=round') , 
+    ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
+    OR
+    ST_Length(ST_Intersection(
+    ST_Buffer(ST_Transform(get_int.new_line2, 2952), 3*(ST_Length(ST_Transform(get_int.new_line2, 2952))), 'endcap=flat join=round') , 
+    ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1
+     ) ;
 
 RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name are found.'; 
 
@@ -304,7 +305,7 @@ FROM _wip2;
 DROP TABLE _wip2;
 
 EXCEPTION WHEN SQLSTATE 'XX000' THEN
-	RAISE WARNING 'Internal error at case2 for highway2 = % , btwn1 = %, btwn2 = % : ''%'' ', 
+    RAISE WARNING 'Internal error at case2 for highway2 = % , btwn1 = %, btwn2 = % : ''%'' ', 
     highway2, btwn1, btwn2, SQLERRM ;
 
 END;
