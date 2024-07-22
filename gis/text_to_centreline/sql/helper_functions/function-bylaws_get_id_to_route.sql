@@ -37,10 +37,10 @@ BEGIN
     CREATE TEMP TABLE IF NOT EXISTS _results(
         int_start int,
         int_end int,
-        oid1_geom GEOMETRY,
-        oid1_geom_translated GEOMETRY,
-        oid2_geom GEOMETRY,
-        oid2_geom_translated GEOMETRY,
+        oid1_geom geometry,
+        oid1_geom_translated geometry,
+        oid2_geom geometry,
+        oid2_geom_translated geometry,
         lev_sum1 int,
         lev_sum2 int
     );
