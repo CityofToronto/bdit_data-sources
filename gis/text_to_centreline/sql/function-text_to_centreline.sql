@@ -2,8 +2,9 @@ CREATE OR REPLACE FUNCTION gis.text_to_centreline(
     _bylaw_id integer,
     highway text,
     frm text,
-    t text)
-RETURNS TABLE(
+    t text
+)
+RETURNS TABLE (
     int1 integer,
     int2 integer,
     geo_id numeric,

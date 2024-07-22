@@ -1,5 +1,6 @@
 CREATE OR REPLACE FUNCTION gis.abbr_street(
-    _input_street text)
+    _input_street text
+)
 RETURNS text
 LANGUAGE 'plpgsql'
 

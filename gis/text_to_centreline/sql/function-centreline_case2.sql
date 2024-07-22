@@ -1,7 +1,7 @@
 DROP FUNCTION gis._centreline_case2 (
     text, text, text, double precision, text, text, double precision, text, text
 );
-CREATE OR REPLACE FUNCTION gis._centreline_case2 (
+CREATE OR REPLACE FUNCTION gis._centreline_case2(
     highway2 text,
     btwn1 text,
     direction_btwn1 text,
