@@ -1,14 +1,25 @@
 --USING centrelines aka GIS network
 CREATE OR REPLACE FUNCTION gis._get_lines_btwn_interxn(
-	_highway2 text,
-	_int_start integer,
-	_int_end integer)
-    RETURNS TABLE(int_start integer, int_end integer, seq integer, geo_id numeric, lf_name character varying, objectid numeric, geom geometry, fcode integer, fcode_desc character varying) 
-    LANGUAGE 'plpgsql'
+    _highway2 text,
+    _int_start integer,
+    _int_end integer
+)
+RETURNS TABLE (
+    int_start integer,
+    int_end integer,
+    seq integer,
+    geo_id numeric,
+    lf_name character varying,
+    objectid numeric,
+    geom geometry,
+    fcode integer,
+    fcode_desc character varying
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    STABLE STRICT 
-    ROWS 1000
+COST 100
+STABLE STRICT
+ROWS 1000
 AS $BODY$
 
 BEGIN
@@ -17,11 +28,11 @@ RETURN QUERY
 WITH 
 results AS (SELECT _int_start, _int_end, * FROM
     pgr_dijkstra(format('SELECT id, source::int, target::int,
-				 CASE WHEN levenshtein(TRIM(lf_name), TRIM(%L), 1, 1,1) < 3 THEN (0.3*cost)::float ELSE cost END AS cost 
-				 from gis.centreline_routing_undirected_lfname'::TEXT, _highway2),
-				 _int_start::bigint, _int_end::bigint, FALSE)
+                 CASE WHEN levenshtein(TRIM(lf_name), TRIM(%L), 1, 1,1) < 3 THEN (0.3*cost)::float ELSE cost END AS cost 
+                 from gis.centreline_routing_undirected_lfname'::text, _highway2),
+                 _int_start::bigint, _int_end::bigint, FALSE)
 --or do pgr_dijkstra('SELECT id, source::int, target::int, 
-	--CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::TEXT, ... )
+    --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::text, ... )
 )
 SELECT results._int_start, results._int_end, results.seq, 
 centre.geo_id, centre.lf_name, centre.objectid, centre.geom, centre.fcode, centre.fcode_desc 
