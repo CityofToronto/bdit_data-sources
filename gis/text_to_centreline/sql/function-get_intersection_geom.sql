@@ -14,9 +14,9 @@ AS $BODY$
 
 DECLARE
 geom text;
-int_arr INT[];
-oid_int INT;
-oid_geom_test GEOMETRY;
+int_arr int [];
+oid_int int;
+oid_geom_test geometry;
 
 BEGIN
 int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 

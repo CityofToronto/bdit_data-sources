@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION gis._get_intersection_id(
     highway2 text, btwn text, not_int_id int
 )
-RETURNS int[] AS $$
+RETURNS int [] AS $$
 DECLARE
 oid int;
 lev_sum int;
