@@ -185,16 +185,16 @@ CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a hum
 Row count: 73
 | column_name | data_type | sample | Comments |
 |:------------|:----------|:-------|:---------|
+| flow_id | numeric | 104042943 | Primary key |
+| site_id | numeric | 100042943 | |
 | validated | boolean | True  | |
 | includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
-| replaces_flow_id | numeric | | |
-| flow_id | numeric | 104042943 | |
-| site_id | numeric | 100042943 | |
+| replaces_flow_id | numeric | | `flow_id` of earlier flow that this one replaces |
+| replaced_by_flow_id | numeric | 353363669 | `flow_id` of flow this one is replaced by |
 | flow_direction | text | westbound (includes contraflow) |  |
 | flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
-| replaced_by_flow_id | numeric | 353363669 | |
 | first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 
