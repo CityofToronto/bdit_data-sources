@@ -1,21 +1,28 @@
-DROP FUNCTION gis._get_intersection_geom(text, text, text, double precision, integer);
-CREATE OR REPLACE FUNCTION gis._get_intersection_geom(highway2 TEXT, btwn TEXT, direction TEXT, metres FLOAT, not_int_id INT,
-OUT oid_geom GEOMETRY, OUT oid_geom_translated GEOMETRY, OUT int_id_found INT, OUT lev_sum INT)
+DROP FUNCTION gis._get_intersection_geom (
+    text, text, text, double precision, integer
+);
+CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
+    highway2 text, btwn text, direction text, metres float, not_int_id int,
+    OUT oid_geom geometry,
+    OUT oid_geom_translated geometry,
+    OUT int_id_found int,
+    OUT lev_sum int
+)
 
 LANGUAGE 'plpgsql'
 AS $BODY$
 
 DECLARE
-geom TEXT;
-int_arr INT[];
-oid_int INT;
-oid_geom_test GEOMETRY;
+geom text;
+int_arr int [];
+oid_int int;
+oid_geom_test geometry;
 
 BEGIN
 int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
-	THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
-	ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
-	END);
+    THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
+    ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
+    END);
 
 oid_int := int_arr[1];
 int_id_found := int_arr[3];
@@ -23,30 +30,32 @@ lev_sum := int_arr[2];
 
 --needed geom to be in SRID = 2952 for the translation
 oid_geom_test := (
-		SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
-		FROM gis.centreline_intersection gis
-		WHERE objectid = oid_int
-		);
+        SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
+        FROM gis.centreline_intersection gis
+        WHERE objectid = oid_int
+        );
 oid_geom_translated := (
-		CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
-	   	THEN (SELECT *
+        CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
+           THEN (SELECT *
            FROM gis._translate_intersection_point(oid_geom_test, metres, direction) translated_geom)
-		ELSE NULL
-		END
-		);
+        ELSE NULL
+        END
+        );
 oid_geom := (
-		SELECT gis.geom 
-		FROM gis.centreline_intersection gis
-		WHERE objectid = oid_int
-		);
+        SELECT gis.geom 
+        FROM gis.centreline_intersection gis
+        WHERE objectid = oid_int
+        );
 
 RAISE NOTICE '(get_intersection_geom) oid: %, geom: %, geom_translated: %, direction %, metres %, not_int_id: %', 
-oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres::TEXT, not_int_id;
+oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres::text, not_int_id;
 
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gis._get_intersection_geom(TEXT, TEXT, TEXT, FLOAT, INT) IS '
+COMMENT ON FUNCTION gis._get_intersection_geom(
+    text, text, text, float, int
+) IS '
 Input values of the names of two intersections, direction (may be NULL), number of units the intersection should be translated,
 and the intersection id of an intersection that you do not want the function to return (or 0).
 
