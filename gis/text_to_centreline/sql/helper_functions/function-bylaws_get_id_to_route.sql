@@ -1,16 +1,20 @@
 CREATE OR REPLACE FUNCTION gis.bylaws_get_id_to_route(
-	_bylaw_id integer,
-	highway text,
-	frm text,
-	t text)
-    RETURNS TABLE(bylaw_id integer, note text, highway2 text, int1 integer, int2 integer, 
-				  oid1_geom geometry, oid1_geom_translated geometry, oid2_geom geometry, oid2_geom_translated geometry, 
-				  lev_sum1 integer, lev_sum2 integer) 
-    LANGUAGE 'plpgsql'
+    _bylaw_id integer,
+    highway text,
+    frm text,
+    t text)
+RETURNS TABLE(
+    bylaw_id integer, note text, highway2 text, int1 integer, int2 integer,
+    oid1_geom geometry,
+    oid1_geom_translated geometry,
+    oid2_geom geometry,
+    oid2_geom_translated geometry,
+    lev_sum1 integer, lev_sum2 integer)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
-    ROWS 1000
+COST 100
+VOLATILE
+ROWS 1000
 AS $BODY$
 
 DECLARE

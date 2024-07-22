@@ -1,21 +1,23 @@
 --First create a table
 CREATE TABLE gis.cleaned_bylaws_text (
-	bylaw_id INT,
-	highway2 TEXT, 
-	btwn1 TEXT, 
-	direction_btwn1 TEXT, 
-	metres_btwn1 FLOAT, 
-	btwn2 TEXT, 
-	direction_btwn2 TEXT, 
-	metres_btwn2 FLOAT,
-	btwn2_orig TEXT, 
-	btwn2_check TEXT
-	);
+    bylaw_id INT,
+    highway2 TEXT,
+    btwn1 TEXT,
+    direction_btwn1 TEXT,
+    metres_btwn1 FLOAT,
+    btwn2 TEXT,
+    direction_btwn2 TEXT,
+    metres_btwn2 FLOAT,
+    btwn2_orig TEXT,
+    btwn2_check TEXT
+);
 
 --Then, create a function 
-DROP FUNCTION gis._clean_bylaws_text(integer, text, text, text);
-CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(_bylaw_id INT, highway TEXT, frm TEXT, t TEXT)
-RETURNS gis.cleaned_bylaws_text 
+DROP FUNCTION gis._clean_bylaws_text(INTEGER, TEXT, TEXT, TEXT);
+CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(
+    _bylaw_id INT, highway TEXT, frm TEXT, t TEXT
+)
+RETURNS gis.CLEANED_BYLAWS_TEXT
 LANGUAGE 'plpgsql'
 AS $$
 

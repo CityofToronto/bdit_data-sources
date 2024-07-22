@@ -1,10 +1,10 @@
 CREATE OR REPLACE FUNCTION gis.abbr_street(
-	_input_street text)
-    RETURNS text
-    LANGUAGE 'plpgsql'
+    _input_street text)
+RETURNS text
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
+COST 100
+VOLATILE
 AS $BODY$
 DECLARE
     _abbrev_street TEXT;
