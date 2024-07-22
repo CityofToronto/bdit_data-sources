@@ -103,15 +103,22 @@ WITH get_int AS (
 )
 
 SELECT
-    cl.geo_id, cl.lf_name, cl.geom, 
-    get_int.new_line1, get_int.new_line2,
-    get_int.oid1_geom, get_int.oid1_geom_translated, 
-    get_int.oid2_geom, get_int.oid2_geom_translated, 
-    cl.objectid, cl.fcode, cl.fcode_desc
-FROM gis.centreline cl
-INNER JOIN get_int USING (lf_name) --only get those with desired street names
+    cl.centreline_id AS geo_id,
+    cl.linear_name_full AS lf_name,
+    cl.geom, 
+    get_int.new_line1,
+    get_int.new_line2,
+    get_int.oid1_geom,
+    get_int.oid1_geom_translated, 
+    get_int.oid2_geom,
+    get_int.oid2_geom_translated, 
+    cl.objectid,
+    cl.feature_code AS fcode,
+    cl.feature_code_desc AS fcode_desc
+FROM gis_core.centreline_latest AS cl
+JOIN get_int ON get_int.lf_name =  cl.linear_name_full --only get those with desired street names
 WHERE
-    cl.geo_id NOT IN (SELECT _wip2.geo_id FROM _wip2)  --not repeating those found from pgrouting
+    cl.centreline_id NOT IN (SELECT _wip2.geo_id FROM _wip2)  --not repeating those found from pgrouting
     AND (
         ST_DWithin(
             ST_Transform(cl.geom, 2952), 
