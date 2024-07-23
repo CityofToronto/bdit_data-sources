@@ -1,5 +1,5 @@
 --USING centrelines aka GIS network
-CREATE OR REPLACE FUNCTION gis._get_lines_btwn_interxn(
+CREATE OR REPLACE FUNCTION gwolofs._get_lines_btwn_interxn(
     _highway2 text,
     _int_start integer,
     _int_end integer
@@ -29,10 +29,10 @@ WITH
 results AS (SELECT _int_start, _int_end, * FROM
     pgr_dijkstra(format('SELECT id, source::int, target::int,
                  CASE WHEN levenshtein(TRIM(lf_name), TRIM(%L), 1, 1,1) < 3 THEN (0.3*cost)::float ELSE cost END AS cost 
-                 from gis.centreline_routing_undirected_lfname'::text, _highway2),
+                 from gwolofs.centreline_routing_undirected_lfname'::text, _highway2),
                  _int_start::bigint, _int_end::bigint, FALSE)
 --or do pgr_dijkstra('SELECT id, source::int, target::int, 
-    --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::text, ... )
+    --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gwolofs.centreline_routing_undirected_lfname'::text, ... )
 )
 SELECT
     results._int_start,

@@ -1,5 +1,5 @@
 --First create a table
-CREATE TABLE gis.cleaned_bylaws_text (
+CREATE TABLE gwolofs.cleaned_bylaws_text (
     bylaw_id int,
     highway2 text,
     btwn1 text,
@@ -13,11 +13,11 @@ CREATE TABLE gis.cleaned_bylaws_text (
 );
 
 --Then, create a function 
-DROP FUNCTION gis._clean_bylaws_text(int, text, text, text);
-CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(
+DROP FUNCTION gwolofs._clean_bylaws_text(int, text, text, text);
+CREATE OR REPLACE FUNCTION gwolofs._clean_bylaws_text(
     _bylaw_id int, highway text, frm text, t text
 )
-RETURNS gis.cleaned_bylaws_text
+RETURNS gwolofs.cleaned_bylaws_text
 LANGUAGE 'plpgsql'
 AS $$
 
@@ -29,7 +29,7 @@ DECLARE
 
     -- when the input was btwn instead of from and to
     btwn1_v1 text := CASE WHEN t IS NULL THEN
-    gis.abbr_street(regexp_REPLACE
+    gwolofs.abbr_street(regexp_REPLACE
     (regexp_REPLACE
     (regexp_REPLACE
     (split_part
@@ -43,7 +43,7 @@ DECLARE
     , '[Bb]etween ', '', 'g')
     , 'A point', '', 'g'))
     
-    ELSE gis.abbr_street(regexp_REPLACE
+    ELSE gwolofs.abbr_street(regexp_REPLACE
     (regexp_REPLACE
     (regexp_REPLACE(frm, '\(.*?\)', '', 'g')
     , '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'g')
@@ -60,7 +60,7 @@ DECLARE
 
     btwn2_orig_v1 text := CASE WHEN t IS NULL THEN
             (CASE WHEN split_part(regexp_REPLACE(frm,  '\(.*?\)', '', 'g'), ' and ', 2) <> ''
-            THEN gis.abbr_street(regexp_REPLACE
+            THEN gwolofs.abbr_street(regexp_REPLACE
             (split_part
             (regexp_REPLACE
             (regexp_REPLACE
@@ -72,7 +72,7 @@ DECLARE
             , '[Bb]etween |(A point)|(thereof)|(the northeast of)', '', 'g'))
 
             WHEN split_part(frm, ' to ', 2) <> ''
-            THEN gis.abbr_street(regexp_REPLACE
+            THEN gwolofs.abbr_street(regexp_REPLACE
             (regexp_REPLACE
             (split_part
             (regexp_REPLACE
@@ -86,7 +86,7 @@ DECLARE
             END)
 
             ELSE
-            gis.abbr_street(regexp_REPLACE
+            gwolofs.abbr_street(regexp_REPLACE
             (regexp_REPLACE
             (regexp_REPLACE
             (regexp_REPLACE(t, '\(.*?\)', '', 'g')
@@ -103,12 +103,12 @@ DECLARE
             END
     );
 
-    highway2 text :=  gis.abbr_street(highway);
+    highway2 text :=  gwolofs.abbr_street(highway);
 
     direction_btwn1 text := CASE WHEN t IS NULL THEN
                 (
                 CASE WHEN btwn1 LIKE '% m %'
-                OR gis.abbr_street( regexp_REPLACE
+                OR gwolofs.abbr_street( regexp_REPLACE
                 (split_part
                 (split_part
                 (frm, ' to ', 1)
@@ -116,7 +116,7 @@ DECLARE
                 , '[Bb]etween ', '', 'g')) LIKE '% m %'
                 THEN split_part
                 (split_part
-                (gis.abbr_street
+                (gwolofs.abbr_street
                 (regexp_REPLACE
                 (regexp_REPLACE
                 (regexp_REPLACE
@@ -134,11 +134,11 @@ DECLARE
                 ELSE
                 (
                 CASE WHEN btwn1 LIKE '% m %'
-                OR gis.abbr_street(frm) LIKE '% m %'
+                OR gwolofs.abbr_street(frm) LIKE '% m %'
                 THEN regexp_replace(regexp_replace
                 (split_part
                 (split_part
-                (gis.abbr_street(frm), ' m ', 2)
+                (gwolofs.abbr_street(frm), ' m ', 2)
                 , ' of ', 1)
                 , 'further ', '', 'g')
                 , 'east/north', 'northeast', 'g')
@@ -152,17 +152,17 @@ DECLARE
                 OR
                 (
                     CASE WHEN split_part(frm, ' and ', 2) <> ''
-                    THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'))
+                    THEN gwolofs.abbr_street( regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'))
                     WHEN split_part(frm, ' to ', 2) <> ''
-                    THEN gis.abbr_street( regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'))
+                    THEN gwolofs.abbr_street( regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'))
                     END
                 ) LIKE '% m %'
                 THEN
                 (
                     CASE WHEN split_part(frm, ' and ', 2) <> ''
-                    THEN regexp_REPLACE(regexp_replace(split_part(split_part( gis.abbr_street(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
+                    THEN regexp_REPLACE(regexp_replace(split_part(split_part( gwolofs.abbr_street(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
                     WHEN split_part(frm, ' to ', 2) <> ''
-                    THEN regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
+                    THEN regexp_REPLACE(regexp_replace(split_part(split_part(gwolofs.abbr_street(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g')), ' m ', 2), ' of ', 1), 'further | thereof', '', 'g'), 'east/north', 'northeast', 'g')
                     END
                 )
                 ELSE NULL
@@ -170,9 +170,9 @@ DECLARE
                 ELSE
                 (
                 CASE WHEN btwn2_orig LIKE '% m %'
-                OR gis.abbr_street(t) LIKE '% m %'
+                OR gwolofs.abbr_street(t) LIKE '% m %'
                 THEN
-                regexp_REPLACE(regexp_replace(split_part(split_part(gis.abbr_street(t), ' m ', 2), ' of ', 1), 'further ', '', 'g'), 'east/north', 'northeast', 'g')
+                regexp_REPLACE(regexp_replace(split_part(split_part(gwolofs.abbr_street(t), ' m ', 2), ' of ', 1), 'further ', '', 'g'), 'east/north', 'northeast', 'g')
                 ELSE NULL
                 END
                 )
@@ -182,7 +182,7 @@ DECLARE
     metres_btwn1 float :=    (CASE WHEN t IS NULL THEN
                 (
                 CASE WHEN btwn1 LIKE '% m %'
-                OR gis.abbr_street(regexp_REPLACE
+                OR gwolofs.abbr_street(regexp_REPLACE
                 (split_part
                 (split_part(frm, ' to ', 1)
                 , ' and ', 1)
@@ -191,7 +191,7 @@ DECLARE
                 (regexp_REPLACE
                 (regexp_REPLACE
                 (split_part
-                (gis.abbr_street
+                (gwolofs.abbr_street
                 (regexp_REPLACE
                 (split_part
                 (split_part(frm, ' to ', 1)
@@ -207,12 +207,12 @@ DECLARE
                 ELSE
                 (
                 CASE WHEN btwn1 LIKE '% m %'
-                OR gis.abbr_street(frm) LIKE '% m %'
+                OR gwolofs.abbr_street(frm) LIKE '% m %'
                 THEN regexp_REPLACE
                 (regexp_REPLACE
                 (regexp_REPLACE
                 (split_part
-                (gis.abbr_street(frm), ' m ' ,1)
+                (gwolofs.abbr_street(frm), ' m ' ,1)
                 , 'a point ', '', 'g')
                 , 'A point', '', 'g')
                 , ',', 'g')::float
@@ -226,18 +226,18 @@ DECLARE
                 ( CASE WHEN btwn2_orig LIKE '% m %' OR
                     (
                         CASE WHEN split_part(frm, ' and ', 2) <> ''
-                        THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
+                        THEN gwolofs.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
                         WHEN split_part(frm, ' to ', 2) <> ''
-                        THEN gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
+                        THEN gwolofs.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*?\)', '', 'g'), '[Bb]etween ', '', 'g'))
                         END
                     )
                 LIKE '% m %'
                 THEN
                 (
                 CASE WHEN split_part(frm, ' and ', 2) <> ''
-                THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part( gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
+                THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part( gwolofs.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
                 WHEN split_part(frm, ' to ', 2) <> ''
-                THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
+                THEN regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gwolofs.abbr_street( regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '\(.*\)', '', 'g'), '[Bb]etween ', '', 'g')), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
                 END
                 )
                 ELSE NULL
@@ -246,9 +246,9 @@ DECLARE
                 ELSE
                 (
                 CASE WHEN btwn2_orig LIKE '% m %'
-                OR gis.abbr_street(t) LIKE '% m %'
+                OR gwolofs.abbr_street(t) LIKE '% m %'
                 THEN
-                regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gis.abbr_street(t), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
+                regexp_REPLACE(regexp_REPLACE(regexp_REPLACE(split_part(gwolofs.abbr_street(t), ' m ', 1), 'a point ', '', 'g'), 'A point', '', 'g'), ',', '', 'g')::float
                 ELSE NULL
                 END
                 )
@@ -262,13 +262,13 @@ DECLARE
     -- the difference between the two is that one of the cases has a 'of' to describe the second road that intersects with "street"/"highway2"
     btwn2_check text := CASE WHEN t IS NULL THEN
             (CASE WHEN split_part(frm, ' and ', 2) <> ''
-            THEN gis.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
+            THEN gwolofs.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' and ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
             WHEN split_part(frm, ' to ', 2) <> ''
-            THEN gis.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
+            THEN gwolofs.abbr_street(regexp_REPLACE(regexp_REPLACE(split_part(frm, ' to ', 2), '[Bb]etween ', '', 'g'), 'A point', '', 'g'))
             END)
 
             ELSE
-            gis.abbr_street(t)
+            gwolofs.abbr_street(t)
             END ;
 
 
@@ -277,8 +277,8 @@ DECLARE
         -- for case one
         -- i.e. Watson road from St. Mark's Road to a point 100 metres north
         -- we want the btwn2 to be St. Mark's Road (which is also btwn1)
-    THEN TRIM(gis.abbr_street(btwn1))
-    ELSE TRIM(gis.abbr_street(regexp_replace(btwn2_orig , 'a point', '', 'g')))
+    THEN TRIM(gwolofs.abbr_street(btwn1))
+    ELSE TRIM(gwolofs.abbr_street(regexp_replace(btwn2_orig , 'a point', '', 'g')))
     END
     );
 
@@ -287,7 +287,7 @@ RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, 
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 RETURN ROW(_bylaw_id, highway2, btwn1, direction_btwn1, metres_btwn1, btwn2, direction_btwn2, metres_btwn2,
-btwn2_orig, btwn2_check)::gis.cleaned_bylaws_text ;
+btwn2_orig, btwn2_check)::gwolofs.cleaned_bylaws_text ;
 
 END;
 $$;
@@ -296,9 +296,9 @@ $$;
 --For testing purposes only
 DO $$
 DECLARE
- return_test gis.cleaned_bylaws_text; --the table
+ return_test gwolofs.cleaned_bylaws_text; --the table
 BEGIN
- return_test := gis.clean_bylaws_text('123', 'Chesham Drive', 'The west end of Chesham Drive and Heathrow Drive', NULL); --the function
+ return_test := gwolofs.clean_bylaws_text('123', 'Chesham Drive', 'The west end of Chesham Drive and Heathrow Drive', NULL); --the function
  RAISE NOTICE 'Testing 123';
 END;
 $$ LANGUAGE 'plpgsql';
