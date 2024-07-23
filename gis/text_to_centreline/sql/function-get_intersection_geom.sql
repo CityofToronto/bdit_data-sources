@@ -1,7 +1,7 @@
-DROP FUNCTION gis._get_intersection_geom (
+DROP FUNCTION gwolofs._get_intersection_geom (
     text, text, text, double precision, integer
 );
-CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
+CREATE OR REPLACE FUNCTION gwolofs._get_intersection_geom(
     highway2 text, btwn text, direction text, metres float, not_int_id int,
     OUT oid_geom geometry,
     OUT oid_geom_translated geometry,
@@ -20,8 +20,8 @@ oid_geom_test geometry;
 
 BEGIN
 int_arr := (CASE WHEN TRIM(highway2) = TRIM(btwn) 
-    THEN (gis._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
-    ELSE (gis._get_intersection_id(highway2, btwn, not_int_id))
+    THEN (gwolofs._get_intersection_id_highway_equals_btwn(highway2, btwn, not_int_id))
+    ELSE (gwolofs._get_intersection_id(highway2, btwn, not_int_id))
     END);
 
 oid_int := int_arr[1];
@@ -37,7 +37,7 @@ oid_geom_test := (
 oid_geom_translated := (
         CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
            THEN (SELECT *
-           FROM gis._translate_intersection_point(oid_geom_test, metres, direction) translated_geom)
+           FROM gwolofs._translate_intersection_point(oid_geom_test, metres, direction) translated_geom)
         ELSE NULL
         END
         );
@@ -53,7 +53,7 @@ oid_int, ST_AsText(oid_geom), ST_AsText(oid_geom_translated), direction, metres:
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gis._get_intersection_geom(
+COMMENT ON FUNCTION gwolofs._get_intersection_geom(
     text, text, text, float, int
 ) IS '
 Input values of the names of two intersections, direction (may be NULL), number of units the intersection should be translated,

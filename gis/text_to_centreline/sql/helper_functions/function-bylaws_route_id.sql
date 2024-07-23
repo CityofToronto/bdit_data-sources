@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gis.bylaws_route_id(
+CREATE OR REPLACE FUNCTION gwolofs.bylaws_route_id(
     _bylaw_id integer,
     highway2 text,
     _int_start integer,
@@ -37,7 +37,7 @@ SELECT
     rout.objectid,
     rout.fcode,
     rout.fcode_desc
-FROM gis._get_lines_btwn_interxn(highway2, _int_start, _int_end) rout;
+FROM gwolofs._get_lines_btwn_interxn(highway2, _int_start, _int_end) rout;
 
 END;
 $BODY$;
