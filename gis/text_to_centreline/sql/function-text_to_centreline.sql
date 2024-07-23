@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS gwolofs.text_to_centreline;
+
 CREATE OR REPLACE FUNCTION gwolofs.text_to_centreline(
     _bylaw_id integer,
     highway text,
@@ -7,7 +9,7 @@ CREATE OR REPLACE FUNCTION gwolofs.text_to_centreline(
 RETURNS TABLE (
     int1 integer,
     int2 integer,
-    geo_id numeric,
+    geo_id integer,
     lf_name character varying,
     con text,
     note text,
@@ -17,7 +19,7 @@ RETURNS TABLE (
     oid1_geom_translated geometry,
     oid2_geom geometry,
     oid2_geom_translated geometry,
-    objectid numeric,
+    objectid integer,
     fcode integer,
     fcode_desc character varying
 )
@@ -55,7 +57,7 @@ BEGIN
         int_start int,
         int_end int,
         seq int,
-        geo_id numeric,
+        geo_id integer,
         lf_name varchar,
         line_geom geometry,
         section NUMRANGE,
@@ -63,7 +65,7 @@ BEGIN
         oid1_geom_translated geometry,
         oid2_geom geometry,
         oid2_geom_translated geometry,
-        objectid numeric,
+        objectid integer,
         fcode int,
         fcode_desc varchar,
         lev_sum int

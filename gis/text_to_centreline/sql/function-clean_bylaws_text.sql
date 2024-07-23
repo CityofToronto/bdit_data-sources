@@ -1,5 +1,5 @@
 --First create a table
-CREATE TABLE gwolofs.cleaned_bylaws_text (
+CREATE TABLE IF NOT EXISTS gwolofs.cleaned_bylaws_text (
     bylaw_id int,
     highway2 text,
     btwn1 text,
@@ -13,7 +13,7 @@ CREATE TABLE gwolofs.cleaned_bylaws_text (
 );
 
 --Then, create a function 
-DROP FUNCTION gwolofs._clean_bylaws_text(int, text, text, text);
+DROP FUNCTION IF EXISTS gwolofs._clean_bylaws_text(int, text, text, text);
 CREATE OR REPLACE FUNCTION gwolofs._clean_bylaws_text(
     _bylaw_id int, highway text, frm text, t text
 )
@@ -298,7 +298,7 @@ DO $$
 DECLARE
  return_test gwolofs.cleaned_bylaws_text; --the table
 BEGIN
- return_test := gwolofs.clean_bylaws_text('123', 'Chesham Drive', 'The west end of Chesham Drive and Heathrow Drive', NULL); --the function
+ return_test := gwolofs._clean_bylaws_text(123::int, 'Chesham Drive'::text, 'The west end of Chesham Drive and Heathrow Drive'::text, NULL::text); --the function
  RAISE NOTICE 'Testing 123';
 END;
 $$ LANGUAGE 'plpgsql';

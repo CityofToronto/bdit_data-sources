@@ -1,4 +1,4 @@
-DROP FUNCTION gwolofs._get_intersection_geom (
+DROP FUNCTION IF EXISTS gwolofs._get_intersection_geom (
     text, text, text, double precision, integer
 );
 CREATE OR REPLACE FUNCTION gwolofs._get_intersection_geom(

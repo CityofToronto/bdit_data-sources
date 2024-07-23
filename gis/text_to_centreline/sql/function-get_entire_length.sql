@@ -1,9 +1,9 @@
-DROP FUNCTION gwolofs._get_entire_length (text);
+DROP FUNCTION IF EXISTS gwolofs._get_entire_length (text);
 CREATE OR REPLACE FUNCTION gwolofs._get_entire_length(highway2_before_editing text)
 RETURNS TABLE (
     centreline_id numeric,
     linear_name_full varchar,
-    objectid numeric,
+    objectid integer,
     geom geometry,
     feature_code int,
     feature_code_desc varchar

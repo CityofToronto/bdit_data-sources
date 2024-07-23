@@ -1,6 +1,6 @@
 -- FUNCTION: gwolofs.text_to_centreline_geom(text, text, text)
 
-DROP FUNCTION gwolofs.text_to_centreline_geom (text, text, text);
+DROP FUNCTION IF EXISTS gwolofs.text_to_centreline_geom (text, text, text);
 
 CREATE OR REPLACE FUNCTION gwolofs.text_to_centreline_geom(
     _street text,
@@ -8,7 +8,6 @@ CREATE OR REPLACE FUNCTION gwolofs.text_to_centreline_geom(
     _to_loc text,
     _return_geom OUT geometry
 )
---     RETURNS geometry
 LANGUAGE 'plpgsql'
 
 COST 100
@@ -25,7 +24,7 @@ gwolofs.text_to_centreline(0,
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.text_to_centreline_geom(text, text, text) OWNER TO rdumas;
+ALTER FUNCTION gwolofs.text_to_centreline_geom(text, text, text) OWNER TO gwolofs;
 
 GRANT EXECUTE ON FUNCTION gwolofs.text_to_centreline_geom(text, text, text) TO bdit_humans;
 COMMENT ON FUNCTION gwolofs.text_to_centreline_geom(text, text, text) IS

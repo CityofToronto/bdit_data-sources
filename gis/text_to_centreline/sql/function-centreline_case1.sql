@@ -1,4 +1,4 @@
-DROP FUNCTION gwolofs._centreline_case1 (text, text, text, double precision);
+DROP FUNCTION IF EXISTS gwolofs._centreline_case1 (text, text, text, double precision);
 
 CREATE OR REPLACE FUNCTION gwolofs._centreline_case1(
     highway2 text,
@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION gwolofs._centreline_case1(
 )
 RETURNS TABLE (
     int1 integer,
-    geo_id numeric,
+    geo_id integer,
     lf_name character varying,
     ind_line_geom geometry,
     line_geom geometry,
@@ -17,7 +17,7 @@ RETURNS TABLE (
     combined_section numrange,
     oid1_geom geometry,
     oid1_geom_translated geometry,
-    objectid numeric,
+    objectid integer,
     fcode integer,
     fcode_desc character varying,
     lev_sum integer
@@ -33,7 +33,7 @@ BEGIN
 
 CREATE TEMP TABLE IF NOT EXISTS _wip(
     int1 int, 
-    geo_id numeric, 
+    geo_id integer, 
     lf_name varchar, 
     ind_line_geom geometry,
     line_geom geometry, 
@@ -41,7 +41,7 @@ CREATE TEMP TABLE IF NOT EXISTS _wip(
     section numrange,
     oid1_geom geometry, 
     oid1_geom_translated geometry, 
-    objectid numeric, 
+    objectid integer, 
     fcode int, 
     fcode_desc varchar, 
     lev_sum int, 
