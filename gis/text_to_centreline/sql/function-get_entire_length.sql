@@ -1,12 +1,12 @@
 DROP FUNCTION IF EXISTS gwolofs._get_entire_length (text);
 CREATE OR REPLACE FUNCTION gwolofs._get_entire_length(highway2_before_editing text)
 RETURNS TABLE (
-    centreline_id numeric,
-    linear_name_full varchar,
+    centreline_id integer,
+    linear_name_full text,
     objectid integer,
     geom geometry,
     feature_code int,
-    feature_code_desc varchar
+    feature_code_desc text
 )
 LANGUAGE 'plpgsql' STRICT STABLE
 AS $BODY$
@@ -26,14 +26,14 @@ BEGIN
 
 RETURN QUERY
 SELECT
-    centreline_id,
-    linear_name_full,
-    objectid,
-    geom,
-    feature_code,
-    feature_code_desc
-FROM gis_core.centreline_latest
-WHERE linear_name_full LIKE highway2;
+    cl.centreline_id,
+    cl.linear_name_full,
+    cl.objectid,
+    cl.geom,
+    cl.feature_code,
+    cl.feature_code_desc
+FROM gis_core.centreline_latest AS cl
+WHERE cl.linear_name_full LIKE highway2;
 
 RAISE NOTICE 'Entire segment found for %', highway2_before_editing;
 
