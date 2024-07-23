@@ -14,26 +14,29 @@ WITH intersections AS (
     SELECT DISTINCT
         objectid,
         trim(unnest(string_to_array(intersection_desc::text, '/'::text))) AS street,
-        intersection_id AS int_id,
-        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) AS levenshtein_1,
-        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) AS levenshtein_2
+        intersection_id AS int_id
     FROM gis_core.centreline_intersection_point_latest
 )
 
 SELECT
     intersections.objectid, 
-    SUM(LEAST(levenshtein_1, levenshtein_2)),
+    SUM(LEAST(levenshtein.lev_highway, levenshtein.lev_btwn)),
     intersections.int_id
 INTO oid, lev_sum, int_id_found
-FROM intersections
+FROM intersections,
+LATERAL (
+    SELECT
+        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1),
+        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)
+) AS levenshtein (lev_highway, lev_btwn)
 WHERE
-    (levenshtein_1 < 4  OR levenshtein_2 < 4) 
+    (levenshtein.lev_highway < 4  OR levenshtein.lev_btwn < 4) 
     --AND intersections.int_id <> not_int_id
 GROUP BY
     intersections.objectid,
     intersections.int_id
 HAVING COUNT(DISTINCT TRIM(intersections.street)) > 1
-ORDER BY AVG(LEAST(levenshtein_1, levenshtein_2))
+ORDER BY AVG(LEAST(levenshtein.lev_highway, levenshtein.lev_btwn))
 LIMIT 1;
 
 RAISE NOTICE 'highway2 being matched: %, btwn being matched: %, not_int_id: %, intersection arr: %', highway2, btwn, not_int_id, ARRAY[oid, lev_sum];

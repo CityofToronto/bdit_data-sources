@@ -25,33 +25,39 @@ WITH intersections AS (
             WHEN classification_desc LIKE 'Pseudo%' THEN 2 
             WHEN classification_desc = 'Lesser-Single Level' THEN 3
             ELSE 4
-        END AS priority,
-        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) AS levenshtein_1,
-        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1) AS levenshtein_2
+        END AS priority
     FROM gis_core.centreline_intersection_point_latest
     WHERE classification IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
-),
+)
 
 SELECT
     intersections.objectid,
-    SUM(levenshtein_1),
+    SUM(levenshtein.lev_highway),
     intersections.int_id
 INTO oid, lev_sum, int_id_found
-FROM intersections
+FROM intersections,
+LATERAL (
+    SELECT
+        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1),
+        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)
+) AS levenshtein (lev_highway, lev_btwn)
 WHERE
-    levenshtein_1 < 4 
+    levenshtein.lev_highway < 4 
     AND intersections.int_id <> not_int_id 
 GROUP BY
     intersections.objectid,
     intersections.int_id,
     priority
 ORDER BY
-    AVG(LEAST(levenshtein_1, levenshtein_2)),
+    AVG(LEAST(levenshtein.lev_highway, levenshtein.lev_btwn)),
     intersections.priority,
     (
-        SELECT COUNT(*)
-        FROM gwolofs.centreline_intersection_streets
-        WHERE objectid = intersections.objectid
+        SELECT COUNT(streets.street)
+        FROM (
+            SELECT DISTINCT UNNEST(string_to_array(intersection_desc::text, '/'::text)) AS street
+            FROM gis_core.centreline_intersection_point_latest
+            WHERE objectid = intersections.objectid
+        ) streets
     )
 LIMIT 1;
 
