@@ -37,11 +37,8 @@ WITH results AS (
                 centreline_id AS id,
                 from_intersection_id AS source,
                 to_intersection_id AS target,
-                CASE WHEN levenshtein(TRIM(linear_name_full), TRIM(%L), 1, 1,1) < 3 THEN (0.3*costs.cost)::float ELSE costs.cost END AS cost 
-            FROM gis_core.centreline_latest,
-            LATERAL (
-                SELECT st_length(st_transform(geom, 98012))::integer AS cost
-            ) AS costs(cost)
+                st_length(st_transform(geom, 2952)) * CASE WHEN levenshtein(TRIM(linear_name_full), TRIM(%L), 1, 1, 1) < 3 THEN 0.3::float ELSE 1.0::float END AS cost
+            FROM gis_core.centreline_latest
             WHERE feature_code_desc IN (''Collector'', ''Expressway Ramp'', ''Pending'', ''Expressway'', ''Major Arterial'', ''Local'', ''Minor Arterial'')
             '::text, _highway2),
         _int_start::bigint, _int_end::bigint, FALSE
