@@ -6,18 +6,20 @@ CREATE TABLE traffic.mto_length_bin_classification
     class_desc text,
     length_range numrange,
     CONSTRAINT mto_length_pkey PRIMARY KEY (mto_class_uid),
-    CONSTRAINT mto_length_bin_classification_length_range_excl EXCLUDE USING GIST (length_range WITH &&)
+    CONSTRAINT mto_length_bin_classification_length_range_excl
+    EXCLUDE USING gist (length_range WITH &&)
 );
 
 INSERT INTO traffic.mto_length_bin_classification (length_range, class_desc)
-(VALUES
-    (numrange(0, 6.5, '[)'), 'Lights'::text),
-    (numrange(6.5, 12.5, '[)'), 'Short Trucks'::text),
-    (numrange(12.5, 21.1, '[)'), 'Long Trucks'::text),
-    (numrange(21.1, 23.0, '[)'), 'Oversize Long Trucks'::text),
-    (numrange(23.0, 30, '[)'), 'Oversize Vehicles >23m'::text),
-    (numrange(30, 40, '[]'), 'LCV'::text),
-    (numrange(40, null, '()'), 'Unknown (>40m)'::text)
+(
+    VALUES
+        (numrange(0, 6.5, '[)'), 'Lights'::text),
+        (numrange(6.5, 12.5, '[)'), 'Short Trucks'::text),
+        (numrange(12.5, 21.1, '[)'), 'Long Trucks'::text),
+        (numrange(21.1, 23.0, '[)'), 'Oversize Long Trucks'::text),
+        (numrange(23.0, 30, '[)'), 'Oversize Vehicles >23m'::text),
+        (numrange(30, 40, '[]'), 'LCV'::text),
+        (numrange(40, NULL, '()'), 'Unknown (>40m)'::text)
 );
 
 COMMENT ON TABLE traffic.mto_length_bin_classification
