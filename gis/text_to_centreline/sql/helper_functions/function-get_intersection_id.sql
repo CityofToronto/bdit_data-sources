@@ -31,7 +31,7 @@ LATERAL (
 ) AS levenshtein (lev_highway, lev_btwn)
 WHERE
     (levenshtein.lev_highway < 4  OR levenshtein.lev_btwn < 4) 
-    --AND intersections.int_id <> not_int_id
+    AND intersections.int_id <> not_int_id
 GROUP BY
     intersections.objectid,
     intersections.int_id
