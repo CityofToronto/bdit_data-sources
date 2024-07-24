@@ -15,7 +15,7 @@ OWNER TO miovision_admins;
 REVOKE ALL ON TABLE miovision_api.intersection_movements FROM bdit_humans;
 
 GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.intersection_movements
-TO bdit_humans WITH GRANT OPTION;
+TO bdit_humans;
 
 GRANT ALL ON TABLE miovision_api.intersection_movements TO miovision_admins;
 
@@ -34,3 +34,9 @@ CHECK (NOT (classification_uid = 10 AND movement_uid = 8));
 ALTER TABLE IF EXISTS miovision_api.intersection_movements
 ADD CONSTRAINT intersecton_movements_exclude_xwalk_bikes
 CHECK (NOT (classification_uid = 7));
+
+CREATE TRIGGER miovision_intersection_movements_pad
+AFTER INSERT ON miovision_api.intersection_movements
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT
+EXECUTE FUNCTION miovision_api.add_intersection_movement_padding_values();
