@@ -157,7 +157,7 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | geom | geometry |  | |
 | facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
 | notes | text | | |
-| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites. This field indicates the site_id of the new replacement site, if any. Please note that any attempt to combine counts from one site with those of its replacement should be done at the level of flows. |
 | centreline_id | integer | | The nearest street centreline_id, noting that ecocounter sensors are only configured to count bike like objects on a portion of the roadway ie. cycletrack or multi-use-path. Join using `JOIN gis_core.centreline_latest USING (centreline_id)`. |
 | first_active | timestamp without time zone | | First timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
@@ -185,16 +185,16 @@ CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a hum
 Row count: 73
 | column_name | data_type | sample | Comments |
 |:------------|:----------|:-------|:---------|
+| flow_id | numeric | 104042943 | Primary key |
+| site_id | numeric | 100042943 | |
 | validated | boolean | True  | |
 | includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
-| replaces_flow_id | numeric | | |
-| flow_id | numeric | 104042943 | |
-| site_id | numeric | 100042943 | |
+| replaces_flow_id | numeric | | `flow_id` of earlier flow that this one replaces |
+| replaced_by_flow_id | numeric | 353363669 | `flow_id` of flow this one is replaced by |
 | flow_direction | text | westbound (includes contraflow) |  |
 | flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
-| replaced_by_flow_id | numeric | 353363669 | |
 | first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 
