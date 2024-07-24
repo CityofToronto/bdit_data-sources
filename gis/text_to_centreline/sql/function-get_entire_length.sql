@@ -1,6 +1,13 @@
-DROP FUNCTION gis._get_entire_length(text);
+DROP FUNCTION gis._get_entire_length (text);
 CREATE OR REPLACE FUNCTION gis._get_entire_length(highway2_before_editing text)
-RETURNS TABLE(geo_id NUMERIC, lf_name VARCHAR, objectid NUMERIC, line_geom GEOMETRY, fcode INT, fcode_desc VARCHAR)
+RETURNS TABLE (
+    geo_id numeric,
+    lf_name varchar,
+    objectid numeric,
+    line_geom geometry,
+    fcode int,
+    fcode_desc varchar
+)
 LANGUAGE 'plpgsql' STRICT STABLE
 AS $BODY$
 
@@ -8,13 +15,13 @@ AS $BODY$
 
 DECLARE
 
-highway2 TEXT :=
-	CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
-	THEN 'F G Gardiner Xy W'
-	WHEN highway2_before_editing = 'Don Valley Pky'
-	THEN 'Don Valley Parkway'
-	ELSE highway2_before_editing
-	END;
+highway2 text :=
+    CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
+    THEN 'F G Gardiner Xy W'
+    WHEN highway2_before_editing = 'Don Valley Pky'
+    THEN 'Don Valley Parkway'
+    ELSE highway2_before_editing
+    END;
 
 BEGIN
 
@@ -27,7 +34,7 @@ WHERE centre.lf_name = highway2;
 RAISE NOTICE 'Entire segment found for %', highway2_before_editing;
 
 END;
-$BODY$; 
+$BODY$;
 
 COMMENT ON FUNCTION gis._get_entire_length(text) IS '
 For bylaws with ''Entire Length'', 

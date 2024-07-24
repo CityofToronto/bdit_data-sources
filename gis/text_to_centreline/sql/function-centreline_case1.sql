@@ -1,38 +1,54 @@
-DROP FUNCTION gis._centreline_case1(text,text,text,double precision) ;
+DROP FUNCTION gis._centreline_case1 (text, text, text, double precision);
 
 CREATE OR REPLACE FUNCTION gis._centreline_case1(
-	highway2 text,
-	btwn2 text,
-	direction_btwn2 text,
-	metres_btwn2 double precision)
-    RETURNS TABLE(int1 integer, geo_id numeric, lf_name character varying, ind_line_geom geometry, line_geom geometry, line_geom_cut geometry, section numrange, combined_section numrange, oid1_geom geometry, oid1_geom_translated geometry, objectid numeric, fcode integer, fcode_desc character varying, lev_sum integer)
-    LANGUAGE 'plpgsql'
+    highway2 text,
+    btwn2 text,
+    direction_btwn2 text,
+    metres_btwn2 double precision
+)
+RETURNS TABLE (
+    int1 integer,
+    geo_id numeric,
+    lf_name character varying,
+    ind_line_geom geometry,
+    line_geom geometry,
+    line_geom_cut geometry,
+    section numrange,
+    combined_section numrange,
+    oid1_geom geometry,
+    oid1_geom_translated geometry,
+    objectid numeric,
+    fcode integer,
+    fcode_desc character varying,
+    lev_sum integer
+)
+LANGUAGE 'plpgsql'
 
-    COST 100
-    VOLATILE 
-    ROWS 1000
+COST 100
+VOLATILE
+ROWS 1000
 AS $BODY$
 
 BEGIN
 
 CREATE TEMP TABLE IF NOT EXISTS _wip(
-    int1 INTEGER, 
-    geo_id NUMERIC, 
-    lf_name VARCHAR, 
-    ind_line_geom GEOMETRY,
-    line_geom GEOMETRY, 
-    new_line GEOMETRY,
+    int1 int, 
+    geo_id numeric, 
+    lf_name varchar, 
+    ind_line_geom geometry,
+    line_geom geometry, 
+    new_line geometry,
     section NUMRANGE,
-    oid1_geom GEOMETRY, 
-    oid1_geom_translated GEOMETRY, 
-    objectid NUMERIC, 
-    fcode INTEGER, 
-    fcode_desc VARCHAR, 
-    lev_sum INTEGER, 
-    line_geom_cut GEOMETRY,
-    line_geom_reversed GEOMETRY,
+    oid1_geom geometry, 
+    oid1_geom_translated geometry, 
+    objectid numeric, 
+    fcode int, 
+    fcode_desc varchar, 
+    lev_sum int, 
+    line_geom_cut geometry,
+    line_geom_reversed geometry,
     combined_section NUMRANGE,
-    whole_centreline GEOMETRY
+    whole_centreline geometry
 );
 
 TRUNCATE TABLE _wip;
@@ -40,39 +56,69 @@ TRUNCATE TABLE _wip;
 INSERT INTO _wip (int1, geo_id, lf_name, ind_line_geom, new_line, oid1_geom, oid1_geom_translated, 
 objectid, fcode, fcode_desc, lev_sum)
 WITH get_int AS
-(SELECT oid_geom AS oid1_geom, oid_geom_translated AS oid1_geom_translated, 
-ST_MakeLine(oid_geom, oid_geom_translated) AS new_line, -- line from the intersection point to the translated point
-int_id_found AS int1, get_geom.lev_sum
-FROM gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom)
-,
+(
+    SELECT
+        oid_geom AS oid1_geom,
+        oid_geom_translated AS oid1_geom_translated, 
+        ST_MakeLine(oid_geom, oid_geom_translated) AS new_line, -- line from the intersection point to the translated point
+        int_id_found AS int1,
+        get_geom.lev_sum
+    FROM gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom
+),
+
 get_lines AS (
-SELECT cl.geo_id, cl.lf_name, cl.objectid, cl.fcode, cl.fcode_desc, cl.geom, get_int.oid1_geom, get_int.oid1_geom_translated,
-ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
-		   10) AS dwithin
-FROM gis.centreline cl, get_int
-WHERE ST_DWithin(ST_Transform(cl.geom, 2952), 
-		   ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
-		   10) = TRUE 
---as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
-AND ST_Length(ST_Intersection(
-	ST_Buffer(ST_Transform(get_int.new_line, 2952), 3*(ST_Length(ST_Transform(get_int.new_line, 2952))), 'endcap=flat join=round') , 
-	ST_Transform(cl.geom, 2952))) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
+    SELECT
+        cl.geo_id,
+        cl.lf_name,
+        cl.objectid,
+        cl.fcode,
+        cl.fcode_desc,
+        cl.geom,
+        get_int.oid1_geom,
+        get_int.oid1_geom_translated,
+        ST_DWithin(
+            ST_Transform(cl.geom, 2952), 
+            ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+            10
+        ) AS dwithin
+    FROM gis.centreline cl, get_int
+    WHERE
+        ST_DWithin(
+            ST_Transform(cl.geom, 2952), 
+            ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
+            10) = TRUE 
+    --as some centreline is much longer compared to the short road segment, the ratio is set to 0.1 instead of 0.9
+        AND ST_Length(
+                ST_Intersection(
+                ST_Buffer(ST_Transform(get_int.new_line, 2952), 3*(ST_Length(ST_Transform(get_int.new_line, 2952))), 'endcap=flat join=round') , 
+                ST_Transform(cl.geom, 2952))
+            ) / ST_Length(ST_Transform(cl.geom, 2952)) > 0.1 
 )
 
-SELECT get_int.int1, get_lines.geo_id, get_lines.lf_name, ST_LineMerge(get_lines.geom) AS ind_line_geom, get_int.new_line, 
-get_int.oid1_geom, get_int.oid1_geom_translated, get_lines.objectid, get_lines.fcode, get_lines.fcode_desc, 
-get_int.lev_sum
+SELECT
+    get_int.int1,
+    get_lines.geo_id,
+    get_lines.lf_name,
+    ST_LineMerge(get_lines.geom) AS ind_line_geom,
+    get_int.new_line, 
+    get_int.oid1_geom,
+    get_int.oid1_geom_translated,
+    get_lines.objectid,
+    get_lines.fcode,
+    get_lines.fcode_desc,
+    get_int.lev_sum
 FROM get_int, get_lines
-WHERE get_lines.lf_name = highway2 ;
+WHERE get_lines.lf_name = highway2;
 
 RAISE NOTICE 'Centrelines within the buffer and have the same bylaws highway name are found.'; 
 
 --TO CUT combined ind_line_geom and put into line_geom
 UPDATE _wip SET whole_centreline =
-(SELECT ST_LineMerge(ST_Union(_wip.ind_line_geom)) 
-FROM _wip
-GROUP BY _wip.lf_name );
+(
+    SELECT ST_LineMerge(ST_Union(_wip.ind_line_geom)) 
+    FROM _wip
+    GROUP BY _wip.lf_name
+);
 
 UPDATE _wip SET line_geom_cut = (
 CASE WHEN metres_btwn2 > ST_Length(ST_Transform(_wip.whole_centreline, 2952)) 
@@ -102,26 +148,26 @@ END
 );
 
 UPDATE _wip SET combined_section = (
--- case where the section of street from the intersection in the specified direction is shorter than x metres
---take the whole centreline, range is [0,1]
-CASE WHEN metres_btwn2 > ST_Length(ST_Transform(_wip.whole_centreline, 2952)) 
-AND metres_btwn2 - ST_Length(ST_Transform(_wip.whole_centreline, 2952)) < 15
-THEN numrange(0, 1, '[]')
+    -- case where the section of street from the intersection in the specified direction is shorter than x metres
+    --take the whole centreline, range is [0,1]
+    CASE
+        WHEN metres_btwn2 > ST_Length(ST_Transform(_wip.whole_centreline, 2952))
+        AND metres_btwn2 - ST_Length(ST_Transform(_wip.whole_centreline, 2952)) < 15
+        THEN numrange(0, 1, '[]')
 
---when the from_intersection is at the end point of the original centreline
---range is [xxx, 1]
-WHEN ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom)
-> ST_LineLocatePoint(_wip.whole_centreline, ST_ClosestPoint(_wip.whole_centreline, ST_EndPoint(new_line)))
-THEN numrange ((ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom) - (metres_btwn2/ST_Length(ST_Transform(_wip.whole_centreline, 2952))))::numeric , 1::numeric, '[]')
+        --when the from_intersection is at the end point of the original centreline
+        --range is [xxx, 1]
+        WHEN ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom)
+        > ST_LineLocatePoint(_wip.whole_centreline, ST_ClosestPoint(_wip.whole_centreline, ST_EndPoint(new_line)))
+        THEN numrange ((ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom) - (metres_btwn2/ST_Length(ST_Transform(_wip.whole_centreline, 2952))))::numeric , 1::numeric, '[]')
 
---when the from_intersection is at the start point of the original centreline 
---range is [0, xxx]
-WHEN ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom)
-< ST_LineLocatePoint(_wip.whole_centreline, ST_ClosestPoint(_wip.whole_centreline, ST_EndPoint(new_line)))
--- take the substring from the intersection to the point x metres ahead of it
-THEN numrange(0::numeric, (ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom) + (metres_btwn2/ST_Length(ST_Transform(_wip.whole_centreline, 2952))))::numeric, '[]')
-
-END
+        --when the from_intersection is at the start point of the original centreline 
+        --range is [0, xxx]
+        WHEN ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom)
+        < ST_LineLocatePoint(_wip.whole_centreline, ST_ClosestPoint(_wip.whole_centreline, ST_EndPoint(new_line)))
+        -- take the substring from the intersection to the point x metres ahead of it
+        THEN numrange(0::numeric, (ST_LineLocatePoint(_wip.whole_centreline, _wip.oid1_geom) + (metres_btwn2/ST_Length(ST_Transform(_wip.whole_centreline, 2952))))::numeric, '[]')
+    END
 );
 
 RAISE NOTICE 'Centrelines are now combined and cut as specified on the bylaws. 
@@ -190,11 +236,11 @@ FROM _wip;
 DROP TABLE _wip;
 
 EXCEPTION WHEN SQLSTATE 'XX000' THEN
-	RAISE WARNING 'Internal error at case2 for highway2 = % , btwn2 = % : ''%'' ', 
+    RAISE WARNING 'Internal error at case2 for highway2 = % , btwn2 = % : ''%'' ', 
     highway2, btwn2, SQLERRM ;
 
 END;
 $BODY$;
 
 ALTER FUNCTION gis._centreline_case1(text, text, text, double precision)
-    OWNER TO gis_admins;
+OWNER TO gis_admins;
