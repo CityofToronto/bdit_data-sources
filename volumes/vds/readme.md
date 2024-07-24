@@ -368,11 +368,11 @@ Row count: 6,415,490
 | uid            | bigint                      | 6774601             | unique id |
 
 ### vds.veh_length_15min
-Summarization of `vds.raw_vdsvehicledata` with count of observation (vehicle) lengths grouped by 15 min / 1m length / vds_id. Can be used to investigate the mix of vehicle types using our roadways.  
+Summarization of `vds.raw_vdsvehicledata` with count of observation (vehicle) lengths grouped by 15 min / MTO classification guide / vdsconfig_uid. Can be used to investigate the mix of vehicle types using our roadways.  
 
 Data quality: 
 - There are some suspiciously long vehicles (about 0.05% >= 20m, max = 49m). 
-- There are null length values in `raw_vdsvehicledata` which are excluded here. 
+- There are null length values in `raw_vdsvehicledata` which are included here. The meaning of these are not understood, but make up a significant portion of values in some cases (suspicious). 
 
 Row count: 4,622,437
 | column_name    | data_type                   | sample              | description   |
@@ -381,7 +381,7 @@ Row count: 4,622,437
 | vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
 | entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
 | datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
-| length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
+| mto_class_uid  | smallint                    | 0                   | fkey referencing `traffic.mto_length_bin_classification.mto_class_uid` |
 | count          | smallint                    | 3                   | count of observations |
 | total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
 | uid            | bigint                      | 4866932             | unique id |
