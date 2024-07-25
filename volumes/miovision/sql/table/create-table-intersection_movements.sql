@@ -14,7 +14,8 @@ OWNER TO miovision_admins;
 
 REVOKE ALL ON TABLE miovision_api.intersection_movements FROM bdit_humans;
 
-GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.intersection_movements TO bdit_humans WITH GRANT OPTION;
+GRANT TRIGGER, SELECT, REFERENCES ON TABLE miovision_api.intersection_movements
+TO bdit_humans WITH GRANT OPTION;
 
 GRANT ALL ON TABLE miovision_api.intersection_movements TO miovision_admins;
 
