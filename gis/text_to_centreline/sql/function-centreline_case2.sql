@@ -1,7 +1,7 @@
-DROP FUNCTION IF EXISTS gwolofs._centreline_case2 (
+DROP FUNCTION IF EXISTS gis._centreline_case2 (
     text, text, text, double precision, text, text, double precision, text, text
 );
-CREATE OR REPLACE FUNCTION gwolofs._centreline_case2(
+CREATE OR REPLACE FUNCTION gis._centreline_case2(
     highway2 text,
     btwn1 text,
     direction_btwn1 text,
@@ -69,12 +69,12 @@ CREATE TEMP TABLE IF NOT EXISTS _wip2 (
 
 TRUNCATE TABLE _wip2; 
 
-    _int1_result := gwolofs._get_intersection_geom(highway2, btwn1, direction_btwn1, metres_btwn1, 0);
+    _int1_result := gis._get_intersection_geom(highway2, btwn1, direction_btwn1, metres_btwn1, 0);
 
     _int2_result := (
         CASE WHEN btwn2_orig LIKE '%point%' AND (btwn2_check NOT LIKE '% of %' OR btwn2_check LIKE ('% of ' || TRIM(btwn1)))
-            THEN gwolofs._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0)
-            ELSE gwolofs._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, _int1_result.int_id_found)
+            THEN gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0)
+            ELSE gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, _int1_result.int_id_found)
         END
     );
                 
@@ -84,7 +84,7 @@ TRUNCATE TABLE _wip2;
     _int1_result.oid_geom AS oid1_geom, _int1_result.oid_geom_translated AS oid1_geom_translated,
     _int2_result.oid_geom AS oid2_geom, _int2_result.oid_geom_translated AS oid2_geom_translated,
     rout.objectid, rout.fcode, rout.fcode_desc, _int1_result.lev_sum + _int2_result.lev_sum
-    FROM gwolofs._get_lines_btwn_interxn(highway2, _int1_result.int_id_found, _int2_result.int_id_found) rout;
+    FROM gis._get_lines_btwn_interxn(highway2, _int1_result.int_id_found, _int2_result.int_id_found) rout;
 
 --those centreline found from buffer are where int_start, int_end, seq, lev_sum = NULL
 INSERT INTO _wip2 (geo_id, lf_name, ind_line_geom, new_line1, new_line2, 

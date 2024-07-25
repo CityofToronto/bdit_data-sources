@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs._get_intersection_id(
+CREATE OR REPLACE FUNCTION gis._get_intersection_id(
     highway2 text, btwn text, not_int_id int
 )
 RETURNS int [] AS $$
@@ -47,7 +47,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-COMMENT ON FUNCTION gwolofs._get_intersection_id(text, text, int) IS '
+COMMENT ON FUNCTION gis._get_intersection_id(text, text, int) IS '
 Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the first returned intersection id
 into the function on the second time the function is called).

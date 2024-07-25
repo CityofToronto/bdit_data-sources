@@ -1,5 +1,5 @@
-DROP FUNCTION IF EXISTS gwolofs._get_entire_length (text);
-CREATE OR REPLACE FUNCTION gwolofs._get_entire_length(highway2_before_editing text)
+DROP FUNCTION IF EXISTS gis._get_entire_length (text);
+CREATE OR REPLACE FUNCTION gis._get_entire_length(highway2_before_editing text)
 RETURNS TABLE (
     centreline_id integer,
     linear_name_full text,
@@ -40,6 +40,6 @@ RAISE NOTICE 'Entire segment found for %', highway2_before_editing;
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gwolofs._get_entire_length(text) IS '
+COMMENT ON FUNCTION gis._get_entire_length(text) IS '
 For bylaws with ''Entire Length'', 
 get all the individual line_geom that constitute the whole road segment from gis_core.centreline_latest table.';

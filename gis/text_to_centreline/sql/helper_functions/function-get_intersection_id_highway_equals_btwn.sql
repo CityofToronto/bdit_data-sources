@@ -4,7 +4,7 @@
 -- intersection_id of the first intersection in the bylaw text (or 0 if we are trying to find
 -- the first intersection). 
 -- not_int_id is there so we dont ever get the same intersections matched twice
-CREATE OR REPLACE FUNCTION gwolofs._get_intersection_id_highway_equals_btwn(
+CREATE OR REPLACE FUNCTION gis._get_intersection_id_highway_equals_btwn(
     highway2 text, btwn text, not_int_id int
 )
 RETURNS int [] AS $$
@@ -68,11 +68,11 @@ RETURN ARRAY[oid, lev_sum, int_id_found];
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION gwolofs._get_intersection_id_highway_equals_btwn(
+COMMENT ON FUNCTION gis._get_intersection_id_highway_equals_btwn(
     text, text, int
 ) IS '
 Get intersection id from a text street name when intersection is a cul de sac or a dead end or a pseudo intersection.
-In these cases the intersection name (intersec5 of gwolofs.centreline_intersection) would just be the name of the street.
+In these cases the intersection name (intersec5 of gis.centreline_intersection) would just be the name of the street.
 
 Input two street names of streets that intersect each other, and 0 or an intersection id that you do not want the function to return
 (i.e. sometimes two streets intersect each other twice so if you want to get both intersections by calling this function you would input the

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.abbr_street(
+CREATE OR REPLACE FUNCTION gis.abbr_street(
     _input_street text
 )
 RETURNS text
