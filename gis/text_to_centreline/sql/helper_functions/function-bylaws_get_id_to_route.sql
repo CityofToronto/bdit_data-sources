@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.bylaws_get_id_to_route(
+CREATE OR REPLACE FUNCTION gis.bylaws_get_id_to_route(
     _bylaw_id integer,
     highway text,
     frm text,
@@ -30,7 +30,7 @@ BEGIN
 
 --STEP 1 
     -- clean bylaws text
-    clean_bylaws := gwolofs._clean_bylaws_text(_bylaw_id, highway, frm, t);
+    clean_bylaws := gis._clean_bylaws_text(_bylaw_id, highway, frm, t);
 
 --STEP 2
     -- get centrelines geoms
@@ -45,11 +45,11 @@ BEGIN
         lev_sum2 int
     );
 
-int1_result := gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
+int1_result := gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
 int2_result := (CASE WHEN clean_bylaws.btwn2_orig LIKE '%point%' AND (clean_bylaws.btwn2_check NOT LIKE '% of %' OR clean_bylaws.btwn2_check LIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
-            THEN gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0)
-            ELSE gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
+            THEN gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0)
+            ELSE gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
             END);
 
 INSERT INTO _results(int_start, int_end,

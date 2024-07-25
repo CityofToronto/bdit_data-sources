@@ -1,6 +1,6 @@
-DROP FUNCTION IF EXISTS gwolofs._centreline_case1 (text, text, text, double precision);
+DROP FUNCTION IF EXISTS gis._centreline_case1 (text, text, text, double precision);
 
-CREATE OR REPLACE FUNCTION gwolofs._centreline_case1(
+CREATE OR REPLACE FUNCTION gis._centreline_case1(
     highway2 text,
     btwn2 text,
     direction_btwn2 text,
@@ -63,7 +63,7 @@ WITH get_int AS
         ST_MakeLine(oid_geom, oid_geom_translated) AS new_line, -- line from the intersection point to the translated point
         int_id_found AS int1,
         get_geom.lev_sum
-    FROM gwolofs._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom
+    FROM gis._get_intersection_geom(highway2, btwn2, direction_btwn2, metres_btwn2, 0) get_geom
 ),
 
 get_lines AS (
@@ -242,5 +242,5 @@ EXCEPTION WHEN SQLSTATE 'XX000' THEN
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs._centreline_case1(text, text, text, double precision)
-OWNER TO gwolofs;
+ALTER FUNCTION gis._centreline_case1(text, text, text, double precision)
+OWNER TO gis_admins;

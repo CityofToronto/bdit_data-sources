@@ -1,6 +1,6 @@
-DROP FUNCTION IF EXISTS gwolofs.text_to_centreline;
+DROP FUNCTION IF EXISTS gis.text_to_centreline;
 
-CREATE OR REPLACE FUNCTION gwolofs.text_to_centreline(
+CREATE OR REPLACE FUNCTION gis.text_to_centreline(
     _bylaw_id integer,
     highway text,
     frm text,
@@ -44,7 +44,7 @@ DECLARE
 BEGIN 
 --STEP 1 
     -- clean bylaws text
-    clean_bylaws := gwolofs._clean_bylaws_text(
+    clean_bylaws := gis._clean_bylaws_text(
         _bylaw_id := text_to_centreline._bylaw_id,
         highway := text_to_centreline.highway,
         frm := text_to_centreline.frm,
@@ -79,7 +79,7 @@ BEGIN
         RAISE NOTICE 'Using entire length case.';
         INSERT INTO _results(geo_id, lf_name, objectid, line_geom, fcode, fcode_desc)
         SELECT gel.centreline_id, gel.linear_name_full, gel.objectid, gel.geom, gel.feature_code, gel.feature_code_desc
-        FROM gwolofs._get_entire_length(clean_bylaws.highway2) AS gel;
+        FROM gis._get_entire_length(clean_bylaws.highway2) AS gel;
         --lev_total := NULL
 
     --normal cases
@@ -87,11 +87,11 @@ BEGIN
         THEN
         RAISE NOTICE 'Using normal case.';
 
-        int1_result := gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
+        int1_result := gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
         int2_result := (CASE WHEN clean_bylaws.btwn2_orig ILIKE '%point%' AND (clean_bylaws.btwn2_check NOT ILIKE '% of %' OR clean_bylaws.btwn2_check ILIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
-                    THEN gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0)
-                    ELSE gwolofs._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
+                    THEN gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, 0)
+                    ELSE gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, int1_result.int_id_found)
                     END);
                     
         INSERT INTO _results(int_start, int_end, seq, geo_id, lf_name, line_geom,
@@ -100,7 +100,7 @@ BEGIN
         int1_result.oid_geom AS oid1_geom, int1_result.oid_geom_translated AS oid1_geom_translated,
         int2_result.oid_geom AS oid2_geom, int2_result.oid_geom_translated AS oid2_geom_translated,
         rout.objectid, rout.fcode, rout.fcode_desc
-        FROM gwolofs._get_lines_btwn_interxn(clean_bylaws.highway2, int1_result.int_id_found, int2_result.int_id_found) rout;
+        FROM gis._get_lines_btwn_interxn(clean_bylaws.highway2, int1_result.int_id_found, int2_result.int_id_found) rout;
 
         -- sum of the levenshtein distance of both of the intersections matched
         UPDATE _results SET lev_sum = int1_result.lev_sum + int2_result.lev_sum;
@@ -112,7 +112,7 @@ BEGIN
         INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc, lev_sum)
         SELECT case1.int1, case1.geo_id, case1.lf_name, case1.line_geom, case1.section, 
         case1.oid1_geom, case1.oid1_geom_translated, case1.objectid, case1.fcode, case1.fcode_desc, case1.lev_sum
-        FROM gwolofs._centreline_case1(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
+        FROM gis._centreline_case1(clean_bylaws.highway2, clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2) case1;
     
     --interxns_and_offsets
     ELSE 
@@ -122,7 +122,7 @@ BEGIN
         SELECT case2.int_start, case2.int_end, case2.seq, case2.geo_id, case2.lf_name, case2.line_geom, case2.section, 
         case2.oid1_geom, case2.oid1_geom_translated, case2.oid2_geom, case2.oid2_geom_translated, 
         case2.objectid, case2.fcode, case2.fcode_desc, case2.lev_sum
-        FROM gwolofs._centreline_case2(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1,
+        FROM gis._centreline_case2(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1,
         clean_bylaws.btwn2, clean_bylaws.direction_btwn2, clean_bylaws.metres_btwn2, clean_bylaws.btwn2_orig, clean_bylaws.btwn2_check) case2 ;
 
     END IF;
@@ -168,22 +168,22 @@ EXCEPTION WHEN SQLSTATE 'XX000' THEN
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.text_to_centreline(integer, text, text, text)
-OWNER TO gwolofs;
+ALTER FUNCTION gis.text_to_centreline(integer, text, text, text)
+OWNER TO gis_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.text_to_centreline(
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(
     integer, text, text, text
 ) TO bdit_humans;
 
-GRANT EXECUTE ON FUNCTION gwolofs.text_to_centreline(
+GRANT EXECUTE ON FUNCTION gis.text_to_centreline(
     integer, text, text, text
-) TO gwolofs;
+) TO gis_admins;
 
-REVOKE ALL ON FUNCTION gwolofs.text_to_centreline(
+REVOKE ALL ON FUNCTION gis.text_to_centreline(
     integer, text, text, text
 ) FROM public;
 
-COMMENT ON FUNCTION gwolofs.text_to_centreline(integer, text, text, text)
+COMMENT ON FUNCTION gis.text_to_centreline(integer, text, text, text)
 IS '
 The main function for converting text descriptions of locations where bylaws are in effect to centreline segment geometry
 Check out README in https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/text_to_centreline for more information

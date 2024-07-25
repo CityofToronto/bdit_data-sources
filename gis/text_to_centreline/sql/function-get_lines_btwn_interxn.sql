@@ -1,7 +1,7 @@
 --USING centrelines aka GIS network
-DROP FUNCTION IF EXISTS gwolofs._get_lines_btwn_interxn;
+DROP FUNCTION IF EXISTS gis._get_lines_btwn_interxn;
 
-CREATE OR REPLACE FUNCTION gwolofs._get_lines_btwn_interxn(
+CREATE OR REPLACE FUNCTION gis._get_lines_btwn_interxn(
     _highway2 text,
     _int_start integer,
     _int_end integer
@@ -44,7 +44,7 @@ WITH results AS (
         _int_start::bigint, _int_end::bigint, FALSE
     ) AS dijkstra
 --or do pgr_dijkstra('SELECT id, source::int, target::int, 
-    --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gwolofs.centreline_routing_undirected_lfname'::text, ... )
+    --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::text, ... )
 )
 SELECT
     results._int_start,
