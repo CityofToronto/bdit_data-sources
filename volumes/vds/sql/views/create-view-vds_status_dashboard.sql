@@ -1,5 +1,5 @@
-DROP VIEW ckousin.vds_dashboard_data;
-CREATE OR REPLACE VIEW ckousin.vds_dashboard_data AS
+DROP VIEW vds.vds_dashboard_data;
+CREATE OR REPLACE VIEW vds.vds_dashboard_data AS
 
 WITH last_active AS (
     SELECT
@@ -36,7 +36,7 @@ JOIN last_active AS la USING (detector_id)
 WHERE di.division_id = 2
 ORDER BY di.detector_id, la.last_active DESC;
 
-ALTER TABLE ckousin.vds_dashboard_data OWNER TO ckousin;
+ALTER TABLE vds.vds_dashboard_data OWNER TO ckousin;
 
-GRANT SELECT ON TABLE ckousin.vds_dashboard_data TO bdit_humans;
-GRANT ALL ON TABLE ckousin.vds_dashboard_data TO ckousin;
+GRANT SELECT ON TABLE vds.vds_dashboard_data TO bdit_humans;
+GRANT ALL ON TABLE vds.vds_dashboard_data TO ckousin;
