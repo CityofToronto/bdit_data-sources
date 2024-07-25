@@ -3,7 +3,9 @@
 CREATE TABLE miovision_api.volumes_15min_mvt_unfiltered
 (
     volume_15min_mvt_uid integer NOT NULL
-    DEFAULT nextval('miovision_api.volumes_15min_mvt_unfiltered_volume_15min_mvt_uid_seq'::regclass),
+    DEFAULT nextval(
+        'miovision_api.volumes_15min_mvt_unfiltered_volume_15min_mvt_uid_seq'::regclass
+    ),
     intersection_uid integer,
     datetime_bin timestamp without time zone,
     classification_uid integer,
@@ -23,7 +25,8 @@ WITH (
 ALTER TABLE miovision_api.volumes_15min_mvt_unfiltered OWNER TO miovision_admins;
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min_mvt_unfiltered
 TO bdit_humans WITH GRANT OPTION;
-GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt_unfiltered TO miovision_api_bot;
+GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_mvt_unfiltered
+TO miovision_api_bot;
 
 COMMENT ON TABLE miovision_api.volumes_15min_mvt_unfiltered IS E''
 'NOTE: Refer instead to view volumes_15min_mvt_filtered to exclude anomalous_ranges. '

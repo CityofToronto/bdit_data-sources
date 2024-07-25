@@ -7,12 +7,14 @@ CREATE OR REPLACE VIEW gwolofs.miovision_15min_test_filtered AS (
         v15.movement_uid,
         v15.sum
     FROM gwolofs.miovision_volumes_15min_mvt_unfiltered AS v15
-    JOIN miovision_api.intersection_movements AS im USING (intersection_uid, classification_uid, leg, movement_uid)
+    JOIN miovision_api.intersection_movements USING (
+        intersection_uid, classification_uid, leg, movement_uid
+    )
     --anti join unacceptable_gaps
     LEFT JOIN miovision_api.unacceptable_gaps AS un USING (datetime_bin, intersection_uid)
     --anti join anomalous_ranges
     LEFT JOIN miovision_api.anomalous_ranges AS ar
-        ON (ar.problem_level = ANY (ARRAY['do-not-use'::text, 'questionable'::text]))
+        ON (ar.problem_level = ANY(ARRAY['do-not-use'::text, 'questionable'::text]))
         AND ar.intersection_uid = v15.intersection_uid
         AND (
             ar.classification_uid = v15.classification_uid
