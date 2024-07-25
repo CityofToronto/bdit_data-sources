@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS gis.text_to_centreline;
+
 CREATE OR REPLACE FUNCTION gis.text_to_centreline(
     _bylaw_id integer,
     highway text,
@@ -7,7 +9,7 @@ CREATE OR REPLACE FUNCTION gis.text_to_centreline(
 RETURNS TABLE (
     int1 integer,
     int2 integer,
-    geo_id numeric,
+    geo_id integer,
     lf_name character varying,
     con text,
     note text,
@@ -17,7 +19,7 @@ RETURNS TABLE (
     oid1_geom_translated geometry,
     oid2_geom geometry,
     oid2_geom_translated geometry,
-    objectid numeric,
+    objectid integer,
     fcode integer,
     fcode_desc character varying
 )
@@ -36,13 +38,18 @@ DECLARE
     con text;
     note text;
     text_var1 text;
-      text_var2 text;
-      text_var3 text;
+    text_var2 text;
+    text_var3 text;
 
 BEGIN 
 --STEP 1 
     -- clean bylaws text
-    clean_bylaws := gis._clean_bylaws_text(_bylaw_id, highway, frm, t);
+    clean_bylaws := gis._clean_bylaws_text(
+        _bylaw_id := text_to_centreline._bylaw_id,
+        highway := text_to_centreline.highway,
+        frm := text_to_centreline.frm,
+        t := text_to_centreline.t
+    );
 
 --STEP 2
     -- get centrelines geoms
@@ -50,7 +57,7 @@ BEGIN
         int_start int,
         int_end int,
         seq int,
-        geo_id numeric,
+        geo_id integer,
         lf_name varchar,
         line_geom geometry,
         section NUMRANGE,
@@ -58,7 +65,7 @@ BEGIN
         oid1_geom_translated geometry,
         oid2_geom geometry,
         oid2_geom_translated geometry,
-        objectid numeric,
+        objectid integer,
         fcode int,
         fcode_desc varchar,
         lev_sum int
@@ -69,14 +76,17 @@ BEGIN
     --entire length cases
     IF TRIM(clean_bylaws.btwn1) ILIKE '%entire length%' AND clean_bylaws.btwn2 IS NULL
         THEN
+        RAISE NOTICE 'Using entire length case.';
         INSERT INTO _results(geo_id, lf_name, objectid, line_geom, fcode, fcode_desc)
-        SELECT *
-        FROM gis._get_entire_length(clean_bylaws.highway2) ;
+        SELECT gel.centreline_id, gel.linear_name_full, gel.objectid, gel.geom, gel.feature_code, gel.feature_code_desc
+        FROM gis._get_entire_length(clean_bylaws.highway2) AS gel;
         --lev_total := NULL
 
     --normal cases
     ELSIF COALESCE(clean_bylaws.metres_btwn1, clean_bylaws.metres_btwn2) IS NULL
         THEN
+        RAISE NOTICE 'Using normal case.';
+
         int1_result := gis._get_intersection_geom(clean_bylaws.highway2, clean_bylaws.btwn1, clean_bylaws.direction_btwn1, clean_bylaws.metres_btwn1, 0);
 
         int2_result := (CASE WHEN clean_bylaws.btwn2_orig ILIKE '%point%' AND (clean_bylaws.btwn2_check NOT ILIKE '% of %' OR clean_bylaws.btwn2_check ILIKE ('% of ' || TRIM(clean_bylaws.btwn1)))
@@ -85,7 +95,7 @@ BEGIN
                     END);
                     
         INSERT INTO _results(int_start, int_end, seq, geo_id, lf_name, line_geom,
-        oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid,    fcode, fcode_desc)
+        oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid, fcode, fcode_desc)
         SELECT int_start, int_end, seq, rout.geo_id, rout.lf_name, geom AS line_geom, 
         int1_result.oid_geom AS oid1_geom, int1_result.oid_geom_translated AS oid1_geom_translated,
         int2_result.oid_geom AS oid2_geom, int2_result.oid_geom_translated AS oid2_geom_translated,
@@ -98,6 +108,7 @@ BEGIN
     --interxn_and_offset
     ELSIF clean_bylaws.btwn1 = clean_bylaws.btwn2
         THEN
+        RAISE NOTICE 'Using interxn_and_offset case.';
         INSERT INTO _results(int_start, geo_id, lf_name, line_geom, section, oid1_geom, oid1_geom_translated, objectid, fcode, fcode_desc, lev_sum)
         SELECT case1.int1, case1.geo_id, case1.lf_name, case1.line_geom, case1.section, 
         case1.oid1_geom, case1.oid1_geom_translated, case1.objectid, case1.fcode, case1.fcode_desc, case1.lev_sum
@@ -105,6 +116,7 @@ BEGIN
     
     --interxns_and_offsets
     ELSE 
+        RAISE NOTICE 'Using interxns_and_offsets case.';
         INSERT INTO _results(int_start, int_end, seq, geo_id, lf_name, line_geom, section,
         oid1_geom, oid1_geom_translated, oid2_geom, oid2_geom_translated, objectid, fcode, fcode_desc, lev_sum)
         SELECT case2.int_start, case2.int_end, case2.seq, case2.geo_id, case2.lf_name, case2.line_geom, case2.section, 
@@ -146,7 +158,7 @@ SELECT int_start, int_end, r.geo_id, r.lf_name, con, note,
 r.line_geom, r.section, r.oid1_geom, r.oid1_geom_translated, 
 r.oid2_geom, r.oid2_geom_translated, 
 r.objectid, r.fcode, r.fcode_desc 
-FROM _results r;
+FROM _results AS r;
 
 DROP TABLE _results;
 

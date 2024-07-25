@@ -1,4 +1,4 @@
-DROP FUNCTION gis._centreline_case1 (text, text, text, double precision);
+DROP FUNCTION IF EXISTS gis._centreline_case1 (text, text, text, double precision);
 
 CREATE OR REPLACE FUNCTION gis._centreline_case1(
     highway2 text,
@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION gis._centreline_case1(
 )
 RETURNS TABLE (
     int1 integer,
-    geo_id numeric,
+    geo_id integer,
     lf_name character varying,
     ind_line_geom geometry,
     line_geom geometry,
@@ -17,7 +17,7 @@ RETURNS TABLE (
     combined_section numrange,
     oid1_geom geometry,
     oid1_geom_translated geometry,
-    objectid numeric,
+    objectid integer,
     fcode integer,
     fcode_desc character varying,
     lev_sum integer
@@ -33,21 +33,21 @@ BEGIN
 
 CREATE TEMP TABLE IF NOT EXISTS _wip(
     int1 int, 
-    geo_id numeric, 
+    geo_id integer, 
     lf_name varchar, 
     ind_line_geom geometry,
     line_geom geometry, 
     new_line geometry,
-    section NUMRANGE,
+    section numrange,
     oid1_geom geometry, 
     oid1_geom_translated geometry, 
-    objectid numeric, 
+    objectid integer, 
     fcode int, 
     fcode_desc varchar, 
     lev_sum int, 
     line_geom_cut geometry,
     line_geom_reversed geometry,
-    combined_section NUMRANGE,
+    combined_section numrange,
     whole_centreline geometry
 );
 
@@ -68,11 +68,11 @@ WITH get_int AS
 
 get_lines AS (
     SELECT
-        cl.geo_id,
-        cl.lf_name,
+        cl.centreline_id AS geo_id,
+        cl.linear_name_full AS lf_name,
         cl.objectid,
-        cl.fcode,
-        cl.fcode_desc,
+        cl.feature_code AS fcode,
+        cl.feature_code_desc AS fcode_desc,
         cl.geom,
         get_int.oid1_geom,
         get_int.oid1_geom_translated,
@@ -81,7 +81,7 @@ get_lines AS (
             ST_BUFFER(ST_Transform(get_int.new_line, 2952), 3*metres_btwn2, 'endcap=flat join=round'),
             10
         ) AS dwithin
-    FROM gis.centreline cl, get_int
+    FROM gis_core.centreline_latest AS cl, get_int
     WHERE
         ST_DWithin(
             ST_Transform(cl.geom, 2952), 
