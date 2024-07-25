@@ -90,8 +90,9 @@ def run_api(start_date, end_date, intersection, pull, agg):
         logger.info('Skipping pulling volume data.')
     if agg:
         logger.info('Aggregating data from %s to %s' %(start_date, end_date))
-        intersections = get_intersection_info(conn, intersection)
-        process_data(conn, start_date, end_date, intersections=intersections)
+        with mio_postgres.get_conn() as conn:
+            intersections = get_intersection_info(conn, intersection)
+            process_data(conn, start_date, end_date, intersections=intersections)
     else:
         logger.info('Skipping aggregating and processing volume data')
 
