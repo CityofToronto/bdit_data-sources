@@ -14,25 +14,51 @@ lev_sum int;
 int_id_found int;
 
 BEGIN
-SELECT intersections.objectid, SUM(LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1))), intersections.int_id
+
+WITH intersections AS (
+    SELECT DISTINCT
+        objectid,
+        trim(unnest(string_to_array(intersection_desc::text, '/'::text))) AS street,
+        intersection_id AS int_id,
+        CASE
+            WHEN classification_desc = 'Cul de Sac-Single Level' THEN 1 
+            WHEN classification_desc LIKE 'Pseudo%' THEN 2 
+            WHEN classification_desc = 'Lesser-Single Level' THEN 3
+            ELSE 4
+        END AS priority
+    FROM gis_core.centreline_intersection_point_latest
+    WHERE classification IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
+)
+
+SELECT
+    intersections.objectid,
+    SUM(levenshtein.lev_highway),
+    intersections.int_id
 INTO oid, lev_sum, int_id_found
-FROM
-(gis.centreline_intersection_streets LEFT JOIN gis.centreline_intersection USING(objectid, classifi6, elevatio10)) AS intersections
-
-
-WHERE levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1) < 4 
-AND intersections.int_id  <> not_int_id 
-AND intersections.classifi6 IN ('SEUML','SEUSL', 'CDSSL', 'LSRSL', 'MNRSL')
-
-
-GROUP BY intersections.objectid, intersections.int_id, elevatio10
-ORDER BY AVG (LEAST(levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1)
-, levenshtein(TRIM(intersections.street),  TRIM(btwn), 1, 1, 1))),
-(CASE WHEN elevatio10='Cul de sac' THEN 1 
-WHEN elevatio10='Pseudo' THEN 2 
-WHEN elevatio10='Laneway' THEN 3 ELSE 4 END),
-(SELECT COUNT(*) FROM gis.centreline_intersection_streets WHERE objectid = intersections.objectid)
-
+FROM intersections,
+LATERAL (
+    SELECT
+        levenshtein(TRIM(intersections.street), TRIM(highway2), 1, 1, 1),
+        levenshtein(TRIM(intersections.street), TRIM(btwn), 1, 1, 1)
+) AS levenshtein (lev_highway, lev_btwn)
+WHERE
+    levenshtein.lev_highway < 4 
+    AND intersections.int_id <> not_int_id 
+GROUP BY
+    intersections.objectid,
+    intersections.int_id,
+    priority
+ORDER BY
+    AVG(LEAST(levenshtein.lev_highway, levenshtein.lev_btwn)),
+    intersections.priority,
+    (
+        SELECT COUNT(streets.street)
+        FROM (
+            SELECT DISTINCT UNNEST(string_to_array(intersection_desc::text, '/'::text)) AS street
+            FROM gis_core.centreline_intersection_point_latest
+            WHERE objectid = intersections.objectid
+        ) streets
+    )
 LIMIT 1;
 
 RAISE NOTICE '(highway=btwn) highway2 being matched: %, btwn being matched: %, not_int_id: %, intersection arr: %', highway2, btwn, not_int_id, ARRAY[oid, lev_sum];

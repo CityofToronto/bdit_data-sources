@@ -1,12 +1,12 @@
-DROP FUNCTION gis._get_entire_length (text);
+DROP FUNCTION IF EXISTS gis._get_entire_length (text);
 CREATE OR REPLACE FUNCTION gis._get_entire_length(highway2_before_editing text)
 RETURNS TABLE (
-    geo_id numeric,
-    lf_name varchar,
-    objectid numeric,
-    line_geom geometry,
-    fcode int,
-    fcode_desc varchar
+    centreline_id integer,
+    linear_name_full text,
+    objectid integer,
+    geom geometry,
+    feature_code int,
+    feature_code_desc text
 )
 LANGUAGE 'plpgsql' STRICT STABLE
 AS $BODY$
@@ -16,20 +16,24 @@ AS $BODY$
 DECLARE
 
 highway2 text :=
-    CASE WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%'
-    THEN 'F G Gardiner Xy W'
-    WHEN highway2_before_editing = 'Don Valley Pky'
-    THEN 'Don Valley Parkway'
-    ELSE highway2_before_editing
+    CASE
+        WHEN TRIM(highway2_before_editing) LIKE 'GARDINER EXPRESSWAY%' THEN 'F G Gardiner Xy %'
+        WHEN highway2_before_editing = 'Don Valley Pky' THEN 'Don Valley Parkway %'
+        ELSE highway2_before_editing
     END;
 
 BEGIN
 
 RETURN QUERY
-SELECT centre.geo_id, centre.lf_name, centre.objectid, centre.geom AS line_geom,
-centre.fcode, centre.fcode_desc
-FROM gis.centreline centre
-WHERE centre.lf_name = highway2;
+SELECT
+    cl.centreline_id,
+    cl.linear_name_full,
+    cl.objectid,
+    cl.geom,
+    cl.feature_code,
+    cl.feature_code_desc
+FROM gis_core.centreline_latest AS cl
+WHERE cl.linear_name_full LIKE highway2;
 
 RAISE NOTICE 'Entire segment found for %', highway2_before_editing;
 
@@ -38,4 +42,4 @@ $BODY$;
 
 COMMENT ON FUNCTION gis._get_entire_length(text) IS '
 For bylaws with ''Entire Length'', 
-get all the individual line_geom that constitute the whole road segment from gis.centreline table.';
+get all the individual line_geom that constitute the whole road segment from gis_core.centreline_latest table.';

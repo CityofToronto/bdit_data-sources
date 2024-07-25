@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS gis.bylaws_route_id;
+
 CREATE OR REPLACE FUNCTION gis.bylaws_route_id(
     _bylaw_id integer,
     highway2 text,
@@ -10,9 +12,9 @@ RETURNS TABLE (
     int_end integer,
     line_geom geometry,
     seq integer,
-    geo_id numeric,
+    geo_id integer,
     lf_name character varying,
-    objectid numeric,
+    objectid integer,
     fcode integer, fcode_desc character varying
 )
 

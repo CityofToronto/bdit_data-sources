@@ -1,4 +1,4 @@
-DROP FUNCTION gis._get_intersection_geom (
+DROP FUNCTION IF EXISTS gis._get_intersection_geom (
     text, text, text, double precision, integer
 );
 CREATE OR REPLACE FUNCTION gis._get_intersection_geom(
@@ -30,9 +30,9 @@ lev_sum := int_arr[2];
 
 --needed geom to be in SRID = 2952 for the translation
 oid_geom_test := (
-        SELECT ST_Transform(ST_SetSRID(gis.geom, 4326), 2952)
-        FROM gis.centreline_intersection gis
-        WHERE objectid = oid_int
+        SELECT ST_Transform(ST_SetSRID(cipl.geom, 4326), 2952)
+        FROM gis_core.centreline_intersection_point_latest AS cipl
+        WHERE cipl.objectid = oid_int
         );
 oid_geom_translated := (
         CASE WHEN direction IS NOT NULL OR metres IS NOT NULL
@@ -42,9 +42,9 @@ oid_geom_translated := (
         END
         );
 oid_geom := (
-        SELECT gis.geom 
-        FROM gis.centreline_intersection gis
-        WHERE objectid = oid_int
+        SELECT cipl.geom 
+        FROM gis_core.centreline_intersection_point_latest AS cipl
+        WHERE cipl.objectid = oid_int
         );
 
 RAISE NOTICE '(get_intersection_geom) oid: %, geom: %, geom_translated: %, direction %, metres %, not_int_id: %', 
