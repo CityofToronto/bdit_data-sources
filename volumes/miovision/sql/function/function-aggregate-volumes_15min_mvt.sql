@@ -63,7 +63,7 @@ WITH temp AS (
 ),
 
 aggregate_insert AS (
-    INSERT INTO miovision_api.volumes_15min_mvt(
+    INSERT INTO miovision_api.volumes_15min_mvt_unfiltered(
         intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume
     )
     SELECT DISTINCT ON (
@@ -74,18 +74,9 @@ aggregate_insert AS (
         v.classification_uid,
         v.leg,
         v.movement_uid,
-        CASE
-            --set unacceptable gaps as nulls
-            WHEN un.datetime_bin IS NOT NULL THEN NULL
-            --gap fill with zeros (restricted to certain modes in temp CTE)
-            ELSE v.volume
-        END AS volume
+        v.volume
     FROM temp AS v
     JOIN miovision_api.intersections AS i USING (intersection_uid)
-    --set unacceptable gaps as null
-    LEFT JOIN miovision_api.unacceptable_gaps AS un USING (
-        intersection_uid, datetime_bin
-    )
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
@@ -134,7 +125,7 @@ TO miovision_api_bot;
 
 COMMENT ON FUNCTION miovision_api.aggregate_15_min_mvt(date, date, integer []) 
 IS '''Aggregates valid movements from `miovision_api.volumes` in to
-`miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills
+`miovision_api.volumes_15min_mvt_unfiltered` as 15 minute turning movement counts (TMC) bins and fills
 in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an
 optional intersection array parameter to aggregate only specific intersections. Use
 `clear_15_min_mvt()` to remove existing values before summarizing.''';
