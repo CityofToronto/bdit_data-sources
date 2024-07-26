@@ -18,7 +18,8 @@ IS 'miovision_api.volumes_15min_mvt_filtered, but only including turning movemen
 
 GRANT ALL ON TABLE miovision_api.volumes_15min_tmc TO bdit_humans;
 GRANT ALL ON TABLE miovision_api.volumes_15min_tmc TO bdit_bots;
-GRANT TRIGGER, REFERENCES, SELECT ON TABLE miovision_api.volumes_15min_tmc TO bdit_humans WITH GRANT OPTION;
+GRANT TRIGGER, REFERENCES, SELECT ON TABLE miovision_api.volumes_15min_tmc
+TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE miovision_api.volumes_15min_tmc TO dbadmin;
 GRANT ALL ON TABLE miovision_api.volumes_15min_tmc TO miovision_admins;
 GRANT ALL ON TABLE miovision_api.volumes_15min_tmc TO rds_superuser WITH GRANT OPTION;
