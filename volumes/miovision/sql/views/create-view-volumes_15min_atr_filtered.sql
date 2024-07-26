@@ -1,5 +1,5 @@
-DROP VIEW miovision_api.miovision_15min_atr_filtered;
-CREATE VIEW miovision_api.miovision_15min_atr_filtered AS (
+DROP VIEW miovision_api.volumes_15min_atr_filtered;
+CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
 
     --entries
     SELECT
@@ -40,7 +40,7 @@ CREATE VIEW miovision_api.miovision_15min_atr_filtered AS (
 
 --test: 0.2 s with primary key
 SELECT *
-FROM miovision_api.miovision_15min_atr_filtered
+FROM miovision_api.volumes_15min_atr_filtered
 WHERE
     intersection_uid = 6
     AND classification_uid = 1
@@ -56,7 +56,7 @@ SELECT
     volumes.dir,
     classifications.classification,
     SUM(volumes.volume) AS volume
-FROM miovision_api.miovision_15min_atr_filtered AS volumes
+FROM miovision_api.volumes_15min_atr_filtered AS volumes
 INNER JOIN miovision_api.classifications USING (classification_uid)
 WHERE
     volumes.classification_uid NOT IN (2, 7)
