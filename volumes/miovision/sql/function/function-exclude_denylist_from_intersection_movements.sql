@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION miovision_api.exclude_denylist_from_intersection_movements()
-RETURNS TRIGGER
+RETURNS trigger
 LANGUAGE plpgsql
 AS $BODY$
 
@@ -24,7 +24,8 @@ BEGIN
 END;
 $BODY$;
 
-ALTER FUNCTION miovision_api.exclude_denylist_from_intersection_movements OWNER TO miovision_admins;
+ALTER FUNCTION miovision_api.exclude_denylist_from_intersection_movements
+OWNER TO miovision_admins;
 
 GRANT EXECUTE ON miovision_api.exclude_denylist_from_intersection_movements TO miovision_api_bot;
 
