@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION miovision_api.create_yyyy_volumes_15min_partition(
     base_table text,
-    year_ integer)
+    year_ integer
+)
 RETURNS void
 LANGUAGE 'plpgsql'
 SECURITY DEFINER
@@ -39,8 +40,11 @@ $BODY$;
 
 COMMENT ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) IS
 '''Create a new year partition under the parent table `base_table`. Only to be used for
-miovision_api `volumes_15min_mvt_unfiltered` table.
-Example: `SELECT miovision_api.create_yyyy_volumes_partition(''volumes_15min_mvt_unfiltered'', 2023)`''';
+miovision_api `volumes_15min_mvt_unfiltered` table. Example:
+`SELECT miovision_api.create_yyyy_volumes_partition(''volumes_15min_mvt_unfiltered'', 2023)`''';
 
-ALTER FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer) TO miovision_api_bot;
+ALTER FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer)
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.create_yyyy_volumes_15min_partition(text, integer)
+TO miovision_api_bot;
