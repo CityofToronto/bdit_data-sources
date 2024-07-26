@@ -7,10 +7,6 @@ CREATE OR REPLACE VIEW miovision_api.volumes_15min_mvt_filtered AS (
         v15.movement_uid,
         v15.volume
     FROM miovision_api.volumes_15min_mvt_unfiltered AS v15
-    --only include "common" movements
-    JOIN miovision_api.intersection_movements USING (
-        intersection_uid, classification_uid, leg, movement_uid
-    )
     --anti join unacceptable_gaps
     LEFT JOIN miovision_api.unacceptable_gaps AS un USING (datetime_bin, intersection_uid)
     --anti join anomalous_ranges
