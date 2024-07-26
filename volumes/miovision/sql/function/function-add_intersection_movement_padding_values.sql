@@ -54,7 +54,7 @@ WITH temp AS (
 ),
 
 aggregate_insert AS (
-    INSERT INTO miovision_api.volumes_15min_mvt(
+    INSERT INTO miovision_api.volumes_15min_mvt_unfiltered(
         intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume
     )
     SELECT DISTINCT ON (

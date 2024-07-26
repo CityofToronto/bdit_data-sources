@@ -17,7 +17,7 @@ DECLARE
 BEGIN
 
     WITH aggregate_delete AS (
-        DELETE FROM miovision_api.volumes_15min_mvt
+        DELETE FROM miovision_api.volumes_15min_mvt_unfiltered
         WHERE
             intersection_uid = ANY(target_intersections)
             AND datetime_bin >= start_date
@@ -41,7 +41,7 @@ BEGIN
     SELECT COUNT(*) INTO n_deleted
     FROM aggregate_delete;
 
-    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_15min_mvt.', n_deleted;
+    RAISE NOTICE 'Deleted % rows from miovision_api.volumes_15min_mvt_unfiltered.', n_deleted;
 
 END;
 
@@ -57,5 +57,5 @@ GRANT EXECUTE ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, i
 TO miovision_admins;
 
 COMMENT ON FUNCTION miovision_api.clear_15_min_mvt(timestamp, timestamp, integer [])
-IS '''Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling.
+IS '''Clears data from `miovision_api.volumes_15min_mvt_unfiltered` in order to facilitate re-pulling.
 `intersections` param defaults to all intersections.''';
