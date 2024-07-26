@@ -165,10 +165,10 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
 
 ```mermaid
   erDiagram
-  volumes }|--|| volumes_15min_mvt : "aggregate into 15min TMC bins"
+  volumes }|--|| volumes_15min_mvt_unfiltered : "aggregate into 15min TMC bins"
   volumes 
-  volumes_15min_mvt ||--|{ volumes_15min : "transform into ATR style"
-  volumes_15min_mvt {
+  volumes_15min_mvt_unfiltered ||--|{ volumes_15min_atr_unfiltered : "transform into ATR style (VIEW)"
+  volumes_15min_mvt_unfiltered {
         integer intersection_uid
         integer classification_uid
         date datetime_bin
@@ -178,14 +178,14 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
   volumes }|--|| volumes_daily_unfiltered : "aggregate to daily"
   volumes }|--|| unacceptable_gaps : "identify runs of zeros"
-  unacceptable_gaps }|--|| volumes_15min_mvt : "exclude 15min bins"
+  unacceptable_gaps }|--|| volumes_15min_mvt_unfiltered : "exclude 15min bins"
   unacceptable_gaps {
     integer intersection_uid
     datetime datetime_bin
   }
-  volumes_15min_mvt ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
+  volumes_15min_mvt_unfiltered ||--|{ anomalous_ranges : "identify data anomalies (manual and automated)"
   anomalous_ranges ||--|{ volumes_daily : "exclude"
-  anomalous_ranges ||--|{ volumes_15min_filtered : "exclude"
+  anomalous_ranges ||--|{ volumes_15min_atr_filtered : "exclude"
   anomalous_ranges ||--|{ volumes_15min_mvt_filtered : "exclude"
   anomalous_ranges {
         integer intersection_uid
@@ -194,8 +194,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
-  volumes_15min ||--|{ volumes_15min_filtered : "filtered"
-  volumes_15min_mvt ||--|{ volumes_15min_mvt_filtered : "filtered"
+  volumes_15min_atr_unfiltered ||--|{ volumes_15min_atr_filtered : "filtered"
+  volumes_15min_mvt_unfiltered ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -208,14 +208,14 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         date dt
         integer volume
     }
-  volumes_15min {
+  volumes_15min_atr_unfiltered {
         integer intersection_uid
         integer classification_uid
         date datetime_bin
         text leg
         integer volume
   }
-  volumes_15min_filtered {
+  volumes_15min_atr_filtered {
         integer intersection_uid
         integer classification_uid
         date datetime_bin
