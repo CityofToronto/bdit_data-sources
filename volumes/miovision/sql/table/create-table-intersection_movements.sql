@@ -39,4 +39,4 @@ CREATE TRIGGER miovision_intersection_movements_pad
 AFTER INSERT ON miovision_api.intersection_movements
 REFERENCING NEW TABLE AS new_rows
 FOR EACH STATEMENT
-EXECUTE FUNCTION miovision_api.add_intersection_movement_padding_values();
+EXECUTE FUNCTION miovision_api.fn_add_intersection_movement_padding_values();
