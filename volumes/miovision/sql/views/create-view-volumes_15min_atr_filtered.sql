@@ -38,34 +38,11 @@ CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
         mmm.exit_dir
 );
 
---test: 0.2 s with primary key
-SELECT *
-FROM miovision_api.volumes_15min_atr_filtered
-WHERE
-    intersection_uid = 6
-    AND classification_uid = 1
-    AND datetime_bin = '2024-06-25 12:00:00'
-    AND leg <> LEFT(dir, 1);
+ALTER VIEW miovision_api.volumes_15min_atr_filtered OWNER TO miovision_admins;
 
---DR i0627 test using new view
---41s for original, 1:06 for view (1.3M rows)
-SELECT
-    volumes.intersection_uid,
-    date_trunc('hour', volumes.datetime_bin) AS datetime_bin,
-    volumes.leg,
-    volumes.dir,
-    classifications.classification,
-    SUM(volumes.volume) AS volume
-FROM miovision_api.volumes_15min_atr_filtered AS volumes
-INNER JOIN miovision_api.classifications USING (classification_uid)
-WHERE
-    volumes.classification_uid NOT IN (2, 7)
-    AND volumes.datetime_bin >= '2024-01-01'
-    AND volumes.datetime_bin < '2024-05-22'
-    AND volumes.intersection_uid IN (76, 88, 81, 85, 84, 87, 75, 83, 86, 49, 80, 36)
-GROUP BY
-    volumes.intersection_uid,
-    classifications.classification,
-    date_trunc('hour', volumes.datetime_bin),
-    volumes.leg,
-    volumes.dir;
+COMMENT ON VIEW miovision_api.volumes_15min_atr_filtered IS E''
+'A ATR style transformation of miovision_api.volumes_15min_mvt with anomalous_ranges labeled '
+'''do-not-use'' or ''questionable'' filtered out, unacceptable_gaps anti-joined, 
+and only common (>0.05%) movements (`intersection_movements`) included.';
+
+GRANT SELECT ON TABLE miovision_api.volumes_15min_atr_filtered TO bdit_humans;
