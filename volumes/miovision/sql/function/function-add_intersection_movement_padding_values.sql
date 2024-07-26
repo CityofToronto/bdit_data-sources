@@ -6,6 +6,8 @@ COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
 
+DECLARE n_inserted numeric;
+
 BEGIN
 
 WITH temp AS (
@@ -86,23 +88,29 @@ aggregate_insert AS (
         --select real value instead of padding value if available
         v.volume DESC
     RETURNING intersection_uid, volume_15min_mvt_uid, datetime_bin, classification_uid, leg, movement_uid, volume
+),
+
+updated AS (
+    --To update foreign key for 1min bin table
+    UPDATE miovision_api.volumes AS v
+    SET volume_15min_mvt_uid = a_i.volume_15min_mvt_uid
+    FROM aggregate_insert AS a_i
+    WHERE
+        v.volume_15min_mvt_uid IS NULL
+        AND a_i.volume > 0
+        AND v.intersection_uid = a_i.intersection_uid
+        AND v.datetime_bin >= a_i.datetime_bin
+        AND v.datetime_bin < a_i.datetime_bin + interval '15 minutes'
+        AND v.classification_uid = a_i.classification_uid
+        AND v.leg = a_i.leg
+        AND v.movement_uid = a_i.movement_uid
 )
 
---To update foreign key for 1min bin table
-UPDATE miovision_api.volumes AS v
-SET volume_15min_mvt_uid = a_i.volume_15min_mvt_uid
-FROM aggregate_insert AS a_i
-WHERE
-    v.volume_15min_mvt_uid IS NULL
-    AND a_i.volume > 0
-    AND v.intersection_uid = a_i.intersection_uid
-    AND v.datetime_bin >= a_i.datetime_bin
-    AND v.datetime_bin < a_i.datetime_bin + interval '15 minutes'
-    AND v.classification_uid = a_i.classification_uid
-    AND v.leg = a_i.leg
-    AND v.movement_uid = a_i.movement_uid;
+SELECT COUNT(*) INTO n_inserted
+FROM aggregate_insert;
 
-RAISE NOTICE '% Done adding to 15min MVT bin based on intersection_movement new rows.', timeofday();
+RAISE NOTICE '% Done adding to 15min MVT bin based on intersection_movement new rows. % rows added.', timeofday(), n_inserted;
+RETURN NULL; 
 END;
 
 $BODY$;
