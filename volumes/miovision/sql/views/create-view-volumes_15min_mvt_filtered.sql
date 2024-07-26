@@ -30,8 +30,10 @@ CREATE OR REPLACE VIEW miovision_api.volumes_15min_mvt_filtered AS (
         AND un.datetime_bin IS NULL
 );
 
+ALTER VIEW miovision_api.volumes_15min_mvt_filtered OWNER TO miovision_admins;
+
 COMMENT ON VIEW miovision_api.volumes_15min_mvt_filtered IS E''
-'miovision_api.volumes_15min with anomalous_ranges labeled '
+'TMC style 15-minute Miovision volume view with anomalous_ranges labeled '
 '''do-not-use'' or ''questionable'' filtered out, unacceptable_gaps anti-joined,
 and only common (>0.05%) movements (`intersection_movements`) included.';
 
