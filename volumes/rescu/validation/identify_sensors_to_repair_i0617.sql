@@ -1,12 +1,13 @@
 --this query can be used to identify detectors for repair requests.
-    --recommend opening in qgis and styling based on 'classify'. Look for geographical gaps with bad/inactive sensors. 
-    --designate a set of `time_bins` (ie. current year) to get exact % active bins 
-    --includes inactive sensors that don't have any records during the designated `time_bins`
+--recommend opening in qgis and styling based on 'classify'. Look for geographical gaps with
+--bad/inactive sensors. 
+--designate a set of `time_bins` (ie. current year) to get exact % active bins 
+--includes inactive sensors that don't have any records during the designated `time_bins`
 --runs in 20s for 2023-01--2023-05
 
 DROP TABLE gwolofs.i0617_rescu_sensor_eval;
 
-CREATE TABLE gwolofs.i0617_rescu_sensor_eval(
+CREATE TABLE gwolofs.i0617_rescu_sensor_eval (
     detector_id text,
     number_of_lanes int,
     primary_road text,
@@ -39,7 +40,8 @@ WITH time_bins AS (
     SELECT generate_series(
         '2023-01-01 00:00'::timestamp,
         '2023-05-15 14:30',
-        '15 minutes') AS time_bin
+        '15 minutes'
+    ) AS time_bin
 ),
 
 --exclude network outages from time bins so not to penalize all detectors for network issue. 
@@ -92,9 +94,11 @@ SELECT
     sv.last_active,
     ST_SetSRID(ST_MakePoint(di.longitude, di.latitude), 4326) AS geom,
     CASE
-        WHEN sv.last_active >= '2023-05-15'
+        WHEN
+            sv.last_active >= '2023-05-15'
             AND sv.bins_active_percent >= 0.6 THEN 'good'
-        WHEN sv.last_active < '2023-05-15' --the most recent day with data
+        WHEN
+            sv.last_active < '2023-05-15' --the most recent day with data
             OR sv.bins_active_percent < 0.6 THEN 'bad' --<60% of days have data
     END AS classify
 FROM sensor_volumes AS sv
@@ -117,7 +121,6 @@ SELECT
     ST_SetSRID(ST_MakePoint(di.longitude, di.latitude), 4326) AS geom,
     'inactive' AS classify
 FROM inactive_sensors AS inactive
-LEFT JOIN rescu.detector_inventory AS di ON di.detector_id = inactive.detector_id
+LEFT JOIN rescu.detector_inventory AS di USING (detector_id)
 WHERE di.primary_road NOT LIKE 'RAMP%'
-ORDER BY di.detector_id
-
+ORDER BY di.detector_id;
