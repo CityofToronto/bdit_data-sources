@@ -18,8 +18,9 @@ WITH bin_gaps AS (
         LAG(datetime_15min, 1) OVER sensor + interval '15 minutes' AS gap_start,
         datetime_15min - interval '15 minutes' AS gap_end,
         CASE datetime_15min - LAG(datetime_15min, 1) OVER sensor
-        WHEN '00:15:00' THEN 0
-        ELSE 1 END AS bin_break, --identify non-consecutive bins
+            WHEN '00:15:00' THEN 0
+            ELSE 1
+        END AS bin_break, --identify non-consecutive bins
         datetime_15min - LAG(datetime_15min, 1) OVER sensor AS bin_gap --duration of gap
     FROM vds.counts_15min_div2
     WHERE COALESCE(count_15min, 0) > 0
