@@ -1,4 +1,4 @@
-CREATE VIEW miovision_api.monitor_intersection_movements AS (
+CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
     WITH intersection_movements AS (
         SELECT
             v.intersection_uid,
@@ -7,14 +7,19 @@ CREATE VIEW miovision_api.monitor_intersection_movements AS (
             v.movement_uid,
             im.intersection_uid IS NULL AS is_not_in_intersection_movements,
             SUM(v.volume) AS sum_volume,
-            SUM(SUM(v.volume)) OVER (PARTITION BY v.intersection_uid, v.classification_uid) AS intersection_classification_total
+            SUM(SUM(v.volume)) OVER (PARTITION BY v.intersection_uid, v.classification_uid)
+            AS intersection_classification_total
         FROM miovision_api.volumes AS v
         LEFT JOIN miovision_api.intersection_movements AS im
+            USING (intersection_uid, classification_uid, leg, movement_uid)
+        --anti join intersection_movements_denylist
+        LEFT JOIN miovision_api.intersection_movements_denylist AS im_dl
             USING (intersection_uid, classification_uid, leg, movement_uid)
         WHERE
             v.datetime_bin >= now()::date - interval '100 days'
             AND v.classification_uid IN (1, 2, 6, 10)
             AND NOT(v.classification_uid = 10 AND movement_uid = 8) --bike exit
+            AND im_dl.intersection_uid IS NULL
         GROUP BY
             v.intersection_uid,
             v.classification_uid,
