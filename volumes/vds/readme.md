@@ -17,11 +17,14 @@
     - [vds.entity\_locations](#vdsentity_locations)
     - [`vds.config_comms_device`](#vdsconfig_comms_device)
     - [`vds.centreline_vds`](#vdscentreline_vds)
+    - [`vds.last_active`](#vdslast_active)
   - [Aggregate Tables](#aggregate-tables)
     - [vds.counts\_15min](#vdscounts_15min)
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
     - [vds.veh\_speeds\_15min](#vdsveh_speeds_15min)
     - [vds.veh\_length\_15min](#vdsveh_length_15min)
+    - [vds.individual\_outages](#vdsindividual_outages)
+    - [vds.network\_outages](#vdsnetwork_outages)
   - [Raw Data](#raw-data)
     - [vds.raw\_vdsdata](#vdsraw_vdsdata)
     - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
@@ -385,6 +388,36 @@ Row count: 4,622,437
 | total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
 | uid            | bigint                      | 4866932             | unique id |
 
+### vds.individual_outages
+
+A view of individual sensor outages of at least 30 minutes. Could be used in looking for days without outages of a certain duration, or in identifying unreliable sensors with multiple smaller outages. 
+
+It is recommended to add a where clause using `vdsconfig_uid` to get faster results for a sensor. 
+
+| column_name    | data_type | sample |
+| vdsconfig_uid | integer  | 516 |
+| entity_location_uid | integer  | 10238 |
+| division_id | smallint  | 2  |
+| time_start |  timestamp without time zone    | "2004-02-26 00:15:00" |
+| time_end |  timestamp without time zone    | "2004-02-27 00:00:00" |
+| date_start |  date    | "2004-02-26" |
+| date_end |  date    | "2004-02-27" |
+| time_range |  tsrange    | "[""2004-02-26 00:15:00"",""2004-02-27 00:00:00""]" |
+| date_range |  daterange    | "[2004-02-26,2004-02-28)" |
+| duration_days |  numeric     | 1.0  |
+
+### vds.network_outages
+
+`network_outages` view can be used to identify/elimante dates from a study where all detectors are inactive. Runs in about 20s for entire network. See an example [here](https://github.com/CityofToronto/bdit_data-sources/blob/901087b032a16fa971ba18c84e84d1625be0fece/volumes/rescu/validation/evaluate_rescu_network.ipynb) where this view was used to identify number of days of network wide outages per year. 
+
+| column_name    | data_type | sample | 
+| time_start    |  timestamp without time zone    | "1993-01-11 17:00:00"  |
+| time_end    |  timestamp without time zone    | "1993-01-14 06:45:00"  |
+| date_start    |  date    | 1993-01-11  |
+| date_end    |  date    | 1993-01-14  |
+| time_range    |  tsrange    | ["1993-01-11 17:00:00","1993-01-14 06:45:00"]  |
+| date_range    |  daterange    | [1993-01-11,1993-01-15)  |
+| duration_days    |  numeric     | 2.5729166666666667  |
 
 ## Raw Data
 

@@ -54,8 +54,11 @@ ORDER BY
     bt.division_id,
     bt.gap_start;
 
+ALTER TABLE vds.individual_outages OWNER TO vds_admins;
+
 GRANT SELECT ON TABLE vds.individual_outages TO bdit_humans;
 
-COMMENT ON VIEW vds.individual_outages IS ''
-'A view which identifies individual sensor outages in the VDS network. '
-'Runs in around 1:30 for entire dataset or include a WHERE filter on vdsconfig_uid for speed.';
+COMMENT ON VIEW vds.individual_outages IS 
+'''A view which identifies individual sensor outages in the VDS network.
+Note: does not indclude ongoing outages. See vds.detector_inventory.last_active for that purpose.
+Runs in around 1:30 for entire dataset or include a WHERE filter on vdsconfig_uid for speed.''';
