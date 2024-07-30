@@ -1,17 +1,11 @@
 <!-- TOC -->
 
-- [Bicycle loop detectors](#bicycle-loop-detectors)
-  - [Installation types](#installation-types)
-  - [Ecocounter data](#ecocounter-data)
-    - [Flows - what we know](#flows---what-we-know)
-  - [Discontinuities](#discontinuities)
-  - [Using the Ecocounter API](#using-the-ecocounter-api)
-    - [Note](#note)
-  - [Historical data](#historical-data)
-  - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
-    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
-    - [`data_checks` TaskGroup](#data_checks-taskgroup)
-  - [`ecocounter_check` DAG](#ecocounter_check-dag)
+    - [Discontinuities](#discontinuities)
+    - [Using the Ecocounter API](#using-the-ecocounter-api)
+        - [Note](#note)
+    - [Historical data](#historical-data)
+    - [ecocounter_pull DAG](#ecocounter_pull-dag)
+    - [ecocounter_check DAG](#ecocounter_check-dag)
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
     - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
@@ -26,35 +20,6 @@
     - [`ecocounter.manual_counts_raw`](#ecocountermanual_counts_raw)
 
 <!-- /TOC -->
-
-# Bicycle loop detectors
-
-This dataset comes from a small but growing number of permanent [loop detectors](https://en.wikipedia.org/wiki/Induction_loop) installed within designated bicycle infrastructure such as bike lanes and multi-use paths. This is actually one of our older data collection programs, and the data have been handled in a number of ways over the years and now reside in a couple different places in the `bigdata` database.
-
-Ecocounter is the vendor that manages our current sensor installations. There is a web dashboard at https://www.eco-visio.net that should show all active installations.
-
-## Installation types
-There are two types of sensors, which can be easily distinguished. The single sensor installations, as below simply count the number of bikes that pass over the sensor. These are installed in one-way infrastructure such as a typical bike lane. 
-
-![a single ecocounter sensor installed in a one-way bike lane](./single-sensor.jpg)
-
-Increasingly however newer installations are using a double sensor that can detect the direction of travel as well. In cases like the image below this allows us to measure contra-flow travel within the bike lane. 
-
-![a double sensor installed in a one-way bike lane](./double-sensor.jpg)
-
-Sometimes these paired sensors are themselves installed in pairs, giving four measured flows per site, two per lane. 
-
-![a pair of bidirectional sensors recently installed in a multi-use path](double-double-sensor.jpg)
-
-## Ecocounter data
-
-Data from these sensors is stored in the `ecocounter` schema in three **views**:
-
-* `sites`
-* `flows`
-* `counts`
-
-A **site** is a distinct location, sometimes referring to one and sometimes to two directions of travel on the same path or street. A site is recorded as a point geometry at the centroid of the sensor(s) it represents.
 
 A **flow** (sometimes also referred to as a _channel_) is a direction of travel recorded at a site. A site may have 1, 2, or 4 flows depending on whether one or two sensors are installed and whether they record the two directions of travel separately.
 
@@ -112,25 +77,28 @@ LIMIT 1000;
 ```
 
 <!-- ecocounter_pull_doc_md -->
+
 ## `ecocounter_pull` DAG
 The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
 
-### `check_partitions` TaskGroup
-- `check_annual_partition` checks if execution date is January 1st.  
-- `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
+- `pull_recent_outages` task is similar to `pull_ecocounter` task except it tries to pull data corresponding to zero volume outages within the last 60 days. This was implemented following the finding that some Ecocounters will suddenly backfill missing data due to spotty cellular signal. Max ~2 weeks of backfilling has been observed so the task was conservatively set to look back 60 days. 
 
+- `check_partitions` TaskGroup
+  - `check_annual_partition` checks if execution date is January 1st.  
+  - `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
+  
 - `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`. The new rows contain a flag `validated = null` indicating they still need to be manually validated. A notification is sent with any new additions.  
 - `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts_unfiltered` table. 
 - `done` is an external task marker to trigger the `ecocounter_check` DAG for additional "yellow card" data checks.  
    
-### `data_checks` TaskGroup
-This task group runs data quality checks on the pipeline output.  
-- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
-- `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
-- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
+- `data_checks` TaskGroup: This task group runs data quality checks on the pipeline output.  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
+  - `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
+  - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
 
 <!-- ecocounter_check_doc_md -->
+
 ## `ecocounter_check` DAG
 The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter_pull` to perform additional "yellow card" data checks on the new data.  
 
