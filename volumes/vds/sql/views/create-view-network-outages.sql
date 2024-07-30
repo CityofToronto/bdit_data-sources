@@ -48,6 +48,8 @@ WHERE
     AND bin_gap IS NOT NULL
 ORDER BY gap_start;
 
+ALTER TABLE vds.network_outages OWNER TO vds_admins;
+
 GRANT SELECT ON TABLE vds.network_outages TO bdit_humans;
 
 COMMENT ON VIEW vds.network_outages
