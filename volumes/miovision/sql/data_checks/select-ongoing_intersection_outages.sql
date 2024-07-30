@@ -1,6 +1,6 @@
 WITH ongoing_outages AS (
     SELECT
-        i.intersection_name || ' (uid: ' || i.intersection_uid || ') - data last received: '
+        i.intersection_name || ' (id: ' || i.id || ') - data last received: '
         || MAX(v.datetime_bin::date) || ' (' || '{{ macros.ds_add(ds, 6) }}'::date --noqa: TMP, LT05
         - MAX(v.datetime_bin::date) || ' days)' AS descrip
     FROM miovision_api.volumes AS v
