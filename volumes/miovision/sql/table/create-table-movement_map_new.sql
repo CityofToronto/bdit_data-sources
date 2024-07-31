@@ -1,5 +1,5 @@
-DROP TABLE gwolofs.miovision_movement_map_new;
-CREATE TABLE gwolofs.miovision_movement_map_new AS (
+DROP TABLE miovision_api.miovision_movement_map_new;
+CREATE TABLE miovision_api.miovision_movement_map_new AS (
     SELECT
         entries.movement_uid,
         entries.leg_old AS leg,
@@ -17,8 +17,8 @@ CREATE TABLE gwolofs.miovision_movement_map_new AS (
     WHERE entries.leg_new <> substr(entries.dir, 1, 1) --eg. E leg going West is an entry
 );
 
-ALTER TABLE gwolofs.miovision_movement_map_new
+ALTER TABLE miovision_api.miovision_movement_map_new
 ADD CONSTRAINT movement_map_new_pkey PRIMARY KEY (movement_uid, leg);
 
-COMMENT ON TABLE gwolofs.miovision_movement_map_new
+COMMENT ON TABLE miovision_api.miovision_movement_map_new
 IS 'A more intuitive version of miovision_api.movement_map.';
