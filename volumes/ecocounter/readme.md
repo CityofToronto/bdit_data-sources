@@ -1,11 +1,17 @@
+# Ecocounter <!-- omit in toc -->
+
 <!-- TOC -->
 
-    - [Discontinuities](#discontinuities)
-    - [Using the Ecocounter API](#using-the-ecocounter-api)
-        - [Note](#note)
-    - [Historical data](#historical-data)
-    - [ecocounter_pull DAG](#ecocounter_pull-dag)
-    - [ecocounter_check DAG](#ecocounter_check-dag)
+- [Bicycle loop detectors](#bicycle-loop-detectors)
+  - [Installation types](#installation-types)
+  - [Ecocounter data](#ecocounter-data)
+    - [Flows - what we know](#flows---what-we-know)
+  - [Discontinuities](#discontinuities)
+  - [Using the Ecocounter API](#using-the-ecocounter-api)
+    - [Note](#note)
+  - [Historical data](#historical-data)
+  - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
+  - [`ecocounter_check` DAG](#ecocounter_check-dag)
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
     - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
@@ -20,6 +26,35 @@
     - [`ecocounter.manual_counts_raw`](#ecocountermanual_counts_raw)
 
 <!-- /TOC -->
+
+# Bicycle loop detectors
+
+This dataset comes from a small but growing number of permanent [loop detectors](https://en.wikipedia.org/wiki/Induction_loop) installed within designated bicycle infrastructure such as bike lanes and multi-use paths. This is actually one of our older data collection programs, and the data have been handled in a number of ways over the years and now reside in a couple different places in the `bigdata` database.
+
+Ecocounter is the vendor that manages our current sensor installations. There is a web dashboard at https://www.eco-visio.net that should show all active installations.
+
+## Installation types
+There are two types of sensors, which can be easily distinguished. The single sensor installations, as below simply count the number of bikes that pass over the sensor. These are installed in one-way infrastructure such as a typical bike lane. 
+
+![a single ecocounter sensor installed in a one-way bike lane](./single-sensor.jpg)
+
+Increasingly however newer installations are using a double sensor that can detect the direction of travel as well. In cases like the image below this allows us to measure contra-flow travel within the bike lane. 
+
+![a double sensor installed in a one-way bike lane](./double-sensor.jpg)
+
+Sometimes these paired sensors are themselves installed in pairs, giving four measured flows per site, two per lane. 
+
+![a pair of bidirectional sensors recently installed in a multi-use path](double-double-sensor.jpg)
+
+## Ecocounter data
+
+Data from these sensors is stored in the `ecocounter` schema in three **views**:
+
+* `sites`
+* `flows`
+* `counts`
+
+A **site** is a distinct location, sometimes referring to one and sometimes to two directions of travel on the same path or street. A site is recorded as a point geometry at the centroid of the sensor(s) it represents.
 
 A **flow** (sometimes also referred to as a _channel_) is a direction of travel recorded at a site. A site may have 1, 2, or 4 flows depending on whether one or two sensors are installed and whether they record the two directions of travel separately.
 
