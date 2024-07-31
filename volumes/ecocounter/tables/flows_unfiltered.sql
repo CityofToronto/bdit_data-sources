@@ -11,6 +11,7 @@ CREATE TABLE ecocounter.flows_unfiltered (
     validated boolean,
     first_active timestamp without time zone,
     last_active timestamp without time zone,
+    date_decommissioned timestamp without time zone,
     CONSTRAINT locations_pkey PRIMARY KEY (flow_id),
     CONSTRAINT flows_replaced_by_flow_id_fkey FOREIGN KEY (replaced_by_flow_id)
     REFERENCES ecocounter.flows_unfiltered (flow_id) MATCH SIMPLE
