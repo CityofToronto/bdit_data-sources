@@ -31,34 +31,26 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
     -- clean data
 
     -- when the input was btwn instead of from and to
-    btwn1_v1 text := CASE WHEN t IS NULL THEN
-    gwolofs.abbr_street(
-        regexp_replace(
-            regexp_replace(
-                regexp_replace(
-                    split_part(
-                        split_part(
+    btwn1_cleaned text := regexp_replace(
                             regexp_replace(
                                 regexp_replace(frm,
                                 '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi'),
                                 '\(.*?\)', '', 'gi'),
+                            'A point', '', 'gi');
+    btwn1_v1 text := (CASE WHEN t IS NULL THEN
+    gwolofs.abbr_street(
+            regexp_replace(
+                regexp_replace(
+                    split_part(
+                        split_part(btwn1_cleaned,
                             ' to ', 1),
                         ' and ', 1),
                     '\(.*\)', '', 'gi'),
                 'between ', '', 'gi'),
-            'A point', '', 'gi')
         )
 
-    ELSE
-        gwolofs.abbr_street(
-            regexp_replace
-    (
-        regexp_replace
-    (
-        regexp_replace(frm, '\(.*?\)', '', 'gi')
-    , '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi')
-    , 'A point', '', 'gi'))
-    END;
+    ELSE gwolofs.abbr_street(btwn1_cleaned)
+    END);
 
     -- cases when three roads intersect at once (i.e. btwn1_v1 = Terry Dr/Woolner Ave) ... just take first street
     btwn1 text := (CASE WHEN btwn1_v1 LIKE '%/%'
@@ -68,18 +60,19 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
             END
     );
 
+    btwn2_cleaned text := regexp_replace(
+                            regexp_replace(
+                                regexp_replace(
+                                    COALESCE(t, frm),
+                                    '\(.*?\)', '', 'gi'),
+                                '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
+                            'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi')
     btwn2_orig_v1 text := CASE WHEN t IS NULL THEN (
-        CASE WHEN split_part(
+            CASE WHEN split_part(
                 regexp_replace(frm,  '\(.*?\)', '', 'gi'), ' and ', 2) <> ''
             THEN gwolofs.abbr_street(
                 regexp_replace(
-                    split_part(
-                        regexp_replace(
-                            regexp_replace(
-                                regexp_replace(frm, '\(.*?\)', '', 'gi'),
-                                '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
-                            'the (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi'),
-                        ' and ', 2),
+                    split_part(btwn2_cleaned, ' and ', 2),
             --Delete 'thereof' and some other words
                     'between |(A point)|(thereof)|(the northeast of)', '', 'gi')
             )
@@ -89,12 +82,7 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                 regexp_replace(
                     regexp_replace(
                         split_part(
-                            regexp_replace(
-                                regexp_replace(
-                                    regexp_replace(frm, '\(.*?\)', '', 'gi'),
-                                    '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
-                                'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi'),
-                            ' to ', 2),
+                            btwn2_cleaned, ' to ', 2),
                         'between ', '', 'gi'),
                     'A point', '', 'gi')
                 )
@@ -102,13 +90,7 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
         )
 
             ELSE gwolofs.abbr_street(
-                    regexp_replace(
-                        regexp_replace(
-                            regexp_replace(
-                                regexp_replace(t, '\(.*?\)', '', 'gi'),
-                                '[0123456789.]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
-                            'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi'),
-                        'the northeast of', '', 'gi')
+                    regexp_replace(btwn2_cleaned, 'the northeast of', '', 'gi')
                 )
             END ;
 
@@ -263,19 +245,11 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
         CASE WHEN t IS NULL THEN
                 ( CASE WHEN btwn2_orig LIKE '% m %' OR
                     (
-                        CASE WHEN split_part(frm, ' and ', 2) <> ''
+                        CASE WHEN substring(frm, '(?<= (and)|(to) )[\S\s]+') IS NOT NULL
                         THEN gwolofs.abbr_street(
                             regexp_replace(
                                 regexp_replace(
-                                    split_part(frm, ' and ', 2),
-                                    '\(.*?\)', '', 'gi'),
-                                'between ', '', 'gi')
-                            )
-                        WHEN split_part(frm, ' to ', 2) <> ''
-                        THEN gwolofs.abbr_street(
-                            regexp_replace(
-                                regexp_replace(
-                                    split_part(frm, ' to ', 2),
+                                    substring(frm, '(?<= (and)|(to) )[\S\s]+'),
                                     '\(.*?\)', '', 'gi'),
                                 'between ', '', 'gi')
                             )
@@ -284,30 +258,14 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                 LIKE '% m %'
                 THEN
                 (
-                CASE WHEN split_part(frm, ' and ', 2) <> ''
-                THEN regexp_replace(
-                        regexp_replace(
-                            regexp_replace(
-                                split_part(
-                                    gwolofs.abbr_street(
-                                        regexp_replace(
-                                            regexp_replace(
-                                                split_part(frm, ' and ', 2),
-                                                '\(.*\)', '', 'gi'),
-                                            'between ', '', 'gi')
-                                        ),
-                                    ' m ', 1),
-                                'a point ', '', 'gi'),
-                            'A point', '', 'gi'),
-                        ',', '', 'gi')::float
-                WHEN split_part(frm, ' to ', 2) <> ''
+                CASE WHEN substring(frm, '(?<= (and)|(to) )[\S\s]+') IS NOT NULL
                 THEN regexp_replace(
                         regexp_replace(
                             split_part(
                                 gwolofs.abbr_street(
                                     regexp_replace(
                                         regexp_replace(
-                                            split_part(frm, ' to ', 2),
+                                            substring(frm, '(?<= (and)|(to) )[\S\s]+'),
                                             '\(.*\)', '', 'gi'),
                                         'between ', '', 'gi')
                                     ),
@@ -319,20 +277,19 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                 ELSE NULL
                 END )
 
-                ELSE
-                (
-                CASE WHEN btwn2_orig LIKE '% m %'
-                OR gwolofs.abbr_street(t) LIKE '% m %'
-                THEN
-                regexp_replace(
+                ELSE (
+                    CASE WHEN btwn2_orig LIKE '% m %'
+                    OR gwolofs.abbr_street(t) LIKE '% m %'
+                    THEN
                     regexp_replace(
-                            split_part(
-                                gwolofs.abbr_street(t),
-                                ' m ', 1),
-                            'a point\s{0,1}', '', 'gi'),
-                    ',', '', 'gi')::float
-                ELSE NULL
-                END
+                        regexp_replace(
+                                split_part(
+                                    gwolofs.abbr_street(t),
+                                    ' m ', 1),
+                                'a point\s{0,1}', '', 'gi'),
+                        ',', '', 'gi')::float
+                    ELSE NULL
+                    END
                 )
                 END)::float;
 
@@ -343,24 +300,15 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
     -- we need to be able to differentiate the two cases
     -- the difference between the two is that one of the cases has a 'of' to describe the second road that intersects with "street"/"highway2"
     btwn2_check text := CASE WHEN t IS NULL THEN
-            (CASE WHEN split_part(frm, ' and ', 2) <> ''
+            (CASE WHEN substring(frm, '(?<= (and)|(to) )[\S\s]+') IS NOT NULL
             THEN gwolofs.abbr_street(
                     regexp_replace(
                         regexp_replace(
-                            split_part(frm, ' and ', 2),
+                            substring(frm, '(?<= (and)|(to) )[\S\s]+'),
                             'between ', '', 'gi'),
                         'A point', '', 'gi')
                         )
-            WHEN split_part(frm, ' to ', 2) <> ''
-            THEN gwolofs.abbr_street(
-                regexp_replace(
-                    regexp_replace(
-                        split_part(frm, ' to ', 2),
-                        'between ', '', 'gi'),
-                    'A point', '', 'gi')
-                )
             END)
-
             ELSE gwolofs.abbr_street(t)
             END ;
 
