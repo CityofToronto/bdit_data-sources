@@ -27,7 +27,7 @@ CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
         v15.classification_uid,
         mmm.exit_leg,
         mmm.exit_dir,
-        SUM(v15.volume)
+        SUM(v15.volume) AS volume
     FROM miovision_api.volumes_15min_mvt_filtered AS v15
     JOIN miovision_api.miovision_movement_map_new AS mmm USING (movement_uid, leg)
     GROUP BY
