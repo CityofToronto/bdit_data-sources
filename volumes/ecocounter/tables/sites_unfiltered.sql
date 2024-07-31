@@ -9,6 +9,7 @@ CREATE TABLE ecocounter.sites_unfiltered (
     centreline_id integer,
     first_active timestamp without time zone,
     last_active timestamp without time zone,
+    date_decommissioned timestamp without time zone,
     CONSTRAINT sites_pkey PRIMARY KEY (site_id),
     CONSTRAINT sites_replaced_by_fkey FOREIGN KEY (replaced_by_site_id)
     REFERENCES ecocounter.sites_unfiltered (site_id) MATCH SIMPLE

@@ -8,7 +8,8 @@ CREATE OR REPLACE VIEW ecocounter.sites AS (
         replaced_by_site_id,
         centreline_id,
         first_active,
-        last_active
+        last_active,
+        date_decommissioned
     FROM ecocounter.sites_unfiltered
     WHERE validated
 );
