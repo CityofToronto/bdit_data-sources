@@ -1,5 +1,5 @@
 --First create a table
-CREATE TABLE IF NOT EXISTS gwolofs.cleaned_bylaws_text (
+CREATE TABLE IF NOT EXISTS gis.cleaned_bylaws_text (
     bylaw_id int,
     highway2 text,
     btwn1 text,
@@ -13,18 +13,18 @@ CREATE TABLE IF NOT EXISTS gwolofs.cleaned_bylaws_text (
 );
 
 --Then, create a function 
-DROP FUNCTION IF EXISTS gwolofs._clean_bylaws_text (int, text, text, text);
-CREATE OR REPLACE FUNCTION gwolofs._clean_bylaws_text(
+DROP FUNCTION IF EXISTS gis._clean_bylaws_text (int, text, text, text);
+CREATE OR REPLACE FUNCTION gis._clean_bylaws_text(
     _bylaw_id int, highway text, frm text, t text
 )
-RETURNS gwolofs.cleaned_bylaws_text
+RETURNS gis.cleaned_bylaws_text
 LANGUAGE 'plpgsql'
 AS $$
 
 DECLARE
-    highway text := gwolofs.custom_case(_clean_bylaws_text.highway);
-    frm text := gwolofs.custom_case(_clean_bylaws_text.frm);
-    t text := gwolofs.custom_case(_clean_bylaws_text.t);
+    highway text := gis.custom_case(_clean_bylaws_text.highway);
+    frm text := gis.custom_case(_clean_bylaws_text.frm);
+    t text := gis.custom_case(_clean_bylaws_text.t);
 
 --STEP 1
     -- clean data
@@ -38,7 +38,7 @@ DECLARE
                             'A point', '', 'gi');
                             
     btwn1_v1 text := CASE
-            WHEN t IS NULL THEN gwolofs.abbr_street(
+            WHEN t IS NULL THEN gis.abbr_street(
                 regexp_replace(
                     regexp_replace(
                         split_part(
@@ -48,7 +48,7 @@ DECLARE
                         '\(.*\)', '', 'gi'),
                     'between ', '', 'gi')
             )
-            ELSE gwolofs.abbr_street(btwn1_cleaned)
+            ELSE gis.abbr_street(btwn1_cleaned)
         END;
 
     -- cases when three roads intersect at once (i.e. btwn1_v1 = Terry Dr/Woolner Ave) ... just take first street
@@ -70,7 +70,7 @@ DECLARE
         WHEN t IS NULL THEN (
             CASE WHEN split_part(
                 regexp_replace(frm,  '\(.*?\)', '', 'gi'), ' and ', 2) <> ''
-            THEN gwolofs.abbr_street(
+            THEN gis.abbr_street(
                 regexp_replace(
                     split_part(btwn2_cleaned, ' and ', 2),
             --Delete 'thereof' and some other words
@@ -78,7 +78,7 @@ DECLARE
             )
 
             WHEN split_part(frm, ' to ', 2) <> ''
-            THEN gwolofs.abbr_street(
+            THEN gis.abbr_street(
                 regexp_replace(
                     regexp_replace(
                         split_part(
@@ -88,7 +88,7 @@ DECLARE
                 )
             END
         )
-        ELSE gwolofs.abbr_street(
+        ELSE gis.abbr_street(
                 regexp_replace(btwn2_cleaned, 'the northeast of', '', 'gi')
             )
         END;
@@ -101,13 +101,13 @@ DECLARE
             ELSE btwn2_orig_v1
         END;
 
-    highway2 text := gwolofs.abbr_street(highway);
+    highway2 text := gis.abbr_street(highway);
 
     direction_btwn1 text := CASE WHEN t IS NULL THEN
                 (
                 CASE
                     WHEN btwn1 LIKE '% m %'
-                    OR gwolofs.abbr_street(
+                    OR gis.abbr_street(
                         regexp_replace(
                             split_part(
                                 split_part(frm, ' to ', 1),
@@ -116,7 +116,7 @@ DECLARE
                         ) LIKE '% m %'
                     THEN split_part(
                         split_part(
-                            gwolofs.abbr_street(
+                            gis.abbr_street(
                                 regexp_replace(
                                         regexp_replace(
                                             split_part(
@@ -133,12 +133,12 @@ DECLARE
                 ELSE (
                     CASE
                         WHEN btwn1 LIKE '% m %'
-                            OR gwolofs.abbr_street(frm) LIKE '% m %'
+                            OR gis.abbr_street(frm) LIKE '% m %'
                         THEN regexp_replace(
                             regexp_replace(
                                 split_part(
                                     split_part(
-                                        gwolofs.abbr_street(frm),
+                                        gis.abbr_street(frm),
                                         ' m ', 2),
                                     ' of ', 1),
                                 'further ', '', 'gi'),
@@ -149,14 +149,14 @@ DECLARE
                 END;
 
     frm_part_1 text := substring(frm, '(?<= (from)|(and) )[\S\s]+');
-    frm_part_2 text := substring\(frm, '(?<= (and)|(to) )[\S\s]+');
+    frm_part_2 text := substring(frm, '(?<= (and)|(to) )[\S\s]+');
 
     direction_btwn2 text := CASE
         WHEN t IS NULL THEN (
                 CASE WHEN btwn2_orig LIKE '% m %'
                 OR (
                     CASE WHEN frm_part_1 IS NOT NULL
-                    THEN gwolofs.abbr_street(
+                    THEN gis.abbr_street(
                         regexp_replace(
                             frm_part_1,
                             'between ', '', 'gi')
@@ -171,7 +171,7 @@ DECLARE
                             regexp_replace(
                                 split_part(
                                     split_part(
-                                        gwolofs.abbr_street(
+                                        gis.abbr_street(
                                             regexp_replace(
                                                 frm_part_1,
                                                 'between ', '', 'gi')
@@ -187,13 +187,13 @@ DECLARE
                 ELSE (
                     CASE
                         WHEN btwn2_orig LIKE '% m %'
-                        OR gwolofs.abbr_street(t) LIKE '% m %'
+                        OR gis.abbr_street(t) LIKE '% m %'
                         THEN
                         regexp_replace(
                             regexp_replace(
                                 split_part(
                                     split_part(
-                                        gwolofs.abbr_street(t),
+                                        gis.abbr_street(t),
                                         ' m ', 2),
                                     ' of ', 1),
                                 'further ', '', 'gi'),
@@ -207,7 +207,7 @@ DECLARE
     metres_btwn1 float := (CASE WHEN t IS NULL THEN (
                 CASE WHEN
                     btwn1 LIKE '% m %' 
-                    OR gwolofs.abbr_street(
+                    OR gis.abbr_street(
                         regexp_replace(
                             split_part(
                                 split_part(frm, ' to ', 1),
@@ -217,7 +217,7 @@ DECLARE
                     THEN regexp_replace(
                         regexp_replace(
                                 split_part(
-                                    gwolofs.abbr_street(
+                                    gis.abbr_street(
                                         regexp_replace(
                                             split_part(
                                                 split_part(frm, ' to ', 1), ' and ', 1),
@@ -230,10 +230,10 @@ DECLARE
                 )
                 ELSE (
                     CASE WHEN btwn1 LIKE '% m %'
-                    OR gwolofs.abbr_street(frm) LIKE '% m %'
+                    OR gis.abbr_street(frm) LIKE '% m %'
                     THEN regexp_replace(
                             regexp_replace(
-                                split_part(gwolofs.abbr_street(frm), ' m ' ,1),
+                                split_part(gis.abbr_street(frm), ' m ' ,1),
                                 'a point\s{0,1}', '', 'gi'),
                         ',', 'gi')::float
                     ELSE NULL
@@ -246,7 +246,7 @@ DECLARE
                 ( CASE WHEN btwn2_orig LIKE '% m %' OR
                     (
                         CASE WHEN frm_part_2 IS NOT NULL
-                        THEN gwolofs.abbr_street(
+                        THEN gis.abbr_street(
                             regexp_replace(
                                 regexp_replace(
                                     frm_part_2,
@@ -263,7 +263,7 @@ DECLARE
                     THEN regexp_replace(
                             regexp_replace(
                                 split_part(
-                                    gwolofs.abbr_street(
+                                    gis.abbr_street(
                                         regexp_replace(
                                             regexp_replace(
                                                 frm_part_2,
@@ -280,12 +280,12 @@ DECLARE
 
                 ELSE (
                     CASE WHEN btwn2_orig LIKE '% m %'
-                    OR gwolofs.abbr_street(t) LIKE '% m %'
+                    OR gis.abbr_street(t) LIKE '% m %'
                     THEN
                     regexp_replace(
                         regexp_replace(
                                 split_part(
-                                    gwolofs.abbr_street(t),
+                                    gis.abbr_street(t),
                                     ' m ', 1),
                                 'a point\s{0,1}', '', 'gi'),
                         ',', '', 'gi')::float
@@ -305,7 +305,7 @@ DECLARE
             THEN (
                 CASE
                     WHEN frm_part_2 IS NOT NULL
-                    THEN gwolofs.abbr_street(
+                    THEN gis.abbr_street(
                         regexp_replace(
                             regexp_replace(
                                 frm_part_2,
@@ -313,7 +313,7 @@ DECLARE
                             'A point', '', 'gi')
                         )
                 END)
-            ELSE gwolofs.abbr_street(t)
+            ELSE gis.abbr_street(t)
         END;
 
     btwn2 text := CASE
@@ -322,8 +322,8 @@ DECLARE
         -- for case one
         -- i.e. Watson road from St. Mark's Road to a point 100 metres north
         -- we want the btwn2 to be St. Mark's Road (which is also btwn1)
-        THEN TRIM(gwolofs.abbr_street(btwn1))
-        ELSE TRIM(gwolofs.abbr_street(
+        THEN TRIM(gis.abbr_street(btwn1))
+        ELSE TRIM(gis.abbr_street(
             regexp_replace(btwn2_orig , 'a point', '', 'gi')))
     END;
 
@@ -332,7 +332,7 @@ RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, 
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 RETURN ROW(_bylaw_id, highway2, btwn1, direction_btwn1, metres_btwn1, btwn2, direction_btwn2, metres_btwn2,
-btwn2_orig, btwn2_check)::gwolofs.cleaned_bylaws_text;
+btwn2_orig, btwn2_check)::gis.cleaned_bylaws_text;
 
 END;
 $$;
@@ -340,9 +340,9 @@ $$;
 --For testing purposes only
 DO $$
 DECLARE
- return_test gwolofs.cleaned_bylaws_text; --the table
+ return_test gis.cleaned_bylaws_text; --the table
 BEGIN
- return_test := gwolofs._clean_bylaws_text(123::int, 'Chesham Drive'::text, 'The west end of Chesham Drive and Heathrow Drive'::text, NULL::text); --the function
+ return_test := gis._clean_bylaws_text(123::int, 'Chesham Drive'::text, 'The west end of Chesham Drive and Heathrow Drive'::text, NULL::text); --the function
  RAISE NOTICE 'Testing 123';
 END;
 $$ LANGUAGE 'plpgsql';
