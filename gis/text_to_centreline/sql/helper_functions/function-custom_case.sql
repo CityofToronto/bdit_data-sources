@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.custom_case(
+CREATE OR REPLACE FUNCTION gis.custom_case(
     txt text
 )
 RETURNS text
@@ -23,3 +23,6 @@ txt := regexp_REPLACE(txt, ' The ', ' the ');
 RETURN txt;
 END;
 $BODY$;
+
+COMMENT ON FUNCTION gis.custom_case(text)
+IS 'Initcap plus some select lowercasing to fit the quirks of gis.text_to_centreline.';
