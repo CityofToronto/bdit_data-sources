@@ -37,6 +37,7 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                                 '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi'),
                                 '\(.*?\)', '', 'gi'),
                             'A point', '', 'gi');
+                            
     btwn1_v1 text := (CASE WHEN t IS NULL THEN
     gwolofs.abbr_street(
             regexp_replace(
@@ -66,7 +67,8 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                                     COALESCE(t, frm),
                                     '\(.*?\)', '', 'gi'),
                                 '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
-                            'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi')
+                            'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi');
+
     btwn2_orig_v1 text := CASE WHEN t IS NULL THEN (
             CASE WHEN split_part(
                 regexp_replace(frm,  '\(.*?\)', '', 'gi'), ' and ', 2) <> ''
@@ -74,7 +76,7 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                 regexp_replace(
                     split_part(btwn2_cleaned, ' and ', 2),
             --Delete 'thereof' and some other words
-                    'between |(A point)|(thereof)|(the northeast of)', '', 'gi')
+                    'between |(A point)|(thereof)|(the northeast of)', '', 'g')
             )
 
             WHEN split_part(frm, ' to ', 2) <> ''
@@ -84,7 +86,7 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                         split_part(
                             btwn2_cleaned, ' to ', 2),
                         'between ', '', 'gi'),
-                    'A point', '', 'gi')
+                    'A point', '', 'g')
                 )
             END
         )
@@ -258,20 +260,21 @@ t text := gwolofs.custom_case(_clean_bylaws_text.t);
                 LIKE '% m %'
                 THEN
                 (
-                CASE WHEN substring(frm, '(?<= (and)|(to) )[\S\s]+') IS NOT NULL
-                THEN regexp_replace(
-                        regexp_replace(
-                            split_part(
-                                gwolofs.abbr_street(
-                                    regexp_replace(
+                CASE
+                    WHEN substring(frm, '(?<= (and)|(to) )[\S\s]+') IS NOT NULL
+                    THEN regexp_replace(
+                            regexp_replace(
+                                split_part(
+                                    gwolofs.abbr_street(
                                         regexp_replace(
-                                            substring(frm, '(?<= (and)|(to) )[\S\s]+'),
-                                            '\(.*\)', '', 'gi'),
-                                        'between ', '', 'gi')
-                                    ),
-                                ' m ', 1),
-                            'a point\s{0,1}', '', 'gi'),
-                        ',', '', 'gi')::float
+                                            regexp_replace(
+                                                substring(frm, '(?<= (and)|(to) )[\S\s]+'),
+                                                '\(.*\)', '', 'gi'),
+                                            'between ', '', 'gi')
+                                        ),
+                                    ' m ', 1),
+                                'a point\s{0,1}', '', 'gi'),
+                            ',', '', 'gi')::float
                 END
                 )
                 ELSE NULL
@@ -329,7 +332,7 @@ RAISE NOTICE 'btwn1: %, btwn2: %, btwn2_check: %, highway2: %, metres_btwn1: %, 
 btwn1, btwn2, btwn2_check, highway2, metres_btwn1, metres_btwn2, direction_btwn1, direction_btwn2;
 
 RETURN ROW(_bylaw_id, highway2, btwn1, direction_btwn1, metres_btwn1, btwn2, direction_btwn2, metres_btwn2,
-btwn2_orig, btwn2_check)::gwolofs.cleaned_bylaws_text ;
+btwn2_orig, btwn2_check)::gwolofs.cleaned_bylaws_text;
 
 END;
 $$;
