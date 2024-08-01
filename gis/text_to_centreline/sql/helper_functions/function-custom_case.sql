@@ -10,16 +10,17 @@ AS $BODY$
 DECLARE
     txt text := initcap(custom_case.txt);
 BEGIN
-txt := regexp_REPLACE(txt, 'From ', 'from ');
-txt := regexp_REPLACE(txt, 'To ', 'to ');
-txt := regexp_REPLACE(txt, ' A ', ' a '); --not at the beginning, ie. "A point west of"
-txt := regexp_REPLACE(txt, 'And ', 'and ');
-txt := regexp_REPLACE(txt, 'Of ', 'of ');
-txt := regexp_REPLACE(txt, ' M ', ' m ');
-txt := regexp_REPLACE(txt, ' Point ', ' point ');
-txt := regexp_REPLACE(txt, ' Between ', ' between ');
-txt := regexp_REPLACE(txt, ' Thereof ', ' thereof ');
-txt := regexp_REPLACE(txt, ' The ', ' the ');
+txt := regexp_REPLACE(txt, 'From ', 'from ', 'g');
+txt := regexp_REPLACE(txt, 'To ', 'to ', 'g');
+txt := regexp_REPLACE(txt, ' A ', ' a ', 'g'); --not at the beginning, ie. "A point west of"
+txt := regexp_REPLACE(txt, 'And ', 'and ', 'g');
+txt := regexp_REPLACE(txt, 'Of ', 'of ', 'g');
+txt := regexp_REPLACE(txt, ' Metres ', ' m ', 'g');
+txt := regexp_REPLACE(txt, ' M ', ' m ', 'g');
+txt := regexp_REPLACE(txt, ' Point ', ' point ', 'g');
+txt := regexp_REPLACE(txt, ' Between ', ' between ', 'g');
+txt := regexp_REPLACE(txt, ' Thereof ', ' thereof ', 'g');
+txt := regexp_REPLACE(txt, ' The ', ' the ', 'g');
 RETURN txt;
 END;
 $BODY$;
