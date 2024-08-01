@@ -33,7 +33,7 @@ DECLARE
     btwn1_cleaned text := regexp_replace(
                             regexp_replace(
                                 regexp_replace(frm,
-                                '[0123456789.,]* metres (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi'),
+                                '[0123456789.,]* m (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi'),
                                 '\(.*?\)', '', 'gi'),
                             'A point', '', 'gi');
                             
@@ -63,7 +63,7 @@ DECLARE
                                 regexp_replace(
                                     COALESCE(t, frm),
                                     '\(.*?\)', '', 'gi'),
-                                '[0123456789.,]* metres (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
+                                '[0123456789.,]* m (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
                             'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi');
 
     btwn2_orig_v1 text := CASE
