@@ -16,10 +16,10 @@ txt := regexp_REPLACE(txt, ' A ', ' a '); --not at the beginning, ie. "A point w
 txt := regexp_REPLACE(txt, 'And ', 'and ');
 txt := regexp_REPLACE(txt, 'Of ', 'of ');
 txt := regexp_REPLACE(txt, ' M ', ' m ');
+txt := regexp_REPLACE(txt, ' Point ', ' point ');
+txt := regexp_REPLACE(txt, ' Between ', ' between ');
+txt := regexp_REPLACE(txt, ' Thereof ', ' thereof ');
+txt := regexp_REPLACE(txt, ' The ', ' the ');
 RETURN txt;
 END;
 $BODY$;
-
-COMMENT ON FUNCTION gwolofs.custom_case(txt)
-IS 'Transform text input to proper capitalization: initcap for street names +
-lower case for separators.';
