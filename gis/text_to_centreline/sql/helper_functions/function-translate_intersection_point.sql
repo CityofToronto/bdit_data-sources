@@ -4,23 +4,24 @@ CREATE OR REPLACE FUNCTION gis._translate_intersection_point(
 )
 RETURNS geometry AS $translated_geom$
 DECLARE
+direction text := trim(lower(_translate_intersection_point.direction));
 translated_geom text := (
     CASE
-        WHEN regexp_instr(trim(lower(direction)), '(?<!\S)(w|west)(?!\S)') = 1
+        WHEN regexp_instr(direction, '(?<!\S)(w|west)(?!\S)') = 1
         THEN ST_Translate(oid_geom, -metres, 0)
-        WHEN regexp_instr(trim(lower(direction)), '(?<!\S)(e|east)(?!\S)') = 1
+        WHEN regexp_instr(direction, '(?<!\S)(e|east)(?!\S)') = 1
         THEN ST_Translate(oid_geom, metres, 0)
-        WHEN regexp_instr(trim(lower(direction)), '(?<!\S)(n|north)(?!\S)') = 1
+        WHEN regexp_instr(direction, '(?<!\S)(n|north)(?!\S)') = 1
         THEN ST_Translate(oid_geom, 0, metres)
-        WHEN regexp_instr(trim(lower(direction)), '(?<!\S)(s|south)(?!\S)') = 1
+        WHEN regexp_instr(direction, '(?<!\S)(s|south)(?!\S)') = 1
         THEN ST_Translate(oid_geom, 0, -metres)
-        WHEN lower(regexp_replace(direction, '\s', '')) = 'southwest'
+        WHEN direction = 'southwest'
         THEN ST_Translate(oid_geom, -cos(45)*metres, -sin(45)*metres)
-        WHEN lower(regexp_replace(direction, '\s', '')) = 'southeast'
+        WHEN direction = 'southeast'
         THEN ST_Translate(oid_geom, cos(45)*metres, -sin(45)*metres)
-        WHEN lower(regexp_replace(direction, '\s', '')) = 'northwest'
+        WHEN direction = 'northwest'
         THEN ST_Translate(oid_geom, -cos(45)*metres, sin(45)*metres)
-        WHEN lower(regexp_replace(direction, '\s', '')) = 'northeast'
+        WHEN direction = 'northeast'
         THEN ST_Translate(oid_geom, cos(45)*metres, sin(45)*metres)
     END
 );
