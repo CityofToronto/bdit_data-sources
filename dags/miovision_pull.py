@@ -26,7 +26,7 @@ try:
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
-        pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+        run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
     )
     from volumes.miovision.api.pull_alert import run_alerts_api
@@ -103,16 +103,13 @@ def pull_miovision_dag():
         else:
             INTERSECTION = tuple(context["params"]["intersection"])
         
-        CONFIG = configparser.ConfigParser()
-        CONFIG.read(API_CONFIG_PATH)
-        api_key=CONFIG['API']
-        key=api_key['key']
-        start_time = dateutil.parser.parse(str(ds))
-        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
-        mio_postgres = PostgresHook("miovision_api_bot")
-
-        with mio_postgres.get_conn() as conn:
-            pull_data(conn, start_time, end_time, INTERSECTION, key)
+        run_api(
+            start_date=ds,
+            end_date=ds_add(ds, 1),
+            intersection=INTERSECTION,
+            pull=True,
+            agg=False
+        )
 
     @task(trigger_rule='none_failed', retries = 1)
     def pull_alerts(ds):
