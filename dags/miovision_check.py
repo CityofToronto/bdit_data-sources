@@ -76,7 +76,7 @@ def miovision_check_dag():
     check_distinct_intersection_uid.doc_md = '''
     Identify intersections which appeared within the lookback period that did not appear today.
     '''
-  
+
     check_open_anomalous_ranges = SQLCheckOperatorWithReturnValue(
         task_id="check_open_anomalous_ranges",
         sql="select-open_issues.sql",
@@ -86,9 +86,19 @@ def miovision_check_dag():
     Identify open ended gaps that have non-zero volumes in the last week and notify DAG owners so ranges don't get stale.
     '''
 
+    check_monitor_intersection_movements = SQLCheckOperatorWithReturnValue(
+        task_id="check_monitor_intersection_movements",
+        sql="select-monitor_intersection_movements.sql",
+        conn_id="miovision_api_bot"
+    )
+    check_monitor_intersection_movements.doc_md = '''
+    Identify high volume movements missing from intersection_movements table and notify.
+    '''
+
     t_upstream_done >> [
         check_distinct_intersection_uid,
-        check_open_anomalous_ranges
+        check_open_anomalous_ranges,
+        check_monitor_intersection_movements
     ]
 
 miovision_check_dag()
