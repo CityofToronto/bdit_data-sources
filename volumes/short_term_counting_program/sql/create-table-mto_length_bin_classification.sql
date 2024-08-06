@@ -23,7 +23,8 @@ INSERT INTO traffic.mto_length_bin_classification (length_range, class_desc)
 );
 
 COMMENT ON TABLE traffic.mto_length_bin_classification
-IS 'MTO 6 length bin classification guide.';
+IS 'MTO 6 length bin classification guide. Used to summarize vehicle lengths observed
+by VDS (RESCU) sensors in `vds.veh_lengths_15min`.';
 
 ALTER TABLE traffic.mto_length_bin_classification OWNER TO traffic_admins;
 GRANT SELECT ON TABLE traffic.mto_length_bin_classification TO bdit_humans;
