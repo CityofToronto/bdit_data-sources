@@ -138,7 +138,7 @@ Here is a description of the movement_uids and corresponding types:
 4|U-Turn|Vehicle went back from whence it came - usually excluded from counts|
 5|Clockwise|Pedestrian (or bike in crosswalk) proceeded clockwise around the intersection (a pedestrian on the north leg going clockwise would be heading eastbound)|
 6|Counter Clockwise|Pedestrian (or bike in crosswalk) proceeded counter clockwise around the intersection (a pedestrian on the north leg going counter clockwise would be heading westbound)|
-7|Bicycle Entrance|Used to determine where bicycles entered the intersection|
+7|Bicycle Entrance|Used to determine where bicycles entered the intersection. Although typically only used for bicycles, [special detection zones set up to monitor TTC right-of-way intrusion](https://github.com/CityofToronto/bdit_data-sources/issues/960) also used movement_uid = 7. |
 8|Bicycle Exit|Used to determine where bicycles exited the intersection|
 
 ### `volumes`
