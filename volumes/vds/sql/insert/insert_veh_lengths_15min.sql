@@ -18,7 +18,7 @@ SELECT
 FROM vds.raw_vdsvehicledata AS v
 --left join to preserve null lengths in summary table
 LEFT JOIN traffic.mto_length_bin_classification AS mto
-ON v.length_meter::numeric <@ mto.length_range
+    ON v.length_meter::numeric <@ mto.length_range
 WHERE
     v.dt >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
     AND v.dt < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
