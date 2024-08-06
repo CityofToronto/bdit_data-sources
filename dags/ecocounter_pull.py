@@ -31,9 +31,8 @@ try:
     from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
-        getToken, getSites, getFlowData, siteIsKnownToUs, insertSite,
-        insertFlow, flowIsKnownToUs, truncateFlowSince, insertFlowCounts,
-        getKnownSites, getKnownFlows
+        getToken, getSites, siteIsKnownToUs, insertSite, insertFlow,
+        flowIsKnownToUs, getKnownSites, getKnownFlows, truncate_and_insert
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -85,9 +84,8 @@ def pull_ecocounter_dag():
         )
       
         check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
-
-    @task(trigger_rule='none_failed')
-    def update_sites_and_flows(**context):
+    
+    def get_connections():
         api_conn = BaseHook.get_connection('ecocounter_api_key')
         token = getToken(
             api_conn.host,
@@ -96,7 +94,11 @@ def pull_ecocounter_dag():
             api_conn.extra_dejson['secret_api_hash']
         )
         eco_postgres = PostgresHook("ecocounter_bot")
+        return eco_postgres, token
 
+    @task(trigger_rule='none_failed')
+    def update_sites_and_flows(**context):
+        eco_postgres, token = get_connections()
         new_sites, new_flows = [], []
         with eco_postgres.get_conn() as conn:
             for site in getSites(token):
@@ -140,15 +142,7 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
-        api_conn = BaseHook.get_connection('ecocounter_api_key')
-        token = getToken(
-            api_conn.host,
-            api_conn.login,
-            api_conn.password,
-            api_conn.extra_dejson['secret_api_hash']
-        )
-        eco_postgres = PostgresHook("ecocounter_bot")
-        
+        eco_postgres, token = get_connections()
         start_date = dateutil.parser.parse(str(ds))
         end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
         LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
@@ -156,22 +150,22 @@ def pull_ecocounter_dag():
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
                 for flow_id in getKnownFlows(conn, site_id):
-                    LOGGER.debug(f'Starting on flow {flow_id} for site {site_id}.')
-                    # empty the count table for this flow
-                    truncateFlowSince(flow_id, conn, start_date, end_date)          
-                    # and fill it back up!
-                    LOGGER.debug(f'Fetching data for flow {flow_id}.')
-                    counts = getFlowData(token, flow_id, start_date, end_date)
-                    #convert response into a tuple for inserting
-                    volume=[]
-                    for count in counts:
-                        row=(flow_id, count['date'], count['counts'])
-                        volume.append(row)
-                    if len(volume) == 0:
-                        LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} of site {site_id}.')
-                    insertFlowCounts(conn, volume)
-                LOGGER.info(f'Data inserted for site {site_id}.')
-          
+                    truncate_and_insert(conn, token, flow_id, start_date, end_date)
+
+    @task(trigger_rule='none_failed')
+    def pull_recent_outages():
+        eco_postgres, token = get_connections()
+        #get list of outages
+        outage_query = "SELECT flow_id, start_time, end_time FROM ecocounter.identify_outages('60 days'::interval);"
+        with eco_postgres.get_conn() as conn, conn.cursor() as curr:
+            curr.execute(outage_query)
+            recent_outages = curr.fetchall()
+        #for each outage, try to pull data
+        with eco_postgres.get_conn() as conn:
+            for outage in recent_outages:
+                flow_id, start_date, end_date = outage
+                truncate_and_insert(conn, token, flow_id, start_date, end_date)
+
     t_done = ExternalTaskMarker(
         task_id="done",
         external_dag_id="ecocounter_check",
@@ -219,6 +213,7 @@ def pull_ecocounter_dag():
         ]
 
     (
+        pull_recent_outages(),
         check_partitions() >>
         update_sites_and_flows() >>
         pull_ecocounter() >>

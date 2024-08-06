@@ -1,7 +1,6 @@
 <!-- TOC -->
 
 - [Overview](#overview)
-- [API](#api)
   - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
     - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
     - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
@@ -26,12 +25,9 @@
   - [Notes](#notes)
 
 <!-- /TOC -->
-<!-- /TOC -->
 
 # Overview
 This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/readme.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
-
-# API
 
 ## Relevant Calls and Outputs
 
@@ -119,9 +115,9 @@ password={password}
 
 ### TMCs (Volumes)
 
-The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
+The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line from within the airflow venv (since Airflow Connections are used for database connection and API key). This can be useful when adding new intersections, or when troubleshooting. 
 
-In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
+In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api-cli ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api-cli --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
 
 **TMC Command Line Options**
 
@@ -130,11 +126,10 @@ In command prompt, navigate to the folder where the python file is [located](../
 |start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is which stores the api key. |`/data/airflow/data_scripts/volumes/miovision/api/config.cfg`||
 |pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
 |agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
 
-`python3 intersection_tmc.py run-api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg` is an example with all the options specified:  
+`python3 intersection_tmc.py run-api-cli --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12` is an example with all the options specified:  
 - both data pulling and aggregation specified
 - multiple days
 - multiple, specific intersections
@@ -196,7 +191,7 @@ This flow chart provides a high level overview of the script:
 
 ```mermaid
 flowchart TB
-    A[" `pull_data` called via\ncommand line `run-api`"]
+    A[" `pull_data` called via\ncommand line `run-api-cli`"]
     B[" `pull_data` called via\n`miovision_pull` Airflow DAG\n`pull_data` task"]
     A & B-->pull_data
 
@@ -256,7 +251,7 @@ flowchart TB
 
 ## Repulling data
 
-The Miovision ETL DAG `miovision_pull` and the command line `run-api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
+The Miovision ETL DAG `miovision_pull` and the command line `run-api-cli` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
 
 Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
 
