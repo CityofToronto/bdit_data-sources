@@ -5,7 +5,7 @@ Created on Wed Oct 17 15:26:52 2018
 @author: rliu4, jchew, radumas
 """
 
-import configparser
+import os
 import datetime
 import logging
 import sys
@@ -17,15 +17,19 @@ import json
 import dateutil.parser
 import psycopg2
 from psycopg2 import sql
-from psycopg2 import connect
 from psycopg2.extras import execute_values
 from requests import Session, exceptions
 from requests.exceptions import RequestException
 
+from airflow.hooks.base import BaseHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+
+SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
+
 class WYS_APIException(Exception):
     """Base class for exceptions."""
     pass
-  
+
 class TimeoutException(Exception):
     """Exception if API gives a 504 error"""
     pass
@@ -54,8 +58,7 @@ CONTEXT_SETTINGS = dict(
 
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+signs_endpoint,
-                         headers=headers)
+    response=session.get(url+signs_endpoint, headers=headers)
     if response.status_code==200:
         signs=response.json()
         return signs
@@ -70,12 +73,11 @@ def get_location(location, api_key):
         return statistics
     else:
         return response.status_code
-    logger.debug('get_location done')
 
 def location_id(api_key):
     ''' Using get_signs and get_location function'''
     logger.info('Pulling locations')
-    for attempt in range(3):
+    for _ in range(3):
         try:
             signs=get_signs(api_key)
             location_id=[]
@@ -221,7 +223,7 @@ def parse_location(api_id, start_date, loc):
         direction=None
     return (api_id, address, name, direction, start_date, geocode)
 
-def get_data_for_date(start_date, signs_iterator, api_key):
+def get_data_for_date(start_date, signs_iterator, api_key, conn):
     ''' Using get_statistics, parse_count_for_locations, parse_locations functions.
     Pull data for the provided date and list of signs to pull
 
@@ -285,15 +287,38 @@ def get_data_for_date(start_date, signs_iterator, api_key):
             sign[1] = [h for h in sign[1] if h not in processed_hr]
         # only keep signs with missing data
         sign_hr_iterator = {i:sign_hr_iterator[i] for i in sign_hr_iterator if len(sign_hr_iterator[i][1]) > 0}
-        # return if already got all requested data
-        if sign_hr_iterator == {}:
-            return speed_counts, sign_locations
+    
     # log failures (if any)
     for api_id in sign_hr_iterator:
         logger.error('Failed to extract the data of sign #{} on {} for {} hours ({})'.format(
                     api_id, start_date, len(sign_hr_iterator[api_id][1]), 
                     ','.join(map(str,sign_hr_iterator[api_id][1]))))
-    return speed_counts, sign_locations
+        
+    try:    
+        with conn.cursor() as cur:
+            logger.info('Inserting '+str(len(speed_counts))+' rows of data. Note: Insert gets roll back on error.')
+            delete_sql = sql.SQL("DELETE FROM wys.raw_data WHERE datetime_bin >= %s AND datetime_bin < %s + interval '1 day';")
+            cur.execute(delete_sql)
+            insert_sql = sql.SQL("""
+                INSERT INTO wys.raw_data(api_id, datetime_bin, speed, count)
+                VALUES %s
+                ON CONFLICT (datetime_bin, api_id, speed)
+                DO NOTHING;
+            """)
+            cur.execute_values(insert_sql, speed_counts)        
+    except psycopg2.Error as exc:
+        logger.critical('Error inserting speed count data')
+        logger.critical(exc)
+        sys.exit(1)
+
+    try:
+        update_locations(conn, sign_locations)
+        logger.info('Updated wys.locations')
+    except psycopg2.Error as exc:
+        logger.critical('Error updating locations')
+        logger.critical(exc)
+        conn.close()
+        sys.exit(1)
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -302,30 +327,32 @@ def cli():
 @cli.command()
 @click.option('-s', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-@click.option('--path' , default='config.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--location_flag' , default=0, help='enter the location_id of the sign')
 
-def run_api(start_date, end_date, path, location_flag):
+def run_api(start_date, end_date, location_flag):
+    api_key = get_api_key()
+    wys_postgres = PostgresHook("wys_bot")
+    conn = wys_postgres.get_conn()
     
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
-    api_main(start_date, end_date, location_flag, CONFIG)
+    start_date = dateutil.parser.parse(str(start_date)).date()
+    end_date = dateutil.parser.parse(str(end_date)).date()
+    signs_list = get_sign_list(location_flag)
 
-def api_main(start_date=default_start,
-             end_date=default_end,
-             location_flag=0, CONFIG=None, conn=None, api_key=None):
-    if CONFIG and not conn:
-        key=CONFIG['API']
-        api_key=key['key']
-        dbset = CONFIG['DBSETTINGS']
-        conn = connect(**dbset)
+    logger.debug('Pulling data')
 
-    start_date= dateutil.parser.parse(str(start_date)).date()
-    end_date= dateutil.parser.parse(str(end_date)).date()
+    while start_date<=end_date:
+        logger.info('Pulling %s', str(start_date))
+        get_data_for_date(start_date, signs_list, api_key)
+        agg_1hr_5kph(start_date, start_date + time_delta, conn)
+        start_date+=time_delta
 
+    logger.info('Done')
+
+def get_sign_list(location_flag = 0):
+    api_key = get_api_key()
     signs_list=[]
     try:
-        if location_flag ==0:
+        if location_flag == 0:
             signs_list=location_id(api_key)
         else:
             signs_list=[location_flag]
@@ -333,142 +360,61 @@ def api_main(start_date=default_start,
         logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
         sys.exit(2)
+    return signs_list
 
-    logger.debug('Pulling data')  
-    while start_date<=end_date:
-        logger.info('Pulling '+str(start_date))
-        table, loc_table = get_data_for_date(start_date, signs_list, api_key)
+def get_api_key():
+    #api connection
+    api_conn = BaseHook.get_connection('wys_api_key')
+    return api_conn.password
 
-        try:    
-            with conn.cursor() as cur:
-                logger.info('Inserting '+str(len(table))+' rows of data. Note: Insert gets roll back on error.')
-                insert_sql = sql.SQL("INSERT INTO wys.raw_data(api_id, datetime_bin, speed, count) VALUES %s ON CONFLICT DO NOTHING")
-                execute_values(cur, insert_sql, table)
-                
-        except psycopg2.Error as exc:
-            logger.critical('Error inserting speed count data')
-            logger.critical(exc)
-            sys.exit(1)
-
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", (start_date, start_date + datetime.timedelta(days=1)))
-                logger.info('Aggregated Speed Count Data')
-        except psycopg2.Error as exc:
-            logger.critical('Error aggregating data to 1-hour bins')
-            logger.critical(exc)
-            conn.close()
-            sys.exit(1)
-        
-        start_date+=time_delta
-        conn.commit()
-
+def agg_1hr_5kph(start_date, end_date, conn):
     try:
-        update_locations(conn, loc_table)
-        logger.info('Updated wys.locations')
+        with conn.cursor() as cur:
+            params = (start_date, end_date)
+            cur.execute("SELECT wys.clear_speed_counts_agg_5kph(%s, %s);", params)
+            cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", params)
+            logger.info('Aggregated Speed Count Data')
     except psycopg2.Error as exc:
-        logger.critical('Error updating locations')
+        logger.critical('Error aggregating data to 1-hour bins')
         logger.critical(exc)
         conn.close()
         sys.exit(1)
-
-    conn.commit()
-
-    logger.info('Done')
 
 def update_locations(conn, loc_table):
     '''Update the wys.locations table for the date of data collection
 
     Parameters
     ------------
-    con : SQL connection object
+    conn : SQL connection object
         Connection object needed to connect to the RDS
     loc_table: list
         List of rows representing each active sign to be inserted or updated
     '''
+    fpath = os.path.join(SQL_DIR, 'sql/create-temp-table-daily_insersections.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        daily_intersections_sql = sql.SQL(file.read())
+
     with conn.cursor() as cur:
-        create_temp_table="""
-            DROP TABLE IF EXISTS daily_intersections;
+        execute_values(cur, daily_intersections_sql, loc_table)
         
-            CREATE TEMPORARY TABLE daily_intersections (
-                api_id integer NOT NULL,
-                address text,
-                sign_name text,
-                dir text,
-                start_date date,
-                loc text,
-                geom geometry);
-        """
-        cur.execute(create_temp_table)
-        execute_values(cur, 'INSERT INTO daily_intersections (api_id, address, sign_name, dir, start_date, loc) VALUES %s', loc_table)
-        calc_geom_temp_table = """
-            UPDATE daily_intersections
-            SET geom = ST_Transform(ST_SetSRID(ST_MakePoint(split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 2)::double precision, 
-                                                            split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 1)::double precision), 
-                                               4326),
-                                    2952);
-            """
-        cur.execute(calc_geom_temp_table)
-        update_locations_sql="""
-            -- most recent record of each sign
-            WITH locations AS (
-                SELECT DISTINCT ON(api_id) api_id, address, sign_name, dir, loc, start_date, geom, id
-                FROM wys.locations 
-                ORDER BY api_id, start_date DESC
-            )
-            -- New and moved signs
-            , differences AS (
-                SELECT a.api_id, a.address, a.sign_name, a.dir, a.start_date, 
-                       a.loc, a.geom 
-                FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
-                WHERE
-                    st_distance(A.geom, B.geom) > 100 -- moved more than 100m
-                    OR A.dir <> B.dir -- changed direction
-                    OR A.api_id NOT IN (SELECT api_id FROM locations) -- new sign
-            )
-            -- Insert new & moved signs into wys.locations
-            , new_signs AS (
-                INSERT INTO wys.locations (api_id, address, sign_name, dir, start_date, loc, geom)
-                SELECT * FROM differences
-            )
-            -- Signs with new name and/or address
-            , updated_signs AS (
-                SELECT a.api_id, a.address, a.sign_name, a.dir, a.loc, a.start_date, 
-                       a.geom, b.id 
-                FROM daily_intersections A
-                LEFT JOIN locations B ON A.api_id = B.api_id
-                                      AND st_distance(A.geom, B.geom) < 100
-                                      AND A.dir = B.dir
-                                      AND (A.sign_name <> B.sign_name
-                                        OR A.address <> B.address)
-            )
-            -- Update name and/or address
-            UPDATE wys.locations 
-                SET api_id = b.api_id,
-                    address = b.address,
-                    sign_name = b.sign_name,
-                    dir = b.dir,
-                    start_date = b.start_date,
-                    loc = b.loc,
-                    id = b.id,
-                    geom = b.geom
-                FROM updated_signs b
-                WHERE locations.id = b.id            
-        """
+    fpath = os.path.join(SQL_DIR, 'sql/select-update_locations.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        update_locations_sql = sql.SQL(file.read())
+
+    with conn.cursor() as cur:
         cur.execute(update_locations_sql)
 
 def get_schedules(conn, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
     
-    try: 
+    try:
         response=session.get(url+signs_endpoint+schedule_endpoint,
                          headers=headers)
         response.raise_for_status()
         schedule_list = response.json()
     except RequestException as exc: 
         logger.critical('Error querying API, %s', exc)
-        logger.critical('Response: %s', exc.response)                        
+        logger.critical('Response: %s', exc.response)
 
     try:
         rows = [(schedule['name'], api_id)
@@ -487,7 +433,6 @@ def get_schedules(conn, api_key):
             schedule_name = EXCLUDED.schedule_name
             '''
         execute_values(cur, schedule_sql, rows)
-
 
 if __name__ == '__main__':
     cli()
