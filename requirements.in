@@ -1,8 +1,8 @@
-# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.7.0/constraints-3.10.txt
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.10.txt
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.9.2
+apache-airflow==2.9.3
 
 # Airflow service providers
 apache-airflow-providers-celery
@@ -19,7 +19,7 @@ pip-tools==7.3.0
 # pipelines
 bs4==0.0.1
 env-canada==0.6.1
-geopandas==0.13.2
+geopandas==1.0.1
 holidays==0.31
 
 # development
