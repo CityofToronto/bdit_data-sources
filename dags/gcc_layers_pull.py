@@ -37,59 +37,62 @@ DEFAULT_ARGS = {
 }
 
 #-------------------------------------------------------------------------------------------------------
-bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
-              "centreline": [0, 2, 'gis_core', False], # VFH Layers
-              "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
-              "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
-              "intersection": [12, 42, 'gis_core', False],
-              "census_tract": [26, 7, 'gis_core', True],
-              "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
-              "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
-              #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
-              "cycling_infrastructure": [2, 49, 'gis', True], 
-              "traffic_camera": [2, 3, 'gis', True],
-              "permit_parking_area": [2, 11, 'gis', True],
-              "prai_transit_shelter": [2, 35, 'gis', True],
-              "traffic_bylaw_point": [2, 38, 'gis', True],
-              "traffic_bylaw_line": [2, 39, 'gis', True],
-              "loop_detector": [2, 46, 'gis', True],
-              "electrical_vehicle_charging_station": [20, 1, 'gis', True],
-              "day_care_centre": [22, 1, 'gis', True],
-              "middle_childcare_centre": [22, 2, 'gis', True],
-              "business_improvement_area": [23, 1, 'gis', True],
-              "proposed_business_improvement_area": [23, 13, 'gis', True],
-              "film_permit_all": [23, 9, 'gis', True],
-              "film_permit_parking_all": [23, 10, 'gis', True],
-              "hotel": [23, 12, 'gis', True],
-              "convenience_store": [26, 1, 'gis', True],
-              "supermarket": [26, 4, 'gis', True],
-              "place_of_worship": [26, 5, 'gis', True],
-              "ymca": [26, 6, 'gis', True],
-              "aboriginal_organization": [26, 45, 'gis', True],
-              "attraction": [26, 46, 'gis', True],
-              "dropin": [26, 47, 'gis', True],
-              "early_years_centre": [26, 48, 'gis', True],
-              "family_resource_centre": [26, 49, 'gis', True],
-              "food_bank": [26, 50, 'gis', True],
-              "longterm_care": [26, 53, 'gis', True],
-              "parenting_family_literacy": [26, 54, 'gis', True],
-              "retirement_home": [26, 58, 'gis', True],
-              "senior_housing": [26, 59, 'gis', True],
-              "shelter": [26, 61, 'gis', True],
-              "social_housing": [26, 62, 'gis', True],
-              "private_road": [27, 13, 'gis', True],
-              "school": [28, 17, 'gis', True],
-              "library": [28, 28, 'gis', True]
-             }
+bigdata_layers = {
+    "city_ward": [0, 0, 'gis_core', True], # VFH Layers
+    "centreline": [0, 2, 'gis_core', False], # VFH Layers
+    "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
+    "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
+    "intersection": [12, 42, 'gis_core', False],
+    "census_tract": [26, 7, 'gis_core', True],
+    "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
+    "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
+    #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
+    "cycling_infrastructure": [2, 49, 'gis', True], 
+    "traffic_camera": [2, 3, 'gis', True],
+    "permit_parking_area": [2, 11, 'gis', True],
+    "prai_transit_shelter": [2, 35, 'gis', True],
+    "traffic_bylaw_point": [2, 38, 'gis', True],
+    "traffic_bylaw_line": [2, 39, 'gis', True],
+    "loop_detector": [2, 46, 'gis', True],
+    "electrical_vehicle_charging_station": [20, 1, 'gis', True],
+    "day_care_centre": [22, 1, 'gis', True],
+    "middle_childcare_centre": [22, 2, 'gis', True],
+    "business_improvement_area": [23, 1, 'gis', True],
+    "proposed_business_improvement_area": [23, 13, 'gis', True],
+    "film_permit_all": [23, 9, 'gis', True],
+    "film_permit_parking_all": [23, 10, 'gis', True],
+    "hotel": [23, 12, 'gis', True],
+    "convenience_store": [26, 1, 'gis', True],
+    "supermarket": [26, 4, 'gis', True],
+    "place_of_worship": [26, 5, 'gis', True],
+    "ymca": [26, 6, 'gis', True],
+    "aboriginal_organization": [26, 45, 'gis', True],
+    "attraction": [26, 46, 'gis', True],
+    "dropin": [26, 47, 'gis', True],
+    "early_years_centre": [26, 48, 'gis', True],
+    "family_resource_centre": [26, 49, 'gis', True],
+    "food_bank": [26, 50, 'gis', True],
+    "longterm_care": [26, 53, 'gis', True],
+    "parenting_family_literacy": [26, 54, 'gis', True],
+    "retirement_home": [26, 58, 'gis', True],
+    "senior_housing": [26, 59, 'gis', True],
+    "shelter": [26, 61, 'gis', True],
+    "social_housing": [26, 62, 'gis', True],
+    "private_road": [27, 13, 'gis', True],
+    "school": [28, 17, 'gis', True],
+    "library": [28, 28, 'gis', True],
+    "pavement_asset": [2, 36, 'gis', True],
+}
 
 
-ptc_layers = {"city_ward": [0, 0, 'gis', True],
-                  "centreline": [0, 2, 'gis', False],
-                  "intersection": [12, 42, 'gis', False],
-                  "centreline_intersection_point": [0, 19, 'gis', False],
-                  "ibms_grid": [11, 25, 'gis', True],
-                  "ibms_district": [11, 23, 'gis', True]
-                 }
+ptc_layers = {
+    "city_ward": [0, 0, 'gis', True],
+    "centreline": [0, 2, 'gis', False],
+    "intersection": [12, 42, 'gis', False],
+    "centreline_intersection_point": [0, 19, 'gis', False],
+    "ibms_grid": [11, 25, 'gis', True],
+    "ibms_district": [11, 23, 'gis', True],
+}
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
 with DAG(
