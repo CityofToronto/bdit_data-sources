@@ -394,15 +394,15 @@ def update_locations(conn, loc_table):
     with open(fpath, 'r', encoding='utf-8') as file:
         daily_intersections_sql = sql.SQL(file.read())
 
-    with conn.cursor() as cur:
-        execute_values(cur, daily_intersections_sql, loc_table)
-        
-    fpath = os.path.join(SQL_DIR, 'sql/select-update_locations.sql')
-    with open(fpath, 'r', encoding='utf-8') as file:
+    update_fpath = os.path.join(SQL_DIR, 'sql/select-update_locations.sql')
+    with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
 
     with conn.cursor() as cur:
+        execute_values(cur, daily_intersections_sql, loc_table)
+        logger.info('Create and populated daily_intersections temp table.')
         cur.execute(update_locations_sql)
+        logger.info('Finished updating intersections.')
 
 def get_schedules(conn, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
