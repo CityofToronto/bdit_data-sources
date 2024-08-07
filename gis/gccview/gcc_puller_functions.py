@@ -59,7 +59,8 @@ pk_dict = {
     "private_road": "objectid",
     "school": "objectid",
     "library": "id",
-	}
+    "pavement_asset": "objectid",
+}
 #-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
