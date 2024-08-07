@@ -6,6 +6,7 @@ import os
 import sys
 from functools import partial
 import pendulum
+import dateutil.parser
 
 from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
@@ -21,7 +22,9 @@ from googleapiclient.discovery import build
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from wys.api.python.wys_api import api_main, get_schedules
+    from wys.api.python.wys_api import (
+        get_schedules, agg_1hr_5kph, get_sign_list, get_api_key, get_data_for_date
+    )
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
@@ -53,13 +56,13 @@ def custom_fail_slack_alert(context: dict) -> str:
     else:
         return ""
 
-DAG_NAME = 'pull_wys'
+DAG_NAME = 'wys_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2020, 4, 1, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 8, 6, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 3,
@@ -103,25 +106,39 @@ def pull_wys_dag():
         check_jan_1st() >> create_annual_partition >> (
             check_1st_of_month() >> create_month_partition
         )
-
-    @task(trigger_rule='none_failed')
-    def pull_wys(ds=None):
-        #to connect to pgadmin bot
-        wys_postgres = PostgresHook("wys_bot")
-        
-        #api connection
-        api_conn = BaseHook.get_connection('wys_api_key')
-        api_key = api_conn.password
-
-        with wys_postgres.get_conn() as conn:
-            api_main(start_date = ds,
-                     end_date = ds,
-                     conn = conn,
-                     api_key=api_key)
     
+    @task_group()
+    def api_pull():
+
+        @task(trigger_rule='none_failed')
+        def get_signs():
+            return get_sign_list()
+
+        @task()
+        def pull_wys(signs, ds=None):
+            #to connect to pgadmin bot
+            wys_postgres = PostgresHook("wys_bot")           
+            api_key = get_api_key()
+
+            with wys_postgres.get_conn() as conn:
+                wys_postgres = PostgresHook("wys_bot")           
+                api_key = get_api_key()
+                with wys_postgres.get_conn() as conn:
+                    get_data_for_date(ds, signs, api_key, conn)
+
+        pull_wys(signs = get_signs())
+    
+    @task()
+    def agg_speed_counts_hr(ds=None):
+        wys_postgres = PostgresHook("wys_bot")
+        start_date = dateutil.parser.parse(ds).date()
+        end_date = start_date + timedelta(days=1)
+        with wys_postgres.get_conn() as conn:
+            agg_1hr_5kph(start_date, end_date, conn)
+
     t_done = ExternalTaskMarker(
         task_id="done",
-        external_dag_id="check_miovision",
+        external_dag_id="check_wys",
         external_task_id="starting_point"
     )
 
@@ -146,11 +163,8 @@ def pull_wys_dag():
     @task
     def pull_schedules():
         #to connect to pgadmin bot
-        wys_postgres = PostgresHook("wys_bot")
-        
-        #api connection
-        api_conn = BaseHook.get_connection('wys_api_key')
-        api_key = api_conn.password
+        wys_postgres = PostgresHook("wys_bot")       
+        api_key = get_api_key()
 
         with wys_postgres.get_conn() as conn:
             get_schedules(conn, api_key)
@@ -170,7 +184,7 @@ def pull_wys_dag():
         read_masterlist(wys_postgres.get_conn(), service, **kwargs)
 
 
-    check_partitions() >> pull_wys() >> t_done >> data_checks()
+    check_partitions() >> api_pull() >> agg_speed_counts_hr() >> t_done >> data_checks()
     pull_schedules()
     read_google_sheets()
 
