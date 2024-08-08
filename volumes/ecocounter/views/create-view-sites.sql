@@ -1,4 +1,4 @@
-CREATE VIEW ecocounter.sites AS (
+CREATE OR REPLACE VIEW ecocounter.sites AS (
     SELECT
         site_id,
         site_description,
@@ -6,7 +6,10 @@ CREATE VIEW ecocounter.sites AS (
         facility_description,
         notes,
         replaced_by_site_id,
-        centreline_id
+        centreline_id,
+        first_active,
+        last_active,
+        date_decommissioned
     FROM ecocounter.sites_unfiltered
     WHERE validated
 );
@@ -38,3 +41,11 @@ COMMENT ON COLUMN ecocounter.sites.centreline_id IS E''
 'The nearest street centreline_id, noting that ecocounter sensors are only configured to count '
 'bike-like objects on a portion of the roadway ie. cycletrack or multi-use-path. '
 'Join using `JOIN gis_core.centreline_latest USING (centreline_id)`.';
+
+COMMENT ON COLUMN ecocounter.sites.first_active IS E''
+'First timestamp site_id appears in ecocounter.counts_unfiltered. '
+'Updated using trigger with each insert on ecocounter.counts_unfiltered. ';
+
+COMMENT ON COLUMN ecocounter.sites.last_active IS E''
+'Last timestamp site_id appears in ecocounter.counts_unfiltered. '
+'Updated using trigger with each insert on ecocounter.counts_unfiltered. ';

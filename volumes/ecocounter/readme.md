@@ -1,3 +1,5 @@
+# Ecocounter <!-- omit in toc -->
+
 <!-- TOC -->
 
 - [Bicycle loop detectors](#bicycle-loop-detectors)
@@ -9,8 +11,6 @@
     - [Note](#note)
   - [Historical data](#historical-data)
   - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
-    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
-    - [`data_checks` TaskGroup](#data_checks-taskgroup)
   - [`ecocounter_check` DAG](#ecocounter_check-dag)
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
@@ -112,24 +112,28 @@ LIMIT 1000;
 ```
 
 <!-- ecocounter_pull_doc_md -->
+
 ## `ecocounter_pull` DAG
 The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
 
-### `check_partitions` TaskGroup
-- `check_annual_partition` checks if execution date is January 1st.  
-- `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
+- `pull_recent_outages` task is similar to `pull_ecocounter` task except it tries to pull data corresponding to zero volume outages within the last 60 days. This was implemented following the finding that some Ecocounters will suddenly backfill missing data due to spotty cellular signal. Max ~2 weeks of backfilling has been observed so the task was conservatively set to look back 60 days. 
 
+- `check_partitions` TaskGroup
+  - `check_annual_partition` checks if execution date is January 1st.  
+  - `create_annual_partitions` creates a new annual partition for `ecocounter.counts_unfiltered` if previous task succeeds.  
+  
 - `update_sites_and_flows` task identifies any sites and "flows" (known as channels in the API) in the API which do not exist in our database and adds them to `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`. The new rows contain a flag `validated = null` indicating they still need to be manually validated. A notification is sent with any new additions.  
 - `pull_ecocounter` task pulls data from the Ecocounter API and inserts into the `ecocounter.counts_unfiltered` table. 
 - `done` is an external task marker to trigger the `ecocounter_check` DAG for additional "yellow card" data checks.  
    
-### `data_checks` TaskGroup
-This task group runs data quality checks on the pipeline output.  
-- `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
-- `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
+- `data_checks` TaskGroup: This task group runs data quality checks on the pipeline output.  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
+  - `check_volume` checks the sum of volume in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
+  - `check_distinct_flow_ids` checks the count of distinct flow_ids appearing in `ecocounter.counts` (filtered view) and notifies if less than 70% of the 60 day lookback avg.  
 <!-- ecocounter_pull_doc_md -->
 
 <!-- ecocounter_check_doc_md -->
+
 ## `ecocounter_check` DAG
 The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter_pull` to perform additional "yellow card" data checks on the new data.  
 
@@ -156,11 +160,18 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | geom | geometry |  | |
 | facility_description | text | | description of bike-specific infrastructure which the sensor is installed within |
 | notes | text | | |
-| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites though we should ideally treat the data as continuous with the replaced site. This field indicates the site_id of the new replacement site, if any. |
+| replaced_by_site_id  | numeric | | Several sites had their sensors replaced and show up now as "new" sites. This field indicates the site_id of the new replacement site, if any. Please note that any attempt to combine counts from one site with those of its replacement should be done at the level of flows. |
 | centreline_id | integer | | The nearest street centreline_id, noting that ecocounter sensors are only configured to count bike like objects on a portion of the roadway ie. cycletrack or multi-use-path. Join using `JOIN gis_core.centreline_latest USING (centreline_id)`. |
+| first_active | timestamp without time zone | | First timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| last_active | timestamp without time zone | | Last timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+
 
 ### `ecocounter.counts_unfiltered`
-CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
+CAUTION: Use VIEW `ecocounter.counts` instead to see only data that has been screened for
+* manually validated sites
+* manually validated flows
+* absence of manually identified anomalous ranges (in the `do-not-use` `problem_level`)
+
 This Table contains the actual binned counts for ecocounter flows. Please note that
 bin size varies for older data, so averaging these numbers may not be straightforward.
 
@@ -177,16 +188,18 @@ CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a hum
 Row count: 73
 | column_name | data_type | sample | Comments |
 |:------------|:----------|:-------|:---------|
+| flow_id | numeric | 104042943 | Primary key |
+| site_id | numeric | 100042943 | |
 | validated | boolean | True  | |
 | includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
-| replaces_flow_id | numeric | | |
-| flow_id | numeric | 104042943 | |
-| site_id | numeric | 100042943 | |
+| replaces_flow_id | numeric | | `flow_id` of earlier flow that this one replaces |
+| replaced_by_flow_id | numeric | 353363669 | `flow_id` of flow this one is replaced by |
 | flow_direction | text | westbound (includes contraflow) |  |
 | flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
-| replaced_by_flow_id | numeric | 353363669 | |
+| first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.

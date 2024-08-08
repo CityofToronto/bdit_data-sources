@@ -1,8 +1,12 @@
 import requests
+import logging
 from configparser import ConfigParser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
+from airflow.exceptions import AirflowFailException
+
+LOGGER = logging.getLogger(__name__)
 
 default_start = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)-timedelta(days=1)
 default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)
@@ -30,15 +34,17 @@ def getSites(token: str, sites: any = ()):
         f'{URL}/api/site',
         headers={'Authorization': f'Bearer {token}'}
     )
-    result = []
-    #filter sites using optional param.
-    if not sites == ():
-        for site in response.json():
-            if site['id'] in sites:
-                result.append(site)
-        return result
-    else:
+    if response.status_code!=200:
+        raise AirflowFailException(f"{response.status_code}: {response.reason}")
+    if sites == ():
         return response.json()
+    
+    #otherwise filter sites using optional param.        
+    result = []
+    for site in response.json():
+        if site['id'] in sites:
+            result.append(site)
+    return result        
 
 # get all of a flows ("channel") data from the API
 def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime):
@@ -57,8 +63,13 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
                 'step': '15m'
             }
         )
-        data += response.json()
-        requestStart += requestChunkSize
+        if response.status_code==200:
+            data += response.json()
+            requestStart += requestChunkSize
+        elif response.status_code==401:
+            raise AirflowFailException(f"{response.status_code}: {response.reason}")
+        else:
+            raise AirflowFailException(f"{response.status_code}: {response.reason}")
     return data
 
 def getKnownSites(conn: any):
@@ -140,6 +151,20 @@ def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, bin_size: 
     with conn.cursor() as cur:
         cur.execute(insert_query, (flow_id, site_id, flow_name, bin_size))
 
+def truncate_and_insert(conn, token, flow_id, start_date, end_date):
+    LOGGER.info(f'Attempting to fetch data for flow {flow_id} from {start_date} to {end_date}.')
+    # empty the count table for this flow
+    truncateFlowSince(flow_id, conn, start_date, end_date)          
+    # and fill it back up!
+    counts = getFlowData(token, flow_id, start_date, end_date)
+    #convert response into a tuple for inserting
+    volume=[]
+    for count in counts:
+        row=(flow_id, count['date'], count['counts'])
+        volume.append(row)
+    LOGGER.info(f'{len(volume)} rows fetched for flow {flow_id} from {start_date} to {end_date}.')
+    insertFlowCounts(conn, volume)
+
 #for testing/pulling data without use of airflow.
 def run_api(
         start_date: datetime = default_start,
@@ -169,16 +194,4 @@ def run_api(
             if not flowIsKnownToUs(flow_id, conn):
                 print('unknown flow', flow_id)
                 continue
-            # we do have this site and flow in the database; let's update its counts
-            print(f'starting on flow {flow_id}')
-            # empty the count table for this flow
-            truncateFlowSince(flow_id, conn, start_date, end_date)
-            # and fill it back up!
-            print(f'fetching data for flow {flow_id}')
-            counts = getFlowData(token, flow_id, start_date, end_date)
-            print(f'inserting data for flow {flow_id}')
-            volume=[]
-            for count in counts:
-                row=(flow_id, count['date'], count['counts'])
-                volume.append(row)
-            insertFlowCounts(conn, volume)
+            truncate_and_insert(conn, token, flow_id, start_date, end_date)
