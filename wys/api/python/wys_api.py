@@ -107,39 +107,9 @@ def location_id(api_key):
             raise WYS_APIException(str(e))
     logger.info('location_id done')
 
-def get_statistics_hourly(location, start_date, hr, api_key):
+def get_statistics_date(location, start_date, api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+'/date/'+
-                        str(start_date)+'/from/'+str(hr).zfill(2)+
-                        ':00/to/'+str(hr).zfill(2)+':59/speed_units/0', 
-                        headers=headers)
-    try:
-        res = response.json()
-    except json.decoder.JSONDecodeError as err:
-        # catching invalid json responses `json.decoder.JSONDecodeError`
-        logger.error(err + response)
-        raise
-    # Error handling
-    if response.status_code==200:
-        return res
-    elif response.status_code==204:
-        logger.error('204 error '+res['error_message'])
-    elif response.status_code==404:
-        logger.error('404 error for location %s, ' +res['error_message']+' or request duration invalid', location)
-    elif response.status_code==401:
-        logger.error('401 error    '+res['error_message'])
-    elif response.status_code==405:
-        logger.error('405 error    '+res['error_message'])        
-    elif response.status_code==504:
-        logger.error('504 timeout pulling sign %s for hour %s', 
-                     location, hr)
-        raise TimeoutException('Error'+str(response.status_code))
-    else:
-        raise WYS_APIException('Error'+str(response.status_code))
-
-def get_statistics(location, start_date, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/from/00:00/to/23:59/speed_units/0', 
+    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/speed_units/0', 
                          headers=headers)
     if response.status_code==200:
         statistics=response.json()
@@ -223,8 +193,8 @@ def parse_location(api_id, start_date, loc):
         direction=None
     return (api_id, address, name, direction, start_date, geocode)
 
-def get_data_for_date(start_date, signs_iterator, api_key, conn):
-    ''' Using get_statistics, parse_count_for_locations, parse_locations functions.
+def get_data_for_date(start_date, sign, api_key, conn):
+    ''' Using get_statistics_date, parse_count_for_locations, parse_locations functions.
     Pull data for the provided date and list of signs to pull
 
     Parameters
@@ -242,83 +212,58 @@ def get_data_for_date(start_date, signs_iterator, api_key, conn):
     sign_locations: list
         List of active sign locations to be inserted into wys.locations
     '''
-    speed_counts, sign_locations = [], []
-    # for each api_id: tuple of sign data and 24 hours to process
-    sign_hr_iterator = {int(i[0]):[i,list(range(24))] for i in signs_iterator}
-    # to assure each sign's location is only added once
-    sign_locations_list = []
     for attempt in range(3):
         if attempt > 0:
-            logger.info('Attempt %d, %d signs remaining',
-                        attempt + 1,
-                        len(sign_hr_iterator) )
-        for sign in sign_hr_iterator.values():
-            api_id=sign[0][0]
-            name=sign[0][1]
+            logger.info('Attempt %d.', attempt + 1)
+            api_id=sign[0]
+            name=sign[1]
             logger.debug(str(name))
-            hr_iterator = sign[1]
-            processed_hr = []
-            for hr in hr_iterator:
-                try:
-                    statistics=get_statistics_hourly(api_id, start_date, hr, api_key)
-                    raw_data=statistics['LocInfo']
-                    raw_records=raw_data['raw_records']
-                    spd_cnts = parse_counts_for_location(api_id, raw_records)
-                    speed_counts.extend(spd_cnts)
-                    if api_id not in sign_locations_list:
-                        sign_location = parse_location(api_id, start_date, raw_data['Location'])
-                        sign_locations.append(sign_location)
-                        sign_locations_list.append(api_id)
-                except TimeoutException:
-                    sleep(180)
-                except exceptions.ProxyError as prox:
-                    logger.error(prox)
-                    logger.warning('Retrying in 2 minutes')
-                    sleep(120)
-                except exceptions.RequestException as err:
-                    logger.error(err)
-                    sleep(75)
-                except Exception as err:
-                    logger.error(err)
-                else:
-                   # keep track of processed intervals
-                   processed_hr.append(hr) 
-            # only keep intervals with no data
-            sign[1] = [h for h in sign[1] if h not in processed_hr]
-        # only keep signs with missing data
-        sign_hr_iterator = {i:sign_hr_iterator[i] for i in sign_hr_iterator if len(sign_hr_iterator[i][1]) > 0}
-    
-    # log failures (if any)
-    for api_id in sign_hr_iterator:
-        logger.error('Failed to extract the data of sign #{} on {} for {} hours ({})'.format(
-                    api_id, start_date, len(sign_hr_iterator[api_id][1]), 
-                    ','.join(map(str,sign_hr_iterator[api_id][1]))))
-        
-    try:    
+            try:
+                statistics=get_statistics_date(api_id, start_date, api_key)
+                raw_data=statistics['LocInfo']
+                raw_records=raw_data['raw_records']
+                spd_cnts = parse_counts_for_location(api_id, raw_records)
+            except TimeoutException:
+                sleep(180)
+            except exceptions.ProxyError as prox:
+                logger.error(prox)
+                logger.warning('Retrying in 2 minutes')
+                sleep(120)
+            except exceptions.RequestException as err:
+                logger.error(err)
+                sleep(75)
+            except Exception as err:
+                logger.error(err)
+           
+    try:
         with conn.cursor() as cur:
-            logger.info('Inserting '+str(len(speed_counts))+' rows of data. Note: Insert gets roll back on error.')
-            delete_sql = sql.SQL("DELETE FROM wys.raw_data WHERE datetime_bin >= %s AND datetime_bin < %s + interval '1 day';")
+            logger.info('Inserting '+str(len(spd_cnts))+' rows of data. Note: Insert gets roll back on error.')
+            delete_sql = sql.SQL("""
+                DELETE FROM wys.raw_data
+                WHERE datetime_bin >= {} AND datetime_bin < {} + interval '1 day' AND api_id = {};
+            """)
+            delete_sql = delete_sql.format(sql.Identifier(start_date), sql.Identifier(start_date), sql.Identifier(api_id))
             cur.execute(delete_sql)
             insert_sql = sql.SQL("""
-                INSERT INTO wys.raw_data(api_id, datetime_bin, speed, count)
+                INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count)
                 VALUES %s
                 ON CONFLICT (datetime_bin, api_id, speed)
                 DO NOTHING;
             """)
-            cur.execute_values(insert_sql, speed_counts)        
+            cur.execute_values(insert_sql, spd_cnts)
     except psycopg2.Error as exc:
         logger.critical('Error inserting speed count data')
         logger.critical(exc)
         sys.exit(1)
 
-    try:
-        update_locations(conn, sign_locations)
-        logger.info('Updated wys.locations')
-    except psycopg2.Error as exc:
-        logger.critical('Error updating locations')
-        logger.critical(exc)
-        conn.close()
-        sys.exit(1)
+    #try:
+    #    update_locations(conn, sign_locations)
+    #    logger.info('Updated wys.locations')
+    #except psycopg2.Error as exc:
+    #    logger.critical('Error updating locations')
+    #    logger.critical(exc)
+    #    conn.close()
+    #    sys.exit(1)
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
