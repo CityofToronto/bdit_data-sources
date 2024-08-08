@@ -370,7 +370,8 @@ Row count: 6,415,490
 ### vds.veh_length_15min
 Summarization of `vds.raw_vdsvehicledata` with count of observation (vehicle) lengths grouped by 15 min / MTO classification guide (see below) / vdsconfig_uid. Can be used to investigate the mix of vehicle types using our roadways.  
 
-**Data quality:** 
+**Data quality:**
+- **The quality of this data is extremely suspect and unverified, including large unexplained variations between adjacent sensors. Use with extreme caution.** 
 - There are some suspiciously long vehicles (about 0.05% >= 20m, max = 49m). 
 - There are null length values in `raw_vdsvehicledata` which are included here. The meaning of these are not understood, but make up a significant portion of values in some cases (suspicious). 
 
