@@ -1,13 +1,15 @@
 
 from psycopg2 import sql, Error
 from typing import Tuple
-import logging 
+import logging
+import datetime
 # pylint: disable=import-error
 from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException
 from airflow.models import Variable
+from airflow.sensors.time_sensor import TimeSensor
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +39,7 @@ def get_variable(var_name:str) -> list:
     """
     return Variable.get(var_name, deserialize_json=True)
 
-@task()
+@task(map_index_template="{{ dest_table_name }}")
 def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
     """Copies ``table[0]`` table into ``table[1]`` after truncating it.
 
@@ -47,6 +49,11 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             ``schema.table``, and the destination table in the same format
             ``schema.table``.
     """
+    #name mapped task
+    from airflow.operators.python import get_current_context
+    context = get_current_context()
+    context["dest_table_name"] = table[1]
+    
     # separate tables and schemas
     try:
         src_schema, src_table = table[0].split(".")
@@ -98,15 +105,15 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             # truncate the destination table
             cur.execute(truncate_query)
             # get the column names of the source table
-            cur.execute(source_columns_query, [src_schema, src_table])
-            src_columns = [r[0] for r in cur.fetchall()]
+            cur.execute(source_columns_query, [dst_schema, dst_table])
+            dst_columns = [r[0] for r in cur.fetchall()]
             # copy all the data
             insert_query = sql.SQL(
                 "INSERT INTO {}.{} ({}) SELECT {} FROM {}.{}"
                 ).format(
                     sql.Identifier(dst_schema), sql.Identifier(dst_table),
-                    sql.SQL(', ').join(map(sql.Identifier, src_columns)),
-                    sql.SQL(', ').join(map(sql.Identifier, src_columns)),
+                    sql.SQL(', ').join(map(sql.Identifier, dst_columns)),
+                    sql.SQL(', ').join(map(sql.Identifier, dst_columns)),
                     sql.Identifier(src_schema), sql.Identifier(src_table)
                 )
             cur.execute(insert_query)
@@ -149,3 +156,18 @@ def check_if_dow(isodow, ds):
 
     start_date = datetime.strptime(ds, '%Y-%m-%d')
     return start_date.isoweekday() == isodow
+
+def wait_for_weather_timesensor(timeout=8*3600):
+    """Use to delay a data check until after yesterdays weather is available."""
+    wait_for_weather = TimeSensor(
+        task_id="wait_for_weather",
+        timeout=timeout,
+        mode="reschedule",
+        poke_interval=3600,
+        target_time=datetime.time(hour = 8, minute = 5)
+    )
+    wait_for_weather.doc_md = """
+    Historical weather is pulled at 8:00AM daily through the `weather_pull` DAG.
+    Use this sensor to have a soft link to that DAG.
+    """
+    return wait_for_weather

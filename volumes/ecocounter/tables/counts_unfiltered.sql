@@ -21,10 +21,22 @@ GRANT SELECT, INSERT, DELETE ON ecocounter.counts_unfiltered TO ecocounter_bot;
 
 REVOKE ALL ON TABLE ecocounter.counts_unfiltered FROM bdit_humans;
 
-COMMENT ON TABLE ecocounter.counts_unfiltered
-IS 'CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human.
-This Table contains the actual binned counts for ecocounter flows. Please note that
-bin size varies for older data, so averaging these numbers may not be straightforward.';
+COMMENT ON TABLE ecocounter.counts_unfiltered IS E''
+'CAUTION: Use VIEW `ecocounter.counts` instead to see data only for sites verified by a human. '
+'This Table contains the actual binned counts for ecocounter flows. Please note that '
+'bin size varies for older data, so averaging these numbers may not be straightforward.';
 
 COMMENT ON COLUMN ecocounter.counts_unfiltered.datetime_bin
 IS 'indicates start time of the time bin. Note that not all time bins are the same size!';
+
+CREATE TRIGGER ecocounter_update_last_active_ins
+AFTER INSERT ON ecocounter.counts_unfiltered
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT
+EXECUTE FUNCTION ecocounter.fn_update_last_active();
+
+CREATE TRIGGER ecocounter_update_last_active_upd
+AFTER UPDATE ON ecocounter.counts_unfiltered
+REFERENCING NEW TABLE AS new_rows
+FOR EACH STATEMENT
+EXECUTE FUNCTION ecocounter.fn_update_last_active();

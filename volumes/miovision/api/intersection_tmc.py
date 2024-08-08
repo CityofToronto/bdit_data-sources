@@ -1,43 +1,37 @@
 import sys
 import json
-from requests import Session
-from requests import exceptions
+from requests import Session, exceptions
 import datetime
 import pytz
 import dateutil.parser
 import psycopg2
 from psycopg2.extras import execute_values
-from psycopg2 import connect, Error
 import logging
-import configparser
 import click
 import traceback
 from time import sleep
 from collections import namedtuple
 
+from airflow.hooks.base_hook import BaseHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
-
 
 class MiovisionAPIException(BreakingError):
     """Base class for exceptions."""
 
-
 class NotFoundError(BreakingError):
     """Exception for a 404 error."""
-
 
 class RetryError(Exception):
     """Base class for exceptions that warrant a retry."""
 
-
 class TimeoutException(RetryError):
     """Exception if API gives a 504 error"""
 
-
 class ServerException(RetryError):
     """Exception if API gives a 500 error"""
-
 
 def logger():
     logger = logging.getLogger(__name__)
@@ -48,20 +42,17 @@ def logger():
     logger.addHandler(stream_handler)
     return logger
 
-
 logger = logger()
 logger.debug('Start')
 
 time_delta = datetime.timedelta(days=1)
 default_start = str(datetime.date.today()-time_delta)
 default_end = str(datetime.date.today())
+TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
-url = 'https://api.miovision.com/intersections/'
-tmc_endpoint = '/tmc'
-ped_endpoint = '/crosswalktmc'
-
+URL_BASE = 'https://api.miovision.one/api/v1'
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -74,45 +65,39 @@ def cli():
 @cli.command()
 @click.option('--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('--end_date' , default=default_end, help='format is YYYY-MM-DD for end date & excluding the day itself')
-@click.option('--path' , default='config_miovision_api_bot.cfg', help='enter the path/directory of the config.cfg file')
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
 @click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
 
-def run_api(start_date, end_date, path, intersection, pull, agg):
+def run_api_cli(start_date, end_date, intersection, pull, agg):
+    return run_api(start_date, end_date, intersection, pull, agg)
 
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read(path)
-    api_key=CONFIG['API']
-    key=api_key['key']
-    dbset = CONFIG['DBSETTINGS']
-    conn = connect(**dbset)
-    conn.autocommit = True
-    logger.debug('Connected to DB')
-
-    start_time = dateutil.parser.parse(str(start_date))
-    end_time = dateutil.parser.parse(str(end_date))
-
+def run_api(start_date, end_date, intersection, pull, agg):
+    api_key = BaseHook.get_connection('miovision_api_key')
+    key = api_key.extra_dejson['key']
+    mio_postgres = PostgresHook("miovision_api_bot")
+    start_date = dateutil.parser.parse(str(start_date))
+    end_date = dateutil.parser.parse(str(end_date))
     if pull:
         try:
-            logger.info('Pulling from %s to %s' %(start_time, end_time))
-            pull_data(conn, start_time, end_time, intersection, key)
+            logger.info('Pulling from %s to %s' %(start_date, end_date))
+            with mio_postgres.get_conn() as conn:
+                pull_data(conn, start_date, end_date, intersection, key)
         except Exception as e:
             logger.critical(traceback.format_exc())
             sys.exit(1)
     else:
         logger.info('Skipping pulling volume data.')
-
     if agg:
-        logger.info('Aggregating data from %s to %s' %(start_time, end_time))
-        intersections = get_intersection_info(conn, intersection)
-        process_data(conn, start_time, end_time, intersections=intersections)
+        logger.info('Aggregating data from %s to %s' %(start_date, end_date))
+        with mio_postgres.get_conn() as conn:
+            intersections = get_intersection_info(conn, intersection)
+            process_data(conn, start_date, end_date, intersections=intersections)
     else:
         logger.info('Skipping aggregating and processing volume data')
 
 # Entrance-exit pairs.
 EEPair = namedtuple('EEPair', ['entrance', 'exit'])
-
 
 class MiovPuller:
     """Miovision API puller.
@@ -130,13 +115,10 @@ class MiovPuller:
         Miovision API access key.
 
     """
-
     headers = {'Content-Type': 'application/json',
-               'Authorization': ''}
-
-    tmc_template = url + "{int_id1}" + tmc_endpoint
-    ped_template = url + "{int_id1}" + ped_endpoint
-
+               'apikey': ''}
+    tmc_template = URL_BASE + "/intersections/{int_id1}/tmc"
+    ped_template = tmc_template + '/crosswalk'
     roaduser_class = {
         'Light': '1',
         'BicycleTMC': '2',
@@ -147,7 +129,6 @@ class MiovPuller:
         'MotorizedVehicle': '9',
         'Bicycle': '10'
     }
-
     # Lookup table for all TMC movements that are not u-turns.
     tmc_movements_no_uturn = {
         EEPair(entrance='N', exit='S'): '1',
@@ -163,29 +144,22 @@ class MiovPuller:
         EEPair(entrance='N', exit='W'): '3',
         EEPair(entrance='W', exit='S'): '3',
     }
-
     crosswalkuser_class = {
         'Pedestrian': '6',
         'Bicycle': '7'
     }
-
     crosswalk_mvmts = {
         'CW': '5',
         'CCW': '6'
     }
-
     def __init__(self, int_id1, int_uid, key):
-        self.headers['Authorization'] = key
+        self.headers['apikey'] = key
         self.int_id1 = int_id1
         self.intersection_uid = int_uid
-
-    def get_response(self, apitype, start_time, end_iteration_time):
+    def get_response(self, apitype, start_time, end_time):
         """Requests data from API."""
-
-        params = {'endTime': (end_iteration_time
-                              - datetime.timedelta(milliseconds=1)),
-                  'startTime': start_time}
-
+        params = {'endDateTime': end_time,
+                  'startDateTime': start_time}
         # Select the appropriate request URL depending on which API we're
         # pulling from.
         if apitype == 'crosswalk':
@@ -194,11 +168,14 @@ class MiovPuller:
             request_url = self.tmc_template.format(int_id1=self.int_id1)
         else:
             raise ValueError("apitype must be either 'tmc' or 'crosswalk'!")
-
+        logger.debug(f'params:{params}')
+        logger.debug(f'request_url:{request_url}')
         response = session.get(
-            request_url, params=params, headers=self.headers,
-            proxies=session.proxies)
-
+            request_url,
+            params=params,
+            headers=self.headers,
+            proxies=session.proxies
+        )
         # Return if we get a success response code, or raise an error if not.
         if response.status_code == 200:
             return response
@@ -212,7 +189,7 @@ class MiovPuller:
             logger.critical(("Bad request error when pulling ped data for "
                              "intersection {0} from {1} until {2}")
                             .format(self.int_id1, start_time,
-                                    end_iteration_time))
+                                    end_time))
             error = json.loads(response.content.decode('utf-8'))
             logger.critical(error['error'])
             sys.exit(5)
@@ -220,15 +197,13 @@ class MiovPuller:
             raise TimeoutException('Error' + str(response.status_code))
         elif response.status_code == 500:
             raise ServerException('Error' + str(response.status_code))
-
         # If code isn't handled in the block above, throw a general error.
         logger.critical('Unknown error pulling ped data for intersection %s',
                         self.int_id1)
+        logger.critical(request_url)
         raise MiovisionAPIException('Error' + str(response.status_code))
-
     def get_road_class(self, row):
         """Get road user class."""
-
         is_approach = ((row['entrance'] == 'UNDEFINED')
                        or (row['exit'] == 'UNDEFINED'))
         # Second check isn't strictly necessary but better safe than sorry.
@@ -236,13 +211,11 @@ class MiovPuller:
             ru_class = 'BicycleTMC'
         else:
             ru_class = row['class']
-
         try:
             return self.roaduser_class[ru_class]
         except KeyError:
             raise ValueError("vehicle class {0} not recognized!"
                              .format(row['class']))
-
     def get_road_leg_and_movement(self, row):
         """Get intersection leg and movement UID.
 
@@ -259,7 +232,6 @@ class MiovPuller:
         movement = self.tmc_movements_no_uturn[
             EEPair(entrance=row['entrance'], exit=row['exit'])]
         return (row['entrance'], movement)
-
     def get_crosswalk_class(self, row):
         """Get crosswalk road user class."""
         try:
@@ -267,7 +239,6 @@ class MiovPuller:
         except KeyError:
             raise ValueError("crosswalk class {0} not recognized!"
                              .format(row['class']))
-
     def get_crosswalk_movement(self, row):
         """Get crosswalk movement."""
         try:
@@ -275,25 +246,20 @@ class MiovPuller:
         except KeyError:
             raise ValueError("crosswalk movement {0} not recognized!"
                              .format(row['direction']))
-
     def process_tmc_row(self, row):
         """Process one row of TMC API output."""
-
         classification = self.get_road_class(row)
         (leg, movement) = self.get_road_leg_and_movement(row)
-
+        timestamp = self.process_timestamp(row)
         # Return time, classification_uid, leg, movement, volume.
-        return (row['timestamp'], classification, leg, movement, row['qty'])
-
+        return (timestamp, classification, leg, movement, row['qty'])
     def process_crosswalk_row(self, row):
         """Process one row of crosswalk API output."""
         classification = self.get_crosswalk_class(row)
         movement = self.get_crosswalk_movement(row)
-
+        timestamp = self.process_timestamp(row)
         # Return time, classification_uid, leg, movement, volume.
-        return (row['timestamp'], classification, row['crosswalkSide'],
-                movement, row['qty'])
-
+        return (timestamp, classification, row['crosswalkSide'], movement, row['qty'])
     def process_response(self, apitype, response):
         """Process the output of self.get_response."""
         data = json.loads(response.content.decode('utf-8'))
@@ -302,23 +268,31 @@ class MiovPuller:
                     + self.process_crosswalk_row(row) for row in data]
         return [(self.intersection_uid, )
                 + self.process_tmc_row(row) for row in data]
-
-    def get_intersection(self, start_time, end_iteration_time):
+    def process_timestamp(self, row):
+        """Miovision One API returns timestamps in UTC which needs converting to local TZ."""
+        utc_timestamp = row['timestamp']
+        if utc_timestamp is None:
+            return None
+        utc_timestamp = dateutil.parser.parse(str(utc_timestamp))
+        #convert timestamp from utc to local TZ
+        local_timestamp = utc_timestamp.replace(tzinfo=pytz.utc).astimezone(TZ)
+        return local_timestamp.replace(tzinfo=None)
+    def get_intersection(self, start_time, end_time):
         """Get all data for one intersection between start and end time."""
-        response_tmc = self.get_response('tmc', start_time, end_iteration_time)
+        start_time = start_time.isoformat()
+        end_time = end_time.isoformat()
+        response_tmc = self.get_response('tmc', start_time, end_time)
         table_veh = self.process_response('tmc', response_tmc)
-        response_crosswalk = self.get_response(
-            'crosswalk', start_time, end_iteration_time)
+        response_crosswalk = self.get_response('crosswalk', start_time, end_time)
         table_ped = self.process_response('crosswalk', response_crosswalk)
-
         return table_veh, table_ped
 
-def process_data(conn, start_time, end_iteration_time, intersections):
+def process_data(conn, start_time, end_time, intersections):
     """Process Miovision into aggregate tables.
     
     Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
     """
-    time_period = (start_time, end_iteration_time)
+    time_period = (start_time, end_time)
     find_gaps(conn, time_period, intersections)
     aggregate_15_min_mvt(conn, time_period, intersections)
     agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
@@ -441,7 +415,6 @@ def get_report_dates(conn, time_period, intersections = None):
     Takes optional intersection param to clear/aggregate specific
     for specific report dates. 
     """
-    
     try:
         with conn.cursor() as cur:
             if intersections is None:
@@ -521,7 +494,6 @@ def insert_data(conn, time_period, table, intersections):
         cur.execute(invalid_movements, time_period)
         logger.info(conn.notices[-1])
 
-
 def daterange(start_time, end_time, time_delta):
     """Generator for a sequence of regular time periods."""
     curr_time = start_time
@@ -529,9 +501,7 @@ def daterange(start_time, end_time, time_delta):
         yield curr_time
         curr_time += time_delta
 
-
 class Intersection:
-
     def __init__(self, uid, id1, name, date_installed,
                  date_decommissioned):
         self.uid = uid
@@ -539,7 +509,6 @@ class Intersection:
         self.name = name
         self.date_installed = date_installed
         self.date_decommissioned = date_decommissioned
-
     def __repr__(self):
         return ("intersection_uid: {u}\n"
                 "    intersection_id1: {id1}\n"
@@ -549,7 +518,6 @@ class Intersection:
                 .format(u=self.uid, id1=self.id1,
                         n=self.name, di=self.date_installed,
                         ddc=self.date_decommissioned))
-
     def is_active(self, ctime):
         """Checks if an intersection's Miovision system is active.
 
@@ -590,14 +558,12 @@ def get_intersection_info(conn, intersection=()):
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
-
     return [Intersection(*x) for x in intersection_list]
 
 def check_dst(start_time, end_time):
     'check if fall back (EDT -> EST) occured between two timestamps.'
-    tz = pytz.timezone("EST5EDT")
-    tz_1 = start_time.astimezone(tz).tzname()
-    tz_2 = end_time.astimezone(tz).tzname()
+    tz_1 = start_time.astimezone(TZ).tzname()
+    tz_2 = end_time.astimezone(TZ).tzname()
     if tz_1 == 'EDT' and tz_2 == 'EST':
         logger.info(f"EDT -> EST time change occured today.")
         return True
@@ -606,8 +572,7 @@ def check_dst(start_time, end_time):
 def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     """
-    time_delta = datetime.timedelta(hours=6)
-
+    time_delta = datetime.timedelta(hours=24)
     intersections = get_intersection_info(conn, intersection=intersection)
 
     if len(intersections) == 0:
@@ -637,20 +602,18 @@ def pull_data(conn, start_time, end_time, intersection, key):
         sys.exit(3)
 
     for c_start_t in daterange(start_time, end_time, time_delta):
-
         c_end_t = c_start_t + time_delta
         table = []
-
         for c_intersec in intersections:
-
             if c_intersec.is_active(c_start_t):
                 logger.info(c_intersec.name + '     ' + str(c_start_t))
                 miovpull = MiovPuller(c_intersec.id1, c_intersec.uid, key)
-
                 for _ in range(3):
                     try:
-                        table_veh, table_ped = miovpull.get_intersection(
-                            c_start_t, c_end_t)
+                        #provide API with dts with TZ
+                        c_start_t_TZ = TZ.localize(c_start_t)
+                        c_end_t_TZ = TZ.localize(c_end_t)
+                        table_veh, table_ped = miovpull.get_intersection(c_start_t_TZ, c_end_t_TZ)
                         break
                     except (exceptions.ProxyError,
                             exceptions.RequestException, RetryError) as err:
@@ -668,7 +631,6 @@ def pull_data(conn, start_time, end_time, intersection, key):
                                  'data for this intersection after 3 tries.')
                     table_veh = []
                     table_ped = []
-
                 #if edt -> est occured in the current range
                 #discard the 2nd 1AM hour of data to avoid duplicates
                 if check_dst(c_start_t, c_end_t):
@@ -679,26 +641,20 @@ def pull_data(conn, start_time, end_time, intersection, key):
                     table_ped = [x for x in table_ped if
                         datetime.datetime.fromisoformat(x[1]).hour != 1 and
                         datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
-                    
                 table.extend(table_veh)
                 table.extend(table_ped)
-
                 # Hack to slow down API hit rate.
                 sleep(1)
-
             elif user_def_intersection:
                 logger.info(c_intersec.name + ' not active on '
                             + str(c_start_t))
-
         logger.info('Completed data pulling from %s to %s'
                     %(c_start_t, c_end_t))
-
         try:
             insert_data(conn, time_period=(c_start_t, c_end_t), table=table, intersections=intersections)
         except psycopg2.Error as exc:
             logger.exception(exc)
             sys.exit(1)
-
     logger.info('Done pulling data.')
 
 if __name__ == '__main__':

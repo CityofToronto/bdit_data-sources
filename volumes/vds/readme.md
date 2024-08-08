@@ -370,11 +370,12 @@ Row count: 6,415,490
 | uid            | bigint                      | 6774601             | unique id |
 
 ### vds.veh_length_15min
-Summarization of `vds.raw_vdsvehicledata` with count of observation (vehicle) lengths grouped by 15 min / 1m length / vds_id. Can be used to investigate the mix of vehicle types using our roadways.  
+Summarization of `vds.raw_vdsvehicledata` with count of observation (vehicle) lengths grouped by 15 min / MTO classification guide (see below) / vdsconfig_uid. Can be used to investigate the mix of vehicle types using our roadways.  
 
-Data quality: 
+**Data quality:**
+- **The quality of this data is extremely suspect and unverified, including large unexplained variations between adjacent sensors. Use with extreme caution.** 
 - There are some suspiciously long vehicles (about 0.05% >= 20m, max = 49m). 
-- There are null length values in `raw_vdsvehicledata` which are excluded here. 
+- There are null length values in `raw_vdsvehicledata` which are included here. The meaning of these are not understood, but make up a significant portion of values in some cases (suspicious). 
 
 Row count: 4,622,437
 | column_name    | data_type                   | sample              | description   |
@@ -383,10 +384,17 @@ Row count: 4,622,437
 | vdsconfig_uid            | integer                     | 1             | fkey referencing `vdsconfig.uid` |
 | entity_location_uid            | integer                     | 1             | fkey referencing `entity_locations.uid` |
 | datetime_15min | timestamp without time zone | 2023-06-13 00:00:00 |               |
-| length_meter   | smallint                    | 0                   | 1m length bins, rounded down. |
+| mto_class_uid  | smallint                    | 0                   | fkey referencing `traffic.mto_length_bin_classification.mto_class_uid` |
 | count          | smallint                    | 3                   | count of observations |
 | total_count    | smallint                    | 5                   | Use count::numeric/total_count to get proportion. |
 | uid            | bigint                      | 4866932             | unique id |
+
+**MTO Classification Guide:** 
+<div style="width: 40%";>
+
+![MTO classification guide](image.png)
+
+</div>
 
 ### vds.individual_outages
 
@@ -470,6 +478,7 @@ Row count: 1,148,765 (7 days)
 
 
 ## Cursed
+
 ### vds.detector_inventory_cursed
 Outdated detector inventory from old `rescu` schema with unknown origin, likely manual. Archiving in this schema in case some of this information is useful in the future. Only contains information about RESCU network. 
 
@@ -504,6 +513,7 @@ VDS data is pulled daily at 4AM from ITS Central database by the Airflow DAGs de
 The DAGs need to be run on-prem to access ITSC database and are hosted for now on Morbius. 
 
 <!-- vds_pull_vdsdata_doc_md -->
+
 ### vds_pull_vdsdata DAG 
 <div style="width: 75%";>
 
@@ -535,10 +545,12 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_vdsdata_div2` runs a row count check on `vds.counts_15min_div2` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsdata_doc_md -->
 
 <!-- vds_pull_vdsvehicledata_doc_md -->
+
 ### vds_pull_vdsvehicledata DAG 
 <div style="width: 75%";>
 
@@ -567,6 +579,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `done` acts as a starting point for downstream `vds_check` DAG.  
 
   **`data_checks`**  
+  - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
   - `check_rows_veh_speeds` runs a row count check on `vds.veh_speeds_15min` to check the row count is >= 0.7 * the 60 day average lookback row count. A slack alert is sent if the check fails.  
 <!-- vds_pull_vdsvehicledata_doc_md -->
 

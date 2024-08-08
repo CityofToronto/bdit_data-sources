@@ -86,23 +86,13 @@ def pull_here():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
 
-    load_data_run = BashOperator(
-        task_id = "load_data",
-        bash_command = '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" ''', 
-        env = {"DOWNLOAD_URL": download_url, 
-               "HOST":  BaseHook.get_connection("here_bot").host, 
-               "USER" :  BaseHook.get_connection("here_bot").login, 
-               "PGPASSWORD": BaseHook.get_connection("here_bot").password},
-        append_env=True
-    )
-
-    #Can implement the following when we upgrade to 2.9.1 
-    #@task.bash(env={"DOWNLOAD_URL": download_url,
-    #                "HOST":  BaseHook.get_connection("here_bot").host,
-    #                "USER" :  BaseHook.get_connection("here_bot").login,
-    #           "        PGPASSWORD": BaseHook.get_connection("here_bot").password})
-    #def load_data_run()->str:
-    #    return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+    @task.bash(env={"DOWNLOAD_URL": download_url,
+                    "HOST":  BaseHook.get_connection("here_bot").host,
+                    "USER" :  BaseHook.get_connection("here_bot").login,
+                    "PGPASSWORD": BaseHook.get_connection("here_bot").password})
+    def load_data_run()->str:
+        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+    
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
     def trigger_dags(**kwargs):
@@ -113,11 +103,11 @@ def pull_here():
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',
                 trigger_dag_id=dag_id,
-                execution_date = '{{ ds }}',
+                logical_date = '{{ ds }}',
                 reset_dag_run = True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
             )
             trigger_operators.append(trigger_operator)
 
-    load_data_run >> trigger_dags()
+    load_data_run() >> trigger_dags()
 
 pull_here()

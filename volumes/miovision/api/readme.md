@@ -1,35 +1,33 @@
 <!-- TOC -->
 
 - [Overview](#overview)
-- [API](#api)
-    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-        - [Turning Movement Count TMC](#turning-movement-count-tmc)
-        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
-        - [Error responses](#error-responses)
-    - [Input Files](#input-files)
-    - [How to run the api](#how-to-run-the-api)
-        - [Command Line Options](#command-line-options)
-    - [Classifications](#classifications)
-        - [API Classifications](#api-classifications)
-        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
-    - [PostgreSQL Functions](#postgresql-functions)
-    - [Invalid Movements](#invalid-movements)
-    - [How the API works](#how-the-api-works)
-    - [Repulling data](#repulling-data)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [TMCs (Volumes)](#tmcs-volumes)
+    - [Alerts](#alerts)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-    - [**miovision_pull**](#miovision_pull)
-        - [check_partitions TaskGroup](#check_partitions-taskgroup)
-        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
-        - [data_checks TaskGroup](#data_checks-taskgroup)
-    - [**miovision_check**](#miovision_check)
-    - [Notes](#notes)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [Notes](#notes)
 
 <!-- /TOC -->
 
 # Overview
 This readme contains information on the script used to pull data from the Miovision `intersection_tmc` API and descriptions of the Airflow DAGs which make use of the API scripts and [sql functions](../sql/readme.md#postgresql-functions) to pull, aggregate, and run data quality checks on new.  
-
-# API
 
 ## Relevant Calls and Outputs
 
@@ -115,27 +113,40 @@ password={password}
 
 ## How to run the api
 
-The process to use the API to download data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line. This can be useful when adding new intersections, or when troubleshooting. 
+### TMCs (Volumes)
 
-In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
+The process to use the API to download volumes data is typically run through the daily [miovision_pull Airflow DAG](../../../dags/miovision_pull.py). However it can also be run through the command line from within the airflow venv (since Airflow Connections are used for database connection and API key). This can be useful when adding new intersections, or when troubleshooting. 
 
-### Command Line Options
+In command prompt, navigate to the folder where the python file is [located](../api/) and run `python3 intersection_tmc.py run-api-cli ...` with various command line options listed below. For example, to download and aggregate data from a custom date range, run `python3 intersection_tmc.py run-api-cli --pull --agg --start_date=YYYY-MM-DD --end_date=YYYY-MM-DD`. The start and end variables will indicate the start and end date to pull data from the api.
+
+**TMC Command Line Options**
 
 |Option|Format|Description|Example|Default|
 |-----|-------|-----|-----|-----|
 |start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
 |end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 |intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
-|path|path|Specifies the directory where the `config.cfg` file is which stores the api key. |`/data/airflow/data_scripts/volumes/miovision/api/config.cfg`||
 |pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
 |agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
 
-`python3 intersection_tmc.py run-api --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12 --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg` is an example with all the options specified:  
+`python3 intersection_tmc.py run-api-cli --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12` is an example with all the options specified:  
 - both data pulling and aggregation specified
 - multiple days
 - multiple, specific intersections
 
 The `--pull` and `--agg` commands allow us to run data pulling and aggregation together or independently, which is useful for when we want to check out the data before doing any processing. For example, when we are [finding valid intersection movements for new intersections](../update_intersections/readme.md#update-miovision_apiintersection_movements).  
+
+### Alerts
+
+Although it it typically run daily through the Airflow DAG [miovision_pull](../../../dags/miovision_pull.py) `pull_alerts` task, you can also pull from the Alerts API using the command line within the airflow venv (since Airflow Connections are used for database connection and API key). This is helpful for backfilling multiple dates at once. An example command is: 
+`python3 pull_alert.py run-alerts-api-cli --start_date=2024-06-01 --end_date=2024-07-01`
+
+**Alerts Command Line Options**
+
+|Option|Format|Description|Example|Default|
+|-----|-------|-----|-----|-----|
+|start_date|YYYY-MM-DD|Specifies the start date to pull data from. Inclusive. |2018-08-01|The previous day|
+|end_date|YYYY-MM-DD|Specifies the end date to pull data from. Must be at least 1 day after `start_date` and cannot be a future date. Exclusive. |2018-08-05|Today|
 
 ## Classifications
 
@@ -180,7 +191,7 @@ This flow chart provides a high level overview of the script:
 
 ```mermaid
 flowchart TB
-    A[" `pull_data` called via\ncommand line `run-api`"]
+    A[" `pull_data` called via\ncommand line `run-api-cli`"]
     B[" `pull_data` called via\n`miovision_pull` Airflow DAG\n`pull_data` task"]
     A & B-->pull_data
 
@@ -240,7 +251,7 @@ flowchart TB
 
 ## Repulling data
 
-The Miovision ETL DAG `miovision_pull` and the command line `run-api` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
+The Miovision ETL DAG `miovision_pull` and the command line `run-api-cli` method, both have deletes built in to each insert/aggregation function. This makes both of these methods idempotent and safe to re-run without the need to manually delete data before re-pulling. Both methods also have an optional intersection_uid parameter which allows re-pulling or re-aggregation of a single intersection or a subset of intersections. 
 
 Neither method supports deleting and re-processing data that is not in **daily blocks** (for example we cannot delete and re-pull data from `'2021-05-01 16:00:00'` to `'2021-05-02 23:59:00'`, instead we must do so from `'2021-05-01 00:00:00'` to `'2021-05-03 00:00:00'`).
 
@@ -259,7 +270,7 @@ This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent
   - `create_month_partition` contains any partition creates necessary for a new month.  
  
 `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
-- `pull_alerts` pulls alerts from the API at 5 minute increments and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), extending existing alerts. The records are de-dupped (duplicates are a result of the short-form alert title used by the API), sorted, and runs are identified to identify the approximate alert start/end time. Before inserting, records are first used to update the end time of alerts that are continuous with existing alerts. 
+- `pull_alerts` pulls alerts occuring on this day from the API and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), updating `end_time` of existing alerts.  
 
 ### `miovision_agg` TaskGroup
 This task group completes various Miovision aggregations.  
@@ -274,6 +285,7 @@ This task group completes various Miovision aggregations.
 
 ### `data_checks` TaskGroup
 This task group runs various red-card data-checks on Miovision aggregate tables for the current data interval using [`SQLCheckOperatorWithReturnValue`](../../../dags/custom_operators.py). These tasks are not affected by the optional intersection DAG-level param.  
+- `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
 - `check_row_count` checks the sum of `volume` in `volumes_15min_mvt`, equivalent to the row count of `volumes` table using [this](../../../dags/sql/select-row_count_lookback.sql) generic sql.
 - `check_distinct_classification_uid` checks the count of distinct values in `classification_uid` column using [this](../../../dags/sql/select-sensor_id_count_lookback.sql) generic sql.  
 <!-- miovision_pull_doc_md -->
