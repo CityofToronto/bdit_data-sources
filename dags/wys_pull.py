@@ -7,6 +7,7 @@ import sys
 from functools import partial
 import pendulum
 import dateutil.parser
+from typing import Dict
 
 from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
@@ -69,7 +70,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
     #progressive longer waits between retries
     'retry_exponential_backoff': True,
-    'on_failure_callback': task_fail_slack_alert
+    #'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -111,22 +112,32 @@ def pull_wys_dag():
     def api_pull():
 
         @task(trigger_rule='none_failed')
-        def get_signs():
+        def signs():
             return get_sign_list()
-
+        
         @task()
-        def pull_wys(signs, ds=None):
+        def get_signs_part(signs, slice):
+            #break up the xcom to not exceed mapped task limit
+            #alternative is to increase max_map_length global airflow variable
+            return signs[slice]
+        
+        @task(retry = 0, max_active_tis_per_dag = 5)
+        def pull_wys(sign, ds=None):
             #to connect to pgadmin bot
-            wys_postgres = PostgresHook("wys_bot")           
+            wys_postgres = PostgresHook("wys_bot")
             api_key = get_api_key()
 
             with wys_postgres.get_conn() as conn:
-                wys_postgres = PostgresHook("wys_bot")           
+                wys_postgres = PostgresHook("wys_bot")
                 api_key = get_api_key()
                 with wys_postgres.get_conn() as conn:
-                    get_data_for_date(ds, signs, api_key, conn)
+                    get_data_for_date(ds, sign, api_key, conn)
 
-        pull_wys(signs = get_signs())
+        s = signs()
+        signs_1 = get_signs_part(s, slice(None, 1024))
+        signs_2 = get_signs_part(s, slice(None, 1024))
+        pull_wys.override(task_id = "pull_wys_1").expand(sign = signs_1)
+        pull_wys.override(task_id = "pull_wys_2").expand(sign = signs_2)
     
     @task()
     def agg_speed_counts_hr(ds=None):
@@ -163,7 +174,7 @@ def pull_wys_dag():
     @task
     def pull_schedules():
         #to connect to pgadmin bot
-        wys_postgres = PostgresHook("wys_bot")       
+        wys_postgres = PostgresHook("wys_bot")
         api_key = get_api_key()
 
         with wys_postgres.get_conn() as conn:
