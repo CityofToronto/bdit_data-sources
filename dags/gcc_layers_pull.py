@@ -67,15 +67,15 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
     return generated_dag
 
 #get puller details from airflow variable
-PULLERS = Variable.get('gcc_pullers', deserialize_json=True)
+DAGS = Variable.get('gcc_dags', deserialize_json=True)
 
 #identify the appropriate pullers based on deployment
 dep = os.environ.get("DEPLOYMENT", "PROD")
-filtered_pullers = [
-    key for key, facts in PULLERS.items() if dep in facts['deployments']
+filtered_dags = [
+    key for key, facts in DAGS.items() if dep in facts['deployments']
 ]
 
-for puller in filtered_pullers:
+for dag in filtered_dags:
     DAG_NAME = 'gcc_pull_layers'
     DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
@@ -88,12 +88,12 @@ for puller in filtered_pullers:
         'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
     }
 
-    dag_name = f"{DAG_NAME}_{puller}"
+    dag_name = f"{DAG_NAME}_{dag}"
     globals()[dag_name] = (
         create_gcc_puller_dag(
             dag_id=dag_name,
             default_args=DEFAULT_ARGS,
-            name=puller,
-            conn_id=PULLERS[puller]['conn'],
+            name=dag,
+            conn_id=DAGS[dag]['conn'],
         )
     )
