@@ -7,24 +7,22 @@ import sys
 from functools import partial
 import pendulum
 import dateutil.parser
-from typing import Dict
-
 from datetime import timedelta
-from airflow.hooks.base_hook import BaseHook
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.decorators import task, dag, task_group
 from airflow.sensors.external_task import ExternalTaskMarker
-
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+
 from googleapiclient.discovery import build
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from wys.api.python.wys_api import (
-        get_schedules, agg_1hr_5kph, get_sign_list, get_api_key, get_data_for_date
+        get_schedules, agg_1hr_5kph, get_signs, get_api_key, get_data_for_date, update_locations
     )
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
@@ -65,7 +63,6 @@ default_args = {
     'depends_on_past':False,
     'start_date': pendulum.datetime(2024, 8, 6, tz="America/Toronto"),
     'email_on_failure': False,
-    'email_on_success': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
     #progressive longer waits between retries
@@ -113,31 +110,33 @@ def pull_wys_dag():
 
         @task(trigger_rule='none_failed')
         def signs():
-            return get_sign_list()
-        
-        @task()
-        def get_signs_part(signs, slice):
-            #break up the xcom to not exceed mapped task limit
-            #alternative is to increase max_map_length global airflow variable
-            return signs[slice]
-        
-        @task(retry = 0, max_active_tis_per_dag = 5)
-        def pull_wys(sign, ds=None):
+            api_key = get_api_key()
+            locations = get_signs(api_key)
+            #0s represents nulls here
+            api_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
+            return sorted(api_ids)[:100]
+               
+        @task(retries = 0)
+        def pull_wys(api_ids, ds=None):
             #to connect to pgadmin bot
             wys_postgres = PostgresHook("wys_bot")
             api_key = get_api_key()
 
             with wys_postgres.get_conn() as conn:
-                wys_postgres = PostgresHook("wys_bot")
-                api_key = get_api_key()
-                with wys_postgres.get_conn() as conn:
-                    get_data_for_date(ds, sign, api_key, conn)
+                locations = get_data_for_date(ds, api_ids, api_key, conn)
+                return locations
+        
+        @task(retries = 0)
+        def update_wys_locations(locations):
+            #to connect to pgadmin bot
+            wys_postgres = PostgresHook("wys_bot")
 
-        s = signs()
-        signs_1 = get_signs_part(s, slice(None, 1024))
-        signs_2 = get_signs_part(s, slice(None, 1024))
-        pull_wys.override(task_id = "pull_wys_1").expand(sign = signs_1)
-        pull_wys.override(task_id = "pull_wys_2").expand(sign = signs_2)
+            with wys_postgres.get_conn() as conn:
+                update_locations(locations, conn)
+
+        api_ids = signs()
+        locations = pull_wys(api_ids)
+        update_wys_locations(locations)
     
     @task()
     def agg_speed_counts_hr(ds=None):
