@@ -4,7 +4,7 @@ import os
 from functools import partial
 
 import pendulum
-from airflow.decorators import dag, task, task_group
+from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.operators.python import get_current_context
@@ -34,21 +34,21 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             tables = Variable.get('gcc_layers', deserialize_json=True)
             return tables[name]
                     
-        @task(map_index_template="{{ table_name }}")
+        @task() #add after 2.9.3 upgrade: map_index_template="{{ table_name }}"
         def pull_layer(layer, conn_id):
-            #name mapped task
-            context = get_current_context()
-            context["table_name"] = layer[0]
+            #name mapped task (implement after 2.9.3 upgrade)
+            #context = get_current_context()
+            #context["table_name"] = layer[0]
             #get db connection
             conn = PostgresHook(conn_id).get_conn()
-
+            
             #pull and insert layer
             get_layer(
                 mapserver_n = layer[1].get("mapserver"),
                 layer_id = layer[1].get("layer_id"),
                 schema_name = layer[1].get("schema_name"),
                 is_audited = layer[1].get("is_audited"),
-                pk = layer[1].get("pk"),
+                primary_key = layer[1].get("pk"),
                 con = conn
             )
 
@@ -56,6 +56,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             agg_sql = layer[1].get("agg")
             if agg_sql is not None:
                 with conn.cursor() as cur:
+                    print(agg_sql)
                     cur.execute(agg_sql)
 
         layers = get_layers(name)
@@ -84,7 +85,7 @@ for puller in filtered_pullers:
         'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
         'email_on_failure': False, 
         'retries': 0,
-        #'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
+        'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
     }
 
     dag_name = f"{DAG_NAME}_{puller}"
