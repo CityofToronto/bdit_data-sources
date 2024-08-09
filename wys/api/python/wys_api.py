@@ -11,6 +11,7 @@ import logging
 import sys
 import traceback
 from time import sleep
+from re import findall
 
 import click
 import json
@@ -119,7 +120,7 @@ def get_statistics_date(location, start_date, api_key):
         logger.error('204 error    '+error['error_message'])
     elif response.status_code==404:
         error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message']+' or request duration invalid', location)
+        logger.error('404 error for location %s, ' +error['error_message'], location)
     elif response.status_code==401:
         error=response.json()
         logger.error('401 error    '+error['error_message'])
@@ -178,22 +179,16 @@ def parse_location(api_id, start_date, loc):
         Tuple representing a row of the wys.locations table
 
     '''
-    geocode=loc['geocode']
-    address=loc['address']
-    name=loc['name']
-    if 'SB' in name:
-        direction='SB'
-    elif 'NB' in name:
-        direction='NB'
-    elif 'WB' in name:
-        direction='WB'
-    elif 'EB' in name:
-        direction='EB'
-    else:
-        direction=None
+    geocode=loc.get('geocode')
+    address=loc.get('address')
+    name=loc.get('name')
+    try:
+        direction = findall("SB|NB|WB|EB", name)[0]
+    except IndexError:
+        direction = None
     return (api_id, address, name, direction, start_date, geocode)
 
-def get_data_for_date(start_date, sign, api_key, conn):
+def get_data_for_date(start_date, api_ids, api_key, conn):
     ''' Using get_statistics_date, parse_count_for_locations, parse_locations functions.
     Pull data for the provided date and list of signs to pull
 
@@ -212,37 +207,38 @@ def get_data_for_date(start_date, sign, api_key, conn):
     sign_locations: list
         List of active sign locations to be inserted into wys.locations
     '''
-    for attempt in range(3):
-        if attempt > 0:
-            logger.info('Attempt %d.', attempt + 1)
-            api_id=sign[0]
-            name=sign[1]
-            logger.debug(str(name))
-            try:
-                statistics=get_statistics_date(api_id, start_date, api_key)
-                raw_data=statistics['LocInfo']
-                raw_records=raw_data['raw_records']
-                spd_cnts = parse_counts_for_location(api_id, raw_records)
-            except TimeoutException:
-                sleep(180)
-            except exceptions.ProxyError as prox:
-                logger.error(prox)
-                logger.warning('Retrying in 2 minutes')
-                sleep(120)
-            except exceptions.RequestException as err:
-                logger.error(err)
-                sleep(75)
-            except Exception as err:
-                logger.error(err)
+    speed_counts, sign_locations = [], []
+    count = len(api_ids)
+    for api_id in api_ids:
+        try:
+            logger.info('Pulling sign %s (# %s / %s).', api_id, api_ids.index(api_id), count)
+            statistics=get_statistics_date(api_id, start_date, api_key)
+            raw_data=statistics['LocInfo']
+            raw_records=raw_data['raw_records']
+            spd_cnts = parse_counts_for_location(api_id, raw_records)
+            speed_counts.extend(spd_cnts)
+            sign_location = parse_location(api_id, start_date, raw_data['Location'])
+            sign_locations.append(sign_location)
+        except TimeoutException:
+            sleep(180)
+        except exceptions.ProxyError as prox:
+            logger.error(prox)
+            logger.warning('Retrying in 2 minutes')
+            sleep(120)
+        except exceptions.RequestException as err:
+            logger.error(err)
+            sleep(75)
+        except Exception as err:
+            logger.error(err)
            
     try:
         with conn.cursor() as cur:
-            logger.info('Inserting '+str(len(spd_cnts))+' rows of data. Note: Insert gets roll back on error.')
+            logger.info('Inserting '+str(len(speed_counts))+' rows of data. Note: Insert gets roll back on error.')
             delete_sql = sql.SQL("""
                 DELETE FROM wys.raw_data
-                WHERE datetime_bin >= {} AND datetime_bin < {} + interval '1 day' AND api_id = {};
+                WHERE datetime_bin >= {}::timestamp AND datetime_bin < {}::timestamp + interval '1 day';
             """)
-            delete_sql = delete_sql.format(sql.Identifier(start_date), sql.Identifier(start_date), sql.Identifier(api_id))
+            delete_sql = delete_sql.format(sql.Literal(str(start_date)), sql.Literal(str(start_date)))
             cur.execute(delete_sql)
             insert_sql = sql.SQL("""
                 INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count)
@@ -250,20 +246,13 @@ def get_data_for_date(start_date, sign, api_key, conn):
                 ON CONFLICT (datetime_bin, api_id, speed)
                 DO NOTHING;
             """)
-            cur.execute_values(insert_sql, spd_cnts)
+            execute_values(cur, insert_sql, speed_counts)
     except psycopg2.Error as exc:
         logger.critical('Error inserting speed count data')
         logger.critical(exc)
         sys.exit(1)
 
-    #try:
-    #    update_locations(conn, sign_locations)
-    #    logger.info('Updated wys.locations')
-    #except psycopg2.Error as exc:
-    #    logger.critical('Error updating locations')
-    #    logger.critical(exc)
-    #    conn.close()
-    #    sys.exit(1)
+    return sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 def cli():
@@ -325,7 +314,7 @@ def agg_1hr_5kph(start_date, end_date, conn):
         conn.close()
         sys.exit(1)
 
-def update_locations(conn, loc_table):
+def update_locations(loc_table, conn):
     '''Update the wys.locations table for the date of data collection
 
     Parameters
@@ -335,11 +324,12 @@ def update_locations(conn, loc_table):
     loc_table: list
         List of rows representing each active sign to be inserted or updated
     '''
-    fpath = os.path.join(SQL_DIR, 'sql/create-temp-table-daily_insersections.sql')
+    logger.info('Updating wys.locations')
+    fpath = os.path.join(SQL_DIR, 'create-temp-table-daily_insersections.sql')
     with open(fpath, 'r', encoding='utf-8') as file:
         daily_intersections_sql = sql.SQL(file.read())
 
-    update_fpath = os.path.join(SQL_DIR, 'sql/select-update_locations.sql')
+    update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
     with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
 
