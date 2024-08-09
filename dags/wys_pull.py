@@ -114,7 +114,7 @@ def pull_wys_dag():
             locations = get_signs(api_key)
             #0s represents nulls here
             api_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
-            return sorted(api_ids)[:100]
+            return sorted(api_ids)
                
         @task(retries = 0)
         def pull_wys(api_ids, ds=None):

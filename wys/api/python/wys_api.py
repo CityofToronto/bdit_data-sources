@@ -306,8 +306,9 @@ def agg_1hr_5kph(start_date, end_date, conn):
         with conn.cursor() as cur:
             params = (start_date, end_date)
             cur.execute("SELECT wys.clear_speed_counts_agg_5kph(%s, %s);", params)
+            logger.info('Done clearing speed counts for %s to %s.', start_date, end_date)
             cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", params)
-            logger.info('Aggregated Speed Count Data')
+            logger.info('Done aggregating speed count data for %s to %s.', start_date, end_date)
     except psycopg2.Error as exc:
         logger.critical('Error aggregating data to 1-hour bins')
         logger.critical(exc)
