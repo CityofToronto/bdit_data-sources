@@ -4,7 +4,6 @@ import os
 from functools import partial
 
 import pendulum
-from psycopg2 import sql
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.hooks.postgres_hook import PostgresHook
@@ -14,72 +13,85 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from dags.common_tasks import get_variable
     from gis.gccview.gcc_puller_functions import get_layer
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
-DAG_NAME = 'gcc_pull_layers'
-
-DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
-
-DEFAULT_ARGS = {
-    'owner': ','.join(DAG_OWNERS),
-    'depends_on_past': False,
-    'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
-    'email_on_failure': False, 
-    'retries': 0,
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
-}
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
-@dag(
-    dag_id = DAG_NAME,
-    catchup=False,
-    default_args=DEFAULT_ARGS,
-    schedule='0 7 1 */3 *' #'@quarterly'
-)
-def gcc_layers_dag():
-
-    @task()
-    def get_pullers():
-        dep = os.environ.get("DEPLOYMENT", "PROD")
-        pullers = Variable.get('gcc_pullers', deserialize_json=True)
-
-        #return the appropriate pullers
-        return [(puller, facts['conn']) for puller, facts in pullers.items() if dep in facts['deployments']]
-
-    @task_group()
-    def pull_and_agg_layers(puller_details):
-        @task()
-        def get_conn_id(puller_details) -> str:
-            return puller_details[1]
+def create_gcc_puller_dag(dag_id, default_args, name, conn_id): 
+    @dag(
+        dag_id=dag_id,
+        default_args=default_args,
+        catchup=False,
+        tags=['gcc', name],
+        schedule='0 7 1 */3 *' #'@quarterly'
+    )
+    def gcc_layers_dag():
 
         @task()
-        def get_layers(puller: str):
+        def get_layers(name):
             tables = Variable.get('gcc_layers', deserialize_json=True)
-            return tables[puller]
+            return tables #[name]
         
-        @task(map_index_template="{{ table_name }}")
-        def pull_layer(layer, conn_id):
-            #name mapped task
-            context = get_current_context()
-            context["table_name"] = tables[tbl_index]
-            conn = PostgresHook(conn_id).get_conn()
-            get_layer(layer, layer.items(), conn)
-        
-        #if layer in ['centreline', 'intersection']:
-        #    @task
-        #    def agg_layer():
-        #        sql_refresh_mat_view = sql.SQL("SELECT {function_name}()").format(
-        #            function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
-        #        )
-        #        with con.cursor() as cur:
-        #            cur.execute(sql_refresh_mat_view)
+        @task_group()
+        def pull_and_agg_layers(layer, conn_id):
+            
+            @task() #map_index_template="{{ table_name }}"
+            def pull_layer(layer, conn_id):
+                #name mapped task
+                #context = get_current_context()
+                #context["table_name"] = layer
+                print(layer)
+                print(conn_id)
+                #conn = PostgresHook(conn_id).get_conn()
+                #get_layer(layer, layer.items(), conn)
+            
+            #if layer in ['centreline', 'intersection']:
+            #    @task
+            #    def agg_layer():
+            #        sql_refresh_mat_view = sql.SQL("SELECT {function_name}()").format(
+            #            function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
+            #        )
+            #        with con.cursor() as cur:
+            #            cur.execute(sql_refresh_mat_view)
 
-        pull_layer.partial(conn_id = get_conn_id(puller_details)).expand(layer = get_layers(puller_details))() #>> agg_layer()
+            pull_layer(layer, conn_id)
 
-    for puller in get_pullers():
-        pull_and_agg_layers(puller_details = puller)
+        layers = get_layers(name)
+        #pull_and_agg_layers.override(group_id = f"{name}_pull").partial(conn_id = conn_id).expand(layer = layers)
+    generated_dag = gcc_layers_dag()
 
-gcc_layers_dag()
+    return generated_dag
+
+#get puller details from airflow variable
+PULLERS = Variable.get('gcc_pullers', deserialize_json=True)
+
+#identify the appropriate pullers based on deployment
+dep = os.environ.get("DEPLOYMENT", "PROD")
+filtered_pullers = [
+    key for key, facts in PULLERS.items() if dep in facts['deployments']
+]
+
+for puller in filtered_pullers:
+    DAG_NAME = 'gcc_pull_layers'
+    DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+    DEFAULT_ARGS = {
+        'owner': ','.join(DAG_OWNERS),
+        'depends_on_past': False,
+        'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
+        'email_on_failure': False, 
+        'retries': 0,
+        #'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
+    }
+
+    dag_name = f"{DAG_NAME}_{puller}"
+    globals()[dag_name] = (
+        create_gcc_puller_dag(
+            dag_id=dag_name,
+            default_args=DEFAULT_ARGS,
+            name=puller,
+            conn_id=PULLERS[puller]['conn'],
+        )
+    )
