@@ -19,7 +19,7 @@ except:
 
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
-def create_gcc_puller_dag(dag_id, default_args, name, conn_id): 
+def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
     @dag(
         dag_id=dag_id,
         default_args=default_args,
@@ -32,34 +32,35 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
         @task()
         def get_layers(name):
             tables = Variable.get('gcc_layers', deserialize_json=True)
-            return tables #[name]
-        
-        @task_group()
-        def pull_and_agg_layers(layer, conn_id):
-            
-            @task() #map_index_template="{{ table_name }}"
-            def pull_layer(layer, conn_id):
-                #name mapped task
-                #context = get_current_context()
-                #context["table_name"] = layer
-                print(layer)
-                print(conn_id)
-                #conn = PostgresHook(conn_id).get_conn()
-                #get_layer(layer, layer.items(), conn)
-            
-            #if layer in ['centreline', 'intersection']:
-            #    @task
-            #    def agg_layer():
-            #        sql_refresh_mat_view = sql.SQL("SELECT {function_name}()").format(
-            #            function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
-            #        )
-            #        with con.cursor() as cur:
-            #            cur.execute(sql_refresh_mat_view)
+            return tables[name]
+                    
+        @task(map_index_template="{{ table_name }}")
+        def pull_layer(layer, conn_id):
+            #name mapped task
+            context = get_current_context()
+            context["table_name"] = layer[0]
+            #get db connection
+            conn = PostgresHook(conn_id).get_conn()
 
-            pull_layer(layer, conn_id)
+            #pull and insert layer
+            get_layer(
+                mapserver_n = layer[1].get("mapserver"),
+                layer_id = layer[1].get("layer_id"),
+                schema_name = layer[1].get("schema_name"),
+                is_audited = layer[1].get("is_audited"),
+                pk = layer[1].get("pk"),
+                con = conn
+            )
+
+            #refresh mat views as necessary
+            agg_sql = layer[1].get("agg")
+            if agg_sql is not None:
+                with conn.cursor() as cur:
+                    cur.execute(agg_sql)
 
         layers = get_layers(name)
-        #pull_and_agg_layers.override(group_id = f"{name}_pull").partial(conn_id = conn_id).expand(layer = layers)
+        pull_layer.partial(conn_id = conn_id).expand(layer = layers)
+
     generated_dag = gcc_layers_dag()
 
     return generated_dag

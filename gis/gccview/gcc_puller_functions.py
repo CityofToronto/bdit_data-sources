@@ -16,52 +16,6 @@ if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-#-------------------------------------------------------------------------------------------------------
-pk_dict = {
-	"city_ward": "area_id",
-    "census_tract": "area_id",
-    "cycling_infrastructure": "objectid", 
-    "neighbourhood_improvement_area": "area_id",
-    "priority_neighbourhood_for_investment": "area_id",
-    "ibms_district": "area_id",
-    "ibms_grid": "area_id",
-    "bikeway": "centreline_id",
-    "traffic_camera": "rec_id",
-    "permit_parking_area": "area_long_code",
-    "prai_transit_shelter": "id",
-    "traffic_bylaw_point": "objectid",
-    "traffic_bylaw_line": "objectid",
-    "loop_detector": "id",
-    "electrical_vehicle_charging_station": "id",
-    "day_care_centre": "loc_id",
-    "middle_childcare_centre": "id",
-    "business_improvement_area": "area_id",
-    "proposed_business_improvement_area": "objectid",
-    "film_permit_all": "objectid",
-    "film_permit_parking_all": "objectid",
-    "hotel": "id",
-    "convenience_store": "objectid",
-    "supermarket": "objectid",
-    "place_of_worship": "objectid",
-    "ymca": "objectid",
-    "aboriginal_organization": "id",
-    "attraction": "objectid",
-    "dropin": "objectid",
-    "early_years_centre": "id",
-    "family_resource_centre": "objectid",
-    "food_bank": "objectid",
-    "longterm_care": "id",
-    "parenting_family_literacy": "id",
-    "retirement_home": "id",
-    "senior_housing": "objectid",
-    "shelter": "objectid",
-    "social_housing": "objectid",
-    "private_road": "objectid",
-    "school": "objectid",
-    "library": "id",
-    "pavement_asset": "objectid",
-}
-#-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
     Function to return the mapserver name from integer
@@ -596,7 +550,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 # base main function, also compatible with Airflow
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -639,8 +593,10 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         LOGGER.error("Invalid mapserver and/or layer Id")
         return
     #--------------------------------
-    if is_audited:
-        primary_key = pk_dict.get(output_table)
+    if is_audited and primary_key is None:
+        LOGGER.error("Audited tables should have a primary key.")
+    if not(is_audited) and primary_key is not None:
+        LOGGER.error("Non-audited tables do not use the primary key.")
     #--------------------------------
     keep_adding = True
     counter = 0
@@ -699,9 +655,11 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
                 , help = 'Name of destination schema')
 @click.option('--is-audited', '-a', is_flag=True, show_default=True, default=False, 
                 help = 'Whether the table is supposed to be audited (T) or partitioned (F)')
+@click.option('--primary-key', '-pk', type = str, default=None, required = False,
+                help = 'Primary key. Only include if table is audited.')
 @click.option('--con', '-c', type = str, required = True, 
                 help = 'The path to the credential config file')
-def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
+def manual_get_layer(mapserver, layer_id, schema_name, is_audited, primary_key, con):
     """
     This script pulls a GIS layer from GCC servers into the databases of
     the Data and Analytics Unit.
@@ -715,7 +673,14 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
     # get_layer function
-    get_layer(mapserver, layer_id, schema_name, is_audited, con=connection_obj)
+    get_layer(
+        mapserver_n = mapserver,
+        layer_id = layer_id,
+        schema_name = schema_name,
+        is_audited = is_audited,
+        primary_key = primary_key,
+        con=connection_obj
+    )
 
 if __name__ == '__main__':
     manual_get_layer()
