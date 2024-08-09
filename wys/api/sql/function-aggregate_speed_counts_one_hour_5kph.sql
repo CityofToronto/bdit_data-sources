@@ -45,8 +45,7 @@ BEGIN
     FROM insert_data AS ins
     JOIN wys.speed_bins_old AS sbo USING (speed_id)
     WHERE
-        raw.speed_count_uid IS NULL
-        AND raw.api_id = ins.api_id
+        raw.api_id = ins.api_id
         AND raw.speed <@ sbo.speed_bin
         AND raw.datetime_bin >= ins.datetime_bin
         AND raw.datetime_bin < ins.datetime_bin + interval '1 hour'
