@@ -20,6 +20,9 @@ WITH (OIDS=FALSE);
 CREATE INDEX IF NOT EXISTS raw_data_datetime_bin_idx
 ON wys.raw_data USING brin(datetime_bin);
 
+CREATE INDEX IF NOT EXISTS raw_data_speed_count_uid_idx
+ON wys.raw_data USING btree(speed_count_uid ASC NULLS FIRST);
+
 ALTER TABLE wys.raw_data OWNER TO wys_admins;
 GRANT SELECT, REFERENCES ON TABLE wys.raw_data TO bdit_humans WITH GRANT OPTION;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE wys.raw_data TO wys_bot;
