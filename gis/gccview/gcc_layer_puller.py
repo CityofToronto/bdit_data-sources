@@ -5,20 +5,145 @@ from psycopg2 import connect
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 import logging
+import os
 from time import sleep
 import click
 from pathlib import Path
 import configparser
-from psycopg2 import connect
 CONFIG = configparser.ConfigParser()
-CONFIG.read(str(Path.home().joinpath('db.cfg'))) #Creates a path to your db.cfg file
-dbset = CONFIG['DB_SETTINGS']
-con = connect(**dbset)
+from psycopg2 import connect
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-from gcc_puller_functions import (mapserver_name, get_tablename, get_fieldtype, to_time, find_limit, get_geometry)
+# Geometry Switcher 
+def line(geom):
+    return 'SRID=4326;LineString('+','.join(' '.join(str(x) for x in tup) for tup in geom['paths'][0]) +')'
+def polygon(geom):
+    return 'SRID=4326;MultiPolygon((('+','.join(' '.join(str(x) for x in tup) for tup in geom['rings'][0]) +')))'
+def point(geom):
+    return 'SRID=4326;Point('+(str(geom['x']))+' '+ (str(geom['y']))+')'  
+def get_geometry(geometry_type, geom):
+    switcher = {
+        'esriGeometryLine':line,
+        'esriGeometryPolyline': line,
+        'esriGeometryPoint': point,
+        'esriGeometryMultiPolygon': polygon,
+        'esriGeometryPolygon': polygon
+    }
+    func = switcher.get(geometry_type)
+    geometry = (func(geom)) 
+    return geometry
+
+def to_time(input):
+    """
+    Convert epoch time to postgresql timestamp without time zone
+
+    Parameters
+    -----------
+    input : string
+        Epoch time attribute in return_json
+
+    Returns
+    --------
+    time : string
+        Time in the type of postgresql timestamp without time zone
+    """
+    
+    time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
+    return time
+
+def mapserver_name(mapserver_n):
+    """
+    Function to return the mapserver name from integer
+    
+    Parameters
+    ------------
+    mapserver_n : numeric
+        The number of mapserver we will be accessing. 0 for 'cot_geospatial'
+    
+    Returns
+    --------
+    mapserver_name : string
+        The name of the mapserver
+    """
+    
+    if mapserver_n == 0:
+        mapserver_name = 'cot_geospatial'
+    else:
+        mapserver_name = 'cot_geospatial' + str(mapserver_n)
+    
+    return(mapserver_name)
+
+def get_tablename(mapserver, layer_id):
+    """
+    Function to return the name of the layer
+
+    Parameters
+    -----------
+    mapserver: string
+        The name of the mapserver we are accessing, returned from function mapserver_name
+    
+    layer_id: integer
+        Unique layer id that represent a single layer in the mapserver
+    
+    Returns
+    --------
+    output_name
+        The table name of the layer in database
+    """
+    
+    url = 'https://insideto-gis.toronto.ca/arcgis/rest/services/'+mapserver+'/MapServer/layers?f=json'
+    try:
+        r = requests.get(url, verify = False, timeout = 20)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as err_h:
+        LOGGER.error("Invalid HTTP response: ", err_h)
+    except requests.exceptions.ConnectionError as err_c:
+        LOGGER.error("Network problem: ", err_c)
+    except requests.exceptions.Timeout as err_t:
+        LOGGER.error("Timeout: ", err_t)
+    except requests.exceptions.RequestException as err:
+        LOGGER.error("Error: ", err)
+    else:
+        ajson = r.json()
+        layers = ajson['layers']
+        for layer in layers:
+            if layer['id'] == layer_id:
+                output_name = (layer['name'].lower()).replace(' ', '_')
+        return output_name
+
+def find_limit(return_json):
+    """
+    Function to check if last query return all rows
+
+    Parameters
+    -----------
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+
+    Returns
+    --------
+    keep_adding : Boolean
+        boolean 'keep_adding' indicating if last query returned all rows in the layer
+    """
+    
+    if return_json.get('exceededTransferLimit', False) == True:
+        keep_adding = True
+    else:
+        keep_adding = False
+    return keep_adding
+
+def get_fieldtype(field):
+    if field == 'esriFieldTypeInteger' or field == 'esriFieldTypeSingle' or field == 'esriFieldTypeInteger' or field=='esriFieldTypeOID' or field == 'esriFieldTypeSmallInteger' or field =='esriFieldGlobalID':
+        fieldtype = 'integer'
+    elif field == 'esriFieldTypeString':
+        fieldtype = 'text'
+    elif field == 'esriFieldTypeDouble':
+        fieldtype = 'numeric'
+    elif field == 'esriFieldTypeDate':
+        fieldtype = 'timestamp without time zone'
+    return fieldtype
 
 def create_table(output_table, return_json, schema_name, con):
     """
@@ -55,9 +180,6 @@ def create_table(output_table, return_json, schema_name, con):
     insert_column_list.append(sql.Identifier('geom'))
     insert_column = sql.SQL(',').join(insert_column_list)
     
-    # Since this is a temporary table, name it '_table' as opposed to 'table' for now
-    temp_table_name = '_' + output_table
-    
     with con:
         with con.cursor() as cur:
             
@@ -66,7 +188,7 @@ def create_table(output_table, return_json, schema_name, con):
             col_list_string = sql.SQL(',').join(col_list)
             
             LOGGER.info(col_list_string.as_string(con))
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, output_table),
                                                                       columns = col_list_string)
             LOGGER.info(create_sql.as_string(con))
             cur.execute(create_sql)
@@ -176,11 +298,9 @@ def insert_data(output_table, insert_column, return_json, schema_name, con):
         
         rows.append(row)
     
-    # Since this is a temporary table, name it '_table' as opposed to 'table' for now (for audited tables)
-    temp_table_name = '_' + output_table
     
     insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, temp_table_name), 
+        schema_table = sql.Identifier(schema_name, output_table), 
         columns = insert_column
     )
     with con:
@@ -231,34 +351,33 @@ def get_layer(mapserver_n, layer_id, schema_name, con = None):
             insert_column = create_table(output_table, return_json, schema_name, con)
         
             features = return_json['features']
-            record_max=(len(features))
+            record_max=len(features)
             max_number = record_max
-
-            insert_data(output_table, insert_column, return_json, schema_name, con)
-
-            counter += 1
-            keep_adding = find_limit(return_json)
-            if keep_adding == False:
-                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
         else:
             return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
-            insert_data(output_table, insert_column, return_json, schema_name, con)
-            
-            counter += 1
-            keep_adding = find_limit(return_json)
-            if keep_adding == True:
-                max_number = max_number + record_max
-            else:
-                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
+        
+        # Insert data into the table
+        insert_data(output_table, insert_column, return_json, schema_name, con)
+        
+        # Update loop variables
+        counter += 1
+        keep_adding = find_limit(return_json)
+        
+        if keep_adding:
+            max_number += record_max
+        else:
+            LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
     
 @click.command()
 @click.option('--mapserver', '-m', type = int, required = True, 
                 help = 'Mapserver number, e.g. cotgeospatial_2 will be 2')
-@click.option('--layer-id', '-l', type = int, required = True
-                , help = 'Layer id')
-@click.option('--schema-name', '-s', type = str, required = True
-                , help = 'Name of destination schema')
-def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
+@click.option('--layer-id', '-l', type = int, required = True,
+                help = 'Layer id')
+@click.option('--schema-name', '-s', type = str, required = True,
+                help = 'Name of destination schema')
+@click.option('--con', '-c', type = str, default=os.path.expanduser('~/db.cfg'),
+                help = 'The path to the credential config file. Default is ~/db.cfg')                
+def manual_get_layer(mapserver, layer_id, schema_name, con):
     """
     This script pulls a GIS layer from GCC servers into the databases of the Data and Analytics Unit.
     
