@@ -14,7 +14,6 @@ from time import sleep
 from re import findall
 
 import click
-import json
 import dateutil.parser
 import psycopg2
 from psycopg2 import sql
@@ -54,8 +53,13 @@ date=(datetime.datetime.today()+time_delta).strftime('%Y-%m-%d')
 default_start=str(datetime.date.today()-time_delta)
 default_end=str(datetime.date.today()-time_delta)
 CONTEXT_SETTINGS = dict(
-    default_map={'run_api': {'minutes':'1473','pull_time':'0:01', 'path':'config.cfg','location_flag': 0}}
+    default_map={'api_main': {'minutes':'1473','pull_time':'0:01', 'path':'config.cfg','location_id': 0}}
 )
+
+def get_api_key():
+    #api connection
+    api_conn = BaseHook.get_connection('wys_api_key')
+    return api_conn.password
 
 def get_signs(api_key):
     headers={'Content-Type':'application/json','x-api-key':api_key}
@@ -134,12 +138,12 @@ def get_statistics_date(location, start_date, api_key):
     else:
         raise WYS_APIException('Error'+str(response.status_code))
 
-def parse_counts_for_location(api_id, raw_records):
+def parse_counts_for_location(location_id, raw_records):
     '''Parse the response for a given location and set of records
 
     Parameters
     ------------
-    api_id : int
+    location_id : int
         Unique identifier for the sign.
     raw_records : list
         List of records returned for location and time.
@@ -157,16 +161,16 @@ def parse_counts_for_location(api_id, raw_records):
         for item in counter:
             this_speed=int(item['speed']) if item['speed'] else None
             this_count=int(item['count']) if item['count'] else None
-            speed_row=[api_id, datetime_bin, this_speed, this_count]
+            speed_row=[location_id, datetime_bin, this_speed, this_count]
             speed_counts.append(speed_row)
     return speed_counts
 
-def parse_location(api_id, start_date, loc):
+def parse_location(location_id, start_date, loc):
     '''Parse the location data for a given sign
 
     Parameters
     ------------
-    api_id : int 
+    location_id : int 
         Unique identifier for the sign.
     start_date : date 
         Date being processed.
@@ -186,9 +190,9 @@ def parse_location(api_id, start_date, loc):
         direction = findall("SB|NB|WB|EB", name)[0]
     except IndexError:
         direction = None
-    return (api_id, address, name, direction, start_date, geocode)
+    return (location_id, address, name, direction, start_date, geocode)
 
-def get_data_for_date(start_date, api_ids, api_key, conn):
+def get_data_for_date(start_date, location_ids, api_key, conn):
     ''' Using get_statistics_date, parse_count_for_locations, parse_locations functions.
     Pull data for the provided date and list of signs to pull
 
@@ -197,7 +201,7 @@ def get_data_for_date(start_date, api_ids, api_key, conn):
     start_date : date
         Date to pull data for
     signs_iterator : list
-        List of api_id's (signs) to pull data from
+        List of location_id's (signs) to pull data from
     api_key : str
         Key to pull data from the api
     Returns
@@ -208,16 +212,16 @@ def get_data_for_date(start_date, api_ids, api_key, conn):
         List of active sign locations to be inserted into wys.locations
     '''
     speed_counts, sign_locations = [], []
-    count = len(api_ids)
-    for api_id in api_ids:
+    count = len(location_ids)
+    for location_id in location_ids:
         try:
-            logger.info('Pulling sign %s (# %s / %s).', api_id, api_ids.index(api_id), count)
-            statistics=get_statistics_date(api_id, start_date, api_key)
+            logger.info('Pulling sign %s (# %s / %s).', location_id, location_ids.index(location_id), count)
+            statistics=get_statistics_date(location_id, start_date, api_key)
             raw_data=statistics['LocInfo']
             raw_records=raw_data['raw_records']
-            spd_cnts = parse_counts_for_location(api_id, raw_records)
+            spd_cnts = parse_counts_for_location(location_id, raw_records)
             speed_counts.extend(spd_cnts)
-            sign_location = parse_location(api_id, start_date, raw_data['Location'])
+            sign_location = parse_location(location_id, start_date, raw_data['Location'])
             sign_locations.append(sign_location)
         except TimeoutException:
             sleep(180)
@@ -261,16 +265,16 @@ def cli():
 @cli.command()
 @click.option('-s', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-@click.option('--location_flag' , default=0, help='enter the location_id of the sign')
+@click.option('--location_id' , default=0, help='enter the location_id of the sign')
 
-def run_api(start_date, end_date, location_flag):
+def api_main(start_date, end_date, location_id):
     api_key = get_api_key()
     wys_postgres = PostgresHook("wys_bot")
     conn = wys_postgres.get_conn()
     
     start_date = dateutil.parser.parse(str(start_date)).date()
     end_date = dateutil.parser.parse(str(end_date)).date()
-    signs_list = get_sign_list(location_flag)
+    signs_list = get_sign_list(location_id)
 
     logger.debug('Pulling data')
 
@@ -280,26 +284,24 @@ def run_api(start_date, end_date, location_flag):
         agg_1hr_5kph(start_date, start_date + time_delta, conn)
         start_date+=time_delta
 
+    with wys_postgres.get_conn() as conn:
+        update_locations(location_id, conn)
+
     logger.info('Done')
 
-def get_sign_list(location_flag = 0):
+def get_sign_list(location_id = 0):
     api_key = get_api_key()
     signs_list=[]
     try:
-        if location_flag == 0:
+        if location_id == 0:
             signs_list=location_id(api_key)
         else:
-            signs_list=[location_flag]
+            signs_list=[location_id]
     except Exception:
         logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
         sys.exit(2)
     return signs_list
-
-def get_api_key():
-    #api connection
-    api_conn = BaseHook.get_connection('wys_api_key')
-    return api_conn.password
 
 def agg_1hr_5kph(start_date, end_date, conn):
     try:
@@ -327,11 +329,11 @@ def update_locations(loc_table, conn):
     '''
     logger.info('Updating wys.locations')
     fpath = os.path.join(SQL_DIR, 'create-temp-table-daily_insersections.sql')
-    with open(fpath, 'r', encoding='utf-8') as file:
+    with os.open(fpath, 'r', encoding='utf-8') as file:
         daily_intersections_sql = sql.SQL(file.read())
 
     update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
-    with open(update_fpath, 'r', encoding='utf-8') as file:
+    with os.open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
 
     with conn.cursor() as cur:
@@ -353,9 +355,9 @@ def get_schedules(conn, api_key):
         logger.critical('Response: %s', exc.response)
 
     try:
-        rows = [(schedule['name'], api_id)
+        rows = [(schedule['name'], location_id)
                     for schedule in schedule_list if schedule['assigned_on_locations']
-                        for api_id in schedule['assigned_on_locations'] if api_id]
+                        for location_id in schedule['assigned_on_locations'] if location_id]
     except TypeError as e:
         logger.critical('Error converting schedules response to values list.')
         logger.critical('Return value: %s', schedule_list)

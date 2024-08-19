@@ -67,7 +67,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
     #progressive longer waits between retries
     'retry_exponential_backoff': True,
-    #'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -113,17 +113,17 @@ def pull_wys_dag():
             api_key = get_api_key()
             locations = get_signs(api_key)
             #0s represents nulls here
-            api_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
-            return sorted(api_ids)
+            location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
+            return sorted(location_ids)
                
         @task(retries = 0)
-        def pull_wys(api_ids, ds=None):
+        def pull_wys(location_ids, ds=None):
             #to connect to pgadmin bot
             wys_postgres = PostgresHook("wys_bot")
             api_key = get_api_key()
 
             with wys_postgres.get_conn() as conn:
-                locations = get_data_for_date(ds, api_ids, api_key, conn)
+                locations = get_data_for_date(ds, location_ids, api_key, conn)
                 return locations
         
         @task(retries = 0)
@@ -134,8 +134,8 @@ def pull_wys_dag():
             with wys_postgres.get_conn() as conn:
                 update_locations(locations, conn)
 
-        api_ids = signs()
-        locations = pull_wys(api_ids)
+        location_ids = signs()
+        locations = pull_wys(location_ids)
         update_wys_locations(locations)
     
     @task()
