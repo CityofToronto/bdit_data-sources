@@ -48,7 +48,7 @@ def wys_check_dag():
 
     t_upstream_done = ExternalTaskSensor(
         task_id="starting_point",
-        external_dag_id="pull_wys",
+        external_dag_id="wys_pull",
         external_task_id="done",
         poke_interval=3600, #retry hourly
         mode="reschedule",
