@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Oct 17 15:26:52 2018
-
-@author: rliu4, jchew, radumas
-"""
 
 import os
 import datetime
@@ -62,7 +57,10 @@ def get_api_key():
     return headers
 
 def get_location_ids(ids = [0], api_key = None):
-    response=session.get(url+signs_endpoint, headers=api_key)
+    response=session.get(
+        url+signs_endpoint,
+        headers=api_key
+    )
     try:
         if response.status_code==200:
             locations=response.json()
@@ -78,30 +76,47 @@ def get_location_ids(ids = [0], api_key = None):
         logger.critical(traceback.format_exc())
         sys.exit(2)
 
-def get_statistics_date(location, start_date, api_key):
-    response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/speed_units/0', 
-                         headers=api_key)
-    if response.status_code==200:
-        statistics=response.json()
-        return statistics
-    elif response.status_code==204:
-        error=response.json()
-        logger.error('204 error    '+error['error_message'])
-    elif response.status_code==404:
-        error=response.json()
-        logger.error('404 error for location %s, ' +error['error_message'], location)
-    elif response.status_code==401:
-        error=response.json()
-        logger.error('401 error    '+error['error_message'])
-    elif response.status_code==405:
-        error=response.json()
-        logger.error('405 error    '+error['error_message'])        
-    elif response.status_code==504:
-        error=response.json()
-        logger.error('504 error')
-        raise TimeoutException('Error'+str(response.status_code))
-    else:
-        raise WYS_APIException('Error'+str(response.status_code))
+def get_statistics_date(location_id, start_date, api_key):
+    for attempt in range(3):
+        if attempt > 0:
+            logger.info('Attempt %s for location_id %s', attempt + 1, location_id)
+        try:
+            response=session.get(
+                url+statistics_url+str(location_id)+'/date/'+str(start_date)+'/speed_units/0',
+                headers=api_key
+            )
+            if response.status_code==200:
+                statistics=response.json()
+                return statistics
+            elif response.status_code==204:
+                error=response.json()
+                logger.error('204 error    '+error['error_message'])
+            elif response.status_code==404:
+                error=response.json()
+                logger.error('404 error for location_id %s, ' +error['error_message'], location_id)
+            elif response.status_code==401:
+                error=response.json()
+                logger.error('401 error    '+error['error_message'])
+            elif response.status_code==405:
+                error=response.json()
+                logger.error('405 error    '+error['error_message'])
+            elif response.status_code==504:
+                error=response.json()
+                logger.error('504 error')
+                logger.warning('Retrying in 3 minutes.')
+                sleep(180)
+            else: #unknown error code
+                raise WYS_APIException('Error'+str(response.status_code))
+        except exceptions.ProxyError as prox:
+            logger.error(prox)
+            logger.warning('Retrying in 2 minutes.')
+            sleep(120)
+        except exceptions.RequestException as err:
+            logger.error(err)
+            logger.warning('Retrying in 75 seconds.')
+            sleep(75)
+        except Exception as err:
+            logger.error(err)
 
 def parse_counts_for_location(location_id, raw_records):
     '''Parse the response for a given location and set of records
@@ -179,26 +194,14 @@ def get_data_for_date(start_date, location_ids, api_key, conn):
     speed_counts, sign_locations = [], []
     count = len(location_ids)
     for location_id in location_ids:
-        try:
-            logger.info('Pulling sign %s (# %s / %s).', location_id, location_ids.index(location_id), count)
-            statistics=get_statistics_date(location_id, start_date, api_key)
-            raw_data=statistics['LocInfo']
-            raw_records=raw_data['raw_records']
-            spd_cnts = parse_counts_for_location(location_id, raw_records)
-            speed_counts.extend(spd_cnts)
-            sign_location = parse_location(location_id, start_date, raw_data['Location'])
-            sign_locations.append(sign_location)
-        except TimeoutException:
-            sleep(180)
-        except exceptions.ProxyError as prox:
-            logger.error(prox)
-            logger.warning('Retrying in 2 minutes')
-            sleep(120)
-        except exceptions.RequestException as err:
-            logger.error(err)
-            sleep(75)
-        except Exception as err:
-            logger.error(err)
+        i = location_ids.index(location_id)
+        logger.info('Pulling location_id: %s (# %s / %s).', location_id, i, count)
+        statistics=get_statistics_date(location_id, start_date, api_key)
+        raw_data=statistics['LocInfo']
+        spd_cnts = parse_counts_for_location(location_id, raw_data['raw_records'])
+        speed_counts.extend(spd_cnts)
+        sign_location = parse_location(location_id, start_date, raw_data['Location'])
+        sign_locations.append(sign_location)
            
     try:
         with conn.cursor() as cur:
@@ -220,7 +223,7 @@ def get_data_for_date(start_date, location_ids, api_key, conn):
         logger.critical('Error inserting speed count data')
         logger.critical(exc)
         sys.exit(1)
-
+        
     return sign_locations
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -247,14 +250,13 @@ def api_main(start_date, end_date, location_id):
         with wys_postgres.get_conn() as conn:
             locations = get_data_for_date(start_date, location_ids, api_key, conn)
             agg_1hr_5kph(start_date, start_date + time_delta, conn)
+            update_locations(locations, conn)
         start_date+=time_delta
-        
-    with wys_postgres.get_conn() as conn:
-        update_locations(locations, conn)
         
     logger.info('Done')
 
 def agg_1hr_5kph(start_date, end_date, conn):
+    #improvement idea: add location_id parameter to this function + sql functions
     try:
         with conn.cursor() as cur:
             params = (start_date, end_date)
@@ -280,11 +282,11 @@ def update_locations(loc_table, conn):
     '''
     logger.info('Updating wys.locations')
     fpath = os.path.join(SQL_DIR, 'create-temp-table-daily_insersections.sql')
-    with os.open(fpath, 'r', encoding='utf-8') as file:
+    with open(fpath, 'r', encoding='utf-8') as file:
         daily_intersections_sql = sql.SQL(file.read())
 
     update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
-    with os.open(update_fpath, 'r', encoding='utf-8') as file:
+    with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
 
     with conn.cursor() as cur:
@@ -295,14 +297,16 @@ def update_locations(loc_table, conn):
 
 def get_schedules(conn, api_key):    
     try:
-        response=session.get(url+signs_endpoint+schedule_endpoint,
-                         headers=api_key)
+        response=session.get(
+            url+signs_endpoint+schedule_endpoint,
+            headers=api_key
+        )
         response.raise_for_status()
         schedule_list = response.json()
     except RequestException as exc: 
         logger.critical('Error querying API, %s', exc)
         logger.critical('Response: %s', exc.response)
-
+        
     try:
         rows = [(schedule['name'], location_id)
                     for schedule in schedule_list if schedule['assigned_on_locations']
@@ -311,7 +315,7 @@ def get_schedules(conn, api_key):
         logger.critical('Error converting schedules response to values list.')
         logger.critical('Return value: %s', schedule_list)
         raise WYS_APIException(e)
-
+    
     with conn.cursor() as cur:
         logger.debug('Inserting '+str(len(rows))+' rows of schedules')
         schedule_sql = '''

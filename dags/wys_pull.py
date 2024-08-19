@@ -112,17 +112,15 @@ def pull_wys_dag():
         @task(trigger_rule='none_failed')
         def signs():
             api_key = get_api_key()
-            locations = get_location_ids(api_key = api_key)
-            #0s represents nulls here
-            location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
-            return sorted(location_ids)
-               
+            location_ids = get_location_ids(api_key = api_key)
+            return location_ids
+        
         @task(retries = 0)
         def pull_wys(location_ids, ds=None):
             #to connect to pgadmin bot
             wys_postgres = PostgresHook("wys_bot")
             api_key = get_api_key()
-
+            
             with wys_postgres.get_conn() as conn:
                 locations = get_data_for_date(ds, location_ids, api_key, conn)
                 return locations
@@ -131,10 +129,10 @@ def pull_wys_dag():
         def update_wys_locations(locations):
             #to connect to pgadmin bot
             wys_postgres = PostgresHook("wys_bot")
-
+            
             with wys_postgres.get_conn() as conn:
                 update_locations(locations, conn)
-
+        
         location_ids = signs()
         locations = pull_wys(location_ids)
         update_wys_locations(locations)
