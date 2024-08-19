@@ -22,7 +22,8 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from wys.api.python.wys_api import (
-        get_schedules, agg_1hr_5kph, get_signs, get_api_key, get_data_for_date, update_locations
+        get_schedules, agg_1hr_5kph, get_location_ids, get_api_key,
+        get_data_for_date, update_locations
     )
     from wys.api.python.wys_google_sheet import read_masterlist
     from dags.dag_functions import task_fail_slack_alert
@@ -111,7 +112,7 @@ def pull_wys_dag():
         @task(trigger_rule='none_failed')
         def signs():
             api_key = get_api_key()
-            locations = get_signs(api_key)
+            locations = get_location_ids(api_key = api_key)
             #0s represents nulls here
             location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
             return sorted(location_ids)
