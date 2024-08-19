@@ -12,7 +12,6 @@ import sys
 import traceback
 from time import sleep
 from re import findall
-
 import click
 import dateutil.parser
 import psycopg2
@@ -59,63 +58,29 @@ CONTEXT_SETTINGS = dict(
 def get_api_key():
     #api connection
     api_conn = BaseHook.get_connection('wys_api_key')
-    return api_conn.password
+    headers={'Content-Type':'application/json', 'x-api-key':api_conn.password}
+    return headers
 
-def get_signs(api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+signs_endpoint, headers=headers)
-    if response.status_code==200:
-        signs=response.json()
-        return signs
-    logger.debug('get_signs done')
-
-def get_location(location, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    response=session.get(url+statistics_url+str(location)+'/period/5/speed_units/0', 
-                         headers=headers)
-    if response.status_code==200:
-        statistics=str(response.content)
-        return statistics
-    else:
-        return response.status_code
-
-def location_id(api_key):
-    ''' Using get_signs and get_location function'''
-    logger.info('Pulling locations')
-    for _ in range(3):
-        try:
-            signs=get_signs(api_key)
-            location_id=[]
-            for item in signs:
-                location=item['location_id']
-                sign_name=item['name']
-                address=item['address']
-                statistics=str(get_location(location, api_key))
-                #logger.debug('DONE one item')
-                if statistics[4:11] == 'LocInfo':
-                    temp=[location, sign_name, address]
-                    location_id.append(temp)
-            logger.info(str(len(location_id))+' locations have data')
-            return location_id
-        except TimeoutException as exc_504:
-            logger.exception(exc_504)
-            sleep(180)
-        except exceptions.ProxyError as prox:
-            logger.error(prox)
-            logger.warning('Retrying in 2 minutes')
-            sleep(120)
-        except exceptions.RequestException as err:
-            logger.error(err)
-            sleep(75)
-        except Exception as e:
-            logger.critical(traceback.format_exc())
-            raise WYS_APIException(str(e))
-    logger.info('location_id done')
+def get_location_ids(ids = [0], api_key = None):
+    response=session.get(url+signs_endpoint, headers=api_key)
+    try:
+        if response.status_code==200:
+            locations=response.json()
+            if ids == [0]:
+                location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
+            else:
+                location_ids = [x['location_id'] for x in locations if x['location_id'] in ids]
+            if len(location_ids) == 0:
+                logger.critical("No signs returned.")
+            return sorted(location_ids)
+    except Exception:
+        logger.critical("Couldn't parse sign parameter")
+        logger.critical(traceback.format_exc())
+        sys.exit(2)
 
 def get_statistics_date(location, start_date, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
     response=session.get(url+statistics_url+str(location)+'/date/'+str(start_date)+'/speed_units/0', 
-                         headers=headers)
+                         headers=api_key)
     if response.status_code==200:
         statistics=response.json()
         return statistics
@@ -265,43 +230,29 @@ def cli():
 @cli.command()
 @click.option('-s', '--start_date', default=default_start, help='format is YYYY-MM-DD for start date')
 @click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
-@click.option('--location_id' , default=0, help='enter the location_id of the sign')
+@click.option('--location_id' , multiple=True, help='enter the location_id (api_id) of the sign(s)')
 
 def api_main(start_date, end_date, location_id):
     api_key = get_api_key()
     wys_postgres = PostgresHook("wys_bot")
-    conn = wys_postgres.get_conn()
     
     start_date = dateutil.parser.parse(str(start_date)).date()
     end_date = dateutil.parser.parse(str(end_date)).date()
-    signs_list = get_sign_list(location_id)
-
+    location_ids = get_location_ids(location_id, api_key)
+    
     logger.debug('Pulling data')
-
+    
     while start_date<=end_date:
         logger.info('Pulling %s', str(start_date))
-        get_data_for_date(start_date, signs_list, api_key)
-        agg_1hr_5kph(start_date, start_date + time_delta, conn)
+        with wys_postgres.get_conn() as conn:
+            locations = get_data_for_date(start_date, location_ids, api_key, conn)
+            agg_1hr_5kph(start_date, start_date + time_delta, conn)
         start_date+=time_delta
-
+        
     with wys_postgres.get_conn() as conn:
-        update_locations(location_id, conn)
-
+        update_locations(locations, conn)
+        
     logger.info('Done')
-
-def get_sign_list(location_id = 0):
-    api_key = get_api_key()
-    signs_list=[]
-    try:
-        if location_id == 0:
-            signs_list=location_id(api_key)
-        else:
-            signs_list=[location_id]
-    except Exception:
-        logger.critical("Couldn't parse sign parameter")
-        logger.critical(traceback.format_exc())
-        sys.exit(2)
-    return signs_list
 
 def agg_1hr_5kph(start_date, end_date, conn):
     try:
@@ -342,12 +293,10 @@ def update_locations(loc_table, conn):
         cur.execute(update_locations_sql)
         logger.info('Finished updating intersections.')
 
-def get_schedules(conn, api_key):
-    headers={'Content-Type':'application/json','x-api-key':api_key}
-    
+def get_schedules(conn, api_key):    
     try:
         response=session.get(url+signs_endpoint+schedule_endpoint,
-                         headers=headers)
+                         headers=api_key)
         response.raise_for_status()
         schedule_list = response.json()
     except RequestException as exc: 
