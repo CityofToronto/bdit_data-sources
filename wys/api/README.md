@@ -27,8 +27,9 @@
       - [**`open_data.wys_mobile_summary`**](#open_datawys_mobile_summary)
       - [**`open_data.wys_mobile_detailed`**](#open_datawys_mobile_detailed)
   - [DAG](#dag)
-    - [**`pull_wys`**](#pull_wys)
+    - [**`wys_pull`**](#wys_pull)
     - [**`wys_monthly_summary`**](#wys_monthly_summary)
+    - [**`wys_check`**](#wys_check)
   - [Quality Checks](#quality-checks)
     - [NULL rows in API data](#null-rows-in-api-data)
 
@@ -60,28 +61,25 @@ The API provides data on non-regular (but uniform) 5 minute bins, i.e., at 3:44,
 
 The WYS data puller script is called by an Airflow DAG that runs daily. It collects the count of vehicles for each speed recorded by the sign in 5 minute aggregate bins.
 
-The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run_api`, e.g., `python wys_api.py run_api`.
+The WYS data puller script can also run independent of Airflow for specific date ranges and locations. It uses the `click` module like the `miovision` and `here` data to define input paramters. The argument to run the API is `run-api`, e.g., `python3 wys_api.py run-api ...`.
 
 |Option|Type|Format|Description|Example|Default|
 |-----|------|------|-------|-----|-----|
 |`start_date`|str|`"YYYY-MM-DD"`|The start date of pulled data|`"2023-01-31"`|previous day date|
 |`end_date`|str|`"YYYY-MM-DD"`|The end date of pulled data|`"2023-01-31"`|previous day date|
-|`path`|str||The path of the configuration file|`/home/wys/api/config.cfg`|`config.cfg` (int the current directory)|
-|`location_flag`|integer||The location ID used by the API to pull data from a specific intersection|`1967`|`0` (to pull all available data)|
+|`location_flag`|integer||The location ID used by the API to pull data from a specific intersection|`1967`|Omit to pull all available data|
 
 ## `api_main` Process
 
 The main function in the puller script `api_main` performs the following steps:
 
-1. Parse the `config.cfg` file (for API key and database credentials) and any input parameters.
-2. Retrieve the list of all signs from the `signs` endpoint by calling `location_id()` function, if `location_flag` is `0`. Insert/update into `wys.locations` using `wys.daily_intersections` as a staging table to identify new and updated signs.  
+1. Retrive API key and database credentials from Airflow variables (must be run in `airflow_venv`.
+2. Retrieve the list of all signs from the `signs` endpoint by calling `get_location_ids()` function, if `location_flag` is `0`. 
 3. For every day in the parsed date range (defined as `[start_date, end_date]`):
-   1. Collect daily data by calling `get_data_for_date()`, which attempts to pull hourly statistics for each location from the `signs/statistics/location` endpoint up to three trials before marking this (sign, hour) pair as failed.
+   1. Collect daily data by calling `get_data_for_date()`, which attempts to pull statistics for each location from the `signs/statistics/location` endpoint up to three trials before skipping this sign.
    2. Insert the collected data into the appropriate `raw_data` table, e.g., `wys.raw_data_2023` for 2023 data
-   3. Aggregate speed counts by calling the `plpgsql` function `wys.aggregate_speed_counts_one_hour_5kph()` into `wys.speed_counts_agg_5kph`  
+   3. Aggregate speed counts by calling the sql function `wys.aggregate_speed_counts_one_hour_5kph()`. 
 4. Update the `wys.locations` table with the changes in the direction and/or location (moved for more than 100 meters) of any existing sign and insert the locations of the new signs as well.
-
-Note: this function contains calls to many different api endpoints. There is an open issue [#629](https://github.com/CityofToronto/bdit_data-sources/issues/629) to refactor this function to allow it to be split into multiple Airflow tasks. 
 
 
 ## `wys` Bigdata Schema
@@ -357,19 +355,34 @@ This open data view provides a summary of mobile sign data in hourly / 5kph spee
 ## DAG
 There are two WYS DAGs, a daily data pull and a monthly summary. 
 
-### **`pull_wys`**  
-`pull_wys` >> [`check_row_count`, `check_distinct_api_id`]
-- The `pull_wys` task runs `api_main` function of `wys_api.py`:
-  - See [here](#api_main-process) for more information on the `api_main` function.
+<!-- wys_pull_doc_md -->
+
+### **`wys_pull`**  
+
+**`check_partitions`**: [`check_jan_1st` >> `check_1st_of_month` >> `create_annual_partitions` >> `create_month_partition`]  
+This task group checks if new partitions are required based on the execution date and if so creates them.  
+
+**`api_pull`**: [`signs` >> `pull_wys` >> `update_wys_locations`]  
+This task group pulls sign details and daily statistics for all signs from the WYS API. 
+- `signs`: Gets the list of `location_id`s from the API's `signs` endpoint. 
+- `pull_wys`: For each sign identified by `signs`, pull data for that day including sign details. Contains a clear function to avoid inserting duplicate data on reruns.  
+- `update_locations`: Using the sign details from the previous task, update or add any locations.
+
+`agg_speed_counts_hr`: aggregates each sign's data into one hour / 5kph summary table. Contains a clear function to avoid inserting duplicate data on reruns.  
+
+`done`: triggers downstream `wys_check` yellow card data checks. 
+
+**`data_checks`**
+This task group contains red card data checks that may require the pipeline to be re-run if failed. 
 - `check_row_count` checks the volume recorded in the aggregate table compared to a 60 day lookback.
-- `check_distinct_api_id` checks the number of signs recored in the aggregate table compared to a 60 day lookback.
 
-`pull_schedules`
-- Inserts/updates sign schedules in `wys.sign_schedules_list` from the `schedules` endpoint. 
+`pull_schedules`: Inserts/updates sign schedules in `wys.sign_schedules_list` from the `schedules` endpoint. 
 
-`read_google_sheets`
-- Pulls mobile sign details from the Google Sheets. 
-- See more details under [`wys.mobile_sign_installations`](#wysmobile_sign_installations)
+`read_google_sheets`: Pulls mobile sign details from the Google Sheets. See more details under [`wys.mobile_sign_installations`](#wysmobile_sign_installations)
+
+<!-- wys_pull_doc_md -->
+
+<!-- wys_monthly_summary_doc_md -->
 
 ### **`wys_monthly_summary`**  
 - Runs monthly on the 2nd to update summary tables referenced by Open Data views. 
@@ -382,6 +395,18 @@ There are two WYS DAGs, a daily data pull and a monthly summary.
 `wys_view_mobile_api_id` >> `wys_mobile_summary`
 - Refreshes the `wys.mobile_api_id` mat view, then;
 - Clears/inserts summaries for signs which were active that month into `wys.mobile_summary`
+
+<!-- wys_monthly_summary_doc_md -->
+
+<!-- wys_check_doc_md -->
+
+### **`wys_check`**
+Runs additional "yellow card" data checks. 
+- `starting_point`: link to external `wys_pull.done`.
+- `data_checks`
+  - `check_distinct_api_id` checks the number of signs recored in the aggregate table compared to a 60 day lookback.
+
+<!-- wys_check_doc_md -->
 
 ## Quality Checks
 
