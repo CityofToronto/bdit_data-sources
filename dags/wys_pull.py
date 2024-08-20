@@ -15,6 +15,7 @@ from airflow.models import Variable
 from airflow.decorators import task, dag, task_group
 from airflow.sensors.external_task import ExternalTaskMarker
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from airflow.exceptions import AirflowFailException
 
 from googleapiclient.discovery import build
 
@@ -31,30 +32,6 @@ try:
     from dags.common_tasks import check_jan_1st, check_1st_of_month
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
-
-def custom_fail_slack_alert(context: dict) -> str:
-    """Adds a custom failure message in case of failing to pull data of some wards.
-
-    Args:
-        context: The calling Airflow task's context
-
-    Returns:
-        str: A string containing a custom message to get attached to the 
-            standard failure alert.
-    """
-    empty_wards = context.get(
-        "task_instance"
-    ).xcom_pull(
-        task_ids=context.get("task_instance").task_id,
-        key="empty_wards"
-    )
-    if empty_wards:
-        return (
-            "Failed to pull/load the data of the following wards: " + 
-            ", ".join(map(str, empty_wards))
-        )
-    else:
-        return ""
 
 DAG_NAME = 'wys_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
@@ -181,10 +158,8 @@ def pull_wys_dag():
         with wys_postgres.get_conn() as conn:
             get_schedules(conn, api_key)
     
-    @task(on_failure_callback = partial(
-                    task_fail_slack_alert, extra_msg=custom_fail_slack_alert
-                    ))
-    def read_google_sheets(**kwargs):
+    @task(retries = 0)
+    def read_google_sheets(**context):
         #to connect to pgadmin bot
         wys_postgres = PostgresHook("wys_bot")
 
@@ -192,9 +167,14 @@ def pull_wys_dag():
         wys_api_hook = GoogleBaseHook('vz_api_google')
         cred = wys_api_hook.get_credentials()
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
-
-        read_masterlist(wys_postgres.get_conn(), service, **kwargs)
-
+        
+        with wys_postgres.get_conn() as conn:
+            empty_wards = read_masterlist(conn, service)
+        
+        if empty_wards != []:
+            failure_msg = "Failed to pull/load the data of the following wards: " + ", ".join(map(str, empty_wards))
+            context.get("task_instance").xcom_push(key="extra_msg", value=failure_msg)
+            raise AirflowFailException(failure_msg)
 
     check_partitions() >> api_pull() >> agg_speed_counts_hr() >> t_done >> data_checks()
     pull_schedules()

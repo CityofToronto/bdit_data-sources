@@ -21,15 +21,14 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def read_masterlist(con, service, **kwargs):
+def read_masterlist(con, service):
     dict_table = {}
     ward_list = []
-    with con:
-        with con.cursor() as cur:
-            read_table='''SELECT spreadsheet_id, range_name, schema_name, table_name FROM wys.ward_masterlist ORDER BY ward_no'''
-            cur.execute(read_table)
-            ward_list=cur.fetchall()
-            LOGGER.debug(ward_list)
+    with con.cursor() as cur:
+        read_table='''SELECT spreadsheet_id, range_name, schema_name, table_name FROM wys.ward_masterlist ORDER BY ward_no'''
+        cur.execute(read_table)
+        ward_list=cur.fetchall()
+        LOGGER.debug(ward_list)
 
     empty_wards = []
     for i in range(25):
@@ -37,17 +36,9 @@ def read_masterlist(con, service, **kwargs):
         LOGGER.info('Working on ward %s', i+1)
         if not pull_from_sheet(con, service, dict_table[i+1]):
             empty_wards.append(i+1)
-    
-    if empty_wards == []:
-        LOGGER.info('Completed')
-    else:
-        task_instance = kwargs.get('task_instance', None)
-        if task_instance:
-            task_instance.xcom_push('empty_wards', empty_wards)
-        raise AirflowFailException(
-            "Failed to pull/load the data of the following wards: " + 
-            ", ".join(map(str, empty_wards))
-        )
+
+    LOGGER.info('Completed')
+    return empty_wards
 
 def pull_from_sheet(
     con: PostgresHook,
@@ -69,7 +60,6 @@ def pull_from_sheet(
     """
     spreadsheet_id = str(ward[0])
     range_name = str(ward[1])
-    schema_name = str(ward[2])
     table_name = str(ward[3])
     ward_no = (str(ward[3])).split('_',1)[1]
     
@@ -195,9 +185,8 @@ def pull_from_sheet(
     LOGGER.debug(rows)
 
     try:
-        with con:
-            with con.cursor() as cur:
-                execute_values(cur, insert, rows)
+        with con.cursor() as cur:
+            execute_values(cur, insert, rows)
         LOGGER.info('Table %s is done', table_name)
     except Error as err2:
         LOGGER.error('There was an error inserting into %s', table_name)
