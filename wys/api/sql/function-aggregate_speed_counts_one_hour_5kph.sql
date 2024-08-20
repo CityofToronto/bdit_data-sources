@@ -1,6 +1,6 @@
--- FUNCTION: wys.aggregate_speed_counts_one_hour()
+-- FUNCTION: wys.aggregate_speed_counts_one_hour_5kph()
 
--- DROP FUNCTION wys.aggregate_speed_counts_one_hour();
+-- DROP FUNCTION wys.aggregate_speed_counts_one_hour_5kph();
 
 CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph(_start_date date, _end_date date)
 RETURNS void
