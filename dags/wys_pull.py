@@ -26,7 +26,7 @@ try:
         get_data_for_date, update_locations
     )
     from wys.api.python.wys_google_sheet import read_masterlist
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month
 except:
@@ -59,6 +59,9 @@ def custom_fail_slack_alert(context: dict) -> str:
 DAG_NAME = 'wys_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
+README_PATH = os.path.join(repo_path, 'wys/api/README.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
@@ -79,7 +82,7 @@ default_args = {
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     schedule='0 15 * * *', # Run at 3 PM local time every day
     tags=["wys", "data_pull", "partition_create", "data_checks"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def pull_wys_dag():
 
