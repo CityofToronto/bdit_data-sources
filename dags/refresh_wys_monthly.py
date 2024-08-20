@@ -14,13 +14,14 @@ from dateutil.relativedelta import relativedelta
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
+from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 
 dag_name = 'wys_monthly_summary'
-
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+
+README_PATH = os.path.join(repo_path, 'wys/api/README.md')
+DOC_MD = get_readme_docmd(README_PATH, dag_name)
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -41,6 +42,8 @@ def last_month(ds):
 with DAG(dag_id = dag_name,
          default_args=default_args,
          max_active_runs=1,
+         tags=["wys", "aggregation", "monthly"],
+         doc_md = DOC_MD,
          user_defined_macros={
             'last_month' : last_month
           },
