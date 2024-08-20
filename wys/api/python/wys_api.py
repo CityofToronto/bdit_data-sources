@@ -56,7 +56,7 @@ def get_api_key():
     headers={'Content-Type':'application/json', 'x-api-key':api_conn.password}
     return headers
 
-def get_location_ids(ids = [0], api_key = None):
+def get_location_ids(ids = [], api_key = None):
     response=session.get(
         url+signs_endpoint,
         headers=api_key
@@ -64,12 +64,11 @@ def get_location_ids(ids = [0], api_key = None):
     try:
         if response.status_code==200:
             locations=response.json()
-            if ids == [0]:
-                location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
-            else:
-                location_ids = [x['location_id'] for x in locations if x['location_id'] in ids]
+            location_ids = [x['location_id'] for x in locations if x['location_id'] != 0]
+            if len(ids) != 0:
+                location_ids = [x for x in location_ids if x in ids]
             if len(location_ids) == 0:
-                logger.critical("No signs returned.")
+                logger.critical("No signs being returned.")
             return sorted(location_ids)
     except Exception:
         logger.critical("Couldn't parse sign parameter")
@@ -117,6 +116,7 @@ def get_statistics_date(location_id, start_date, api_key):
             sleep(75)
         except Exception as err:
             logger.error(err)
+    return None
 
 def parse_counts_for_location(location_id, raw_records):
     '''Parse the response for a given location and set of records
@@ -191,18 +191,24 @@ def get_data_for_date(start_date, location_ids, api_key, conn):
     sign_locations: list
         List of active sign locations to be inserted into wys.locations
     '''
-    speed_counts, sign_locations = [], []
+    speed_counts, sign_locations, failures = [], [], []
     count = len(location_ids)
     for location_id in location_ids:
         i = location_ids.index(location_id)
         logger.info('Pulling location_id: %s (# %s / %s).', location_id, i, count)
         statistics=get_statistics_date(location_id, start_date, api_key)
-        raw_data=statistics['LocInfo']
-        spd_cnts = parse_counts_for_location(location_id, raw_data['raw_records'])
-        speed_counts.extend(spd_cnts)
-        sign_location = parse_location(location_id, start_date, raw_data['Location'])
-        sign_locations.append(sign_location)
-           
+        if statistics is None:
+            failures.append(location_id)
+        else:
+            raw_data=statistics['LocInfo']
+            spd_cnts = parse_counts_for_location(location_id, raw_data['raw_records'])
+            speed_counts.extend(spd_cnts)
+            sign_location = parse_location(location_id, start_date, raw_data['Location'])
+            sign_locations.append(sign_location)
+    
+    if failures != []:
+        logger.warning('There were errors when pulling the following signs: %s', ", ".join(map(str, failures)))
+    
     try:
         with conn.cursor() as cur:
             logger.info('Inserting '+str(len(speed_counts))+' rows of data. Note: Insert gets roll back on error.')
@@ -284,11 +290,11 @@ def update_locations(loc_table, conn):
     fpath = os.path.join(SQL_DIR, 'create-temp-table-daily_insersections.sql')
     with open(fpath, 'r', encoding='utf-8') as file:
         daily_intersections_sql = sql.SQL(file.read())
-
+        
     update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
     with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
-
+        
     with conn.cursor() as cur:
         execute_values(cur, daily_intersections_sql, loc_table)
         logger.info('Create and populated daily_intersections temp table.')
