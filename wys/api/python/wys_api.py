@@ -70,6 +70,8 @@ def get_location_ids(ids = [], api_key = None):
             if len(location_ids) == 0:
                 logger.critical("No signs being returned.")
             return sorted(location_ids)
+        else: #unknown error code
+            raise WYS_APIException('Error'+str(response.status_code))
     except Exception:
         logger.critical("Couldn't parse sign parameter")
         logger.critical(traceback.format_exc())
@@ -312,7 +314,10 @@ def get_schedules(conn, api_key):
             headers=api_key
         )
         response.raise_for_status()
-        schedule_list = response.json()
+        if response.status_code == 200:
+            schedule_list = response.json()
+        else: #unknown error code
+            raise WYS_APIException('Error'+str(response.status_code))
     except RequestException as exc: 
         logger.critical('Error querying API, %s', exc)
         logger.critical('Response: %s', exc.response)
