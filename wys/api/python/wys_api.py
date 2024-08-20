@@ -241,13 +241,17 @@ def cli():
 @click.option('-e' ,'--end_date', default=default_end, help='format is YYYY-MM-DD for end date')
 @click.option('--location_id' , multiple=True, help='enter the location_id (api_id) of the sign(s)')
 
+def run_api(start_date, end_date, location_id):
+    return api_main(start_date, end_date, location_id)
+
 def api_main(start_date, end_date, location_id):
     api_key = get_api_key()
     wys_postgres = PostgresHook("wys_bot")
     
     start_date = dateutil.parser.parse(str(start_date)).date()
     end_date = dateutil.parser.parse(str(end_date)).date()
-    location_ids = get_location_ids(location_id, api_key)
+    ids = [int(x) for x in location_id]
+    location_ids = get_location_ids(ids, api_key)
     
     logger.debug('Pulling data')
     
