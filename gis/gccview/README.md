@@ -1,12 +1,9 @@
 # GCCVIEW pipeline
   * [Overview](#overview)
   * [Where the layers are pulled](#where-the-layers-are-pulled)
-  * [How the script works](#how-the-script-works)
+  * [Data Pipeline](#data-pipeline)
   * [Adding new layers to GCC Puller DAG](#adding-new-layers-to-gcc-puller-dag)
-  * [Manually fetch layers - Using Jupyter Notebook](#manually-fetch-layers---using-jupyter-notebook)
-  * [Manually fetch layers - Using Click in command prompt](#manually-fetch-layers---using-click-in-command-prompt)
-
-
+  * [Manually fetch layers](#manually-fetch-layers)
 
 ## Overview
 
@@ -80,7 +77,7 @@ The GCC pipeline will be pulling multiple layers into the `gis_core` and `gis` s
 |school|28|17|
 |library|28|28|
 
-## How the script works
+## Data Pipeline
 
 The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
 
@@ -97,29 +94,44 @@ In the DAG file, the arguments for each layer are stored in dictionaries called 
 2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in [gcc_layers_pull.py](/dags/gcc_layers_pull.py) depending on the destination database. 
 3. If is_audited = True, you must also add a primary key for the new layer to "pk_dict" in [gcc_puller_functions.py](gcc_puller_functions.py).
 
-## Manually fetch layers - Using Jupyter Notebook
+## Manually fetch layers
 
-One option is to use [this notebook](./gcc_puller.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
+If you need to pull a layer as a one-off task, this script allows you to pull any layer from the GCC Rest API. Please note that the script must be run locally or on a on-prem server as it needs connection to insideto.
 
-To use the Jupyter notebook:
-1. Know the name of the layer you want to fetch. 
-2. Look for the mapserver that host the layer, and the layer id using the tables above.
-3. Determine the schema of where you want the downloaded table to be.
-4. Enter the .cfg file path at the 'Config' code block.
-5. Enter the variables using the pre-existing template code block provided at the end of the notebook file.
-6. Execute the code blocks from top to bottom.
-7. Open pgAdmin, go to the specified schema and check if the layer's information had been pulled correctly.
+Before running the script, ensure that you have set up the appropriate environment with all necessary packages installed. You might have to set the `https_proxy` in your environment with your novell username and password in order to clone this repo or install packages. If you run into any issues, don't hestitate to ask a sysadmin. You can then install all packages in the `requirement.txt`, either with:
+1) Activate your virtual environment, it should automatically install them for you
 
-Note that if you want to pull a partitioned child table into your personal schema, you need to set up the parent table first. Refer to the .sql files in `/gis/gccview/sql`.
+    Pipenv:
 
-## Manually fetch layers - Using Click in command prompt
+    `pipenv shell`
 
-The second option is to execute `gcc_puller_functions.py` in command prompt (or venv in Morbius or other servers).
+    `pipenv install`
 
-There are 5 inputs that need to be entered, which are very similar to the ones listed above for function `get_layer`. The only difference is that the last parameter now needs to be a string that contains the path to your .cfg file.
+    Venv: 
 
-Run the following line to see the details of how to enter each parameter with Click.
+    `source .venv/bin/activate`
 
-```python3 {FULL_PATH_TO_gcc_puller_functions.py} --help```
+    `python3 -m pip install -r requirements.txt`  
+2) Install packages with pip if you are not using a virtual environment (you should) 
+  
+    `pip install -r requirements.txt`
 
-Note that if the script doesn't work, one reason might be because your credentials don't have access to the GCC API.
+
+Now you are set to run the script!
+
+There are 4 inputs that need to be entered.
+
+`--mapserver`: Mapserver number, e.g. cotgeospatial_2 will be 2
+
+`--layer-id`: Layer id
+
+`--schema-name`: Name of destination schema
+
+`--con`(optional): The path to the credential config file. Default is ~/db.cfg
+
+Example of pulling the library layer to the gis schema.
+
+
+```python
+python gcc_layer_puller.py --mapserver 28 --layer-id 28 --schema-name gis --con db.cfg
+```
