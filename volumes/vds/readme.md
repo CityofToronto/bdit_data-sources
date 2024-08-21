@@ -416,7 +416,7 @@ It is recommended to add a where clause using `vdsconfig_uid` to get faster resu
 
 ### vds.network_outages
 
-`network_outages` view can be used to identify/elimante dates from a study where all detectors are inactive. Runs in about 20s for entire network. See an example [here](https://github.com/CityofToronto/bdit_data-sources/blob/901087b032a16fa971ba18c84e84d1625be0fece/volumes/rescu/validation/evaluate_rescu_network.ipynb) where this view was used to identify number of days of network wide outages per year. 
+`network_outages` view can be used to identify/eliminate dates from a study where all detectors are inactive. Runs in about 20s for entire network. See an example [here](https://github.com/CityofToronto/bdit_data-sources/blob/901087b032a16fa971ba18c84e84d1625be0fece/volumes/rescu/validation/evaluate_rescu_network.ipynb) where this view was used to identify number of days of network wide outages per year. 
 
 | column_name    | data_type | sample | 
 | time_start    |  timestamp without time zone    | "1993-01-11 17:00:00"  |
