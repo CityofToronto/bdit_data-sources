@@ -28,7 +28,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
         schedule='0 7 1 */3 *' #'@quarterly'
     )
     def gcc_layers_dag():
-
+        
         @task()
         def get_layers(name):
             tables = Variable.get('gcc_layers', deserialize_json=True)
@@ -75,7 +75,7 @@ filtered_dags = [
     key for key, facts in DAGS.items() if dep in facts['deployments']
 ]
 
-for dag in filtered_dags:
+for item in filtered_dags:
     DAG_NAME = 'gcc_pull_layers'
     DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
@@ -88,12 +88,12 @@ for dag in filtered_dags:
         'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
     }
 
-    dag_name = f"{DAG_NAME}_{dag}"
+    dag_name = f"{DAG_NAME}_{item}"
     globals()[dag_name] = (
         create_gcc_puller_dag(
             dag_id=dag_name,
             default_args=DEFAULT_ARGS,
-            name=dag,
-            conn_id=DAGS[dag]['conn'],
+            name=dag_name,
+            conn_id=DAGS[item]['conn'],
         )
     )
