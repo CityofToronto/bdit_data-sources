@@ -9,14 +9,17 @@ WITH locations AS (
         start_date,
         geom,
         id
-    FROM wys.locations 
+    FROM wys.locations
     ORDER BY
-        api_id,
+        api_id ASC,
         start_date DESC
 ),
 
--- New and moved signs
-differences AS (
+-- Insert new & moved signs into wys.locations
+differences AS ( --noqa: ST03
+    INSERT INTO wys.locations (
+        api_id, address, sign_name, dir, start_date, loc, geom
+    )
     SELECT
         di.api_id,
         di.address,
@@ -24,29 +27,13 @@ differences AS (
         di.dir,
         di.start_date,
         di.loc,
-        di.geom 
+        di.geom
     FROM daily_intersections AS di
     LEFT JOIN locations AS loc USING (api_id)
     WHERE
         st_distance(di.geom, loc.geom) > 100 -- moved more than 100m
         OR di.dir <> loc.dir -- changed direction
         OR di.api_id NOT IN (SELECT api_id FROM locations) -- new sign
-),
-
--- Insert new & moved signs into wys.locations
-new_signs AS (
-    INSERT INTO wys.locations (
-        api_id, address, sign_name, dir, start_date, loc, geom
-    )
-    SELECT
-        api_id,
-        address,
-        sign_name,
-        dir,
-        start_date,
-        loc,
-        geom 
-    FROM differences
 ),
 
 -- Signs with new name and/or address
@@ -59,7 +46,7 @@ updated_signs AS (
         di.loc,
         di.start_date,
         di.geom,
-        loc.id 
+        loc.id
     FROM daily_intersections AS di
     LEFT JOIN locations AS loc USING (api_id, dir)
     WHERE
