@@ -144,8 +144,8 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
 - For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.  
 - Data quality checks have not been implemented in this new schema. For examples of past work see:  
-  - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).  
-  - @gabrielwol did work to identify periods of network wide or individual sensor outages on the RESCU network which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/3ba3af5068e96191caffab524d42ae52fe7be7b2/volumes/rescu/README.md#1--are-there-known-data-gapsincomplete-data)  
+  - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](../rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).  
+  - @gabrielwol created some helpful views to identify periods of [network wide](#vdsnetwork_outages) or [individual sensor](#vdsindividual_outages) outages on the RESCU network.  
 
 ## Lookup Tables and Views
 
@@ -403,6 +403,7 @@ A view of individual sensor outages of at least 30 minutes. Could be used in loo
 It is recommended to add a where clause using `vdsconfig_uid` to get faster results for a sensor. 
 
 | column_name    | data_type | sample |
+|:---------------|:----------|:-------|
 | vdsconfig_uid | integer  | 516 |
 | entity_location_uid | integer  | 10238 |
 | division_id | smallint  | 2  |
@@ -416,9 +417,10 @@ It is recommended to add a where clause using `vdsconfig_uid` to get faster resu
 
 ### vds.network_outages
 
-`network_outages` view can be used to identify/eliminate dates from a study where all detectors are inactive. Runs in about 20s for entire network. See an example [here](https://github.com/CityofToronto/bdit_data-sources/blob/901087b032a16fa971ba18c84e84d1625be0fece/volumes/rescu/validation/evaluate_rescu_network.ipynb) where this view was used to identify number of days of network wide outages per year. 
+`network_outages` view can be used to identify/eliminate dates from a study where all detectors are inactive. Runs in about 20s for entire network. Can be used for network health / uptime calculations.  
 
-| column_name    | data_type | sample | 
+| column_name    | data_type | sample |
+|:---------------|:----------|:-------|
 | time_start    |  timestamp without time zone    | "1993-01-11 17:00:00"  |
 | time_end    |  timestamp without time zone    | "1993-01-14 06:45:00"  |
 | date_start    |  date    | 1993-01-11  |
