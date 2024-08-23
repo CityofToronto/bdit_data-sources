@@ -16,134 +16,16 @@ from psycopg2 import connect
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Geometry Switcher 
-def line(geom):
-    return 'SRID=4326;LineString('+','.join(' '.join(str(x) for x in tup) for tup in geom['paths'][0]) +')'
-def polygon(geom):
-    return 'SRID=4326;MultiPolygon((('+','.join(' '.join(str(x) for x in tup) for tup in geom['rings'][0]) +')))'
-def point(geom):
-    return 'SRID=4326;Point('+(str(geom['x']))+' '+ (str(geom['y']))+')'  
-def get_geometry(geometry_type, geom):
-    switcher = {
-        'esriGeometryLine':line,
-        'esriGeometryPolyline': line,
-        'esriGeometryPoint': point,
-        'esriGeometryMultiPolygon': polygon,
-        'esriGeometryPolygon': polygon
-    }
-    func = switcher.get(geometry_type)
-    geometry = (func(geom)) 
-    return geometry
-
-def to_time(input):
-    """
-    Convert epoch time to postgresql timestamp without time zone
-
-    Parameters
-    -----------
-    input : string
-        Epoch time attribute in return_json
-
-    Returns
-    --------
-    time : string
-        Time in the type of postgresql timestamp without time zone
-    """
-    
-    time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
-    return time
-
-def mapserver_name(mapserver_n):
-    """
-    Function to return the mapserver name from integer
-    
-    Parameters
-    ------------
-    mapserver_n : numeric
-        The number of mapserver we will be accessing. 0 for 'cot_geospatial'
-    
-    Returns
-    --------
-    mapserver_name : string
-        The name of the mapserver
-    """
-    
-    if mapserver_n == 0:
-        mapserver_name = 'cot_geospatial'
-    else:
-        mapserver_name = 'cot_geospatial' + str(mapserver_n)
-    
-    return(mapserver_name)
-
-def get_tablename(mapserver, layer_id):
-    """
-    Function to return the name of the layer
-
-    Parameters
-    -----------
-    mapserver: string
-        The name of the mapserver we are accessing, returned from function mapserver_name
-    
-    layer_id: integer
-        Unique layer id that represent a single layer in the mapserver
-    
-    Returns
-    --------
-    output_name
-        The table name of the layer in database
-    """
-    
-    url = 'https://insideto-gis.toronto.ca/arcgis/rest/services/'+mapserver+'/MapServer/layers?f=json'
-    try:
-        r = requests.get(url, verify = False, timeout = 20)
-        r.raise_for_status()
-    except requests.exceptions.HTTPError as err_h:
-        LOGGER.error("Invalid HTTP response: ", err_h)
-    except requests.exceptions.ConnectionError as err_c:
-        LOGGER.error("Network problem: ", err_c)
-    except requests.exceptions.Timeout as err_t:
-        LOGGER.error("Timeout: ", err_t)
-    except requests.exceptions.RequestException as err:
-        LOGGER.error("Error: ", err)
-    else:
-        ajson = r.json()
-        layers = ajson['layers']
-        for layer in layers:
-            if layer['id'] == layer_id:
-                output_name = (layer['name'].lower()).replace(' ', '_')
-        return output_name
-
-def find_limit(return_json):
-    """
-    Function to check if last query return all rows
-
-    Parameters
-    -----------
-    return_json : json
-        Resulted json response from calling the api, returned from function get_data
-
-    Returns
-    --------
-    keep_adding : Boolean
-        boolean 'keep_adding' indicating if last query returned all rows in the layer
-    """
-    
-    if return_json.get('exceededTransferLimit', False) == True:
-        keep_adding = True
-    else:
-        keep_adding = False
-    return keep_adding
-
-def get_fieldtype(field):
-    if field == 'esriFieldTypeInteger' or field == 'esriFieldTypeSingle' or field == 'esriFieldTypeInteger' or field=='esriFieldTypeOID' or field == 'esriFieldTypeSmallInteger' or field =='esriFieldGlobalID':
-        fieldtype = 'integer'
-    elif field == 'esriFieldTypeString':
-        fieldtype = 'text'
-    elif field == 'esriFieldTypeDouble':
-        fieldtype = 'numeric'
-    elif field == 'esriFieldTypeDate':
-        fieldtype = 'timestamp without time zone'
-    return fieldtype
+# Import functions
+try:
+    from gcc_puller_function import (  get_geometry, 
+                                        to_time, 
+                                        mapserver_name, 
+                                        get_tablename, 
+                                        find_limit, 
+                                        get_fieldtype)
+except:
+    raise ImportError("Cannot import puller helper functions.")
 
 def create_table(output_table, return_json, schema_name, con):
     """
@@ -163,7 +45,7 @@ def create_table(output_table, return_json, schema_name, con):
     primary_key : string
         Primary key for this layer, returned from dictionary pk_dict
     
-    con: Airflow Connection
+    con: Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -383,8 +265,7 @@ def manual_get_layer(mapserver, layer_id, schema_name, con):
     
     Example:
 
-    python gcc_puller_functions.py --mapserver 28 --layer-id 28
-    --schema-name gis --con db.cfg
+    python gcc_layer_puller.py --mapserver 28 --layer-id 28 --schema-name gis --con db.cfg
     """
     CONFIG.read(con)
     dbset = CONFIG['DBSETTINGS']
