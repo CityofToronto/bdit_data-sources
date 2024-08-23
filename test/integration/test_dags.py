@@ -25,10 +25,11 @@ AIRFLOW_VARIABLES = {
     'AIRFLOW_VAR_SLACK_MEMBER_ID': '{"var": "value"}',
     'AIRFLOW_VAR_SSZ_SPREADSHEET_IDS': "{"+",".join([f'"ssz{year}": "value"' for year in range(2018, datetime.now().year+1)])+"}",
     'AIRFLOW_VAR_COLLISIONS_TABLES': "["+",".join([f'["src_schema.table_{i}", "dst_schema.table_{i}"]' for i in range(0, 2)])+"]",
-	'AIRFLOW_VAR_COUNTS_TABLES': "["+",".join([f'["src_schema.table_{i}", "dst_schema.table_{i}"]' for i in range(0, 3)])+"]",
-	'AIRFLOW_VAR_HERE_DAG_TRIGGERS': "["+",".join([f'"dag_{i}"' for i in range(0, 3)])+"]",
-	'AIRFLOW_VAR_REPLICATORS': '{"dag": {"dag_name": "value", "tables": "value", "conn": "value"}}',
-	'AIRFLOW_VAR_TEST_DAG_TRIGGERS': "["+",".join([f'"dag_{i}"' for i in range(0, 3)])+"]"
+    'AIRFLOW_VAR_COUNTS_TABLES': "["+",".join([f'["src_schema.table_{i}", "dst_schema.table_{i}"]' for i in range(0, 3)])+"]",
+    'AIRFLOW_VAR_HERE_DAG_TRIGGERS': "["+",".join([f'"dag_{i}"' for i in range(0, 3)])+"]",
+    'AIRFLOW_VAR_REPLICATORS': '{"dag": {"dag_name": "value", "tables": "value", "conn": "value"}}',
+    'AIRFLOW_VAR_TEST_DAG_TRIGGERS': "["+",".join([f'"dag_{i}"' for i in range(0, 3)])+"]",
+    'AIRFLOW_VAR_GCC_DAGS': '{"dag": {"conn": "value", "deployments": ["value"]}}',
 }
 SAMPLE_CONN = Connection(
     conn_type="sample_type",
