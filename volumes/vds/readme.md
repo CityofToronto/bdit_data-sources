@@ -23,6 +23,8 @@
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
     - [vds.veh\_speeds\_15min](#vdsveh_speeds_15min)
     - [vds.veh\_length\_15min](#vdsveh_length_15min)
+    - [vds.individual\_outages](#vdsindividual_outages)
+    - [vds.network\_outages](#vdsnetwork_outages)
   - [Raw Data](#raw-data)
     - [vds.raw\_vdsdata](#vdsraw_vdsdata)
     - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
@@ -142,8 +144,8 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
 - For RESCU requests, make use of the manually defined fields in `vds.detector_inventory` for easy filtering.  
 - Data quality checks have not been implemented in this new schema. For examples of past work see:  
-      - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).
-      - @gabrielwol did work to identify periods of network wide or individual sensor outages on the RESCU network which is written up [here](https://github.com/CityofToronto/bdit_data-sources/blob/3ba3af5068e96191caffab524d42ae52fe7be7b2/volumes/rescu/README.md#1--are-there-known-data-gapsincomplete-data)  
+  - @scann0n did some work on identifying good date ranges for RESCU sensors based on volumes from days with all 96 15-minute bins present which is written up [here](../rescu/README.md#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken).  
+  - @gabrielwol created some helpful views to identify periods of [network wide](#vdsnetwork_outages) or [individual sensor](#vdsindividual_outages) outages on the RESCU network.  
 
 ## Lookup Tables and Views
 
@@ -393,6 +395,39 @@ Row count: 4,622,437
 ![MTO classification guide](image.png)
 
 </div>
+
+### vds.individual_outages
+
+A view of individual sensor outages of at least 30 minutes. Could be used in looking for days without outages of a certain duration, or in identifying unreliable sensors with multiple smaller outages. 
+
+It is recommended to add a where clause using `vdsconfig_uid` to get faster results for a sensor. 
+
+| column_name    | data_type | sample |
+|:---------------|:----------|:-------|
+| vdsconfig_uid | integer  | 516 |
+| entity_location_uid | integer  | 10238 |
+| division_id | smallint  | 2  |
+| time_start |  timestamp without time zone    | "2004-02-26 00:15:00" |
+| time_end |  timestamp without time zone    | "2004-02-27 00:00:00" |
+| date_start |  date    | "2004-02-26" |
+| date_end |  date    | "2004-02-27" |
+| time_range |  tsrange    | "[""2004-02-26 00:15:00"",""2004-02-27 00:00:00""]" |
+| date_range |  daterange    | "[2004-02-26,2004-02-28)" |
+| duration_days |  numeric     | 1.0  |
+
+### vds.network_outages
+
+`network_outages` view can be used to identify/eliminate dates from a study where all detectors are inactive. Runs in about 20s for entire network. Can be used for network health / uptime calculations.  
+
+| column_name    | data_type | sample |
+|:---------------|:----------|:-------|
+| time_start    |  timestamp without time zone    | "1993-01-11 17:00:00"  |
+| time_end    |  timestamp without time zone    | "1993-01-14 06:45:00"  |
+| date_start    |  date    | 1993-01-11  |
+| date_end    |  date    | 1993-01-14  |
+| time_range    |  tsrange    | ["1993-01-11 17:00:00","1993-01-14 06:45:00"]  |
+| date_range    |  daterange    | [1993-01-11,1993-01-15)  |
+| duration_days    |  numeric     | 2.5729166666666667  |
 
 ## Raw Data
 
