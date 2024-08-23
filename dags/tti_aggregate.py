@@ -30,9 +30,6 @@ Slack notifications is raised when the airflow process fails.
 DAG_NAME = 'tti_aggregate'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
 
-# Slack alert
-SLACK_CONN_ID = 'slack_data_pipeline'
-
 default_args = {'owner': ','.join(DAG_OWNERS),
                 'depends_on_past':False,
                 'start_date': pendulum.datetime(2024, 5, 16, tz="America/Toronto"),
