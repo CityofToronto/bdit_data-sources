@@ -56,7 +56,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             agg_sql = layer[1].get("agg")
             if agg_sql is not None:
                 with conn.cursor() as cur:
-                    print(agg_sql)
                     cur.execute(agg_sql)
 
         layers = get_layers(name)
