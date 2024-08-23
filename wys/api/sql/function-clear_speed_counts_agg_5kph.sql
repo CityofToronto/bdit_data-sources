@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION wys.clear_speed_counts_agg_5kph(_start_date date, _en
 RETURNS void
 LANGUAGE 'plpgsql'
 COST 100
-VOLATILE SECURITY DEFINER 
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 BEGIN
