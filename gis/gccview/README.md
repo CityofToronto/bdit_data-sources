@@ -79,7 +79,7 @@ The GCC pipeline will be pulling multiple layers into the `gis_core` and `gis` s
 
 ## Data Pipeline
 
-The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
+The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `/dags/gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
 
 - mapserver_n (int): ID of the mapserver that host the desired layer
 - layer_id (int): ID of the layer within the particular mapserver
@@ -91,8 +91,8 @@ In the DAG file, the arguments for each layer are stored in dictionaries called 
 
 ## Adding new layers to GCC Puller DAG
 1. Identify the mapserver_n and layer_id for the layer you wish to add. You can find COT transportation layers here: https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial2/FeatureServer, where mapserver_n is 2 and the layer_id is in brackets after the layer name.
-2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in [gcc_layers_pull.py](/dags/gcc_layers_pull.py) depending on the destination database. 
-3. If is_audited = True, you must also add a primary key for the new layer to "pk_dict" in [gcc_puller_functions.py](gcc_puller_functions.py).
+2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in airflow's variable depending on the destination database. 
+3. If is_audited = True, you must also add a primary key for the new layer to "pk_dict" in the corresponding airflow variable.
 
 ## Manually fetch layers
 
