@@ -216,8 +216,8 @@ def get_data_for_date(start_date, location_ids, api_key, conn):
             logger.info('Inserting '+str(len(speed_counts))+' rows of data. Note: Insert gets roll back on error.')
             delete_sql = sql.SQL("""
                 DELETE FROM wys.raw_data
-                WHERE datetime_bin >= %(st_dt)s::timestamp
-                AND datetime_bin < %(st_dt)s::timestamp + interval '1 day';
+                WHERE datetime_bin >= %(start_date)s::timestamp
+                AND datetime_bin < %(start_date)s::timestamp + interval '1 day';
             """)
             cur.execute(delete_sql, {'start_date' : start_date})
             insert_sql = sql.SQL("""
