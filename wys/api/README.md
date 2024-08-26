@@ -73,7 +73,7 @@ The WYS data puller script can also run independent of Airflow for specific date
 
 The main function in the puller script `api_main` performs the following steps:
 
-1. Retrive API key and database credentials from Airflow variables (must be run in `airflow_venv`.
+1. Retrieve API key and database credentials from Airflow variables (must be run in `airflow_venv`.
 2. Retrieve the list of all signs from the `signs` endpoint by calling `get_location_ids()` function, if `location_flag` is `0`. 
 3. For every day in the parsed date range (defined as `[start_date, end_date]`):
    1. Collect daily data by calling `get_data_for_date()`, which attempts to pull statistics for each location from the `signs/statistics/location` endpoint up to three trials before skipping this sign.
