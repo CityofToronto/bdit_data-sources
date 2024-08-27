@@ -6,15 +6,12 @@ CREATE OR REPLACE VIEW miovision_api.open_issues AS
 WITH alerts AS (
     SELECT
         ar.uid,
-        string_agg(DISTINCT alerts.alert, '; ') AS alerts
+        string_agg(DISTINCT alerts.alert, '; '::text) AS alerts
     FROM miovision_api.anomalous_ranges AS ar
-    LEFT JOIN miovision_api.alerts
+    JOIN miovision_api.alerts
         ON alerts.intersection_uid = ar.intersection_uid
-        AND alerts.start_time >= ar.range_start
-        AND (
-            alerts.end_time < ar.range_end
-            OR ar.range_end IS NULL
-        )
+        AND tsrange(alerts.start_time, alerts.end_time)
+        && tsrange(ar.range_start, ar.range_end)
     GROUP BY ar.uid
 )
     
