@@ -12,7 +12,7 @@ For the main Miovision readme, see [here](../readme.md).
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
 	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
-- [New Intersection Activation Dates.ipynb](#new-intersection-activation-datesipynb)
+- [New Intersection Activation Dates.py](#new-intersection-activation-datespy)
 - [Adding many intersections](#adding-many-intersections)
 
 <!-- /TOC -->
@@ -37,7 +37,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
     The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
 2. **date installed**  
-    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [Jupyter notebook](new_intersection_activation_dates.ipynb) in this folder. 
+    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [script](new_intersection_activation_dates.py) in this folder. 
 
 3.  **date_decommissioned**  
     `date_decommissioned` is described under (#removing-intersections). 
@@ -89,7 +89,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 		ni.intersection_uid, --sequential 
 		ni.id, --from api
 		ni.intersection_name, --cleaned name
-		ni.date_installed, --identify via communication or new_intersection_activation_dates.ipynb
+		ni.date_installed, --identify via communication or new_intersection_activation_dates.py
 		ts.latitude,
 		ts.longitude,
 		ts.geom,
@@ -356,7 +356,7 @@ Now that the intersection is configured and the raw volumes data is in the datab
 4. **Done!**  
     From the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
-# [New Intersection Activation Dates.ipynb](new_intersection_activation_dates.ipynb)
+# [New Intersection Activation Dates.py](new_intersection_activation_dates.py)
 
 Jupyter notebook to help identify new intersections and first date of data for each new intersection.
 
