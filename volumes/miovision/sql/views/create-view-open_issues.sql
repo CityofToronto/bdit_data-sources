@@ -14,7 +14,7 @@ WITH alerts AS (
         && tsrange(ar.range_start, ar.range_end)
     GROUP BY ar.uid
 )
-    
+
 SELECT
     ar.uid,
     ar.intersection_uid,
