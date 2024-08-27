@@ -1,54 +1,45 @@
-WITH out_of_order AS (
+WITH ooo_sites AS (
+    SELECT
+        site_id,
+        site_description,
+        last_active
+    FROM ecocounter.sites
+    WHERE
+        last_active < CURRENT_DATE - 1
+        AND date_decommissioned IS NULL
+),
+
+ooo_flows_and_sites AS (
     SELECT
         s.site_id,
         s.site_description,
         f.flow_id,
-        'Site: `' || s.site_description || ' (site_id: ' || s.site_id
-        || (CASE WHEN f.flow_id IS NOT NULL THEN ', channel_id: ' || f.flow_id ELSE '' END)
-        || ')` - date last received: `' || MAX(c.datetime_bin::date)
-        || ' (' || '{{ macros.ds_add(ds, 6) }}'::date - MAX(c.datetime_bin::date) -- noqa: TMP, LT05
-        || ' days)`' AS description
-    FROM ecocounter.counts AS c --only validated sites
-    JOIN ecocounter.flows AS f USING (flow_id)
+        f.last_active
+    FROM ecocounter.flows AS f
     JOIN ecocounter.sites AS s USING (site_id)
-    WHERE
-        c.datetime_bin >= '{{ macros.ds_add(ds, 6) }}'::date -- noqa: TMP
-        - interval '{{ params.lookback }}' -- noqa: TMP
-        AND c.datetime_bin < '{{ macros.ds_add(ds, 6) }}'::date + interval '1 day' -- noqa: TMP, LT05
-    GROUP BY
-        --find both sites and site/flow combos which are out of order.
-        GROUPING SETS ((s.site_id), (s.site_id, f.flow_id)),
-        s.site_description
-    HAVING
-        MAX(c.datetime_bin::date)
-        < '{{ macros.ds_add(ds, 6) }}'::date - interval '{{ params.min_duration }}' -- noqa: TMP, LT05
-),
-
-ongoing_outages AS (
-    --out of order sites (all channels)
-    SELECT ooo_sites.description
-    FROM out_of_order AS ooo_sites
-    WHERE ooo_sites.flow_id IS NULL
-
-    UNION
-
-    --out of order flows (where channel does not have overall outage)
-    SELECT ooo_flows.description
-    FROM out_of_order AS ooo_flows
     --anti join ooo_sites
-    LEFT JOIN out_of_order AS ooo_sites
-        ON ooo_flows.site_id = ooo_sites.site_id
-        AND ooo_sites.flow_id IS NULL
+    LEFT JOIN ooo_sites USING (site_id)
     WHERE
-        ooo_flows.flow_id IS NOT NULL
-        AND ooo_sites.site_id IS NULL --anti join
+        ooo_sites.site_id IS NULL
+        AND f.last_active < CURRENT_DATE - 1
+        AND f.date_decommissioned IS NULL
+    UNION
+    SELECT
+        site_id,
+        site_description,
+        NULL AS flow_id,
+        last_active
+    FROM ooo_sites
 )
 
 SELECT
-    COUNT(ongoing_outages.*) < 1 AS _check,
-    CASE WHEN COUNT(ongoing_outages.*) = 1 THEN 'There is ' ELSE 'There are ' END
-    || COALESCE(COUNT(ongoing_outages.*), 0)
-    || CASE WHEN COUNT(ongoing_outages.*) = 1 THEN ' ongoing outage.' ELSE ' ongoing outages.'
-    END AS summ,
-    array_agg(ongoing_outages.description) AS gaps
-FROM ongoing_outages
+    COUNT(*) < 1 AS _check,
+    CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END || COALESCE(COUNT(*), 0)
+    || CASE WHEN COUNT(*) = 1 THEN ' ongoing outage.' ELSE ' ongoing outages.' END AS summ,
+    array_agg(
+        'Site: `' || site_description || ' (site_id: ' || site_id
+        || (CASE WHEN flow_id IS NOT NULL THEN ', channel_id: ' || flow_id ELSE '' END)
+        || ')` - date last received: `' || last_active::date
+        || ' (' || CURRENT_DATE - 1 - last_active::date || ' days)`'
+    ) AS gaps
+FROM ooo_flows_and_sites
