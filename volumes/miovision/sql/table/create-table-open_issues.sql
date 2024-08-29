@@ -1,0 +1,38 @@
+-- Table: miovision_api.open_issues_review
+-- DROP TABLE IF EXISTS miovision_api.open_issues_review;
+
+CREATE TABLE IF NOT EXISTS miovision_api.open_issues_review
+(
+    uid smallint NOT NULL,
+    intersection_uid smallint,
+    intersection_id text COLLATE pg_catalog."default",
+    intersection_name text COLLATE pg_catalog."default",
+    classification_uid smallint,
+    classification text COLLATE pg_catalog."default",
+    leg text COLLATE pg_catalog."default",
+    range_start date,
+    num_days integer,
+    notes text COLLATE pg_catalog."default",
+    volume bigint,
+    alerts text COLLATE pg_catalog."default",
+    logged boolean,
+    CONSTRAINT open_issues_review_pkey PRIMARY KEY (uid)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS miovision_api.open_issues_review
+OWNER to miovision_admins;
+
+REVOKE ALL ON TABLE miovision_api.open_issues_review FROM bdit_humans;
+REVOKE ALL ON TABLE miovision_api.open_issues_review FROM ckousin;
+
+GRANT SELECT ON TABLE miovision_api.open_issues_review TO bdit_humans;
+
+GRANT UPDATE ON TABLE miovision_api.open_issues_review TO ckousin;
+
+GRANT ALL ON TABLE miovision_api.open_issues_review TO miovision_admins;
+
+COMMENT ON TABLE miovision_api.open_issues_review
+IS 'Update this table using `SELECT miovision_api.update_open_issues();`.
+This is performed automatically once a week on Mondays by `miovision_check` Airflow DAG. ';
