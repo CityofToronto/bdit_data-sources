@@ -4,148 +4,168 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 
 ## Table of Contents <!-- omit in toc -->
 
-- [FLOW Data](#flow-data)
-	- [1. Loading Data](#1-loading-data)
-	- [2. Schema Overview](#2-schema-overview)
-	- [3. Traffic Count Types](#3-traffic-count-types)
-		- [Turning Movement Counts (TMCs)](#turning-movement-counts-tmcs)
-			- [Data Elements](#data-elements)
-			- [Notes](#notes)
-		- [Automated Traffic Recorders (ATRs)](#automated-traffic-recorders-atrs)
-			- [Data Elements](#data-elements-1)
-			- [Notes](#notes-1)
-	- [4. Relevant Tables](#4-relevant-tables)
-		- [arterydata](#arterydata)
-			- [Content](#content)
-			- [Table Structure](#table-structure)
-		- [det](#det)
-			- [Content](#content-1)
-			- [Table Structure](#table-structure-1)
-		- [countinfomics](#countinfomics)
-			- [Content](#content-2)
-			- [Table Structure](#table-structure-2)
-		- [cnt_det](#cnt_det)
-			- [Content](#content-3)
-			- [Table Stucture](#table-stucture)
-		- [countinfo](#countinfo)
-			- [Content](#content-4)
-			- [Table Structure](#table-structure-3)
-		- [category](#category)
-			- [Content](#content-5)
-			- [Table Structure](#table-structure-4)
-	- [5. Useful Views](#5-useful-views)
+- [Introduction](#introduction)
+- [What is counted?](#what-is-counted)
+	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
+	- [Automated Traffic Record (ATR)](#automated-traffic-record-atr)
+- [Where does it come from?](#where-does-it-come-from)
+- [How often is data updated?](#how-often-is-data-updated)
+- [Where can I access the data?](#where-can-i-access-the-data)
+- [How is the data structured?](#how-is-the-data-structured)
+- [Relevant Tables](#relevant-tables)
+	- [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics)
+	- [TMC Observations (`det`)](#tmc-observations-det)
+	- [ATR Metadata (`countinfo`)](#atr-metadata-countinfo)
+	- [ATR Observations (`cnt_det`)](#atr-observations-cnt_det)
+	- [Spatial-Temporal Reference (`arterydata`)](#spatial-temporal-reference-arterydata)
+		- [What is an arterycode?](#what-is-an-arterycode)
+		- [From arterycode to centreline](#from-arterycode-to-centreline)
+	- [`category`](#category)
+		- [Category Reference](#category-reference)
+- [Useful Views](#useful-views)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
 
-## FLOW Data
+## Introduction
 
-### 1. Loading Data
+The City of Toronto collects ad-hoc traffic volume data for projects and service requests. The traffic data collection program serves many internal transportation projects and operations teams for project planning, capital planning, engineering design, project analysis, and operational functions like signal timing.
 
-**Here is your quick July 2022 loading data update:**
-- Data are loaded into the TRAFFIC_NEW schema on BigData every night
-- For nine tables, data are upserted from TRAFFIC_NEW into traffic. The nine tables are:
-    - arc_link
-    - arterydata
-    - category
-    - cnt_det
-    - cnt_spd
-    - countinfo
-    - countinfomics
-    - det
-    - nodes
-- We audit some of these tables (in `traffic.logged_actions`) but not all of them because some of these tables are huge! With huge changes! Here are the tables we're auditing:
-    - arc_link
-    - arterydata
-    - category
-    - countinfo
-    - countinfomics
-    - nodes
+The two most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Automated Traffic Recorder** (ATR) count. TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. ATRs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
 
-### 2. Schema Overview
-The following is an overview of tables relevant to traffic volume counts housed in FLOW, a database maintained by the Data Collection team within Transportation Services' Data & Analytics Unit. The relationships between the relevant tables are illustrated below.
+Other studies include pedestrian delay and classification, pedestrian crossover observation, stop-sign compliance, queue-delay, cordon count, and radar speed studies.
 
-!['flow_tables_relationship'](../img/flow_tables_relationship.png)
+## What is counted?
 
+### Turning Movement Counts (TMC)
 
-The database is structured around three types of tables: Turning Movement Counts (TMC), Automatic Traffic Recorder (ATR) counts, and other reference tables that provide additional spatial or temporal information.
+- Type of road user: car, truck, bus, bicycle, pedestrian, other
+- Intersection approach leg: N / S / E / W
+- Type of movement:
+  - Motor vehicle: Through / Left / Right
+  - Cyclist: cyclist volume by approach leg
+  - Pedestrian: pedestrian volume by leg of intersection crossed
 
-Table Name|Description
-----------|-----------
-[arterydata](#arterydata)|Reference table for Artery Codes (internal reference for intersections and segments)
-[det](#det)|Individual Turning Movement Count (TMC) observations
-[countinfomics](#countinfomics)|Intermediate table linking TMC observations to Artery Codes
-[cnt_det](#cnt_det)|Automatic Traffic Recorder (ATR) observations
-[countinfo](#countinfo)|Intermediate table linking ATR observations to Artery Codes
-[category](#category)|Reference table for Category ID (i.e traffic count type)
-
-### 3. Traffic Count Types
-
-#### Turning Movement Counts (TMCs)
-
-##### Data Elements
+#### Data Elements <!-- omit in toc -->
 * Location Identifier (SLSN *Node* ID)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
 	- vehicle types
 	- cyclists and pedestrian counts are approach only
 	
-##### Notes
-* No regular data load schedule. 
-* Data files collected by 2-3 staff members.
-* Manually geo-reference volume data to an SLSN node during data import process.
-* Data is manually imported into FLOW.
-* Counts are conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days.
-* Strictly conforms to FLOW LOADER data file structure.
-* If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded.
+#### Notes <!-- omit in toc -->
+* No regular data load schedule
+* Data files collected by 2-3 staff members
+* Manually geo-reference volume data to an SLSN node during data import process
+* Counts are typically conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
+* If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded
 * Volumes are available at both signalized and non-signalized intersections
-* Each count station is given a unique identifier to avoid duplicate records.
-* Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents.
+* Each count station is given a unique identifier to avoid duplicate records
+* Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents
 
-#### Automated Traffic Recorders (ATRs)
+### Automated Traffic Record (ATR)
 
-##### Data Elements
+- Volume
+  - Direction
+  - Volume
+- Speed
+  - Direction
+  - Speed bin
+  - Volume
+- Vehicle classification
+  - Direction
+  - Vehicle classification
+  - Volume
+
+#### Data Elements <!-- omit in toc -->
 * Location Identifier (SLSN *Link* ID)
 * Direction
 * 15 min aggregated interval time
 * 15 min volume
 	- typically aggregated by direction, although data may be available by lane
 
-##### Notes
+#### Notes <!-- omit in toc -->
 * The counts represent roadway and direction(s), not on a lane-by-lane level
 * No regular data load schedule
 * Manually geo-reference volume data to an SLSN node during data import process
-* Strictly conforms to FLOW LOADER data file structure
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
 
-### 4. Relevant Tables
+## Where does it come from?
 
-#### arterydata
+The City of Toronto retains a traffic counting contractor who conducts data collection. They schedule and install temporary counting equipment, or send staff into the field to observe volumes, and process data.
 
-##### Content
+Data are collected through various technologies. Originally, data were collected by field staff who would manually observe and record volumes. Pneumatic road tubes were introduced to record motor vehicle volumes, speeds, and classifications. More recently, counting has shifted to video observation.
 
-This table contains the location information of each volume count. 
+Once the City receives data from the contractor, staff load the data into our database. Until recently, staff would load data files into a legacy Oracle database through an application called "FlowLoad". Data would then be retrieved through a user interface application called "Flow", where the data were formatted into nice reports. In recent years, "Flow" was replaced by [MOVE](https://github.com/CityofToronto/bdit_flashcrow).
 
-##### Table Structure
+## How often is data updated?
+
+Traffic counts are conducted ad-hoc, usually on request for a specific project need. As such, the data is not systematically collected. We do not have comprehensive coverage across time or space.
+
+TMCs are processed automatically, nightly, once made available from the contractor. ATRs are loaded manually by staff once data files are received from the contractor.
+
+## Where can I access the data?
+
+Internal to the Transportation Data & Analytics team, data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS.
+
+Look in the `traffic` schema for all ad-hoc data tables.
+
+## How is the data structured?
+
+### Core Tables <!-- omit in toc -->
+
+The database is structured around three types of tables: metadata, count observations, and reference tables (spatial, temporal, or categorical).
+
+- Turning Movement Count (TMC)
+  - [`countinfomics`](#tmc-metadata-countinfomics): metadata
+  - [`det`](#tmc-observations-det): count observations
+- Automated Traffic Recorder (ATR)
+  - [`countinfo`](#atr-metadata-countinfo): metadata
+  - [`cnt_det`](#atr-observations-cnt_det): count observations
+- Spatial reference
+  - [`arterydata`](#spatial-temporal-reference-arterydata): an internal reference system that maps a count to a location, used by _both_ TMC and ATR tables
+- Other reference
+  - [`category`](#category): reference table for traffic count type or data source, used by _both_ TMC and ATR tables
+
+The following diagram shows the relationship between the above-mentioned tables.
+
+!['flow_tables_relationship'](../img/flow_tables_relationship.png)
+
+### Other Useful Tables <!-- omit in toc -->
+
+- `studies`: a much more human-friendly interpretation of studies, grouped by colocated arterycodes and with individual ATR "counts" into continuous study days
+- A gaggle of cascading tables that aggregate "counts" into "studies" (counts at the same location that occurred on continuous days) and "arterycodes" into "arterycode groups" (counts that occured at the same location)
+  - `arteries_centreline`
+  - `arteries_counts_groups`
+  - `arteries_groups`
+  - `counts_multiday_runs`
+- New TMC - recent TMCs (2023+) loaded through new mechanisms; includes 14-hour TMC data
+  - `tmc_metadata_legacy`
+  - `tmc_study_legacy`
+- New ATR - recent ATRs (2022+) loaded through new mechanisms; includes speed/volume data only
+  - `atr_metadata`
+  - `atr_study`
+
+## Relevant Tables
+
+### TMC Metadata (`countinfomics`)
+
+This table contains Turning Movement Count metadata only. This table contains the location reference, date, and source for each Turning Movement Count. Each Turning Movement Count is defined by a unique `count_info_id`.
 
 Field Name|Type|Description
 ----------|----|-----------
-arterycode|bigint|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
-street1|text|first street name
-street2|text|second street name
-location|text|full description of count location
-apprdir|text|direction of the approach referred to by this arterycode
-sideofint|text|the side of the intersection that the arterycode refers to
-linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
+count_info_id|bigint|Unique ID for a count linked to [`det`](#tmc-observations-det) table containing detailed count entries
+arterycode|bigint|ID number linked to [`arterydata`](#spatial-temporal-reference-arterydata) table containing information for the count location
+count_date|date|Date on which the count was conducted
+day_no|bigint|Day of the week (ISO standard; 1 = Monday, 7 = Sunday)
+category_id|int|ID number linked to [`category`](#category) table containing the text description of the count type or source
 
-### det 
-#### Content 
-This table contains individual data entries for turning movement counts. For a long (vs wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
+### TMC Observations (`det`)
+This table contains individual data entries for Turning Movement Counts in 15-minute non-continuous increments. This is a "wide" format, where each direction-mode-movement has its own column. For a long (instead of wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
 
-#### Table Structure
 Field Name|Type|Description
 ----------|----|-----------
 ID|Autonumber|Autonumber function
-COUNT_INFO_ID|number|ID number linked to [countinfomics](#1. countinfomics) table containing higher-level information
+COUNT_INFO_ID|number|Unique ID number for a count linked to [`countinfomics`](#tmc-metadata-countinfomics) table containing count metadata (higher-level information)
 COUNT_TIME|Date/Time|Effective time of counts (**time displayed is the end time period**)
 N_CARS_R|number|S/B cars turning right
 N_CARS_T|number|S/B cars going through
@@ -196,61 +216,69 @@ S_OTHER|number|South side - optional field
 E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
 
-#### countinfomics
+### ATR Metadata (`countinfo`)
 
-##### Content
+Similar to [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics), this table contains the location reference, date, and data type/source from all sources other than Turning Movement Counts.
 
-This table contains the location, date, and source for each count_info_id. This table contains turning movement counts information exclusively.
+See [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics).
 
-##### Table Structure
+### ATR Observations (`cnt_det`)
 
-Field Name|Type|Description
-----------|----|-----------
-count_info_id|bigint|ID number linked to [det](#det) table containing detailed count entries
-arterycode|bigint|ID number linked to [arterydata](#arterydata) table containing information for the count location
-count_date|date|date on which the count was conducted
-day_no|bigint|day of the week
-category_id|int|ID number linked to [category](#category) table containing the source of the count
-
-#### cnt_det
-
-##### Content
-
-This table contains individual data entries from all sources other than turning movement counts.
-
-##### Table Stucture
+This table contains individual data entries for all counts or sources other than Turning Movement Counts.
 
 Field Name|Type|Description
 ----------|----|-----------
-count_info_id|bigint|ID number linked to [countinfo](#countinfo) table containing higher-level information
-count|bigint|vehicle count
+count_info_id|bigint|Unique ID number for a count linked to [`countinfo`](#atr-metadata-countinfo) table containing count metadata (higher-level information)
+count|bigint|Vehicle count
 timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
-speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts
+speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts.
 
-#### countinfo
+### Spatial-Temporal Reference (`arterydata`)
 
-##### Content
-
-Similar to [countinfomics](#countinfomics), this table contains the location, date, and source for each count_info_id from all sources other than turning movement counts.
-
-##### Table Structure
-
-See [countinfomics](#countinfomics)
-
-#### category
-
-##### Content
-
-This is a reference table referencing the data source of each entry.
-
-##### Table Structure
+This table contains the location information of each volume count.
 
 Field Name|Type|Description
 ----------|----|-----------
-category_id|int|ID number referred to by [countinfomics](#countinfomics) and [countinfo](#countinfo)
-category_name|text|name of the data source
+arterycode|bigint|ID number referred to by [`countinfomics`](#tmc-metadata-countinfomics) and [`countinfo`](#atr-metadata-countinfo)
+street1|text|first street name
+street2|text|second street name
+location|text|full description of count location (**do not use PX references, not consistent and can change without warning from upstream sources**)
+apprdir|text|direction of the approach referred to by this arterycode
+sideofint|text|the side of the intersection that the arterycode refers to
+linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
 
-### 5. Useful Views
+#### What is an arterycode?
+
+It's very important to understand the humble arterycode. The arterycode identifier system is an internal legacy location reference system that describes intersections and segments of the Toronto street network _where a count has occurred_. Arterycodes do not describe the entire Toronto transportation network.
+
+#### From arterycode to centreline
+
+Given an arterycode, you can find the corresponding modern-day location by cross-referencing with `traffic.arteries_centreline`.
+
+### `category`
+
+This is a reference table referencing the count type or data source of each entry.
+
+Field Name|Type|Description
+----------|----|-----------
+category_id|int|ID number referred to by [`countinfomics`](#tmc-metadata-countinfomics) and [`countinfo`](#atr-metadata-countinfo)
+category_name|text|name of the count type or data source
+
+#### Category Reference
+
+Category Name|Meaning
+-------------|-------
+24 HOUR|Volume ATR
+RESCU|RESCU
+CLASS|Vehicle Classification ATR
+SPEED|Speed ATR
+MANUAL|
+PERM STN|Permanent Count Stations
+BICYCLE|Bicycle Volume ATR
+SPD OCC|
+SENSYS SPEED|
+
+## Useful Views
 
 - `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
 
