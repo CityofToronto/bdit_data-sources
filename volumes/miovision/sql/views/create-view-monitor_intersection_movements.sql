@@ -5,7 +5,7 @@ CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
             classification_uid,
             SUM(daily_volume) AS volume
         FROM miovision_api.volumes_daily_unfiltered
-        WHERE dt >= now()::date AT TIME ZONE 'Canada/Eastern' - interval ' 100 days'
+        WHERE dt >= CURRENT_DATE - 100
         GROUP BY
             intersection_uid,
             classification_uid
@@ -30,8 +30,9 @@ CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
     LEFT JOIN intersection_classification_totals AS ict USING (intersection_uid, classification_uid)
     WHERE
         v.volume_15min_mvt_uid IS NULL --not aggregated
-        AND v.datetime_bin >= now()::date AT TIME ZONE 'Canada/Eastern' - interval '100 days'
-        AND NOT(v.classification_uid = 10 AND movement_uid = 8) --bike exit
+        AND v.datetime_bin >= CURRENT_DATE - 100
+        AND NOT (v.classification_uid = 10 AND movement_uid = 8) --bike exit
+        AND im_dl.intersection_uid IS NULL
     GROUP BY
         v.intersection_uid,
         v.classification_uid,
