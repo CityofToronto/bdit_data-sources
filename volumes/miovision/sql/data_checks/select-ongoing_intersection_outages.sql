@@ -11,7 +11,8 @@ WITH ongoing_outages AS (
         i.intersection_name
     HAVING
         MAX(v.dt)
-        < '{{ macros.ds_add(ds, 6) }}'::date - interval '{{ params.min_duration }}' --noqa: TMP
+        < '{{ macros.ds_add(ds, 6) }}'::date --noqa: TMP
+        - interval '{{ params.min_duration }}' --noqa: TMP
 )
 
 SELECT
