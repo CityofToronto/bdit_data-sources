@@ -22,7 +22,7 @@ COMMENT ON TABLE miovision_api.intersection_movements_denylist
 IS 'Unique movements which we do not want to aggregate.
 Uniqueness from intersection_movements is enforced via on insert trigger.';
 
-CREATE TRIGGER intersection_movements_denylist_exclusion
+CREATE OR REPLACE TRIGGER intersection_movements_denylist_exclusion
 BEFORE INSERT ON miovision_api.intersection_movements_denylist
 FOR EACH ROW
-EXECUTE FUNCTION miovision_api.exclude_intersection_movements_from_denylist();
+EXECUTE FUNCTION miovision_api.intersection_movements_exclude();
