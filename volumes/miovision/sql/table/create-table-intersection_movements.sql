@@ -22,7 +22,7 @@ GRANT ALL ON TABLE miovision_api.intersection_movements TO miovision_admins;
 COMMENT ON TABLE miovision_api.intersection_movements
 IS 'Unique movements for each intersection by classification';
 
-CREATE TRIGGER denylist_intersection_movements_exclusion
+CREATE OR REPLACE TRIGGER intersection_movements_denylist_exclusion
 BEFORE INSERT ON miovision_api.intersection_movements
 FOR EACH ROW
-EXECUTE FUNCTION miovision_api.exclude_denylist_from_intersection_movements();
+EXECUTE FUNCTION miovision_api.intersection_movements_exclude();
