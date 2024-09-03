@@ -6,22 +6,27 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 
 - [Introduction](#introduction)
 - [What is counted?](#what-is-counted)
-	- [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
-	- [Automated Traffic Record (ATR)](#automated-traffic-record-atr)
+  - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
+  - [Automated Traffic Record (ATR)](#automated-traffic-record-atr)
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
 - [How is the data structured?](#how-is-the-data-structured)
+  - [Core Tables](#core-tables)
+  - [Other Useful Tables](#other-useful-tables)
 - [Relevant Tables](#relevant-tables)
-	- [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics)
-	- [TMC Observations (`det`)](#tmc-observations-det)
-	- [ATR Metadata (`countinfo`)](#atr-metadata-countinfo)
-	- [ATR Observations (`cnt_det`)](#atr-observations-cnt_det)
-	- [Spatial-Temporal Reference (`arterydata`)](#spatial-temporal-reference-arterydata)
-		- [What is an arterycode?](#what-is-an-arterycode)
-		- [From arterycode to centreline](#from-arterycode-to-centreline)
-	- [`category`](#category)
-		- [Category Reference](#category-reference)
+  - [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics)
+  - [TMC Observations (`det`)](#tmc-observations-det)
+    - [Vehicle movement](#vehicle-movement)
+    - [Bike movement](#bike-movement)
+    - [Pedestrian movement](#pedestrian-movement)
+  - [ATR Metadata (`countinfo`)](#atr-metadata-countinfo)
+  - [ATR Observations (`cnt_det`)](#atr-observations-cnt_det)
+  - [Spatial-Temporal Reference (`arterydata`)](#spatial-temporal-reference-arterydata)
+    - [What is an arterycode?](#what-is-an-arterycode)
+    - [From arterycode to centreline](#from-arterycode-to-centreline)
+  - [`category`](#category)
+    - [Category Reference](#category-reference)
 - [Useful Views](#useful-views)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
 
@@ -29,7 +34,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 
 The City of Toronto collects ad-hoc traffic volume data for projects and service requests. The traffic data collection program serves many internal transportation projects and operations teams for project planning, capital planning, engineering design, project analysis, and operational functions like signal timing.
 
-The two most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Automated Traffic Recorder** (ATR) count. TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. ATRs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
+The most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Automated Traffic Recorder** (ATR) count. TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. ATRs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
 
 Other studies include pedestrian delay and classification, pedestrian crossover observation, stop-sign compliance, queue-delay, cordon count, and radar speed studies.
 
@@ -99,7 +104,7 @@ Once the City receives data from the contractor, staff load the data into our da
 
 ## How often is data updated?
 
-Traffic counts are conducted ad-hoc, usually on request for a specific project need. As such, the data is not systematically collected. We do not have comprehensive coverage across time or space.
+Traffic counts are conducted ad-hoc, usually on request for a specific project need. As such, the data is not necessarily systematically collected. We do not have comprehensive coverage across time or space.
 
 TMCs are processed automatically, nightly, once made available from the contractor. ATRs are loaded manually by staff once data files are received from the contractor.
 
@@ -111,7 +116,7 @@ Look in the `traffic` schema for all ad-hoc data tables.
 
 ## How is the data structured?
 
-### Core Tables <!-- omit in toc -->
+### Core Tables
 
 The database is structured around three types of tables: metadata, count observations, and reference tables (spatial, temporal, or categorical).
 
@@ -130,19 +135,44 @@ The following diagram shows the relationship between the above-mentioned tables.
 
 !['flow_tables_relationship'](../img/flow_tables_relationship.png)
 
-### Other Useful Tables <!-- omit in toc -->
+### Other Useful Tables
 
-- `studies`: a much more human-friendly interpretation of studies, grouped by colocated arterycodes and with individual ATR "counts" into continuous study days
-- A gaggle of cascading tables that aggregate "counts" into "studies" (counts at the same location that occurred on continuous days) and "arterycodes" into "arterycode groups" (counts that occured at the same location)
-  - `arteries_centreline`
-  - `arteries_counts_groups`
-  - `arteries_groups`
-  - `counts_multiday_runs`
-- New TMC - recent TMCs (2023+) loaded through new mechanisms; includes 14-hour TMC data
+#### `studies` <!-- omit in toc -->
+A human-friendly interpretation of studies. Grouped by colocated arterycodes and with single-day ATR "counts" into continuous study days.
+
+Find at `traffic.studies`.
+
+#### Artery groups and count groups <!-- omit in toc -->
+A gaggle of cascading tables that aggregate "counts" into "studies" (counts at the same location that occurred on continuous days) and "arterycodes" into "arterycode groups" (counts that occured at the same location). These intermediary tables are used to create [`studies`](#studies).
+
+- `traffic.arteries_groups`
+  - arterycodes describe a count-location
+  - for ATR counts, an arterycode *also* describes a direction
+  - for a two-way street where a count was conducted to observe traffic in both directions, two arterycodes exist for this one road segment
+  - as such, there can be multiple arterycodes that exist at the same physical road segment
+  - this table groups arterycodes that belong together at the same location
+- `traffic.arteries_centreline`
+  - a mapping of legacy arterycodes to current centreline nodes and segments
+  - this is the output of the MOVE conflation
+- `traffic.counts_multiday_runs`
+  - aggregates single-day ATR "counts" into continuous multi-day "studies"
+- `traffic.arteries_counts_groups`
+  - brings together artery groups and count groups
+  - single-day counts aggregated into continous studies (`count_group_id`) at colocated arterycodes (`artery_group_id`)
+
+
+#### New TMCs <!-- omit in toc -->
+Recent TMCs (September 2023 and on) loaded through new mechanisms. Includes 14-hour TMC data. Designed to mimic the legacy data tables for backwards compatibility.
+
   - `tmc_metadata_legacy`
+    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
   - `tmc_study_legacy`
-- New ATR - recent ATRs (2022+) loaded through new mechanisms; includes speed/volume data only
+
+#### New ATRs <!-- omit in toc -->
+Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and volume data only. Designed to mimic the legacy data tables for backwards compatibility.
+
   - `atr_metadata`
+    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
   - `atr_study`
 
 ## Relevant Tables
@@ -155,9 +185,17 @@ Field Name|Type|Description
 ----------|----|-----------
 count_info_id|bigint|Unique ID for a count linked to [`det`](#tmc-observations-det) table containing detailed count entries
 arterycode|bigint|ID number linked to [`arterydata`](#spatial-temporal-reference-arterydata) table containing information for the count location
+count_type|varchar(1)|Count hours<sup>1</sup> during which data are recorded, Routine (R) or School/Pedestrian (P)
 count_date|date|Date on which the count was conducted
 day_no|bigint|Day of the week (ISO standard; 1 = Monday, 7 = Sunday)
 category_id|int|ID number linked to [`category`](#category) table containing the text description of the count type or source
+
+1 - Routine and School Hours
+
+Routine hours are the "typical" hours during which data would be collected. School hours were specifically selected to observe school pickup, dropoff, and lunch periods. We are moving towards continuous collection periods (e.g. 6:00am-8:00pm), but legacy data are still reported during these standard 8-hour disaggregate periods.
+
+- Routine Hours: 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00
+- School Hours: 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00
 
 ### TMC Observations (`det`)
 This table contains individual data entries for Turning Movement Counts in 15-minute non-continuous increments. This is a "wide" format, where each direction-mode-movement has its own column. For a long (instead of wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
@@ -215,6 +253,29 @@ N_OTHER|number|North side  - optional field
 S_OTHER|number|South side - optional field
 E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
+
+#### Vehicle movement
+The following image depicts motor vehicle movements. This example shows south approach, or northbound travel, movements.
+
+- `S_[CARS|TRUCK|BUS]_L`
+- `S_[CARS|TRUCK|BUS]_T`
+- `S_[CARS|TRUCK|BUS]_R`
+
+!['tmc_turning_movements'](../img/tmc_movements.png)
+
+Notes:
+- Exits can be calculated by summing associated movements.
+- U-turns are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+#### Bike movement
+
+At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg. Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+#### Pedestrian movement
+
+The following image depicts pedestrian movement. This example shows "south side pedestrians crossing" or `S_PEDS`.
+
+!['tmc_ped_cross'](../img/ped_cross_movement.png)
 
 ### ATR Metadata (`countinfo`)
 
