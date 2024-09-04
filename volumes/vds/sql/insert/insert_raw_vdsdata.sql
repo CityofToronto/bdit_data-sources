@@ -6,7 +6,7 @@ WITH inserted AS (
     RETURNING division_id, vdsconfig_uid, entity_location_uid, dt
 )
 
-INSERT INTO vds.last_active AS existing (
+INSERT INTO vds.last_active AS la (
     division_id, vdsconfig_uid, entity_location_uid, first_active, last_active
 )
 SELECT
@@ -24,5 +24,5 @@ GROUP BY
     entity_location_uid
 ON CONFLICT (vdsconfig_uid, entity_location_uid, division_id)
 DO UPDATE SET
-first_active = LEAST(MIN(inserted.dt), existing.first_active),
-last_active = GREATEST(MAX(inserted.dt), existing.last_active);
+first_active = LEAST(EXCLUDED.first_active, la.first_active),
+last_active = GREATEST(EXCLUDED.last_active, la.last_active);
