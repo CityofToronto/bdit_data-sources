@@ -43,7 +43,7 @@ default_args = {
      catchup=False,
      max_active_runs=1,
      template_searchpath=os.path.join(repo_path,'dags/sql'),
-     schedule='30 17 * * *', # Run at 5:30 PM local time every day
+     schedule='0 20 * * *', # Run at 8:00 PM local time every day
      tags=["wys", "data_checks"],
      doc_md=DOC_MD
 )
@@ -56,7 +56,7 @@ def wys_check_dag():
         poke_interval=3600, #retry hourly
         mode="reschedule",
         timeout=86400, #one day
-        execution_delta=timedelta(hours=2, minutes=30) #pull_wys scheduled at '0 15 * * *'
+        execution_delta=timedelta(hours=1, minutes=30) #pull_wys scheduled at '30 18 * * *'
     )
 
     @task_group()
