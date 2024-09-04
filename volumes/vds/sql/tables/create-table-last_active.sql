@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS vds.last_active
     first_active timestamp without time zone,
     last_active timestamp without time zone,
     CONSTRAINT vds_pairings_pkey PRIMARY KEY (detector_uid),
-    CONSTRAINT vds_pairings_unique UNIQUE (vdsconfig_uid, entity_location_uid)
+    CONSTRAINT vds_pairings_unique UNIQUE (vdsconfig_uid, entity_location_uid, division_id)
 )
 
 TABLESPACE pg_default;
