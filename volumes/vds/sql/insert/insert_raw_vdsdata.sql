@@ -24,5 +24,5 @@ GROUP BY
     entity_location_uid
 ON CONFLICT (vdsconfig_uid, entity_location_uid, division_id)
 DO UPDATE SET
-first_active = LEAST(EXCLUDED.first_active, la.first_active),
-last_active = GREATEST(EXCLUDED.last_active, la.last_active);
+first_active = LEAST(excluded.first_active, la.first_active),
+last_active = GREATEST(excluded.last_active, la.last_active);
