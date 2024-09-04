@@ -57,7 +57,7 @@ default_args = {
     catchup=False,
     max_active_runs=5,
     template_searchpath=os.path.join(repo_path,'dags/sql'),
-    schedule='0 15 * * *', # Run at 3 PM local time every day
+    schedule='30 18 * * *', # Run at 6:30 PM local time every day
     tags=["wys", "data_pull", "partition_create", "data_checks"],
     doc_md=DOC_MD
 )
@@ -127,7 +127,7 @@ def pull_wys_dag():
 
     t_done = ExternalTaskMarker(
         task_id="done",
-        external_dag_id="check_wys",
+        external_dag_id="wys_check",
         external_task_id="starting_point"
     )
 
