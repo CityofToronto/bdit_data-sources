@@ -42,7 +42,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 14 3 * *', # 2pm, 3rd day of each month
+    schedule='0 10 3 * *', # 10am, 3rd day of each month
     catchup=True,
     max_active_runs=1,
     tags=["miovision", "open_data"],
