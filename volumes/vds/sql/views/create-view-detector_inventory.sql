@@ -48,22 +48,25 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
             WHEN
                 dtypes.det_type = 'Smartmicro Sensors'
                 OR c.detector_id SIMILAR TO 'SMARTMICRO - D\w{8}' THEN 3 --5 min bins
+            WHEN lower(comms.source_id) SIMILAR TO '%whd%' OR lower(comms.source_id) SIMILAR TO '%wavetronix%' THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
+            WHEN pairs.vdsconfig_uid IN (5621308, 5621332) THEN 30 --unique houston radar setup
             WHEN dtypes.det_type = 'Houston Radar' THEN 1 --15 min bins
         END AS expected_bins,
         comms.source_id AS comms_desc,
         --rescu techology type, determined by communication device in some cases.
-        CASE dtypes.det_type = 'RESCU Detectors'
-            WHEN TRUE THEN CASE
-                WHEN
-                    lower(comms.source_id) SIMILAR TO '%smartmicro%'
-                    OR lower(c.detector_id) SIMILAR TO '%smartmicro%'
-                    THEN 'Smartmicro'
-                WHEN lower(comms.source_id) SIMILAR TO '%whd%'
-                    THEN 'Wavetronix'
-                ELSE 'Inductive'
-            END
+        CASE 
+            WHEN
+                lower(comms.source_id) SIMILAR TO '%smartmicro%'
+                OR lower(c.detector_id) SIMILAR TO '%smartmicro%'
+                THEN 'Smartmicro'
+            WHEN lower(comms.source_id) SIMILAR TO '%whd%' OR lower(comms.source_id) SIMILAR TO '%wavetronix%'
+                THEN 'Wavetronix'
+            WHEN lower(c.detector_id) SIMILAR TO '%(whalespout)|(houstonradar)%'
+                THEN 'Radar'
+            WHEN dtypes.det_type = 'RESCU Detectors'
+                THEN 'Inductive'
         END AS det_tech
     FROM vds.last_active AS pairs
     LEFT JOIN vds.vdsconfig AS c
@@ -92,7 +95,8 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN c.detector_id SIMILAR TO 'PX[0-9]{4}-PE%' AND c.division_id = 8001
                     THEN 'Signal Preemption'
                 WHEN c.detector_id LIKE 'BCT%' THEN 'Blue City AI'
-                WHEN c.detector_id LIKE '%WHALESPOUT%' THEN 'Houston Radar'
+                WHEN lower(comms.source_id) LIKE '%wavetronix%' THEN 'Wavetronix'
+                WHEN lower(c.detector_id) SIMILAR TO '%(whalespout)|(houstonradar)%' THEN 'Houston Radar'
                 WHEN
                     c.detector_id LIKE ANY(
                         '{"%SMARTMICRO%", "%YONGE HEATH%",
