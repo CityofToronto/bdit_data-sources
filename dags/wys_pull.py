@@ -57,7 +57,7 @@ default_args = {
     catchup=False,
     max_active_runs=5,
     template_searchpath=os.path.join(repo_path,'dags/sql'),
-    schedule='30 18 * * *', # Run at 6:30 PM local time every day
+    schedule='0 17 * * *', # Run at 5:00 PM local time every day
     tags=["wys", "data_pull", "partition_create", "data_checks"],
     doc_md=DOC_MD
 )
