@@ -84,6 +84,13 @@ BEGIN
             v.datetime_bin >= start_date
             AND v.datetime_bin < end_date
             AND v.intersection_uid = ANY(target_intersections)
+            --exclude bike exits 
+            AND NOT (
+                classification_uid = 10
+                AND movement_uid = 8
+            )
+            --exclude bikes in crosswalk
+            AND NOT (classification_uid = 7)
         GROUP BY
             v.intersection_uid,
             v.classification_uid,
