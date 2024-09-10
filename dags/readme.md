@@ -73,8 +73,8 @@ Contains common Airflow Task definitions which can be used in multiple DAGs.
 - `wait_for_external_trigger`: Reusable sensor to wait for external DAG trigger.  
 - `get_variable`: Task to access an airflow variable and return value as XCOM.  
 - `copy_table`: A task to copy a postgres table contents (and comment) from one location to another within the same database. 
-- `check_jan_1st`, `check_1st_of_month`: `short_circuit` operators which can be used to have downstream tasks occur only on Jan 1 / 1st of each month.  
-- `check_if_dow`: A `short_circuit` operator which checks a date against a day of week and short circuits (skips downstream tasks) if not.  
+- `check_jan_1st`, `check_1st_of_month`: Can be used in as `pre_execute` parameter in base operators to have downstream tasks occur only on Jan 1 / 1st of each month. Remember to set downstream tasks to `trigger_rule='none_failed'`.  
+- `check_if_dow`: A `short_circuit` operator which checks a date against a day of week and short circuits (skips downstream tasks) if not. Not currently in use, may be better written as a @task.run_if decorator.  
 - `wait_for_weather_timesensor`: returns a `TimeSensor` Airflow operator which can be used to delay data checks until the time of day when historical weather is avaialble.  
 
 ### [**dag_functions.py**](dag_functions.py)
