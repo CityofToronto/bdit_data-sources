@@ -96,6 +96,7 @@ def vdsdata_dag():
 
         create_partitions = PostgresOperator(
             task_id='create_partitions',
+            pre_execute=check_jan_1st,
             sql=[#partition by year and month:
                 "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
                 "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
@@ -107,7 +108,7 @@ def vdsdata_dag():
         )
 
         #check if Jan 1, if so trigger partition creates.
-        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
+        create_partitions
 
     @task_group
     def pull_vdsdata():
