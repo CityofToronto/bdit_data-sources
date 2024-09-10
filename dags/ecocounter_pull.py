@@ -75,6 +75,7 @@ def pull_ecocounter_dag():
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
+            pre_execute=check_jan_1st,
             sql="""SELECT ecocounter.create_yyyy_counts_unfiltered_partition(
                     base_table := 'counts_unfiltered',
                     year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int
@@ -83,7 +84,7 @@ def pull_ecocounter_dag():
             autocommit=True
         )
       
-        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition
+        create_annual_partition
     
     def get_connections():
         api_conn = BaseHook.get_connection('ecocounter_api_key')
