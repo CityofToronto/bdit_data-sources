@@ -1,5 +1,9 @@
 --DROP FUNCTION miovision_api.update_open_issues;
-CREATE OR REPLACE FUNCTION miovision_api.update_open_issues() AS
+CREATE OR REPLACE FUNCTION miovision_api.update_open_issues()
+RETURNS VOID
+LANGUAGE SQL
+
+AS $BODY$
 
 WITH alerts AS (
     SELECT
@@ -110,6 +114,7 @@ WHEN NOT MATCHED THEN
         oi.volume, oi.alerts
     );
 
+$BODY$;
 
 COMMENT ON FUNCTION miovision_api.update_open_issues
 IS '''A function to update miovision_api.open_issues.
