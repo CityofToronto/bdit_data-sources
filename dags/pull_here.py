@@ -57,29 +57,25 @@ default_args = {'owner': ','.join(names),
      )
 
 def pull_here():
-
-    @task
-    def send_request():
-        api_conn = BaseHook.get_connection('here_api_key')
-        access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
-        return access_token
-
-    @task
-    def get_request_id(access_token: str, ds=None):
+    
+    @task(retries=0) 
+    def get_download_link(ds=None):
         api_conn = BaseHook.get_connection('here_api_key')
         pull_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
+        access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
-        return request_id
+        
+        i = 0
+        while i < 3:
+            try:
+                download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
+                return download_url
+            except HereAPIException:
+                #generate a new access token
+                access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
+                i+=1
     
-    @task(retries=2) 
-    def get_download_link(request_id: str, access_token: str):
-        api_conn = BaseHook.get_connection('here_api_key')
-        download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
-        return download_url
-    
-    access_token = send_request()
-    request_id =  get_request_id(access_token)
-    download_url = get_download_link(request_id, access_token)
+    download_url = get_download_link()
 
     @task.bash(env={"DOWNLOAD_URL": download_url,
                     "HOST":  BaseHook.get_connection("here_bot").host,
