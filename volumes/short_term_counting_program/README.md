@@ -273,7 +273,7 @@ At the time of writing, bike totals are reported only by the number of cyclists 
 
 #### Pedestrian movement
 
-The following image depicts pedestrian movement. This example shows "south side pedestrians crossing" or `S_PEDS`.
+Pedestrians are counted based on the side of the intersection they cross on. The example below shows `S_PEDS` or pedestrians crossing on the south side of the intersection. Note that they could be travelling either east or west in this example.
 
 !['tmc_ped_cross'](../img/ped_cross_movement.png)
 
