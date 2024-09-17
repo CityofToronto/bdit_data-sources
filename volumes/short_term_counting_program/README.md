@@ -277,6 +277,8 @@ Pedestrians are counted based on the side of the intersection they cross on. The
 
 !['tmc_ped_cross'](../img/ped_cross_movement.png)
 
+Pedestrians are only counted when they cross the roadway, meaning that pedestrians who turn at the intersections without crossing the roadway are _not_ counted.
+
 For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
 
 ### ATR Metadata (`countinfo`)
