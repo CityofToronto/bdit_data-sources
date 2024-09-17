@@ -11,7 +11,7 @@ import sys
 import click
 import requests
 
-from here_api import get_download_url, get_access_token
+from .here_api import get_access_token, get_download_url
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
