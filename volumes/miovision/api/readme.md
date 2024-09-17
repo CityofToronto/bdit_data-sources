@@ -277,7 +277,7 @@ This task group completes various Miovision aggregations.
 - `find_gaps_task` clears and then populates `miovision_api.unacceptable_gaps` using `intersection_tmc.find_gaps` function. 
 - `aggregate_15_min_mvt_task` clears and then populates `miovision_api.volumes_15min_mvt` using `intersection_tmc.aggregate_15_min_mvt` function. 
 - `aggregate_15_min_task` clears and then populates `miovision_api.volumes_15min` using `intersection_tmc.aggregate_15_min` function. 
-- `zero_volume_anomalous_ranges_task` identifies intersection / classification combos with zero volumes and adds/updates `miovision_api.anomalous_ranges` accordingly.
+- `zero_volume_anomalous_ranges_task` identifies intersection / classification combos with zero volumes and adds/updates `miovision_api.anomalous_ranges` accordingly. Also refreshes `miovision_api.open_issues` table used for manual QC. 
 - `aggregate_volumes_daily_task` clears and then populates `miovision_api.volumes_daily` using `intersection_tmc.aggregate_volumes_daily` function.
 - `get_report_dates_task` clears and then populates `miovision_api.report_dates` using `intersection_tmc.get_report_dates` function.
 
