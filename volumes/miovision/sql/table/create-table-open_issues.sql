@@ -24,15 +24,11 @@ TABLESPACE pg_default;
 ALTER TABLE IF EXISTS miovision_api.open_issues_review
 OWNER to miovision_admins;
 
-REVOKE ALL ON TABLE miovision_api.open_issues_review FROM bdit_humans;
-REVOKE ALL ON TABLE miovision_api.open_issues_review FROM ckousin;
+GRANT ALL ON TABLE miovision_api.open_issues_review TO miovision_admins;
+GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE miovision_api.open_issues_review TO miovision_api_bot;
 
+REVOKE ALL ON TABLE miovision_api.open_issues_review FROM bdit_humans;
 GRANT SELECT ON TABLE miovision_api.open_issues_review TO bdit_humans;
 
+REVOKE ALL ON TABLE miovision_api.open_issues_review FROM ckousin;
 GRANT UPDATE ON TABLE miovision_api.open_issues_review TO ckousin;
-
-GRANT ALL ON TABLE miovision_api.open_issues_review TO miovision_admins;
-
-COMMENT ON TABLE miovision_api.open_issues_review
-IS 'Update this table using `SELECT miovision_api.update_open_issues();`.
-This is performed automatically once a week on Mondays by `miovision_check` Airflow DAG. ';
