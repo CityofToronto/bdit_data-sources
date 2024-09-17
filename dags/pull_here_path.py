@@ -1,16 +1,10 @@
-import json
 import sys
 import os
 import pendulum
+from datetime import timedelta
 
-from airflow import DAG
 from airflow.decorators import task, dag
-from datetime import datetime, timedelta
-from airflow.models.connection import Connection
-from airflow.operators.bash_operator import BashOperator
 from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
 from airflow.macros import ds_add, ds_format
 
@@ -18,8 +12,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from here.traffic.here_api_path import query_dates, get_access_token, get_download_url, download_data, send_data_to_database
-    cfg_path = repo_path
+    from here.traffic.here_api_path import query_dates, get_access_token, get_download_url, HereAPIException
 except:
     raise ImportError("Cannot import slack alert functions")
 
