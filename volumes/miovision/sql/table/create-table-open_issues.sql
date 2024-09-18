@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS miovision_api.open_issues_review
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS miovision_api.open_issues_review
-OWNER to miovision_admins;
+ALTER TABLE miovision_api.open_issues_review OWNER TO miovision_api_bot;
 
 GRANT ALL ON TABLE miovision_api.open_issues_review TO miovision_admins;
 GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE miovision_api.open_issues_review TO miovision_api_bot;
