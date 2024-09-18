@@ -6,8 +6,8 @@ WITH all_outages AS (
 
 total_outages AS (
     SELECT
-        intersection_name || ' (id: ' || intersection_id || ') - data last received: '
-        || range_start || ' (' || CURRENT_DATE - range_start || ' days)' AS descrip
+        intersection_name || ' (id: `' || intersection_id || '`) - data last received: `'
+        || range_start || '` (' || CURRENT_DATE - range_start || ' days)' AS descrip
     FROM miovision_api.open_issues_review
     WHERE classification_uid IS NULL
 )

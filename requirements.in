@@ -1,8 +1,8 @@
-# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.10.txt
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.10.0/constraints-no-providers-3.10.txt
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.9.3
+apache-airflow==2.10.0
 
 # Airflow service providers
 apache-airflow-providers-celery
