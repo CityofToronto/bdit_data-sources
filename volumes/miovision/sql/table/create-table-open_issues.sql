@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS miovision_api.open_issues_review
     volume bigint,
     alerts text COLLATE pg_catalog."default",
     logged boolean,
-    notes txt
+    reviewer_notes text,
     CONSTRAINT open_issues_review_pkey PRIMARY KEY (uid)
 )
 
