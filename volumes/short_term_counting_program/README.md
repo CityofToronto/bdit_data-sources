@@ -11,6 +11,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
+- [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
   - [Core Tables](#core-tables)
   - [Other Useful Tables](#other-useful-tables)
@@ -113,6 +114,10 @@ TMCs are processed automatically, nightly, once made available from the contract
 Internal to the Transportation Data & Analytics team, data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS.
 
 Look in the `traffic` schema for all ad-hoc data tables.
+
+## Where can I find what data?
+
+!['where-to-find-data'](../img/where-to-find-adhoc-count-data.png)
 
 ## How is the data structured?
 
