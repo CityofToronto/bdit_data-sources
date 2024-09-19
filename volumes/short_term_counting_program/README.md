@@ -331,17 +331,17 @@ category_name|text|name of the count type or data source
 
 #### Category Reference
 
-Category Name|Meaning
--------------|-------
-24 HOUR|Volume ATR
-RESCU|RESCU
-CLASS|Vehicle Classification ATR
-SPEED|Speed ATR
-MANUAL|
-PERM STN|Permanent Count Stations
-BICYCLE|Bicycle Volume ATR
-SPD OCC|
-SENSYS SPEED|
+Category Name|Status|Meaning
+-------------|------|-------
+24 HOUR|-|Volume ATR
+RESCU|**DO NOT USE.** For current RESCU data and pipeline information, see [volumes/vds](../vds).|Volume ATR data from RESCU permanent counters. Highway and major arterial in-road loop detectors.
+CLASS|-|Vehicle Classification ATR
+SPEED|-|Speed / Volume ATR
+MANUAL|**Don't use this without further investigation.**|Likely counts loaded via manual counting boards.
+PERM STN|**Don't use this without further investigation.** Unclear how this is different from other specified permanent counters.|Permanent Count Stations
+BICYCLE|**DO NOT USE.** For current Eco-Counter data and pipeline information, see [volumes/ecocounter](../ecocounter).|Bicycle Volume ATR from Eco-Counter permanent count stations, manually loaded via portable device.
+SPD OCC|**DO NOT USE.**|Likely a permanent counter that collected speed ("SPD") and occupancy ("OCC") data.
+SENSYS SPEED|**DO NOT USE.**|Sensys permanent counters that collected speed data.
 
 ## Useful Views
 
