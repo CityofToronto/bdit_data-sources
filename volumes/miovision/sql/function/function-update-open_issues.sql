@@ -1,6 +1,6 @@
 --DROP FUNCTION miovision_api.update_open_issues;
 CREATE OR REPLACE FUNCTION miovision_api.update_open_issues()
-RETURNS VOID
+RETURNS void
 LANGUAGE PLPGSQL
 
 AS $BODY$
@@ -126,6 +126,5 @@ BEGIN
 END
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.update_open_issues
-IS '''A function to update miovision_api.open_issues.
+COMMENT ON FUNCTION miovision_api.update_open_issuesIS '''A function to update miovision_api.open_issues.
 Run daily via miovision_pull Airflow DAG.''';
