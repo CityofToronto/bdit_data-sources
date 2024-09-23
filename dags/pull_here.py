@@ -62,16 +62,10 @@ def pull_here():
     def get_download_link(ds=None):
         api_conn = BaseHook.get_connection('here_api_key')
         pull_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
-        i = 0
-        while i < 3:
-            try:
-                access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
-                if i == 0: #only generate request_id once, but new access_token on each attempt
-                    request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
-                download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
-                return download_url
-            except HereAPIException:
-                i+=1
+        access_token = get_access_token(api_conn)
+        request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
+        download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login, api_conn)
+        return download_url
     
     download_url = get_download_link()
 
