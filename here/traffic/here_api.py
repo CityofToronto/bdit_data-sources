@@ -117,12 +117,13 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
 
     status='Pending'
     status_url = status_base_url + str(user_id) + '/requests/' + str(request_id)
-    status_header = {'Authorization': 'Bearer ' +  access_token}
     
-    i = 0
-    while status != "Completed Successfully" and i < 3:
+    #try polling same request_id for up to 8 hrs
+    token_counter = 0
+    while status != "Completed Successfully" and token_counter < 8:
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
+        status_header = {'Authorization': 'Bearer ' +  access_token}
         query_status = requests.get(status_url, headers = status_header)
         try:
             query_status.raise_for_status()
@@ -130,7 +131,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
         except requests.exceptions.HTTPError:
             #access token expires after 1 hr, try to generate up to 3 times.
             access_token = get_access_token(api_conn)
-            i+=1
+            token_counter+=1
         except KeyError as err:
             error = 'Error in polling status of query request \n'
             error += 'err\n'
