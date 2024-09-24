@@ -53,21 +53,33 @@ default_args = {'owner': ','.join(names),
      schedule_interval='0 17 * * * ' ,
      catchup=False,
      doc_md = doc_md,
-     tags=["HERE"]
+     tags=["HERE", "data_pull"]
      )
 
 def pull_here():
     
-    @task(retries=0) 
-    def get_download_link(ds=None):
+    @task
+    def send_request():
+        api_conn = BaseHook.get_connection('here_api_key')
+        access_token = get_access_token(api_conn)
+        return access_token
+
+    @task
+    def get_request_id(access_token: str, ds=None):
         api_conn = BaseHook.get_connection('here_api_key')
         pull_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
-        access_token = get_access_token(api_conn)
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
+        return request_id
+    
+    @task(retries=0) 
+    def get_download_link(request_id: str, access_token: str):
+        api_conn = BaseHook.get_connection('here_api_key')
         download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login, api_conn)
         return download_url
     
-    download_url = get_download_link()
+    access_token = send_request()
+    request_id =  get_request_id(access_token)
+    download_url = get_download_link(request_id, access_token)
 
     @task.bash(env={"DOWNLOAD_URL": download_url,
                     "HOST":  BaseHook.get_connection("here_bot").host,
