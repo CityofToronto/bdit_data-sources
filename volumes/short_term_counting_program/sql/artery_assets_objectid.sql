@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW traffic.artery_objectid_pavement_asset
+CREATE OR REPLACE VIEW traffic.artery_assets
 AS
 WITH clpav18 AS ( 
     SELECT 
@@ -16,12 +16,12 @@ FROM traffic.arterydata AS ad
 JOIN traffic.arteries_centreline AS ac USING (arterycode)
 JOIN clpav18 ON clpav18.geo_id = ac.centreline_id AND clpav18.rownumber = 1;
 
-COMMENT ON VIEW traffic.artery_objectid_pavement_asset IS 'Lookup between artery codes and objectid (to join pavement asset data e.g. vz_analysis.gcc_pavement_asset)';
-ALTER TABLE IF EXISTS traffic.artery_objectid_pavement_asset
+COMMENT ON VIEW traffic.artery_assets IS 'Lookup between artery codes and objectid (to join pavement asset data e.g. vz_analysis.gcc_pavement_asset)';
+ALTER TABLE IF EXISTS traffic.artery_assets
 OWNER TO traffic_admins;
 
-GRANT ALL ON TABLE traffic.artery_objectid_pavement_asset TO bdit_humans;
-GRANT ALL ON TABLE traffic.artery_objectid_pavement_asset TO traffic_admins;
+GRANT ALL ON TABLE traffic.artery_assets TO bdit_humans;
+GRANT ALL ON TABLE traffic.artery_assets TO traffic_admins;
 
 
 -- flashcrow.counts.arteries_centreline must be migrated to the bigdata.traffic schema and copied over regularly
