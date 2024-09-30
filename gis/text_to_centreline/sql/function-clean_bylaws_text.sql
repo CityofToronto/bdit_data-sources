@@ -25,6 +25,7 @@ DECLARE
     highway text := gis.custom_case(_clean_bylaws_text.highway);
     frm text := gis.custom_case(_clean_bylaws_text.frm);
     t text := gis.custom_case(_clean_bylaws_text.t);
+    direction_or text := 'north|south|east|west|northeast|northwest|southwest|southeast';
 
 --STEP 1
     -- clean data
@@ -33,7 +34,7 @@ DECLARE
     btwn1_cleaned text := regexp_replace(
                             regexp_replace(
                                 regexp_replace(frm,
-                                '[0123456789.,]* m (north|south|east|west|East|northeast|northwest|southwest|southeast) of ', '', 'gi'),
+                                '[0123456789.,]* m (' || direction_or || ') of ', '', 'gi'),
                                 '\(.*?\)', '', 'gi'),
                             'A point', '', 'gi');
                             
@@ -63,8 +64,8 @@ DECLARE
                                 regexp_replace(
                                     COALESCE(t, frm),
                                     '\(.*?\)', '', 'gi'),
-                                '[0123456789.,]* m (north|south|east|west|East|east/north|northeast|northwest|southwest|southeast|south west) of ', '', 'gi'),
-                            'the (north|south|east|west|east/north|northeast|northwest|southwest|southeast|south west) end of', '', 'gi');
+                                '[0123456789.,]* m (' || direction_or || ') of ', '', 'gi'),
+                            'the (' || direction_or || ') end of', '', 'gi');
 
     btwn2_orig_v1 text := CASE
         WHEN t IS NULL THEN (
@@ -74,7 +75,7 @@ DECLARE
                 regexp_replace(
                     split_part(btwn2_cleaned, ' and ', 2),
             --Delete 'thereof' and some other words
-                    'between |(A point)|(thereof)|(the northeast of)', '', 'g')
+                    'between |(A point)|(thereof)|(the northeast of)', '', 'gi')
             )
 
             WHEN split_part(frm, ' to ', 2) <> ''
@@ -117,13 +118,11 @@ DECLARE
                     THEN split_part(
                         split_part(
                             gis.abbr_street(
-                                regexp_replace(
-                                        regexp_replace(
-                                            split_part(
-                                                split_part(frm, ' to ', 1),
-                                                ' and ', 1),
-                                            '(between)|(further) ', '', 'gi'),
-                                    'east/north', 'northeast', 'gi')
+                                    regexp_replace(
+                                        split_part(
+                                            split_part(frm, ' to ', 1),
+                                            ' and ', 1),
+                                        '(between)|(further) ', '', 'gi')
                                 ),
                                 ' m ', 2),
                             ' of ', 1)
@@ -135,14 +134,12 @@ DECLARE
                         WHEN btwn1 LIKE '% m %'
                             OR gis.abbr_street(frm) LIKE '% m %'
                         THEN regexp_replace(
-                            regexp_replace(
                                 split_part(
                                     split_part(
                                         gis.abbr_street(frm),
                                         ' m ', 2),
                                     ' of ', 1),
-                                'further ', '', 'gi'),
-                            'east/north', 'northeast', 'gi')
+                                'further ', '', 'gi')
                         ELSE NULL
                     END
                 )
@@ -168,7 +165,6 @@ DECLARE
                     CASE
                         WHEN frm_part_1 IS NOT NULL
                         THEN regexp_replace(
-                            regexp_replace(
                                 split_part(
                                     split_part(
                                         gis.abbr_street(
@@ -178,8 +174,7 @@ DECLARE
                                             ),
                                         ' m ', 2),
                                     ' of ', 1),
-                                'further | thereof', '', 'gi'),
-                            'east/north', 'northeast', 'gi')
+                                'further | thereof', '', 'gi')
                     END
                 )
                 ELSE NULL
@@ -189,16 +184,13 @@ DECLARE
                         WHEN btwn2_orig LIKE '% m %'
                         OR gis.abbr_street(t) LIKE '% m %'
                         THEN
-                        regexp_replace(
                             regexp_replace(
                                 split_part(
                                     split_part(
                                         gis.abbr_street(t),
                                         ' m ', 2),
                                     ' of ', 1),
-                                'further ', '', 'gi'),
-                            'east/north', 'northeast', 'gi'
-                        )
+                                'further ', '', 'gi')
                         ELSE NULL
                     END
                 )
