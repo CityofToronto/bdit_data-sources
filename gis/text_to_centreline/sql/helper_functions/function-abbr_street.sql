@@ -49,3 +49,5 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, 'Rd Cres', 'Road Cres', 'g');
 return _abbrev_street;
 end;
 $BODY$;
+
+GRANT EXECUTE ON FUNCTION gis.abbr_street(text) TO vz_readonly;
