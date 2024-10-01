@@ -9,10 +9,10 @@ CREATE VIEW traffic.artery_locations_px AS (
     FROM traffic.arterydata
     JOIN traffic.arteries_centreline USING (arterycode)
     JOIN traffic.traffic_signal
-        ON traffic_signal."centrelineId" = arteries_centreline.centreline_id
+        ON arteries_centreline.centreline_id = traffic_signal."centrelineId"
     JOIN gis.traffic_signal AS signals
-        ON trim(leading '0' FROM signals.px)::int = traffic_signal.px
-    ORDER BY px
+        ON trim(LEADING '0' FROM signals.px)::int = traffic_signal.px
+    ORDER BY traffic_signal.px
 
 );
 
