@@ -65,13 +65,14 @@ def vdsvehicledata_dag():
 
         create_partitions = PostgresOperator(
             task_id='create_partitions',
+            pre_execute=check_jan_1st,
             sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
             postgres_conn_id='vds_bot',
             autocommit=True
         )
         
         #check if Jan 1, if so trigger partition creates.
-        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
+        create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     @task_group
