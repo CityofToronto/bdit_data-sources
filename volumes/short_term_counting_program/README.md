@@ -347,9 +347,7 @@ SENSYS SPEED|
 
 - `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
 
-- `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections), created using `regexp_matches`. 
-
-- `traffic.artery_traffic_signals` - A lookup view between artery codes and px numbers that have traffic signals. 
+- `traffic.artery_locations_px` -  A lookup view between artery codes and px numbers (intersections). Created using MOVE's `traffic.traffic_signals` lookup. 
 
 - `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement asset information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [Update pavement assets #620](https://github.com/CityofToronto/bdit_data-sources/issues/620).
 
