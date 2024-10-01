@@ -204,6 +204,56 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
             
     return insert_column, output_table
 
+def create_table(output_table, return_json, schema_name, con):
+    """
+    Function to create a new table in postgresql for the layer (for audited tables only)
+
+    Parameter
+    ---------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+        
+    primary_key : string
+        Primary key for this layer, returned from dictionary pk_dict
+    
+    con: Connection
+        Could be the connection to bigdata or to on-prem server
+
+    Returns
+    --------
+    insert_columm : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    
+    excluded_column : SQL composed
+        Composed object that is similar to insert_column, but has 'EXCLUDED.' attached before each column name, used for UPSERT query
+    """
+    
+    fields = return_json['fields']
+    insert_column_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) for field in fields]
+    insert_column_list.append(sql.Identifier('geom'))
+    insert_column = sql.SQL(',').join(insert_column_list)
+    
+    with con:
+        with con.cursor() as cur:
+            
+            col_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) + sql.SQL(' ') + sql.SQL(get_fieldtype(field["type"])) for field in fields]
+            col_list.append(sql.Identifier('geom') + sql.SQL(' ') + sql.SQL('geometry'))
+            col_list_string = sql.SQL(',').join(col_list)
+            
+            LOGGER.info(col_list_string.as_string(con))
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, output_table),
+                                                                      columns = col_list_string)
+            LOGGER.info(create_sql.as_string(con))
+            cur.execute(create_sql)
+
+    return insert_column
+
 # Geometry Switcher 
 def line(geom):
     return 'SRID=4326;LineString('+','.join(' '.join(str(x) for x in tup) for tup in geom['paths'][0]) +')'
@@ -448,6 +498,58 @@ def insert_partitioned_data(schema_parent_table_insert, insert_column, return_js
         with con.cursor() as cur:
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), schema_parent_table_insert)
+    
+def insert_data(output_table, insert_column, return_json, schema_name, con):
+    """
+    Function to insert data to our postgresql database, the data is inserted into a temp table (for audited tables)
+
+    Parameters
+    ----------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    insert_column : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+    
+    con: Airflow Connection
+        Could be the connection to bigdata or to on-prem server
+    """
+    rows = []
+    features = return_json['features']
+    fields = return_json['fields']
+    trials = [[field['name'], field['type']] for field in fields]
+
+    for feature in features:
+        geom = feature['geometry']
+        geometry_type = return_json['geometryType']
+        geometry = get_geometry(geometry_type, geom)
+        
+        row = []
+        for trial in trials:
+            if trial[1] == 'esriFieldTypeDate' and feature['attributes'][trial[0]] != None:
+                row.append(to_time(feature['attributes'][trial[0]]))
+            else:
+                row.append(feature['attributes'][trial[0]])
+
+        row.append(geometry)
+        
+        rows.append(row)
+    
+    
+    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
+        schema_table = sql.Identifier(schema_name, output_table), 
+        columns = insert_column
+    )
+    with con:
+        with con.cursor() as cur:
+               execute_values(cur, insert, rows)
+    LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
@@ -547,7 +649,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 # base main function, also compatible with Airflow
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None, is_manual = False):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -573,8 +675,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         Connection object that can connect to a particular database
         Expects a valid con object if using command prompt
     """
-    successful_task_run = True
-
+        
     # For Airflow DAG
     if cred is not None:
         con = cred.get_conn()
@@ -590,46 +691,71 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         LOGGER.error("Invalid mapserver and/or layer Id")
         return
     #--------------------------------
-    if is_audited and primary_key is None:
-        LOGGER.error("Audited tables should have a primary key.")
-    if not(is_audited) and primary_key is not None:
-        LOGGER.error("Non-audited tables do not use the primary key.")
-    #--------------------------------
     keep_adding = True
     counter = 0
-    
-    while keep_adding == True:
+    #--------------------------------
+    if is_manual:
+        while keep_adding == True:
         
-        if counter == 0:
-            return_json = get_data(mapserver, layer_id)
-            if is_audited:
-                (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
+            if counter == 0:
+                return_json = get_data(mapserver, layer_id)
+                insert_column = create_table(output_table, return_json, schema_name, con)
+        
+                features = return_json['features']
+                record_max=len(features)
+                max_number = record_max
             else:
-                (insert_column, schema_parent_table_insert) = create_partitioned_table(output_table, return_json, schema_name, con)
-            
-            features = return_json['features']
-            record_max=(len(features))
-            max_number = record_max
-            # Insert data into the table
-        if is_audited:
-            insert_audited_data(output_table, insert_column, return_json, schema_name, con)
-        else:
-            insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
-        # Update loop variables
-        counter += 1
-        keep_adding = find_limit(return_json)
+                return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
         
-        if keep_adding:
-            max_number += record_max
-        else:
-            LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
+            # Insert data into the table
+            insert_data(output_table, insert_column, return_json, schema_name, con)
+        
+            # Update loop variables
+            counter += 1
+            keep_adding = find_limit(return_json)
+        
+            if keep_adding:
+                max_number += record_max
+            else:
+                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
+    else:
+        if is_audited and primary_key is None:
+            LOGGER.error("Audited tables should have a primary key.")
+        if not(is_audited) and primary_key is not None:
+            LOGGER.error("Non-audited tables do not use the primary key.")
+        #--------------------------------
+        while keep_adding == True:
+            return_json = get_data(mapserver, layer_id)
+        
+            if counter == 0:
+                if is_audited:
+                    (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
+                else:
+                    (insert_column, schema_parent_table_insert) = create_partitioned_table(output_table, return_json, schema_name, con)
+            
+                features = return_json['features']
+                record_max=(len(features))
+                max_number = record_max
+                # Insert data into the table
+            if is_audited:
+                insert_audited_data(output_table, insert_column, return_json, schema_name, con)
+            else:
+                insert_partitioned_data(schema_parent_table_insert, insert_column, return_json, schema_name, con)
+            # Update loop variables
+            counter += 1
+            keep_adding = find_limit(return_json)
+        
+            if keep_adding:
+                max_number += record_max
+            else:
+                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
     
-    if is_audited:
-        try:
-            successful_task_run = update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
-        except Exception as err:
-            LOGGER.exception("Unable to update table %s", err)
-
+        if is_audited:
+            try:
+                update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
+            except Exception as err:
+                LOGGER.exception("Unable to update table %s", err)
+        
 @click.command()
 @click.option('--mapserver', '-ms', type = int, required = True, 
                 help = 'Mapserver number, e.g. cotgeospatial_2 will be 2')
@@ -663,7 +789,8 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, primary_key, 
         schema_name = schema_name,
         is_audited = is_audited,
         primary_key = primary_key,
-        con=connection_obj
+        con=connection_obj,
+        is_manual = True
     )
 
 if __name__ == '__main__':
