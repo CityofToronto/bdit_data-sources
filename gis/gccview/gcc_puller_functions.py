@@ -725,9 +725,10 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
             LOGGER.error("Non-audited tables do not use the primary key.")
         #--------------------------------
         while keep_adding == True:
-            return_json = get_data(mapserver, layer_id)
-        
             if counter == 0:
+                # Without specifying the max_number and record_max, the number of data we get from this query 
+                # should be the max record count of the layer if the layer is huge
+                return_json = get_data(mapserver, layer_id)
                 if is_audited:
                     (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
                 else:
@@ -736,7 +737,10 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
                 features = return_json['features']
                 record_max=(len(features))
                 max_number = record_max
-                # Insert data into the table
+            else:
+                return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
+            
+            # Insert data into the table    
             if is_audited:
                 insert_audited_data(output_table, insert_column, return_json, schema_name, con)
             else:
