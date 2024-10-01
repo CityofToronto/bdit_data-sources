@@ -455,6 +455,8 @@ def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
                 cur.execute(anomalous_range_sql, query_params)
                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete for intersections %s',
                             [x.uid for x in intersections])
+            #update the table used for manual QC
+            cur.execute("SELECT miovision_api.update_open_issues();")
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
