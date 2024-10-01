@@ -32,6 +32,7 @@ CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
         v.volume_15min_mvt_uid IS NULL --not aggregated
         AND v.datetime_bin >= CURRENT_DATE - 100
         AND NOT (v.classification_uid = 10 AND movement_uid = 8) --bike exit
+        AND NOT (v.classification_uid = 7) --bikes in crosswalk
         AND im_dl.intersection_uid IS NULL
     GROUP BY
         v.intersection_uid,
