@@ -198,7 +198,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
                                                                                                                                             schema_parent_table = sql.Identifier(schema_name, output_table))
             cur.execute(create_sql, (today_string, ))
 
-            index_sql = sql.SQL("CREATE INDEX {idx_name} ON {schema_child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
+            index_sql = sql.SQL("CREATE INDEX IF NOT EXISTS {idx_name} ON {schema_child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
                                                                                                                 schema_child_table=sql.Identifier(schema_name, output_table_with_date))
             cur.execute(index_sql)
             
