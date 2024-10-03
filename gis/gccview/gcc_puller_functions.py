@@ -42,10 +42,10 @@ def get_tablename(mapserver, layer_id):
 
     Parameters
     -----------
-    mapserver: string
+    mapserver : string
         The name of the mapserver we are accessing, returned from function mapserver_name
     
-    layer_id: integer
+    layer_id : integer
         Unique layer id that represent a single layer in the mapserver
     
     Returns
@@ -103,7 +103,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
     primary_key : string
         Primary key for this layer, returned from dictionary pk_dict
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -141,8 +141,8 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
             LOGGER.info(create_sql.as_string(con))
             cur.execute(create_sql)
 
-            # owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema_table} OWNER to gis_admins").format(schema_table = sql.Identifier(schema_name, temp_table_name))
-            # cur.execute(owner_sql)
+            owner_sql = sql.SQL("ALTER TABLE IF EXISTS {schema_table} OWNER to gis_admins").format(schema_table = sql.Identifier(schema_name, temp_table_name))
+            cur.execute(owner_sql)
     
     # Add a pk
     with con:
@@ -166,7 +166,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     schema_name : string
         The schema in which the table will be inserted into
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -206,7 +206,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
 
 def create_table(output_table, return_json, schema_name, con):
     """
-    Function to create a new table in postgresql for the layer (for audited tables only)
+    Function to create a new table in postgresql for the layer (for regular table)
 
     Parameter
     ---------
@@ -219,19 +219,13 @@ def create_table(output_table, return_json, schema_name, con):
     schema_name : string
         The schema in which the table will be inserted into
         
-    primary_key : string
-        Primary key for this layer, returned from dictionary pk_dict
-    
-    con: Connection
+    con : Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
     --------
     insert_columm : SQL composed
         Composed object of column name and types use for creating a new postgresql table
-    
-    excluded_column : SQL composed
-        Composed object that is similar to insert_column, but has 'EXCLUDED.' attached before each column name, used for UPSERT query
     """
     
     fields = return_json['fields']
@@ -391,6 +385,29 @@ def find_limit(return_json):
     return keep_adding
 
 def insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned):
+    """
+    Function to insert data to our postgresql database
+    Parameters
+    ----------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+    insert_column : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+    
+    con : Airflow Connection
+        Could be the connection to bigdata or to on-prem server
+        
+    is_audited : Boolean
+        Whether we want to have the table be audited (true) or be non-audited (false)
+
+    is_partitioned : Boolean
+        Whether we want to have the table be partitioned (true) or neither audited nor partitioned(false)
+    """
     rows = []
     features = return_json['features']
     fields = return_json['fields']
@@ -450,7 +467,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     schema_name : string
         The schema in which the table will be inserted into
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
     
     Returns
@@ -526,7 +543,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 # base main function, also compatible with Airflow
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None, is_partitioned = False):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None, is_partitioned = True):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -541,16 +558,19 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
     schema_name : string
         The schema in which the table will be inserted into
     
-    is_audited: Boolean
-        Whether we want to have the table be audited (true) or be partitioned (false)
+    is_audited : Boolean
+        Whether we want to have the table be audited (true) or be non-audited (false)
     
-    cred: Airflow PostgresHook
+    cred : Airflow PostgresHook
         Contains credentials to enable a connection to a database
         Expects a valid cred input when running Airflow DAG
     
-    con: connection to database
+    con : connection to database
         Connection object that can connect to a particular database
         Expects a valid con object if using command prompt
+
+    is_partitioned : Boolean
+        Whether we want to have the table be partitioned (true) or neither audited nor partitioned(false)
     """
         
     # For Airflow DAG
