@@ -88,7 +88,7 @@ def miovision_open_data_dag():
 
     @task(
         retries=0,
-        trigger_rule='all_done',
+        trigger_rule='all_success',
         doc_md="""A status message to report DAG success."""
     )
     def status_message(ds = None, **context):
