@@ -117,7 +117,18 @@ Look in the `traffic` schema for all ad-hoc data tables.
 
 ## Where can I find what data?
 
-!['where-to-find-data'](../img/where-to-find-adhoc-count-data.png)
+| Study Type // Loading Mechanism | FlowLoad (`traffic.*`)                           | MOVE Loader (`traffic.atr_*`)        | Spectrum API Loader (`traffic.tmc_*`) |
+|---------------------------------|--------------------------------------------------|--------------------------------------|---------------------------------------|
+| Turning Movement Count          | All-time TMC data*                               | n/a                                  | September 2023 to present             |
+| Volume ATR                      | All-time Volume ATRs**                           | n/a                                  | n/a                                   |
+| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                  | n/a                                   |
+| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded*** | n/a                                   |
+
+*The `traffic.*` tables contain all-time TMC and Speed/Vol ATR data from all loading mechanisms
+
+**Around 2021, we stopped collecting Volume-only ATR counts, and switched to Speed/Vol ATR counts, as they're a similar price but more data rich
+
+***Classification ATR data is spotty for two reasons: 1) the legacy loader did not allow for co-located Speed/Vol ATR and Classification ATR data to be loaded for the same day; 2) there is curently no loading mechanism for Classification ATR data post-May 2023, when the MOVE Loader was introduced.
 
 ## How is the data structured?
 
