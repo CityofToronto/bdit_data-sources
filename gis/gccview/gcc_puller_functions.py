@@ -426,7 +426,7 @@ def insert_data(output_table, insert_column, return_json, schema_name, con, is_a
             else:
                 row.append(feature['attributes'][trial[0]])
                 
-        if is_partitioned:
+        if (not is_audited) and is_partitioned:
             row.insert(0, today_string)
         row.append(geometry)
         
