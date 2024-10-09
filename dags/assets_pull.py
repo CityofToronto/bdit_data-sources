@@ -326,7 +326,14 @@ def get_point_geometry(long, lat):
     lat: value of 'lat' in traffic_signals/v3 json
     '''
     return 'SRID=4326;Point('+(str(long))+' '+ (str(lat))+')'  
-        
+
+def identify_temp_signals(px):
+    if px >= '3300' and px < '3400':
+        return 'Temporary (portable)'
+    if px >= '3100' and px < '3200':
+        return 'Temporary'
+    return None
+
 def pull_traffic_signal():
     '''
     This function would pull all records from https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
@@ -374,14 +381,12 @@ def pull_traffic_signal():
     Upsert into gis.traffic_signal, an audited table
     '''
     
-    complete_rows = []
-    
     # column names in the PG table
     column_names = ['px', 'main_street', 'midblock_route', 'side1_street', 'side2_street', 'private_access', 'additional_info', 'x', 'y', 'latitude', 'longitude',
                     'activationdate', 'signalsystem', 'non_system', 'control_mode', 'pedwalkspeed', 'aps_operation', 'numberofapproaches', 'geo_id', 'node_id',
                     'audiblepedsignal', 'transit_preempt', 'fire_preempt', 'rail_preempt', 'bicycle_signal', 'ups', 'led_blankout_sign',
                     'lpi_north_implementation_date', 'lpi_south_implementation_date', 'lpi_east_implementation_date', 'lpi_west_implementation_date', 'lpi_comment',
-                    'aps_activation_date', 'leading_pedestrian_intervals', 'geom']
+                    'aps_activation_date', 'leading_pedestrian_intervals', 'geom', 'removed_date', 'temp_signal']
     
     # attribute names in JSON dict
     attribute_names = ['px', 'main', 'mid_block', 'side1', 'side2', 'private_access', 'additional_info', 'x', 'y', 'lat', 'long',
@@ -390,13 +395,17 @@ def pull_traffic_signal():
                       'lpiNorthImplementationDate', 'lpiSouthImplementationDate', 'lpiEastImplementationDate', 'lpiWestImplementationDate', 'lpiComment',
                       'aps_activation_date', 'leading_pedestrian_intervals']
     
+    complete_rows = []
     for obj in return_json:
         one_complete_ts = []
         for attr in attribute_names:
             one_complete_ts.append(obj[attr])
         # Create point geometry based on x and y
         one_complete_ts.append(get_point_geometry(obj['long'], obj['lat']))
-        
+        #removed_date
+        one_complete_ts.append(None)
+        #identify temporary and temporary (portable) signals
+        one_complete_ts.append(identify_temp_signals(obj['px']))
         complete_rows.append(one_complete_ts)
     
     # Upsert query to update gis.traffic_signal
@@ -409,9 +418,17 @@ def pull_traffic_signal():
         columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names])
     )
 
+    #label traffic signals removed from open data.
+    update_deleted = sql.SQL("""UPDATE gis.traffic_signal
+                             SET removed_date = CURRENT_DATE
+                             WHERE removed_date IS NULL AND NOT(px IN ({}));""")
+    current_pxs = [obj['px'] for obj in return_json]
+    update_deleted = update_deleted.format(sql.SQL(',').join(map(sql.Literal, current_pxs)))
+    
     with conn:
         with conn.cursor() as cur:
             execute_values(cur, upsert_query_gis, complete_rows)
+            cur.execute(update_deleted)
     
 # ------------------------------------------------------------------------------
 # Set up the dag and task
