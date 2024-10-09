@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS gis.traffic_signal
     lpi_comment text COLLATE pg_catalog."default",
     aps_activation_date timestamp without time zone,
     leading_pedestrian_intervals integer,
+    removed_date date,
+    temporary_signal text,
     CONSTRAINT _traffic_signal_pkey PRIMARY KEY (px)
 )
 
@@ -56,32 +58,32 @@ GRANT ALL ON TABLE gis.traffic_signal TO gis_admins;
 GRANT ALL ON TABLE gis.traffic_signal TO vz_api_bot;
 
 COMMENT ON TABLE gis.traffic_signal
-IS 'Updated daily by the assets_pull dag https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/assets';
+    IS 'Updated daily by the assets_pull dag https://github.com/CityofToronto/bdit_data-sources/tree/master/gis/assets';
 -- Index: traffic_signal_gix
 
 -- DROP INDEX IF EXISTS gis.traffic_signal_gix;
 
 CREATE INDEX IF NOT EXISTS traffic_signal_gix
-ON gis.traffic_signal USING gist
-(geom)
-TABLESPACE pg_default;
+    ON gis.traffic_signal USING gist
+    (geom)
+    TABLESPACE pg_default;
 
 -- Trigger: audit_trigger_row
 
 -- DROP TRIGGER IF EXISTS audit_trigger_row ON gis.traffic_signal;
 
 CREATE OR REPLACE TRIGGER audit_trigger_row
-AFTER INSERT OR DELETE OR UPDATE
-ON gis.traffic_signal
-FOR EACH ROW
-EXECUTE FUNCTION gis.if_modified_func('true');
+    AFTER INSERT OR DELETE OR UPDATE 
+    ON gis.traffic_signal
+    FOR EACH ROW
+    EXECUTE FUNCTION gis.if_modified_func('true');
 
 -- Trigger: audit_trigger_stm
 
 -- DROP TRIGGER IF EXISTS audit_trigger_stm ON gis.traffic_signal;
 
 CREATE OR REPLACE TRIGGER audit_trigger_stm
-AFTER TRUNCATE
-ON gis.traffic_signal
-FOR EACH STATEMENT
-EXECUTE FUNCTION gis.if_modified_func('true');
+    AFTER TRUNCATE
+    ON gis.traffic_signal
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION gis.if_modified_func('true');
