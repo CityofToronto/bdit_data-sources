@@ -355,8 +355,8 @@ def pull_traffic_signal():
     # each "info" is all the properties of one APS, including its coords
     
     for obj in return_json:
-        #do not add temporary portable traffic signals to vz_safety_programs_staging.signals_cart
-        if obj['px'] >= '3300' and obj['px'] < '3400':
+        #do not add Temporary (portable) traffic signals to vz_safety_programs_staging.signals_cart
+        if identify_temp_signals(obj['px']) == 'Temporary (portable)':
             continue
         # temporary list of properties of one TS to be appended into the rows list
         one_ts = []
