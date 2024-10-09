@@ -355,16 +355,15 @@ def pull_traffic_signal():
     # each "info" is all the properties of one APS, including its coords
     
     for obj in return_json:
-            
+        #do not add temporary portable traffic signals to vz_safety_programs_staging.signals_cart
+        if obj['px'] >= '3300' and obj['px'] < '3400':
+            continue
         # temporary list of properties of one TS to be appended into the rows list
         one_ts = []
-
         one_ts.append('Traffic Signals') # append the asset_name as listed in EC2
-
         # append the values in the same order as in the table
         for attr in att_names:
             one_ts.append(obj[attr])
-
         rows.append(tuple(one_ts))
     
     # delete existing Traffic Signals and insert into the local table
