@@ -40,7 +40,7 @@ Records from this URL are inserted into `gis.traffic_signal` and `vz_safety_prog
 `gis.traffic_signal`
 - rows are upserted so that the changes can be audited.
 - `removed_date` field notes when the row was removed from the Open Dataset. Note the field was first populated on 2024-10-09 so signals removed before that date will be rounded up to that date.
-- `temp_signal` field notes temporary (px = '31XX') and temporary (portable) (px = '33XX') traffic signals.
+- `temp_signal` field notes temporary (px = '31XX', to be replaced by a permanent signal) and temporary (portable, typically for a work zone, and will be removed) (px = '33XX') traffic signals.
 
 `signals_cart`
 - existing records of traffic signals will first be deleted and then new ones inserted
