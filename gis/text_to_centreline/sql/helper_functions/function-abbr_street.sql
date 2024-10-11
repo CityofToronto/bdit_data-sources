@@ -29,7 +29,7 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, ' Square', ' Sq', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Circle', ' Crcl', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Trail', ' Trl', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, '(?<=[A-Z][a-z]+ )([Gg]ardens)(?![a-z])(?! [A-Z])', 'Gdns', 'g');
-_abbrev_street := regexp_REPLACE(_abbrev_street, 'metres', 'm', 'g');
+_abbrev_street := regexp_REPLACE(_abbrev_street, 'metres', 'm', 'gi');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Avenue E', ' Ave E', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Avenue W', ' Ave W', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Avenue N', ' Ave N', 'g');
@@ -41,7 +41,7 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, '(?<=[A-Z][a-z]+ )(Park)(?![a-z
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'Gate', 'Gt', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'Pathway', 'Pthwy', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, '\(.*\)', '', 'g');
-_abbrev_street := regexp_REPLACE(_abbrev_street, 'approximately', '', 'g');
+_abbrev_street := regexp_REPLACE(_abbrev_street, 'approximately', '', 'gi');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grove', ' Grv', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grv Rd', ' Grove Rd', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grv Ave', ' Grove Ave', 'g');
@@ -49,3 +49,5 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, 'Rd Cres', 'Road Cres', 'g');
 return _abbrev_street;
 end;
 $BODY$;
+
+GRANT EXECUTE ON FUNCTION gis.abbr_street(text) TO vz_readonly;
