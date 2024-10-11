@@ -11,6 +11,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
+- [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
   - [Core Tables](#core-tables)
   - [Other Useful Tables](#other-useful-tables)
@@ -113,6 +114,21 @@ TMCs are processed automatically, nightly, once made available from the contract
 Internal to the Transportation Data & Analytics team, data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS.
 
 Look in the `traffic` schema for all ad-hoc data tables.
+
+## Where can I find what data?
+
+| Study Type // Loading Mechanism | FlowLoad (`traffic.*`)                           | MOVE Loader (`traffic.atr_*`)        | Spectrum API Loader (`traffic.tmc_*`) |
+|---------------------------------|--------------------------------------------------|--------------------------------------|---------------------------------------|
+| Turning Movement Count          | All-time TMC data*                               | n/a                                  | September 2023 to present             |
+| Volume ATR                      | All-time Volume ATRs**                           | n/a                                  | n/a                                   |
+| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                  | n/a                                   |
+| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded*** | n/a                                   |
+
+*The `traffic.*` tables contain all-time TMC and Speed/Vol ATR data from all loading mechanisms
+
+**Around 2021, we stopped collecting Volume-only ATR counts, and switched to Speed/Vol ATR counts, as they're a similar price but more data rich
+
+***Classification ATR data is spotty for two reasons: 1) the legacy loader did not allow for co-located Speed/Vol ATR and Classification ATR data to be loaded for the same day; 2) there is curently no loading mechanism for Classification ATR data post-May 2023, when the MOVE Loader was introduced.
 
 ## How is the data structured?
 
@@ -331,17 +347,17 @@ category_name|text|name of the count type or data source
 
 #### Category Reference
 
-Category Name|Meaning
--------------|-------
-24 HOUR|Volume ATR
-RESCU|RESCU
-CLASS|Vehicle Classification ATR
-SPEED|Speed ATR
-MANUAL|
-PERM STN|Permanent Count Stations
-BICYCLE|Bicycle Volume ATR
-SPD OCC|
-SENSYS SPEED|
+Category Name|Status|Meaning
+-------------|------|-------
+24 HOUR|-|Volume ATR
+RESCU|**DO NOT USE.** For current RESCU data and pipeline information, see [volumes/vds](../vds).|Volume ATR data from RESCU permanent counters. Highway and major arterial in-road loop detectors.
+CLASS|-|Vehicle Classification ATR
+SPEED|-|Speed / Volume ATR
+MANUAL|**Don't use this without further investigation.**|Likely counts loaded via manual counting boards.
+PERM STN|**Don't use this without further investigation.** Unclear how this is different from other specified permanent counters.|Permanent Count Stations
+BICYCLE|**DO NOT USE.** For current Eco-Counter data and pipeline information, see [volumes/ecocounter](../ecocounter).|Bicycle Volume ATR from Eco-Counter permanent count stations, manually loaded via portable device.
+SPD OCC|**DO NOT USE.**|Likely a permanent counter that collected speed ("SPD") and occupancy ("OCC") data.
+SENSYS SPEED|**DO NOT USE.**|Sensys permanent counters that collected speed data.
 
 ## Useful Views
 
