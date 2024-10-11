@@ -1,21 +1,17 @@
-import calendar
 import configparser
 import logging
 import logging.handlers
-import re
 import shutil
 import subprocess
 import traceback
-from collections import defaultdict
 from datetime import datetime, timedelta
-from time import sleep
 from json import JSONDecodeError
 import os 
 import sys
-
 import click
 import requests
-from requests_oauthlib import OAuth1
+
+from .here_api import get_access_token, get_download_url
 
 class HereAPIException(Exception):
     '''Base Exception for all errors thrown by this module'''
@@ -38,30 +34,6 @@ def default_start_date():
 def default_end_date():
     dt = datetime.today() - timedelta(days=3)
     return dt.date().strftime('%Y%m%d')
-
-def get_access_token(key_id, key_secret, token_url):
-    '''Uses Oauth1 to get an access token using the key_id and client_secret'''
-    oauth1 = OAuth1(key_id, client_secret=key_secret)
-    headers = {'content-type': 'application/json'}
-    payload = {'grantType':'client_credentials', 'expiresIn': 3600}
-    LOGGER.info('Getting Access Token')
-    r = requests.post(token_url, auth=oauth1, json=payload, headers=headers)
-
-    try:
-        r.raise_for_status()
-        access_token = r.json()['accessToken']
-    except (requests.exceptions.HTTPError, KeyError, JSONDecodeError, ValueError) as err:
-        error = 'Error in requesting access token \n'
-        error += 'Response was:\n'
-        try:
-            resp = r.json()['message']
-        except JSONDecodeError:
-            resp = r.text
-        finally:
-            error += resp
-            error += '\n'
-            raise HereAPIException(error)
-    return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
                 request_type = 'PATH', vehicle_type = 'ALL', epoch_type = 5):
@@ -108,41 +80,6 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
         finally:
             raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
-
-def get_download_url(request_id, status_base_url, access_token, user_id):
-    '''Pings to get status of request and then returns the download URL when it has successfully completed'''
-
-    status='Pending'
-    status_url = status_base_url + str(user_id) + '/requests/' + str(request_id)
-    status_header = {'Authorization': 'Bearer ' +  access_token}
-
-    while status != "Completed Successfully":
-        sleep(60)
-        LOGGER.info('Polling status of query request: %s', request_id)
-        query_status = requests.get(status_url, headers = status_header)
-        try:
-            query_status.raise_for_status()
-            status = str(query_status.json()['status'])
-        except (requests.exceptions.HTTPError, KeyError) as err:
-            error = 'Error in polling status of query request \n'
-            error += 'err\n'
-            error += 'Response was:\n'
-            try:
-                resp = str(query_status.json()['message'])
-            except:
-                resp = query_status.text
-            finally:
-                error += resp
-                error += '\n'
-                raise HereAPIException(error)
-        except JSONDecodeError as json_err:
-            LOGGER.warning("JSON error in query status response.")
-            LOGGER.warning(query_status.text)
-            continue
-
-    LOGGER.info('Requested query completed')
-    
-    return query_status.json()['outputUrl']
 
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_start_date())
