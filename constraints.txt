@@ -1,6 +1,6 @@
 
 #
-# This constraints file was automatically generated on 2024-08-12T09:36:59.478072
+# This constraints file was automatically generated on 2024-09-16T16:21:46.279414
 # via "eager-upgrade" mechanism of PIP. For the "v2-10-test" branch of Airflow.
 # This variant of constraints install just the 'bare' 'apache-airflow' package build from the HEAD of
 # the branch, without installing any of the providers.
@@ -8,7 +8,7 @@
 # Those constraints represent the "newest" dependencies airflow could use, if providers did not limit
 # Airflow in any way.
 #
-Authlib==1.3.1
+Authlib==1.3.2
 ConfigUpdater==3.2
 Deprecated==1.2.14
 Flask-AppBuilder==4.5.0
@@ -30,13 +30,13 @@ PyYAML==6.0.2
 Pygments==2.18.0
 SQLAlchemy-JSONField==1.0.2
 SQLAlchemy-Utils==0.41.2
-SQLAlchemy==1.4.53
+SQLAlchemy==1.4.54
 WTForms==3.1.2
 Werkzeug==2.2.3
-aiobotocore==2.13.2
-aiohappyeyeballs==2.3.5
-aiohttp==3.10.3
-aioitertools==0.11.0
+aiobotocore==2.15.0
+aiohappyeyeballs==2.4.0
+aiohttp==3.10.5
+aioitertools==0.12.0
 aiosignal==1.3.1
 alembic==1.13.2
 amqp==5.2.0
@@ -52,10 +52,10 @@ babel==2.16.0
 backoff==2.2.1
 bcrypt==4.2.0
 blinker==1.8.2
-botocore==1.34.131
+botocore==1.35.16
 cachelib==0.9.0
-certifi==2024.7.4
-cffi==1.17.0
+certifi==2024.8.30
+cffi==1.17.1
 cgroupspy==0.2.3
 charset-normalizer==3.3.2
 click==8.1.7
@@ -64,9 +64,9 @@ cloudpickle==3.0.0
 colorama==0.4.6
 colorlog==6.8.2
 connexion==2.14.2
-cron-descriptor==1.4.3
+cron-descriptor==1.4.5
 croniter==3.0.3
-cryptography==43.0.0
+cryptography==43.0.1
 decorator==5.1.1
 dill==0.3.8
 distlib==0.3.8
@@ -74,27 +74,27 @@ dnspython==2.6.1
 docopt==0.6.2
 docutils==0.21.2
 email_validator==2.2.0
-eventlet==0.36.1
+eventlet==0.37.0
 exceptiongroup==1.2.2
-fastavro==1.9.5
-filelock==3.15.4
+fastavro==1.9.7
+filelock==3.16.0
 frozenlist==1.4.1
-fsspec==2024.6.1
+fsspec==2024.9.0
 gevent==24.2.1
 google-re2==1.1.20240702
-googleapis-common-protos==1.63.2
+googleapis-common-protos==1.65.0
 graphviz==0.20.3
-greenlet==3.0.3
-grpcio==1.65.4
+greenlet==3.1.0
+grpcio==1.66.1
 gssapi==1.8.3
 gunicorn==23.0.0
 h11==0.14.0
 hdfs==2.7.3
 httpcore==1.0.5
-httpx==0.27.0
-idna==3.7
-importlib_metadata==8.2.0
-importlib_resources==6.4.0
+httpx==0.27.2
+idna==3.10
+importlib_metadata==8.5.0
+importlib_resources==6.4.5
 inflection==0.5.1
 isodate==0.6.1
 itsdangerous==2.2.0
@@ -111,12 +111,12 @@ lxml==5.3.0
 markdown-it-py==3.0.0
 marshmallow-oneofschema==3.1.1
 marshmallow-sqlalchemy==0.28.2
-marshmallow==3.21.3
-mdit-py-plugins==0.4.1
+marshmallow==3.22.0
+mdit-py-plugins==0.4.2
 mdurl==0.1.2
 methodtools==0.4.7
-more-itertools==10.4.0
-multidict==6.0.5
+more-itertools==10.5.0
+multidict==6.1.0
 numpy==1.26.4
 opentelemetry-api==1.16.0
 opentelemetry-exporter-otlp-proto-grpc==1.16.0
@@ -131,7 +131,7 @@ packaging==24.1
 pandas==2.1.4
 pathspec==0.12.1
 pendulum==3.0.0
-platformdirs==4.2.2
+platformdirs==4.3.3
 pluggy==1.5.0
 plyvel==1.5.1
 prison==0.2.1
@@ -139,11 +139,11 @@ prometheus_client==0.20.0
 protobuf==4.25.4
 psutil==6.0.0
 pure-sasl==0.6.2
-pyasn1==0.6.0
-pyasn1_modules==0.4.0
+pyasn1==0.6.1
+pyasn1_modules==0.4.1
 pycparser==2.22
-pydantic==2.8.2
-pydantic_core==2.20.1
+pydantic==2.9.1
+pydantic_core==2.23.3
 pykerberos==1.2.4
 pyspnego==0.11.1
 python-daemon==3.0.1
@@ -152,17 +152,17 @@ python-ldap==3.4.4
 python-nvd3==0.16.0
 python-slugify==8.0.4
 python3-saml==1.16.0
-pytz==2024.1
+pytz==2024.2
 referencing==0.35.1
 requests-kerberos==0.15.0
 requests-toolbelt==1.0.0
 requests==2.32.3
 rfc3339-validator==0.1.4
 rich-argparse==1.5.2
-rich==13.7.1
+rich==13.8.1
 rpds-py==0.20.0
-s3fs==2024.6.1
-sentry-sdk==2.12.0
+s3fs==2024.9.0
+sentry-sdk==2.14.0
 setproctitle==1.3.3
 six==1.16.0
 sniffio==1.3.1
@@ -179,15 +179,15 @@ typing_extensions==4.12.2
 tzdata==2024.1
 uc-micro-py==1.0.3
 unicodecsv==0.14.1
-universal_pathlib==0.2.2
-urllib3==2.2.2
-uv==0.2.34
+universal_pathlib==0.2.5
+urllib3==2.2.3
+uv==0.4.1
 vine==5.1.0
-virtualenv==20.26.3
+virtualenv==20.26.4
 wirerope==0.4.7
 wrapt==1.16.0
 xmlsec==1.3.14
-yarl==1.9.4
-zipp==3.20.0
+yarl==1.11.1
+zipp==3.20.2
 zope.event==5.0
-zope.interface==7.0.1
+zope.interface==7.0.3
