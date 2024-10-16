@@ -62,7 +62,7 @@ DEFAULT_ARGS = {
             items={"type": "number"},
         )
     },
-    tags=["Vision Zero"]
+    tags=["Vision Zero", "google_sheets"]
 )
 def get_vz_data():
     """The main function of the SSZ DAG."""
@@ -147,7 +147,7 @@ def get_vz_data():
         return sheets
             
     #to get credentials to access google sheets
-    google_cred = GoogleBaseHook('vz_api_google').get_credentials()
+    google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
     
     pull_data.partial(
         engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine(),
