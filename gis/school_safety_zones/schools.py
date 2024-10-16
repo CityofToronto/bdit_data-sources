@@ -327,7 +327,7 @@ def pull_from_sheet_cli(
     connect_url = URL.create("postgresql+psycopg2", **config['DBSETTINGS'])
     engine = create_engine(connect_url)
 
-    google_cred = GoogleBaseHook('vz_api_google').get_credentials()
+    google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
 
     if table is None:
         table = f"school_safety_zone_{year}_raw"
