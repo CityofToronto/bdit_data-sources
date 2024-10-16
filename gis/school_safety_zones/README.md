@@ -47,7 +47,7 @@ The DAG consists of two main tasks as shown in the below figure:
 
 ## 3. Sheets Credentials
 
-A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data, the contents of this file can be downloaded from [the google console](https://console.cloud.google.com/iam-admin/serviceaccounts/details/) if you're logged in to the right google account. This is currently stored in an encrypted Airflow connection: `vz_api_google`.
+A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data, the contents of this file can be downloaded from [the google console](https://console.cloud.google.com/iam-admin/serviceaccounts/details/) if you're logged in to the right google account. This is currently stored in an encrypted Airflow connection: `google_sheets_api`.
 
 ## 4. Adding a new year
 
