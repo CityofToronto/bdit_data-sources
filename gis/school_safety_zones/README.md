@@ -66,7 +66,7 @@ CREATE TABLE vz_safety_programs_staging.school_safety_zone_yyyy_raw (
 
 ### 4.2 Request sharing permission to the new sheet
 
-The sheet must be shared with `vz-sheets@quickstart-1568664221624.iam.gserviceaccount.com`. This ought to be View-only. This email is saved in the Airflow credentials as `wys_cred.service_account_email`.  
+The sheet must be shared with `sheets-puller@bubbly-fuze-182523.iam.gserviceaccount.com`. This ought to be View-only. This email is associated with the `terrestrial.wherever@gmail.com` email and saved in the `google_sheets_api` Airflow connection.
 
 ### 4.3 Add the New Google Sheet to Airflow
 
