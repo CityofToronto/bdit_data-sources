@@ -123,18 +123,19 @@ def insertFlowCounts(conn: any, volume: any):
     return cur.query
 
 # insert new site record
-def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
+def insertSite(conn: any, site_id: int, site_name: str, counter: str, lon: float, lat: float):
     insert_query="""
-    INSERT INTO ecocounter.sites_unfiltered (site_id, site_description, geom, validated)
+    INSERT INTO ecocounter.sites_unfiltered (site_id, site_description, counter, geom, validated)
     VALUES (
         %s::numeric,
         %s::text,
+        %s::text,
         ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-        null::boolean --not validated
+        null::boolean --not validated by default
     )
     """
     with conn.cursor() as cur:
-        cur.execute(insert_query, (site_id, site_name, lon, lat))
+        cur.execute(insert_query, (site_id, site_name, counter, lon, lat))
 
 # insert new flow record
 def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, bin_size: int):
