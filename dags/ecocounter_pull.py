@@ -103,9 +103,9 @@ def pull_ecocounter_dag():
         new_sites, new_flows = [], []
         with eco_postgres.get_conn() as conn:
             for site in getSites(token):
-                site_id, site_name = site['id'], site['name']
+                site_id, site_name, counter = site['id'], site['name'], site['counter']
                 if not siteIsKnownToUs(site_id, conn):
-                    insertSite(conn, site_id, site_name, site['longitude'], site['latitude'])
+                    insertSite(conn, site_id, site_name, counter, site['longitude'], site['latitude'])
                     new_sites.append({
                         'site_id': site_id,
                         'site_name': site_name
