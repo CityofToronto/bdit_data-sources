@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS ecocounter.sensitivity_history
 (
     flow_id numeric,
-    sensitivity text,
     date_range daterange,
+    setting text,
     CONSTRAINT eco_sensitivity_exclude EXCLUDE USING gist (
         date_range WITH &&,
         flow_id WITH =
@@ -26,8 +26,6 @@ GRANT ALL ON TABLE ecocounter.sensitivity_history TO ecocounter_admins;
 /*
 --initial code used to populate
 
-INSERT INTO ecocounter.sensitivity_history (flow_id, sensitivity, date_range)
-
 WITH dates AS (
     SELECT flow_id, date_of_change::date, setting
     FROM ecocounter.sensitivity_changes
@@ -36,6 +34,7 @@ WITH dates AS (
     FROM ecocounter.flows
 )
 
+INSERT INTO ecocounter.sensitivity_history (flow_id, date_range, setting)
 SELECT
     flow_id,
     daterange(
