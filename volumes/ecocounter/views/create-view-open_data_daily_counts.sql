@@ -22,8 +22,7 @@ GROUP BY
     f.flow_direction,
     cc.datetime_bin::date,
     cc.correction_factor,
-    cc.validation_date,
-    cc.corrected_volume;
+    cc.validation_date;
 
 COMMENT ON VIEW ecocounter.open_data_daily_counts IS
 '(In development) daily data scaled based on Spectrum studies for Open Data.';

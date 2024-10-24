@@ -44,3 +44,5 @@ COMMENT ON VIEW ecocounter.correction_factors IS
 'correction factors based on other validation studies and sensitivity history.';
 
 SELECT * FROM ecocounter.correction_factors;
+
+ALTER VIEW ecocounter.correction_factors OWNER TO ecocounter_admins;
