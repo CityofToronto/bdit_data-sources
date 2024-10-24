@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS ecocounter.sensitivity_history
 (
     flow_id numeric,
-    sensitivity integer,
+    sensitivity text,
     date_range daterange,
     CONSTRAINT eco_sensitivity_exclude EXCLUDE USING gist (
         date_range WITH &&,
@@ -28,17 +28,21 @@ GRANT ALL ON TABLE ecocounter.sensitivity_history TO ecocounter_admins;
 
 INSERT INTO ecocounter.sensitivity_history (flow_id, sensitivity, date_range)
 
+WITH dates AS (
+    SELECT flow_id, date_of_change::date, setting
+    FROM ecocounter.sensitivity_changes
+    UNION 
+    SELECT flow_id, flows.first_active::date, 'Original configuration'
+    FROM ecocounter.flows
+)
+
 SELECT
     flow_id,
-    regexp_substr(reverse(setting), '[0-9]', 1)::int AS sensitivity, #the second number
-    daterange(date_of_change, null)
-FROM ecocounter.sensitivity_changes
-WHERE uid IN (16,17,18,19,20,21,22) --the ones that were like #->#
-UNION
-SELECT
-    flow_id,
-    regexp_substr(setting, '[0-9]', 1)::int AS sensitivity, #the first number
-    daterange(null, date_of_change)
-FROM ecocounter.sensitivity_changes
-WHERE uid IN (16,17,18,19,20,21,22)
+    daterange(
+        date_of_change,
+        LEAD(date_of_change) OVER w
+    ) AS date_range,
+    setting
+FROM dates
+WINDOW w AS (PARTITION BY flow_id ORDER BY date_of_change)
 */
