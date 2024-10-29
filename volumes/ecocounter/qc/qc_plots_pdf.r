@@ -4,7 +4,7 @@ library('dbplyr')
 library('ggplot2')
 library('config')
 library('gridExtra')
-
+library('ggrepel')
 
 setwd('C:\\Users\\gwolofs\\OneDrive - City of Toronto\\Documents\\R')
 
@@ -27,7 +27,7 @@ volumes = tbl(con, sql("WITH daily_volumes AS (
         datetime_bin::date AS date,
         CASE SUM(lat.corrected_volume) WHEN 0 THEN null ELSE SUM(volume) END AS daily_volume
     FROM ecocounter.counts_unfiltered AS c
-    JOIN ecocounter.flows AS f USING (flow_id)
+    JOIN ecocounter.flows_unfiltered AS f USING (flow_id)
    LEFT JOIN ecocounter.correction_factors cf
      ON c.flow_id = cf.flow_id
      AND c.datetime_bin::date <@ cf.factor_range,
@@ -66,8 +66,10 @@ anomalous_ranges = tbl(con, sql("
 ")) %>% collect()
 
 anomalous_ranges = anomalous_ranges %>% mutate(
-  upper = date(upper), lower = date(lower)
-)
+  notes = ifelse(is.na(flow_id),
+         paste0('site_id - ', site_id, ': ', notes),
+         paste0('flow_id - ', flow_id, ': ', notes)
+       ))
 
 correction_factors = tbl(con, sql("
   SELECT
@@ -105,29 +107,27 @@ p <- lapply(sites$site_id, function(s) {
     geom_line(data = vol, aes(
       x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
       color = paste(flow_direction, '-', flow_id)), linewidth = 1) +
-    geom_vline(data = corr, aes(
+    geom_vline(data = corr %>% mutate(factor_start = factor_start + sample(rnorm(1,7), n(), replace = TRUE)), aes(
         xintercept=factor_start,
         color = paste(flow_direction, '-', flow_id)
       ),
-      size = 1.2,
-      linetype="dotted") + 
+      linewidth = 1.2,
+      linetype = 'dotted') + 
     geom_text(data = ars, aes(
-      x = coalesce(upper, max(limits$date)),
+      x = mean.Date(c(coalesce(upper, max(limits$date)), coalesce(lower, min(limits$date)))),
       y = max(limits$daily_volume),
       label = stringr::str_wrap(notes, 35),
-      hjust = 1,
-      vjust = 1), nudge_x = -10) +
-    geom_label(data = corr, aes(
+      hjust = 0,
+      vjust = 1)) +
+    geom_label_repel(data = corr, aes(
       x = coalesce(factor_start, min(limits$date))+3,
       y = max(limits$daily_volume)-50,
       color = paste(flow_direction, '-', flow_id),
-      label = paste("CF: ", calibration_factor),
-      hjust = 0,
-      vjust = 1)) +
+      label = paste("CF: ", calibration_factor))) +
     ggtitle(label = paste(site$site_description, "(site_id:", s, ')')) + 
     scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 week",
                  date_labels = "%Y-%m-%d",
-                 limits = c(min(limits$date)-10, max(limits$date)+10)) +
+                 limits = c(min(limits$date)-20, max(limits$date)+20)) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
     guides(
       alpha=FALSE,
