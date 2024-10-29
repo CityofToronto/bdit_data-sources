@@ -53,8 +53,7 @@ SELECT
     issueconfig.startissueonplannedstarttime,
     issueconfig.startstatus,
     issueconfig.updateremindernoticeseconds
-FROM public.issues
+FROM issues
 LEFT JOIN public.issuelocationnew USING (divisionid, issueid, timestamputc)
 LEFT JOIN public.issueconfig USING (divisionid, issueid)
 ORDER BY issueid DESC
-LIMIT 1000
