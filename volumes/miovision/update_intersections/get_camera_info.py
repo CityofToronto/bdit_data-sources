@@ -48,9 +48,14 @@ final = [tuple(x) for x in final.to_numpy()] #convert to tuples for inserting
 
 truncate_query = sql.SQL("TRUNCATE miovision_api.camera_details;")
 insert_query = sql.SQL("""
-INSERT INTO miovision_api.camera_details (
+WITH camera_details (
     intersection_id, intersection_lat, intersection_long, intersection_name, intersection_customId, camera_id, camera_type, camera_label, camera_streamUrl
-) VALUES %s;""")
+) AS (VALUES %s)
+INSERT INTO miovision_api.camera_details
+SELECT cd.*
+FROM camera_details AS cd
+LEFT JOIN miovision_api.intersections AS i ON cd.intersection_id = i.id
+WHERE i.date_decommissioned IS NULL;""")
 
 # Get intersections currently stored in `miovision_api` on Postgres.
 dbset = config['DBSETTINGS']
