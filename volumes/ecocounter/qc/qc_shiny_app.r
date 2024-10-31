@@ -23,6 +23,7 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
 )
 
 sites = tbl(con, sql("SELECT * FROM ecocounter.sites")) %>% collect()
+flows = tbl(con, sql("SELECT * FROM ecocounter.flows")) %>% collect()
 
 sites_list <- sites$site_id
 names(sites_list) <- sites$site_description
@@ -34,6 +35,7 @@ ui <- fluidPage(
   fluidRow(
     plotOutput("plot",
               dblclick = "plot_dblclick",
+              #click = "plot_click",
               brush = brushOpts(
                  id = "brush",
                  resetOnNew = FALSE,
@@ -80,14 +82,14 @@ server <- function(input, output, session) {
   # Render table with delete buttons
   output$myTable <- DT::renderDataTable({
     DT::datatable(values$tab,
-                  options = list(dom = "t"),
+                  #options = list(dom = "t"),
                   escape   = FALSE,
                   editable = TRUE)
   })
   
-  # Single zoomable plot (on left)
+  # reactive values for zoomable plot
   ranges <- reactiveValues(x = NULL, y = NULL)
-  
+
   # Clear brush, reset zoom when site_id changes or range is saved.
   observeEvent(list(input$site_id, input$save_range), priority = -1, {
     session$resetBrush("brush")
@@ -107,6 +109,7 @@ server <- function(input, output, session) {
       ranges$y <- NULL
     }
   })
+
   
   #volume data, refreshes on site_id
   vol <- eventReactive(input$site_id, {
@@ -158,7 +161,6 @@ server <- function(input, output, session) {
       return(correction_factors)
   })
   
-  
   # Observe "Remove" buttons and removes rows
   observeEvent(input$remove_button_Tab1, {
     myTable <- values$tab
@@ -170,26 +172,35 @@ server <- function(input, output, session) {
   
   # Observe brush input and add ranges to the reactive dataframe
   observeEvent(input$save_range, {
-    buttonCounter <<- buttonCounter + 1L
-    myTable <- isolate(values$tab)
+    brush <- input$brush
     
-    new_range <- data.frame(
-      id = buttonCounter,
-      site_id = as.numeric(input$site_id),
-      flow_id = 0L,
-      range_start = as.Date(input$brush$xmin),
-      range_end = as.Date(input$brush$xmax),
-      notes = ""
-    )
-    
-    myTable <- bind_rows(
-        myTable,
-        new_range %>%
-          mutate(Remove = getRemoveButton(buttonCounter, idS = "", lab = "Tab1")))
+    if (!is.null(brush)) {
+      s = input$site_id
+      fl = (flows %>% filter(site_id == s))$flow_id
+      myTable <- isolate(values$tab)
+      
+      for (f in fl){
+        buttonCounter <<- buttonCounter + 1L
+        new_range <- data.frame(
+          id = buttonCounter,
+          site_id = as.numeric(input$site_id),
+          flow_id = 0L,
+          range_start = as.Date(input$brush$xmin),
+          range_end = as.Date(input$brush$xmax),
+          notes = ""
+        )
+        
+        myTable <- bind_rows(
+          myTable,
+          new_range %>%
+            mutate(Remove = getRemoveButton(buttonCounter, idS = "", lab = "Tab1")))
+      }
       replaceData(proxyTable, myTable, resetPaging = FALSE)
       values$tab <- myTable
-    })
+    }
+  })
   
+
   # Observes table editing and updates data
   observeEvent(input$myTable_cell_edit, {
     
@@ -226,6 +237,11 @@ server <- function(input, output, session) {
     if (!is.null(input$brush)) {
       p <- p + brush_labels()
     }
+    
+    #label on plot click
+    # if (!is.null(input$plot_click)) {
+    #   p <- p + cursor_label()
+    # }
     
     #changes when anomalous ranges change
     if (ar_data() %>% count() > 0){
@@ -291,6 +307,22 @@ server <- function(input, output, session) {
     }
     return(layers)
   })
+  
+  #dynamically label cursor position
+  # cursor_label <- eventReactive(input$plot_click, {
+  #   cursor=input$plot_click
+  #   if (!is.null(cursor)) {
+  #     cursor_date <- cursor$x
+  #     print(cursor_date)
+  #     v = vol() %>% filter(date %in% cursor_date)
+  #     print(v %>% count())
+  #     layers <- list(
+  #       geom_point(data = v, aes(x=date, y=daily_volume, color = flow_color), size = 2),
+  #       geom_label_repel(data = v, aes(x=date, y=daily_volume, label=daily_volume, color = flow_color))
+  #     )
+  #   }
+  #   return(layers)
+  # })
   
   #dynamically draw anomalous ranges when they change
   ar_layers <- eventReactive(ar_listen(), {
