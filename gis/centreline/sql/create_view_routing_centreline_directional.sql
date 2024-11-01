@@ -17,6 +17,7 @@ FROM (
         centreline.geom,
         0 as dir
     FROM gis_core.centreline_latest AS centreline
+    WHERE centreline.oneway_dir_code >= 0 -- bi-directional and with digitization
 
     UNION
 
@@ -28,12 +29,13 @@ FROM (
         st_reverse(centreline.geom) AS geom,
         1 as dir
     FROM gis_core.centreline_latest AS centreline
-    WHERE centreline.oneway_dir_code = 0) AS dup;
+    WHERE centreline.oneway_dir_code <= 0 /*bi-directional or against digitization*/
+    ) AS dup;
 
 ALTER TABLE gis_core.routing_centreline_directional OWNER TO gis_admins;
 
 COMMENT ON VIEW gis_core.routing_centreline_directional
-IS 'A view that contains centreline streets for routing, with duplicated rows for two-way streets and flipped geometries when necessary. A new id has been assigned to each centreline to distinguish duplicated lines.';
+IS 'A view that contains centreline streets for routing, with duplicated rows for two-way streets and flipped geometries when lines were drawn against digitization. A new id has been assigned to each centreline to distinguish duplicated lines.';
 
 GRANT SELECT ON TABLE gis_core.routing_centreline_directional TO bdit_humans;
 GRANT ALL ON TABLE gis_core.routing_centreline_directional TO gis_admins;
