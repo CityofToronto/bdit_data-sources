@@ -636,11 +636,11 @@ def pull_data(conn, start_time, end_time, intersection, key):
                 if check_dst(c_start_t, c_end_t):
                     logger.info('Deleting records for 1AM, UTC-05:00 to prevent duplicates.')
                     table_veh = [x for x in table_veh if
-                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        x[1].hour != 1 and
+                        x[1].tzname() != 'UTC-05:00']
                     table_ped = [x for x in table_ped if
-                        datetime.datetime.fromisoformat(x[1]).hour != 1 and
-                        datetime.datetime.fromisoformat(x[1]).tzname() != 'UTC-05:00']
+                        x[1].hour != 1 and
+                        x[1].tzname() != 'UTC-05:00']
                 table.extend(table_veh)
                 table.extend(table_ped)
                 # Hack to slow down API hit rate.
