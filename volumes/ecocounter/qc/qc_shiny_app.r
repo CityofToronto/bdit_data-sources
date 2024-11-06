@@ -30,8 +30,9 @@ names(sites_list) <- sites$site_description
 
 # Define UI for the app
 ui <- fluidPage(
-  titlePanel("Interactive Range Selection"),
+  titlePanel("Ecocounter - Interactive Anomalous Range Selection"),
   fluidRow(selectInput("site_id", "Select Site ID", choices = sites_list, selected = sites_list[1])),
+  uiOutput("dynamic_title"),  # Dynamic title panel
   fluidRow(
     plotOutput("plot",
               dblclick = "plot_dblclick",
@@ -71,7 +72,9 @@ server <- function(input, output, session) {
       flow_id = numeric(),
       range_start = as.Date(character()),
       range_end = as.Date(character()),
-      notes = character()
+      notes = character(),
+      investigation_level = character(),
+      problem_level = character()
     ) %>%
     mutate(Remove = getRemoveButton(id, idS = "", lab = "Tab1"))
   
@@ -160,7 +163,16 @@ server <- function(input, output, session) {
       ")) %>% filter(site_id == s) %>% collect()
       return(correction_factors)
   })
-  
+
+  output$dynamic_title <- renderUI({
+    s=input$site_id
+    site_name = names(which(sites_list==s))
+    tags$h2(
+      paste0(site_name, " (site_id = ", s, ')'),
+      style = "font-size: 22px; text-align: center;"  # Customize font size, weight, and color here
+    )
+  })
+
   # Observe "Remove" buttons and removes rows
   observeEvent(input$remove_button_Tab1, {
     myTable <- values$tab
@@ -184,10 +196,12 @@ server <- function(input, output, session) {
         new_range <- data.frame(
           id = buttonCounter,
           site_id = as.numeric(input$site_id),
-          flow_id = 0L,
+          flow_id = f,
           range_start = as.Date(input$brush$xmin),
           range_end = as.Date(input$brush$xmax),
-          notes = ""
+          notes = "",
+          investigation_level = 'confirmed',
+          problem_level = 'do-not-use'
         )
         
         myTable <- bind_rows(
@@ -227,8 +241,6 @@ server <- function(input, output, session) {
   })
   
   
-  #coords <- eventReactive(list(), {})
-  
   output$plot <- renderPlot({
     #this part of the plot only changes when site id changes
     p <- ggplot() + base_plot()
@@ -237,12 +249,7 @@ server <- function(input, output, session) {
     if (!is.null(input$brush)) {
       p <- p + brush_labels()
     }
-    
-    #label on plot click
-    # if (!is.null(input$plot_click)) {
-    #   p <- p + cursor_label()
-    # }
-    
+
     #changes when anomalous ranges change
     if (ar_data() %>% count() > 0){
       p <- p + ar_layers()
@@ -280,10 +287,10 @@ server <- function(input, output, session) {
         data = cf,
         aes(x = coalesce(factor_start, min_date)+3, y = max(limits$daily_volume)-50,
         color = flow_color, label = paste("CF: ", calibration_factor))),
-      ggtitle(label = paste(site_name, "(site_id:", s, ')')),
       scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 week",
                   date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)),
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+            text = element_text(size = 20)),
       guides(
         alpha="none",
         linewidth=guide_legend(title=NULL),
@@ -308,28 +315,13 @@ server <- function(input, output, session) {
     return(layers)
   })
   
-  #dynamically label cursor position
-  # cursor_label <- eventReactive(input$plot_click, {
-  #   cursor=input$plot_click
-  #   if (!is.null(cursor)) {
-  #     cursor_date <- cursor$x
-  #     print(cursor_date)
-  #     v = vol() %>% filter(date %in% cursor_date)
-  #     print(v %>% count())
-  #     layers <- list(
-  #       geom_point(data = v, aes(x=date, y=daily_volume, color = flow_color), size = 2),
-  #       geom_label_repel(data = v, aes(x=date, y=daily_volume, label=daily_volume, color = flow_color))
-  #     )
-  #   }
-  #   return(layers)
-  # })
-  
   #dynamically draw anomalous ranges when they change
   ar_layers <- eventReactive(ar_listen(), {
     ars = ar_data()
     limits = vol() %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
     max_date <- max(limits$date)
+    ars <- ars %>% rowwise() %>% mutate(x_plot = mean.Date(c(coalesce(upper, max_date), coalesce(lower, min_date))))
     
     layers = list(
       geom_rect(data = ars,
@@ -341,7 +333,7 @@ server <- function(input, output, session) {
                   ymax = max(limits$daily_volume)
                 ), alpha = 0.5),
       geom_text(data = ars, aes(
-        x = mean.Date(c(coalesce(upper, max_date), coalesce(lower, min_date))),
+        x = x_plot,
         y = max(limits$daily_volume),
         label = stringr::str_wrap(notes, 35),
         hjust = 0,
@@ -352,8 +344,21 @@ server <- function(input, output, session) {
   
   # Save ranges to a CSV file when button is clicked
   observeEvent(input$export_csv, {
-    fname = paste0("anomalous_ranges_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv")
-    write.csv(values$tab %>% select(-any_of(c("Remove", "id"))), file = fname, row.names = FALSE)
+    fname = paste0("anomalous_ranges_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+    temp <- values$tab %>%
+      mutate(time_range = paste0("[", range_start, ", ", range_end, ")")) %>%
+      select(-any_of(c("Remove", "id", "range_start", "range_end")))
+
+    comma_sep <- function(x) paste0("('", paste0(x, collapse = "', '"), sep = "')")
+    
+    
+    lines <- c(
+      paste0("INSERT INTO ecocounter.anomalous_ranges (", paste(colnames(temp), collapse = ', '), ") (VALUES "),
+      paste0(apply(temp, 1, comma_sep), collapse = ',\n'),
+      ') RETURNING ecocounter.anomalous_ranges.*'
+    )
+    write_lines(lines, fname)
+    
     showModal(modalDialog(
       title = "Ranges Saved to: ",
       paste0("Your selected ranges have been saved to:", fname),
