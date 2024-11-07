@@ -19,7 +19,10 @@ WHERE
             AND anomalous_ranges.time_range @> counts_unfiltered.datetime_bin
             AND (
                 counts_unfiltered.flow_id = anomalous_ranges.flow_id
-                OR sites_unfiltered.site_id = anomalous_ranges.site_id
+                OR (
+                    anomalous_ranges.flow_id IS NULL
+                    AND sites_unfiltered.site_id = anomalous_ranges.site_id
+                )
             )
     );
 
