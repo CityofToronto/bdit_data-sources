@@ -32,6 +32,9 @@ names(sites_list) <- sites$site_description
 ui <- fluidPage(
   titlePanel("Ecocounter - Interactive Anomalous Range Selection"),
   fluidRow(selectInput("site_id", "Select Site ID", choices = sites_list, selected = sites_list[1])),
+  checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE),
+  checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE),
+  checkboxInput(inputId = 'calibration_factors', label = 'Show Calibration Factors?', value = TRUE),
   uiOutput("dynamic_title"),  # Dynamic title panel
   fluidRow(
     plotOutput("plot",
@@ -115,14 +118,37 @@ server <- function(input, output, session) {
 
   
   #volume data, refreshes on site_id
-  vol <- eventReactive(input$site_id, {
+  vol <- eventReactive(list(input$site_id, input$validated_only), {
     # Your code to prepare the data for plotting
     s=input$site_id
-    volumes = tbl(con, sql(sprintf("
+    
+    if(input$validated_only){
+      volumes = tbl(con, sql(sprintf("
+        SELECT
+          site_id, direction::text AS flow_color, dt AS date, daily_volume,
+          CASE WHEN daily_volume IS NOT NULL THEN AVG(daily_volume) OVER w END AS rolling_avg_1_week
+        FROM ecocounter.open_data_daily_counts
+        WHERE site_id = %s
+        WINDOW w AS (
+          PARTITION BY site_id, direction
+          ORDER BY dt
+          RANGE BETWEEN interval '6 days' PRECEDING AND CURRENT ROW
+        )", s))) %>% collect() %>% 
+        group_by(site_id, flow_color) %>% 
+        arrange(date) %>%
+        mutate(datedif = as.numeric(date - dplyr::lag(date))-1) %>%
+        mutate(groupid = cumsum(ifelse(is.na(datedif), 0, datedif)))
+      
+    } else {
+      volumes = tbl(con, sql(sprintf("
         SELECT site_id, flow_id, date, daily_volume, rolling_avg_1_week, flow_color
         FROM gwolofs.ecocounter_graph_volumes(%s)
-                       ", s))) %>% collect()
-
+                       ", s))) %>% collect() %>% 
+        group_by(site_id, flow_color) %>% 
+        arrange(date) %>%
+        mutate(datedif = as.numeric(date - dplyr::lag(date))-1) %>%
+        mutate(groupid = cumsum(ifelse(is.na(datedif), 0, datedif)))
+    }
     return(volumes)
   })
   
@@ -244,6 +270,10 @@ server <- function(input, output, session) {
   output$plot <- renderPlot({
     #this part of the plot only changes when site id changes
     p <- ggplot() + base_plot()
+
+    if(input$calibration_factors){
+      p <- p + cf_layers()
+    }
     
     #changes when brush changes
     if (!is.null(input$brush)) {
@@ -251,7 +281,7 @@ server <- function(input, output, session) {
     }
 
     #changes when anomalous ranges change
-    if (ar_data() %>% count() > 0){
+    if ((ar_data() %>% count() > 0) & input$anomalous_ranges){
       p <- p + ar_layers()
     }
     
@@ -260,24 +290,13 @@ server <- function(input, output, session) {
       coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = TRUE)
   })
   
-  #a base part of the plot which doesn't change except when site_id changes (improves render time)
-  base_plot <- eventReactive(input$site_id, {
-    s=input$site_id
-    site_name = names(which(sites_list==s))
+  cf_layers <- eventReactive(input$calibration_factors, {
     v = vol()
-    cf = corr()
     limits = v %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
     max_date <- max(limits$date)
-    
+    cf = corr()
     layers <- list(
-      theme_bw(),
-      geom_path(data = v, aes(
-        x=date, y=daily_volume,
-        color = flow_color), linewidth = 0.2, alpha = 0.5),
-      geom_line(data = v, aes(
-        x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
-        color = flow_color), linewidth = 1),
       geom_vline(
         #add a jitter to correction factors since they occur on the same date.
         data = cf, #%>% mutate(factor_start = factor_start + sample(rnorm(1,7), n(), replace = TRUE)),
@@ -286,7 +305,27 @@ server <- function(input, output, session) {
       geom_label_repel(
         data = cf,
         aes(x = coalesce(factor_start, min_date)+3, y = max(limits$daily_volume)-50,
-        color = flow_color, label = paste("CF: ", calibration_factor))),
+            color = flow_color, label = paste("CF: ", calibration_factor)))
+    )
+  })
+  
+  #a base part of the plot which doesn't change except when site_id changes (improves render time)
+  base_plot <- eventReactive(list(input$site_id, input$validated_only),  {
+    s=input$site_id
+    site_name = names(which(sites_list==s))
+    v = vol()
+    limits = v %>% filter(!is.na(daily_volume))
+    min_date <- min(limits$date)
+    max_date <- max(limits$date)
+    
+    layers <- list(
+      theme_bw(),
+      geom_path(data = v, aes(
+        x=date, y=daily_volume, color = flow_color, group = paste(flow_color, groupid)
+        ), linewidth = 0.2, alpha = 0.5),
+      geom_line(data = v, aes(
+        x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
+        color = flow_color, group = paste(flow_color, groupid)), linewidth = 1),
       scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 week",
                   date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
