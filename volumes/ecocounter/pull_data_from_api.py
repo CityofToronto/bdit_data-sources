@@ -74,13 +74,13 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
 
 def getKnownSites(conn: any):
     with conn.cursor() as cur:
-        cur.execute('SELECT site_id FROM ecocounter.sites_unfiltered;')
+        cur.execute('SELECT site_id FROM ecocounter.sites_unfiltered WHERE date_decommissioned IS NULL;')
         sites = cur.fetchall()
         return [site[0] for site in sites]
 
 def getKnownFlows(conn: any, site: int):
     with conn.cursor() as cur:
-        cur.execute('SELECT flow_id FROM ecocounter.flows_unfiltered WHERE site_id = %s;',
+        cur.execute('SELECT flow_id FROM ecocounter.flows_unfiltered WHERE date_decommissioned IS NULL AND site_id = %s;',
                     (site, )
         )
         flows = cur.fetchall()
