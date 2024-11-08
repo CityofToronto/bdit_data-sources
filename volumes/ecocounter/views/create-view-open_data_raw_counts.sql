@@ -23,3 +23,5 @@ COMMENT ON VIEW ecocounter.open_data_raw_counts IS
 
 ALTER TABLE ecocounter.open_data_raw_counts OWNER TO ecocounter_admins;
 GRANT SELECT ON TABLE ecocounter.open_data_raw_counts TO bdit_humans WITH GRANT OPTION;
+
+GRANT SELECT ON TABLE ecocounter.open_data_raw_counts TO ecocounter_bot;
