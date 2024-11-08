@@ -9,6 +9,7 @@ import pendulum
 
 from airflow.decorators import dag, task
 from airflow.models import Variable 
+from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.sensors.date_time import DateTimeSensor
@@ -58,11 +59,10 @@ def ecocounter_open_data_dag():
         external_task_id="done",
         poke_interval=3600, #retry hourly
         mode="reschedule",
-        doc_md="Wait for last day of month to run before running monthly DAG."
+        doc_md="Wait for last day of month to run before running monthly DAG.",
         timeout=86400, #one day
-        #when this DAG runs on Monday (day 7 - at the end of it's week long schedule interval),
-        #it should check for the Sunday (day 6) _pull DAG, which gets executed on the Monday.
-        execution_delta=timedelta(days=-1, hours=-1) #pull_ecocounter scheduled at '0 10 * * *'
+        #wait for the 1st of the following month
+        execution_date_fn=lambda dt: dt + pendulum.duration(months=1, hours=-1) #ecocounter_pull scheduled at '0 10 * * *'
     )
 
     check_data_availability = SQLCheckOperatorWithReturnValue(
@@ -85,13 +85,13 @@ def ecocounter_open_data_dag():
 
     @task(retries=0, doc_md="""A reminder message.""")
     def reminder_message(ds = None, **context):
-        mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
+        mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m')
         slack_ids = Variable.get("slack_member_id", deserialize_json=True)
         list_names = " ".join([slack_ids.get(name, name) for name in DAG_OWNERS])
 
         send_slack_msg(
             context=context,
-            msg=f"{list_names} Remember to check Ecocounter Open Data for {mnth} and label any sites pending validation in anomalous_ranges. :meow_detective: :open_data_to:"
+            msg=f"{list_names} Remember to check Ecocounter :open_data_to: for {mnth} and label any sites pending validation in anomalous_ranges. :meow_detective:"
         )
 
     wait_till_10th = DateTimeSensor(
@@ -99,27 +99,50 @@ def ecocounter_open_data_dag():
         timeout=10*86400,
         mode="reschedule",
         poke_interval=3600*24,
-        target_time="{{ execution_date.replace(day=10) }}",
+        ####################################
+        #remember to change back to the 10th
+        ####################################
+        target_time="{{ next_execution_date.replace(day=5) }}",
     )
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
 
-    #these tasks will dump data from database to morbius.
-    #refresh_monthly_open_data = PostgresOperator(
-    #    task_id='refresh_monthly_open_data',
-    #    sql="SELECT gwolofs.insert_ecocounter_open_data_monthly_summary('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date)",
+    #insert_daily = PostgresOperator(
+    #    sql="SELECT ecocounter.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
+    #    task_id='insert_daily_open_data',
     #    postgres_conn_id='ecocounter_bot',
-    #    autocommit=True
+    #    autocommit=True,
+    #    retries = 0
     #)
-    #
-    #refresh_15min_open_data = PostgresOperator(
-    #    task_id='refresh_15min_open_data',
-    #    sql="SELECT gwolofs.insert_ecocounter_15min_open_data('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date)",
+    #insert_raw = PostgresOperator(
+    #    sql="SELECT ecocounter.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
+    #    task_id='insert_raw_open_data',
     #    postgres_conn_id='ecocounter_bot',
-    #    autocommit=True
+    #    autocommit=True,
+    #    retries = 0
     #)
 
+    @task.bash(env={
+        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+    })
+    def download_daily_open_data()->str:
+        return '''psql -h $HOST -U $USER -d bigdata -c \
+            "SELECT * FROM ecocounter.open_data_daily_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+            --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+        
+    @task.bash(env={
+        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+    })
+    def download_raw_open_data()->str:
+        return '''psql -h $HOST -U $USER -d bigdata -c \
+            "SELECT * FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+            --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+    
     @task(
         retries=0,
         trigger_rule='all_success',
@@ -129,7 +152,7 @@ def ecocounter_open_data_dag():
         mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
         send_slack_msg(
             context=context,
-            msg=f":meow_ecocounter: :open_data_to: DAG ran successfully for {mnth} :white_check_mark:"
+            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:"
         )
 
     (
@@ -137,7 +160,9 @@ def ecocounter_open_data_dag():
         check_data_availability >>
         reminder_message() >>
         wait_till_10th >>
-        #[refresh_monthly_open_data, refresh_15min_open_data] >> 
+#        [[insert_daily >> save_daily_open_data()],
+#       [insert_raw >> save_raw_open_data()]] >>
+        [save_daily_open_data(), save_raw_open_data()] >>
         status_message()
     )
 
