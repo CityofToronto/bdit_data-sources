@@ -7,7 +7,7 @@ from datetime import timedelta
 import logging
 import pendulum
 
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 from airflow.models import Variable 
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -99,50 +99,52 @@ def ecocounter_open_data_dag():
         timeout=10*86400,
         mode="reschedule",
         poke_interval=3600*24,
-        ####################################
-        #remember to change back to the 10th
-        ####################################
-        target_time="{{ next_execution_date.replace(day=5) }}",
+        target_time="{{ next_execution_date.replace(day=10) }}",
     )
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
 
-    #insert_daily = PostgresOperator(
-    #    sql="SELECT ecocounter.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
-    #    task_id='insert_daily_open_data',
-    #    postgres_conn_id='ecocounter_bot',
-    #    autocommit=True,
-    #    retries = 0
-    #)
-    #insert_raw = PostgresOperator(
-    #    sql="SELECT ecocounter.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
-    #    task_id='insert_raw_open_data',
-    #    postgres_conn_id='ecocounter_bot',
-    #    autocommit=True,
-    #    retries = 0
-    #)
+    @task_group()
+    def insert_and_download_data():
+        insert_daily = PostgresOperator(
+            sql="SELECT ecocounter.open_data_daily_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
+            task_id='insert_daily_open_data',
+            postgres_conn_id='ecocounter_bot',
+            autocommit=True,
+            retries = 0
+        )
+        insert_raw = PostgresOperator(
+            sql="SELECT ecocounter.open_data_raw_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
+            task_id='insert_raw_open_data',
+            postgres_conn_id='ecocounter_bot',
+            autocommit=True,
+            retries = 0
+        )
 
-    @task.bash(env={
-        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
-    })
-    def download_daily_open_data()->str:
-        return '''psql -h $HOST -U $USER -d bigdata -c \
-            "SELECT * FROM ecocounter.open_data_daily_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
-            --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
-        
-    @task.bash(env={
-        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
-    })
-    def download_raw_open_data()->str:
-        return '''psql -h $HOST -U $USER -d bigdata -c \
-            "SELECT * FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
-            --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+        @task.bash(env={
+            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+        })
+        def download_daily_open_data()->str:
+            return '''psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT * FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+                --csv -o ~/open_data/ecocounter/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+            
+        @task.bash(env={
+            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+        })
+        def download_raw_open_data()->str:
+            return '''psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT * FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+                --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
     
+        insert_daily >> download_daily_open_data()
+        insert_raw >> download_raw_open_data()
+
     @task(
         retries=0,
         trigger_rule='all_success',
@@ -159,10 +161,8 @@ def ecocounter_open_data_dag():
         t_upstream_done >>
         check_data_availability >>
         reminder_message() >>
-        wait_till_10th >>
-#        [[insert_daily >> save_daily_open_data()],
-#       [insert_raw >> save_raw_open_data()]] >>
-        [save_daily_open_data(), save_raw_open_data()] >>
+        wait_till_10th >> 
+        insert_and_download_data() >>
         status_message()
     )
 
