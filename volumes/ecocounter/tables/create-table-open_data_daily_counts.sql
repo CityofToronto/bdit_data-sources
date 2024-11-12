@@ -20,3 +20,6 @@ REVOKE ALL ON TABLE ecocounter.open_data_daily_counts FROM bdit_humans;
 GRANT SELECT ON TABLE ecocounter.open_data_daily_counts TO bdit_humans;
 
 GRANT SELECT, INSERT ON TABLE ecocounter.open_data_daily_counts TO ecocounter_bot;
+
+COMMENT ON TABLE ecocounter.open_data_daily_counts IS
+'Daily Ecocounter data by site and direction.';
