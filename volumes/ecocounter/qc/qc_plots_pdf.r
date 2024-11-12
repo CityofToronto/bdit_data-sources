@@ -6,7 +6,7 @@ library('config')
 library('gridExtra')
 library('ggrepel')
 
-setwd('C:\\Users\\gwolofs\\OneDrive - City of Toronto\\Documents\\R')
+setwd('~/../OneDrive - City of Toronto/Documents/R')
 
 dw <- config::get("bigdata")
 
@@ -136,8 +136,10 @@ p <- lapply(sites$site_id, function(s) {
       fill=guide_legend(title="Anomalous Range"))
 })
 
+fname = paste0("ecocounter_validation_plots_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".pdf")
+
 ggsave(
-  filename = 'C:\\Users\\gwolofs\\OneDrive - City of Toronto\\SQLs\\Ecocounter\\validation_plots.pdf', 
+  filename = file.path(getwd(), fname), 
   plot = marrangeGrob(p, nrow=2, ncol=1), 
   width = 15, height = 9
 )
