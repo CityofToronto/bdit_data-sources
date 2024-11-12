@@ -17,15 +17,15 @@ WITH daily_volumes AS (
         site_id,
         f.flow_id,
         datetime_bin::date AS date,
-        CASE SUM(lat.corrected_volume) WHEN 0 THEN null ELSE SUM(lat.corrected_volume) END AS daily_volume
+        CASE SUM(lat.calibrated_volume) WHEN 0 THEN null ELSE SUM(lat.calibrated_volume) END AS daily_volume
     FROM ecocounter.counts_unfiltered AS c
     JOIN ecocounter.flows_unfiltered AS f USING (flow_id)
-   LEFT JOIN ecocounter.correction_factors AS cf
+   LEFT JOIN ecocounter.calibration_factors AS cf
      ON c.flow_id = cf.flow_id
      AND c.datetime_bin::date <@ cf.factor_range,
     LATERAL (
       SELECT 
-        round(COALESCE(cf.ecocounter_day_corr_factor, 1::numeric) * c.volume::numeric) AS corrected_volume
+        round(COALESCE(cf.ecocounter_day_corr_factor, 1::numeric) * c.volume::numeric) AS calibrated_volume
     ) lat
     WHERE site_id = site_var
     GROUP BY
