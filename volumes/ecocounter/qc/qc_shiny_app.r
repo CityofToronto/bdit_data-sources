@@ -22,7 +22,7 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
                       password = dw$pwd
 )
 
-sites = tbl(con, sql("SELECT * FROM ecocounter.sites")) %>% collect()
+sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")) %>% collect()
 flows = tbl(con, sql("SELECT * FROM ecocounter.flows")) %>% collect()
 
 sites_list <- sites$site_id
@@ -326,7 +326,7 @@ server <- function(input, output, session) {
       geom_line(data = v, aes(
         x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
         color = flow_color, group = paste(flow_color, groupid)), linewidth = 1),
-      scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 week",
+      scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 day",
                   date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
             text = element_text(size = 20)),
