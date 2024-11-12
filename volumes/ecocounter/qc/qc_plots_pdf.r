@@ -25,15 +25,15 @@ volumes = tbl(con, sql("WITH daily_volumes AS (
         site_id,
         f.flow_id,
         datetime_bin::date AS date,
-        CASE SUM(lat.corrected_volume) WHEN 0 THEN null ELSE SUM(volume) END AS daily_volume
+        CASE SUM(lat.calibrated_volume) WHEN 0 THEN null ELSE SUM(volume) END AS daily_volume
     FROM ecocounter.counts_unfiltered AS c
     JOIN ecocounter.flows_unfiltered AS f USING (flow_id)
-   LEFT JOIN ecocounter.correction_factors cf
+   LEFT JOIN ecocounter.calibration_factors cf
      ON c.flow_id = cf.flow_id
      AND c.datetime_bin::date <@ cf.factor_range,
     LATERAL (
       SELECT 
-        round(COALESCE(cf.ecocounter_day_corr_factor, 1::numeric) * c.volume::numeric) AS corrected_volume
+        round(COALESCE(cf.ecocounter_day_corr_factor, 1::numeric) * c.volume::numeric) AS calibrated_volume
     ) lat
     GROUP BY
         site_id,
@@ -71,7 +71,7 @@ anomalous_ranges = anomalous_ranges %>% mutate(
          paste0('flow_id - ', flow_id, ': ', notes)
        ))
 
-correction_factors = tbl(con, sql("
+calibration_factors = tbl(con, sql("
   SELECT
     flow_id,
     site_id,
@@ -79,7 +79,7 @@ correction_factors = tbl(con, sql("
     ecocounter_day_corr_factor AS calibration_factor,
     LOWER(factor_range) AS factor_start,
     UPPER(factor_range) AS factor_end   
-  FROM ecocounter.correction_factors
+  FROM ecocounter.calibration_factors
   JOIN ecocounter.flows USING (flow_id)
 ")) %>% collect()
 
@@ -89,7 +89,7 @@ p <- lapply(sites$site_id, function(s) {
   site = sites %>% filter(site_id == s)
   vol = volumes %>% filter(site_id == s) %>% left_join(flows, by = 'flow_id')
   ars = anomalous_ranges %>% filter(site_id == s)
-  corr = correction_factors %>% filter(site_id == s)
+  corr = calibration_factors %>% filter(site_id == s)
   limits = vol %>% filter(!is.na(daily_volume))
   
   ggplot() +
