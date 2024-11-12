@@ -173,12 +173,12 @@ server <- function(input, output, session) {
     return(anomalous_ranges)
   })
   
-  #correction factors, refreshes on site_id
+  #calibration factors, refreshes on site_id
   corr <- eventReactive(input$site_id, {
     # Your code to prepare the data for plotting
     s=input$site_id
     
-    correction_factors = tbl(con, sql("
+    calibration_factors = tbl(con, sql("
         SELECT
           flow_id,
           site_id,
@@ -187,10 +187,10 @@ server <- function(input, output, session) {
           LOWER(factor_range) AS factor_start,
           UPPER(factor_range) AS factor_end,
           f.flow_direction || ' - ' || f.flow_id AS flow_color
-        FROM ecocounter.correction_factors
+        FROM ecocounter.calibration_factors
         JOIN ecocounter.flows_unfiltered AS f USING (flow_id)
       ")) %>% filter(site_id == s) %>% collect()
-      return(correction_factors)
+      return(calibration_factors)
   })
 
   output$dynamic_title <- renderUI({
@@ -301,7 +301,7 @@ server <- function(input, output, session) {
     cf = corr()
     layers <- list(
       geom_vline(
-        #add a jitter to correction factors since they occur on the same date.
+        #add a jitter to calibration factors since they occur on the same date.
         data = cf, #%>% mutate(factor_start = factor_start + sample(rnorm(1,7), n(), replace = TRUE)),
         aes(xintercept=factor_start, color = flow_color),
         linewidth = 1.2, linetype = 'dotted'),

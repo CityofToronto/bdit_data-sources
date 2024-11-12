@@ -1,10 +1,10 @@
-CREATE VIEW ecocounter.correction_factors AS
+CREATE VIEW ecocounter.calibration_factors AS
 WITH dates AS (
     SELECT
         UNNEST(vr.flow_ids) AS flow_id,
         vr.count_date,
         vr.ecocounter_day_corr_factor,
-        sh.sensitivity,
+        sh.setting,
         sh.date_range AS sensitivity_date_range,
         LAG(vr.count_date) OVER w AS last_count_date,
         LEAD(vr.count_date) OVER w AS next_count_date
@@ -23,7 +23,7 @@ SELECT
     flow_id,
     count_date,
     ecocounter_day_corr_factor,
-    sensitivity,
+    setting,
     sensitivity_date_range,
     daterange(
         --if there's a previous study, let that one take precedent for days before count_date.
@@ -39,8 +39,8 @@ ORDER BY
     flow_id,
     count_date;
 
-COMMENT ON VIEW ecocounter.correction_factors IS
+COMMENT ON VIEW ecocounter.calibration_factors IS
 '(in development) - table of validation results and dates to apply '
-'correction factors based on other validation studies and sensitivity history.';
+'calibration factors based on other validation studies and sensitivity history.';
 
-ALTER VIEW ecocounter.correction_factors OWNER TO ecocounter_admins;
+ALTER VIEW ecocounter.calibration_factors OWNER TO ecocounter_admins;
