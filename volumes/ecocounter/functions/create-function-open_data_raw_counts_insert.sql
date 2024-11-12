@@ -16,9 +16,9 @@ AS $BODY$
         s.site_description,
         f.direction_main AS direction,
         cc.datetime_bin AS datetime_bin,
-        SUM(cc.corrected_volume) AS bin_volume
+        SUM(cc.calibrated_volume) AS bin_volume
     --this view excludes anomalous ranges
-    FROM ecocounter.counts_corrected AS cc
+    FROM ecocounter.counts_calibrated AS cc
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     WHERE
@@ -29,7 +29,7 @@ AS $BODY$
         s.site_description,
         f.direction_main,
         cc.datetime_bin
-    HAVING SUM(cc.corrected_volume) > 0
+    HAVING SUM(cc.calibrated_volume) > 0
     ON CONFLICT (site_id, direction, datetime_bin)
     DO NOTHING;
 

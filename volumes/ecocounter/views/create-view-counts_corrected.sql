@@ -1,15 +1,15 @@
-CREATE OR REPLACE VIEW ecocounter.counts_corrected AS
+CREATE OR REPLACE VIEW ecocounter.counts_calibrated AS
 SELECT
     counts_unfiltered.flow_id,
     counts_unfiltered.datetime_bin,
     counts_unfiltered.volume AS raw_volume,
-    cf.ecocounter_day_corr_factor AS correction_factor,
+    cf.ecocounter_day_corr_factor AS calibration_factor,
     cf.count_date AS validation_date,
-    ROUND(COALESCE(cf.ecocounter_day_corr_factor, 1) * counts_unfiltered.volume) AS corrected_volume
+    ROUND(COALESCE(cf.ecocounter_day_corr_factor, 1) * counts_unfiltered.volume) AS calibrated_volume
 FROM ecocounter.counts_unfiltered
 JOIN ecocounter.flows_unfiltered USING (flow_id)
 JOIN ecocounter.sites_unfiltered USING (site_id)
-LEFT JOIN ecocounter.correction_factors AS cf
+LEFT JOIN ecocounter.calibration_factors AS cf
     ON
     counts_unfiltered.flow_id = cf.flow_id
     AND counts_unfiltered.datetime_bin::date <@ cf.factor_range
@@ -33,13 +33,13 @@ WHERE
             )
     );
 
-COMMENT ON VIEW ecocounter.counts_corrected
-IS '(In development) Ecocounter counts corrected based on Spectrum validation studies.';
+COMMENT ON VIEW ecocounter.counts_calibrated
+IS '(In development) Ecocounter counts calibrated based on Spectrum validation studies.';
 
-ALTER VIEW ecocounter.counts_corrected OWNER TO ecocounter_admins;
+ALTER VIEW ecocounter.counts_calibrated OWNER TO ecocounter_admins;
 
-GRANT SELECT ON ecocounter.counts_corrected TO ecocounter_bot;
-GRANT SELECT ON ecocounter.counts_corrected TO bdit_humans;
+GRANT SELECT ON ecocounter.counts_calibrated TO ecocounter_bot;
+GRANT SELECT ON ecocounter.counts_calibrated TO bdit_humans;
 
-COMMENT ON COLUMN ecocounter.counts_corrected.datetime_bin
+COMMENT ON COLUMN ecocounter.counts_calibrated.datetime_bin
 IS 'indicates start time of the time bin. Note that not all time bins are the same size!';
