@@ -23,6 +23,10 @@ GRANT SELECT ON TABLE ecocounter.sensitivity_history TO bdit_humans;
 
 GRANT ALL ON TABLE ecocounter.sensitivity_history TO ecocounter_admins;
 
+COMMENT ON TABLE ecocounter.sensitivity_history IS
+'Stores sensitivity adjustments for each flow as date ranges to '
+'ranges when data is comparable.';
+
 /*
 --initial code used to populate
 

@@ -20,3 +20,6 @@ REVOKE ALL ON TABLE ecocounter.open_data_raw_counts FROM bdit_humans;
 GRANT SELECT ON TABLE ecocounter.open_data_raw_counts TO bdit_humans;
 
 GRANT SELECT, INSERT ON TABLE ecocounter.open_data_raw_counts TO ecocounter_bot;
+
+COMMENT ON TABLE ecocounter.open_data_raw_counts IS
+'Disaggregate Ecocounter data by site and direction.';
