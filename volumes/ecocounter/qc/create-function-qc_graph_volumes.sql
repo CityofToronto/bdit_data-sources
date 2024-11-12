@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.ecocounter_graph_volumes(numeric)
+-- FUNCTION: ecocounter.qc_graph_volumes(numeric)
 
--- DROP FUNCTION IF EXISTS gwolofs.ecocounter_graph_volumes(numeric);
+-- DROP FUNCTION IF EXISTS ecocounter.qc_graph_volumes(numeric);
 
-CREATE OR REPLACE FUNCTION gwolofs.ecocounter_graph_volumes(
+CREATE OR REPLACE FUNCTION ecocounter.qc_graph_volumes(
 	site_var numeric)
     RETURNS TABLE(site_id numeric, flow_id numeric, date date, daily_volume numeric, rolling_avg_1_week numeric, flow_color text) 
     LANGUAGE 'sql'
@@ -55,5 +55,8 @@ ORDER BY
 
 $BODY$;
 
-ALTER FUNCTION gwolofs.ecocounter_graph_volumes(numeric)
-    OWNER TO gwolofs;
+ALTER FUNCTION ecocounter.qc_graph_volumes(numeric)
+    OWNER TO ecocounter_admins;
+
+COMMENT ON FUNCTION ecocounter.qc_graph_volumes IS
+'A function to get unfiltered flows/volumes for Ecocounter Shiny graphing tool.';
