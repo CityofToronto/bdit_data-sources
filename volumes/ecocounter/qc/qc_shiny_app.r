@@ -11,8 +11,8 @@ library(ggplot2)
 library(config)
 library(ggrepel)
 
-setwd('C:\\Users\\gwolofs\\OneDrive - City of Toronto\\Documents\\R')
-
+#config.yml located here
+setwd('~/../OneDrive - City of Toronto/Documents/R')
 dw <- config::get("bigdata")
 
 con <- DBI::dbConnect(RPostgres::Postgres(),
@@ -21,6 +21,9 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
                       user = dw$user,
                       password = dw$pwd
 )
+
+dir.create('ecocounter_anomalous_ranges', showWarnings = FALSE)
+export_path <- file.path(getwd(), 'ecocounter_anomalous_ranges')
 
 sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")) %>% collect()
 flows = tbl(con, sql("SELECT * FROM ecocounter.flows")) %>% collect()
@@ -142,7 +145,7 @@ server <- function(input, output, session) {
     } else {
       volumes = tbl(con, sql(sprintf("
         SELECT site_id, flow_id, date, daily_volume, rolling_avg_1_week, flow_color
-        FROM gwolofs.ecocounter_graph_volumes(%s)
+        FROM ecocounter.qc_graph_volumes(%s)
                        ", s))) %>% collect() %>% 
         group_by(site_id, flow_color) %>% 
         arrange(date) %>%
@@ -390,17 +393,16 @@ server <- function(input, output, session) {
 
     comma_sep <- function(x) paste0("('", paste0(x, collapse = "', '"), sep = "')")
     
-    
     lines <- c(
       paste0("INSERT INTO ecocounter.anomalous_ranges (", paste(colnames(temp), collapse = ', '), ") (VALUES "),
       paste0(apply(temp, 1, comma_sep), collapse = ',\n'),
       ') RETURNING ecocounter.anomalous_ranges.*'
     )
-    write_lines(lines, fname)
+    write_lines(lines, file.path(export_path, fname))
     
     showModal(modalDialog(
       title = "Ranges Saved to: ",
-      paste0("Your selected ranges have been saved to:", fname),
+      paste0("Your selected ranges have been saved to:", file.path(export_path, fname)),
       easyClose = TRUE
     ))
   })
