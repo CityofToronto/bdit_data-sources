@@ -8,10 +8,32 @@ VOLATILE
 
 AS $BODY$
 
+    WITH complete_dates AS (
+        SELECT
+            s.site_id,
+            f.direction_main,
+            cc.datetime_bin::date,
+            COUNT(DISTINCT cc.datetime_bin) AS datetime_bin_unique
+        --this view excludes anomalous ranges
+        FROM ecocounter.counts_calibrated AS cc
+        JOIN ecocounter.flows AS f USING (flow_id)
+        JOIN ecocounter.sites AS s USING (site_id)
+        WHERE
+            cc.datetime_bin >= to_date(yyyy::varchar, 'yyyy')
+            AND cc.datetime_bin < to_date((yyyy+1)::varchar, 'yyyy')
+        GROUP BY
+            s.site_id,
+            f.direction_main,
+            cc.datetime_bin::date,
+            f.bin_size
+        --all datetime bins present, corrected for bin size
+        HAVING COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
+    )
+
     INSERT INTO ecocounter.open_data_raw_counts (
         site_id, site_description, direction, datetime_bin, bin_volume
     )
-    SELECT
+    SELECT  
         s.site_id,
         s.site_description,
         f.direction_main AS direction,
@@ -21,6 +43,12 @@ AS $BODY$
     FROM ecocounter.counts_calibrated AS cc
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
+    JOIN complete_dates AS cd
+    ON
+        cd.site_id = s.site_id
+        AND cd.direction_main = f.direction_main
+        AND cc.datetime_bin >= cd.datetime_bin
+        AND cc.datetime_bin < cd.datetime_bin + interval '1 day'
     WHERE
         cc.datetime_bin >= to_date(yyyy::varchar, 'yyyy')
         AND cc.datetime_bin < to_date((yyyy+1)::varchar, 'yyyy')
