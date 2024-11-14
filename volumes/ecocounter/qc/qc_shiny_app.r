@@ -33,6 +33,7 @@ sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")
 ui <- fluidPage(
   titlePanel("Ecocounter - Interactive Anomalous Range Selection"),
   fluidRow(uiOutput('site_descriptions')),
+  actionButton("query", "Query Selected Sites"),
   fluidRow(
     column(3, checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE)),
     column(3, checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE)),
@@ -146,7 +147,7 @@ server <- function(input, output, session) {
   })
   
   #volume data, refreshes on site_id
-  vol <- eventReactive(list(input$site_descriptions, input$validated_only), {
+  vol <- eventReactive(list(input$query, input$validated_only), {
     # Your code to prepare the data for plotting
     
     if(input$validated_only){
@@ -280,7 +281,7 @@ server <- function(input, output, session) {
   })
   
   ar_listen <- reactive({
-    list(input$myTable_cell_edit, input$save_range, input$site_descriptions, input$anomalous_ranges)
+    list(input$myTable_cell_edit, input$save_range, input$query, input$anomalous_ranges)
   })
   
   ar_data <- eventReactive(ar_listen(), {
@@ -316,7 +317,7 @@ server <- function(input, output, session) {
       coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = TRUE)
   })
   
-  cf_layers <- eventReactive(list(input$calibration_factors, input$site_descriptions), {
+  cf_layers <- eventReactive(list(input$calibration_factors, input$query), {
     v = vol()
     limits = v %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
@@ -336,11 +337,18 @@ server <- function(input, output, session) {
   })
   
   #a base part of the plot which doesn't change except when site_id changes (improves render time)
-  base_plot <- eventReactive(list(input$site_descriptions, input$validated_only),  {
+  base_plot <- eventReactive(list(input$query, input$validated_only),  {
     v = vol()
     limits = v %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
     max_date <- max(limits$date)
+    if (max_date - min_date > dyears(3)){
+      break_minor = '1 month'
+      break_major = '1 year'
+    } else {
+      break_minor = '1 day'
+      break_major = '1 month'
+    }
     
     layers <- list(
       theme_bw(),
@@ -350,8 +358,9 @@ server <- function(input, output, session) {
       geom_line(data = v, aes(
         x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
         color = flow_color, group = paste(site_id, flow_color, groupid)), linewidth = 1),
-      scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 day",
-                   date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
+      scale_x_date(date_breaks = break_major,
+                   date_minor_breaks = break_minor,
+                   date_labels = "%Y-%m-%d", limits = c(min_date-ddays(20), max_date+ddays(20))),
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
             text = element_text(size = 20)),
       guides(
