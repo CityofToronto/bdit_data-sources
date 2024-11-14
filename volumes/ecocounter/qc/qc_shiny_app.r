@@ -25,30 +25,31 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
 dir.create('ecocounter_anomalous_ranges', showWarnings = FALSE)
 export_path <- file.path(getwd(), 'ecocounter_anomalous_ranges')
 
-sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")) %>% collect()
 flows = tbl(con, sql("SELECT * FROM ecocounter.flows")) %>% collect()
-
-sites_list <- sites$site_id
-names(sites_list) <- sites$site_description
+sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")) %>%
+  mutate(site_title = paste0(site_description, " (site_id = ", site_id, ")")) %>% collect()
 
 # Define UI for the app
 ui <- fluidPage(
   titlePanel("Ecocounter - Interactive Anomalous Range Selection"),
-  fluidRow(selectInput("site_id", "Select Site ID", choices = sites_list, selected = sites_list[1])),
-  checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE),
-  checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE),
-  checkboxInput(inputId = 'calibration_factors', label = 'Show Calibration Factors?', value = TRUE),
+  fluidRow(uiOutput('site_descriptions')),
+  fluidRow(
+    column(3, checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE)),
+    column(3, checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE)),
+    column(3, checkboxInput(inputId = 'calibration_factors', label = 'Show Calibration Factors?', value = TRUE)),
+    column(3, checkboxInput(inputId = 'recent_data', label = 'Only sites with recent data?', value = FALSE))
+  ),
   uiOutput("dynamic_title"),  # Dynamic title panel
   fluidRow(
     plotOutput("plot",
-              dblclick = "plot_dblclick",
-              #click = "plot_click",
-              brush = brushOpts(
+               dblclick = "plot_dblclick",
+               #click = "plot_click",
+               brush = brushOpts(
                  id = "brush",
                  resetOnNew = FALSE,
                  delay = 1000,
                  delayType = "debounce"
-              ))),
+               ))),
   fluidRow(
     actionButton("save_range", "Save Range"),
     DTOutput("myTable"),
@@ -73,15 +74,15 @@ server <- function(input, output, session) {
   # Store ranges selected by the user
   values <- reactiveValues()
   values$tab <- data.frame(
-      id = integer(),
-      site_id = numeric(),
-      flow_id = numeric(),
-      range_start = as.Date(character()),
-      range_end = as.Date(character()),
-      notes = character(),
-      investigation_level = character(),
-      problem_level = character()
-    ) %>%
+    id = integer(),
+    site_id = numeric(),
+    flow_id = numeric(),
+    range_start = as.Date(character()),
+    range_end = as.Date(character()),
+    notes = character(),
+    investigation_level = character(),
+    problem_level = character()
+  ) %>%
     mutate(Remove = getRemoveButton(id, idS = "", lab = "Tab1"))
   
   buttonCounter <- 0L
@@ -98,12 +99,37 @@ server <- function(input, output, session) {
   
   # reactive values for zoomable plot
   ranges <- reactiveValues(x = NULL, y = NULL)
-
+  
   # Clear brush, reset zoom when site_id changes or range is saved.
-  observeEvent(list(input$site_id, input$save_range), priority = -1, {
+  observeEvent(list(input$site_descriptions, input$save_range), priority = -1, {
     session$resetBrush("brush")
     ranges$x <- NULL
     ranges$y <- NULL
+  })
+  
+  #sites_list which can be filtrered for all data or only recent data.
+  sites_list <- reactive({
+    if (input$recent_data) {
+      sites_list <- (sites %>% filter(last_active >= today() - dmonths(2)))$site_description
+    } else {
+      sites_list <- sites$site_description
+    }
+    return(unique(sites_list))
+  })
+  
+  site_ids <- eventReactive(input$site_descriptions, {
+    temp = sites %>% filter(site_description %in% input$site_descriptions)
+    return(temp$site_id)
+  })
+  
+  output$site_descriptions = renderUI({
+    selectInput("site_descriptions",
+                label = "Select Site ID",
+                choices = sites_list(),
+                selected = sites_list()[1],
+                multiple = TRUE,
+                selectize=FALSE,
+                width = 400)
   })
   
   # When a double-click happens, check if there's a brush on the plot.
@@ -118,35 +144,35 @@ server <- function(input, output, session) {
       ranges$y <- NULL
     }
   })
-
   
   #volume data, refreshes on site_id
-  vol <- eventReactive(list(input$site_id, input$validated_only), {
+  vol <- eventReactive(list(input$site_descriptions, input$validated_only), {
     # Your code to prepare the data for plotting
-    s=input$site_id
     
     if(input$validated_only){
-      volumes = tbl(con, sql(sprintf("
+      volumes = tbl(con, sql("
         SELECT
           site_id, direction::text AS flow_color, dt AS date, daily_volume,
           CASE WHEN daily_volume IS NOT NULL THEN AVG(daily_volume) OVER w END AS rolling_avg_1_week
         FROM ecocounter.open_data_daily_counts
-        WHERE site_id = %s
         WINDOW w AS (
           PARTITION BY site_id, direction
           ORDER BY dt
           RANGE BETWEEN interval '6 days' PRECEDING AND CURRENT ROW
-        )", s))) %>% collect() %>% 
+        )")) %>%
+        filter(site_id %in% !!site_ids()) %>%
+        collect() %>% 
         group_by(site_id, flow_color) %>% 
-        arrange(date) %>%
+        arrange(site_id, flow_color, date) %>%
         mutate(datedif = as.numeric(date - dplyr::lag(date))-1) %>%
         mutate(groupid = cumsum(ifelse(is.na(datedif), 0, datedif)))
       
     } else {
       volumes = tbl(con, sql(sprintf("
         SELECT site_id, flow_id, date, daily_volume, rolling_avg_1_week, flow_color
-        FROM ecocounter.qc_graph_volumes(%s)
-                       ", s))) %>% collect() %>% 
+        FROM (VALUES %s) AS sites(s),
+        LATERAL ecocounter.qc_graph_volumes(s) AS qc", paste0('(', site_ids(), ')', collapse = ', ')))) %>%
+        collect() %>% 
         group_by(site_id, flow_color) %>% 
         arrange(date) %>%
         mutate(datedif = as.numeric(date - dplyr::lag(date))-1) %>%
@@ -156,10 +182,7 @@ server <- function(input, output, session) {
   })
   
   #anomalous ranges data, refreshes on site_id
-  ars <- eventReactive(input$site_id, {
-    # Your code to prepare the data for plotting
-    s=input$site_id
-    
+  ars <- eventReactive(input$site_descriptions, {
     anomalous_ranges = tbl(con, sql("
         SELECT
           site_id,
@@ -169,15 +192,12 @@ server <- function(input, output, session) {
           ELSE 'flow_id - ' || flow_id END || ': ' || notes AS notes,
           problem_level
         FROM ecocounter.anomalous_ranges
-    ")) %>% filter(site_id == s) %>% collect()
+    ")) %>% filter(site_id %in% !!site_ids()) %>% collect()
     return(anomalous_ranges)
   })
   
   #calibration factors, refreshes on site_id
-  corr <- eventReactive(input$site_id, {
-    # Your code to prepare the data for plotting
-    s=input$site_id
-    
+  corr <- eventReactive(input$site_descriptions, {
     calibration_factors = tbl(con, sql("
         SELECT
           flow_id,
@@ -189,19 +209,20 @@ server <- function(input, output, session) {
           f.flow_direction || ' - ' || f.flow_id AS flow_color
         FROM ecocounter.calibration_factors
         JOIN ecocounter.flows_unfiltered AS f USING (flow_id)
-      ")) %>% filter(site_id == s) %>% collect()
-      return(calibration_factors)
+        JOIN ecocounter.sites USING (site_id)
+      ")) %>% filter(site_id %in% !!site_ids()) %>% collect()
+    return(calibration_factors)
   })
-
+  
   output$dynamic_title <- renderUI({
-    s=input$site_id
-    site_name = names(which(sites_list==s))
+    s = site_ids()
+    site_titles = (sites %>% filter(site_id %in% s))$site_title
     tags$h2(
-      paste0(site_name, " (site_id = ", s, ')'),
+      paste(site_titles, collapse = ', '),
       style = "font-size: 22px; text-align: center;"  # Customize font size, weight, and color here
     )
   })
-
+  
   # Observe "Remove" buttons and removes rows
   observeEvent(input$remove_button_Tab1, {
     myTable <- values$tab
@@ -216,34 +237,36 @@ server <- function(input, output, session) {
     brush <- input$brush
     
     if (!is.null(brush)) {
-      s = input$site_id
-      fl = (flows %>% filter(site_id == s))$flow_id
       myTable <- isolate(values$tab)
+      si = site_ids()
       
-      for (f in fl){
-        buttonCounter <<- buttonCounter + 1L
-        new_range <- data.frame(
-          id = buttonCounter,
-          site_id = as.numeric(input$site_id),
-          flow_id = f,
-          range_start = as.Date(input$brush$xmin),
-          range_end = as.Date(input$brush$xmax),
-          notes = "",
-          investigation_level = 'confirmed',
-          problem_level = 'do-not-use'
-        )
-        
-        myTable <- bind_rows(
-          myTable,
-          new_range %>%
-            mutate(Remove = getRemoveButton(buttonCounter, idS = "", lab = "Tab1")))
+      for (s in si){
+        fl = (flows %>% filter(site_id == s))$flow_id
+        for (f in fl){
+          buttonCounter <<- buttonCounter + 1L
+          new_range <- data.frame(
+            id = buttonCounter,
+            site_id = s,
+            flow_id = f,
+            range_start = as.Date(input$brush$xmin),
+            range_end = as.Date(input$brush$xmax),
+            notes = "",
+            investigation_level = 'confirmed',
+            problem_level = 'do-not-use'
+          )
+          
+          myTable <- bind_rows(
+            myTable,
+            new_range %>%
+              mutate(Remove = getRemoveButton(buttonCounter, idS = "", lab = "Tab1")))
+        }
       }
       replaceData(proxyTable, myTable, resetPaging = FALSE)
       values$tab <- myTable
     }
   })
   
-
+  
   # Observes table editing and updates data
   observeEvent(input$myTable_cell_edit, {
     
@@ -257,12 +280,12 @@ server <- function(input, output, session) {
   })
   
   ar_listen <- reactive({
-    list(input$myTable_cell_edit, input$save_range, input$site_id)
+    list(input$myTable_cell_edit, input$save_range, input$site_descriptions, input$anomalous_ranges)
   })
   
   ar_data <- eventReactive(ar_listen(), {
     # Your code to prepare the data for plotting
-    s=input$site_id
+    s=input$site_descriptions
     temp_ars = values$tab %>% filter(site_id == s) %>%
       transmute(site_id, lower = range_start, upper = range_end, notes, problem_level = "Draft")
     
@@ -273,7 +296,7 @@ server <- function(input, output, session) {
   output$plot <- renderPlot({
     #this part of the plot only changes when site id changes
     p <- ggplot() + base_plot()
-
+    
     if(input$calibration_factors){
       p <- p + cf_layers()
     }
@@ -282,7 +305,7 @@ server <- function(input, output, session) {
     if (!is.null(input$brush)) {
       p <- p + brush_labels()
     }
-
+    
     #changes when anomalous ranges change
     if ((ar_data() %>% count() > 0) & input$anomalous_ranges){
       p <- p + ar_layers()
@@ -293,7 +316,7 @@ server <- function(input, output, session) {
       coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = TRUE)
   })
   
-  cf_layers <- eventReactive(input$calibration_factors, {
+  cf_layers <- eventReactive(list(input$calibration_factors, input$site_descriptions), {
     v = vol()
     limits = v %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
@@ -313,9 +336,7 @@ server <- function(input, output, session) {
   })
   
   #a base part of the plot which doesn't change except when site_id changes (improves render time)
-  base_plot <- eventReactive(list(input$site_id, input$validated_only),  {
-    s=input$site_id
-    site_name = names(which(sites_list==s))
+  base_plot <- eventReactive(list(input$site_descriptions, input$validated_only),  {
     v = vol()
     limits = v %>% filter(!is.na(daily_volume))
     min_date <- min(limits$date)
@@ -324,13 +345,13 @@ server <- function(input, output, session) {
     layers <- list(
       theme_bw(),
       geom_path(data = v, aes(
-        x=date, y=daily_volume, color = flow_color, group = paste(flow_color, groupid)
-        ), linewidth = 0.2, alpha = 0.5),
+        x=date, y=daily_volume, color = flow_color, group = paste(site_id, flow_color, groupid)
+      ), linewidth = 0.2, alpha = 0.5),
       geom_line(data = v, aes(
         x=date, y=rolling_avg_1_week, linewidth = "7 day avg",
-        color = flow_color, group = paste(flow_color, groupid)), linewidth = 1),
+        color = flow_color, group = paste(site_id, flow_color, groupid)), linewidth = 1),
       scale_x_date(date_breaks = "1 month", date_minor_breaks = "1 day",
-                  date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
+                   date_labels = "%Y-%m-%d", limits = c(min_date-20, max_date+20)),
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
             text = element_text(size = 20)),
       guides(
@@ -339,8 +360,8 @@ server <- function(input, output, session) {
         color=guide_legend(title="Flow"),
         fill=guide_legend(title="Anomalous Range"))
     )
-
-      return(layers)
+    
+    return(layers)
   })
   
   #dynamically label brush extents
@@ -390,7 +411,7 @@ server <- function(input, output, session) {
     temp <- values$tab %>%
       mutate(time_range = paste0("[", range_start, ", ", range_end, ")")) %>%
       select(-any_of(c("Remove", "id", "range_start", "range_end")))
-
+    
     comma_sep <- function(x) paste0("('", paste0(x, collapse = "', '"), sep = "')")
     
     lines <- c(
