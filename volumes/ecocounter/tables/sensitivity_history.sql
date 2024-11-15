@@ -33,7 +33,7 @@ COMMENT ON TABLE ecocounter.sensitivity_history IS
 WITH dates AS (
     SELECT flow_id, date_of_change::date, setting
     FROM ecocounter.sensitivity_changes
-    UNION 
+    UNION
     SELECT flow_id, flows.first_active::date, 'Original configuration'
     FROM ecocounter.flows
 )

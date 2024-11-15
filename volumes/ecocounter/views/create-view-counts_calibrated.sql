@@ -5,7 +5,8 @@ SELECT
     counts_unfiltered.volume AS raw_volume,
     cf.ecocounter_day_corr_factor AS calibration_factor,
     cf.count_date AS validation_date,
-    ROUND(COALESCE(cf.ecocounter_day_corr_factor, 1) * counts_unfiltered.volume) AS calibrated_volume
+    ROUND(COALESCE(cf.ecocounter_day_corr_factor, 1) * counts_unfiltered.volume)
+    AS calibrated_volume
 FROM ecocounter.counts_unfiltered
 JOIN ecocounter.flows_unfiltered USING (flow_id)
 JOIN ecocounter.sites_unfiltered USING (site_id)

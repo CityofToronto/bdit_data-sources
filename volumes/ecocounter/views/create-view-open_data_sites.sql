@@ -38,8 +38,7 @@ GROUP BY
     s.date_decommissioned
 ORDER BY site_description;
 
-ALTER TABLE ecocounter.open_data_sites
-    OWNER TO ecocounter_admins;
+ALTER TABLE ecocounter.open_data_sites OWNER TO ecocounter_admins;
 
 GRANT SELECT ON TABLE ecocounter.open_data_sites TO bdit_humans;
 GRANT ALL ON TABLE ecocounter.open_data_sites TO ecocounter_admins;
