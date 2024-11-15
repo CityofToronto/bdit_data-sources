@@ -18,7 +18,7 @@ AS $BODY$
         cc.datetime_bin::date AS dt,
         SUM(calibrated_volume) AS daily_volume
     --this view excludes anomalous ranges
-    FROM ecocounter.counts_calibrated AS cc
+    FROM ecocounter.counts AS cc
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     WHERE
