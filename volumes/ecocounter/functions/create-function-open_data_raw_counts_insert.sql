@@ -15,7 +15,7 @@ AS $BODY$
             cc.datetime_bin::date,
             COUNT(DISTINCT cc.datetime_bin) AS datetime_bin_unique
         --this view excludes anomalous ranges
-        FROM ecocounter.counts_calibrated AS cc
+        FROM ecocounter.counts AS cc
         JOIN ecocounter.flows AS f USING (flow_id)
         JOIN ecocounter.sites AS s USING (site_id)
         WHERE
@@ -40,7 +40,7 @@ AS $BODY$
         cc.datetime_bin AS datetime_bin,
         SUM(cc.calibrated_volume) AS bin_volume
     --this view excludes anomalous ranges
-    FROM ecocounter.counts_calibrated AS cc
+    FROM ecocounter.counts AS cc
     JOIN ecocounter.flows AS f USING (flow_id)
     JOIN ecocounter.sites AS s USING (site_id)
     JOIN complete_dates AS cd
