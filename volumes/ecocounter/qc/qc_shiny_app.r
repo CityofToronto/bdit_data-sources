@@ -11,10 +11,10 @@ library(ggplot2)
 library(config)
 library(ggrepel)
 
-#config.yml located here
 setwd('~/../OneDrive - City of Toronto/Documents/R')
-dw <- config::get("bigdata")
 
+#db connection from config.yml located in working directory
+dw <- config::get("bigdata")
 con <- DBI::dbConnect(RPostgres::Postgres(),
                       host = dw$host,
                       dbname = dw$database,
@@ -32,15 +32,19 @@ sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")
 # Define UI for the app
 ui <- fluidPage(
   titlePanel("Ecocounter - Interactive Anomalous Range Selection"),
-  fluidRow(uiOutput('site_descriptions')),
-  actionButton("query", "Query Selected Sites"),
   fluidRow(
-    column(3, checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE)),
-    column(3, checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE)),
-    column(3, checkboxInput(inputId = 'calibration_factors', label = 'Show Calibration Factors?', value = TRUE)),
-    column(3, checkboxInput(inputId = 'recent_data', label = 'Only sites with recent data?', value = FALSE))
+    column(3, 
+      fluidRow(uiOutput('site_descriptions')),
+      actionButton("query", "Query Selected Sites")
+    ),
+    column(3,
+       checkboxInput(inputId = 'validated_only', label = 'Validated Data Only', value = FALSE),
+       checkboxInput(inputId = 'anomalous_ranges', label = 'Show Anomalous Ranges?', value = TRUE),
+       checkboxInput(inputId = 'calibration_factors', label = 'Show Calibration Factors?', value = TRUE),
+       checkboxInput(inputId = 'recent_data', label = 'Only sites with recent data?', value = FALSE)
+    )
   ),
-  uiOutput("dynamic_title"),  # Dynamic title panel
+  fluidRow(uiOutput("dynamic_title")),  # Dynamic title panel
   fluidRow(
     plotOutput("plot",
                dblclick = "plot_dblclick",
@@ -52,12 +56,16 @@ ui <- fluidPage(
                  delayType = "debounce"
                ))),
   fluidRow(
-    actionButton("save_range", "Save Range"),
+    fluidRow(
+      actionButton("save_range_flow", "Save Range (flows)"),
+      actionButton("save_range_site", "Save Range (site)")
+    ),
     DTOutput("myTable"),
     actionButton("export_csv", "Export Ranges to File")
   )
 )
 
+#remove buttons to make rows in temp anomalous range table removable
 getRemoveButton <- function(n, idS = "", lab = "Pit") {
   if (stringr::str_length(idS) > 0) idS <- paste0(idS, "-")
   ret <- shinyInput(actionButton, n,
@@ -66,6 +74,7 @@ getRemoveButton <- function(n, idS = "", lab = "Pit") {
   return (ret)
 }
 
+#helper function for getRemoveButton
 shinyInput <- function(FUN, n, id, ses, ...) {
   as.character(FUN(paste0(id, n), ...))
 }
@@ -102,7 +111,7 @@ server <- function(input, output, session) {
   ranges <- reactiveValues(x = NULL, y = NULL)
   
   # Clear brush, reset zoom when site_id changes or range is saved.
-  observeEvent(list(input$site_descriptions, input$save_range), priority = -1, {
+  observeEvent(list(input$query, input$save_range_site, input$save_range_flow), priority = -1, {
     session$resetBrush("brush")
     ranges$x <- NULL
     ranges$y <- NULL
@@ -117,20 +126,22 @@ server <- function(input, output, session) {
     }
     return(unique(sites_list))
   })
-  
-  site_ids <- eventReactive(input$site_descriptions, {
-    temp = sites %>% filter(site_description %in% input$site_descriptions)
-    return(temp$site_id)
-  })
-  
+
+  #a dynamic site select list based on checkbox.
   output$site_descriptions = renderUI({
     selectInput("site_descriptions",
                 label = "Select Site ID",
                 choices = sites_list(),
                 selected = sites_list()[1],
                 multiple = TRUE,
-                selectize=FALSE,
+                selectize = FALSE,
                 width = 400)
+  })
+  
+  #converts site descriptions to ids
+  site_ids <- eventReactive(input$site_descriptions, {
+    temp = sites %>% filter(site_description %in% input$site_descriptions)
+    return(temp$site_id)
   })
   
   # When a double-click happens, check if there's a brush on the plot.
@@ -148,8 +159,8 @@ server <- function(input, output, session) {
   
   #volume data, refreshes on site_id
   vol <- eventReactive(list(input$query, input$validated_only), {
-    # Your code to prepare the data for plotting
-    
+
+    #returns open data if "validted = true"
     if(input$validated_only){
       volumes = tbl(con, sql("
         SELECT
@@ -167,12 +178,14 @@ server <- function(input, output, session) {
         arrange(site_id, flow_color, date) %>%
         mutate(datedif = as.numeric(date - dplyr::lag(date))-1) %>%
         mutate(groupid = cumsum(ifelse(is.na(datedif), 0, datedif)))
-      
+    
+    #otherwise returns unfiltered data
     } else {
       volumes = tbl(con, sql(sprintf("
         SELECT site_id, flow_id, date, daily_volume, rolling_avg_1_week, flow_color
         FROM (VALUES %s) AS sites(s),
-        LATERAL ecocounter.qc_graph_volumes(s) AS qc", paste0('(', site_ids(), ')', collapse = ', ')))) %>%
+        LATERAL ecocounter.qc_graph_volumes(s) AS qc",
+                            paste0('(', site_ids(), ')', collapse = ', ')))) %>%
         collect() %>% 
         group_by(site_id, flow_color) %>% 
         arrange(date) %>%
@@ -215,12 +228,13 @@ server <- function(input, output, session) {
     return(calibration_factors)
   })
   
+  #dynamic graph title as a UI element (not ggplot) so it is select-able.
   output$dynamic_title <- renderUI({
     s = site_ids()
     site_titles = (sites %>% filter(site_id %in% s))$site_title
     tags$h2(
       paste(site_titles, collapse = ', '),
-      style = "font-size: 22px; text-align: center;"  # Customize font size, weight, and color here
+      style = "font-size: 22px; text-align: center;"
     )
   })
   
@@ -234,7 +248,37 @@ server <- function(input, output, session) {
   })
   
   # Observe brush input and add ranges to the reactive dataframe
-  observeEvent(input$save_range, {
+  observeEvent(input$save_range_site, {
+    brush <- input$brush
+    
+    if (!is.null(brush)) {
+      myTable <- isolate(values$tab)
+      si = site_ids()
+      for (s in si){
+        buttonCounter <<- buttonCounter + 1L
+        new_range <- data.frame(
+          id = buttonCounter,
+          site_id = s,
+          flow_id = 0,
+          range_start = as.Date(input$brush$xmin),
+          range_end = as.Date(input$brush$xmax),
+          notes = "",
+          investigation_level = 'confirmed',
+          problem_level = 'do-not-use'
+        )
+        
+        myTable <- bind_rows(
+          myTable,
+          new_range %>%
+            mutate(Remove = getRemoveButton(buttonCounter, idS = "", lab = "Tab1")))
+      }
+      replaceData(proxyTable, myTable, resetPaging = FALSE)
+      values$tab <- myTable
+    }
+  })
+  
+  # Observe brush input and add ranges to the reactive dataframe
+  observeEvent(input$save_range_flow, {
     brush <- input$brush
     
     if (!is.null(brush)) {
@@ -268,6 +312,7 @@ server <- function(input, output, session) {
   })
   
   
+  
   # Observes table editing and updates data
   observeEvent(input$myTable_cell_edit, {
     
@@ -280,14 +325,14 @@ server <- function(input, output, session) {
     
   })
   
+  #update anomalous ranges layer on these events
   ar_listen <- reactive({
     list(input$myTable_cell_edit, input$save_range, input$query, input$anomalous_ranges)
   })
   
+  #combine anomalous ranges from database and temp table to display
   ar_data <- eventReactive(ar_listen(), {
-    # Your code to prepare the data for plotting
-    s=input$site_descriptions
-    temp_ars = values$tab %>% filter(site_id == s) %>%
+    temp_ars = values$tab %>% filter(site_id %in% site_ids()) %>%
       transmute(site_id, lower = range_start, upper = range_end, notes, problem_level = "Draft")
     
     return(rbind(ars(), temp_ars))
