@@ -1,7 +1,7 @@
 CREATE VIEW ecocounter.calibration_factors AS
 WITH dates AS (
     SELECT
-        UNNEST(vr.flow_ids) AS flow_id,
+        sh.flow_id,
         vr.count_date,
         vr.ecocounter_day_corr_factor,
         sh.setting,
