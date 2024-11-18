@@ -12,35 +12,18 @@ SELECT
     s.site_description,
     st_x(s.geom) AS site_x,
     st_y(s.geom) AS site_y,
-    s.facility_description,
     s.replaced_by_site_id,
-    s.centreline_id,
     s.first_active::date AS first_active,
     s.date_decommissioned::date AS date_decommissioned,
-    string_agg(DISTINCT f.direction_main::text, ', '::text) AS site_directions,
-    --could also turn this into an array?
-    MAX(cf.count_date) AS latest_calibration_study,
-    MIN(f.bin_size) AS bin_size, --Note: each site has a consistent bin_size, although it is defined in the API at the flow level.
     CASE
         WHEN site_id = 210 THEN 'Induction - Other'
         ELSE 'Induction - Eco-Counter'
     END AS technology
-FROM ecocounter.sites s
+FROM ecocounter.sites AS s
 JOIN od_sites USING (site_id) --omit sites if they have no data to publish.
-JOIN ecocounter.flows f USING (site_id)
-LEFT JOIN ecocounter.calibration_factors AS cf USING (flow_id)
-GROUP BY
-    s.site_id,
-    od_sites.site_id,
-    s.site_description,
-    s.geom,
-    s.facility_description,
-    s.notes,
-    s.replaced_by_site_id,
-    s.centreline_id,
-    s.first_active,
-    s.date_decommissioned
-ORDER BY site_description;
+JOIN ecocounter.flows USING (site_id)
+LEFT JOIN ecocounter.calibration_factors USING (flow_id)
+ORDER BY s.site_description;
 
 ALTER TABLE ecocounter.open_data_sites OWNER TO ecocounter_admins;
 

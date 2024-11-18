@@ -13,7 +13,7 @@ RETURNS TABLE (
     rolling_avg_1_week numeric,
     flow_color text
 )
-LANGUAGE 'sql'
+LANGUAGE sql
 COST 100
 VOLATILE PARALLEL UNSAFE
 ROWS 1000
