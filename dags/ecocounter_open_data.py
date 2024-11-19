@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 import logging
 import pendulum
+from functools import partial
 
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable 
@@ -39,7 +40,7 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
 }
 
 @dag(
@@ -91,7 +92,8 @@ def ecocounter_open_data_dag():
 
         send_slack_msg(
             context=context,
-            msg=f"{list_names} Remember to check Ecocounter :open_data_to: for {mnth} and label any sites pending validation in anomalous_ranges. :meow_detective:"
+            msg=f"{list_names} Remember to check Ecocounter :open_data_to: for {mnth} and label any sites pending validation in anomalous_ranges. :meow_detective:",
+            use_proxy=True
         )
 
     wait_till_10th = DateTimeSensor(
@@ -130,7 +132,7 @@ def ecocounter_open_data_dag():
         def download_daily_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
                 "SELECT * FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
-                --csv -o ~/open_data/ecocounter/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+                --csv -o /data/open_data/permanent-bike-counters/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
             
         @task.bash(env={
             "HOST":  BaseHook.get_connection("ecocounter_bot").host,
@@ -140,7 +142,7 @@ def ecocounter_open_data_dag():
         def download_raw_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
                 "SELECT * FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
-                --csv -o ~/open_data/ecocounter/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+                --csv -o /data/open_data/permanent-bike-counters/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
     
         insert_daily >> download_daily_open_data()
         insert_raw >> download_raw_open_data()
@@ -154,7 +156,8 @@ def ecocounter_open_data_dag():
         mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
         send_slack_msg(
             context=context,
-            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:"
+            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:",
+            use_proxy=True
         )
 
     (
