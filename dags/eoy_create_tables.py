@@ -25,12 +25,10 @@ import logging
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-bt_bot = PostgresHook('bt_bot')
-
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from dags.dag_functions import task_fail_slack_alert, send_slack_msg
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -41,7 +39,6 @@ except Exception as exc:
     err_msg = "Error importing functions for end of year Bluetooth maintenance \n" + str(exc)
     raise ImportError(err_msg)
 
-SLACK_CONN_ID = 'slack_data_pipeline'
 DAG_NAME = 'eoy_table_create'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
@@ -59,23 +56,22 @@ default_args = {'owner': ','.join(DAG_OWNERS),
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 0 1 12 *', # At 00:00 on 1st in December.
-    tags=["partition_create"],
+    tags=["partition_create", "yearly"],
     catchup=False,
     doc_md=__doc__
-    ) 
+)
 def eoy_create_table_dag():
     @task_group
     def yearly_task():
         """Task group to create yearly tables and triggers."""
-        bt_replace_trigger = PythonOperator(
-                        task_id='bt_replace_trigger',
-                        python_callable = replace_bt_trigger,
-                        op_kwargs = {'pg_hook': bt_bot,
-                                      'dt': '{{ ds }}'})
         @task
-        def insert_holidays(**kwargs):
-            dt = kwargs["ds"]
-            next_year = datetime.strptime(dt, "%Y-%m-%d") + relativedelta(years=1)
+        def bt_replace_trigger(ds=None):
+            bt_bot = PostgresHook('bt_bot')
+            replace_bt_trigger(bt_bot, ds)
+
+        @task
+        def insert_holidays(ds=None):
+            next_year = datetime.strptime(ds, "%Y-%m-%d") + relativedelta(years=1)
             holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
             ref_bot = PostgresHook('ref_bot')
             with ref_bot.get_conn() as con, con.cursor() as cur:
@@ -101,21 +97,22 @@ def eoy_create_table_dag():
                         postgres_conn_id='congestion_bot',
                         autocommit=True)
         
-        bt_replace_trigger
+        bt_replace_trigger()
         insert_holidays()
         here_create_tables
         bt_create_tables
         congestion_create_table
 
-    success_alert = SlackWebhookOperator(
-        task_id="success_alert",
-        slack_webhook_conn_id = SLACK_CONN_ID,
-        message='''All End of Year tables have been successfully created, 
-                please checkout the tables on the database and make sure 
-                they have been properly created. ''',
-        username="airflow"
-    )
+    @task
+    def success_alert(**context):
+        slack_ids = Variable.get("slack_member_id", deserialize_json=True)
+        list_names = " ".join([slack_ids.get(name, name) for name in DAG_OWNERS])
+        send_slack_msg(
+            context=context,
+            msg=f"{list_names} EOY DAG has run successfully. Please check out the tables on the database and make sure 
+                they have been properly created."
+        )
 
-    yearly_task() >> success_alert
+    yearly_task() >> success_alert()
 
 eoy_create_table_dag()
