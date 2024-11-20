@@ -9,19 +9,16 @@ Slack notifications is raised for both successful and failed airflow process.
 import sys
 import os
 import holidays
-
 import pendulum
-from airflow.decorators import dag, task, task_group
-from airflow.operators.python_operator import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+import logging
 from dateutil.relativedelta import relativedelta
+from datetime import datetime, timedelta
+
+from airflow.decorators import dag, task, task_group
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 
-
-from datetime import datetime, timedelta
-import logging
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -29,15 +26,9 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, send_slack_msg
+    from bluetooth.sql.bt_eoy_create_tables import replace_bt_trigger
 except:
     raise ImportError("Cannot import DAG helper functions.")
-
-try:
-    sys.path.append('/data/airflow/data_scripts/bluetooth/sql/') 
-    from bt_eoy_create_tables import replace_bt_trigger
-except Exception as exc:
-    err_msg = "Error importing functions for end of year Bluetooth maintenance \n" + str(exc)
-    raise ImportError(err_msg)
 
 DAG_NAME = 'eoy_table_create'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
@@ -103,7 +94,7 @@ def eoy_create_table_dag():
         bt_create_tables
         congestion_create_table
 
-    @task
+    @task(trigger_rule='none_failed')
     def success_alert(**context):
         slack_ids = Variable.get("slack_member_id", deserialize_json=True)
         list_names = " ".join([slack_ids.get(name, name) for name in DAG_OWNERS])
