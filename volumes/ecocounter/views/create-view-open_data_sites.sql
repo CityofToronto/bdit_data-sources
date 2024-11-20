@@ -16,13 +16,12 @@ SELECT
     s.first_active::date AS first_active,
     s.date_decommissioned::date AS date_decommissioned,
     CASE
-        WHEN site_id = 210 THEN 'Induction - Other'
-        ELSE 'Induction - Eco-Counter'
+        WHEN s.site_id = 210::numeric THEN 'Induction - Other'::text
+        ELSE 'Induction - Eco-Counter'::text
     END AS technology
 FROM ecocounter.sites AS s
-JOIN od_sites USING (site_id) --omit sites if they have no data to publish.
-JOIN ecocounter.flows USING (site_id)
-LEFT JOIN ecocounter.calibration_factors USING (flow_id)
+--only sites with records in open data release
+JOIN od_sites USING (site_id)
 ORDER BY s.site_description;
 
 ALTER TABLE ecocounter.open_data_sites OWNER TO ecocounter_admins;
