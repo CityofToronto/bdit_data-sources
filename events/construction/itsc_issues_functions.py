@@ -6,10 +6,11 @@ from numpy import nan
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 from io import BytesIO
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-#fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/rodars_functions.py'
-#SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
-SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
+fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/rodars_functions.py'
+SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
+#SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +30,11 @@ def geometry_from_bytes(geo_bytes):
     coordinates_list = []
     with BytesIO(geo_bytes) as ms:
         # Read the first 4 bytes = length
-        len_val = struct.unpack('i', ms.read(4))[0]
+        try:
+            len_val = struct.unpack('i', ms.read(4))[0]
+        except struct.error:
+            #struct.error: unpack requires a buffer of 4 bytes
+            return None
         # Iterate and unpack each pair of doubles as coordinates
         for _ in range(len_val):
             coordinates = coordinates_from_binary(ms)
@@ -41,7 +46,7 @@ def fetch_and_insert_data(
     insert_conn = PostgresHook('vds_bot')
 ):
     #generic function to pull and insert data using different connections and queries.
-    select_fpath = os.path.join(SQL_DIR, 'select-rodars_new.sql')
+    select_fpath = os.path.join(SQL_DIR, 'select-itsc_issues.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read())
             #.format(
@@ -58,28 +63,35 @@ def fetch_and_insert_data(
         LOGGER.critical(f"Error fetching RODARS data.")
         LOGGER.critical(exc)
         raise Exception()
-
+    
+    #older rodars data doesn't have this value?
+    df['locationindex'] = df['locationindex'].replace({nan: 0})
+    
     geom_data = df['geometry'].map(geometry_from_bytes)
-    geoms_df = df[['issueid', 'divisionid']]
-    geoms_df.insert(2, 'geom_text', geom_data.map(coordinates_to_geomfromtext))
+    valid_geoms = [not(x is None) for x in geom_data]
+    
+    geoms_df = df[['issueid', 'divisionid']][valid_geoms]
+    geoms_df.insert(2, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
     geoms_df = geoms_df.replace({nan: None})
     geoms_df = [tuple(x) for x in geoms_df.to_numpy()]
-
+    
     #transform values for inserting
     df_no_geom = df.drop('geometry', axis = 1)
     df_no_geom = df_no_geom.replace({pd.NaT: None, nan: None})
     df_no_geom = [tuple(x) for x in df_no_geom.to_numpy()]
     
-    insert_fpath = os.path.join(SQL_DIR, 'insert-rodars_new.sql')
+    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues.sql')
     with open(insert_fpath, 'r', encoding="utf-8") as file:
         insert_query = sql.SQL(file.read())
-
+        
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, insert_query, df_no_geom)
-
+        
     geom_update_fpath = os.path.join(SQL_DIR, 'update-rodars_geometry.sql')
     with open(geom_update_fpath, 'r', encoding="utf-8") as file:
         geom_update_query = sql.SQL(file.read())
-
+        
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, geom_update_query, geoms_df)
+        
+#fetch_and_insert_data()
