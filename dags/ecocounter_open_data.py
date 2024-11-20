@@ -131,7 +131,7 @@ def ecocounter_open_data_dag():
         })
         def download_daily_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT * FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+                "SELECT site_description, direction, dt, daily_volume FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
                 --csv -o /data/open_data/permanent-bike-counters/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
             
         @task.bash(env={
@@ -141,7 +141,7 @@ def ecocounter_open_data_dag():
         })
         def download_raw_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT * FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+                "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
                 --csv -o /data/open_data/permanent-bike-counters/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
     
         insert_daily >> download_daily_open_data()
