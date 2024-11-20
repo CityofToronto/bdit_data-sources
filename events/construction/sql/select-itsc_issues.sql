@@ -13,12 +13,18 @@ WITH issues AS (
         status,
         timeoption
     FROM public.issuedata
-    WHERE divisionid = 8048 --rodars new
+    WHERE
+        divisionid IN (
+            8048, --rodars new
+            8014, --rodars (old)
+            8023 --TMMS TM3 Planned Work
+        )
     ORDER BY divisionid, issueid, timestamputc DESC
 )
 
 SELECT
     issues.divisionid,
+    datadivision.shortname AS divisionname,
     issues.issueid,
     issues.timestamputc,
     issues.issuetype,
@@ -56,4 +62,5 @@ SELECT
 FROM issues
 LEFT JOIN public.issuelocationnew USING (divisionid, issueid, timestamputc)
 LEFT JOIN public.issueconfig USING (divisionid, issueid)
+LEFT JOIN public.datadivision USING (divisionid)
 ORDER BY issueid DESC
