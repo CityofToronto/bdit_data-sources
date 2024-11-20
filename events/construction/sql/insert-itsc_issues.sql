@@ -1,5 +1,5 @@
-INSERT INTO gwolofs.rodars_new (
-    divisionid, issueid, timestamputc, issuetype, description, priority,
+INSERT INTO gwolofs.itsc_issues (
+    divisionid, divisionname, issueid, timestamputc, issuetype, description, priority,
     proposedstarttimestamputc, proposedendtimestamputc, earlyendtimestamputc, status, timeoption,
     locationindex, mainroadname, fromroadname, toroadname, direction, lanesaffected,
     streetnumber, locationtype, groupid, groupdescription, sourceid, starttimestamputc,
@@ -11,6 +11,7 @@ INSERT INTO gwolofs.rodars_new (
 VALUES %s
 ON CONFLICT (divisionid, issueid, locationindex)
 DO UPDATE SET
+divisionname = excluded.divisionname,
 timestamputc = excluded.timestamputc,
 issuetype = excluded.issuetype,
 description = excluded.description,

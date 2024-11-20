@@ -1,10 +1,11 @@
--- Table: gwolofs.rodars_new
+-- Table: gwolofs.itsc_issues
 
--- DROP TABLE IF EXISTS gwolofs.rodars_new;
+-- DROP TABLE IF EXISTS gwolofs.itsc_issues;
 
-CREATE TABLE IF NOT EXISTS gwolofs.rodars_new
+CREATE TABLE IF NOT EXISTS gwolofs.itsc_issues
 (
     divisionid smallint NOT NULL,
+    divisionname text,
     issueid integer NOT NULL,
     timestamputc timestamp without time zone,
     issuetype smallint,
@@ -39,19 +40,19 @@ CREATE TABLE IF NOT EXISTS gwolofs.rodars_new
     startissueonplannedstarttime boolean,
     startstatus integer,
     updateremindernoticeseconds integer,
-    CONSTRAINT rodars_new_pkey PRIMARY KEY (divisionid, issueid, locationindex)
+    CONSTRAINT itsc_issues_pkey PRIMARY KEY (divisionid, issueid, locationindex)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.rodars_new OWNER TO dbadmin;
+ALTER TABLE IF EXISTS gwolofs.itsc_issues OWNER TO dbadmin;
 
-REVOKE ALL ON TABLE gwolofs.rodars_new FROM bdit_humans;
+REVOKE ALL ON TABLE gwolofs.itsc_issues FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.rodars_new TO bdit_humans;
+GRANT SELECT ON TABLE gwolofs.itsc_issues TO bdit_humans;
 
-GRANT ALL ON TABLE gwolofs.rodars_new TO dbadmin;
+GRANT ALL ON TABLE gwolofs.itsc_issues TO dbadmin;
 
-GRANT ALL ON TABLE gwolofs.rodars_new TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE gwolofs.itsc_issues TO rds_superuser WITH GRANT OPTION;
 
-GRANT ALL ON TABLE gwolofs.rodars_new TO vds_bot;
+GRANT ALL ON TABLE gwolofs.itsc_issues TO vds_bot;
