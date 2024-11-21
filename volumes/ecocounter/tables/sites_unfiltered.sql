@@ -10,7 +10,10 @@ CREATE TABLE ecocounter.sites_unfiltered (
     first_active timestamp without time zone,
     last_active timestamp without time zone,
     date_decommissioned timestamp without time zone,
-    counter varchar(16),
+    counter character varying(16) COLLATE pg_catalog."default",
+    linear_name_full text COLLATE pg_catalog."default",
+    side_street text COLLATE pg_catalog."default",
+    technology text COLLATE pg_catalog."default",
     CONSTRAINT sites_pkey PRIMARY KEY (site_id),
     CONSTRAINT sites_replaced_by_fkey FOREIGN KEY (replaced_by_site_id)
     REFERENCES ecocounter.sites_unfiltered (site_id) MATCH SIMPLE
