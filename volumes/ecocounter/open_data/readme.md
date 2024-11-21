@@ -28,7 +28,7 @@ ecocounter.open_data_locations
 | dt               | date      | 06/26/1994                                    | Date of count.                           |
 | daily_volume     | integer   | 939                                           | Count of users on date `dt`.             |
 
-## ecocounter.open_data_raw_counts
+## ecocounter.open_data_15min_counts
 
 | column_name      | data_type                   | sample                                        | explanation                                                                                  |
 |------------------|-----------------------------|-----------------------------------------------|----------------------------------------------------------------------------------------------|
