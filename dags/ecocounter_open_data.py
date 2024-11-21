@@ -116,9 +116,9 @@ def ecocounter_open_data_dag():
             autocommit=True,
             retries = 0
         )
-        insert_raw = PostgresOperator(
-            sql="SELECT ecocounter.open_data_raw_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
-            task_id='insert_raw_open_data',
+        insert_15min = PostgresOperator(
+            sql="SELECT ecocounter.open_data_15min_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
+            task_id='insert_15min_open_data',
             postgres_conn_id='ecocounter_bot',
             autocommit=True,
             retries = 0
@@ -131,7 +131,7 @@ def ecocounter_open_data_dag():
         })
         def download_daily_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT site_description, direction, dt, daily_volume FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
+                "SELECT site_description, direction, dt, daily_volume FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date);" \
                 --csv -o /data/open_data/permanent-bike-counters/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
             
         @task.bash(env={
@@ -139,8 +139,11 @@ def ecocounter_open_data_dag():
             "USER" :  BaseHook.get_connection("ecocounter_bot").login,
             "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
         })
-        def download_raw_open_data()->str:
+        def download_15min_open_data()->str:
             return '''psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_15min_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date);" \
+                --csv -o /data/open_data/permanent-bike-counters/ecocounter_15min_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+    
                 "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
                 --csv -o /data/open_data/permanent-bike-counters/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
     
