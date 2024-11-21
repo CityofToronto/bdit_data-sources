@@ -144,11 +144,20 @@ def ecocounter_open_data_dag():
                 "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_15min_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date);" \
                 --csv -o /data/open_data/permanent-bike-counters/ecocounter_15min_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
     
-                "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_raw_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date) LIMIT 100" \
-                --csv -o /data/open_data/permanent-bike-counters/ecocounter_raw_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
-    
+        @task.bash(env={
+            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+        })
+        def download_locations_open_data()->str:
+            return '''psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
+                    FROM ecocounter.open_data_locations" \
+                --csv -o /data/open_data/permanent-bike-counters/locations.csv'''
+
         insert_daily >> download_daily_open_data()
-        insert_raw >> download_raw_open_data()
+        insert_15min >> download_15min_open_data()
+        download_locations_open_data()
 
     @task(
         retries=0,
