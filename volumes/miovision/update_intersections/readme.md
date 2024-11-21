@@ -37,7 +37,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
     The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
 2. **date installed**  
-    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by by e-mailing Miovision, manually querying the Miovision API for the first available timestamp, or by running the [script](new_intersection_activation_dates.py) in this folder. 
+    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by running the [script](new_intersection_activation_dates.py) in this folder to find the date of the first records from the API. 
 
 3.  **date_decommissioned**  
     `date_decommissioned` is described under (#removing-intersections). 
@@ -107,11 +107,13 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 	```
 
 7. **Update geojson**  
-	Update the [geojson intersections file](../geojson/mio_intersections.geojson) by exporting to file from QGIS with `GeoJSON` format. This geojson file is helpful as a publically accessible record of our Miovision intersections.   
-	
-<p align="center">
-	<img src="geojson_export.png" alt="Export to file from QGIS" width="70%"/>
-</p>
+	Update the [geojson intersections file](../geojson/mio_intersections.geojson) using `ogr2ogr`. This geojson file is helpful as a publically accessible record of our Miovision intersections. 
+
+```bash
+cd ~/bdit_data-sources &&
+rm -f volumes/miovision/geojson/mio_intersections.geojson &&
+ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"host=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com dbname=bigdata" -sql "SELECT * FROM miovision_api.intersections ORDER BY date_installed" -nln miovision_installations
+```
 
 8. **Update `miovision_api.centreline_miovision`**
 
@@ -132,7 +134,7 @@ We need to find out all valid movements for the new intersections from the data 
 
 1. **Populate `miovision_api.volumes`**  
     If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process:  
-		`python3 intersection_tmc.py run-api --start_date={DATE INSTALLED} --end_date={TODAYS DATE} --intersection=35 --intersection=38 --pull --path=/data/airflow/data_scripts/volumes/miovision/api/config.cfg`  
+		`python3 intersection_tmc.py run-api-cli --start_date={DATE INSTALLED} --end_date={TODAYS DATE} --intersection=35 --intersection=38 --pull`  
 
 	Include `--pull` and not `--agg` to only pull data and skip data processing and gaps finding since we are only interested in finding valid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. 
 
