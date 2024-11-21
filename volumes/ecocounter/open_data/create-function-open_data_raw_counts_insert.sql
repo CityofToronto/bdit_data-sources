@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION ecocounter.open_data_raw_counts_insert(
+CREATE OR REPLACE FUNCTION ecocounter.open_data_15min_counts_insert(
     yyyy integer
 )
 RETURNS void
@@ -30,7 +30,7 @@ AS $BODY$
         HAVING COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
     )
 
-    INSERT INTO ecocounter.open_data_raw_counts (
+    INSERT INTO ecocounter.open_data_15min_counts (
         site_id, site_description, direction, datetime_bin, bin_volume
     )
     SELECT  
@@ -63,12 +63,12 @@ AS $BODY$
 
 $BODY$;
 
-ALTER FUNCTION ecocounter.open_data_raw_counts_insert(integer) OWNER TO ecocounter_admins;
+ALTER FUNCTION ecocounter.open_data_15min_counts_insert(integer) OWNER TO ecocounter_admins;
 
-GRANT EXECUTE ON FUNCTION ecocounter.open_data_raw_counts_insert(integer) TO ecocounter_admins;
-GRANT EXECUTE ON FUNCTION ecocounter.open_data_raw_counts_insert(integer) TO ecocounter_bot;
-REVOKE EXECUTE ON FUNCTION ecocounter.open_data_raw_counts_insert(integer) FROM bdit_humans;
+GRANT EXECUTE ON FUNCTION ecocounter.open_data_15min_counts_insert(integer) TO ecocounter_admins;
+GRANT EXECUTE ON FUNCTION ecocounter.open_data_15min_counts_insert(integer) TO ecocounter_bot;
+REVOKE EXECUTE ON FUNCTION ecocounter.open_data_15min_counts_insert(integer) FROM bdit_humans;
 
-COMMENT ON FUNCTION ecocounter.open_data_raw_counts_insert(integer) IS
-'Function to insert disaggregate data for a year into `ecocounter.open_data_raw_counts`. '
+COMMENT ON FUNCTION ecocounter.open_data_15min_counts_insert(integer) IS
+'Function to insert disaggregate data for a year into `ecocounter.open_data_15min_counts`. '
 'Does not overwrite existing data (eg. if sensitivity was retroactively updated).';
