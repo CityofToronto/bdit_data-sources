@@ -376,6 +376,7 @@ server <- function(input, output, session) {
         linewidth = 1.2, linetype = 'dotted'),
       geom_label_repel(
         data = cf,
+        max.iter = 1,
         aes(x = coalesce(factor_start, min_date)+3, y = max(limits$daily_volume)-50,
             color = flow_color, label = paste("CF: ", calibration_factor)))
     )
@@ -426,7 +427,8 @@ server <- function(input, output, session) {
       v = vol() %>% filter(date %in% brush_dates)
       layers <- list(
         geom_point(data = v, aes(x=date, y=daily_volume, color = flow_color), size = 2),
-        geom_label_repel(data = v, aes(x=date, y=daily_volume, label=daily_volume, color = flow_color))
+        geom_label_repel(data = v, max.iter = 1,
+                         aes(x=date, y=daily_volume, label=daily_volume, color = flow_color))
       )
     }
     return(layers)
