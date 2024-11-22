@@ -14,7 +14,7 @@ The centreline data are used by many other groups in the City and it's often imp
 
 ## How It's Structured
 
-* The `gis_core.centreline_latest` Materialized View contains the latest set of lines with unique id `centreline_id`. These lines are undirected. All edges have _from_ and _to_ nodes, though this should not be taken to indicate that edges are directed. For a directed centreline layer, check out `gis_core.routing_centreline_directional` ([see more](#centreline-segments-edges))
+* The `gis_core.centreline_latest` Materialized View contains the latest set of lines with unique id `centreline_id`. These lines are undirected. All edges have _from_ and _to_ nodes, though this should not be taken to indicate that edges are directed. For a directed centreline layer, check out `gis_core.routing_centreline_directional` ([see more](#centreline-segments-edges)) which has the necessary schema to be used in pg_routing.
 * The `centreline_intersection_point_latest` Materialized View contains the latest set of unique intersections with unique id `intersection_id`. These are any location where two lines intersect, not strictly intersections in the transportation sense ([see more](#intersections-nodes))
 
 ## Where It's Stored
@@ -41,7 +41,7 @@ Currently we are including only the following types:
 
 #### Directionality
 
-Directionality of streets can be identified with the column `oneway_dir_code_desc`, distinguishing whether the segment is a one-way street. A two way street will be represented by a single segment. `oneway_dir_code` can be used to identify whether a segment is being drawn with the digitization or against, indicating vehicular traffic direction.
+Directionality of streets can be identified with the column `oneway_dir_code_desc`, distinguishing whether the segment is a one-way street. A two way street will be represented by a single segment (`oneway_dir_code = 0`). `oneway_dir_code` can be used to identify whether a segment is being drawn with the digitization (1) or against (-1), indicating vehicular traffic direction.
 
 #### Lineage
 
