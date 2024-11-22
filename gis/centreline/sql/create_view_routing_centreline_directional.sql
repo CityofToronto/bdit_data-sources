@@ -5,7 +5,7 @@ SELECT
     concat(row_number() OVER (), dir)::bigint AS id,
     source,
     target,
-    "cost",
+    cost_length,
     geom
 
 FROM (
@@ -13,7 +13,7 @@ FROM (
         centreline.centreline_id,
         centreline.from_intersection_id AS source,
         centreline.to_intersection_id AS target,
-        centreline.shape_length AS "cost",
+        centreline.shape_length AS cost_length,
         centreline.geom,
         0 AS dir
     FROM gis_core.centreline_latest AS centreline
@@ -25,7 +25,7 @@ FROM (
         centreline.centreline_id,
         centreline.to_intersection_id AS source,
         centreline.from_intersection_id AS target,
-        centreline.shape_length AS "cost",
+        centreline.shape_length AS cost_length,
         st_reverse(centreline.geom) AS geom,
         1 AS dir
     FROM gis_core.centreline_latest AS centreline
