@@ -3,7 +3,7 @@ Pipeline to run monthly ecocounter aggregations for Open Data.
 """
 import sys
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 import logging
 import pendulum
 from functools import partial
@@ -14,7 +14,7 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
-
+from airflow.operators.python import get_current_context
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -37,7 +37,7 @@ default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     #set earlier start_date + catchup when ready?
-    'start_date': pendulum.datetime(2024, 10, 1, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 1, 1, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -48,8 +48,8 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 11 1 * *', # 10am, 1st day of each month
-    catchup=True,
+    schedule='0 12 1 * *', # 12pm, 1st day of each month
+    catchup=False,
     max_active_runs=1,
     tags=["ecocounter", "open_data"],
     doc_md=DOC_MD
@@ -96,58 +96,93 @@ def ecocounter_open_data_dag():
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
+    
+    @task()
+    def get_years(ds=None):
+        mnth = pendulum.from_format(ds, 'YYYY-MM-DD')
+        prev_mnth = mnth.subtract(months=1)
+        yrs = [str(mnth.year), str(prev_mnth.year)]
+        return list(set(yrs)) #unique
 
     @task_group()
-    def insert_and_download_data():
-        insert_daily = PostgresOperator(
-            sql="SELECT ecocounter.open_data_daily_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
-            task_id='insert_daily_open_data',
-            postgres_conn_id='ecocounter_bot',
-            autocommit=True,
-            retries = 0
-        )
-        insert_15min = PostgresOperator(
-            sql="SELECT ecocounter.open_data_15min_counts_insert({{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }})",
-            task_id='insert_15min_open_data',
-            postgres_conn_id='ecocounter_bot',
-            autocommit=True,
-            retries = 0
-        )
+    def insert_and_download_data(yr):
+        @task(map_index_template="{{ yr }}")
+        def insert_daily(yr):
+            context = get_current_context()
+            context["yr"] = yr
+            t = PostgresOperator(
+                sql=f"SELECT ecocounter.open_data_daily_counts_insert({yr}::int)",
+                task_id='insert_daily_open_data',
+                postgres_conn_id='ecocounter_bot',
+                autocommit=True,
+                retries = 0
+            )
+            return t.execute(context=context)
 
-        @task.bash(env={
-            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
-        })
-        def download_daily_open_data()->str:
-            return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT site_description, direction, dt, daily_volume FROM ecocounter.open_data_daily_counts WHERE dt >= date_trunc('year'::text, '{{ ds }}'::date);" \
-                --csv -o /data/open_data/permanent-bike-counters/ecocounter_daily_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+        @task(map_index_template="{{ yr }}")
+        def insert_15min(yr):
+            context = get_current_context()
+            context["yr"] = yr
+            t = PostgresOperator(
+                sql=f"SELECT ecocounter.open_data_15min_counts_insert({yr}::int)",
+                task_id='insert_15min_open_data',
+                postgres_conn_id='ecocounter_bot',
+                autocommit=True,
+                retries = 0
+            )
+            return t.execute(context=context)
+        
+        @task.bash(
+            map_index_template="{{ yr }}",
+            env={
+                "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+                "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+            }
+        )
+        def download_daily_open_data(yr)->str:
+            context = get_current_context()
+            context["yr"] = yr
+            return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT site_description, direction, dt, daily_volume
+                FROM ecocounter.open_data_daily_counts
+                WHERE
+                    dt >= to_date({yr}::text, 'yyyy')
+                    AND dt < LEAST(date_trunc('month', now()), to_date(({yr}::int+1)::text, 'yyyy'));" \
+                --csv -o "/data/open_data/permanent-bike-counters/ecocounter_daily_counts_{yr}.csv"'''
             
-        @task.bash(env={
-            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
-        })
-        def download_15min_open_data()->str:
-            return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT site_description, direction, datetime_bin, bin_volume FROM ecocounter.open_data_15min_counts WHERE datetime_bin >= date_trunc('year'::text, '{{ ds }}'::date);" \
-                --csv -o /data/open_data/permanent-bike-counters/ecocounter_15min_counts_{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}.csv'''
+        @task.bash(
+            map_index_template="{{ yr }}",
+            env={
+                "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+                "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+            }
+        )
+        def download_15min_open_data(yr)->str:
+            context = get_current_context()
+            context["yr"] = yr
+            return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT site_description, direction, datetime_bin, bin_volume
+                FROM ecocounter.open_data_15min_counts
+                WHERE
+                    datetime_bin >= to_date({yr}::text, 'yyyy')
+                    AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'));" \
+                --csv -o "/data/open_data/permanent-bike-counters/ecocounter_15min_counts_{yr}.csv"'''
     
-        @task.bash(env={
-            "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-            "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-            "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
-        })
-        def download_locations_open_data()->str:
-            return '''psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
-                    FROM ecocounter.open_data_locations" \
-                --csv -o /data/open_data/permanent-bike-counters/locations.csv'''
-
-        insert_daily >> download_daily_open_data()
-        insert_15min >> download_15min_open_data()
-        download_locations_open_data()
+        insert_daily(yr) >> download_daily_open_data(yr)
+        insert_15min(yr) >> download_15min_open_data(yr)
+    
+    @task.bash(env={
+        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
+        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
+        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+    })
+    def download_locations_open_data()->str:
+        return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+            "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
+                FROM ecocounter.open_data_locations" \
+            --csv -o /data/open_data/permanent-bike-counters/locations.csv'''
 
     @task(
         retries=0,
@@ -161,14 +196,14 @@ def ecocounter_open_data_dag():
             msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:",
             use_proxy=True
         )
-
+   
+    yrs = get_years()
     (
-        t_upstream_done >>
         check_data_availability >>
         reminder_message() >>
         wait_till_10th >> 
-        insert_and_download_data() >>
+        [insert_and_download_data.expand(yr = yrs), download_locations_open_data()] >>
         status_message()
     )
-
+        
 ecocounter_open_data_dag()
