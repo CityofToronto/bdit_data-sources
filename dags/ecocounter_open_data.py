@@ -12,7 +12,6 @@ from airflow.decorators import dag, task, task_group
 from airflow.models import Variable 
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
 
@@ -56,18 +55,6 @@ default_args = {
     doc_md=DOC_MD
 )
 def ecocounter_open_data_dag():
-
-    t_upstream_done = ExternalTaskSensor(
-        task_id="starting_point",
-        external_dag_id="ecocounter_pull",
-        external_task_id="done",
-        poke_interval=3600, #retry hourly
-        mode="reschedule",
-        doc_md="Wait for last day of month to run before running monthly DAG.",
-        timeout=86400, #one day
-        #wait for the 1st of the following month
-        execution_date_fn=lambda dt: dt + pendulum.duration(months=1, hours=-1) #ecocounter_pull scheduled at '0 10 * * *'
-    )
 
     check_data_availability = SQLCheckOperatorWithReturnValue(
         task_id="check_data_availability",
