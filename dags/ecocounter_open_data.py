@@ -20,7 +20,7 @@ from airflow.macros import ds_format
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, send_slack_msg
+    from dags.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -30,6 +30,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'ecocounter_open_data'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
+DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -50,7 +53,7 @@ default_args = {
     catchup=True,
     max_active_runs=1,
     tags=["ecocounter", "open_data"],
-    doc_md=__doc__
+    doc_md=DOC_MD
 )
 def ecocounter_open_data_dag():
 
