@@ -10,6 +10,7 @@
   - [Historical data](#historical-data)
   - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
   - [`ecocounter_check` DAG](#ecocounter_check-dag)
+  - [`ecocounter_check` DAG](#ecocounter_check-dag-1)
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
     - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
@@ -139,6 +140,25 @@ The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter
 - `check_if_sunday` checks if execution date is Sunday in order to only trigger the following check once weekly on Mondays.
 - `check_unvalidated_sites` runs a `SQLCheckOperatorWithReturnValue` to check for unvalidated sites or flows with non-zero volumes this week and send a slack notification with their details. 
 <!-- ecocounter_check_doc_md -->
+
+<!-- ecocounter_open_data_doc_md -->
+
+## `ecocounter_open_data` DAG
+The `ecocounter_open_data` DAG runs monthly on the 1st of the month to perform insert/download of open data extracts for the month. 
+
+- `check_data_availability` A SQLCheckOperatorWithReturnValue to check if there is data for every day of the previous month before proceeding and report if not. 
+- `reminder_message`: A slack message to indicate data should be verified and any necessary anomalous ranges added to exclude irregular data. 
+- `wait_till_10th`: A DateTimeSensor which waits until the 10th day of the month to proceed with exporting data. Can also be marked as "Success" manually to proceed earlier. 
+- `get_years`: Identifies this month and last month's years in case of additional data added for the previous month.
+- `insert_and_download_data`: TaskGroup for tasks which update and download data. Dynamically mapped over output of `get_years`. 
+  - `insert_daily_open_data`: Inserts daily data into open data table.
+  - `insert_15min_open_data`: Inserts 15min data into open data table.
+  - `download_daily_open_data`: Downloads daily data to Open Data mounted drive on Morbius.
+  - `download_15min_open_data`: Downloads 15min data to Open Data mounted drive on Morbius.
+- `download_locations_open_data`: Downloads locations table to Open Data mounted drive on Morbius.
+- `status_message`: A slack message indicating successful pipeline completion.
+
+<!-- ecocounter_open_data_doc_md -->
 
 # SQL Tables
 
