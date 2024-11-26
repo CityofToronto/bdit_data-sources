@@ -17,7 +17,8 @@
     - [`ecocounter.counts_unfiltered`](#ecocountercounts_unfiltered)
     - [`ecocounter.flows_unfiltered`](#ecocounterflows_unfiltered)
   - [QC Tables](#qc-tables)
-    - [`ecocounter.discontinuities`](#ecocounterdiscontinuities)
+    - [`ecocounter.calibration_factors`](#ecocountercalibration_factors)
+    - [`ecocounter.sensitivity_history`](#ecocountersensitivity_history)
     - [`ecocounter.anomalous_ranges`](#ecocounteranomalous_ranges)
   - [Validation](#validation)
     - [`ecocounter.manual_counts_matched`](#ecocountermanual_counts_matched)
@@ -73,10 +74,7 @@ From an email from Pierre, of Ecocounter:
 
 ## Discontinuities
 
-In January of 2024, it was determined that several sites were undercounting relative to other counting methods. To address this, the sensitivity of these sites was increased. 
-As a result of the change however, we now expect to have some degree of discontinuity in the data where counts before and after a certain point in time may not be directly comparable. 
-
-While we're still working through how best to handle this, we have recorded the times and sites that were effected in a new table, `ecocounter.discontinuities`.
+Since 2023, periodic ground-truth counts have been used to calibrate sensors. Following these studies, if sensitivity of a sensor is adjusted, the new sensitivity is logged in `ecocounter.sensitivity_history` and will result in a discontinuity in the raw volumes. However, if you use `ecocounter.counts.calibrated_volumes`, you should not see a discontinuity as both before and after volumes are adjusted to match ground-truth observations using appropriate calibration factors. 
 
 ## Using the Ecocounter API
 
@@ -219,19 +217,37 @@ Row count: 73
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 
 ## QC Tables
-These tables are used by  `ecocounter_admins` to document discontinuities and anomalous ranges in the Ecocounter data when identified.
+These tables are used by  `ecocounter_admins` to document sensitivity changes and anomalous ranges in the Ecocounter data when identified.
 
-### `ecocounter.discontinuities`
-Moments in time when data collection methods changed in such a way that we would expect clear pre- and post-change paradigms that may not be intercomparable.
+### `ecocounter.calibration_factors`
 
-Row count: 7
-| column_name   | data_type                   | sample                                                                                                                                                                                  |   Comments |
-|:--------------|:----------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------:|
-| uid           | integer                     | 1                                                                                                                                                                                       |        nan |
-| site_id       | numeric                     | 300031255.0                                                                                                                                                                             |        nan |
-| break         | timestamp without time zone | 2024-01-11 00:00:00                                                                                                                                                                     |        nan |
-| give_or_take  | interval                    | 1 days 00:00:00                                                                                                                                                                         |        nan |
-| notes         | text                        | A validation study found that several sensors, including this one, were undercounting bikes. The correct this, the sensitivity of the sensors at this site were increased  by one unit. |        nan |
+| column_name                | data_type   | sample                 |
+|:---------------------------|:------------|:-----------------------|
+| flow_id                    | numeric     | 101042943.0            |
+| count_date                 | date        |                        |
+| ecocounter_day_corr_factor | numeric     |                        |
+| setting                    | text        | Original configuration |
+| sensitivity_date_range     | daterange   | [2018-02-09, None)     |
+| factor_range               | daterange   | [2018-02-09, None)     |
+
+### `ecocounter.sensitivity_history`
+This table stores date ranges for sensitivity adjustments in order to link calibration studies to only the period during which the same sensitivity settings were in effect.
+- `sensitivity_history` must be manually updated based on communication with Eco-counter Technical Support Specialist (Derek Yates as of 2024). 
+- This table has `CONSTRAINT eco_sensitivity_exclude` to exclude flow_ids from having overlapping sensitivities. 
+- The sensetivities go from 1-4 as noted below (least to most selective):
+    - `1`: High-Traffic Bikeway (01D0) 
+    - `2`: Bikeway (01C0)
+    - `3`: Greenway (01C8)
+    - `4`: Total Selectivity (0162)
+    - `Not Standardized`: Newer ZELT sensors have more complex configurations that do not fit in to the above framework. 
+
+| column_name   | data_type   | sample                 | Comments |
+|:--------------|:------------|:-----------------------|----------|
+| flow_id       | numeric     | 101042943.0            |
+| date_range    | daterange   | [2018-02-09, None)     | Date range where sensitivity setting is applicable. Use null end date to indicate current setting. |
+| setting       | text        | Original configuration | Label the sensitivity. Include the sensitivity number (described above) if known. |
+| uid           | smallint    | 2                      | Serial Pkey to allow interactive editing |
+
 
 ### `ecocounter.anomalous_ranges`
 A means of flagging periods with questionable data.
