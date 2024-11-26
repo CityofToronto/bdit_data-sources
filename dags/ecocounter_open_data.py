@@ -144,12 +144,12 @@ def ecocounter_open_data_dag():
             context = get_current_context()
             context["yr"] = yr
             return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT site_description, direction, dt, daily_volume
-                FROM ecocounter.open_data_daily_counts
+                "SELECT location_name, direction, dt, daily_volume
+                FROM open_data.cycling_permanent_counts_daily
                 WHERE
                     dt >= to_date({yr}::text, 'yyyy')
                     AND dt < LEAST(date_trunc('month', now()), to_date(({yr}::int+1)::text, 'yyyy'));" \
-                --csv -o "/data/open_data/permanent-bike-counters/ecocounter_daily_counts_{yr}.csv"'''
+                --csv -o "/data/open_data/permanent-bike-counters/cycling_permanent_counts_daily_{yr}.csv"'''
             
         @task.bash(
             map_index_template="{{ yr }}",
@@ -163,13 +163,13 @@ def ecocounter_open_data_dag():
             context = get_current_context()
             context["yr"] = yr
             return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT site_description, direction, datetime_bin, bin_volume
-                FROM ecocounter.open_data_15min_counts
+                "SELECT location_name, direction, datetime_bin, bin_volume
+                FROM open_data.cycling_permanent_counts_15min
                 WHERE
                     datetime_bin >= to_date({yr}::text, 'yyyy')
                     AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'));" \
-                --csv -o "/data/open_data/permanent-bike-counters/ecocounter_15min_counts_{yr}.csv"'''
-    
+                --csv -o "/data/open_data/permanent-bike-counters/cycling_permanent_counts_15min_{yr}.csv"'''
+
         insert_daily(yr) >> download_daily_open_data(yr)
         insert_15min(yr) >> download_15min_open_data(yr)
     
@@ -180,9 +180,9 @@ def ecocounter_open_data_dag():
     })
     def download_locations_open_data()->str:
         return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-            "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
-                FROM ecocounter.open_data_locations" \
-            --csv -o /data/open_data/permanent-bike-counters/locations.csv'''
+                "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
+                FROM open_data.cycling_permanent_counts_locations" \
+                --csv -o /data/open_data/permanent-bike-counters/cycling_permanent_counts_locations.csv'''
 
     @task(
         retries=0,
