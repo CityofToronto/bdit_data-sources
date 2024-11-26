@@ -14,6 +14,7 @@
 - [SQL Tables](#sql-tables)
   - [Main Tables](#main-tables)
     - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
+    - [`ecocounter.counts`](#ecocountercounts)
     - [`ecocounter.counts_unfiltered`](#ecocountercounts_unfiltered)
     - [`ecocounter.flows_unfiltered`](#ecocounterflows_unfiltered)
   - [QC Tables](#qc-tables)
@@ -162,9 +163,10 @@ The `ecocounter_open_data` DAG runs monthly on the 1st of the month to perform i
 
 ## Main Tables
 Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocounter.counts_unfiltered` each have corresponding VIEWs filtered only to sites/flows marked as `validated` by a human: `ecocounter.sites`, `ecocounter.flows`, `ecocounter.counts`. They otherwise have the same structure as the parent tables described below. 
+See also Open Data SQL definitions [here](./open_data/readme.md). 
 
 ### `ecocounter.sites_unfiltered`
-CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human. Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
+CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human (`validated` = True). Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
 When you want to update new rows with missing `centreline_id`s, use [this script](./updates/ecocounter_centreline_updates.sql).  
 
 | column_name | data_type | sample | comments |
@@ -179,6 +181,26 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | centreline_id | integer | | The nearest street centreline_id, noting that ecocounter sensors are only configured to count bike like objects on a portion of the roadway ie. cycletrack or multi-use-path. Join using `JOIN gis_core.centreline_latest USING (centreline_id)`. |
 | first_active | timestamp without time zone | | First timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| date_decommissioned  | timestamp without time zone | | |
+| counter              | character varying           | ECO09063082 | This field is pulled from the API and is another unique ID frequently referred to by Ecocounter in communications. |
+| linear_name_full     | text                        | | Main road name taken from centreline. Useful for filtering all sensors on one corridor. |
+| side_street          | text                        | | Side street name | 
+| technology           | text                        | | Technology description, useful when unioning with other data sources. | 
+
+### `ecocounter.counts`
+This view contains calibrated (`calibrated_volume`) and raw (`raw_volume`) volumes for Ecocoutner flows. 
+This view excludes:
+- "unvalidated" sites and flows: Usually these don't produce any data or we do not know the location. 
+- Data labelled in anomalous_ranges as `problem_level= 'do-not-use'` 
+
+| column_name        | data_type                   | sample              |
+|:-------------------|:----------------------------|:--------------------|
+| flow_id            | numeric                     | 2102.0              |
+| datetime_bin       | timestamp without time zone | 1994-08-05 05:30:00 |
+| raw_volume         | smallint                    | 0                   |
+| calibration_factor | numeric                     |                     |
+| validation_date    | date                        |                     |
+| calibrated_volume  | numeric                     | 0.0                 |
 
 
 ### `ecocounter.counts_unfiltered`
@@ -198,7 +220,7 @@ Row count: 3,147,432
 | volume | smallint | | |
 
 ### `ecocounter.flows_unfiltered`
-CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
+CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human (`validated` = True). A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
 
 Row count: 73
 | column_name | data_type | sample | Comments |
@@ -215,11 +237,14 @@ Row count: 73
 | notes | text | | |
 | first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
+| date_decommissioned | timestamp without time zone |                     |
+| direction_main      | USER-DEFINED                | Westbound | Grouping column used for Open Data. A custom datatype was created to force this to be one of `Northbound`/`Southbound`/`Westbound`/`Eastbound`. You will need to coerce this column to text (::text) for comparison. |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document sensitivity changes and anomalous ranges in the Ecocounter data when identified.
 
 ### `ecocounter.calibration_factors`
+This view joins together `sensitivty_history` and `manual_counts_results` in order to link calibration factors to the periods during which that sensitivty applied. 
 
 | column_name                | data_type   | sample                 |
 |:---------------------------|:------------|:-----------------------|
