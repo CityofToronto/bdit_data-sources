@@ -196,13 +196,20 @@ def ecocounter_open_data_dag():
             msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:",
             use_proxy=True
         )
-   
+    
+    @task.bash()
+    def output_readme()->str:
+        return '''
+        pandoc -V geometry:margin=1in \
+            -o /data/open_data/permanent-bike-counters/cycling_permanent_counts_readme.pdf \
+            volumes/open_data/sql/cycling_permanent_counts_readme.md
+        '''
     yrs = get_years()
     (
         check_data_availability >>
         reminder_message() >>
         wait_till_10th >> 
-        [insert_and_download_data.expand(yr = yrs), download_locations_open_data()] >>
+        [insert_and_download_data.expand(yr = yrs), download_locations_open_data(), output_readme()] >>
         status_message()
     )
         
