@@ -39,3 +39,4 @@ ALTER TABLE ecocounter.open_data_locations OWNER TO ecocounter_admins;
 
 GRANT SELECT ON TABLE ecocounter.open_data_locations TO bdit_humans;
 GRANT ALL ON TABLE ecocounter.open_data_locations TO ecocounter_admins;
+GRANT SELECT ON TABLE ecocounter.open_data_locations TO ecocounter_bot;
