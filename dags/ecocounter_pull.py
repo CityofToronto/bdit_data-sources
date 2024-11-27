@@ -178,7 +178,7 @@ def pull_ecocounter_dag():
     )
     def data_checks():
         data_check_params = {
-            "table": "ecocounter.counts",
+            "table": "ecocounter.counts_unfiltered",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7
