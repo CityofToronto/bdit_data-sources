@@ -1,39 +1,20 @@
 # Tables
 
-## ecocounter.open_data_locations
+This readme contains an overview of how Open Data schema is structured for Ecocounter. For detailed column descriptions, see documentation in the Open Data folder [here](../../open_data/sql/cycling_permanent_counts_readme.md), which mirrors what is posted to Open Data.
 
-ecocounter.open_data_locations
-| column_name              | data_type   | sample                                        | explanation    | 
-|:-------------------------|:------------|:----------------------------------------------|----------------| 
-| location_name            | text        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location. |
-| direction                | text        | Eastbound                                     | Closest cardinal direction of bike flow. |
-| linear_name_full         | text        | Bloor St E                                    | Linear name full from Toronto Centreline (TCL) |
-| side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
-| lng                      | numeric     | -79.3681194                                   | Approximate longitude of sensor. |
-| lat                      | numeric     | 43.6738047                                    | Approximate latitude of sensor. |
-| centreline_id            | integer     | 8540609                                       | centreline_id corresponding to Toronto Centreline (TCL) |
-| bin_size                 | interval    | 0 days 00:15:00                               | Size of smallest datetime bin recorded by sensor. |
-| latest_calibration_study | date        |                                               | Date of latest calibration study. |
-| first_active             | date        | 1994-06-26                                    | The earliest date the sensor produced data. |
-| last_active              | date        | 2019-06-13                                    | The most recent date of available data produced by the sensor. |
-| date_decommissioned      | date        | 2019-06-13                                    | Date decommissioned. |
-| technology               | text        | Induction - Other                             | Technology of permanent sensor. |
+## `ecocounter.open_data_locations`
+List of Ecocounter site-direction pairs for Open Data. Each site-direction pair can contain more than one flow_id, eg. regular, contraflow, scooter. 
+- Only includes sites marked as `validated` in `ecocounter.sites`, `ecocounter.flows`.
+- Sites are excluded if they have no data in `ecocounter.open_data_daily_counts`, for example because of an anomalous range. 
 
 ## ecocounter.open_data_daily_counts
-
-| column_name      | data_type | sample                                        | explanation                              |
-|------------------|-----------|-----------------------------------------------|------------------------------------------|
-| location_name | text      | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.    |
-| direction        | text      | Westbound                                     | Closest cardinal direction of bike flow. |
-| dt               | date      | 06/26/1994                                    | Date of count.                           |
-| daily_volume     | integer   | 939                                           | Count of users on date `dt`.             |
+Daily volumes (calibrated) for Open Data.
+- Contains only complete days, excludes anomalous_ranges. 
+- Data is inserted into this table each month by the `ecocounter_open_data` DAG using fn `ecocounter.open_data_daily_counts_insert`. 
+- A primary key prevent us from accidentally overwriting older, already published data. 
 
 ## ecocounter.open_data_15min_counts
-
-| column_name      | data_type                   | sample                                        | explanation                                                                                  |
-|------------------|-----------------------------|-----------------------------------------------|----------------------------------------------------------------------------------------------|
-| location_name | text                        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.                                                        |
-| direction        | text                        | Westbound                                     | Closest cardinal direction of bike flow.                                                     |
-| datetime_bin     | timestamp without time zone | 06/26/1994 0:00                               | The date-time at which the record begins. See `bin_size` in `sites` table   for size of bin. |
-| bin_volume       | integer                     | 3                                             | Count of users in `datetime_bin`.                                                            |
-
+15 minute (or hourly for some older sites) volumes (calibrated) for Open Data.
+- Contains only complete days, excludes anomalous_ranges.
+- Data is inserted into this table each month by the `ecocounter_open_data` DAG using fn `ecocounter.open_data_15min_counts_insert`.
+- A primary key prevent us from accidentally overwriting older, already published data. 
