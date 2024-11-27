@@ -1,30 +1,30 @@
 <!-- TOC -->
 
 - [Bicycle loop detectors](#bicycle-loop-detectors)
-  - [Installation types](#installation-types)
-  - [Ecocounter data](#ecocounter-data)
-    - [Flows - what we know](#flows---what-we-know)
-  - [Discontinuities](#discontinuities)
-  - [Using the Ecocounter API](#using-the-ecocounter-api)
-    - [Note](#note)
-  - [Historical data](#historical-data)
-  - [`ecocounter_pull` DAG](#ecocounter_pull-dag)
-  - [`ecocounter_check` DAG](#ecocounter_check-dag)
-  - [`ecocounter_check` DAG](#ecocounter_check-dag-1)
+    - [Installation types](#installation-types)
+    - [Ecocounter data](#ecocounter-data)
+        - [Flows - what we know](#flows---what-we-know)
+    - [Discontinuities](#discontinuities)
+    - [Using the Ecocounter API](#using-the-ecocounter-api)
+        - [Note](#note)
+    - [Historical data](#historical-data)
+    - [ecocounter_pull DAG](#ecocounter_pull-dag)
+    - [ecocounter_check DAG](#ecocounter_check-dag)
+    - [ecocounter_open_data DAG](#ecocounter_open_data-dag)
 - [SQL Tables](#sql-tables)
-  - [Main Tables](#main-tables)
-    - [`ecocounter.sites_unfiltered`](#ecocountersites_unfiltered)
-    - [`ecocounter.counts`](#ecocountercounts)
-    - [`ecocounter.counts_unfiltered`](#ecocountercounts_unfiltered)
-    - [`ecocounter.flows_unfiltered`](#ecocounterflows_unfiltered)
-  - [QC Tables](#qc-tables)
-    - [`ecocounter.calibration_factors`](#ecocountercalibration_factors)
-    - [`ecocounter.sensitivity_history`](#ecocountersensitivity_history)
-    - [`ecocounter.anomalous_ranges`](#ecocounteranomalous_ranges)
-  - [Validation](#validation)
-    - [`ecocounter.manual_counts_matched`](#ecocountermanual_counts_matched)
-    - [`ecocounter.manual_counts_info`](#ecocountermanual_counts_info)
-    - [`ecocounter.manual_counts_raw`](#ecocountermanual_counts_raw)
+    - [Main Tables](#main-tables)
+        - [ecocounter.sites_unfiltered](#ecocountersites_unfiltered)
+        - [ecocounter.counts](#ecocountercounts)
+        - [ecocounter.counts_unfiltered](#ecocountercounts_unfiltered)
+        - [ecocounter.flows_unfiltered](#ecocounterflows_unfiltered)
+    - [QC Tables](#qc-tables)
+        - [ecocounter.calibration_factors](#ecocountercalibration_factors)
+        - [ecocounter.sensitivity_history](#ecocountersensitivity_history)
+        - [ecocounter.anomalous_ranges](#ecocounteranomalous_ranges)
+    - [Validation](#validation)
+        - [ecocounter.manual_counts_matched](#ecocountermanual_counts_matched)
+        - [ecocounter.manual_counts_info](#ecocountermanual_counts_info)
+        - [ecocounter.manual_counts_raw](#ecocountermanual_counts_raw)
 
 <!-- /TOC -->
 # Bicycle loop detectors
@@ -110,7 +110,7 @@ LIMIT 1000;
 
 <!-- ecocounter_pull_doc_md -->
 
-## `ecocounter_pull` DAG
+## ecocounter_pull DAG
 The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with new data. 
 
 - `pull_recent_outages` task is similar to `pull_ecocounter` task except it tries to pull data corresponding to zero volume outages within the last 60 days. This was implemented following the finding that some Ecocounters will suddenly backfill missing data due to spotty cellular signal. Max ~2 weeks of backfilling has been observed so the task was conservatively set to look back 60 days. 
@@ -131,7 +131,7 @@ The `ecocounter_pull` DAG runs daily at 3am to populate `ecocounter` schema with
 
 <!-- ecocounter_check_doc_md -->
 
-## `ecocounter_check` DAG
+## ecocounter_check DAG
 The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter_pull` to perform additional "yellow card" data checks on the new data.  
 
 - `starting_point` is an external task sensor to ensure `ecocounter_pull` DAG is complete before running.  
@@ -142,7 +142,7 @@ The `ecocounter_check` DAG runs daily at 4am following completion of `ecocounter
 
 <!-- ecocounter_open_data_doc_md -->
 
-## `ecocounter_open_data` DAG
+## ecocounter_open_data DAG
 The `ecocounter_open_data` DAG runs monthly on the 1st of the month to perform insert/download of open data extracts for the month. 
 
 - `check_data_availability` A SQLCheckOperatorWithReturnValue to check if there is data for every day of the previous month before proceeding and report if not. 
@@ -165,7 +165,7 @@ The `ecocounter_open_data` DAG runs monthly on the 1st of the month to perform i
 Key tables `ecocounter.sites_unfiltered`, `ecocounter.flows_unfiltered`, `ecocounter.counts_unfiltered` each have corresponding VIEWs filtered only to sites/flows marked as `validated` by a human: `ecocounter.sites`, `ecocounter.flows`, `ecocounter.counts`. They otherwise have the same structure as the parent tables described below. 
 See also Open Data SQL definitions [here](./open_data/readme.md). 
 
-### `ecocounter.sites_unfiltered`
+### ecocounter.sites_unfiltered`
 CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human (`validated` = True). Sites or "locations" of separate ecocounter installations. Each site may have one or more flows.
 When you want to update new rows with missing `centreline_id`s, use [this script](./updates/ecocounter_centreline_updates.sql).  
 
@@ -187,7 +187,7 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | side_street          | text                        | | Side street name | 
 | technology           | text                        | | Technology description, useful when unioning with other data sources. | 
 
-### `ecocounter.counts`
+### ecocounter.counts`
 This view contains calibrated (`calibrated_volume`) and raw (`raw_volume`) volumes for Ecocoutner flows. 
 This view excludes:
 - "unvalidated" sites and flows: Usually these don't produce any data or we do not know the location. 
@@ -203,7 +203,7 @@ This view excludes:
 | calibrated_volume  | numeric                     | 0.0                 |
 
 
-### `ecocounter.counts_unfiltered`
+### ecocounter.counts_unfiltered`
 CAUTION: Use VIEW `ecocounter.counts` instead to see only data that has been screened for
 * manually validated sites
 * manually validated flows
@@ -219,7 +219,7 @@ Row count: 3,147,432
 | datetime_bin  | timestamp without time zone | 2012-12-04 09:00:00 | indicates start time of the time bin. Note that not all time bins are the same size! |
 | volume | smallint | | |
 
-### `ecocounter.flows_unfiltered`
+### ecocounter.flows_unfiltered`
 CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human (`validated` = True). A flow is usually a direction of travel associated with a sensor at an ecocounter installation site. For earlier sensors that did not detect directed flows, a flow may be both directions of travel together, i.e. just everyone who passed over the sensor any which way.
 
 Row count: 73
@@ -243,8 +243,8 @@ Row count: 73
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document sensitivity changes and anomalous ranges in the Ecocounter data when identified.
 
-### `ecocounter.calibration_factors`
-This view joins together `sensitivty_history` and `manual_counts_results` in order to link calibration factors to the periods during which that sensitivty applied. 
+### ecocounter.calibration_factors`
+This view joins together `sensitivty_history` and `manual_counts_results` in order to link calibration factors to the periods during which that sensitivty applied. In case of multiple calibration studies during a single sensitivity range, the first one will be applied starting from the beginning of the sensitivity range until the next calibration study, and the others will be applied from the date of the study forwards, until the next study takes place. 
 
 | column_name                | data_type   | sample                 |
 |:---------------------------|:------------|:-----------------------|
@@ -255,7 +255,7 @@ This view joins together `sensitivty_history` and `manual_counts_results` in ord
 | sensitivity_date_range     | daterange   | [2018-02-09, None)     |
 | factor_range               | daterange   | [2018-02-09, None)     |
 
-### `ecocounter.sensitivity_history`
+### ecocounter.sensitivity_history`
 This table stores date ranges for sensitivity adjustments in order to link calibration studies to only the period during which the same sensitivity settings were in effect.
 - `sensitivity_history` must be manually updated based on communication with Eco-counter Technical Support Specialist (Derek Yates as of 2024). 
 - This table has `CONSTRAINT eco_sensitivity_exclude` to exclude flow_ids from having overlapping sensitivities. 
@@ -273,15 +273,14 @@ This table stores date ranges for sensitivity adjustments in order to link calib
 | setting       | text        | Original configuration | Label the sensitivity. Include the sensitivity number (described above) if known. |
 | uid           | smallint    | 2                      | Serial Pkey to allow interactive editing |
 
-
-### `ecocounter.anomalous_ranges`
-A means of flagging periods with questionable data.
+### ecocounter.anomalous_ranges`
+A means of flagging periods with questionable data. `counts` (and subsequently Open Data tables), exclude data with `problem_level = 'do-not-use'`.
 
 Row count: 9
 | column_name         | data_type   | sample                                                                                       |   Comments |
 |:--------------------|:------------|:---------------------------------------------------------------------------------------------|-----------:|
-| flow_id             | numeric     |                                                                                              |        nan |
-| site_id             | numeric     | 100042942.0                                                                                  |        nan |
+| flow_id             | numeric     |                                                                                              | It is only necessary to include one of flow_id and site_id for an anomalous_range. Use only site_id if it is a site wide issue. |
+| site_id             | numeric     | 100042942.0                                                                                  | It is only necessary to include one of flow_id and site_id for an anomalous_range. |
 | time_range          | tsrange     | [2021-02-09 00:00:00, None)                                                                  |        nan |
 | notes               | text        | Goes from reporting in the hundreds daily to mostly single digits. What could have happened? |        nan |
 | investigation_level | text        | suspect                                                                                      |        nan |
@@ -291,7 +290,7 @@ Row count: 9
 ## Validation
 These tables were created to compare Ecocounter data with Spectrum counts. For more information see: [data_collection_automation/ecocounter_validation_counts](https://github.com/Toronto-Big-Data-Innovation-Team/data_collection_automation/tree/ecocounter_validation_counts/ecocounter_validation_counts). 
 
-### `ecocounter.manual_counts_matched`
+### ecocounter.manual_counts_matched`
 Spectrum manual count volumes matched to eco-counter volumes. 1 row per 15min bin. Used for eco-coounter data validation. 
 
 Row count: 2,944
@@ -308,7 +307,7 @@ Row count: 2,944
 | bikes_path_spectrum     | integer                | 0          |        nan |
 | ecocounter_bikes        | bigint                 | 0          |        nan |
 
-### `ecocounter.manual_counts_info`
+### ecocounter.manual_counts_info`
 Spectrum manual bike count information, matched to eco-counter sites. Used for validation of eco-counter data. 1 row per manual count location.
 
 Row count: 21
@@ -329,7 +328,7 @@ Row count: 21
 | count_geom                      | USER-DEFINED      | 0101000020E6100000C136E2C96EDA53C06C0A647616D54540                                         |        nan |
 | match_line_geom                 | USER-DEFINED      | 0102000020E610000002000000C136E2C96EDA53C06C0A647616D545406FEF6C1D70DA53C010E9EEBB15D54540 |        nan |
 
-### `ecocounter.manual_counts_raw`
+### ecocounter.manual_counts_raw`
 Spectrum manual bike counts at eco-counter locations - raw data, 15min bins
 
 Row count: 3,072
