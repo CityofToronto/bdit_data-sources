@@ -180,7 +180,9 @@ def ecocounter_open_data_dag():
     })
     def download_locations_open_data()->str:
         return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_name, direction, linear_name_full, side_street, lng, lat, centreline_id, bin_size, latest_calibration_study, first_active, last_active, date_decommissioned, technology
+                "SELECT location_name, direction, linear_name_full, side_street, longitude,
+                    latitude, centreline_id, bin_size, latest_calibration_study,
+                    first_active, last_active, date_decommissioned, technology
                 FROM open_data.cycling_permanent_counts_locations" \
                 --csv -o /data/open_data/permanent-bike-counters/cycling_permanent_counts_locations.csv'''
 
