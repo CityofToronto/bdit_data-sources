@@ -3,7 +3,7 @@ Pipeline to run monthly ecocounter aggregations for Open Data.
 """
 import sys
 import os
-from datetime import timedelta, datetime
+from datetime import timedelta
 import logging
 import pendulum
 from functools import partial
@@ -32,6 +32,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+EXPORT_PATH = '/home/airflow/open_data/permanent-bike-counters' #'/data/open_data/permanent-bike-counters'
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -137,7 +138,8 @@ def ecocounter_open_data_dag():
             env={
                 "HOST":  BaseHook.get_connection("ecocounter_bot").host,
                 "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
+                "EXPORT_PATH": EXPORT_PATH,
             }
         )
         def download_daily_open_data(yr)->str:
@@ -146,17 +148,16 @@ def ecocounter_open_data_dag():
             return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
                 "SELECT location_name, direction, dt, daily_volume
                 FROM open_data.cycling_permanent_counts_daily
-                WHERE
-                    dt >= to_date({yr}::text, 'yyyy')
-                    AND dt < LEAST(date_trunc('month', now()), to_date(({yr}::int+1)::text, 'yyyy'));" \
-                --csv -o "/data/open_data/permanent-bike-counters/cycling_permanent_counts_daily_{yr}.csv"'''
+                WHERE dt < LEAST(date_trunc('month', now()));" \
+                --csv -o "$EXPORT_PATH/cycling_permanent_counts_daily.csv"'''
             
         @task.bash(
             map_index_template="{{ yr }}",
             env={
                 "HOST":  BaseHook.get_connection("ecocounter_bot").host,
                 "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
+                "EXPORT_PATH": EXPORT_PATH,
             }
         )
         def download_15min_open_data(yr)->str:
@@ -168,7 +169,7 @@ def ecocounter_open_data_dag():
                 WHERE
                     datetime_bin >= to_date({yr}::text, 'yyyy')
                     AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'));" \
-                --csv -o "/data/open_data/permanent-bike-counters/cycling_permanent_counts_15min_{yr}.csv"'''
+                --csv -o "$EXPORT_PATH/cycling_permanent_counts_15min_{yr}_{yr+1}.csv"'''
 
         insert_daily(yr) >> download_daily_open_data(yr)
         insert_15min(yr) >> download_15min_open_data(yr)
@@ -176,7 +177,8 @@ def ecocounter_open_data_dag():
     @task.bash(env={
         "HOST":  BaseHook.get_connection("ecocounter_bot").host,
         "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password
+        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
+        "EXPORT_PATH": EXPORT_PATH,
     })
     def download_locations_open_data()->str:
         return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
@@ -184,8 +186,18 @@ def ecocounter_open_data_dag():
                     latitude, centreline_id, bin_size, latest_calibration_study,
                     first_active, last_active, date_decommissioned, technology
                 FROM open_data.cycling_permanent_counts_locations" \
-                --csv -o /data/open_data/permanent-bike-counters/cycling_permanent_counts_locations.csv'''
-
+                --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
+    
+    #@task.bash(env={
+    #    "EXPORT_PATH": EXPORT_PATH,
+    #})
+    #def output_readme()->str:
+    #    return '''
+    #    pandoc -V geometry:margin=1in \
+    #        -o "$EXPORT_PATH/cycling_permanent_counts_readme.pdf" \
+    #        volumes/open_data/sql/cycling_permanent_counts_readme.md
+    #    '''
+    
     @task(
         retries=0,
         trigger_rule='all_success',
@@ -195,23 +207,21 @@ def ecocounter_open_data_dag():
         mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
         send_slack_msg(
             context=context,
-            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:",
+            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:. "
+            f"Remember to `cp {EXPORT_PATH}/* /data/open_data/permanent-bike-counters` as bigdata.",
             use_proxy=True
         )
     
-    @task.bash()
-    def output_readme()->str:
-        return '''
-        pandoc -V geometry:margin=1in \
-            -o /data/open_data/permanent-bike-counters/cycling_permanent_counts_readme.pdf \
-            volumes/open_data/sql/cycling_permanent_counts_readme.md
-        '''
     yrs = get_years()
     (
         check_data_availability >>
         reminder_message() >>
         wait_till_10th >> 
-        [insert_and_download_data.expand(yr = yrs), download_locations_open_data(), output_readme()] >>
+        [
+            insert_and_download_data.expand(yr = yrs),
+            download_locations_open_data()
+            #output_readme()
+        ] >>
         status_message()
     )
         
