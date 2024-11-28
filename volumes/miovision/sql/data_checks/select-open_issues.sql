@@ -9,7 +9,7 @@ WITH ars AS (
         leg,
         volume,
         notes
-    FROM miovision_api.open_issues_review
+    FROM miovision_api.open_issues
     WHERE volume > 0
     ORDER BY uid
 )

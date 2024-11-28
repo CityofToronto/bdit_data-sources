@@ -23,7 +23,7 @@ SELECT
         || 'and '
         || (SELECT cnt FROM all_outages
         )
-        || ' partial outages. See `miovision_api.open_issues_review`.'
+        || ' partial outages. See `miovision_api.open_issues`.'
     END AS summ, --gap_threshold
     array_agg(total_outages.descrip) AS gaps
 FROM total_outages
