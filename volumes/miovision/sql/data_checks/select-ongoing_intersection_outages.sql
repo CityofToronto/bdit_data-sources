@@ -10,7 +10,7 @@ total_outages AS (
         || oi.range_start || '` (' || CURRENT_DATE - oi.range_start || ' days)' AS descrip
     FROM miovision_api.open_issues AS oi
     JOIN miovision_api.intersections AS i USING (intersection_uid)
-    WHERE classification_uid IS NULL
+    WHERE oi.classification_uid IS NULL
 )
 
 SELECT
