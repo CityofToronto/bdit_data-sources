@@ -1,7 +1,7 @@
--- Table: miovision_api.open_issues_review
--- DROP TABLE IF EXISTS miovision_api.open_issues_review;
+-- Table: miovision_api.open_issues
+-- DROP TABLE IF EXISTS miovision_api.open_issues;
 
-CREATE TABLE IF NOT EXISTS miovision_api.open_issues_review
+CREATE TABLE IF NOT EXISTS miovision_api.open_issues
 (
     uid smallint NOT NULL,
     intersection_uid smallint,
@@ -22,13 +22,13 @@ CREATE TABLE IF NOT EXISTS miovision_api.open_issues_review
 
 TABLESPACE pg_default;
 
-ALTER TABLE miovision_api.open_issues_review OWNER TO miovision_api_bot;
+ALTER TABLE miovision_api.open_issues OWNER TO miovision_api_bot;
 
-GRANT ALL ON TABLE miovision_api.open_issues_review TO miovision_admins;
-GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE miovision_api.open_issues_review TO miovision_api_bot;
+GRANT ALL ON TABLE miovision_api.open_issues TO miovision_admins;
+GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE miovision_api.open_issues TO miovision_api_bot;
 
-REVOKE ALL ON TABLE miovision_api.open_issues_review FROM bdit_humans;
-GRANT SELECT ON TABLE miovision_api.open_issues_review TO bdit_humans;
+REVOKE ALL ON TABLE miovision_api.open_issues FROM bdit_humans;
+GRANT SELECT ON TABLE miovision_api.open_issues TO bdit_humans;
 
-REVOKE ALL ON TABLE miovision_api.open_issues_review FROM ckousin;
-GRANT UPDATE ON TABLE miovision_api.open_issues_review TO ckousin;
+REVOKE ALL ON TABLE miovision_api.open_issues FROM ckousin;
+GRANT UPDATE ON TABLE miovision_api.open_issues TO ckousin;
