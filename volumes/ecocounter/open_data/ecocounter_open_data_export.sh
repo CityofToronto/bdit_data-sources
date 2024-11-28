@@ -37,12 +37,12 @@ done
 
 #as gwolofs
 #grant permission for bigdata to read from my home folder.
-setfacl -R -m u:bigdata:rx /data/home/gwolofs/open_data/permanent-bike-counters
+setfacl -R -m u:bigdata:rx $dest_path
 
 pbrun su - bigdata
 rm /data/open_data/permanent-bike-counters/*
-cp -r /data/home/gwolofs/open_data/permanent-bike-counters/*.csv /data/open_data/permanent-bike-counters
-cp -r /data/home/gwolofs/open_data/permanent-bike-counters/*.pdf /data/open_data/permanent-bike-counters
+cp -r "$dest_path/*.csv" /data/open_data/permanent-bike-counters
+cp -r "$dest_path/*.pdf" /data/open_data/permanent-bike-counters
 
 cd /data/open_data/permanent-bike-counters
 wc -l ./*
