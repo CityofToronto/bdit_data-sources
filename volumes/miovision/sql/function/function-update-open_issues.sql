@@ -86,11 +86,11 @@ BEGIN
     ),
 
     closed AS (
-        DELETE FROM miovision_api.open_issues_review
+        DELETE FROM miovision_api.open_issues
         WHERE uid NOT IN (SELECT uid FROM open_issues)
     )
 
-    MERGE INTO miovision_api.open_issues_review AS oir
+    MERGE INTO miovision_api.open_issues AS oir
     USING open_issues AS oi 
     ON oir.uid = oi.uid
     WHEN MATCHED THEN
@@ -117,7 +117,7 @@ BEGIN
         );
 
     EXECUTE FORMAT(
-    'COMMENT ON TABLE miovision_api.open_issues_review IS %L', 
+    'COMMENT ON TABLE miovision_api.open_issues IS %L', 
     'Last updated ' || to_char(now() AT TIME ZONE 'EST5EDT', 'yyyy-mm-dd HH24:MI')
     || ' using `SELECT miovision_api.update_open_issues();`.'
     || ' This is performed automatically once per day by `miovision_pull` DAG.'
