@@ -126,5 +126,12 @@ BEGIN
 END
 $BODY$;
 
-COMMENT ON FUNCTION miovision_api.update_open_issuesIS '''A function to update miovision_api.open_issues.
-Run daily via miovision_pull Airflow DAG.''';
+COMMENT ON FUNCTION miovision_api.update_open_issues IS
+'A function to update miovision_api.open_issues. '
+'Run daily via miovision_pull Airflow DAG.';
+
+ALTER FUNCTION miovision_api.update_open_issues() OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.update_open_issues() TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.update_open_issues() TO miovision_data_detectives;
+
