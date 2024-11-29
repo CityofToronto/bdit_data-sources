@@ -1,16 +1,17 @@
 import os
 import logging
 import pandas as pd
-import struct
 from numpy import nan
+import struct
+from io import BytesIO
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
-from io import BytesIO
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/rodars_functions.py'
-SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
-#SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
+#fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/itsc_issues_functions.py'
+#SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
+SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -43,15 +44,15 @@ def geometry_from_bytes(geo_bytes):
 
 def fetch_and_insert_data(
     select_conn = PostgresHook('itsc_postgres'),
-    insert_conn = PostgresHook('vds_bot')
+    insert_conn = PostgresHook('vds_bot'),
+    start_date = None
 ):
     #generic function to pull and insert data using different connections and queries.
     select_fpath = os.path.join(SQL_DIR, 'select-itsc_issues.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
-        select_query = sql.SQL(file.read())
-            #.format(
-            #    start = sql.Literal(start_date + " 00:00:00 EST5EDT")
-            #)
+        select_query = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date)
+        )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info(f"Fetching RODARS data.")
@@ -87,7 +88,7 @@ def fetch_and_insert_data(
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, insert_query, df_no_geom)
         
-    geom_update_fpath = os.path.join(SQL_DIR, 'update-rodars_geometry.sql')
+    geom_update_fpath = os.path.join(SQL_DIR, 'update-itsc_issues_geometry.sql')
     with open(geom_update_fpath, 'r', encoding="utf-8") as file:
         geom_update_query = sql.SQL(file.read())
         
