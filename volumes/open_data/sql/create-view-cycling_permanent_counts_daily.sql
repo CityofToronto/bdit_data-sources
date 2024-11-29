@@ -1,14 +1,20 @@
 -- View: open_data.cycling_permanent_counts_daily
 
--- DROP TABLE IF EXISTS open_data.cycling_permanent_counts_daily;
+-- DROP VIEW IF EXISTS open_data.cycling_permanent_counts_daily;
 
-CREATE VIEW open_data.cycling_permanent_counts_daily AS
+CREATE OR REPLACE VIEW open_data.cycling_permanent_counts_daily AS
 SELECT
-    site_description::text AS location_name,
-    direction::text AS direction,
-    dt::date,
-    daily_volume::integer
-FROM ecocounter.open_data_daily_counts;
+    od.location_dir_id,
+    eco.site_description::text AS location_name,
+    eco.direction::text AS direction,
+    od.linear_name_full,
+    od.side_street,
+    eco.dt::date,
+    eco.daily_volume::integer
+FROM ecocounter.open_data_daily_counts AS eco
+JOIN open_data.cycling_permanent_counts_locations AS od
+    ON eco.site_description::text = od.location_name
+    AND eco.direction::text = od.direction;
 
 ALTER TABLE IF EXISTS open_data.cycling_permanent_counts_daily OWNER TO od_admins;
 
