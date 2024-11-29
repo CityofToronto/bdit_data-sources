@@ -71,8 +71,8 @@ def fetch_and_insert_data(
     geom_data = df['geometry'].map(geometry_from_bytes)
     valid_geoms = [not(x is None) for x in geom_data]
     
-    geoms_df = df[['issueid', 'divisionid']][valid_geoms]
-    geoms_df.insert(2, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
+    geoms_df = df[['issueid', 'divisionid', 'locationindex']][valid_geoms]
+    geoms_df.insert(3, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
     geoms_df = geoms_df.replace({nan: None})
     geoms_df = [tuple(x) for x in geoms_df.to_numpy()]
     
