@@ -105,6 +105,14 @@ def ecocounter_open_data_dag():
         yrs = [str(mnth.year), str(prev_mnth.year)]
         return list(set(yrs)) #unique
 
+    update_locations = PostgresOperator(
+        sql=f"SELECT ecocounter.open_data_locations_insert()",
+        task_id='update_locations',
+        postgres_conn_id='ecocounter_bot',
+        autocommit=True,
+        retries = 0
+    )
+
     @task_group()
     def insert_and_download_data(yr):
         @task(map_index_template="{{ yr }}")
@@ -134,7 +142,6 @@ def ecocounter_open_data_dag():
             return t.execute(context=context)
         
         @task.bash(
-            map_index_template="{{ yr }}",
             env={
                 "HOST":  BaseHook.get_connection("ecocounter_bot").host,
                 "USER" :  BaseHook.get_connection("ecocounter_bot").login,
@@ -142,15 +149,16 @@ def ecocounter_open_data_dag():
                 "EXPORT_PATH": EXPORT_PATH,
             }
         )
-        def download_daily_open_data(yr)->str:
-            context = get_current_context()
-            context["yr"] = yr
-            return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_name, direction, dt, daily_volume
+        def download_daily_open_data()->str:
+            return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+                "SELECT
+                    location_dir_id, location_name, direction, linear_name_full,
+                    side_street, dt, daily_volume
                 FROM open_data.cycling_permanent_counts_daily
-                WHERE dt < LEAST(date_trunc('month', now()));" \
+                WHERE dt < LEAST(date_trunc('month', now()))
+                ORDER BY location_dir_id, dt;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_daily.csv"'''
-            
+
         @task.bash(
             map_index_template="{{ yr }}",
             env={
@@ -164,14 +172,16 @@ def ecocounter_open_data_dag():
             context = get_current_context()
             context["yr"] = yr
             return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_name, direction, datetime_bin, bin_volume
+                "SELECT location_dir_id, location_name, direction, datetime_bin, bin_volume
                 FROM open_data.cycling_permanent_counts_15min
                 WHERE
                     datetime_bin >= to_date({yr}::text, 'yyyy')
-                    AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'));" \
+                    AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'))
+                ORDER BY location_dir_id, datetime_bin;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_15min_{yr}_{yr+1}.csv"'''
-
-        insert_daily(yr) >> download_daily_open_data(yr)
+        
+        #insert only latest year data, but download everything (single file)
+        insert_daily(yr) >> download_daily_open_data()
         insert_15min(yr) >> download_15min_open_data(yr)
     
     @task.bash(env={
@@ -182,10 +192,11 @@ def ecocounter_open_data_dag():
     })
     def download_locations_open_data()->str:
         return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_name, direction, linear_name_full, side_street, longitude,
-                    latitude, centreline_id, bin_size, latest_calibration_study,
+                "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
+                    longitude, latitude, centreline_id, bin_size, latest_calibration_study,
                     first_active, last_active, date_decommissioned, technology
-                FROM open_data.cycling_permanent_counts_locations" \
+                FROM open_data.cycling_permanent_counts_locations
+                ORDER BY location_dir_id;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
     
     #@task.bash(env={
@@ -217,9 +228,9 @@ def ecocounter_open_data_dag():
         check_data_availability >>
         reminder_message() >>
         wait_till_10th >> 
-        [
+        update_locations >> [
             insert_and_download_data.expand(yr = yrs),
-            download_locations_open_data()
+            download_locations_open_data(),
             #output_readme()
         ] >>
         status_message()
