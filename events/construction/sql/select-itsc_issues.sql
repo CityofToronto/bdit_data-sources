@@ -62,6 +62,7 @@ SELECT
     issueconfig.startstatus,
     issueconfig.updateremindernoticeseconds
 FROM issues
+--Note there are multiple locations for each issue (unique locationindex)
 LEFT JOIN public.issuelocationnew USING (divisionid, issueid, timestamputc)
 LEFT JOIN public.issueconfig USING (divisionid, issueid)
 LEFT JOIN public.datadivision USING (divisionid)
