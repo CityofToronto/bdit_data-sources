@@ -103,8 +103,8 @@ def eoy_create_table_dag():
         list_names = " ".join([slack_ids.get(name, name) for name in DAG_OWNERS])
         send_slack_msg(
             context=context,
-            msg=f"""{list_names} EOY DAG has run successfully. Please check out the tables on the database and make sure 
-                they have been properly created."""
+            msg=f"{list_names} EOY DAG has run successfully. Please check out the tables on the database and make sure "
+                "they have been properly created."
         )
 
     yearly_task(YR=yr()) >> success_alert()
