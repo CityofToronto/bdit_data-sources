@@ -1,5 +1,6 @@
 
 # Permanent Bicycle Counters Open Data Dictionary 
+<!-- Note: this data dictionary is converted to pdf via pandoc and published to Open Data via Airflow. -->
 
 ## cycling_permanent_counts_locations.csv
 
@@ -39,7 +40,7 @@ Daily cycling and micromobility volumes by location and direction.
 
 ## cycling_permanent_counts_15min_counts_YYYY_YYYY.csv
 
-15 minute cycling and micromobility by location and direction. Where 15 minute volumes are not available, 1 hour volumes are provided. 
+15 minute cycling and micromobility volumes by location and direction. Where 15 minute volumes are not available, 1 hour volumes are provided. The row counts in these files may exceed the limits for Excel. 
 
 | Column Name      | Data Type | Sample                         | Description                              |
 |------------------|:---------:|-------------------------------:|------------------------------------------|
@@ -50,4 +51,3 @@ Daily cycling and micromobility volumes by location and direction.
 | side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
 | datetime_bin     | timestamp                   | 06/26/1994 0:00 | The date-time at which the record begins. See `bin_size` in `sites` table for size of bin.                               |
 | bin_volume       | integer                     | 3                                             | Count of users in `datetime_bin`.                                                            |
-</nobr>
