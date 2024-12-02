@@ -50,6 +50,7 @@ default_args = {
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 12 1 * *', # 12pm, 1st day of each month
+    template_searchpath=os.path.join(repo_path,'volumes/ecocounter'),
     catchup=False,
     max_active_runs=1,
     tags=["ecocounter", "open_data"],
@@ -59,19 +60,7 @@ def ecocounter_open_data_dag():
 
     check_data_availability = SQLCheckOperatorWithReturnValue(
         task_id="check_data_availability",
-        sql="""WITH daily_volumes AS (
-            SELECT dt::date, COALESCE(SUM(daily_volume), 0) AS daily_volume
-            FROM generate_series('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date,
-                                 '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + '1 month'::interval - '1 day'::interval,
-                                 '1 day'::interval) AS dates(dt)
-            LEFT JOIN ecocounter.open_data_daily_counts USING (dt)
-            GROUP BY dt
-            ORDER BY dt
-        )
-
-        SELECT NOT(COUNT(*) > 0), 'Missing dates: ' || string_agg(dt::text, ', ')
-        FROM daily_volumes
-        WHERE daily_volume = 0""",
+        sql="data_checks/select-data-availability.sql",
         conn_id="ecocounter_bot"
     )
 
