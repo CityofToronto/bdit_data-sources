@@ -91,7 +91,7 @@ def ecocounter_open_data_dag():
     def get_years(ds=None):
         mnth = pendulum.from_format(ds, 'YYYY-MM-DD')
         prev_mnth = mnth.subtract(months=1)
-        yrs = [str(mnth.year), str(prev_mnth.year)]
+        yrs = [mnth.year, prev_mnth.year]
         return list(set(yrs)) #unique
 
     update_locations = PostgresOperator(
