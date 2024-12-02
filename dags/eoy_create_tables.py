@@ -11,8 +11,7 @@ import os
 import holidays
 import pendulum
 import logging
-from dateutil.relativedelta import relativedelta
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from airflow.decorators import dag, task, task_group
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -52,18 +51,22 @@ default_args = {'owner': ','.join(DAG_OWNERS),
     doc_md=__doc__
 )
 def eoy_create_table_dag():
+    @task
+    def yr(data_interval_end=None)->int:
+        return data_interval_end.year + 1
+         
     @task_group
-    def yearly_task():
+    def yearly_task(YR=None):
         """Task group to create yearly tables and triggers."""
+              
         @task
-        def bt_replace_trigger(ds=None):
+        def bt_replace_trigger(yr=None):
             bt_bot = PostgresHook('bt_bot')
-            replace_bt_trigger(bt_bot, ds)
+            replace_bt_trigger(bt_bot, yr)
 
         @task
-        def insert_holidays(ds=None):
-            next_year = datetime.strptime(ds, "%Y-%m-%d") + relativedelta(years=1)
-            holidays_year = holidays.CA(prov='ON', years=int(next_year.year))
+        def insert_holidays(yr=None):
+            holidays_year = holidays.CA(prov='ON', years=int(yr))
             ref_bot = PostgresHook('ref_bot')
             with ref_bot.get_conn() as con, con.cursor() as cur:
                 for dt, name in holidays_year.items():
@@ -72,24 +75,24 @@ def eoy_create_table_dag():
 
         here_create_tables = PostgresOperator(
                         task_id='here_create_tables',
-                        sql="SELECT here.create_yearly_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT here.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='here_bot',
                         autocommit=True)
         
         bt_create_tables = PostgresOperator(
                         task_id='bluetooth_create_tables',
-                        sql="SELECT bluetooth.create_obs_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT bluetooth.create_obs_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='bt_bot',
                         autocommit=True)
         
         congestion_create_table = PostgresOperator(
                         task_id='congestion_create_table',
-                        sql="SELECT congestion.create_yearly_tables('{{ macros.ds_format(data_interval_end | ds, '%Y-%m-%d', '%Y') }}')",
+                        sql="SELECT congestion.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='congestion_bot',
                         autocommit=True)
         
-        bt_replace_trigger()
-        insert_holidays()
+        bt_replace_trigger(yr=YR)
+        insert_holidays(yr=YR)
         here_create_tables
         bt_create_tables
         congestion_create_table
@@ -104,6 +107,6 @@ def eoy_create_table_dag():
                 they have been properly created."""
         )
 
-    yearly_task() >> success_alert()
+    yearly_task(YR=yr()) >> success_alert()
 
 eoy_create_table_dag()
