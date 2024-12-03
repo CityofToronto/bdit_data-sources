@@ -77,6 +77,7 @@ def pull_miovision_dag():
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
+            pre_execute=check_jan_1st,
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
@@ -86,15 +87,14 @@ def pull_miovision_dag():
       
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
+            pre_execute=check_1st_of_month,
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
             postgres_conn_id='miovision_api_bot',
             autocommit=True,
             trigger_rule='none_failed_min_one_success'
         )
 
-        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition >> (
-            check_1st_of_month.override(task_id="check_month_partition")() >> create_month_partition
-        )
+        create_annual_partition >> create_month_partition
 
     @task(trigger_rule='none_failed', retries = 1)
     def pull_miovision(ds = None, **context):
