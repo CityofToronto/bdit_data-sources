@@ -1,3 +1,8 @@
+'''Script that can be run manually to update `miovision_api.camera_details`.
+
+
+'''
+
 import configparser
 from requests import Session
 import pandas as pd
@@ -57,8 +62,24 @@ FROM camera_details AS cd
 LEFT JOIN miovision_api.intersections AS i ON cd.intersection_id = i.id
 WHERE i.date_decommissioned IS NULL;""")
 
+comment_query = sql.SQL(
+        r"""
+            DO $$
+            DECLARE comment_ text;
+            BEGIN
+                SELECT 'Miovision camera details, excluding decommissioned intersections. '
+                    || 'Last updated (manually) at '
+                    || to_char(now() AT TIME ZONE 'EST5EDT', 'yyyy-mm-dd HH24:MI')
+                    || ' using `get_camera_info.py` script. '
+                    INTO comment_;
+                EXECUTE format('COMMENT ON TABLE miovision_api.camera_details IS %L', comment_);
+            END $$;
+        """
+        )
+
 # Get intersections currently stored in `miovision_api` on Postgres.
 dbset = config['DBSETTINGS']
 with psycopg2.connect(**dbset) as con, con.cursor() as cur:
     cur.execute(truncate_query)
     execute_values(cur, insert_query, final)
+    cur.execute(comment_query)
