@@ -24,6 +24,7 @@ headers = {'Content-Type': 'application/json',
 URL_BASE = "https://api.miovision.one/api/v1"
 
 # Get intersections from Miovision API.
+# 1000 rows should be good for forseable future (currently 173)
 response = session.get(
     URL_BASE + "/intersections?pageSize=1000",
     params={},
