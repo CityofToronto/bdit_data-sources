@@ -60,7 +60,8 @@ def blip_pipeline():
     pipeline_check = SQLCheckOperatorWithReturnValue(
         task_id = 'pipeline_check',
         conn_id = 'bt_bot',
-        sql = '''SELECT  (COUNT(*) > 0) AS "_check"
+        sql = '''SELECT  (COUNT(*) > 0) AS "_check", 
+                    'There are no data inserted for '|| '{{ ds }}' AS msg
                 FROM     bluetooth.aggr_5min
                 WHERE    datetime_bin >='{{ ds }}' and datetime_bin < '{{ tomorrow_ds }}' 
                 LIMIT 1'''
