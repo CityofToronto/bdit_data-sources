@@ -30,8 +30,10 @@ Daily cycling and micromobility volumes by location and direction.
 | Column Name      | Data Type | Sample                                        | Description                              |
 |------------------|:---------:|----------------------------------------------:|------------------------------------------|
 | location_dir_id            | integer        | 1 | Unique ID for location and direction for joining to `cycling_permanent_counts_locations`. |
-| location_name    | text      | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.    |
-| direction        | text      | Westbound                                     | Closest cardinal direction of bike flow. |
+| location_name    | text                        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.                                                        |
+| direction        | text                        | Westbound                                     | Closest cardinal direction of bike flow.                                                     |
+| linear_name_full         | text        | Bloor St E                                    | Full street name of flow from Toronto Centreline (TCL) |
+| side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
 | dt               | date      | 06/26/1994                                    | Date of count.                           |
 | daily_volume     | integer   | 939                                           | Count of users on date `dt`.             |
 
@@ -45,9 +47,5 @@ Daily cycling and micromobility volumes by location and direction.
 | Column Name      | Data Type | Sample                         | Description                              |
 |------------------|:---------:|-------------------------------:|------------------------------------------|
 | location_dir_id            | integer        | 1 | Unique ID for location and direction for joining to `cycling_permanent_counts_locations`. |
-| location_name    | text                        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.                                                        |
-| direction        | text                        | Westbound                                     | Closest cardinal direction of bike flow.                                                     |
-| linear_name_full         | text        | Bloor St E                                    | Full street name of flow from Toronto Centreline (TCL) |
-| side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
 | datetime_bin     | timestamp                   | 06/26/1994 0:00 | The date-time at which the record begins. See `bin_size` in `sites` table for size of bin.                               |
 | bin_volume       | integer                     | 3                                             | Count of users in `datetime_bin`.                                                            |
