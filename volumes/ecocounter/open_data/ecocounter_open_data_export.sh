@@ -2,8 +2,8 @@ HOST=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaw
 USER=gwolofs
 #dest_path="/data/open_data/permanent-bike-counters"
 dest_path="/data/home/gwolofs/open_data/permanent-bike-counters"
-YR1=(1994 2017 2024)
-YR2=(2017 2024 2025)
+YR1=(1994 2024)
+YR2=(2024 2025)
 
 cd ~
 rm -f -r $dest_path/*.csv
