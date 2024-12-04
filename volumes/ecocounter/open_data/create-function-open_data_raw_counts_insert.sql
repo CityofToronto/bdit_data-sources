@@ -26,8 +26,11 @@ AS $BODY$
             f.direction_main,
             cc.datetime_bin::date,
             f.bin_size
-        --all datetime bins present, corrected for bin size
-        HAVING COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
+        HAVING
+            --all datetime bins present, corrected for bin size
+            COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
+            --non-zero count days
+            AND SUM(cc.calibrated_volume) > 0
     )
 
     INSERT INTO ecocounter.open_data_15min_counts (
@@ -57,7 +60,6 @@ AS $BODY$
         s.site_description,
         f.direction_main,
         cc.datetime_bin
-    HAVING SUM(cc.calibrated_volume) > 0
     ON CONFLICT (site_id, direction, datetime_bin)
     DO NOTHING;
 
