@@ -4,7 +4,7 @@
 
 ## cycling_permanent_counts_locations.csv
 
-This table contains the locations and metadata about each permanent bicycle counting sensor installation. Table can be joined to daily and 15 minute tables using `location_name` and `direction`. This table references the City of Toronto's Street Centreline dataset. 
+This table contains the locations and metadata about each permanent bicycle counting sensor installation. Table can be joined to daily and 15 minute tables using `location_dir_id`. This table references the City of Toronto's Street Centreline dataset. 
 
 | Column Name              | Data Type   | Sample                                        | Description    | 
 |-------------------------------|:-----------:|--------------------------------------:|-------------------------------------------------------------|
