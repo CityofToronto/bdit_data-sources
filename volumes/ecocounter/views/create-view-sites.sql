@@ -9,7 +9,11 @@ CREATE OR REPLACE VIEW ecocounter.sites AS (
         centreline_id,
         first_active,
         last_active,
-        date_decommissioned
+        date_decommissioned,
+        counter,
+        linear_name_full,
+        side_street,
+        technology
     FROM ecocounter.sites_unfiltered
     WHERE validated
 );

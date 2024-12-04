@@ -3,6 +3,7 @@ CREATE OR REPLACE VIEW ecocounter.flows AS (
         flow_id,
         site_id,
         flow_direction,
+        direction_main,
         flow_geom,
         bin_size,
         notes,
