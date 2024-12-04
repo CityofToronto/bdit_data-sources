@@ -11,7 +11,7 @@ mkdir "$dest_path/"
 
 for ((i=0; i<${#YR1[@]}; i++)) do
     /usr/bin/psql -h $HOST -U $USER -d bigdata -c \
-                "SELECT location_dir_id, location_name, direction, datetime_bin, bin_volume
+                "SELECT location_dir_id, datetime_bin, bin_volume
                 FROM open_data.cycling_permanent_counts_15min
                 WHERE
                     datetime_bin >= to_date(${YR1[i]}::text, 'yyyy')
