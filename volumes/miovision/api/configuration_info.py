@@ -28,7 +28,7 @@ def headers():
     api_key = BaseHook.get_connection('miovision_api_key')
     headers = {
         'Content-Type': 'application/json',
-        'apikey': api_key['key']
+        'apikey': api_key.extra_dejson['key']
     }
     return headers
 
@@ -37,12 +37,13 @@ URL_BASE = "https://api.miovision.one/api/v1"
 def get_cameras(conn):
     intersections = get_intersection_info(conn)
     cameras = pd.DataFrame()
+    HEADERS=headers()
     #for each intersection, query it's camera details
     for intersection in intersections:
         response = session.get(
             URL_BASE + f"/intersections/{intersection.id1}/cameras",
             params={},
-            headers=headers(),
+            headers=HEADERS,
             proxies=session.proxies
         )
         if response.status_code == 200:
@@ -69,12 +70,13 @@ def get_cameras(conn):
         
 def get_configuration_dates(conn):
     intersections = get_intersection_info(conn)
+    HEADERS=headers()
     configs = []
     for intersection in intersections:
         response = session.get(
             URL_BASE + f"/intersections/{intersection.id1}/hardware/detectionConfiguration",
             params={},
-            headers=headers(),
+            headers=HEADERS,
             proxies=session.proxies
         )
         if response.status_code == 200:
