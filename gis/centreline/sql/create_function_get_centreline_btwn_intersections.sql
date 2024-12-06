@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION gis_core.get_centreline_btwn_intersections(
 )
 
 RETURNS record
-LANGUAGE 'sql'
+LANGUAGE SQL
 COST 100
 STABLE STRICT PARALLEL UNSAFE
 AS $BODY$
