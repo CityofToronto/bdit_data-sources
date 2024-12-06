@@ -19,8 +19,8 @@ WITH issues AS (
             8014, --rodars (old)
             8023 --TMMS TM3 Planned Work
         )
-        AND timestamputc >= {start}::date -- noqa: PRS
-        AND timestamputc < {start}::date + interval '1 day' -- noqa: PRS
+        --AND timestamputc >= {start}::date -- noqa: PRS
+        --AND timestamputc < {start}::date + interval '1 day' -- noqa: PRS
     ORDER BY divisionid ASC, issueid ASC, timestamputc DESC
 )
 

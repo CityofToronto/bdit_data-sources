@@ -8,7 +8,7 @@ INSERT INTO congestion_events.itsc_issues (
     updateremindernoticeseconds
 )
 VALUES %s
-ON CONFLICT (divisionid, issueid, locationindex)
+ON CONFLICT (divisionid, issueid)
 DO UPDATE SET
 divisionname = excluded.divisionname,
 timestamputc = excluded.timestamputc,
