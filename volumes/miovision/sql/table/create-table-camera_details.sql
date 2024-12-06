@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS miovision_api.camera_details
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS miovision_api.camera_details
-    OWNER to miovision_api_bot;
+OWNER TO miovision_api_bot;
 
 REVOKE ALL ON TABLE miovision_api.camera_details FROM bdit_humans;
 
