@@ -15,7 +15,7 @@ AS $BODY$
     
 WITH results as (
     SELECT * 
-    FROM pgr_dijkstra('SELECT id, source::int, target::int, cost::int 
+    FROM pgr_dijkstra('SELECT id, source::int, target::int, cost_length::int 
                       as cost from gis_core.routing_centreline_directional', _node_start, _node_end)
 )
 
