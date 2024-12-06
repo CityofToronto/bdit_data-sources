@@ -4,13 +4,14 @@
 '''
 import pytz
 import os
-import configparser
 from requests import Session
 import pandas as pd
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from datetime import datetime
 import logging
+
+from airflow.hooks.base_hook import BaseHook
 
 from .intersection_tmc import get_intersection_info
 
@@ -19,16 +20,17 @@ logging.basicConfig(level=logging.INFO)
 
 SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
 
-# Get api key from airflow variable.
-config = configparser.ConfigParser()
-config.read('/data/airflow/data_scripts/volumes/miovision/api/config.cfg')
-api_key=config['API']
-
 session = Session()
 session.proxies = {}
 
-headers = {'Content-Type': 'application/json',
-           'apikey': api_key['key']}
+def headers():
+    '''get api key from airflow variable.'''
+    api_key = BaseHook.get_connection('miovision_api_key')
+    headers = {
+        'Content-Type': 'application/json',
+        'apikey': api_key['key']
+    }
+    return headers
 
 URL_BASE = "https://api.miovision.one/api/v1"
 
@@ -40,7 +42,7 @@ def get_cameras(conn):
         response = session.get(
             URL_BASE + f"/intersections/{intersection.id1}/cameras",
             params={},
-            headers=headers,
+            headers=headers(),
             proxies=session.proxies
         )
         if response.status_code == 200:
@@ -72,7 +74,7 @@ def get_configuration_dates(conn):
         response = session.get(
             URL_BASE + f"/intersections/{intersection.id1}/hardware/detectionConfiguration",
             params={},
-            headers=headers,
+            headers=headers(),
             proxies=session.proxies
         )
         if response.status_code == 200:
