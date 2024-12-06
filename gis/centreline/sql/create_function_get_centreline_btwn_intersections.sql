@@ -15,7 +15,7 @@ AS $BODY$
     
 WITH results as (
     SELECT * 
-    FROM pgr_dijkstra('SELECT id, source::int, target::int, cost::int 
+    FROM pgr_dijkstra('SELECT id, source::int, target::int, cost_length::int 
                       as cost from gis_core.routing_centreline_directional', _node_start, _node_end)
 )
 
@@ -28,7 +28,8 @@ $BODY$;
 ALTER FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) OWNER TO gis_admins;
 
 COMMENT ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer)
-IS 'Routing function for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';
+IS 'Routing function for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, 
+    as well as one line geometry between two intersections.';
 
 GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) TO bdit_humans;
 
