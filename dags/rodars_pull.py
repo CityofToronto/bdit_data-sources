@@ -3,7 +3,7 @@ import sys
 from functools import partial
 from datetime import datetime, timedelta
 
-from airflow.decorators import dag, task_group, task
+from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 
@@ -13,9 +13,10 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from events.construction.itsc_issues_functions import fetch_and_insert_data
+from events.construction.itsc_issues_functions import (
+    fetch_and_insert_issue_data, fetch_and_insert_location_data
+)
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
-from dags.custom_operators import SQLCheckOperatorWithReturnValue
 
 README_PATH = os.path.join(repo_path, 'events/construction/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -47,14 +48,21 @@ default_args = {
 
 def rodars_dag():
     @task
-    def pull_rodars(ds = None):
+    def pull_rodars_issues(ds = None):
         "Get RODARS data from ITSC and insert into RDS `vds.vdsconfig`"
         itsc_bot = PostgresHook('itsc_postgres')
         vds_bot = PostgresHook('vds_bot')
-        fetch_and_insert_data(select_conn=itsc_bot, insert_conn=vds_bot, start_date=ds)
+        fetch_and_insert_issue_data(select_conn=itsc_bot, insert_conn=vds_bot, start_date=ds)
     
+    @task
+    def pull_rodar_locations(ds = None):
+        "Get RODARS data from ITSC and insert into RDS `vds.vdsconfig`"
+        itsc_bot = PostgresHook('itsc_postgres')
+        vds_bot = PostgresHook('vds_bot')
+        fetch_and_insert_location_data(select_conn=itsc_bot, insert_conn=vds_bot, start_date=ds)
     #add a delete task to remove outdated revisions?
     
-    pull_rodars()
+    pull_rodars_issues()
+    pull_rodar_locations()
 
 rodars_dag()
