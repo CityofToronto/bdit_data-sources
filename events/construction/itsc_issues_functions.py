@@ -43,13 +43,6 @@ def geometry_from_bytes(geo_bytes):
             coordinates_list.append(coordinates)
         return coordinates_list
 
-
-json_str = df['lanesaffected'][1] #
-json_str = df['lanesaffected'][2] #''
-json_str = df['lanesaffected'][4] #LocationDescription, EncodedCoordinates, LocationBlockLevel, RoadClosureType at top level
-json_str = df['lanesaffected'][1116]
-process_lanesaffected(json_str)
-
 def process_row_lanesaffected(json_str):
     if (json_str == 'Unknown') | (json_str is None):
         return None
@@ -69,10 +62,6 @@ def process_row_lanesaffected(json_str):
         for key in keys:
             lanes.insert(0, key, lanesaffected[key])
     return lanes
-
-lanesaffected = df['lanesaffected'][1:10].apply(process_lanesaffected).tolist()
-
-lanesaffected[2]
 
 def fetch_and_insert_issue_data(
     select_conn = PostgresHook('itsc_postgres'),
