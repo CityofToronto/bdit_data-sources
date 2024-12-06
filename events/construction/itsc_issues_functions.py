@@ -43,7 +43,7 @@ def geometry_from_bytes(geo_bytes):
             coordinates_list.append(coordinates)
         return coordinates_list
 
-def process_row_lanesaffected(json_str):
+def process_lanesaffected(json_str):
     if (json_str == 'Unknown') | (json_str is None):
         return None
     lanesaffected = json.loads(json_str)
