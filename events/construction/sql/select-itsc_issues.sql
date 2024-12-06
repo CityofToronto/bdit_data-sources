@@ -37,17 +37,6 @@ SELECT
     issues.earlyendtimestamputc,
     issues.status,
     issues.timeoption,
-    issuelocationnew.locationindex,
-    issuelocationnew.mainroadname,
-    issuelocationnew.fromroadname,
-    issuelocationnew.toroadname,
-    issuelocationnew.direction,
-    issuelocationnew.lanesaffected,
-    issuelocationnew.geometry,
-    issuelocationnew.streetnumber,
-    issuelocationnew.locationtype,
-    issuelocationnew.groupid,
-    issuelocationnew.groupdescription,
     issueconfig.sourceid,
     issueconfig.starttimestamputc,
     issueconfig.endtimestamputc,
@@ -62,8 +51,6 @@ SELECT
     issueconfig.startstatus,
     issueconfig.updateremindernoticeseconds
 FROM issues
---Note there are multiple locations for each issue (unique locationindex)
-LEFT JOIN public.issuelocationnew USING (divisionid, issueid, timestamputc)
 LEFT JOIN public.issueconfig USING (divisionid, issueid)
 LEFT JOIN public.datadivision USING (divisionid)
 ORDER BY issueid DESC

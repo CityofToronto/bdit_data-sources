@@ -5,7 +5,7 @@ WITH newest_timestamps AS (
         divisionid,
         issueid,
         timestamputc
-    FROM gwolofs.itsc_issues
+    FROM congestion_events.itsc_issues
     ORDER BY
         divisionid,
         issueid,
@@ -13,6 +13,6 @@ WITH newest_timestamps AS (
 )
 
 SELECT *
-FROM gwolofs.itsc_issues
+FROM congestion_events.itsc_issues
 LEFT JOIN newest_timestamps USING (divisionid, issueid, timestamputc)
 WHERE newest_timestamps.timestamputc IS NULL
