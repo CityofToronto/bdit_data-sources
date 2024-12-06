@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 from numpy import nan
 import struct
+import json
 from io import BytesIO
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
@@ -42,12 +43,42 @@ def geometry_from_bytes(geo_bytes):
             coordinates_list.append(coordinates)
         return coordinates_list
 
-def fetch_and_insert_data(
+
+json_str = df['lanesaffected'][1] #
+json_str = df['lanesaffected'][2] #''
+json_str = df['lanesaffected'][4] #LocationDescription, EncodedCoordinates, LocationBlockLevel, RoadClosureType at top level
+json_str = df['lanesaffected'][1116]
+process_lanesaffected(json_str)
+
+def process_row_lanesaffected(json_str):
+    if (json_str == 'Unknown') | (json_str is None):
+        return None
+    lanesaffected = json.loads(json_str)
+    #expand laneapproach nested json
+    try:
+        lanes = pd.json_normalize(lanesaffected, 'LaneApproaches')
+    except TypeError as e:
+        print(lanesaffected)
+        print(e)
+        return None
+    lanes = lanes.rename(columns={'FeatureId': 'centreline_id', 'RoadId': 'linear_name_id'})
+    #add extra, non-nested variables
+    keys = list(lanesaffected.keys())
+    keys = keys.remove('LaneApproaches')
+    if keys is not None:
+        for key in keys:
+            lanes.insert(0, key, lanesaffected[key])
+    return lanes
+
+lanesaffected = df['lanesaffected'][1:10].apply(process_lanesaffected).tolist()
+
+lanesaffected[2]
+
+def fetch_and_insert_issue_data(
     select_conn = PostgresHook('itsc_postgres'),
     insert_conn = PostgresHook('vds_bot'),
     start_date = None
 ):
-    #generic function to pull and insert data using different connections and queries.
     select_fpath = os.path.join(SQL_DIR, 'select-itsc_issues.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read()).format(
@@ -65,17 +96,66 @@ def fetch_and_insert_data(
         LOGGER.critical(exc)
         raise Exception()
     
+    #transform values for inserting
+    df_final = df.replace({pd.NaT: None, nan: None})
+    df_final = [tuple(x) for x in df_final.to_numpy()]
+    
+    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues.sql')
+    with open(insert_fpath, 'r', encoding="utf-8") as file:
+        insert_query = sql.SQL(file.read())
+        
+    with insert_conn.get_conn() as con, con.cursor() as cur:
+        execute_values(cur, insert_query, df_final)
+
+def fetch_and_insert_location_data(
+    select_conn = PostgresHook('itsc_postgres'),
+    insert_conn = PostgresHook('vds_bot'),
+    start_date = None
+):
+    #generic function to pull and insert data using different connections and queries.
+    select_fpath = os.path.join(SQL_DIR, 'select-itsc_issue_locations.sql')
+    with open(select_fpath, 'r', encoding="utf-8") as file:
+        select_query = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date)
+        )
+    try:
+        with select_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info(f"Fetching RODARS data.")
+            cur.execute(select_query)
+            data = cur.fetchall()
+            df = pd.DataFrame(data)
+            df.columns=[x.name for x in cur.description]
+    except Error as exc:
+        LOGGER.critical(f"Error fetching RODARS data.")
+        LOGGER.critical(exc)
+        raise Exception()
+    
+    pkeys = ['divisionid', 'issueid', 'timestamputc', 'locationindex']
+    expanded_list = []
+    for row in df.iterrows():
+        expanded = process_lanesaffected(row[1]['lanesaffected'])
+        # Add primary key columns to the expanded data
+        if expanded is None:
+            continue
+        else:
+            for col in pkeys:
+                expanded[col] = row[1][col]
+        expanded_list.append(expanded)
+    df_expanded = pd.concat(expanded_list, ignore_index=True)
+    
+    df = pd.merge(df, df_expanded, on = pkeys)
+        
     #older rodars data doesn't have this value?
     df['locationindex'] = df['locationindex'].replace({nan: 0})
     
-    geom_data = df['geometry'].map(geometry_from_bytes)
+    geom_data = df['geometry'].map(geometry_from_bytes)  
     valid_geoms = [not(x is None) for x in geom_data]
     
-    geoms_df = df[['issueid', 'divisionid', 'locationindex']][valid_geoms]
+    geoms_df = df[pkeys][valid_geoms]
     geoms_df.insert(3, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
     geoms_df = geoms_df.replace({nan: None})
-    geoms_df = [tuple(x) for x in geoms_df.to_numpy()]
-    
+    df = pd.merge(df, geoms_df, on = pkeys)
+   
     #transform values for inserting
     df_no_geom = df.drop('geometry', axis = 1)
     df_no_geom = df_no_geom.replace({pd.NaT: None, nan: None})

@@ -1,4 +1,4 @@
-INSERT INTO gwolofs.itsc_issues (
+INSERT INTO congestion_events.itsc_issues (
     divisionid, divisionname, issueid, timestamputc, issuetype, description, priority,
     proposedstarttimestamputc, proposedendtimestamputc, earlyendtimestamputc, status, timeoption,
     locationindex, mainroadname, fromroadname, toroadname, direction, lanesaffected,

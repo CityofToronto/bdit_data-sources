@@ -1,8 +1,8 @@
--- Table: gwolofs.itsc_issues
+-- Table: congestion_events.itsc_issues
 
--- DROP TABLE IF EXISTS gwolofs.itsc_issues;
+-- DROP TABLE IF EXISTS congestion_events.itsc_issues;
 
-CREATE TABLE IF NOT EXISTS gwolofs.itsc_issues
+CREATE TABLE IF NOT EXISTS congestion_events.itsc_issues
 (
     divisionid smallint NOT NULL,
     divisionname text,
@@ -16,17 +16,6 @@ CREATE TABLE IF NOT EXISTS gwolofs.itsc_issues
     earlyendtimestamputc timestamp without time zone,
     status integer,
     timeoption smallint,
-    locationindex integer,
-    mainroadname text,
-    fromroadname text,
-    toroadname text,
-    direction smallint,
-    lanesaffected text,
-    geometry geometry,
-    streetnumber text,
-    locationtype integer,
-    groupid integer,
-    groupdescription text,
     sourceid text,
     starttimestamputc timestamp without time zone,
     endtimestamputc timestamp without time zone,
@@ -40,19 +29,19 @@ CREATE TABLE IF NOT EXISTS gwolofs.itsc_issues
     startissueonplannedstarttime boolean,
     startstatus integer,
     updateremindernoticeseconds integer,
-    CONSTRAINT itsc_issues_pkey PRIMARY KEY (divisionid, issueid, locationindex)
+    CONSTRAINT itsc_issues_pkey PRIMARY KEY (divisionid, issueid)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.itsc_issues OWNER TO dbadmin;
+ALTER TABLE IF EXISTS congestion_events.itsc_issues OWNER TO dbadmin;
 
-REVOKE ALL ON TABLE gwolofs.itsc_issues FROM bdit_humans;
+REVOKE ALL ON TABLE congestion_events.itsc_issues FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.itsc_issues TO bdit_humans;
+GRANT SELECT ON TABLE congestion_events.itsc_issues TO bdit_humans;
 
-GRANT ALL ON TABLE gwolofs.itsc_issues TO dbadmin;
+GRANT ALL ON TABLE congestion_events.itsc_issues TO dbadmin;
 
-GRANT ALL ON TABLE gwolofs.itsc_issues TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE congestion_events.itsc_issues TO rds_superuser WITH GRANT OPTION;
 
-GRANT ALL ON TABLE gwolofs.itsc_issues TO vds_bot;
+GRANT ALL ON TABLE congestion_events.itsc_issues TO vds_bot;
