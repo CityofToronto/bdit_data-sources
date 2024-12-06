@@ -9,14 +9,15 @@
     - [`movements`](#movements)
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
-    - [`volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous\_ranges)](#volumes_15min_mvt-use-view-volumes_15min_mvt_filtered-to-exclude-anomalous_ranges)
-    - [`volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous\_ranges)](#volumes_15min-use-view-volumes_15min_filtered-to-exclude-anomalous_ranges)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`volumes_15min`](#volumes_15min)
     - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
   - [Reference Tables](#reference-tables)
     - [`miovision_api.breaks`](#miovision_apibreaks)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
+    - [`miovision_api.open_issues`](#miovision_apiopen_issues)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
     - [`movement_map`](#movement_map)
     - [`periods`](#periods)
@@ -232,7 +233,8 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   }
 ```
 
-### `volumes_15min_mvt` (Use view `volumes_15min_mvt_filtered` to exclude anomalous_ranges)
+### `volumes_15min_mvt`
+**(Use view `volumes_15min_mvt_filtered` to exclude anomalous_ranges)**
 
 `volumes_15min_mvt` contains data aggregated into 15 minute bins. In order to make averaging hourly volumes simpler, the volume can be `NULL` (for all modes) or `0` for classifications 1, 2, 6, 10 (which corresponds to light vehicles, bicycles (classifications 2 and 10) and pedestrians).
 
@@ -260,7 +262,8 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `volumes_15min` (Use view `volumes_15min_filtered` to exclude anomalous_ranges)
+### `volumes_15min`
+**(Use view `volumes_15min_filtered` to exclude anomalous_ranges)**
 
 Data table storing ATR versions of the 15-minute turning movement data. Data in
 `volumes` is stored in TMC format, so must be converted to ATR to be included in
@@ -367,6 +370,28 @@ The `anomalous_ranges` table is used to log issues related to specific intersect
 | investigation_level | references `miovision_api.anomaly_investigation_levels`; indicates the degree to which the issue has been investigated. Is it just a suspicion? Has it been authoritatively confirmed? Etc. |
 | problem_level | references `miovision_api.anomaly_problem_levels`; indicates the degree or nature of the problem. e.g. valid with a caveat vs do-not-use under any circumstance |
 | leg | Intersection leg which is affected by range. Null refers to all legs. |
+
+### `miovision_api.open_issues`
+
+`open_issues` is a complementary table to `anomalous_ranges`. It is similar to a view of anomalous ranges which are currently open, except it is a table to allow interactive editing in PgAdmin. Each day via Airflow DAG, issues which are no longer active are removed, but the "logged" and "reviewer_notes" columns remain and other columns may be updated. 
+
+| column_name        | data_type   | sample                                                                                                 |
+|:-------------------|:------------|:-------------------------------------------------------------------------------------------------------|
+| uid                | smallint    | 1797                                                                                                   |
+| intersection_uid   | smallint    | 1                                                                                                      |
+| intersection_id    | text        | 8184ba7d-a2e3-4a1c-b70f-31da15e7462a                                                                   |
+| intersection_name  | text        | Bathurst Street and Adelaide Street West                                                               |
+| classification_uid | smallint    | 2                                                                                                      |
+| classification     | text        | Bicycle TMC                                                                                            |
+| leg                | text        | W                                                                                                      |
+| range_start        | date        | 2024-11-20                                                                                             |
+| num_days           | integer     | 8                                                                                                      |
+| notes              | text        | Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts |
+| volume             | bigint      |                                                                                                        |
+| alerts             | text        |                                                                                                        |
+| logged             | boolean     |                                                                                                        |
+| reviewer_notes     | text        |                                                                                                        |
+
 
 ### `miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`
 These two tables are used to enforce standardized descriptions in the `investigation_level` and `problem_level` columns of `anomalous_ranges`. 

@@ -44,13 +44,12 @@ def create_bt_obs_tables(pg_hook = None, dt = None):
     finally:
         conn.close()
 
-def replace_bt_trigger(pg_hook = None, dt = None):
+def replace_bt_trigger(pg_hook = None, yr = None):
     '''Creates sql for the trigger to send data to the newly created tables and then executes it'''
     logger = logging.getLogger('create_bt_sql_tables')
-    next_year = _get_year_from_dt(dt)
     conn = pg_hook.get_conn()
     sql = trigger_sql_preamble
-    for year in range (int(next_year), 2013, -1):
+    for year in range (int(yr), 2013, -1):
         for month in range(12, 0, -1):
             if month < 10:
                 month= '0'+str(month)

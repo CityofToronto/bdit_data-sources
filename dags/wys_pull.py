@@ -58,7 +58,7 @@ default_args = {
     max_active_runs=5,
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     schedule='0 17 * * *', # Run at 5:00 PM local time every day
-    tags=["wys", "data_pull", "partition_create", "data_checks"],
+    tags=["wys", "data_pull", "partition_create", "data_checks", "google_sheets"],
     doc_md=DOC_MD
 )
 def pull_wys_dag():
@@ -164,7 +164,7 @@ def pull_wys_dag():
         wys_postgres = PostgresHook("wys_bot")
 
         #to get credentials to access google sheets
-        wys_api_hook = GoogleBaseHook('vz_api_google')
+        wys_api_hook = GoogleBaseHook('google_sheets_api')
         cred = wys_api_hook.get_credentials()
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
         

@@ -31,7 +31,7 @@ response = session.get(
 df_api = pd.DataFrame(response.json()['intersections'])
 df_api = df_api[['id', 'name']].copy()
 df_api.columns = ['id', 'intersection_name']
-df_api[df_api['intersection_name'] != 'Testing Lab'] #exclude Testing Lab
+df_api = df_api[df_api['intersection_name'] != 'Testing Lab'] #exclude Testing Lab
 
 # Get intersections currently stored in `miovision_api` on Postgres.
 dbset = config['DBSETTINGS']

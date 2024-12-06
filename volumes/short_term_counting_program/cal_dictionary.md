@@ -1,3 +1,9 @@
+## What is `TRAFFIC.CAL`?
+
+This is an old FLOW table (`TRAFFIC.CAL`) in the legacy Oracle database. It appears to contain Turning Movement Count (TMC) summary statistics for AM peak, PM peak, off peak, and 8-hour totals for a TMC study. These include by direction, mode, and movements.
+
+## Column List
+
 Field Name|Type|Description
 ----------|----|----------
 ID|Autonumber|Autonumber function
