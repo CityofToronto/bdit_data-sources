@@ -34,11 +34,11 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             tables = Variable.get('gcc_layers', deserialize_json=True)
             return tables[name]
                     
-        @task() #add after 2.9.3 upgrade: map_index_template="{{ table_name }}"
+        @task(map_index_template="{{ table_name }}")
         def pull_layer(layer, conn_id):
-            #name mapped task (implement after 2.9.3 upgrade)
-            #context = get_current_context()
-            #context["table_name"] = layer[0]
+            #name mapped task
+            context = get_current_context()
+            context["table_name"] = layer[0]
             #get db connection
             conn = PostgresHook(conn_id).get_conn()
             
@@ -92,7 +92,7 @@ for item in filtered_dags:
         create_gcc_puller_dag(
             dag_id=dag_name,
             default_args=DEFAULT_ARGS,
-            name=dag_name,
+            name=item,
             conn_id=DAGS[item]['conn'],
         )
     )

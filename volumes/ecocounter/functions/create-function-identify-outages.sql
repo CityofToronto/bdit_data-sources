@@ -45,7 +45,10 @@ WITH ongoing_outages AS (
         f.last_active,
         f.date_decommissioned,
         dates.dt
-    HAVING SUM(c.volume) IS NULL
+    HAVING
+        SUM(c.volume) IS NULL
+        --not all datetime bins present, corrected for bin size
+        OR COUNT(DISTINCT c.datetime_bin) <> (3600*24 / EXTRACT(epoch FROM f.bin_size))
     WINDOW w AS (PARTITION BY f.flow_id ORDER BY dates.dt)
     ORDER BY
         f.flow_id,

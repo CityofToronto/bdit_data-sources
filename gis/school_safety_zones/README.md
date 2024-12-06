@@ -47,7 +47,7 @@ The DAG consists of two main tasks as shown in the below figure:
 
 ## 3. Sheets Credentials
 
-A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data, the contents of this file can be downloaded from [the google console](https://console.cloud.google.com/iam-admin/serviceaccounts/details/) if you're logged in to the right google account. This is currently stored in an encrypted Airflow connection: `vz_api_google`.
+A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data, the contents of this file can be downloaded from [the google console](https://console.cloud.google.com/iam-admin/serviceaccounts/details/) if you're logged in to the right google account. This is currently stored in an encrypted Airflow connection: `google_sheets_api`.
 
 ## 4. Adding a new year
 
@@ -66,7 +66,7 @@ CREATE TABLE vz_safety_programs_staging.school_safety_zone_yyyy_raw (
 
 ### 4.2 Request sharing permission to the new sheet
 
-The sheet must be shared with `vz-sheets@quickstart-1568664221624.iam.gserviceaccount.com`. This ought to be View-only. This email is saved in the Airflow credentials as `wys_cred.service_account_email`.  
+The sheet must be shared with `sheets-puller@bubbly-fuze-182523.iam.gserviceaccount.com`. This ought to be View-only. This email is associated with the `terrestrial.wherever@gmail.com` email and saved in the `google_sheets_api` Airflow connection.
 
 ### 4.3 Add the New Google Sheet to Airflow
 

@@ -6,13 +6,9 @@ import sys
 import os
 import pendulum
 
-from airflow import DAG
-from datetime import datetime, timedelta
-from airflow.operators.bash_operator import BashOperator
-from airflow.models.connection import Connection
+from datetime import timedelta
 from airflow.hooks.base_hook import BaseHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.decorators import dag, task, task_group
 from airflow.macros import ds_add, ds_format
@@ -21,8 +17,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from here.traffic.here_api import query_dates, get_access_token, get_download_url, download_data, send_data_to_database
-    cfg_path = repo_path
+    from here.traffic.here_api import query_dates, get_access_token, get_download_url, HereAPIException
 except:
     raise ImportError("Cannot import slack alert functions")
 
@@ -58,15 +53,15 @@ default_args = {'owner': ','.join(names),
      schedule_interval='0 17 * * * ' ,
      catchup=False,
      doc_md = doc_md,
-     tags=["HERE"]
+     tags=["HERE", "data_pull"]
      )
 
 def pull_here():
-
+    
     @task
     def send_request():
         api_conn = BaseHook.get_connection('here_api_key')
-        access_token = get_access_token(api_conn.password, api_conn.extra_dejson['client_secret'], api_conn.extra_dejson['token_url'])
+        access_token = get_access_token(api_conn)
         return access_token
 
     @task
@@ -76,10 +71,10 @@ def pull_here():
         request_id = query_dates(access_token, pull_date, pull_date, api_conn.host, api_conn.login, api_conn.extra_dejson['user_email'])
         return request_id
     
-    @task(retries=2) 
+    @task(retries=0) 
     def get_download_link(request_id: str, access_token: str):
         api_conn = BaseHook.get_connection('here_api_key')
-        download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login)
+        download_url = get_download_url(request_id, api_conn.extra_dejson['status_base_url'], access_token, api_conn.login, api_conn)
         return download_url
     
     access_token = send_request()
