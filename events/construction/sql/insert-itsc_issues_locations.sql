@@ -1,8 +1,9 @@
 --this redundant CTE is just to apply ST_GeomFromText to geom_text.
 WITH locations (
-    divisionid, issueid, timestamputc, locationindex, mainroadname,
-    fromroadname, toroadname, direction, lanesaffected, streetnumber,
-    locationtype, groupid, groupdescription, direction, roadname,
+    divisionid, issueid, timestamputc, locationindex, mainroadname, fromroadname,
+    toroadname, direction_toplevel, lanesaffected, streetnumber, locationtype, groupid,
+    groupdescription, locationblocklevel_toplevel, roadclosuretype_toplevel,
+    encodedcoordinates_toplevel, locationdescription_toplevel, direction, roadname,
     centreline_id, linear_name_id, lanesaffectedpattern, laneblocklevel,
     roadclosuretype, geom_text
 ) AS (
@@ -10,39 +11,59 @@ WITH locations (
 )
 
 INSERT INTO congestion_events.itsc_issues_locations (
-    divisionid, issueid, timestamputc, locationindex, mainroadname,
-    fromroadname, toroadname, direction, lanesaffected, streetnumber,
-    locationtype, groupid, groupdescription, direction, roadname,
-    centreline_id, linear_name_id, lanesaffectedpattern, laneblocklevel,
-    roadclosuretype, geom
+    divisionid, issueid, timestamputc, locationindex, mainroadname, fromroadname, toroadname,
+    direction_toplevel, streetnumber, locationtype, groupid, groupdescription, lanesaffected,
+    locationblocklevel_toplevel, roadclosuretype_toplevel, encodedcoordinates_toplevel,
+    locationdescription_toplevel, direction, roadname, centreline_id, linear_name_id,
+    lanesaffectedpattern, laneblocklevel, roadclosuretype, geom
 )
 SELECT
-    divisionid, issueid, timestamputc, locationindex, mainroadname,
-    fromroadname, toroadname, direction, lanesaffected, streetnumber,
-    locationtype, groupid, groupdescription, direction, roadname,
-    centreline_id, linear_name_id, lanesaffectedpattern, laneblocklevel,
-    roadclosuretype, ST_GeomFromText(geom_text, 4326) AS geom
-FROM locations
-ON CONFLICT (divisionid, issueid, locationindex)
-DO UPDATE SET
-divisionid = excluded.divisionid,
-issueid = excluded.issueid,
-timestamputc = excluded.timestamputc,
-locationindex = excluded.locationindex,
-mainroadname = excluded.mainroadname,
-fromroadname = excluded.fromroadname,
-toroadname = excluded.toroadname,
-direction = excluded.direction,
-lanesaffected = excluded.lanesaffected,
-streetnumber = excluded.streetnumber,
-locationtype = excluded.locationtype,
-groupid = excluded.groupid,
-groupdescription = excluded.groupdescription,
-direction = excluded.direction,
-roadname = excluded.roadname,
-centreline_id = excluded.centreline_id,
-linear_name_id = excluded.linear_name_id,
-lanesaffectedpattern = excluded.lanesaffectedpattern,
-laneblocklevel = excluded.laneblocklevel,
-roadclosuretype = excluded.roadclosuretype,
-geom = excluded.geom;
+    divisionid,
+    issueid,
+    timestamputc,
+    locationindex,
+    mainroadname,
+    fromroadname,
+    toroadname,
+    direction_toplevel,
+    streetnumber,
+    locationtype,
+    groupid,
+    groupdescription,
+    lanesaffected,
+    locationblocklevel_toplevel,
+    roadclosuretype_toplevel,
+    encodedcoordinates_toplevel,
+    locationdescription_toplevel,
+    direction,
+    roadname,
+    centreline_id,
+    linear_name_id,
+    lanesaffectedpattern,
+    laneblocklevel,
+    roadclosuretype,
+    st_geomfromtext(geom_text, 4326) AS geom
+FROM locations;
+--ON CONFLICT (divisionid, issueid, locationindex, direction)
+--DO UPDATE SET
+--divisionid = excluded.divisionid,
+--issueid = excluded.issueid,
+--timestamputc = excluded.timestamputc,
+--locationindex = excluded.locationindex,
+--mainroadname = excluded.mainroadname,
+--fromroadname = excluded.fromroadname,
+--toroadname = excluded.toroadname,
+--direction_toplevel = excluded.direction_toplevel,
+--lanesaffected = excluded.lanesaffected,
+--streetnumber = excluded.streetnumber,
+--locationtype = excluded.locationtype,
+--groupid = excluded.groupid,
+--groupdescription = excluded.groupdescription,
+--lanesaffected_direction = excluded.lanesaffected_direction,
+--roadname = excluded.roadname,
+--centreline_id = excluded.centreline_id,
+--linear_name_id = excluded.linear_name_id,
+--lanesaffectedpattern = excluded.lanesaffectedpattern,
+--laneblocklevel = excluded.laneblocklevel,
+--roadclosuretype = excluded.roadclosuretype,
+--geom = excluded.geom;

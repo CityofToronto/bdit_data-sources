@@ -46,21 +46,29 @@ def geometry_from_bytes(geo_bytes):
 def process_lanesaffected(json_str):
     if (json_str == 'Unknown') | (json_str is None):
         return None
-    lanesaffected = json.loads(json_str)
+    try:
+        lanesaffected = json.loads(json_str)
+    except json.decoder.JSONDecodeError as e:
+        LOGGER.debug("Json str not parsed: %s", json_str)
+        LOGGER.debug(e)
+        return None
     #expand laneapproach nested json
     try:
         lanes = pd.json_normalize(lanesaffected, 'LaneApproaches')
     except TypeError as e:
-        print(lanesaffected)
-        print(e)
+        LOGGER.debug("Json str not parsed: %s", lanesaffected)
+        LOGGER.debug(e)
         return None
-    lanes = lanes.rename(columns={'FeatureId': 'centreline_id', 'RoadId': 'linear_name_id'})
+    lanes = lanes.rename(columns={
+        'FeatureId': 'centreline_id',
+        'RoadId': 'linear_name_id'
+    })
     #add extra, non-nested variables
     keys = list(lanesaffected.keys())
-    keys = keys.remove('LaneApproaches')
+    keys.remove('LaneApproaches')
     if keys is not None:
         for key in keys:
-            lanes.insert(0, key, lanesaffected[key])
+            lanes.insert(0, f"{key}_toplevel", lanesaffected[key])
     return lanes
 
 def fetch_and_insert_issue_data(
@@ -75,13 +83,13 @@ def fetch_and_insert_issue_data(
         )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
-            LOGGER.info(f"Fetching RODARS data.")
+            LOGGER.info("Fetching RODARS data.")
             cur.execute(select_query)
             data = cur.fetchall()
             df = pd.DataFrame(data)
             df.columns=[x.name for x in cur.description]
     except Error as exc:
-        LOGGER.critical(f"Error fetching RODARS data.")
+        LOGGER.critical("Error fetching RODARS data.")
         LOGGER.critical(exc)
         raise Exception()
     
@@ -109,59 +117,67 @@ def fetch_and_insert_location_data(
         )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
-            LOGGER.info(f"Fetching RODARS data.")
+            LOGGER.info("Fetching RODARS data.")
             cur.execute(select_query)
             data = cur.fetchall()
             df = pd.DataFrame(data)
             df.columns=[x.name for x in cur.description]
     except Error as exc:
-        LOGGER.critical(f"Error fetching RODARS data.")
+        LOGGER.critical("Error fetching RODARS data.")
         LOGGER.critical(exc)
         raise Exception()
     
     pkeys = ['divisionid', 'issueid', 'timestamputc', 'locationindex']
+    
+    geom_data = df['geometry'].map(geometry_from_bytes)
+    valid_geoms = [not(x is None) for x in geom_data]
+    geoms_df = df[pkeys][valid_geoms]
+    geoms_df.insert(3, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
+    df_no_geom = pd.merge(df.drop('geometry', axis = 1), geoms_df, on = pkeys)
+    df_no_geom = df_no_geom
+
     expanded_list = []
-    for row in df.iterrows():
+    for row in df_no_geom.iterrows():
         expanded = process_lanesaffected(row[1]['lanesaffected'])
         # Add primary key columns to the expanded data
         if expanded is None:
             continue
-        else:
-            for col in pkeys:
-                expanded[col] = row[1][col]
+        for col in pkeys:
+            expanded[col] = row[1][col]
         expanded_list.append(expanded)
     df_expanded = pd.concat(expanded_list, ignore_index=True)
     
     df = pd.merge(df, df_expanded, on = pkeys)
         
-    #older rodars data doesn't have this value?
-    df['locationindex'] = df['locationindex'].replace({nan: 0})
-    
-    geom_data = df['geometry'].map(geometry_from_bytes)  
-    valid_geoms = [not(x is None) for x in geom_data]
-    
-    geoms_df = df[pkeys][valid_geoms]
-    geoms_df.insert(3, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
-    geoms_df = geoms_df.replace({nan: None})
-    df = pd.merge(df, geoms_df, on = pkeys)
-   
     #transform values for inserting
-    df_no_geom = df.drop('geometry', axis = 1)
     df_no_geom = df_no_geom.replace({pd.NaT: None, nan: None})
+    
+    #check if there are extra columns unnested from the json
+    cols_to_insert = [
+        'divisionid', 'issueid', 'timestamputc', 'locationindex', 'mainroadname', 'fromroadname',
+        'toroadname', 'direction_toplevel', 'lanesaffected', 'streetnumber', 'locationtype', 'groupid',
+        'groupdescription', 'LocationBlockLevel_toplevel', 'RoadClosureType_toplevel',
+        'EncodedCoordinates_toplevel', 'LocationDescription_toplevel', 'Direction', 'RoadName',
+        'centreline_id', 'linear_name_id', 'LanesAffectedPattern', 'LaneBlockLevel',
+        'RoadClosureType', 'geom_text'
+    ]
+    extra_cols = [col for col in df_no_geom.columns if col not in cols_to_insert]
+    if extra_cols != []:
+        LOGGER.warning(f'There are extra columns unpacked from json not being inserted: %s', extra_cols)
+    missing_cols = [col for col in cols_to_insert if col not in df_no_geom.columns]
+    if missing_cols != []:
+        for col in missing_cols:
+            df_no_geom.insert(0, col, None)
+
+    #arrange columns for inserting
+    df_no_geom = df_no_geom[cols_to_insert]
     df_no_geom = [tuple(x) for x in df_no_geom.to_numpy()]
     
-    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues.sql')
+    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues_locations.sql')
     with open(insert_fpath, 'r', encoding="utf-8") as file:
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, insert_query, df_no_geom)
-        
-    geom_update_fpath = os.path.join(SQL_DIR, 'update-itsc_issues_geometry.sql')
-    with open(geom_update_fpath, 'r', encoding="utf-8") as file:
-        geom_update_query = sql.SQL(file.read())
-        
-    with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, geom_update_query, geoms_df)
-        
+
 #fetch_and_insert_data()
