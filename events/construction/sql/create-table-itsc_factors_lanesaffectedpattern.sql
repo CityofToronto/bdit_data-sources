@@ -4,20 +4,23 @@
 
 CREATE TABLE IF NOT EXISTS itsc_factors.lanesaffectedpattern
 (
-    lane_status text COLLATE pg_catalog."default" NOT NULL,
+    lane_status text COLLATE pg_catalog."default",
     code text COLLATE pg_catalog."default" NOT NULL,
-    CONSTRAINT lanesaffected_pkey PRIMARY KEY (code)
+    mode text COLLATE pg_catalog."default",
+    lane_open numeric,
+    lane_closed numeric,
+    CONSTRAINT lanesaffected_pattern_pkey PRIMARY KEY (code)
 )
 
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS itsc_factors.lanesaffectedpattern
-OWNER TO congestion_admins;
+OWNER TO dbadmin;
 
 REVOKE ALL ON TABLE itsc_factors.lanesaffectedpattern FROM bdit_humans;
 
-GRANT INSERT, REFERENCES, SELECT, TRIGGER, UPDATE ON TABLE itsc_factors.lanesaffectedpattern TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO bdit_humans WITH GRANT OPTION;
 
-GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO congestion_admins;
+GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO dbadmin;
 
 GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO rds_superuser WITH GRANT OPTION;
