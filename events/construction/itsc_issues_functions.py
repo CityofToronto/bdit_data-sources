@@ -173,7 +173,7 @@ def fetch_and_insert_location_data(
     df_no_geom = df_no_geom[cols_to_insert]
     df_no_geom = [tuple(x) for x in df_no_geom.to_numpy()]
     
-    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues_locations.sql')
+    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issue_locations.sql')
     with open(insert_fpath, 'r', encoding="utf-8") as file:
         insert_query = sql.SQL(file.read())
         
