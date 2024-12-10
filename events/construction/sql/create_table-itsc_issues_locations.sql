@@ -1,8 +1,8 @@
--- Table: congestion_events.itsc_issues_locations
+-- Table: congestion_events.itsc_issue_locations
 
--- DROP TABLE IF EXISTS congestion_events.itsc_issues_locations;
+-- DROP TABLE IF EXISTS congestion_events.itsc_issue_locations;
 
-CREATE TABLE IF NOT EXISTS congestion_events.itsc_issues_locations
+CREATE TABLE IF NOT EXISTS congestion_events.itsc_issue_locations
 (
     divisionid smallint NOT NULL,
     issueid integer NOT NULL,
@@ -30,13 +30,13 @@ CREATE TABLE IF NOT EXISTS congestion_events.itsc_issues_locations
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS congestion_events.itsc_issues_locations OWNER TO dbadmin;
+ALTER TABLE IF EXISTS congestion_events.itsc_issue_locations OWNER TO dbadmin;
 
-REVOKE ALL ON TABLE congestion_events.itsc_issues_locations FROM bdit_humans;
-GRANT SELECT ON TABLE congestion_events.itsc_issues_locations TO bdit_humans;
+REVOKE ALL ON TABLE congestion_events.itsc_issue_locations FROM bdit_humans;
+GRANT SELECT ON TABLE congestion_events.itsc_issue_locations TO bdit_humans;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues_locations TO dbadmin;
+GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO dbadmin;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues_locations TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO rds_superuser WITH GRANT OPTION;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues_locations TO vds_bot;
+GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO vds_bot;
