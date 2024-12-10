@@ -69,6 +69,7 @@ def pull_wys_dag():
 
         create_annual_partition = PostgresOperator(
             task_id='create_annual_partitions',
+            pre_execute=check_jan_1st,
             sql="SELECT wys.create_yyyy_raw_data_partition('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
             postgres_conn_id='wys_bot',
             autocommit=True
@@ -76,15 +77,14 @@ def pull_wys_dag():
         
         create_month_partition = PostgresOperator(
             task_id='create_month_partition',
+            pre_execute=check_1st_of_month,
             trigger_rule='none_failed_min_one_success',
             sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
             postgres_conn_id='wys_bot',
             autocommit=True
         )
 
-        check_jan_1st() >> create_annual_partition >> (
-            check_1st_of_month() >> create_month_partition
-        )
+        create_annual_partition >> create_month_partition
     
     @task_group()
     def api_pull():

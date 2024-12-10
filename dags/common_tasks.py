@@ -7,7 +7,7 @@ import datetime
 from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
-from airflow.exceptions import AirflowFailException
+from airflow.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models import Variable
 from airflow.sensors.time_sensor import TimeSensor
 
@@ -130,21 +130,19 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
 
     LOGGER.info(f"Successfully copied {table[0]} to {table[1]}.")
 
-@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
-def check_jan_1st(ds=None): #check if Jan 1 to trigger partition creates. 
+def check_jan_1st(context): #check if Jan 1 to trigger partition creates. 
     from datetime import datetime
-    start_date = datetime.strptime(ds, '%Y-%m-%d')
+    start_date = datetime.strptime(context["ds"], '%Y-%m-%d')
     if start_date.month == 1 and start_date.day == 1:
         return True
-    return False
+    raise AirflowSkipException('Not Jan 1st; skipping partition creates.')
 
-@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
-def check_1st_of_month(ds=None): #check if 1st of Month to trigger partition creates. 
+def check_1st_of_month(context): #check if 1st of Month to trigger partition creates. 
     from datetime import datetime
-    start_date = datetime.strptime(ds, '%Y-%m-%d')
+    start_date = datetime.strptime(context["ds"], '%Y-%m-%d')
     if start_date.day == 1:
         return True
-    return False
+    raise AirflowSkipException('Not 1st of month; skipping partition creates.')
 
 @task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
 def check_if_dow(isodow, ds):
