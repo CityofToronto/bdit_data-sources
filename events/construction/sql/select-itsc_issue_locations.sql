@@ -1,17 +1,9 @@
 WITH issues AS (
     --select the most recent version of each issue
-    SELECT DISTINCT ON (divisionid, issueid)
+    SELECT
         divisionid,
         issueid,
-        timestamputc,
-        issuetype,
-        description,
-        priority,
-        proposedstarttimestamputc,
-        proposedendtimestamputc,
-        earlyendtimestamputc,
-        status,
-        timeoption
+        MAX(timestamputc) AS timestamputc
     FROM public.issuedata
     WHERE
         divisionid IN (
@@ -19,27 +11,30 @@ WITH issues AS (
             8014, --rodars (old)
             8023 --TMMS TM3 Planned Work
         )
-        --AND timestamputc >= {start}::date -- noqa: PRS
-        --AND timestamputc < {start}::date + interval '1 day' -- noqa: PRS
-    ORDER BY divisionid ASC, issueid ASC, timestamputc DESC
+    GROUP BY
+        divisionid,
+        issueid
+    --HAVING
+        --AND MAX(timestamputc) >= {start}::date -- noqa: PRS
+        --AND MAX(timestamputc) < {start}::date + interval '1 day' -- noqa: PRS
 )
 
 SELECT
-    divisionid,
-    issueid,
-    timestamputc,
+    i.divisionid,
+    i.issueid,
+    i.timestamputc,
     --Old rodars data doesn't have this value
-    COALESCE(locationindex, 0) AS locationindex,
-    mainroadname,
-    fromroadname,
-    toroadname,
-    direction AS direction_toplevel,
-    lanesaffected,
-    geometry,
-    streetnumber,
-    locationtype,
-    groupid,
-    groupdescription
+    COALESCE(iln.locationindex, 0) AS locationindex,
+    iln.mainroadname,
+    iln.fromroadname,
+    iln.toroadname,
+    iln.direction AS direction_toplevel,
+    iln.lanesaffected,
+    iln.geometry,
+    iln.streetnumber,
+    iln.locationtype,
+    iln.groupid::integer,
+    iln.groupdescription
 --Note there are multiple locations for each issue (unique locationindex)
-FROM public.issuelocationnew
-JOIN issues USING (divisionid, issueid, timestamputc)
+FROM public.issuelocationnew AS iln
+JOIN issues AS i USING (divisionid, issueid, timestamputc)

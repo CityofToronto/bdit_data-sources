@@ -1,5 +1,4 @@
 --this redundant CTE is just to apply ST_GeomFromText to geom_text.
-TRUNCATE congestion_events.itsc_issue_locations;
 WITH locations (
     divisionid, issueid, timestamputc, locationindex, mainroadname, fromroadname,
     toroadname, direction_toplevel, lanesaffected, streetnumber, locationtype, groupid,
