@@ -49,14 +49,14 @@ default_args = {
 def rodars_dag():
     @task
     def pull_rodars_issues(ds = None):
-        "Get RODARS data from ITSC and insert into RDS `vds.vdsconfig`"
+        "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issues`"
         itsc_bot = PostgresHook('itsc_postgres')
         vds_bot = PostgresHook('vds_bot')
         fetch_and_insert_issue_data(select_conn=itsc_bot, insert_conn=vds_bot, start_date=ds)
     
     @task
     def pull_rodar_locations(ds = None):
-        "Get RODARS data from ITSC and insert into RDS `vds.vdsconfig`"
+        "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issue_locations`"
         itsc_bot = PostgresHook('itsc_postgres')
         vds_bot = PostgresHook('vds_bot')
         fetch_and_insert_location_data(select_conn=itsc_bot, insert_conn=vds_bot, start_date=ds)
