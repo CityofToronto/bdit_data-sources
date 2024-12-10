@@ -133,9 +133,8 @@ def fetch_and_insert_location_data(
     valid_geoms = [not(x is None) for x in geom_data]
     geoms_df = df[pkeys][valid_geoms]
     geoms_df.insert(3, 'geom_text', geom_data[valid_geoms].map(coordinates_to_geomfromtext))
-    df_no_geom = pd.merge(df.drop('geometry', axis = 1), geoms_df, on = pkeys)
-    df_no_geom = df_no_geom
-
+    df_no_geom = pd.merge(df.drop('geometry', axis = 1), geoms_df, on = pkeys, how='left')
+    
     expanded_list = []
     for row in df_no_geom.iterrows():
         expanded = process_lanesaffected(row[1]['lanesaffected'])
@@ -146,28 +145,34 @@ def fetch_and_insert_location_data(
             expanded[col] = row[1][col]
         expanded_list.append(expanded)
     df_expanded = pd.concat(expanded_list, ignore_index=True)
-    
-    df = pd.merge(df, df_expanded, on = pkeys)
+    df_no_geom = pd.merge(df_no_geom, df_expanded, on = pkeys, how='left')
         
-    #transform values for inserting
-    df_no_geom = df_no_geom.replace({pd.NaT: None, nan: None})
-    
-    #check if there are extra columns unnested from the json
     cols_to_insert = [
         'divisionid', 'issueid', 'timestamputc', 'locationindex', 'mainroadname', 'fromroadname',
         'toroadname', 'direction_toplevel', 'lanesaffected', 'streetnumber', 'locationtype', 'groupid',
-        'groupdescription', 'LocationBlockLevel_toplevel', 'RoadClosureType_toplevel',
-        'EncodedCoordinates_toplevel', 'LocationDescription_toplevel', 'Direction', 'RoadName',
-        'centreline_id', 'linear_name_id', 'LanesAffectedPattern', 'LaneBlockLevel',
-        'RoadClosureType', 'geom_text'
+        'groupdescription', 'locationblocklevel_toplevel', 'roadclosuretype_toplevel',
+        'encodedcoordinates_toplevel', 'locationdescription_toplevel', 'direction', 'roadname',
+        'centreline_id', 'linear_name_id', 'lanesaffectedpattern', 'laneblocklevel',
+        'roadclosuretype', 'geom_text'
     ]
+    df_no_geom.columns = map(str.lower, df_no_geom.columns)
+    #check for extra columns unpacked from json.
     extra_cols = [col for col in df_no_geom.columns if col not in cols_to_insert]
     if extra_cols != []:
         LOGGER.warning(f'There are extra columns unpacked from json not being inserted: %s', extra_cols)
+    #add missing columns (inconsistent jsons)
     missing_cols = [col for col in cols_to_insert if col not in df_no_geom.columns]
     if missing_cols != []:
         for col in missing_cols:
             df_no_geom.insert(0, col, None)
+    
+    #convert some datatypes to int
+    cols_to_convert = ["locationblocklevel_toplevel", "roadclosuretype_toplevel", "direction", "centreline_id", "linear_name_id", "laneblocklevel", "roadclosuretype", "groupid"]
+    df_no_geom[cols_to_convert] = df_no_geom[cols_to_convert].replace({pd.NaT: 0, nan: 0})
+    df_no_geom[cols_to_convert] = df_no_geom[cols_to_convert].astype('int32')
+
+    #transform values for inserting
+    df_no_geom = df_no_geom.replace({pd.NaT: None, nan: None, '': None})
 
     #arrange columns for inserting
     df_no_geom = df_no_geom[cols_to_insert]
@@ -178,6 +183,6 @@ def fetch_and_insert_location_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df_no_geom)
+        execute_values(cur, insert_query, df_no_geom, page_size = 1000)
 
 #fetch_and_insert_data()
