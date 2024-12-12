@@ -40,3 +40,8 @@ GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO dbadmin;
 GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO rds_superuser WITH GRANT OPTION;
 
 GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO events_bot;
+
+CREATE TRIGGER on_insert_delete_old
+AFTER INSERT ON congestion_events.itsc_issue_locations
+FOR EACH STATEMENT
+EXECUTE FUNCTION congestion_events.delete_old_itsc_issue_locations();
