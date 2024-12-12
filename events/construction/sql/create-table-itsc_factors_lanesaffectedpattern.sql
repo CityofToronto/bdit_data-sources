@@ -24,3 +24,5 @@ GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO bdit_humans WITH GRAN
 GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO dbadmin;
 
 GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO rds_superuser WITH GRANT OPTION;
+
+GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO events_bot;
