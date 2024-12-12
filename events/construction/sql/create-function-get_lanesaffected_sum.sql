@@ -47,4 +47,4 @@ GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO PUBLIC;
 
 GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO congestion_admins;
 
-GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO vds_bot;
+GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO events_bot;

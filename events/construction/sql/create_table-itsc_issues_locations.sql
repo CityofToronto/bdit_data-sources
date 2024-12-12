@@ -39,4 +39,4 @@ GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO dbadmin;
 
 GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO rds_superuser WITH GRANT OPTION;
 
-GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO vds_bot;
+GRANT ALL ON TABLE congestion_events.itsc_issue_locations TO events_bot;
