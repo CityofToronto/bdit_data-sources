@@ -82,3 +82,5 @@ ALTER TABLE congestion_events.itsc_locations OWNER TO congestion_admins;
 
 GRANT SELECT ON TABLE congestion_events.itsc_locations TO bdit_humans;
 GRANT ALL ON TABLE congestion_events.itsc_locations TO congestion_admins;
+
+GRANT SELECT ON TABLE congestion_events.itsc_locations TO events_bot;

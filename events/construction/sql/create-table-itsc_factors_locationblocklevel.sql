@@ -13,3 +13,5 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS itsc_factors.locationblocklevel
 OWNER TO congestion_admins;
+
+GRANT SELECT ON TABLE itsc_factors.locationblocklevel TO events_bot;
