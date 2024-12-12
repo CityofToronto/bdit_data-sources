@@ -20,12 +20,12 @@ BEGIN
       iil.divisionid = latest.divisionid
       AND iil.issueid = latest.issueid
       AND iil.timestamputc < latest.max_timestamputc;
-
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON congestion_events.delete_old_itsc_issue_locations TO congestion_admins;
-GRANT EXECUTE ON congestion_events.delete_old_itsc_issue_locations TO events_bot;
+GRANT EXECUTE ON FUNCTION congestion_events.delete_old_itsc_issue_locations TO congestion_admins;
+GRANT EXECUTE ON FUNCTION congestion_events.delete_old_itsc_issue_locations TO events_bot;
 
 COMMENT ON FUNCTION congestion_events.delete_old_itsc_issue_locations IS
 'Deletes old records from congestion_events.itsc_issue_locations on insert (trigger).';
