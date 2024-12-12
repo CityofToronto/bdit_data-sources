@@ -14,9 +14,9 @@ WITH issues AS (
     GROUP BY
         divisionid,
         issueid
-    --HAVING
-        --AND MAX(timestamputc) >= {start}::date -- noqa: PRS
-        --AND MAX(timestamputc) < {start}::date + interval '1 day' -- noqa: PRS
+    HAVING
+        MAX(timestamputc) >= {start}::date -- noqa: PRS
+        AND MAX(timestamputc) < {start}::date + interval '1 day' -- noqa: PRS
 )
 
 SELECT
