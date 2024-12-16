@@ -4,7 +4,7 @@ import pendulum
 from datetime import timedelta
 
 from airflow.decorators import task, dag
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.models import Variable 
 from airflow.macros import ds_add, ds_format
 
@@ -13,7 +13,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
     from here.traffic.here_api import get_access_token, get_download_url
-    from here.traffic.here_api_path import query_dates, HereAPIException
+    from here.traffic.here_api_path import query_dates
 except:
     raise ImportError("Cannot import slack alert functions")
 
@@ -45,7 +45,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     schedule_interval='30 10 * * *' ,
+     schedule='30 10 * * *' ,
      catchup=False,
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
@@ -76,11 +76,12 @@ def pull_here_path():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
     
-    @task.bash(env={"DOWNLOAD_URL": download_url,
-                    "HOST":  BaseHook.get_connection("here_bot").host,
-                    "USER" :  BaseHook.get_connection("here_bot").login,
-                    "PGPASSWORD": BaseHook.get_connection("here_bot").password})
+    @task.bash(env={"DOWNLOAD_URL": download_url})
     def load_data()->str:
+        conn = BaseHook.get_connection("here_bot")
+        os.environ['HOST'] = conn.host
+        os.environ['USER'] = conn.login
+        os.environ['PGPASSWORD'] = conn.password
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
 
     load_data()
