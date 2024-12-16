@@ -7,7 +7,7 @@ import os
 import pendulum
 
 from datetime import timedelta
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task, task_group
@@ -50,7 +50,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     schedule_interval='0 17 * * * ' ,
+     schedule='0 17 * * * ' ,
      catchup=False,
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
@@ -81,11 +81,12 @@ def pull_here():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
 
-    @task.bash(env={"DOWNLOAD_URL": download_url,
-                    "HOST":  BaseHook.get_connection("here_bot").host,
-                    "USER" :  BaseHook.get_connection("here_bot").login,
-                    "PGPASSWORD": BaseHook.get_connection("here_bot").password})
+    @task.bash(env={"DOWNLOAD_URL": download_url})
     def load_data_run()->str:
+        conn = BaseHook.get_connection("here_bot")
+        os.environ['HOST'] = conn.host
+        os.environ['USER'] = conn.login
+        os.environ['PGPASSWORD'] = conn.password
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
     # Create a task group for triggering the DAGs
