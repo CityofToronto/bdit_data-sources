@@ -1,5 +1,3 @@
-# Ecocounter <!-- omit in toc -->
-
 <!-- TOC -->
 
 - [Bicycle loop detectors](#bicycle-loop-detectors)
@@ -26,7 +24,6 @@
     - [`ecocounter.manual_counts_raw`](#ecocountermanual_counts_raw)
 
 <!-- /TOC -->
-
 # Bicycle loop detectors
 
 This dataset comes from a small but growing number of permanent [loop detectors](https://en.wikipedia.org/wiki/Induction_loop) installed within designated bicycle infrastructure such as bike lanes and multi-use paths. This is actually one of our older data collection programs, and the data have been handled in a number of ways over the years and now reside in a couple different places in the `bigdata` database.
