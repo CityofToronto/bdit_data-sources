@@ -60,8 +60,8 @@ def pull_from_sheet(
     """
     spreadsheet_id = str(ward[0])
     range_name = str(ward[1])
-    table_name = str(ward[3])
-    ward_no = (str(ward[3])).split('_',1)[1]
+    ward_no = ward[3]
+    table_name = f"ward_{ward_no}"
     
     values = None
     for _ in range(3):
