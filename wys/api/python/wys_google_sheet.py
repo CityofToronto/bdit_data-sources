@@ -1,5 +1,6 @@
-import os
 from __future__ import print_function
+import os
+import re
 import json
 
 from google.oauth2 import service_account
@@ -16,7 +17,6 @@ from datetime import datetime
 import logging 
 from time import sleep
 
-from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 LOGGER = logging.getLogger(__name__)
@@ -39,14 +39,15 @@ def read_masterlist(con, service):
         LOGGER.info('Working on ward %s', i+1)
         if not pull_from_sheet(con, service, dict_table[i+1]):
             empty_wards.append(i+1)
-
     LOGGER.info('Completed')
+    
     return empty_wards
 
 def pull_from_sheet(
     con: PostgresHook,
     service: Resource,
-    ward: list
+    ward: list,
+    context
 ) -> bool:
     """Pulls WYS data of a ward and insert into the database
     
@@ -76,27 +77,43 @@ def pull_from_sheet(
         except TimeoutError:
             LOGGER.error("Cannot access: " + json.loads(request.to_json())["uri"])
         except HttpError as err3:
+            LOGGER.warning(str(err3))
             sleep(120)
         else:
             break
     else: 
         LOGGER.warning('Attempts exceeded.')
-
+    
+    match = re.search(r'\d+', range_name)  # Find the first number in the string
+    row_num = int(match.group(0))-1
     rows = []
     badrows = []
     if not values:
         LOGGER.warning(f"No data was found for ward {ward_no}")
         return False
     else:
-        for row in values:           
-            try:             
+        for row in values:
+            row_num+=1
+            if len(row) < 14:
+                error = f">Row `{row_num}` ({row}): " + "`End of Row` missing"
+                badrows.append(error)
+                continue
+            try:
                 #check installation_date and new_sign_number
-                if row[6] and row[10]: 
+                if row[6] and row[10]:
                     try: 
                         installation = datetime.strptime(row[6], '%m/%d/%Y').date()
+                    except ValueError as e:
+                        error = f">Row `{row_num}`, error with installation date: `" + str(e) + '`'
+                        badrows.append(error)
+                        
                         #change: add records even without removal date. 
                         if row[8]:
-                            removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                            try:
+                                removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                            except ValueError as e:
+                                error = f">Row `{row_num}`, error with removal date: `" + str(e) + '`'
+                                badrows.append(error)
                         else:
                             removal = None
                         i = (
@@ -104,17 +121,14 @@ def pull_from_sheet(
                             removal, row[10], row[11], int(row[7]), row[13])
                         rows.append(i)
                         LOGGER.debug(row)
-                    except:
-                        i = (ward_no, row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
-                        badrows.append(i)
-                        LOGGER.warning('Date format is not MM/DD/YYYY')
                 else:
                     LOGGER.debug('This row is not included: %s', row)
             except (IndexError, KeyError) as err1:
-                LOGGER.error('An error occurs at %s', row)
-                LOGGER.error(err1)
+                error = f">Row `{row_num}` ({row}): `" + str(err1) + '`'
+                badrows.append(error)
         if len(badrows) > 0:
-            LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
+            LOGGER.warning('%s rows need fixing in %s', len(badrows), table_name)
+            context.get("task_instance").xcom_push(key="badrows", value=badrows)
         else:
             LOGGER.info('%s does not have any row with different date format', table_name)
     
