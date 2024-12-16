@@ -144,7 +144,6 @@ def check_1st_of_month(context): #check if 1st of Month to trigger partition cre
         return True
     raise AirflowSkipException('Not 1st of month; skipping partition creates.')
 
-@task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
 def check_if_dow(isodow, ds):
     """Use to check if it's a specific day of week to trigger a weekly check.
     Uses isodow: Monday (1) to Sunday (7)"""
