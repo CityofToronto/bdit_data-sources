@@ -1,3 +1,4 @@
+import os
 from __future__ import print_function
 import json
 
@@ -20,6 +21,8 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
 
 def read_masterlist(con, service):
     dict_table = {}
@@ -114,73 +117,10 @@ def pull_from_sheet(
             LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
         else:
             LOGGER.info('%s does not have any row with different date format', table_name)
-
-    insert = sql.SQL('''
-        WITH new_data (ward_no, location, from_street, to_street, direction, 
-                    installation_date, removal_date, new_sign_number, comments, 
-                    work_order, confirmed) 
-                    AS (
-                VALUES %s) 
-        , dupes AS(
-            /*Identify rows that will violate the unique constraint in the 
-            upsert*/
-            INSERT INTO wys.mobile_sign_installations_dupes
-            SELECT ward_no::INT, location, from_street, to_street, direction, 
-            installation_date, removal_date::date, new_sign_number, comments, work_order
-            FROM new_data
-            NATURAL JOIN (SELECT new_sign_number, installation_date
-                    FROM new_data
-                    GROUP BY new_sign_number, installation_date
-                    HAVING COUNT(*)> 1) dupes
-            ON CONFLICT (location, from_street, to_street, direction, 
-                        installation_date, removal_date, new_sign_number, 
-                        comments)
-            /*do update required here because do nothing does not return dupes
-            on conflict. */
-            DO UPDATE SET 
-                location=EXCLUDED.location,
-                from_street=EXCLUDED.from_street,
-                to_street=EXCLUDED.to_street,
-                direction=EXCLUDED.direction,
-                removal_date=EXCLUDED.removal_date,
-                comments=EXCLUDED.comments
-            RETURNING new_sign_number, installation_date
-        )
-        INSERT INTO wys.mobile_sign_installations AS existing (
-            ward_no, location, from_street, to_street, direction, installation_date,
-            removal_date, new_sign_number, comments, confirmed, work_order) 
-        SELECT new_data.ward_no::INT, location, from_street, to_street, 
-                direction, installation_date, removal_date::DATE, 
-                new_sign_number, comments, confirmed, work_order
-        FROM new_data
-        LEFT JOIN dupes USING (new_sign_number, installation_date)
-        --Don't try to insert dupes
-        WHERE dupes.new_sign_number IS NULL
-        ON CONFLICT (ward_no, installation_date, new_sign_number)
-        DO UPDATE SET 
-            removal_date=EXCLUDED.removal_date,
-            comments=EXCLUDED.comments,
-            direction=EXCLUDED.direction,
-            location=EXCLUDED.location,
-            from_street=EXCLUDED.from_street,
-            to_street=EXCLUDED.to_street,
-            work_order=EXCLUDED.work_order
-        -- Prevent unnecessary update if data are unchanged
-        WHERE  (existing.removal_date IS NULL OR 
-            existing.removal_date!=EXCLUDED.removal_date )
-            OR (existing.comments IS NULL OR 
-                existing.comments!=EXCLUDED.comments)
-            OR (existing.direction IS NULL OR 
-                existing.direction!=EXCLUDED.direction)
-            OR (existing.location IS NULL OR 
-                existing.location!=EXCLUDED.location)
-            OR (existing.from_street IS NULL OR 
-                existing.from_street!=EXCLUDED.from_street)
-            OR (existing.to_street IS NULL OR 
-                existing.to_street!=EXCLUDED.to_street)
-            OR (existing.work_order IS NULL OR 
-                existing.work_order!=EXCLUDED.work_order)
-        ''')
+    
+    fpath = os.path.join(SQL_DIR, 'insert-mobile_sign_installations.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        insert = sql.SQL(file.read())
     
     LOGGER.debug(rows)
 
