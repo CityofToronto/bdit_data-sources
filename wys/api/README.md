@@ -1,30 +1,41 @@
-# Watch Your Speed Sign API
-- [Watch Your Speed Sign API](#watch-your-speed-sign-api)
-  - [Overview](#overview)
-  - [Functionality](#functionality)
-    - [Requesting recent data](#requesting-recent-data)
-    - [Error Handling](#error-handling)
-    - [Inconsistent time bins](#inconsistent-time-bins)
-  - [Calls and Input Parameters](#calls-and-input-parameters)
-  - [`api_main` Process](#api_main-process)
-  - [`wys` Bigdata Schema](#wys-bigdata-schema)
-    - [Data Tables](#data-tables)
-      - [**`wys.raw_data`**](#wysraw_data)
-      - [**`wys.speed_counts_agg_5kph`**](#wysspeed_counts_agg_5kph)
-    - [Lookup Tables](#lookup-tables)
-      - [**`wys.speed_bins_old`**](#wysspeed_bins_old)
-      - [**`wys.locations`**](#wyslocations)
-      - [**`wys.sign_schedules_list`**](#wyssign_schedules_list)
-      - [**`wys.sign_schedules_clean`**](#wyssign_schedules_clean)
-    - [Stationary Signs](#stationary-signs)
-      - [**`wys.stationary_signs`**](#wysstationary_signs)
-      - [**`wys.stationary_summary`**](#wysstationary_summary)
-    - [Mobile Signs](#mobile-signs)
-      - [**`wys.ward_masterlist`**](#wysward_masterlist)
-      - [**`wys.mobile_sign_installations`**](#wysmobile_sign_installations)
-      - [**`wys.mobile_api_id`**](#wysmobile_api_id)
-      - [**`wys.mobile_summary`**](#wysmobile_summary)
-      - [**`open_data.wys_mobile_summary`**](#open_datawys_mobile_summary)
+<!-- TOC -->
+
+- [Overview](#overview)
+- [Functionality](#functionality)
+  - [Requesting recent data](#requesting-recent-data)
+  - [Error Handling](#error-handling)
+  - [Inconsistent time bins](#inconsistent-time-bins)
+- [Calls and Input Parameters](#calls-and-input-parameters)
+- [`api_main` Process](#api_main-process)
+- [`wys` Bigdata Schema](#wys-bigdata-schema)
+  - [Data Tables](#data-tables)
+    - [**`wys.raw_data`**](#wysraw_data)
+    - [**`wys.speed_counts_agg_5kph`**](#wysspeed_counts_agg_5kph)
+  - [Lookup Tables](#lookup-tables)
+    - [**`wys.speed_bins_old`**](#wysspeed_bins_old)
+    - [**`wys.locations`**](#wyslocations)
+    - [**`wys.sign_schedules_list`**](#wyssign_schedules_list)
+    - [**`wys.sign_schedules_clean`**](#wyssign_schedules_clean)
+  - [Stationary Signs](#stationary-signs)
+    - [**`wys.stationary_signs`**](#wysstationary_signs)
+    - [**`wys.stationary_summary`**](#wysstationary_summary)
+  - [Mobile Signs](#mobile-signs)
+    - [**`wys.ward_masterlist`**](#wysward_masterlist)
+    - [**`wys.mobile_sign_installations`**](#wysmobile_sign_installations)
+    - [**`wys.mobile_api_id`**](#wysmobile_api_id)
+    - [**`wys.mobile_summary`**](#wysmobile_summary)
+    - [**`open_data.wys_mobile_summary`**](#open_datawys_mobile_summary)
+    - [**`open_data.wys_mobile_detailed`**](#open_datawys_mobile_detailed)
+- [DAG](#dag)
+  - [**`wys_pull`**](#wys_pull)
+  - [**`wys_monthly_summary`**](#wys_monthly_summary)
+  - [**`wys_check`**](#wys_check)
+- [Quality Checks](#quality-checks)
+  - [NULL rows in API data](#null-rows-in-api-data)
+- [Guidelines for Google Sheets](#guidelines-for-google-sheets)
+
+<!-- /TOC -->
+<!-- /TOC -->
       - [**`open_data.wys_mobile_detailed`**](#open_datawys_mobile_detailed)
   - [DAG](#dag)
     - [**`wys_pull`**](#wys_pull)
@@ -378,6 +389,13 @@ This task group contains red card data checks that may require the pipeline to b
 
 `pull_schedules`: Inserts/updates sign schedules in `wys.sign_schedules_list` from the `schedules` endpoint. 
 
+**`read_google_sheets_tg`**
+This task group reads data from the mobile sign installation google sheets.
+  - `read_masterlist`: pulls the list of google sheets from the database `wys.ward_masterlist` table.
+	- `read_google_sheet`: mapped over the output of `read_masterlist`; each task reads an individual google sheet.
+	- `status_msg_rows`: reports any row failures from `read_google_sheet` mapped tasks.
+	- `status_msg_sheets`: reports any sheet failures from `read_google_sheet` mapped tasks.
+
 `read_google_sheets`: Pulls mobile sign details from the Google Sheets. See more details under [`wys.mobile_sign_installations`](#wysmobile_sign_installations)
 
 <!-- wys_pull_doc_md -->
@@ -420,3 +438,9 @@ An analysis on `2021-04-23` to investigate rows with NULL speed and count column
 - of the `734` signs have operating since `> 2021-03-31`, `734` have NULL speed or count columns
 
 Please see the notebook for a Gantt-style visualization of the NULL date ranges. 
+
+## Guidelines for Google Sheets
+
+- All rows should have `End of Row` in column N.
+  - Rows will not be ingested if `Installation Date` or `New Sign Number` are missing.
+- Date format is "%m/%d/%Y", ie. "10/31/2024".
