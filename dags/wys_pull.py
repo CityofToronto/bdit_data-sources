@@ -160,17 +160,18 @@ def pull_wys_dag():
             get_schedules(conn, api_key)
 
     @task
-    def read_masterlist():
+    def read_masterlist(**context):
         wys_postgres = PostgresHook("wys_bot")
         ward_list = []
         with wys_postgres.get_conn() as conn, conn.cursor() as cur:
             read_table="SELECT spreadsheet_id, range_name, schema_name, ward_no FROM wys.ward_masterlist ORDER BY ward_no"
             cur.execute(read_table)
             ward_list=cur.fetchall()
+            context['ti'].xcom_push(key="ward_count", value=len(ward_list))
             return ward_list
     
     @task(retries = 1, on_failure_callback = None, map_index_template="{{ ward_no }}")
-    def read_google_sheets(ward):
+    def read_google_sheets(ward, **context):
         #name mapped task
         context = get_current_context()
         context["ward_no"] = f"ward_{ward[3]}"
@@ -183,11 +184,41 @@ def pull_wys_dag():
         cred = wys_api_hook.get_credentials()
         service = build('sheets', 'v4', credentials=cred, cache_discovery=False)
         with wys_postgres.get_conn() as conn:
-            if not pull_from_sheet(conn, service, ward):
+            if not pull_from_sheet(conn, service, ward, context):
                 return ward[3]
 
-    @task()
-    def sheets_status_msg():
+    @task(
+        retries=0,
+        trigger_rule='all_done',
+        doc_md="""A status message to succinctly report mapped task failures for specific rows."""
+    )
+    def status_msg_rows(wards, **context):
+        ti = context["ti"]
+        badrows = []
+        for m_i in range(0, len(wards)):
+            rows = ti.xcom_pull(key="badrows", map_indexes=m_i, task_ids="read_google_sheets")
+            if rows is not None:
+                link=f"<https://drive.google.com/open?id={wards[m_i][0]}|Ward {m_i}>"
+                msg=f"*{link}*: " + '\n' + '\n'.join([str(item) for item in rows])
+                badrows.append(msg)
+        if badrows != []:
+            extra_msg = ['Failed to pull the following rows:'] + badrows
+            ti.xcom_push(key="extra_msg", value=extra_msg)
+            raise AirflowFailException('Failed to pull some rows.')
+    
+    @task(
+        retries=0,
+        trigger_rule='all_done',
+        doc_md="""A status message to succinctly report mapped task failures for sheets."""
+    )
+    def status_msg_sheets(**context):
+        ti = context["ti"]
+        ward_count = ti.xcom_pull(key="ward_count", task_ids="read_masterlist")
+        empty_wards = []
+        for m_i in range(0, ward_count):
+            sheet = ti.xcom_pull(key="return_value", map_indexes=m_i, task_ids="read_google_sheets")
+            if sheet is not None:
+                empty_wards.append(sheet)
         if empty_wards != []:
             failure_msg = "Failed to pull/load the data of the following wards: " + ", ".join(map(str, empty_wards))
             context.get("task_instance").xcom_push(key="extra_msg", value=failure_msg)
@@ -197,6 +228,9 @@ def pull_wys_dag():
     pull_schedules()
     
     wards = read_masterlist()
-    read_google_sheets.expand(ward=wards)
+    read_google_sheets.expand(ward=wards) >> [
+        status_msg_rows(wards=wards),
+        status_msg_sheets()
+    ]
 
 pull_wys_dag()
