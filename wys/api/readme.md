@@ -392,9 +392,9 @@ This task group contains red card data checks that may require the pipeline to b
 **`read_google_sheets_tg`**
 This task group reads data from the mobile sign installation google sheets.
   - `read_masterlist`: pulls the list of google sheets from the database `wys.ward_masterlist` table.
-	- `read_google_sheet`: mapped over the output of `read_masterlist`; each task reads an individual google sheet.
-	- `status_msg_rows`: reports any row failures from `read_google_sheet` mapped tasks.
-	- `status_msg_sheets`: reports any sheet failures from `read_google_sheet` mapped tasks.
+  - `read_google_sheet`: mapped over the output of `read_masterlist`; each task reads an individual google sheet.
+  - `status_msg_rows`: reports any row failures from `read_google_sheet` mapped tasks. Runs only on Mondays.
+  - `status_msg_sheets`: reports any sheet failures from `read_google_sheet` mapped tasks. Runs only on Mondays.
 
 `read_google_sheets`: Pulls mobile sign details from the Google Sheets. See more details under [`wys.mobile_sign_installations`](#wysmobile_sign_installations)
 

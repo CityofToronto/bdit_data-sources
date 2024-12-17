@@ -159,11 +159,7 @@ def pull_wys_dag():
 
     @task_group()
     def read_google_sheets_tg():
-        @task.short_circuit(ignore_downstream_trigger_rules=False, retries=0) #only skip immediately downstream task
-        def check_if_monday(ds=None):
-            check_if_dow(1, ds)
-        
-        @task(pre_execute = lambda context: check_if_dow(1, context['ds']))
+        @task
         def read_masterlist(**context):
             wys_postgres = PostgresHook("wys_bot")
             ward_list = []
@@ -176,7 +172,7 @@ def pull_wys_dag():
     
         @task(
             retries = 1,
-            on_failure_callback = None,
+            on_failure_callback = None, #downstream tasks report failures
             map_index_template="{{ ward_no }}",
             doc_md="Reads an individual google sheet and inserts signs into the database. Failures from the mapped tasks are consolidated in follow-up tasks."
         )
@@ -195,7 +191,8 @@ def pull_wys_dag():
             with wys_postgres.get_conn() as conn:
                 if not pull_from_sheet(conn, service, ward, context):
                     return ward[3]
-
+                
+        @task.run_if(lambda context: check_if_dow(1, context['ds'])) #only notify on Mondays
         @task(
             retries=0,
             trigger_rule='all_done',
@@ -215,6 +212,7 @@ def pull_wys_dag():
                 ti.xcom_push(key="extra_msg", value=extra_msg)
                 raise AirflowFailException('Failed to pull some rows.')
         
+        @task.run_if(lambda context: check_if_dow(1, context['ds'])) #only notify on Mondays
         @task(
             retries=0,
             trigger_rule='all_done',
@@ -235,13 +233,12 @@ def pull_wys_dag():
         
         wards=read_masterlist()
         [
-            check_if_monday() >> 
-            read_google_sheet.expand(ward=wards) >> [
+            read_google_sheet.expand(ward=wards) >>
+            [
                 status_msg_rows(wards=wards),
                 status_msg_sheets()
             ]
         ]
-        
     check_partitions() >> api_pull() >> agg_speed_counts_hr() >> t_done >> data_checks()
     pull_schedules()
     read_google_sheets_tg()
