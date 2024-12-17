@@ -97,8 +97,8 @@ Contains helper functions to be used in multiple DAGs.
 - Deprecated: [check_rescu.py](check_rescu.py). 
 
 ### WYS
-- [**refresh_wys_monthly.py**](refresh_wys_monthly.py): [readme](../wys/api/README.md#wys_monthly_summary).
-- [**pull_wys.py**](pull_wys.py): [readme](../wys/api/README.md#pull_wys).
+- [**refresh_wys_monthly.py**](refresh_wys_monthly.py): [readme](../wys/api/readme.md#wys_monthly_summary).
+- [**pull_wys.py**](pull_wys.py): [readme](../wys/api/readme.md#pull_wys).
 - [**wys_check.py**](wys_check.py): Contains additional data quality checks for `pull_wys`.  
 
 ## Common Tasks
