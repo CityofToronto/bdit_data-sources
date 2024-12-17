@@ -8,6 +8,7 @@ from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.python import get_current_context
+from airflow.models.param import Param
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -25,14 +26,65 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
         default_args=default_args,
         catchup=False,
         tags=["bdit_data-sources", "gcc", name, "quarterly"],
+        params={
+            "layer_name": Param(
+                default='',
+                type="string",
+                title="Layer name.",
+                description="Layer name for custom pull. Example: city_ward",
+            ),
+            "is_audited": Param(
+                default=False,
+                type="boolean",
+                title="is_audited",
+                description="Is the layer audited?",
+            ),
+            "layer_id": Param(
+                default=0,
+                type="integer",
+                title="layer_id.",
+                description="layer_id for custom pull. Example: 0",
+            ),
+            "mapserver": Param(
+                default=0,
+                type="integer",
+                title="mapserver",
+                description="mapserver for custom pull. Example: 0",
+            ),"pk": Param(
+                default='',
+                type="string",
+                title="Primary Key.",
+                description="(Optional) primary key for custom pull. Example: area_id",
+                examples=['area_id', 'objectid'],
+            ),
+            "schema_name": Param(
+                default='',
+                type="string",
+                title="schema_name.",
+                description="schema_name for custom pull",
+                examples=['gis', 'gis_core'],
+            )
+        },
         schedule='0 7 1 */3 *' #'@quarterly'
     )
     def gcc_layers_dag():
         
         @task()
-        def get_layers(name):
-            tables = Variable.get('gcc_layers', deserialize_json=True)
-            return tables[name]
+        def get_layers(name, **context):
+            layer_name = context["params"]["layer_name"]
+            if layer_name == "":
+                tables = Variable.get('gcc_layers', deserialize_json=True)
+                return tables[name]
+            #if layer_name param was used to trigger, return only the custom layer.
+            layer = dict({
+                'is_audited': context["params"]["is_audited"],
+                'layer_id': context["params"]["layer_id"],
+                'mapserver': context["params"]["mapserver"],
+                'pk': context["params"]["pk"],
+                'schema_name': context["params"]["schema_name"]
+            })
+            return dict({layer_name:layer})
+                
                     
         @task(map_index_template="{{ table_name }}")
         def pull_layer(layer, conn_id):
