@@ -67,7 +67,7 @@ def vdsvehicledata_dag():
             task_id='create_partitions',
             pre_execute=check_jan_1st,
             sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True
         )
         
@@ -85,7 +85,7 @@ def vdsvehicledata_dag():
                     dt >= '{{ds}} 00:00:00'::timestamp
                     AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsvehicledata',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1,
             trigger_rule='none_failed'
@@ -110,7 +110,7 @@ def vdsvehicledata_dag():
         summarize_speeds_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_speeds_15min.sql", "insert/insert_veh_speeds_15min.sql"],
             task_id='summarize_speeds',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
@@ -119,7 +119,7 @@ def vdsvehicledata_dag():
         summarize_lengths_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_length_15min.sql", "insert/insert_veh_lengths_15min.sql"],
             task_id='summarize_lengths',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )

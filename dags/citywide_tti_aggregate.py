@@ -59,7 +59,7 @@ def citywide_tti_aggregate():
 
     aggregate_daily = SQLExecuteQueryOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_daily',
-                                       postgres_conn_id='congestion_bot',
+                                       conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0
                                        )

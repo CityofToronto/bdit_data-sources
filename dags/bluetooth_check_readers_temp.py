@@ -71,7 +71,7 @@ def blip_pipeline():
     update_routes_table = SQLExecuteQueryOperator(
         sql='''SELECT * from bluetooth.insert_report_date_temp()''',
         task_id='update_routes_table',
-        postgres_conn_id='bt_bot',
+        conn_id='bt_bot',
         autocommit=True,
         retries = 0
     )
@@ -80,7 +80,7 @@ def blip_pipeline():
     update_reader_status = SQLExecuteQueryOperator(
         sql='''SELECT * from bluetooth.reader_status_history_temp('{{ ds }}')''',
         task_id='update_reader_status',
-        postgres_conn_id='bt_bot',
+        conn_id='bt_bot',
         autocommit=True,
         retries = 0
     )
