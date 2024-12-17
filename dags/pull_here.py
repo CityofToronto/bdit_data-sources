@@ -87,7 +87,7 @@ def pull_here():
         os.environ['HOST'] = conn.host
         os.environ['USER'] = conn.login
         os.environ['PGPASSWORD'] = conn.password
-        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
