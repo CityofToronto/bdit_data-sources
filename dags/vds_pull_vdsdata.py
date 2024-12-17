@@ -103,7 +103,7 @@ def vdsdata_dag():
                 #partition by year only: 
                 "SELECT vds.partition_vds_yyyy('counts_15min_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
                 "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True
         )
 
@@ -122,7 +122,7 @@ def vdsdata_dag():
                     dt >= '{{ds}} 00:00:00'::timestamp
                     AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsdata',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1,
             trigger_rule='none_failed'
@@ -148,7 +148,7 @@ def vdsdata_dag():
         summarize_v15_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min.sql", "insert/insert_counts_15min.sql"],
             task_id='summarize_v15',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
@@ -157,7 +157,7 @@ def vdsdata_dag():
         summarize_v15_bylane_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min_bylane.sql", "insert/insert_counts_15min_bylane.sql"],
             task_id='summarize_v15_bylane',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )

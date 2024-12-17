@@ -81,7 +81,7 @@ def pull_miovision_dag():
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
-            postgres_conn_id='miovision_api_bot',
+            conn_id='miovision_api_bot',
             autocommit=True
         )
       
@@ -89,7 +89,7 @@ def pull_miovision_dag():
             task_id='create_month_partition',
             pre_execute=check_1st_of_month,
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
-            postgres_conn_id='miovision_api_bot',
+            conn_id='miovision_api_bot',
             autocommit=True,
             trigger_rule='none_failed_min_one_success'
         )
