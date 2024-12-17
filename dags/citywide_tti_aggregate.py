@@ -46,7 +46,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 @dag(
     DAG_NAME, 
     default_args=default_args, 
-    schedule_interval=None, # gets triggered by HERE dag
+    schedule=None, # gets triggered by HERE dag
     doc_md = doc_md,
     tags=["HERE"],
     catchup=False

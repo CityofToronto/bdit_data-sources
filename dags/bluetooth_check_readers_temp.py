@@ -50,7 +50,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule_interval='0 8 * * *',
+    schedule='0 8 * * *',
     catchup=False,
     tags=['bluetooth', 'data_checks']
 )
