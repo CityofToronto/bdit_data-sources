@@ -11,7 +11,7 @@ import click
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 def logger():
