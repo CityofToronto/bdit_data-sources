@@ -82,7 +82,7 @@ def pull_here_path():
         os.environ['HOST'] = conn.host
         os.environ['USER'] = conn.login
         os.environ['PGPASSWORD'] = conn.password
-        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
 
     load_data()
 
