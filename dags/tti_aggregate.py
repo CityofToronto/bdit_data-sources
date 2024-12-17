@@ -53,14 +53,14 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 def tti_aggregate():
     aggregate_citywide_tti = SQLExecuteQueryOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_citywide_tti',
-                                       postgres_conn_id='congestion_bot',
+                                       conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0
                                        )
     
     aggregate_downtown_tti = SQLExecuteQueryOperator(sql="SELECT covid.generate_downtown_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_downtown_tti',
-                                       postgres_conn_id='congestion_bot',
+                                       conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0
                                        )

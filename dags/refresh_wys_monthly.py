@@ -52,7 +52,7 @@ with DAG(dag_id = dag_name,
                             #sql in bdit_data-sources/wys/api/sql/mat-view-stationary-signs.sql
                             sql='SELECT wys.refresh_mat_view_stationary_signs()',
                             task_id='wys_view_stat_signs',
-                            postgres_conn_id='wys_bot',
+                            conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
     wys_view_mobile_api_id = SQLExecuteQueryOperator(
@@ -60,28 +60,28 @@ with DAG(dag_id = dag_name,
                             #sql in bdit_data-sources/wys/api/sql/create-view-mobile_api_id.sql
                             sql='SELECT wys.refresh_mat_view_mobile_api_id()', 
                             task_id='wys_view_mobile_api_id',
-                            postgres_conn_id='wys_bot',
+                            conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
     od_wys_view = SQLExecuteQueryOperator(
                             #sql in bdit_data-sources/wys/api/sql/open_data/mat-view-stationary-locations.sql
                             sql='SELECT wys.refresh_od_mat_view()',
                             task_id='od_wys_view',
-                            postgres_conn_id='wys_bot',
+                            conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
     wys_mobile_summary = SQLExecuteQueryOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-mobile-summary.sql
                             sql="SELECT wys.mobile_summary_for_month('{{ last_month(ds) }}')",
                             task_id='wys_mobile_summary',
-                            postgres_conn_id='wys_bot',
+                            conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
     wys_stat_summary = SQLExecuteQueryOperator(
                             #sql in bdit_data-sources/wys/api/sql/function-stationary-sign-summary.sql
                             sql="SELECT wys.stationary_summary_for_month('{{ last_month(ds) }}')", 
                             task_id='wys_stat_summary',
-                            postgres_conn_id='wys_bot',
+                            conn_id='wys_bot',
                             autocommit=True,
                             retries = 0)
 
