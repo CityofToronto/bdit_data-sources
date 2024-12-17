@@ -3,7 +3,7 @@ import sys
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
@@ -63,7 +63,7 @@ def vdsvehicledata_dag():
     @task_group(group_id='check_partitions')
     def check_partitions_TG():
 
-        create_partitions = PostgresOperator(
+        create_partitions = SQLExecuteQueryOperator(
             task_id='create_partitions',
             pre_execute=check_jan_1st,
             sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
@@ -79,7 +79,7 @@ def vdsvehicledata_dag():
     def pull_vdsvehicledata():
 
         #deletes data from vds.raw_vdsvehicledata
-        delete_vdsvehicledata_task = PostgresOperator(
+        delete_vdsvehicledata_task = SQLExecuteQueryOperator(
             sql="""DELETE FROM vds.raw_vdsvehicledata
                     WHERE
                     dt >= '{{ds}} 00:00:00'::timestamp
@@ -107,7 +107,7 @@ def vdsvehicledata_dag():
         (5km/h speed bins), `vds.veh_length_15min` (1m length bins)"""
 
         #deletes from and then inserts new data into summary table vds.aggregate_15min_veh_speeds
-        summarize_speeds_task = PostgresOperator(
+        summarize_speeds_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_speeds_15min.sql", "insert/insert_veh_speeds_15min.sql"],
             task_id='summarize_speeds',
             postgres_conn_id='vds_bot',
@@ -116,7 +116,7 @@ def vdsvehicledata_dag():
         )
 
         #deletes from and then insert new data into summary table vds.veh_length_15min
-        summarize_lengths_task = PostgresOperator(
+        summarize_lengths_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_length_15min.sql", "insert/insert_veh_lengths_15min.sql"],
             task_id='summarize_lengths',
             postgres_conn_id='vds_bot',

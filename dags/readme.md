@@ -62,7 +62,7 @@ You may notice that many older DAGs have not been renamed to this standard: it i
 - Deprecated: [**pull_interventions_dag.py**](pull_interventions_dag.py).
 
 ### [**sql**](./sql/)
-This folder contains generic sql scripts which are used by various volumes data checks via Airflow PostgresOperator + jinja templating. 
+This folder contains generic sql scripts which are used by various volumes data checks via Airflow SQLExecuteQueryOperator + jinja templating. 
 
 ### [**custom_operators.py**](custom_operators.py)  
 Contains custom Airflow Operators.  

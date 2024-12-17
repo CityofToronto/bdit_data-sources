@@ -2,7 +2,7 @@ import sys
 import os
 
 from datetime import datetime, timedelta
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task
 from airflow.macros import ds_add, ds_format
@@ -57,7 +57,7 @@ def citywide_tti_aggregate():
 
 # Task to aggregate citwyide tti
 
-    aggregate_daily = PostgresOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
+    aggregate_daily = SQLExecuteQueryOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_daily',
                                        postgres_conn_id='congestion_bot',
                                        autocommit=True,
