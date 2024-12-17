@@ -99,10 +99,10 @@ echo "Running Cleanup Process..."
 if [ $TYPE == file ];
 then
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type f -mtime +${MAX_LOG_AGE_IN_DAYS}"
-    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \\;"
 else
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type d -empty"
-    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \\;"
 fi
 echo "Executing Find Statement: ${FIND_STATEMENT}"
 FILES_MARKED_FOR_DELETE=`eval ${FIND_STATEMENT}`
