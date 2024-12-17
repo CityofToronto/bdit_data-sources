@@ -20,7 +20,7 @@ dag_name = 'wys_monthly_summary'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-README_PATH = os.path.join(repo_path, 'wys/api/README.md')
+README_PATH = os.path.join(repo_path, 'wys/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, dag_name)
 
 default_args = {'owner': ','.join(names),
