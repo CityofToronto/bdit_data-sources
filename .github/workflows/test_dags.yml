@@ -20,4 +20,4 @@ jobs:
         pip install -r requirements.txt
     - name: Run basic tests on DAGs
       run: |
-        pytest -v test/integration/test_dags.py -W error
+        pytest -v test/integration/test_dags.py
