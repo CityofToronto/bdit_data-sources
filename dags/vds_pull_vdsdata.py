@@ -3,7 +3,7 @@ import sys
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskMarker
@@ -94,7 +94,7 @@ def vdsdata_dag():
         """Task group checks if all necessary partitions exist and
         if not executes create functions."""
 
-        create_partitions = PostgresOperator(
+        create_partitions = SQLExecuteQueryOperator(
             task_id='create_partitions',
             pre_execute=check_jan_1st,
             sql=[#partition by year and month:
@@ -116,7 +116,7 @@ def vdsdata_dag():
         and then pulls and inserts from ITSC."""
 
         #deletes data from vds.raw_vdsdata
-        delete_raw_vdsdata_task = PostgresOperator(
+        delete_raw_vdsdata_task = SQLExecuteQueryOperator(
             sql="""DELETE FROM vds.raw_vdsdata
                     WHERE
                     dt >= '{{ds}} 00:00:00'::timestamp
@@ -145,7 +145,7 @@ def vdsdata_dag():
         into the same table."""
         
         #first deletes and then inserts summarized data into RDS `vds.counts_15min`
-        summarize_v15_task = PostgresOperator(
+        summarize_v15_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min.sql", "insert/insert_counts_15min.sql"],
             task_id='summarize_v15',
             postgres_conn_id='vds_bot',
@@ -154,7 +154,7 @@ def vdsdata_dag():
         )
 
         #first deletes and then inserts summarized data into RDS `vds.counts_15min_bylane`
-        summarize_v15_bylane_task = PostgresOperator(
+        summarize_v15_bylane_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min_bylane.sql", "insert/insert_counts_15min_bylane.sql"],
             task_id='summarize_v15_bylane',
             postgres_conn_id='vds_bot',

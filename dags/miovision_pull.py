@@ -14,7 +14,7 @@ import dateutil.parser
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
@@ -75,7 +75,7 @@ def pull_miovision_dag():
     @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
 
-        create_annual_partition = PostgresOperator(
+        create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
@@ -85,7 +85,7 @@ def pull_miovision_dag():
             autocommit=True
         )
       
-        create_month_partition = PostgresOperator(
+        create_month_partition = SQLExecuteQueryOperator(
             task_id='create_month_partition',
             pre_execute=check_1st_of_month,
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
