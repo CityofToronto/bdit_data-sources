@@ -15,7 +15,7 @@ from datetime import timedelta
 
 from airflow.decorators import dag, task, task_group
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 
 LOGGER = logging.getLogger(__name__)
@@ -73,24 +73,24 @@ def eoy_create_table_dag():
                     name = name.replace('Observed', 'obs')
                     cur.execute('INSERT INTO ref.holiday VALUES (%s, %s)', (dt, name))
 
-        here_create_tables = PostgresOperator(
+        here_create_tables = SQLExecuteQueryOperator(
                         task_id='here_create_tables',
                         sql="SELECT here.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='here_bot',
                         autocommit=True)
-        here_path_create_tables = PostgresOperator(
+        here_path_create_tables = SQLExecuteQueryOperator(
                         task_id='here_path_create_tables',
                         sql="SELECT here.create_yearly_tables_path('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='here_bot',
                         autocommit=True)
         
-        bt_create_tables = PostgresOperator(
+        bt_create_tables = SQLExecuteQueryOperator(
                         task_id='bluetooth_create_tables',
                         sql="SELECT bluetooth.create_obs_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='bt_bot',
                         autocommit=True)
         
-        congestion_create_table = PostgresOperator(
+        congestion_create_table = SQLExecuteQueryOperator(
                         task_id='congestion_create_table',
                         sql="SELECT congestion.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
                         postgres_conn_id='congestion_bot',

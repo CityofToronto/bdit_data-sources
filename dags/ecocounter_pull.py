@@ -73,7 +73,7 @@ def pull_ecocounter_dag():
     @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
 
-        create_annual_partition = PostgresOperator(
+        create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
             sql="""SELECT ecocounter.create_yyyy_counts_unfiltered_partition(

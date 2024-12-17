@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 
 from airflow.operators.python import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from airflow.decorators import task, dag, task_group, run_if
 from airflow.sensors.external_task import ExternalTaskMarker
@@ -66,7 +66,7 @@ def pull_wys_dag():
     @task_group
     def check_partitions():
 
-        create_annual_partition = PostgresOperator(
+        create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
             sql="SELECT wys.create_yyyy_raw_data_partition('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
@@ -74,7 +74,7 @@ def pull_wys_dag():
             autocommit=True
         )
         
-        create_month_partition = PostgresOperator(
+        create_month_partition = SQLExecuteQueryOperator(
             task_id='create_month_partition',
             pre_execute=check_1st_of_month,
             trigger_rule='none_failed_min_one_success',
