@@ -11,7 +11,7 @@ from datetime import timedelta
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.latest_only import LatestOnlyOperator
 
 # DAG Information
 dag_name = 'pull_weather'
