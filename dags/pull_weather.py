@@ -8,7 +8,7 @@ import sys
 import pendulum
 from airflow import DAG
 from datetime import timedelta
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 from airflow.operators.latest_only_operator import LatestOnlyOperator
