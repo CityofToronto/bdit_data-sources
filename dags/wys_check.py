@@ -22,7 +22,7 @@ except:
 DAG_NAME = 'wys_check'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-README_PATH = os.path.join(repo_path, 'wys/api/README.md')
+README_PATH = os.path.join(repo_path, 'wys/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
