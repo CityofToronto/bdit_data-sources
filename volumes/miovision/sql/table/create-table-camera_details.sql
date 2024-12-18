@@ -5,7 +5,6 @@
 CREATE TABLE IF NOT EXISTS miovision_api.camera_details
 (
     intersection_id text COLLATE pg_catalog."default" NOT NULL,
-    api_name text COLLATE pg_catalog."default",
     camera_id text COLLATE pg_catalog."default" NOT NULL,
     camera_label text COLLATE pg_catalog."default",
     last_seen date NOT NULL,
