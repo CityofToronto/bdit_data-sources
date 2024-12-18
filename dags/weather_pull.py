@@ -13,7 +13,7 @@ from datetime import timedelta, time
 from airflow.decorators import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.latest_only import LatestOnlyOperator
 from airflow.sensors.time_sensor import TimeSensor
 
 # DAG Information

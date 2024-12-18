@@ -150,17 +150,15 @@ def task_fail_slack_alert(
 
 def get_readme_docmd(readme_path, dag_name):
     """Extracts a DAG doc_md from a .md file using html comments tags.
-
     Args:
         readme_path: An aboslute path to the .md file to extract from. 
         dag_name: The name of the DAG, matching the html comment in the .md
         file to extract from. The html comment should be in the format
         '<!-- dag_name_doc_md -->' before and after the relevant section. 
     """
-
     contents = open(readme_path, 'r').read()
     doc_md_key = '<!-- ' + dag_name + '_doc_md -->'
-    doc_md_regex = '(?<=' + doc_md_key + '\n)[\s\S]+(?=\n' + doc_md_key + ')'
+    doc_md_regex = '(?<=' + doc_md_key + '\\n)[\\s\\S]+(?=\\n' + doc_md_key + ')'
     try:
         doc_md = re.findall(doc_md_regex, contents)[0]
     except IndexError: #soft fail without breaking DAG.

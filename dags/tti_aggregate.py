@@ -2,7 +2,7 @@ import sys
 import os
 
 from datetime import datetime, timedelta
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task
 from airflow.macros import ds_add, ds_format
@@ -43,7 +43,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 @dag(
     DAG_NAME, 
     default_args=default_args, 
-    schedule_interval=None, # gets triggered by HERE dag
+    schedule=None, # gets triggered by HERE dag
     doc_md = doc_md,
     tags=["HERE"],
     catchup=False
@@ -51,16 +51,16 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 
 
 def tti_aggregate():
-    aggregate_citywide_tti = PostgresOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
+    aggregate_citywide_tti = SQLExecuteQueryOperator(sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_citywide_tti',
-                                       postgres_conn_id='congestion_bot',
+                                       conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0
                                        )
     
-    aggregate_downtown_tti = PostgresOperator(sql="SELECT covid.generate_downtown_tti( '{{macros.ds_add(ds, -1)}}' )",
+    aggregate_downtown_tti = SQLExecuteQueryOperator(sql="SELECT covid.generate_downtown_tti( '{{macros.ds_add(ds, -1)}}' )",
                                        task_id='aggregate_downtown_tti',
-                                       postgres_conn_id='congestion_bot',
+                                       conn_id='congestion_bot',
                                        autocommit=True,
                                        retries = 0
                                        )

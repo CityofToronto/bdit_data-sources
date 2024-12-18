@@ -11,9 +11,7 @@ import os
 import sys
 import pendulum
 from datetime import timedelta
-from typing import Any
 from dateutil.parser import parse
-from sqlalchemy.engine import Engine
 from googleapiclient.discovery import build
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable 
@@ -69,8 +67,6 @@ def get_vz_data():
     
     @task(map_index_template="{{ task_year }}")
     def pull_data(
-        engine: Engine,
-        service: Any,
         schema: str,
         spreadsheet: dict,
         **context
@@ -78,8 +74,6 @@ def get_vz_data():
         """Loads SSZ data from Google Spreadsheets into the database.
 
         Args:
-            engine: Connection to the PostgreSQL database.
-            service: Resource for interacting with the Google API.
             schema: Name of schema to load the data into.
             spreadsheet: Dictionary of the year to be loaded, the spreadsheet
                 ID, and the range of data within the spreadsheet.
@@ -94,6 +88,11 @@ def get_vz_data():
         from airflow.operators.python import get_current_context
         context = get_current_context()
         context["task_year"] = spreadsheet["year"]
+        
+        #to get credentials to access google sheets, database
+        google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
+        service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False)
+        engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine()
         
         year = spreadsheet["year"]
         context["task_instance"].xcom_push(
@@ -145,13 +144,8 @@ def get_vz_data():
             raise AirflowFailException('No sheets found.')
         
         return sheets
-            
-    #to get credentials to access google sheets
-    google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
     
     pull_data.partial(
-        engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine(),
-        service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False),
         schema="vz_safety_programs_staging"
     ).expand(
         spreadsheet=filter_spreadsheets()
