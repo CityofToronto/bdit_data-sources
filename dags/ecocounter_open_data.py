@@ -10,8 +10,8 @@ from functools import partial
 
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable 
-from airflow.hooks.base_hook import BaseHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.hooks.base import BaseHook
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
 from airflow.operators.python import get_current_context
@@ -94,10 +94,10 @@ def ecocounter_open_data_dag():
         yrs = [mnth.year, prev_mnth.year]
         return list(set(yrs)) #unique
 
-    update_locations = PostgresOperator(
+    update_locations = SQLExecuteQueryOperator(
         sql=f"SELECT ecocounter.open_data_locations_insert()",
         task_id='update_locations',
-        postgres_conn_id='ecocounter_bot',
+        conn_id='ecocounter_bot',
         autocommit=True,
         retries = 0
     )
@@ -108,10 +108,10 @@ def ecocounter_open_data_dag():
         def insert_daily(yr):
             context = get_current_context()
             context["yr"] = yr
-            t = PostgresOperator(
+            t = SQLExecuteQueryOperator(
                 sql=f"SELECT ecocounter.open_data_daily_counts_insert({yr}::int)",
                 task_id='insert_daily_open_data',
-                postgres_conn_id='ecocounter_bot',
+                conn_id='ecocounter_bot',
                 autocommit=True,
                 retries = 0
             )
@@ -121,25 +121,23 @@ def ecocounter_open_data_dag():
         def insert_15min(yr):
             context = get_current_context()
             context["yr"] = yr
-            t = PostgresOperator(
+            t = SQLExecuteQueryOperator(
                 sql=f"SELECT ecocounter.open_data_15min_counts_insert({yr}::int)",
                 task_id='insert_15min_open_data',
-                postgres_conn_id='ecocounter_bot',
+                conn_id='ecocounter_bot',
                 autocommit=True,
                 retries = 0
             )
             return t.execute(context=context)
         
-        @task.bash(
-            env={
-                "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-                "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
-                "EXPORT_PATH": EXPORT_PATH,
-            }
-        )
-        def download_daily_open_data()->str:
-            return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+        @task.bash(append_env=True)
+        def download_daily_open_data(export_path)->str:
+            conn = BaseHook.get_connection("ecocounter_bot")
+            os.environ['HOST'] = conn.host
+            os.environ['LOGIN'] = conn.login
+            os.environ['PGPASSWORD'] = conn.password
+            os.environ['EXPORT_PATH'] = export_path
+            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT
                     location_dir_id, location_name, direction, linear_name_full,
                     side_street, dt, daily_volume
@@ -150,17 +148,17 @@ def ecocounter_open_data_dag():
 
         @task.bash(
             map_index_template="{{ yr }}",
-            env={
-                "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-                "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-                "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
-                "EXPORT_PATH": EXPORT_PATH,
-            }
+            append_env=True
         )
-        def download_15min_open_data(yr)->str:
+        def download_15min_open_data(yr, export_path)->str:
             context = get_current_context()
             context["yr"] = yr
-            return f'''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+            conn = BaseHook.get_connection("ecocounter_bot")
+            os.environ['HOST'] = conn.host
+            os.environ['LOGIN'] = conn.login
+            os.environ['PGPASSWORD'] = conn.password
+            os.environ['EXPORT_PATH'] = export_path
+            return f'''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT location_dir_id, datetime_bin, bin_volume
                 FROM open_data.cycling_permanent_counts_15min
                 WHERE
@@ -170,17 +168,17 @@ def ecocounter_open_data_dag():
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_15min_{yr}_{yr+1}.csv"'''
         
         #insert only latest year data, but download everything (single file)
-        insert_daily(yr) >> download_daily_open_data()
-        insert_15min(yr) >> download_15min_open_data(yr)
+        insert_daily(yr) >> download_daily_open_data(export_path=EXPORT_PATH)
+        insert_15min(yr) >> download_15min_open_data(yr, export_path=EXPORT_PATH)
     
-    @task.bash(env={
-        "HOST":  BaseHook.get_connection("ecocounter_bot").host,
-        "USER" :  BaseHook.get_connection("ecocounter_bot").login,
-        "PGPASSWORD": BaseHook.get_connection("ecocounter_bot").password,
-        "EXPORT_PATH": EXPORT_PATH,
-    })
-    def download_locations_open_data()->str:
-        return '''/usr/bin/psql -h $HOST -U $USER -d bigdata -c \
+    @task.bash(append_env=True)
+    def download_locations_open_data(export_path)->str:
+        conn = BaseHook.get_connection("ecocounter_bot")
+        os.environ['HOST'] = conn.host
+        os.environ['LOGIN'] = conn.login
+        os.environ['PGPASSWORD'] = conn.password
+        os.environ['EXPORT_PATH'] = export_path
+        return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
                     longitude, latitude, centreline_id, bin_size, latest_calibration_study,
                     first_active, last_active, date_decommissioned, technology
@@ -188,10 +186,9 @@ def ecocounter_open_data_dag():
                 ORDER BY location_dir_id;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
     
-    #@task.bash(env={
-    #    "EXPORT_PATH": EXPORT_PATH,
-    #})
-    #def output_readme()->str:
+    #@task.bash(append_env=True)
+    #def output_readme(export_path)->str:
+    #    os.environ['EXPORT_PATH'] = export_path
     #    return '''
     #    pandoc -V geometry:margin=1in \
     #        -o "$EXPORT_PATH/cycling_permanent_counts_readme.pdf" \
@@ -219,8 +216,8 @@ def ecocounter_open_data_dag():
         wait_till_10th >> 
         update_locations >> [
             insert_and_download_data.expand(yr = yrs),
-            download_locations_open_data(),
-            #output_readme()
+            download_locations_open_data(export_path=EXPORT_PATH),
+            #output_readme(export_path=EXPORT_PATH)
         ] >>
         status_message()
     )
