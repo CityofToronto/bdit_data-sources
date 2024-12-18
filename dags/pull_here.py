@@ -81,12 +81,13 @@ def pull_here():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
 
-    @task.bash(env={"DOWNLOAD_URL": download_url})
-    def load_data_run()->str:
+    @task.bash(append_env=True)
+    def load_data_run(download_url)->str:
         conn = BaseHook.get_connection("here_bot")
         os.environ['HOST'] = conn.host
         os.environ['LOGIN'] = conn.login
         os.environ['PGPASSWORD'] = conn.password
+        os.environ['DOWNLOAD_URL'] = download_url
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
     # Create a task group for triggering the DAGs
@@ -104,6 +105,6 @@ def pull_here():
             )
             trigger_operators.append(trigger_operator)
 
-    load_data_run() >> trigger_dags()
+    load_data_run(download_url) >> trigger_dags()
 
 pull_here()

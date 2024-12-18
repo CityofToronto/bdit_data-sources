@@ -76,14 +76,15 @@ def pull_here_path():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
     
-    @task.bash(env={"DOWNLOAD_URL": download_url})
-    def load_data()->str:
+    @task.bash(append_env = True)
+    def load_data(download_url)->str:
         conn = BaseHook.get_connection("here_bot")
         os.environ['HOST'] = conn.host
         os.environ['LOGIN'] = conn.login
         os.environ['PGPASSWORD'] = conn.password
+        os.environ['DOWNLOAD_URL'] = download_url
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
 
-    load_data()
+    load_data(download_url)
 
 pull_here_path()
