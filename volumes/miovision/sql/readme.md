@@ -113,10 +113,10 @@ Note that bicycles are available at both a turning movement level and at an appr
 | 4                  | SingleUnitTruck  | false         | "Vehicles"    | A truck that has a non-detachable cab and trailer system |
 | 5                  | ArticulatedTruck | false         | "Vehicles"    | A truck that has a detachable cab and trailer system |
 | 6                  | Pedestrian       | true          | "Pedestrians" | A walker. May or may not include zombies... |
-| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. do not use aggregate volumes will be removed from tables |
+| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. This movement is exlcuded from aggregate tables. |
 | 8                  | WorkVan          |               |               | A van used for commercial purposes Workvan classification was folded in to "Light" vehicles in the API. |
 | 9                  | MotorizedVehicle | false         | "Vehicles"    | Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars. |
-| 10                 | Bicycle          | false         | "Cyclists"    | Tracks bicycle entrances and exits. There are currently  no exits in the aggregated tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
+| 10                 | Bicycle          | false         | "Cyclists"    | The preferred bike classification. Tracks bicycle entrances and exits passing through manually drawn zones on the SmartSense overlay. Exits are exlcuded from aggregate tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
 
 ### `movements`
 
