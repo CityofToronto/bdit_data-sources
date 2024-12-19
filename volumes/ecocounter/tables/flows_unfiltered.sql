@@ -12,6 +12,7 @@ CREATE TABLE ecocounter.flows_unfiltered (
     first_active timestamp without time zone,
     last_active timestamp without time zone,
     date_decommissioned timestamp without time zone,
+    direction_main travel_directions,
     CONSTRAINT locations_pkey PRIMARY KEY (flow_id),
     CONSTRAINT flows_replaced_by_flow_id_fkey FOREIGN KEY (replaced_by_flow_id)
     REFERENCES ecocounter.flows_unfiltered (flow_id) MATCH SIMPLE
@@ -69,3 +70,5 @@ COMMENT ON COLUMN ecocounter.flows_unfiltered.last_active IS E''
 CREATE INDEX IF NOT EXISTS flows_flow_id_idx
 ON ecocounter.flows_unfiltered USING btree (flow_id ASC NULLS LAST)
 TABLESPACE pg_default;
+
+CREATE TYPE travel_directions AS ENUM ('Northbound', 'Southbound', 'Westbound', 'Eastbound');
