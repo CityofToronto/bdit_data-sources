@@ -135,9 +135,9 @@ def ecocounter_open_data_dag():
             conn = BaseHook.get_connection("ecocounter_bot")
             os.environ['HOST'] = conn.host
             os.environ['LOGIN'] = conn.login
-            os.environ['PGPASSWORD'] = conn.password
+            os.environ['PW'] = conn.password
             os.environ['EXPORT_PATH'] = export_path
-            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+            return '''PGPASSWORD=$PW /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT
                     location_dir_id, location_name, direction, linear_name_full,
                     side_street, dt, daily_volume
@@ -156,9 +156,9 @@ def ecocounter_open_data_dag():
             conn = BaseHook.get_connection("ecocounter_bot")
             os.environ['HOST'] = conn.host
             os.environ['LOGIN'] = conn.login
-            os.environ['PGPASSWORD'] = conn.password
+            os.environ['PW'] = conn.password
             os.environ['EXPORT_PATH'] = export_path
-            return f'''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+            return f'''PGPASSWORD=$PW /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT location_dir_id, datetime_bin, bin_volume
                 FROM open_data.cycling_permanent_counts_15min
                 WHERE
@@ -176,9 +176,9 @@ def ecocounter_open_data_dag():
         conn = BaseHook.get_connection("ecocounter_bot")
         os.environ['HOST'] = conn.host
         os.environ['LOGIN'] = conn.login
-        os.environ['PGPASSWORD'] = conn.password
+        os.environ['PW'] = conn.password
         os.environ['EXPORT_PATH'] = export_path
-        return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+        return '''PGPASSWORD=$PW /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
                     longitude, latitude, centreline_id, bin_size, latest_calibration_study,
                     first_active, last_active, date_decommissioned, technology
