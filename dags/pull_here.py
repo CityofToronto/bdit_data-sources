@@ -86,9 +86,9 @@ def pull_here():
         conn = BaseHook.get_connection("here_bot")
         os.environ['HOST'] = conn.host
         os.environ['LOGIN'] = conn.login
-        os.environ['PGPASSWORD'] = conn.password
+        os.environ['PW'] = conn.password
         os.environ['DOWNLOAD_URL'] = download_url
-        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+        return '''curl $DOWNLOAD_URL | gunzip | PGPASSWORD=$PW psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
