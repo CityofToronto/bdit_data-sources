@@ -7,7 +7,7 @@ import os
 import pendulum
 
 from datetime import timedelta
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.models import Variable
 from airflow.decorators import dag, task, task_group
@@ -50,7 +50,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     schedule_interval='0 17 * * * ' ,
+     schedule='0 17 * * * ' ,
      catchup=False,
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
@@ -81,12 +81,14 @@ def pull_here():
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id, access_token)
 
-    @task.bash(env={"DOWNLOAD_URL": download_url,
-                    "HOST":  BaseHook.get_connection("here_bot").host,
-                    "USER" :  BaseHook.get_connection("here_bot").login,
-                    "PGPASSWORD": BaseHook.get_connection("here_bot").password})
-    def load_data_run()->str:
-        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $USER -d bigdata -c "\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+    @task.bash(append_env=True)
+    def load_data_run(download_url)->str:
+        conn = BaseHook.get_connection("here_bot")
+        os.environ['HOST'] = conn.host
+        os.environ['LOGIN'] = conn.login
+        os.environ['PW'] = conn.password
+        os.environ['DOWNLOAD_URL'] = download_url
+        return '''curl $DOWNLOAD_URL | gunzip | PGPASSWORD=$PW psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
     
     # Create a task group for triggering the DAGs
     @task_group(group_id='trigger_dags_tasks')
@@ -103,6 +105,6 @@ def pull_here():
             )
             trigger_operators.append(trigger_operator)
 
-    load_data_run() >> trigger_dags()
+    load_data_run(download_url) >> trigger_dags()
 
 pull_here()
