@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION miovision_api.aggregate_volumes_daily(
     intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 
 COST 100
 VOLATILE
@@ -86,11 +86,11 @@ BEGIN
             AND v.intersection_uid = ANY(target_intersections)
             --exclude bike exits 
             AND NOT (
-                classification_uid = 10
-                AND movement_uid = 8
+                v.classification_uid = 10
+                AND v.movement_uid = 8
             )
             --exclude bikes in crosswalk
-            AND NOT (classification_uid = 7)
+            AND NOT (v.classification_uid = 7)
         GROUP BY
             v.intersection_uid,
             v.classification_uid,
