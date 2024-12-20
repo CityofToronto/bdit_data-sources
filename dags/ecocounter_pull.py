@@ -15,9 +15,9 @@ import logging
 
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.macros import ds_add
 from airflow.exceptions import AirflowSkipException
 from airflow.sensors.external_task import ExternalTaskMarker
@@ -73,14 +73,14 @@ def pull_ecocounter_dag():
     @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
 
-        create_annual_partition = PostgresOperator(
+        create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
             sql="""SELECT ecocounter.create_yyyy_counts_unfiltered_partition(
                     base_table := 'counts_unfiltered',
                     year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int
                 )""",
-            postgres_conn_id='ecocounter_bot',
+            conn_id='ecocounter_bot',
             autocommit=True
         )
       
