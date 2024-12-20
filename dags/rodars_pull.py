@@ -13,7 +13,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from events.construction.itsc_issues_functions import (
+from events.construction.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
