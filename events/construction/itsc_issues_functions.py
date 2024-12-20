@@ -10,7 +10,7 @@ from psycopg2.extras import execute_values
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-#fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/itsc_issues_functions.py'
+#fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/rodars_issues_functions.py'
 #SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
@@ -72,11 +72,11 @@ def process_lanesaffected(json_str):
     return lanes
 
 def fetch_and_insert_issue_data(
-    select_conn = PostgresHook('itsc_postgres'),
+    select_conn = PostgresHook('rodars_postgres'),
     insert_conn = PostgresHook('vds_bot'),
     start_date = None
 ):
-    select_fpath = os.path.join(SQL_DIR, 'select-itsc_issues.sql')
+    select_fpath = os.path.join(SQL_DIR, 'select-rodars_issues.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read()).format(
             start = sql.Literal(start_date)
@@ -97,7 +97,7 @@ def fetch_and_insert_issue_data(
     df_final = df.replace({pd.NaT: None, nan: None})
     df_final = [tuple(x) for x in df_final.to_numpy()]
     
-    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issues.sql')
+    insert_fpath = os.path.join(SQL_DIR, 'insert-rodars_issues.sql')
     with open(insert_fpath, 'r', encoding="utf-8") as file:
         insert_query = sql.SQL(file.read())
         
@@ -105,12 +105,12 @@ def fetch_and_insert_issue_data(
         execute_values(cur, insert_query, df_final)
 
 def fetch_and_insert_location_data(
-    select_conn = PostgresHook('itsc_postgres'),
+    select_conn = PostgresHook('rodars_postgres'),
     insert_conn = PostgresHook('vds_bot'),
     start_date = None
 ):
     #generic function to pull and insert data using different connections and queries.
-    select_fpath = os.path.join(SQL_DIR, 'select-itsc_issue_locations.sql')
+    select_fpath = os.path.join(SQL_DIR, 'select-rodars_issue_locations.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read()).format(
             start = sql.Literal(start_date)
@@ -178,7 +178,7 @@ def fetch_and_insert_location_data(
     df_no_geom = df_no_geom[cols_to_insert]
     df_no_geom = [tuple(x) for x in df_no_geom.to_numpy()]
     
-    insert_fpath = os.path.join(SQL_DIR, 'insert-itsc_issue_locations.sql')
+    insert_fpath = os.path.join(SQL_DIR, 'insert-rodars_issue_locations.sql')
     with open(insert_fpath, 'r', encoding="utf-8") as file:
         insert_query = sql.SQL(file.read())
         
