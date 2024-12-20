@@ -52,4 +52,28 @@ Column Questions:
     - `LocationBlockLevel`
     - `RoadClosureType`
 
-`priority`: 1-5
+## Comparing RODARS and RODARS New (`rodars_new_approved`)
+
+Here is a small comparison of the data quality of the new and old RODARS. 
+- RODARs New has only been around since 2024-03 (already has more than 28,000 issues!)
+- centreline_id was introduced later in the lifespan of original RODARS (Only about 1/3 of those records have a centreline_id, starting from 2021-09).
+
+| "divisionid" | "divisionname"        | "avg_actual_duration"     | "avg_proposed_duration"   | "min_starttimestamp" | "max_starttimestamp" | "count" | "has_centreline_id" | "start_centreline"           |
+|--------------|-----------------------|---------------------------|---------------------------|----------------------|----------------------|---------|---------------------|------------------------------|
+| 8014         | "RODARS"              | "15 days 28:43:05.992087" | "15 days 09:49:54.340779" | "1930-08-31"         | "2024-12-19"         | 366100  | 99119               | "2021-09-27 20:55:57.855961" |
+| 8048         | "rodars_new_approved" | "20 days 24:26:34.079984" | "18 days 12:11:21.306625" | "2024-03-06"         | "2024-12-19"         | 28418   | 27837               | "2024-03-06 09:48:30.392945" |
+
+```sql
+SELECT
+    divisionid,
+    divisionname,
+    AVG(actual_duration) AS avg_actual_duration,
+    AVG(proposed_duration) AS avg_proposed_duration,
+    MIN(starttimestamp::date) AS min_starttimestamp,
+    MAX(starttimestamp::date) AS max_starttimestamp,
+    COUNT(*),
+    COUNT(*) FILTER (WHERE centreline_id IS NOT NULL) AS has_centreline_id,
+    MIN(starttimestamp) FILTER (WHERE centreline_id IS NOT NULL) AS start_centreline
+FROM congestion_events.rodars_locations
+GROUP BY 1, 2 ORDER BY 1, 2;
+```
