@@ -23,6 +23,9 @@ This table contains the locations and metadata about each permanent bicycle coun
 | date_decommissioned      | date        | 2019-06-13                                    | Date decommissioned. |
 | technology               | text        | Induction - Other                             | Technology of permanent sensor. |
 
+<!-- \pagebreak used for pandoc formatting -->
+\pagebreak
+
 ## cycling_permanent_counts_daily_counts.csv
 
 Daily cycling and micromobility volumes by location and direction. 
@@ -36,9 +39,6 @@ Daily cycling and micromobility volumes by location and direction.
 | side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
 | dt               | date      | 06/26/1994                                    | Date of count.                           |
 | daily_volume     | integer   | 939                                           | Count of users on date `dt`.             |
-
-<!-- \pagebreak used for pandoc formatting -->
-\pagebreak
 
 ## cycling_permanent_counts_15min_counts_YYYY_YYYY.csv
 

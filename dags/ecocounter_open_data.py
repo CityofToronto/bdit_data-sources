@@ -190,13 +190,11 @@ def ecocounter_open_data_dag():
                 ORDER BY location_dir_id;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
     
-    #@task.bash()
-    #def output_readme()->str:
-    #    return f'''
-    #    pandoc -V geometry:margin=1in \
-    #        -o "{EXPORT_PATH}/cycling_permanent_counts_readme.pdf" \
-    #        volumes/open_data/sql/cycling_permanent_counts_readme.md
-    #    '''
+    @task.bash()
+    def output_readme()->str:
+        source='/home/airflow/data_scripts/volumes/open_data/sql/cycling_permanent_counts_readme.md'
+        dest='cycling_permanent_counts_readme.pdf'
+        return f'''pandoc -V geometry:margin=1in -o "{EXPORT_PATH}/{dest}" "{source}"'''
     
     @task(
         retries=0,
@@ -220,7 +218,7 @@ def ecocounter_open_data_dag():
         update_locations >> [
             insert_and_download_data.expand(yr = yrs),
             download_locations_open_data(),
-            #output_readme()
+            output_readme()
         ] >>
         status_message()
     )
