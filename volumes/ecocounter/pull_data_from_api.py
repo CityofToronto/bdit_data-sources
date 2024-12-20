@@ -74,13 +74,13 @@ def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime
 
 def getKnownSites(conn: any):
     with conn.cursor() as cur:
-        cur.execute('SELECT site_id FROM ecocounter.sites_unfiltered;')
+        cur.execute('SELECT site_id FROM ecocounter.sites_unfiltered WHERE date_decommissioned IS NULL;')
         sites = cur.fetchall()
         return [site[0] for site in sites]
 
 def getKnownFlows(conn: any, site: int):
     with conn.cursor() as cur:
-        cur.execute('SELECT flow_id FROM ecocounter.flows_unfiltered WHERE site_id = %s;',
+        cur.execute('SELECT flow_id FROM ecocounter.flows_unfiltered WHERE date_decommissioned IS NULL AND site_id = %s;',
                     (site, )
         )
         flows = cur.fetchall()
@@ -123,18 +123,19 @@ def insertFlowCounts(conn: any, volume: any):
     return cur.query
 
 # insert new site record
-def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
+def insertSite(conn: any, site_id: int, site_name: str, counter: str, lon: float, lat: float):
     insert_query="""
-    INSERT INTO ecocounter.sites_unfiltered (site_id, site_description, geom, validated)
+    INSERT INTO ecocounter.sites_unfiltered (site_id, site_description, counter, geom, validated)
     VALUES (
         %s::numeric,
         %s::text,
+        %s::text,
         ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-        null::boolean --not validated
+        null::boolean --not validated by default
     )
     """
     with conn.cursor() as cur:
-        cur.execute(insert_query, (site_id, site_name, lon, lat))
+        cur.execute(insert_query, (site_id, site_name, counter, lon, lat))
 
 # insert new flow record
 def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, bin_size: int):
