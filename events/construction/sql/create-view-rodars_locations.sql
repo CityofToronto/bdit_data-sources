@@ -46,8 +46,8 @@ SELECT
     iil.fromroadname,
     iil.toroadname,
     iil.streetnumber,
-    itsc_factors.locationblocklevel.locationblocklevel,
-    itsc_factors.roadclosuretype_old.roadclosuretype AS roadclosuretype_desc,
+    rodars_factors.locationblocklevel.locationblocklevel,
+    rodars_factors.roadclosuretype_old.roadclosuretype AS roadclosuretype_desc,
     iil.locationdescription_toplevel,
     d2.direction,
     iil.roadname,
@@ -69,14 +69,14 @@ JOIN congestion_events.rodars_issue_locations AS iil
     AND iil.divisionid = ii.divisionid
     AND iil.timestamputc = ii.timestamputc
 LEFT JOIN gis_core.centreline_latest USING (centreline_id)
-LEFT JOIN itsc_factors.direction AS d1
+LEFT JOIN rodars_factors.direction AS d1
     ON d1.code = iil.direction_toplevel
-LEFT JOIN itsc_factors.direction AS d2
+LEFT JOIN rodars_factors.direction AS d2
     ON d2.code = iil.direction::numeric::integer
-LEFT JOIN itsc_factors.locationblocklevel
-    ON iil.laneblocklevel::numeric::integer = itsc_factors.locationblocklevel.code
-LEFT JOIN itsc_factors.roadclosuretype_old
-    ON iil.roadclosuretype::numeric::integer = itsc_factors.roadclosuretype_old.code,
+LEFT JOIN rodars_factors.locationblocklevel
+    ON iil.laneblocklevel::numeric::integer = rodars_factors.locationblocklevel.code
+LEFT JOIN rodars_factors.roadclosuretype_old
+    ON iil.roadclosuretype::numeric::integer = rodars_factors.roadclosuretype_old.code,
 LATERAL(
     SELECT
         get_lanesaffected_sums.lane_open_auto,
@@ -88,7 +88,7 @@ LATERAL(
         get_lanesaffected_sums.lane_open_bus,
         get_lanesaffected_sums.lane_closed_bus
     --expand lanesaffectedpattern column.
-    FROM itsc_factors.get_lanesaffected_sums(iil.lanesaffectedpattern) AS get_lanesaffected_sums(
+    FROM rodars_factors.get_lanesaffected_sums(iil.lanesaffectedpattern) AS get_lanesaffected_sums(
         lane_open_auto, lane_closed_auto, lane_open_bike, lane_closed_bike,
         lane_open_ped, lane_closed_ped, lane_open_bus, lane_closed_bus
     )
