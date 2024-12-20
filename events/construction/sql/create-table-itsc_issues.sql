@@ -1,8 +1,8 @@
--- Table: congestion_events.itsc_issues
+-- Table: congestion_events.rodars_issues
 
--- DROP TABLE IF EXISTS congestion_events.itsc_issues;
+-- DROP TABLE IF EXISTS congestion_events.rodars_issues;
 
-CREATE TABLE IF NOT EXISTS congestion_events.itsc_issues
+CREATE TABLE IF NOT EXISTS congestion_events.rodars_issues
 (
     divisionid smallint NOT NULL,
     divisionname text,
@@ -29,19 +29,19 @@ CREATE TABLE IF NOT EXISTS congestion_events.itsc_issues
     startissueonplannedstarttime boolean,
     startstatus integer,
     updateremindernoticeseconds integer,
-    CONSTRAINT itsc_issues_pkey PRIMARY KEY (divisionid, issueid)
+    CONSTRAINT rodars_issues_pkey PRIMARY KEY (divisionid, issueid)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS congestion_events.itsc_issues OWNER TO dbadmin;
+ALTER TABLE IF EXISTS congestion_events.rodars_issues OWNER TO dbadmin;
 
-REVOKE ALL ON TABLE congestion_events.itsc_issues FROM bdit_humans;
+REVOKE ALL ON TABLE congestion_events.rodars_issues FROM bdit_humans;
 
-GRANT SELECT ON TABLE congestion_events.itsc_issues TO bdit_humans;
+GRANT SELECT ON TABLE congestion_events.rodars_issues TO bdit_humans;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues TO dbadmin;
+GRANT ALL ON TABLE congestion_events.rodars_issues TO dbadmin;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE congestion_events.rodars_issues TO rds_superuser WITH GRANT OPTION;
 
-GRANT ALL ON TABLE congestion_events.itsc_issues TO events_bot;
+GRANT ALL ON TABLE congestion_events.rodars_issues TO events_bot;
