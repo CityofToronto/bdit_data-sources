@@ -8,8 +8,7 @@ WITH issues AS (
     WHERE
         divisionid IN (
             8048, --rodars new
-            8014, --rodars (old)
-            8023 --TMMS TM3 Planned Work
+            8014 --rodars (old)
         )
     GROUP BY
         divisionid,
