@@ -1,4 +1,4 @@
-INSERT INTO congestion_events.itsc_issues (
+INSERT INTO congestion_events.rodars_issues (
     divisionid, divisionname, issueid, timestamputc, issuetype, description, priority,
     proposedstarttimestamp, proposedendtimestamp, earlyendtimestamp, status, timeoption,
     sourceid, starttimestamp,
