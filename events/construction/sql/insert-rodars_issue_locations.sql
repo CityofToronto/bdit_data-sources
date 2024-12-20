@@ -10,7 +10,7 @@ WITH locations (
     VALUES %s
 )
 
-INSERT INTO congestion_events.itsc_issue_locations (
+INSERT INTO congestion_events.rodars_issue_locations (
     divisionid, issueid, timestamputc, locationindex, mainroadname, fromroadname, toroadname,
     direction_toplevel, streetnumber, locationtype, groupid, groupdescription, lanesaffected,
     locationblocklevel_toplevel, roadclosuretype_toplevel, encodedcoordinates_toplevel,
