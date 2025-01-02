@@ -456,7 +456,10 @@ server <- function(input, output, session) {
         y = max(limits$daily_volume),
         label = stringr::str_wrap(notes, 35),
         hjust = 0,
-        vjust = 1))
+        vjust = 1)),
+      scale_fill_manual(
+        values = c("#00BFC4", "#F8766D"),
+        limits = c("valid-caveat", "do-not-use"))
     )
     return(layers)
   })
