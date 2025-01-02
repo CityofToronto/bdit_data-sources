@@ -310,7 +310,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     """
     return_json = None
     base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
-    # If the data we want to get is centreline
+    # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
         where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
     else:
@@ -350,6 +350,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
             return_json = r.json()
             break
     
+    #check neccessary fields are contained in the return json.
     keys = ['fields', 'features', 'geometryType']
     for k in keys:
         if not(k in return_json.keys()):
