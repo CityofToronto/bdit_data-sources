@@ -345,8 +345,16 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
         except requests.exceptions.RequestException as err:
             LOGGER.error("Error: %s", err)
         else:
+            if r.status_code != 200:
+                LOGGER.error("Query was not successful. Response: %s", r)
             return_json = r.json()
             break
+    
+    keys = ['fields', 'features', 'geometryType']
+    for k in keys:
+        if not(k in return_json.keys()):
+            LOGGER.error("return_json: %s", return_json)
+            raise KeyError(f"Return json missing field: {k}")
     
     return return_json
 
