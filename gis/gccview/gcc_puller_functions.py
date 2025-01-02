@@ -309,54 +309,41 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
         Resulted json response from calling the GCCView rest api
     """
     return_json = None
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
-    
+    base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
     # If the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
+        where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
     else:
-        query = {"where":"1=1",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
+        where = "1=1"
+        
+    query = {"where": where,
+            "outFields": "*",
+            "outSR": '4326',
+            "returnGeometry": "true",
+            "returnTrueCurves": "false",
+            "returnIdsOnly": "false",
+            "returnCountOnly": "false",
+            "returnZ": "false",
+            "returnM": "false",
+            "orderByFields": "OBJECTID", 
+            "returnDistinctValues": "false",
+            "returnExtentsOnly": "false",
+            "resultOffset": f"{max_number}",
+            "resultRecordCount": f"{record_max}",
+            "f":"json"}
     
-    for retry in range(3):
+    for _ in range(3):
         try:
             r = requests.get(base_url, params = query, verify = False, timeout = 300)
             r.raise_for_status()
         except requests.exceptions.HTTPError as err_h:
-            LOGGER.error("Invalid HTTP response: ", err_h)
+            LOGGER.error("Invalid HTTP response: %s", err_h)
         except requests.exceptions.ConnectionError as err_c:
-            LOGGER.error("Network problem: ", err_c)
+            LOGGER.error("Network problem: %s", err_c)
         except requests.exceptions.Timeout as err_t:
-            LOGGER.error("Timeout: ", err_t)
+            LOGGER.error("Timeout: %s", err_t)
         except requests.exceptions.RequestException as err:
-            LOGGER.error("Error: ", err)
+            LOGGER.error("Error: %s", err)
         else:
             return_json = r.json()
             break
