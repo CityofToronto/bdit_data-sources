@@ -30,8 +30,8 @@ WITH results AS (
 SELECT
     get_centreline_btwn_intersections._node_start,
     get_centreline_btwn_intersections._node_end,
-    array_agg(routing_centreline_directional.centreline_id),
-    st_union(st_linemerge(routing_centreline_directional.geom)) AS geom 
+    array_agg(routing_centreline_directional.centreline_id ORDER BY path_seq),
+    st_union(st_linemerge(routing_centreline_directional.geom ORDER BY path_seq)) AS geom 
 FROM results
 INNER JOIN gis_core.routing_centreline_directional ON edge = id
 
