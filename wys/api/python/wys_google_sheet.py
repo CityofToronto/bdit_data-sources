@@ -108,7 +108,11 @@ def pull_from_sheet(
                     except ValueError as e:
                         error = f">Row `{row_num}`, error with installation date: `" + str(e) + '`'
                         badrows.append(error)
-                        
+                    #error catching for optional work order field.
+                    try:
+                        work_order = int(row[7])
+                    except ValueError as e:
+                        work_order = None
                     #change: add records even without removal date. 
                     if row[8]:
                         try:
@@ -120,7 +124,7 @@ def pull_from_sheet(
                         removal = None
                     i = (
                         ward_no, row[0], row[1], row[2], row[3], installation,
-                        removal, row[10], row[11], int(row[7]), row[13])
+                        removal, row[10], row[11], work_order, row[13])
                     rows.append(i)
                     LOGGER.debug(row)
                 else:
