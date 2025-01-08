@@ -202,7 +202,7 @@ def pull_wys_dag():
             ti = context["ti"]
             badrows = []
             for m_i in range(0, len(wards)):
-                rows = ti.xcom_pull(key="badrows", map_indexes=m_i, task_ids="read_google_sheet")
+                rows = ti.xcom_pull(key="badrows", map_indexes=m_i, task_ids="read_google_sheets_tg.read_google_sheet")
                 if rows is not None:
                     link=f"<https://drive.google.com/open?id={wards[m_i][0]}|Ward {m_i}>"
                     msg=f"*{link}*: " + '\n' + '\n'.join([str(item) for item in rows])
@@ -220,10 +220,10 @@ def pull_wys_dag():
         )
         def status_msg_sheets(**context):
             ti = context["ti"]
-            ward_count = ti.xcom_pull(key="ward_count", task_ids="read_masterlist")
+            ward_count = ti.xcom_pull(key="ward_count", task_ids="read_google_sheets_tg.read_masterlist")
             empty_wards = []
             for m_i in range(0, ward_count):
-                sheet = ti.xcom_pull(key="return_value", map_indexes=m_i, task_ids="read_google_sheet")
+                sheet = ti.xcom_pull(key="return_value", map_indexes=m_i, task_ids="read_google_sheets_tg.read_google_sheet")
                 if sheet is not None:
                     empty_wards.append(sheet)
             if empty_wards != []:
