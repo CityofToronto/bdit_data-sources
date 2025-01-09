@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_segments
 (
-    time_grp timestamp without time zone NOT NULL,
+    time_grp tsrange NOT NULL,
     segment_id integer NOT NULL,
     bin_range tsrange NOT NULL,
     dt_start timestamp without time zone,
