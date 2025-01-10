@@ -77,22 +77,23 @@ LEFT JOIN rodars_factors.locationblocklevel
     ON iil.laneblocklevel::numeric::integer = rodars_factors.locationblocklevel.code
 LEFT JOIN rodars_factors.roadclosuretype_old
     ON iil.roadclosuretype::numeric::integer = rodars_factors.roadclosuretype_old.code,
-LATERAL(
-    SELECT
-        get_lanesaffected_sums.lane_open_auto,
-        get_lanesaffected_sums.lane_closed_auto,
-        get_lanesaffected_sums.lane_open_bike,
-        get_lanesaffected_sums.lane_closed_bike,
-        get_lanesaffected_sums.lane_open_ped,
-        get_lanesaffected_sums.lane_closed_ped,
-        get_lanesaffected_sums.lane_open_bus,
-        get_lanesaffected_sums.lane_closed_bus
-    --expand lanesaffectedpattern column.
-    FROM rodars_factors.get_lanesaffected_sums(iil.lanesaffectedpattern) AS get_lanesaffected_sums(
-        lane_open_auto, lane_closed_auto, lane_open_bike, lane_closed_bike,
-        lane_open_ped, lane_closed_ped, lane_open_bus, lane_closed_bus
-    )
-) AS lap;
+    LATERAL (
+        SELECT
+            get_lanesaffected_sums.lane_open_auto,
+            get_lanesaffected_sums.lane_closed_auto,
+            get_lanesaffected_sums.lane_open_bike,
+            get_lanesaffected_sums.lane_closed_bike,
+            get_lanesaffected_sums.lane_open_ped,
+            get_lanesaffected_sums.lane_closed_ped,
+            get_lanesaffected_sums.lane_open_bus,
+            get_lanesaffected_sums.lane_closed_bus
+        --expand lanesaffectedpattern column.
+        FROM rodars_factors.get_lanesaffected_sums(iil.lanesaffectedpattern)
+            AS get_lanesaffected_sums (
+                lane_open_auto, lane_closed_auto, lane_open_bike, lane_closed_bike,
+                lane_open_ped, lane_closed_ped, lane_open_bus, lane_closed_bus
+            )
+    ) AS lap;
 
 ALTER TABLE congestion_events.rodars_locations
 OWNER TO congestion_admins;

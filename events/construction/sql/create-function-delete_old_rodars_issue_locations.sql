@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION congestion_events.delete_old_rodars_issue_locations()
-RETURNS TRIGGER AS $$
+RETURNS trigger AS $$
 BEGIN
 
     WITH latest AS (

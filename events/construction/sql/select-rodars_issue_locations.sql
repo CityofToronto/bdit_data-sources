@@ -14,7 +14,7 @@ WITH issues AS (
         divisionid,
         issueid
     HAVING
-        MAX(timestamputc) >= {start}::date -- noqa: PRS
+        MAX(timestamputc) >= {start}::date -- noqa: PRS, LT02
         AND MAX(timestamputc) < {start}::date + interval '1 day' -- noqa: PRS
 )
 
