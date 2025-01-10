@@ -1,3 +1,5 @@
+--this select query is used to select issue locations from ITSC database in rodars_pull pipeline.
+
 WITH issues AS (
     --select the most recent version of each issue
     SELECT
