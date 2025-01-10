@@ -2,22 +2,21 @@
 
 -- DROP FUNCTION IF EXISTS itsc_factors.get_lanesaffected_sums(text);
 
-CREATE OR REPLACE FUNCTION itsc_factors.get_lanesaffected_sums(
-	input_string text)
-    RETURNS TABLE (
-        lane_open_auto integer,
-        lane_closed_auto integer,
-        lane_open_bike integer,
-        lane_closed_bike integer,
-        lane_open_ped integer,
-        lane_closed_ped integer,
-        lane_open_bus integer,
-        lane_closed_bus integer
-    )
-    LANGUAGE plpgsql
-    COST 100
-    STABLE PARALLEL SAFE
-    ROWS 1
+CREATE OR REPLACE FUNCTION itsc_factors.get_lanesaffected_sums(input_string text)
+RETURNS TABLE (
+    lane_open_auto integer,
+    lane_closed_auto integer,
+    lane_open_bike integer,
+    lane_closed_bike integer,
+    lane_open_ped integer,
+    lane_closed_ped integer,
+    lane_open_bus integer,
+    lane_closed_bus integer
+)
+LANGUAGE plpgsql
+COST 100
+STABLE PARALLEL SAFE
+ROWS 1
 
 AS $BODY$
 DECLARE
@@ -43,7 +42,7 @@ $BODY$;
 
 ALTER FUNCTION itsc_factors.get_lanesaffected_sums(text) OWNER TO congestion_admins;
 
-GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO public;
 
 GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO congestion_admins;
 
