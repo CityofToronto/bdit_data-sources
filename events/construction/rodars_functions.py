@@ -10,25 +10,24 @@ from psycopg2.extras import execute_values
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-#fpath = '/data/home/gwolofs/bdit_data-sources/events/rodars/rodars_issues_functions.py'
-#SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(fpath)), 'sql')
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def coordinates_from_binary(br):
-    # Read longitude and latitude as doubles (8 bytes each)
+    'Read longitude and latitude as doubles (8 bytes each)'
     longitude, latitude = struct.unpack('dd', br.read(16))
     return (longitude, latitude)
 
 def coordinates_to_geomfromtext(l):
+    'Formats points and line geoms to be ingested by postgres `st_geomfromtext`'
     geom_type = 'POINT' if len(l) == 1 else 'LINESTRING'
     coords = ', '.join([f"{x[0]} {x[1]}" for x in l])
-    return (f"{geom_type}({coords})")
+    return f"{geom_type}({coords})"
 
 def geometry_from_bytes(geo_bytes):
-    # Initialize a stream to read binary data from the byte array
+    'Initialize a stream to read binary data from the byte array'
     coordinates_list = []
     with BytesIO(geo_bytes) as ms:
         # Read the first 4 bytes = length
@@ -44,6 +43,12 @@ def geometry_from_bytes(geo_bytes):
         return coordinates_list
 
 def process_lanesaffected(json_str):
+    '''Converts a json variable to pandas dataframe.
+    
+    Top level json attributes are given _toplevel suffix,
+    while contents of LaneApproaches nested json keeps original keys,
+    with exception of FeatureId (centreline_id) and RoadId (linear_name_id).'''
+    
     if (json_str == 'Unknown') | (json_str is None):
         return None
     try:
@@ -76,6 +81,7 @@ def fetch_and_insert_issue_data(
     insert_conn = PostgresHook('vds_bot'),
     start_date = None
 ):
+    '''Fetch, process and insert data from ITS Central issuedata table.'''
     select_fpath = os.path.join(SQL_DIR, 'select-rodars_issues.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read()).format(
@@ -109,7 +115,15 @@ def fetch_and_insert_location_data(
     insert_conn = PostgresHook('vds_bot'),
     start_date = None
 ):
-    #generic function to pull and insert data using different connections and queries.
+    '''Fetch, process and insert data from ITS Central issuelocationnew table.
+    
+    - Fetches data from ITS Central
+    - Processes geometry data stored in binary (accounts for both points/lines).
+    - Unnests mutli layered lanesaffected json column into tabular form.
+    - Performs some checks on columns unnested from json. 
+    - Inserts into RDS `congestion_events.rodars_issue_locations` table.
+    '''
+    
     select_fpath = os.path.join(SQL_DIR, 'select-rodars_issue_locations.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
         select_query = sql.SQL(file.read()).format(
@@ -159,7 +173,7 @@ def fetch_and_insert_location_data(
     #check for extra columns unpacked from json.
     extra_cols = [col for col in df_no_geom.columns if col not in cols_to_insert]
     if extra_cols != []:
-        LOGGER.warning(f'There are extra columns unpacked from json not being inserted: %s', extra_cols)
+        LOGGER.warning('There are extra columns unpacked from json not being inserted: %s', extra_cols)
     #add missing columns (inconsistent jsons)
     missing_cols = [col for col in cols_to_insert if col not in df_no_geom.columns]
     if missing_cols != []:
@@ -184,5 +198,3 @@ def fetch_and_insert_location_data(
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, insert_query, df_no_geom, page_size = 1000)
-
-#fetch_and_insert_data()

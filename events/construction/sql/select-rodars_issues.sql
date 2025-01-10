@@ -1,3 +1,5 @@
+--this select query is used to select issue metadata from ITSC database in rodars_pull pipeline.
+
 WITH issues AS (
     --select the most recent version of each issue
     SELECT DISTINCT ON (divisionid, issueid)
@@ -20,7 +22,10 @@ WITH issues AS (
         )
         AND timestamputc >= {start}::date -- noqa: PRS, LT02
         AND timestamputc < {start}::date + interval '1 day' -- noqa: PRS
-    ORDER BY divisionid ASC, issueid ASC, timestamputc DESC
+    ORDER BY
+        divisionid ASC,
+        issueid ASC,
+        timestamputc DESC
 )
 
 SELECT
