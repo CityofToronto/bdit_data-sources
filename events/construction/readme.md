@@ -1,7 +1,7 @@
 # Introduction
 
-[!IMPORTANT]  
-The city website gives a good overview of RoDARS (here/below): [Road Disruption Activity Reporting System (RoDARS)](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/road-disruption-activity-reporting-system-rodars/)
+> [!IMPORTANT]  
+> The city website gives a good overview of RoDARS (here/below): [Road Disruption Activity Reporting System (RoDARS)](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/road-disruption-activity-reporting-system-rodars/)
 
 > RoDARS is a system that informs the public of planned roadway closures throughout the City. The submission procedure follows the acquisition of an approved [Street Occupation Permit](https://www.toronto.ca/?page_id=80501) (construction) or [Street Closure Permit](https://www.toronto.ca/?page_id=84975) (event).
 > 
@@ -16,16 +16,16 @@ The city website gives a good overview of RoDARS (here/below): [Road Disruption 
 >  1. the work schedule and/or work zone plan has been revised or postponed. The applicant must submit a revised and approved RoDARS Notification Form at least one business day before changes occur
 >  2. the work has been cancelled or completed early. The applicant must contact TMC Dispatch
 
-[!TIP]  
-The RoDARS form is public here: https://rodars.transnomis.com/Permit/PermitApplicationCreate/a9180443-b97f-548e-ae1c-fc70cae18a7a?previewMode=Applicants
+> [!TIP]  
+> The RoDARS form is public here: https://rodars.transnomis.com/Permit/PermitApplicationCreate/a9180443-b97f-548e-ae1c-fc70cae18a7a?previewMode=Applicants
 
 Here is a screenshot of the extremely detailed geographic/lane management plan UI:
 ![Rodars Form](rodars_form.png)
 
 # RODARS vs RODARS New ("rodars_new_approved")
 
-[!IMPORTANT]  
-In 2024 a new version of RODARS which should result in a more reliable data source.  
+> [!IMPORTANT]  
+> In 2024 a new version of RODARS which should result in a more reliable data source.  
 
 **RODARS (New)**
 - RODARs New has only been around since 2024-03 (already has more than 28,000 issues!)
