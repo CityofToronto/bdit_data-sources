@@ -126,6 +126,8 @@ unnested_db_options AS (
         dbo.end_bin,
         unnested.link_dir,
         unnested.len
+    --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
+    HAVING MAX(s5b.tx) + interval '5 minutes' <= dbo.tx + interval '1 hour'
 )
 
 INSERT INTO gwolofs.congestion_raw_segments (
