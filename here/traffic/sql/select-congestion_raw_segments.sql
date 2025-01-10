@@ -147,7 +147,7 @@ SELECT DISTINCT ON (time_grp, segment_id, dt_start)
     total_length,
     SUM(len) AS length_w_data,
     SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
-FROM unnested_db_options AS udbo
+FROM unnested_db_options
 GROUP BY
     time_grp,
     segment_id,
@@ -159,25 +159,19 @@ UNION
 --these 5 minute bins already have sufficient length
 --don't need to use nested data to validate.
 SELECT
-    dbo.time_grp,
-    dbo.segment_id,
-    dbo.tx AS dt_start,
-    dbo.tx + interval '5 minutes' AS dt_end,
-    tsrange(dbo.tx, dbo.tx + interval '5 minutes', '[)') AS bin_range,
-    s5b.total_length / s5b.length_w_data * s5b.unadjusted_tt AS tt,
-    s5b.unadjusted_tt,
-    s5b.total_length,
-    s5b.length_w_data,
-    s5b.num_obs --sum of here.ta_path sample_size for each segment
-FROM dynamic_bin_options AS dbo
-JOIN segment_5min_bins AS s5b
-    ON s5b.time_grp = dbo.time_grp
-    AND s5b.segment_id = dbo.segment_id
-    AND s5b.bin_rank = dbo.start_bin
+    time_grp,
+    segment_id,
+    tx AS dt_start,
+    tx + interval '5 minutes' AS dt_end,
+    tsrange(tx, tx + interval '5 minutes', '[)') AS bin_range,
+    total_length / length_w_data * unadjusted_tt AS tt,
+    unadjusted_tt,
+    total_length,
+    length_w_data,
+    num_obs --sum of here.ta_path sample_size for each segment
+FROM segment_5min_bins
 --we do not need to use nested data to determine length here.
-WHERE
-    dbo.start_bin = dbo.end_bin
-    AND s5b.sum_length >= 0.8
+WHERE sum_length >= 0.8
 ORDER BY
     time_grp,
     segment_id,
