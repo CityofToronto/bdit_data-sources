@@ -1,3 +1,15 @@
+- [Introduction](#introduction)
+  - [RODARS vs RODARS New ("rodars\_new\_approved")](#rodars-vs-rodars-new-rodars_new_approved)
+  - [What's included?](#whats-included)
+- [Querying RODARs Data](#querying-rodars-data)
+  - [Data Dictionary](#data-dictionary)
+    - [`congestion_events.rodars_locations`](#congestion_eventsrodars_locations)
+      - [`rodars_issue_locations.lanesaffectedpattern`](#rodars_issue_locationslanesaffectedpattern)
+- [Data Ops](#data-ops)
+  - [RODARS DAG](#rodars-dag)
+  - [`lanesaffected`](#lanesaffected)
+
+
 # Introduction
 
 > [!IMPORTANT]  
@@ -19,10 +31,10 @@
 > [!TIP]  
 > The RoDARS form is public here: https://rodars.transnomis.com/Permit/PermitApplicationCreate/a9180443-b97f-548e-ae1c-fc70cae18a7a?previewMode=Applicants
 
-Here is a screenshot of the extremely detailed geographic/lane management plan UI:
+Here is a screenshot of the extremely detailed geographic/lane management plan UI (which you can access at the link above):
 ![Rodars Form](rodars_form.png)
 
-# RODARS vs RODARS New ("rodars_new_approved")
+## RODARS vs RODARS New ("rodars_new_approved")
 
 > [!IMPORTANT]  
 > In 2024 a new version of RODARS which should result in a more reliable data source.  
@@ -61,12 +73,141 @@ FROM congestion_events.rodars_locations
 GROUP BY 1, 2 ORDER BY 1, 2;
 ```
 
-### What's included?
+## What's included?
 - As noted in [the intro](#introduction), both construction and events (eg. parades, marathons) are included. 
 - Emergency utilities - maybe included. 
 - Notably, CafeTO is not included (As at EOY 2024). 
 
+# Querying RODARs Data
+
+> [!WARNING]
+> Use of this data is largely untested. If you have an example of use, please help others by proposing a change to this readme!
+
+You could query construction along specific centreline_ids and during specific dates using this sample query. 
+```sql
+WITH target_geom AS (
+    SELECT unnest(links)::integer AS centreline_id
+    FROM gis_core.get_centreline_btwn_intersections(13466931, 13463747)
+)
+
+--visualizing results in dbeaver is preferable to pgadmin due to better handling of overlapping geoms.
+SELECT rl.*
+FROM congestion_events.rodars_locations AS rl
+JOIN target_geom USING (centreline_id)
+WHERE tsrange(starttimestamp, endtimestamp, '[)') @> tsrange('2024-12-01', '2025-01-01', '[)')
+```
+
+Or you could cast a wider net by using `st_intersects` to also include intersecting cross streets:
+```sql
+WITH target_geom AS (
+    SELECT * FROM gis_core.get_centreline_btwn_intersections(13466931, 13463747)
+)
+
+SELECT rl.*
+FROM congestion_events.rodars_locations AS rl, target_geom
+WHERE
+    tsrange(starttimestamp, endtimestamp, '[)') @> tsrange('2024-12-01', '2025-01-01', '[)')
+    AND st_intersects(rl.centreline_geom, target_geom.geom)
+```
+
+> [!CAUTION]
+> For older time periods you may need to use `issue_geom` instead as `centreline_id` is not consistently populated.
+
+## Data Dictionary
+
+### `congestion_events.rodars_locations`
+This view joins together issue metadata from `congestion_events.rodars_issues` and location descriptions from `congestion_events.rodars_issue_locations`.  
+
+
+| Column                       | Sample                                                              | Description                                                                                                                                                                                           |
+|------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| divisionid                   | 8048                                                                | 8014 for RODARS, 8048 for "rodars_new_approved"                                                                                                                                                       |
+| divisionname                 | rodars_new_approved                                                 | Division name                                                                                                                                                                                         |
+| issueid                      | 9535420                                                             | An issueid may have more than one location in this table.                                                                                                                                             |
+| sourceid                     | Tor-RDAR2024-3658                                                   | This ID is helpful for searching on ITS Central                                                                                                                                                       |
+| description                  | City of Toronto Contract 24ECS-LU-08SU                              | This contract ID will yield helpful results on Google.                                                                                                                                                |
+| priority                     | High                                                                | Critical/High/Medium/Low/None                                                                                                                                                                         |
+| status                       | In Progress                                                         | Future/In Progress/Ended/Cancelled/Overdue                                                                                                                                                            |
+| starttimestamp               | 10/02/2024 17:43                                                    |                                                                                                                                                                                                       |
+| endtimestamp                 |                                                                     | null if on-going.                                                                                                                                                                                     |
+| actual_duration              |                                                                     | endtimestamp - starttimestamp                                                                                                                                                                         |
+| proposedstarttimestamp       | 10/01/2024 7:00                                                     |                                                                                                                                                                                                       |
+| proposedendtimestamp         | 10/31/2025 7:00                                                     |                                                                                                                                                                                                       |
+| proposed_duration            | 395 days                                                            | proposedendtimestamp - proposedstarttimestamp                                                                                                                                                         |
+| proposedstart_tod            | 7:00:00                                                             | The time of day, extracted from the proposedstarttimestamp (and in   conjuction with "recurrence_schedule" field) seems to indicate the   working hours in some cases, but is applied inconsistently. |
+| proposedend_tod              | 7:00:00                                                             | The time of day, extracted from the proposedendtimestamp (and in   conjuction with "recurrence_schedule" field) seems to indicate the   working hours in some cases, but is applied inconsistently.   |
+| recurrence_schedule          | Weekdays                                                            | Continuous/Daily/Weekdays/Weekends/Activity Schedule                                                                                                                                                  |
+| location_description         | Harbord St at James Hales Lane                                      | A high level location                                                                                                                                                                                 |
+| mainroadname                 | Harbord St                                                          |                                                                                                                                                                                                       |
+| fromroadname                 | James Hales Lane                                                    |                                                                                                                                                                                                       |
+| toroadname                   |                                                                     |                                                                                                                                                                                                       |
+| streetnumber                 |                                                                     |                                                                                                                                                                                                       |
+| locationblocklevel           | Full Closure with Emergency Access                                  | This field is the highest level "closure" description and seems   to frequently contradict lower level descriptions, as in this case.                                                                 |
+| roadclosuretype_desc         | No Closure                                                          | Another "closure" description. Contradicts above in this case.                                                                                                                                        |
+| locationdescription_toplevel | Harbord St at James Hales Lane                                      | Another high level description                                                                                                                                                                        |
+| direction                    | West                                                                | Each direction on the affected street will have it's own entry.                                                                                                                                       |
+| roadname                     | Harbord St                                                          | lowest level description; roadname corresponding to centreline.                                                                                                                                       |
+| centreline_id                | 14021560                                                            |                                                                                                                                                                                                       |
+| centreline_geom              | 0102000020E61000000200000…                                          | centreline_latest geom, or the most recent geom ordered by version_date   DESC in gis_core.centreline. Note this is not always populated, especially   for older entries.                             |
+| issue_geom                   | 0101000020E610000035B56CA…                                          |                                                                                                                                                                                                       |
+| linear_name_id               | 3605                                                                | Also from the centreline.                                                                                                                                                                             |
+| lanesaffectedpattern         | TOLOWO                                                              | `lanesaffectedpattern` describes the road closures in most detail and   seem to be the most accurate. This code is deciphered in the next 9 columns.                                                  |
+| lap_descriptions             | {"Sidewalk Open","Normal Open","Lane Open   Traffic Opposite Side"} | The description of each 2 letter code from `lanesaffectedpattern`.                                                                                                                                    |
+| lane_open_auto               | 2                                                                   | These next 8 columns are a numeric description of the road closure from   `lanesaffectedpattern`. Any partial closures are coded as 0.5 open/0.5   closed. See notes [here](#lanesaffectedpattern).                                           |
+| lane_closed_auto             | 0                                                                   |                                                                                                                                                                                                       |
+| lane_open_bike               | 0                                                                   |                                                                                                                                                                                                       |
+| lane_closed_bike             | 0                                                                   |                                                                                                                                                                                                       |
+| lane_open_ped                | 1                                                                   |                                                                                                                                                                                                       |
+| lane_closed_ped              | 0                                                                   |                                                                                                                                                                                                       |
+| lane_open_bus                | 0                                                                   |                                                                                                                                                                                                       |
+| lane_closed_bus              | 0                                                                   |                                                                                                                                                                                                       |
+
+#### `rodars_issue_locations.lanesaffectedpattern`
+
+This column offers the most detailed look at the lane closures. However is has been under development since 2022 and some codes did not enter use until later. For example; Sidewalk closures were not noted until 2023-01-18 and the first bike lane closure on 2023-03-03. They may have not entered regular use until later. 
+
+```sql
+--query to identify first occurence of each lanesaffectedpattern code.
+SELECT lap.code, lanesaffectedpattern.lane_status, MIN(timestamputc) AS "min(timestamputc)"
+FROM congestion_events.rodars_issue_locations,
+UNNEST(regexp_split_to_array(lanesaffectedpattern, E'(?=(..)+$)')) AS lap(code)
+JOIN itsc_factors.lanesaffectedpattern ON lap.code = lanesaffectedpattern.code
+WHERE lanesaffectedpattern <> ''
+GROUP BY 1, 2
+ORDER BY 3
+```
+
+|code|lane_status                             |min(timestamputc)      |
+|---|-----------------------------------------|-----------------------|
+LO  |Normal Open                              |2022-05-03 12:16:07.072|
+FO  |Left Turn Open                           |2022-05-03 12:16:07.072|
+LC  |Normal Closed                            |2022-11-16 23:25:27.637|
+SC  |Shoulder Closed                          |2022-12-09 05:24:24.713|
+UC  |Buffer Closed                            |2022-12-14 00:00:34.325|
+TO  |Lane Open Traffic Opposite Side          |2022-12-14 00:00:34.325|
+TA  |Lane Open Traffic Alternating            |2023-01-05 14:54:09.856|
+RC  |Right Turn Closed                        |2023-01-18 21:00:17.778|
+WC  |Sidewalk Closed                          |2023-01-18 21:00:17.778|
+FC  |Left Turn Closed                         |2023-01-31 21:00:18.192|
+KC  |Bicycle Closed                           |2023-03-03 05:01:08.396|
+RO  |Right Turn Open                          |2023-05-23 19:00:12.517|
+UO  |Buffer Open                              |2023-07-18 20:00:53.965|
+WO  |Sidewalk Open                            |2023-10-30 18:00:10.039|
+SO  |Shoulder Open                            |2023-11-04 12:00:14.511|
+WP  |Sidewalk Closed – Protected Path Provided|2023-11-09 19:23:56.367|
+KM  |Bicycle Closed – Merge with other traffic|2023-11-24 21:00:43.557|
+KD  |Bicycle Closed – Detour Path Provided    |2023-12-08 00:00:40.657|
+WD  |Sidewalk Closed – Detour Path Provided   |2023-12-08 00:00:40.657|
+KP  |Bicycle Closed – Protected Path Provided |2023-12-21 00:00:42.532|
+KO  |Bicycle Open                             |2024-04-04 19:30:37.703|
+HC  |HOV Closed                               |2024-05-10 21:00:13.375|
+HO  |HOV Open                                 |2024-06-25 20:00:14.220|
+
 # Data Ops
+
+- Note there is a data dictionary from the vendor saved here: `K:\tra\GM Office\Big Data Group\Data Sources\RODARS\Municipal 511 Custom Datafeed API Documentation - 2.4 (Toronto).pdf`
+  - Resources taken from this data dictionary are saved in the `itsc_factors` schema.
+- Other codes were deciphered manually using ITS Central. 
 
 ## RODARS DAG
 `rodars_pull` DAG runs on Morbius in order to access ITS Central database. See code here: [rodars_pull.py](../../dags/rodars_pull.py).
@@ -80,7 +221,7 @@ GROUP BY 1, 2 ORDER BY 1, 2;
 
 ## `lanesaffected`
 
-`lanesaffected` is a loosely formatted json column in the ITSC issuelocationnew table.
+`lanesaffected` is a loosely formatted json column in the ITSC issuelocationnew table. 
 
 Notes: 
 - This field is unpacked with `process_lanesaffected` function in [rodars_functions.py](./rodars_functions.py) and converted to tabular format. 
