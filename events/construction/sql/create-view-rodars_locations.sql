@@ -54,7 +54,9 @@ SELECT
     CASE iil.centreline_id WHEN 0 THEN NULL ELSE iil.centreline_id END AS centreline_id,
     centreline_latest.geom AS centreline_geom,
     iil.geom AS issue_geom,
-    iil.linear_name_id,
+    CASE iil.linear_name_id WHEN 0 THEN NULL ELSE iil.linear_name_id END AS linear_name_id,
+    iil.lanesaffectedpattern,
+    lap.lap_descriptions,
     lap.lane_open_auto,
     lap.lane_closed_auto,
     lap.lane_open_bike,
@@ -79,6 +81,7 @@ LEFT JOIN itsc_factors.roadclosuretype_old
     ON iil.roadclosuretype::numeric::integer = itsc_factors.roadclosuretype_old.code,
     LATERAL (
         SELECT
+            get_lanesaffected_sums.lap_descriptions,
             get_lanesaffected_sums.lane_open_auto,
             get_lanesaffected_sums.lane_closed_auto,
             get_lanesaffected_sums.lane_open_bike,
