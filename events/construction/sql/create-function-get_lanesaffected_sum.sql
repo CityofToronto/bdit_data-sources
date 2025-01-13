@@ -4,6 +4,7 @@
 
 CREATE OR REPLACE FUNCTION itsc_factors.get_lanesaffected_sums(input_string text)
 RETURNS TABLE (
+    lap_descriptions text[],
     lane_open_auto integer,
     lane_closed_auto integer,
     lane_open_bike integer,
@@ -26,6 +27,7 @@ BEGIN
     -- Iterate over the list and aggregate sums for each code
     RETURN QUERY
     SELECT
+        ARRAY_AGG(lane_status) AS lap_descriptions,
         COALESCE(SUM(lane_open) FILTER (WHERE mode = 'Car'), 0)::int AS lane_open_auto,
         COALESCE(SUM(lane_closed) FILTER (WHERE mode = 'Car'), 0)::int AS lane_closed_auto,
         COALESCE(SUM(lane_open) FILTER (WHERE mode = 'Bike'), 0)::int AS lane_open_bike,
