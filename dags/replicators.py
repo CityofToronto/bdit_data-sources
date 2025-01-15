@@ -28,7 +28,7 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
         max_active_tasks=5,
         schedule=None, #triggered externally
         doc_md=doc_md,
-        tags=[short_name, "replicator"]
+        tags=["bdit_data-sources", short_name, "replicator"]
     )
     def replicator_DAG():
         f"""The main function of the {short_name} DAG."""

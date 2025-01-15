@@ -47,7 +47,7 @@ default_args = {
     schedule='5 10 * * MON', # Run at 10:05 AM on Monday
     catchup=True,
     template_searchpath=os.path.join(repo_path, 'volumes/ecocounter/data_checks'),
-    tags=["ecocounter", "data_checks"],
+    tags=["bdit_data-sources", "ecocounter", "data_checks"],
     doc_md=DOC_MD
 )
 def ecocounter_check_dag():

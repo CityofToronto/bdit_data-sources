@@ -48,7 +48,7 @@ default_args = {
     schedule='0 5 * * FRI', # Run at 5 AM on Friday
     catchup=False,
     template_searchpath=os.path.join(repo_path,'volumes/vds/sql/select'),
-    tags=["vds", "data_checks"],
+    tags=["bdit_data-sources", "vds", "data_checks"],
     doc_md=DOC_MD
 )
 def vds_check_dag():

@@ -57,7 +57,7 @@ default_args = {
     max_active_runs=5,
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     schedule='0 17 * * *', # Run at 5:00 PM local time every day
-    tags=["wys", "data_pull", "partition_create", "data_checks", "google_sheets"],
+    tags=["bdit_data-sources", "wys", "data_pull", "partition_create", "data_checks", "google_sheets"],
     doc_md=DOC_MD
 )
 def pull_wys_dag():
