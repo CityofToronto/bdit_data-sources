@@ -42,7 +42,7 @@ default_args = {
         os.path.join(repo_path,'events/construction/sql')
     ],
     doc_md=DOC_MD,
-    tags=['rodars', 'pull', 'itsc_central'],
+    tags=['bdit_data-sources', 'rodars', 'pull', 'itsc_central'],
     schedule='0 4 * * *' #daily at 4am
 )
 
