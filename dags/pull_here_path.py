@@ -48,7 +48,7 @@ default_args = {'owner': ','.join(names),
      schedule='30 10 * * *' ,
      catchup=False,
      doc_md = doc_md,
-     tags=["bdit_data-sources", "HERE", "data_pull"]
+     tags=["HERE", "data_pull"]
      )
 
 def pull_here_path():

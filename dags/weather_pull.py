@@ -49,7 +49,7 @@ default_args = {
     default_args=default_args, 
     schedule='0 8 * * *', #Historical weather is available at 1000UTC which is 6AM EDT and 5AM EST: https://climate.weather.gc.ca/FAQ_e.html#Q17
     catchup=False,
-    tags=["bdit_data-sources", 'weather', 'data_pull'],
+    tags=['weather', 'data_pull'],
     template_searchpath=os.path.join(repo_path, 'weather/sql'),
     doc_md=__doc__
 )
