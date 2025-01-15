@@ -45,7 +45,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
     default_args=default_args, 
     schedule=None, # gets triggered by HERE dag
     doc_md = doc_md,
-    tags=["HERE"],
+    tags=["bdit_data-sources", "HERE"],
     catchup=False
 )
 

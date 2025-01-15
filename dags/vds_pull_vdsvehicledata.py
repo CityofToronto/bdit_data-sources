@@ -44,7 +44,7 @@ default_args = {
         os.path.join(repo_path,'dags/sql')
     ],
     doc_md=DOC_MD,
-    tags=['vds', 'vdsvehicledata', 'data_checks', 'pull'],
+    tags=["bdit_data-sources", 'vds', 'vdsvehicledata', 'data_checks', 'pull'],
     schedule='5 4 * * *' #daily at 4:05am
 )
 def vdsvehicledata_dag():

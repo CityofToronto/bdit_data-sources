@@ -46,7 +46,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 0 1 12 *', # At 00:00 on 1st in December.
-    tags=["partition_create", "yearly"],
+    tags=["bdit_data-sources", "partition_create", "yearly"],
     catchup=False,
     doc_md=__doc__
 )

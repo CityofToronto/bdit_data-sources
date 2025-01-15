@@ -60,7 +60,7 @@ DEFAULT_ARGS = {
             items={"type": "number"},
         )
     },
-    tags=["Vision Zero", "google_sheets"]
+    tags=["bdit_data-sources", "Vision Zero", "google_sheets"]
 )
 def get_vz_data():
     """The main function of the SSZ DAG."""
