@@ -48,7 +48,7 @@ default_args = {
     #loosely coupled with the two replicator DAGs which are externally triggered at 430am
     schedule='0 4 * * *',
     doc_md=DOC_MD,
-    tags=["bdit_data-sources", "replicator", "data_checks"]
+    tags=["replicator", "data_checks"]
 )
 def replicator_DAG():
 
