@@ -47,7 +47,7 @@ default_args = {
     schedule='0 4 * * MON', # Run at 4 AM on Monday
     catchup=False,
     template_searchpath=os.path.join(repo_path,'volumes/miovision/sql/data_checks'),
-    tags=["bdit_data-sources", "miovision", "data_checks", "weekly"],
+    tags=["miovision", "data_checks", "weekly"],
     doc_md=DOC_MD
 )
 def miovision_check_dag():

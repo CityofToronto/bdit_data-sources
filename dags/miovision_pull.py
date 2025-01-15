@@ -67,7 +67,7 @@ default_args = {
             items={"type": "number"},
         )
     },
-    tags=["bdit_data-sources", "miovision", "data_pull", "partition_create", "data_checks"],
+    tags=["miovision", "data_pull", "partition_create", "data_checks"],
     doc_md=DOC_MD
 )
 def pull_miovision_dag():

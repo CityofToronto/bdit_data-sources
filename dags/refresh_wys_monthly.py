@@ -42,7 +42,7 @@ def last_month(ds):
 with DAG(dag_id = dag_name,
          default_args=default_args,
          max_active_runs=1,
-         tags=["bdit_data-sources", "wys", "aggregation", "monthly"],
+         tags=["wys", "aggregation", "monthly"],
          doc_md = DOC_MD,
          user_defined_macros={
             'last_month' : last_month
