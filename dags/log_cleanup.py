@@ -62,6 +62,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       # Prevent the same DAG from running concurrently more than once.
       max_active_runs=1,
       schedule=schedule_interval,
+      tags=['bdit_data-sources', 'maintenance'],
       # This allows us to simplify `create_bash_task` below.
       template_searchpath=AIRFLOW_TASKS
     )
