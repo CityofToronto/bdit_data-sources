@@ -53,7 +53,7 @@ default_args = {'owner': ','.join(names),
      schedule='0 17 * * * ' ,
      catchup=False,
      doc_md = doc_md,
-     tags=["HERE", "data_pull"]
+     tags=["bdit_data-sources", "HERE", "data_pull"]
      )
 
 def pull_here():

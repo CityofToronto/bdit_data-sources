@@ -44,7 +44,7 @@ default_args = {
      max_active_runs=1,
      template_searchpath=os.path.join(repo_path,'dags/sql'),
      schedule='0 18 * * *', # Run at 6:00 PM local time every day
-     tags=["wys", "data_checks"],
+     tags=["bdit_data-sources", "wys", "data_checks"],
      doc_md=DOC_MD
 )
 def wys_check_dag():

@@ -52,7 +52,7 @@ default_args = {
     default_args=default_args,
     schedule='0 8 * * *',
     catchup=False,
-    tags=['bluetooth', 'data_checks']
+    tags=["bdit_data-sources", 'bluetooth', 'data_checks']
 )
 def blip_pipeline():
     ## Tasks ##

@@ -39,7 +39,7 @@ default_args = {
     default_args=default_args,
     schedule='0 2 * * *',
     catchup=False,
-    tags=["miovision", "data_pull"],
+    tags=["bdit_data-sources", "miovision", "data_pull"],
     doc_md=DOC_MD
 )
 def pull_miovision_dag():
