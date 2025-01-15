@@ -53,7 +53,7 @@ default_args = {
     template_searchpath=os.path.join(repo_path,'volumes/ecocounter'),
     catchup=False,
     max_active_runs=1,
-    tags=["ecocounter", "open_data"],
+    tags=["bdit_data-sources", "ecocounter", "open_data"],
     doc_md=DOC_MD
 )
 def ecocounter_open_data_dag():

@@ -65,7 +65,7 @@ default_args = {
     template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=True,
     max_active_runs=1,
-    tags=["ecocounter", "data_pull", "data_checks", "partition_create"],
+    tags=["bdit_data-sources", "ecocounter", "data_pull", "data_checks", "partition_create"],
     doc_md=DOC_MD
 )
 def pull_ecocounter_dag():
