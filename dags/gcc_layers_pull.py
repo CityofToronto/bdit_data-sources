@@ -24,7 +24,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
         dag_id=dag_id,
         default_args=default_args,
         catchup=False,
-        tags=["bdit_data-sources", 'gcc', name],
+        tags=["bdit_data-sources", "gcc", name, "quarterly"],
         schedule='0 7 1 */3 *' #'@quarterly'
     )
     def gcc_layers_dag():
