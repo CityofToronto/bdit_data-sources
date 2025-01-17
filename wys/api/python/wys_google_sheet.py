@@ -18,6 +18,7 @@ import logging
 from time import sleep
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -81,9 +82,10 @@ def pull_from_sheet(
             sleep(120)
         else:
             break
-    else: 
+    else:
         LOGGER.warning('Attempts exceeded.')
-    
+        raise AirflowFailException('Attempts exceeded trying to access google sheet %s', spreadsheet_id)
+        
     match = re.search(r'\d+', range_name)  # Find the first number in the string
     row_num = int(match.group(0))-1
     rows = []
@@ -106,21 +108,25 @@ def pull_from_sheet(
                     except ValueError as e:
                         error = f">Row `{row_num}`, error with installation date: `" + str(e) + '`'
                         badrows.append(error)
-                        
-                        #change: add records even without removal date. 
-                        if row[8]:
-                            try:
-                                removal = datetime.strptime(row[8], '%m/%d/%Y').date()
-                            except ValueError as e:
-                                error = f">Row `{row_num}`, error with removal date: `" + str(e) + '`'
-                                badrows.append(error)
-                        else:
-                            removal = None
-                        i = (
-                            ward_no, row[0], row[1], row[2], row[3], installation,
-                            removal, row[10], row[11], int(row[7]), row[13])
-                        rows.append(i)
-                        LOGGER.debug(row)
+                    #error catching for optional work order field.
+                    try:
+                        work_order = int(row[7])
+                    except ValueError as e:
+                        work_order = None
+                    #change: add records even without removal date. 
+                    if row[8]:
+                        try:
+                            removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                        except ValueError as e:
+                            error = f">Row `{row_num}`, error with removal date: `" + str(e) + '`'
+                            badrows.append(error)
+                    else:
+                        removal = None
+                    i = (
+                        ward_no, row[0], row[1], row[2], row[3], installation,
+                        removal, row[10], row[11], work_order, row[13])
+                    rows.append(i)
+                    LOGGER.debug(row)
                 else:
                     LOGGER.debug('This row is not included: %s', row)
             except (IndexError, KeyError) as err1:
