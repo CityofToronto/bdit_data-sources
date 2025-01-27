@@ -314,6 +314,7 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     if mapserver == 'cot_geospatial' and layer_id == 2:
         where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
     elif mapserver == 'cot_geospatial27' and layer_id == 41:
+        # Exclude negative objectids from address point layer based on recommendation from GCC (internal use only)
         where = "OBJECTID>0"
     else:
         where = "1=1"
