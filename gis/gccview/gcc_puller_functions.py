@@ -319,6 +319,7 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
         if include_additional_feature: # Then add the additional 5 roadclasses
             where += " OR \"FEATURE_CODE_DESC\" IN ('Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road')"
     elif mapserver == 'cot_geospatial27' and layer_id == 41:
+        # Exclude negative objectids from address point layer based on recommendation from GCC (internal use only)
         where = "OBJECTID>0"
     else:
         where = "1=1"
