@@ -1,6 +1,5 @@
 <!-- TOC -->
 
-- [1. Overview](#1-overview)
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
   - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
   - [Key Tables](#key-tables)
@@ -24,6 +23,8 @@
     - [`intersection_movements`](#intersection_movements)
     - [`centreline_miovision`](#centreline_miovision)
     - [`alerts`](#alerts)
+    - [camera\_details](#camera_details)
+    - [configuration\_updates](#configuration_updates)
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Tables](#other-tables)
@@ -42,8 +43,6 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
-
-# 1. Overview
 
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
 
@@ -113,10 +112,10 @@ Note that bicycles are available at both a turning movement level and at an appr
 | 4                  | SingleUnitTruck  | false         | "Vehicles"    | A truck that has a non-detachable cab and trailer system |
 | 5                  | ArticulatedTruck | false         | "Vehicles"    | A truck that has a detachable cab and trailer system |
 | 6                  | Pedestrian       | true          | "Pedestrians" | A walker. May or may not include zombies... |
-| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. do not use aggregate volumes will be removed from tables |
+| 7                  | Bicycle          | true          | "Cyclists"    | Bicycle in crosswalk. Same movement_uids as 6, Pedestrian. Unclear if it is necessarily being walked or ridden. This movement is exlcuded from aggregate tables. |
 | 8                  | WorkVan          |               |               | A van used for commercial purposes Workvan classification was folded in to "Light" vehicles in the API. |
 | 9                  | MotorizedVehicle | false         | "Vehicles"    | Miscellaneous vehicles. Prior to 2019-08-22 this included streetcars. |
-| 10                 | Bicycle          | false         | "Cyclists"    | Tracks bicycle entrances and exits. There are currently  no exits in the aggregated tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
+| 10                 | Bicycle          | false         | "Cyclists"    | The preferred bike classification. Tracks bicycle entrances and exits passing through manually drawn zones on the SmartSense overlay. Exits are exlcuded from aggregate tables. This classification is only  available from 2021-07-11 on. Bicycle data is not great - stay tuned. |
 
 ### `movements`
 
@@ -493,6 +492,24 @@ LEFT JOIN miovision_api.alerts AS a
     AND v.datetime_bin < a.end_time
 WHERE a.intersection_uid IS NULL
 ```
+
+### camera_details
+This table contains details of Miovision cameras, which we are sometimes required to provide to maintenance. It is updated daily by `miovision_hardware` Airflow DAG. Join to `miovision_api.active_intersections AS ai ON ai.id = camera_details.intersection_id`.  
+
+| column_name     | data_type   | sample                               |
+|:----------------|:------------|:-------------------------------------|
+| intersection_id | text        | 253a327c-4e4b-4e4e-b3a9-c2c3e7753825 |
+| camera_id       | text        | Miovision SmartView 360 NWC          |
+| camera_label    | text        | 1ebf4ec0-88fd-49ec-8cf4-3e0ae0af0128 |
+| last_seen       | date        | 2024-12-05                           |
+
+### configuration_updates
+This table stores the last updated date of Miovision detection configurations. This may be useful at some point in the future to determine for which dates calibration studies are relevant. It was only populated starting 2024-12-05, so the MIN `updated_time` was the most recent update at that point. Further configuration details can be seen in Miovision One.  
+
+| column_name      | data_type                   | sample                     |
+|:-----------------|:----------------------------|:---------------------------|
+| intersection_uid | integer                     | 97                         |
+| updated_time     | timestamp without time zone | 2024-02-23 03:09:36.684000 |
 
 ## Primary and Foreign Keys
 

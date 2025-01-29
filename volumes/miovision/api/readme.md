@@ -1,29 +1,31 @@
 <!-- TOC -->
 
 - [Overview](#overview)
-  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
-    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
-    - [Error responses](#error-responses)
-  - [Input Files](#input-files)
-  - [How to run the api](#how-to-run-the-api)
-    - [TMCs (Volumes)](#tmcs-volumes)
-    - [Alerts](#alerts)
-  - [Classifications](#classifications)
-    - [API Classifications](#api-classifications)
-    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
-  - [PostgreSQL Functions](#postgresql-functions)
-  - [Invalid Movements](#invalid-movements)
-  - [How the API works](#how-the-api-works)
-  - [Repulling data](#repulling-data)
+    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+        - [Turning Movement Count TMC](#turning-movement-count-tmc)
+        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
+        - [Error responses](#error-responses)
+    - [Input Files](#input-files)
+    - [How to run the api](#how-to-run-the-api)
+        - [TMCs Volumes](#tmcs-volumes)
+        - [Alerts](#alerts)
+    - [Classifications](#classifications)
+        - [API Classifications](#api-classifications)
+        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
+    - [PostgreSQL Functions](#postgresql-functions)
+    - [Invalid Movements](#invalid-movements)
+    - [How the API works](#how-the-api-works)
+    - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-  - [**`miovision_pull`**](#miovision_pull)
-    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
-    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
-    - [`data_checks` TaskGroup](#data_checks-taskgroup)
-  - [**`miovision_check`**](#miovision_check)
-  - [Notes](#notes)
+    - [miovision_pull](#miovision_pull)
+        - [check_partitions TaskGroup](#check_partitions-taskgroup)
+        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
+        - [data_checks TaskGroup](#data_checks-taskgroup)
+    - [miovision_check](#miovision_check)
+    - [miovision_hardware](#miovision_hardware)
+    - [Notes](#notes)
 
+<!-- /TOC -->
 <!-- /TOC -->
 
 # Overview
@@ -301,6 +303,16 @@ This DAG replaces the old `check_miovision`. It is used to run daily data qualit
 - `check_if_thursday`: Skips downstream checks if execution date is not a Thursday (sends notification on Friday).
 - `check_open_anomalous_ranges`: Checks if any anomalous_range entries exist with non-zero volume in the last 7 days. Notifies if any found. 
 <!-- miovision_check_doc_md -->
+
+<!-- miovision_hardware_doc_md -->
+## **`miovision_hardware`**
+
+This DAG pulls non-volume information including: camera details and configuration dates, which may be useful at some point. This DAG has no interdependency with the other Miovision pipelines.
+
+- `pull_config_dates`: pulls the **last configured** date from Miovision's `/v1/intersections/{intersectionId}/hardware/detectionConfiguration` API endpoint. This task only started running 2024-12-05, so older configurations dates were not captured. 
+- `pull_camera_details`: pulls the camera ids from the Miovision `/v1/intersections/{intersectionId}/cameras` endpoint. 
+
+<!-- miovision_hardware_doc_md -->
 
 ## Notes
 

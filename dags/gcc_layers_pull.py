@@ -6,7 +6,7 @@ from functools import partial
 import pendulum
 from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.python import get_current_context
 from airflow.models.param import Param
 
@@ -25,7 +25,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
         dag_id=dag_id,
         default_args=default_args,
         catchup=False,
-        tags=['gcc', name],
         params={
             "layer_name": Param(
                 default='',
@@ -65,6 +64,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 examples=['gis', 'gis_core'],
             )
         },
+        tags=["bdit_data-sources", "gcc", name, "quarterly"],
         schedule='0 7 1 */3 *' #'@quarterly'
     )
     def gcc_layers_dag():

@@ -8,7 +8,6 @@
 
 #Environment Canada imports
 import asyncio
-from types import coroutine
 import env_canada
 
 #other packages

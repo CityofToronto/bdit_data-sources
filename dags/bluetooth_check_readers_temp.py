@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 try:
@@ -50,7 +50,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule_interval='0 8 * * *',
+    schedule='0 8 * * *',
     catchup=False,
     tags=['bluetooth', 'data_checks']
 )
@@ -68,19 +68,19 @@ def blip_pipeline():
     ) 
 
     # Update bluetooth.routes with the latest last_reported_date
-    update_routes_table = PostgresOperator(
+    update_routes_table = SQLExecuteQueryOperator(
         sql='''SELECT * from bluetooth.insert_report_date_temp()''',
         task_id='update_routes_table',
-        postgres_conn_id='bt_bot',
+        conn_id='bt_bot',
         autocommit=True,
         retries = 0
     )
 
     # Update bluetooth.reader_locations with the latest reader status
-    update_reader_status = PostgresOperator(
+    update_reader_status = SQLExecuteQueryOperator(
         sql='''SELECT * from bluetooth.reader_status_history_temp('{{ ds }}')''',
         task_id='update_reader_status',
-        postgres_conn_id='bt_bot',
+        conn_id='bt_bot',
         autocommit=True,
         retries = 0
     )

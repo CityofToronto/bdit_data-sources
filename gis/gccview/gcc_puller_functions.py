@@ -309,57 +309,55 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
         Resulted json response from calling the GCCView rest api
     """
     return_json = None
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
-    
-    # If the data we want to get is centreline
+    base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
+    # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
+        where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
+    elif mapserver == 'cot_geospatial27' and layer_id == 41:
+        where = "OBJECTID>0"
     else:
-        query = {"where":"1=1",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
+        where = "1=1"
+        
+    query = {"where": where,
+            "outFields": "*",
+            "outSR": '4326',
+            "returnGeometry": "true",
+            "returnTrueCurves": "false",
+            "returnIdsOnly": "false",
+            "returnCountOnly": "false",
+            "returnZ": "false",
+            "returnM": "false",
+            "orderByFields": "OBJECTID", 
+            "returnDistinctValues": "false",
+            "returnExtentsOnly": "false",
+            "resultOffset": f"{max_number}",
+            "resultRecordCount": f"{record_max}",
+            "f":"json"}
     
-    for retry in range(3):
+    for _ in range(3):
         try:
             r = requests.get(base_url, params = query, verify = False, timeout = 300)
             r.raise_for_status()
         except requests.exceptions.HTTPError as err_h:
-            LOGGER.error("Invalid HTTP response: ", err_h)
+            LOGGER.error("Invalid HTTP response: %s", err_h)
         except requests.exceptions.ConnectionError as err_c:
-            LOGGER.error("Network problem: ", err_c)
+            LOGGER.error("Network problem: %s", err_c)
         except requests.exceptions.Timeout as err_t:
-            LOGGER.error("Timeout: ", err_t)
+            LOGGER.error("Timeout: %s", err_t)
         except requests.exceptions.RequestException as err:
-            LOGGER.error("Error: ", err)
+            LOGGER.error("Error: %s", err)
         else:
+            if r.status_code != 200:
+                LOGGER.error("Query was not successful. Response: %s", r)
             return_json = r.json()
             break
+    
+    #check neccessary fields are contained in the return json.
+    keys = ['fields', 'features', 'geometryType']
+    for k in keys:
+        if not(k in return_json.keys()):
+            LOGGER.error("return_json: %s", return_json)
+            raise KeyError(f"Return json missing field: {k}")
     
     return return_json
 
@@ -377,12 +375,7 @@ def find_limit(return_json):
     keep_adding : Boolean
         boolean 'keep_adding' indicating if last query returned all rows in the layer
     """
-    
-    if return_json.get('exceededTransferLimit', False) == True:
-        keep_adding = True
-    else:
-        keep_adding = False
-    return keep_adding
+    return return_json.get('exceededTransferLimit', False)
 
 def insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned):
     """
@@ -589,37 +582,31 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         return
     #--------------------------------
     keep_adding = True
-    counter = 0
+    total = 0
     #--------------------------------
     if is_audited and primary_key is None:
             LOGGER.error("Audited tables should have a primary key.")
     if not(is_audited) and primary_key is not None:
         LOGGER.error("Non-audited tables do not use the primary key.")
     #--------------------------------
-    while keep_adding == True:
-        if counter == 0:
-            return_json = get_data(mapserver, layer_id)
-            if is_audited:
-                (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
-            elif is_partitioned:
-                (insert_column, output_table) = create_partitioned_table(output_table, return_json, schema_name, con)
-            else:
-                insert_column = create_table(output_table, return_json, schema_name, con)
-            features = return_json['features']
-            record_max=(len(features))
-            max_number = record_max
-        else:
-            return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
-        
-        insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned)
+    #get first data pull (no offset), create tables.
+    return_json = get_data(mapserver, layer_id)
+    if is_audited:
+        (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
+    elif is_partitioned:
+        (insert_column, output_table) = create_partitioned_table(output_table, return_json, schema_name, con)
+    else:
+        insert_column = create_table(output_table, return_json, schema_name, con)
     
-        counter += 1
-        keep_adding = find_limit(return_json)
-        
+    while keep_adding:
+        insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned)
+        record_count = len(return_json['features'])
+        total += record_count
+        keep_adding = find_limit(return_json) #checks if all records fetched
         if keep_adding:
-            max_number += record_max
-        else:
-            LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
+            #get next batch using offset (max_number)
+            return_json = get_data(mapserver, layer_id, max_number = total, record_max = record_count)
+    LOGGER.info('%s records from [mapserver: %s, layerID: %d] have been inserted into %s', total, mapserver, layer_id, output_table)
     
     if is_audited:
         try:
