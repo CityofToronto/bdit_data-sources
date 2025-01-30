@@ -1,81 +1,64 @@
--- FUNCTION: gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], text[], boolean)
+-- FUNCTION: gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
 
--- DROP FUNCTION IF EXISTS gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], text[], boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
 
 CREATE OR REPLACE FUNCTION gwolofs.here_dynamic_bin_avg(
-	start_date date,
-	end_date date,
-	start_tod time without time zone,
-	end_tod time without time zone,
-	dow_list integer[],
-	link_dirs text[],
-	holidays boolean)
+    start_date date,
+    end_date date,
+    start_tod time without time zone,
+    end_tod time without time zone,
+    dow_list integer[],
+    node_start bigint,
+    node_end bigint,
+    holidays boolean)
     RETURNS numeric
-    LANGUAGE 'sql'
+    LANGUAGE 'plpgsql'
     COST 100
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
-CALL gwolofs.cache_tt_segment(here_dynamic_bin_avg.link_dirs);
+DECLARE uri_string_func text :=
+    here_dynamic_bin_avg.node_start::text || '/' ||
+    here_dynamic_bin_avg.node_end::text  || '/' ||
+    here_dynamic_bin_avg.start_tod::text || '/' ||
+    here_dynamic_bin_avg.end_tod::text || '/' ||
+    here_dynamic_bin_avg.start_date::text || '/' ||
+    here_dynamic_bin_avg.end_date::text || '/' ||
+    here_dynamic_bin_avg.holidays::text || '/' ||
+    here_dynamic_bin_avg.dow_list::text;
+    res numeric;
 
-CALL gwolofs.cache_tt_results(
+BEGIN
+
+PERFORM gwolofs.cache_tt_results(
+    uri_string := uri_string_func,
     start_date := here_dynamic_bin_avg.start_date,
     end_date := here_dynamic_bin_avg.end_date,
     start_tod := here_dynamic_bin_avg.start_tod,
     end_tod := here_dynamic_bin_avg.end_tod,
     dow_list := here_dynamic_bin_avg.dow_list,
-    link_dirs := here_dynamic_bin_avg.link_dirs,
+    node_start := here_dynamic_bin_avg.node_start,
+    node_end := here_dynamic_bin_avg.node_end,
     holidays := here_dynamic_bin_avg.holidays
 );
 
-WITH time_grps AS (
-    SELECT tsrange(
-        (days.dt + here_dynamic_bin_avg.start_tod)::timestamp,
-        (days.dt + here_dynamic_bin_avg.end_tod)::timestamp, '[)') AS time_grp
-    FROM generate_series(
-        here_dynamic_bin_avg.start_date::date,
-        here_dynamic_bin_avg.end_date::date - '1 day'::interval, '1 day'::interval) AS days(dt)
-    WHERE date_part('isodow', dt) = ANY(here_dynamic_bin_avg.dow_list)
+WITH daily_means AS (
+    SELECT
+        dt_start::date,
+        AVG(tt) AS daily_mean
+    FROM gwolofs.dynamic_binning_results
+    WHERE uri_string = uri_string_func
+    GROUP BY dt_start::date
 )
 
-SELECT AVG(tt)
-FROM gwolofs.dynamic_binning_results AS res
-JOIN time_grps USING (time_grp)
-JOIN gwolofs.tt_segments AS segs ON res.segment_uid = segs.uid
-WHERE segs.link_dirs = here_dynamic_bin_avg.link_dirs
+SELECT AVG(daily_mean) INTO res
+FROM daily_means;
+
+RETURN res;
+
+END;
 
 $BODY$;
 
-ALTER FUNCTION gwolofs.here_dynamic_bin_avg(
-    date, date, time without time zone, time without time zone, integer[], text[], boolean
-)
-OWNER TO gwolofs;
-
-
-/*example of use: 
-
-SELECT
-    start_date,
-    end_date,
-    start_tod,
-    end_tod,
-    dow_list,
-    link_dirs,
-    gwolofs.here_dynamic_bin_avg(
-        start_date := l.start_date,
-        end_date := l.end_date,
-        start_tod := l.start_tod,
-        end_tod := l.end_tod,
-        dow_list := l.dow_list,
-        link_dirs := l.link_dirs,
-        holidays := TRUE
-    )
-FROM
-(VALUES
-('2025-01-02'::date, '2025-01-10'::date, '07:00'::time, '10:00'::time, '{1,2,3,4,5}'::int[], '{1258924853F,1258924867F,1258924868F,1258924894F}'::text[]),
-('2025-01-02'::date, '2025-01-10'::date, '11:00'::time, '15:00'::time, '{1,2,3,4,5}'::int[], '{1258924852F,1258924867F,1258924868F,1258924894F}'::text[]),
-('2025-01-02'::date, '2025-01-10'::date, '07:00'::time, '10:00'::time, '{1,3,5}'::int[], '{1258924852F,1258924853F,1258924868F,1258924894F}'::text[]),
-('2024-01-02'::date, '2025-01-10'::date, '07:00'::time, '10:00'::time, '{1,2,3,4,5}'::int[], '{1258924852F,1258924853F,1258924867F,1258924894F}'::text[])
-) AS l(start_date, end_date, start_tod, end_tod, dow_list, link_dirs);
-
-*/
+ALTER FUNCTION gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+    OWNER TO gwolofs;
