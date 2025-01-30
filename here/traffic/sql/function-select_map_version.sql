@@ -1,0 +1,26 @@
+-- FUNCTION: gwolofs.select_map_version(date, date)
+
+-- DROP FUNCTION IF EXISTS gwolofs.select_map_version(date, date);
+
+CREATE OR REPLACE FUNCTION gwolofs.select_map_version(
+	start_date date,
+	end_date date)
+    RETURNS text
+    LANGUAGE 'sql'
+    COST 100
+    STABLE PARALLEL SAFE 
+AS $BODY$
+
+SELECT street_version
+FROM here.street_valid_range AS svr,
+LATERAL (
+    SELECT svr.valid_range * daterange(select_map_version.start_date, select_map_version.end_date, '[)') AS overlap
+) AS lat
+WHERE UPPER(lat.overlap) - LOWER(lat.overlap) IS NOT NULL
+ORDER BY UPPER(lat.overlap) - LOWER(lat.overlap) DESC NULLS LAST
+LIMIT 1;
+
+$BODY$;
+
+ALTER FUNCTION gwolofs.select_map_version(date, date)
+    OWNER TO gwolofs;
