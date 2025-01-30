@@ -1,20 +1,29 @@
--- PROCEDURE: gwolofs.cache_tt_results(date, date, time without time zone, time without time zone, integer[], text[], boolean)
+-- FUNCTION: gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
 
--- DROP PROCEDURE IF EXISTS gwolofs.cache_tt_results(date, date, time without time zone, time without time zone, integer[], text[], boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
 
-CREATE OR REPLACE PROCEDURE gwolofs.cache_tt_results(
-    IN start_date date,
-    IN end_date date,
-    IN start_tod time without time zone,
-    IN end_tod time without time zone,
-    IN dow_list integer[],
-    IN link_dirs text[],
-    IN holidays boolean
-)
-LANGUAGE 'plpgsql'
+CREATE OR REPLACE FUNCTION gwolofs.cache_tt_results(
+	uri_string text,
+	start_date date,
+	end_date date,
+	start_tod time without time zone,
+	end_tod time without time zone,
+	dow_list integer[],
+	node_start bigint,
+	node_end bigint,
+	holidays boolean)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
+DECLARE map_version text;
+
 BEGIN
+
+SELECT gwolofs.select_map_version(cache_tt_results.start_date, cache_tt_results.end_date) INTO map_version;
+
 EXECUTE format(
     $$
     WITH segment AS (
@@ -22,10 +31,9 @@ EXECUTE format(
             uid AS segment_uid,
             unnested.link_dir,
             unnested.length,
-            tt_segments.total_length
-        FROM gwolofs.tt_segments,
-        UNNEST(tt_segments.link_dirs, tt_segments.lengths) AS unnested(link_dir, length)
-        WHERE link_dirs = %L
+            total_length
+        FROM gwolofs.cache_tt_segment(%L, %L, %L),
+        UNNEST(cache_tt_segment.link_dirs, cache_tt_segment.lengths) AS unnested(link_dir, length)
     ),
     
     segment_5min_bins AS (
@@ -44,7 +52,7 @@ EXECUTE format(
             ARRAY_AGG(ta.link_dir ORDER BY link_dir) AS link_dirs,
             ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
             ARRAY_AGG(seg.length ORDER BY link_dir) AS lengths
-        FROM here.ta_path AS ta
+        FROM here.ta AS ta
         JOIN segment AS seg USING (link_dir)
         WHERE
             (
@@ -52,7 +60,7 @@ EXECUTE format(
                 AND --{ToD_and_or}
                 tod < %L
             )
-            AND date_part('isodow', dt) = ANY(%L)
+            AND date_part('isodow', dt) = ANY(%L::int[])
             AND dt >= %L
             AND dt < %L
             /*--{holiday_clause}
@@ -109,16 +117,20 @@ EXECUTE format(
             s5b.total_length,
             dbo.tx AS dt_start,
             --exclusive end bin
-            MAX(s5b.tx) + interval '5 minutes' AS dt_end,
+            s5b_end.tx + interval '5 minutes' AS dt_end,
             unnested.link_dir,
             unnested.len,
             AVG(unnested.tt) AS tt, --avg TT for each link_dir
-            SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each link_dir
+            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path sample_size for each link_dir
         FROM dynamic_bin_options AS dbo
         LEFT JOIN segment_5min_bins AS s5b
             ON s5b.time_grp = dbo.time_grp
             AND s5b.bin_rank >= dbo.start_bin
-            AND s5b.bin_rank <= dbo.end_bin,
+            AND s5b.bin_rank <= dbo.end_bin
+        --this join is used to get the tx info about the last bin only
+        LEFT JOIN segment_5min_bins AS s5b_end
+            ON s5b_end.time_grp = dbo.time_grp
+            AND s5b_end.bin_rank = dbo.end_bin,
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
         UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
         --we need to use nested data to determine length for these multi-period bins
@@ -127,21 +139,23 @@ EXECUTE format(
             s5b.segment_uid,
             dbo.time_grp,
             s5b.total_length,
-            dbo.tx,
-            dbo.end_bin,
+            dbo.tx, --stard_bin
+            s5b_end.tx, --end_bin
             unnested.link_dir,
             unnested.len
         --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
-        HAVING MAX(s5b.tx) + interval '5 minutes' <= dbo.tx + interval '1 hour'
+        --HAVING MAX(s5b.tx) + interval '5 minutes' <= dbo.tx + interval '1 hour'
     )
     
     INSERT INTO gwolofs.dynamic_binning_results (
+        uri_string,
         time_grp, segment_uid, dt_start, dt_end, bin_range, tt,
         unadjusted_tt, total_length, length_w_data, num_obs
     )
     --this query contains overlapping values which get eliminated
     --via on conflict with the exclusion constraint on congestion_raw_segments table.
     SELECT DISTINCT ON (dt_start)
+        %L,
         time_grp,
         segment_uid,
         dt_start,
@@ -164,6 +178,7 @@ EXECUTE format(
     --these 5 minute bins already have sufficient length
     --don't need to use nested data to validate.
     SELECT
+        %L,
         time_grp,
         segment_uid,
         tx AS dt_start,
@@ -184,12 +199,14 @@ EXECUTE format(
     ON CONFLICT ON CONSTRAINT dynamic_bins_unique_temp
     DO NOTHING;
     $$,
-    link_dirs, start_tod, end_tod, start_tod, end_tod, dow_list, start_date, end_date
+    node_start, node_end, map_version, --segment CTE
+    start_tod, end_tod, --segment_5min_bins CTE SELECT
+    start_tod, end_tod, dow_list, start_date, end_date, --segment_5min_bins CTE WHERE
+    cache_tt_results.uri_string, cache_tt_results.uri_string --INSERT
 );
 
 END;
 $BODY$;
-ALTER PROCEDURE gwolofs.cache_tt_results(
-    date, date, time without time zone, time without time zone, integer[], text[], boolean
-)
-OWNER TO gwolofs;
+
+ALTER FUNCTION gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+    OWNER TO gwolofs;
