@@ -9,12 +9,16 @@ CREATE TABLE IF NOT EXISTS gwolofs.tt_segments
     geom geometry,
     total_length numeric,
     uid smallint NOT NULL DEFAULT nextval('tt_segments_uid_seq'::regclass),
-    CONSTRAINT unique_link_dirs UNIQUE (link_dirs)
+    node_start bigint NOT NULL,
+    node_end bigint NOT NULL,
+    map_version text COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT tt_segments_pkey PRIMARY KEY (node_start, node_end, map_version)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.tt_segments OWNER TO gwolofs;
+ALTER TABLE IF EXISTS gwolofs.tt_segments
+    OWNER to gwolofs;
 
 REVOKE ALL ON TABLE gwolofs.tt_segments FROM bdit_humans;
 
