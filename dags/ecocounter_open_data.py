@@ -21,7 +21,9 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-except:
+except ModuleNotFoundError:
+    raise ImportError("Cannot import DAG helper functions.")
+except ImportError:
     raise ImportError("Cannot import DAG helper functions.")
 
 LOGGER = logging.getLogger(__name__)
