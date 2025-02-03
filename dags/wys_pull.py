@@ -77,7 +77,7 @@ def pull_wys_dag():
         create_month_partition = SQLExecuteQueryOperator(
             task_id='create_month_partition',
             pre_execute=check_1st_of_month,
-            trigger_rule='none_failed_min_one_success',
+            trigger_rule='none_failed',
             sql="SELECT wys.create_mm_nested_raw_data_partitions('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)",
             conn_id='wys_bot',
             autocommit=True
