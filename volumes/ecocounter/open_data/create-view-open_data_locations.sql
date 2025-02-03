@@ -33,7 +33,10 @@ FROM ecocounter.flows AS f
 JOIN od_flows USING (site_id, direction_main)
 JOIN ecocounter.sites AS s USING (site_id)
 LEFT JOIN ecocounter.calibration_factors AS cf USING (flow_id)
-ORDER BY s.site_description, f.direction_main::text, cf.count_date DESC NULLS LAST;
+ORDER BY
+    s.site_description ASC,
+    f.direction_main::text ASC,
+    cf.count_date DESC NULLS LAST;
 
 ALTER TABLE ecocounter.open_data_locations OWNER TO ecocounter_admins;
 
