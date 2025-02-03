@@ -91,7 +91,7 @@ def pull_miovision_dag():
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
             conn_id='miovision_api_bot',
             autocommit=True,
-            trigger_rule='none_failed_min_one_success'
+            trigger_rule='none_failed'
         )
 
         create_annual_partition >> create_month_partition
