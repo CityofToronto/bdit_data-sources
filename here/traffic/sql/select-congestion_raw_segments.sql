@@ -103,7 +103,7 @@ unnested_db_options AS (
         s5b.total_length,
         dbo.tx AS dt_start,
         --exclusive end bin
-        MAX(s5b.tx) + interval '5 minutes' AS dt_end,
+        s5b_end.tx + interval '5 minutes' AS dt_end,
         unnested.link_dir,
         unnested.len,
         AVG(unnested.tt) AS tt, --avg TT for each link_dir
@@ -113,21 +113,26 @@ unnested_db_options AS (
         ON s5b.time_grp = dbo.time_grp
         AND s5b.segment_id = dbo.segment_id
         AND s5b.bin_rank >= dbo.start_bin
-        AND s5b.bin_rank <= dbo.end_bin,
+        AND s5b.bin_rank <= dbo.end_bin
+    --this join is used to get the tx info about the last bin only
+    LEFT JOIN segment_5min_bins AS s5b_end
+        ON s5b_end.time_grp = dbo.time_grp
+        AND s5b_end.bin_rank = dbo.end_bin,
     --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
     UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
-    --we need to use nested data to determine length for these multi-period bins
-    WHERE dbo.start_bin != dbo.end_bin
+    WHERE
+        --we need to use nested data to determine length for these multi-period bins
+        dbo.start_bin != dbo.end_bin
+        --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
+        AND s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '1 hour'
     GROUP BY
         dbo.time_grp,
         dbo.segment_id,
         s5b.total_length,
-        dbo.tx,
-        dbo.end_bin,
+        dbo.tx, --stard_bin
+        s5b_end.tx, --end_bin
         unnested.link_dir,
         unnested.len
-    --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
-    HAVING MAX(s5b.tx) + interval '5 minutes' <= dbo.tx + interval '1 hour'
 )
 
 INSERT INTO gwolofs.congestion_raw_segments (
