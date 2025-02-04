@@ -4,6 +4,7 @@
   * [Data Pipeline](#data-pipeline)
   * [Adding new layers to GCC Puller DAG](#adding-new-layers-to-gcc-puller-dag)
   * [Manually fetch layers](#manually-fetch-layers)
+  * [Manually fetch layers using Airflow DAG](#manually-fetch-layers-using-airflow-dag)
 
 ## Overview
 
@@ -159,3 +160,10 @@ Example of pulling the city_ward layer (partitioned) to the gis_core schema.
 ```python
 python3 bdit_data-sources/gis/gccview/gcc_puller_functions.py --mapserver 0 --layer-id 0 --schema-name gis_core --con db.cfg --is-audited --primary-key area_id
 ```
+
+## Manually fetch layers using Airflow DAG
+
+You can also manually fetch layers using the Airflow DAG with custom parameters. Simply press `Trigger DAG w/ config` and input the layer details.
+
+![alt text](img/trigger.png)  
+![alt text](img/airflow_params.png)
