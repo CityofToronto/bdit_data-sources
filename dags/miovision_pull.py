@@ -8,8 +8,6 @@ import sys
 import os
 import pendulum
 from datetime import timedelta
-import configparser
-import dateutil.parser
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
@@ -150,7 +148,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
 
-        @task
+        @task(depends_on_past=True)
         def zero_volume_anomalous_ranges_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")  
             time_period = (ds, ds_add(ds, 1))          
