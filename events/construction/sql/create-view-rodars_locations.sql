@@ -52,11 +52,12 @@ SELECT
     d2.direction,
     iil.roadname,
     CASE iil.centreline_id WHEN 0 THEN NULL ELSE iil.centreline_id END AS centreline_id,
-    COALESCE(centreline_latest.geom,
+    COALESCE(
+        centreline_latest.geom,
         --find geoms for centreline that do not appear in centreline_latest
         --wrapping inside case statement coalesce/case prevents unnecessary execution
-        CASE WHEN iil.centreline_id > 0 THEN
-            (
+        CASE
+            WHEN iil.centreline_id > 0 THEN (
                 SELECT centreline.geom
                 FROM gis_core.centreline
                 WHERE centreline.centreline_id = iil.centreline_id
@@ -103,7 +104,8 @@ LEFT JOIN itsc_factors.roadclosuretype_old
             get_lanesaffected_sums.lane_open_bus,
             get_lanesaffected_sums.lane_closed_bus
         --expand lanesaffectedpattern column.
-        FROM itsc_factors.get_lanesaffected_sums(iil.lanesaffectedpattern)
+        FROM
+            itsc_factors.get_lanesaffected_sums(iil.lanesaffectedpattern)
             AS get_lanesaffected_sums (
                 lap_descriptions, lane_open_auto, lane_closed_auto, lane_open_bike,
                 lane_closed_bike, lane_open_ped, lane_closed_ped, lane_open_bus, lane_closed_bus
