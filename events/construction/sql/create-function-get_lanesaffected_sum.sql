@@ -4,7 +4,7 @@
 
 CREATE OR REPLACE FUNCTION itsc_factors.get_lanesaffected_sums(input_string text)
 RETURNS TABLE (
-    lap_descriptions text[],
+    lap_descriptions text [],
     lane_open_auto integer,
     lane_closed_auto integer,
     lane_open_bike integer,
