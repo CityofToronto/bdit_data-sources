@@ -118,9 +118,10 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
     status='Pending'
     status_url = status_base_url + str(user_id) + '/requests/' + str(request_id)
     
-    #try polling same request_id for up to 8 hrs
-    token_counter = 0
-    while status != "Completed Successfully" and token_counter < 8:
+    #try polling same request_id for up to max_tokens hrs
+    token_counter=0
+    max_tokens=8
+    while status != "Completed Successfully" and token_counter < max_tokens:
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
         status_header = {'Authorization': 'Bearer ' +  access_token}
@@ -128,10 +129,17 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
         try:
             query_status.raise_for_status()
             status = str(query_status.json()['status'])
-        except requests.exceptions.HTTPError:
-            #access token expires after 1 hr, try to generate up to 3 times.
-            access_token = get_access_token(api_conn)
-            token_counter+=1
+        except requests.exceptions.HTTPError as err:
+            error_desc = query_status.json()['error_description']
+            if error_desc.startswith('Token Validation Failure'):
+                #access token expires after 1 hr, try to generate up to max_tokens times.
+                LOGGER.info('Token expired; refreshing.')
+                access_token = get_access_token(api_conn)
+                token_counter+=1
+            else:
+                LOGGER.error("HTTP error in query status response.")
+                LOGGER.error(query_status.text)
+                raise HereAPIException(err)
         except KeyError as err:
             error = 'Error in polling status of query request \n'
             error += 'err\n'
@@ -148,9 +156,12 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
             LOGGER.warning("JSON error in query status response.")
             LOGGER.warning(query_status.text)
             continue
-
-    LOGGER.info('Requested query completed')
     
+    if token_counter==max_tokens:
+        LOGGER.error("Maximum number of token retries used.")
+        raise HereAPIException
+    
+    LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
 @click.group(invoke_without_command=True)
