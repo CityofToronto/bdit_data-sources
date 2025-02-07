@@ -30,14 +30,12 @@ CREATE TABLE IF NOT EXISTS congestion_events.rodars_issue_locations
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS congestion_events.rodars_issue_locations OWNER TO dbadmin;
+ALTER TABLE IF EXISTS congestion_events.rodars_issue_locations OWNER TO congestion_admins;
 
 REVOKE ALL ON TABLE congestion_events.rodars_issue_locations FROM bdit_humans;
-GRANT SELECT ON TABLE congestion_events.rodars_issue_locations TO bdit_humans;
 
 GRANT ALL ON TABLE congestion_events.rodars_issue_locations TO dbadmin;
 
-GRANT ALL ON TABLE congestion_events.rodars_issue_locations TO rds_superuser WITH GRANT OPTION;
 
 GRANT ALL ON TABLE congestion_events.rodars_issue_locations TO events_bot;
 
