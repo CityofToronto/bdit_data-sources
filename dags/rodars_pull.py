@@ -61,8 +61,8 @@ def rodars_dag():
         events_bot = PostgresHook('events_bot')
         fetch_and_insert_location_data(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
     #add a delete task to remove outdated revisions?
-    
-    pull_rodars_issues()
-    pull_rodar_locations()
+
+    #these tasks are not dependent, but this helps so only one fails at a time
+    pull_rodars_issues() >> pull_rodar_locations()
 
 rodars_dag()
