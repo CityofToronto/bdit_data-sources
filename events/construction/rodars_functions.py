@@ -78,7 +78,7 @@ def process_lanesaffected(json_str):
 
 def fetch_and_insert_issue_data(
     select_conn = PostgresHook('rodars_postgres'),
-    insert_conn = PostgresHook('vds_bot'),
+    insert_conn = PostgresHook('events_bot'),
     start_date = None
 ):
     '''Fetch, process and insert data from ITS Central issuedata table.'''
@@ -112,7 +112,7 @@ def fetch_and_insert_issue_data(
 
 def fetch_and_insert_location_data(
     select_conn = PostgresHook('rodars_postgres'),
-    insert_conn = PostgresHook('vds_bot'),
+    insert_conn = PostgresHook('events_bot'),
     start_date = None
 ):
     '''Fetch, process and insert data from ITS Central issuelocationnew table.
