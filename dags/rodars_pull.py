@@ -13,12 +13,12 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 
-from events.construction.rodars_functions import (
+from events.road_permits.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 
-README_PATH = os.path.join(repo_path, 'events/construction/readme.md')
+README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
@@ -39,7 +39,7 @@ default_args = {
     default_args=default_args,
     max_active_runs=1,
     template_searchpath=[
-        os.path.join(repo_path,'events/construction/sql')
+        os.path.join(repo_path,'events/road_permits/sql')
     ],
     doc_md=DOC_MD,
     tags=['bdit_data-sources', 'rodars', 'pull', 'itsc_central'],
