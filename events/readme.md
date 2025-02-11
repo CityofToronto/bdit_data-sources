@@ -2,7 +2,7 @@
 
 This folder contains information on data sources related to road closures and special events. 
 
-## [road_closures](./road_closures/)
+## [road_permits](./road_permits/)
 This folder contains [Road Disruption Activity Reporting System (RoDARS)](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/road-disruption-activity-reporting-system-rodars/) which is pulled daily from ITS Central by the [`rodars_pull` DAG](../dags/rodars_pull.py).  
 The describes permitted road construction and event related road closures with data dating back to ~2012, with more accurate data starting in mid-2024 (RoDARS "New"). 
 
