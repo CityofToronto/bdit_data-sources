@@ -1,19 +1,19 @@
--- FUNCTION: gwolofs.cache_tt_segment(bigint, bigint, text)
+-- FUNCTION: gwolofs.congestion_cache_corridor(bigint, bigint, text)
 
-DROP FUNCTION IF EXISTS gwolofs.cache_tt_segment(bigint, bigint, text);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_corridor(bigint, bigint, text);
 
-CREATE OR REPLACE FUNCTION gwolofs.cache_tt_segment(
-	IN node_start bigint,
-	IN node_end bigint,
-	IN map_version text,
-    OUT uid smallint,
-    OUT link_dirs text[],
-    OUT lengths numeric[],
-    OUT total_length numeric)
+CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_corridor(
+	node_start bigint,
+	node_end bigint,
+	map_version text,
+	OUT uid smallint,
+	OUT link_dirs text[],
+	OUT lengths numeric[],
+	OUT total_length numeric)
+    RETURNS record
     LANGUAGE 'plpgsql'
     COST 100
-    VOLATILE PARALLEL SAFE
-
+    VOLATILE PARALLEL SAFE 
 AS $BODY$
 
 DECLARE
@@ -30,7 +30,7 @@ BEGIN
         tt.lengths,
         tt.total_length
         INTO uid, link_dirs, lengths, total_length
-    FROM gwolofs.tt_segments AS tt
+    FROM gwolofs.congestion_corridors AS tt
     WHERE
         tt.node_start = cache_tt_segment.node_start
         AND tt.node_end = cache_tt_segment.node_end
@@ -47,7 +47,7 @@ EXECUTE format (
             UNNEST (links) WITH ORDINALITY AS unnested (link_dir, seq)
         )
         
-        INSERT INTO gwolofs.tt_segments (
+        INSERT INTO gwolofs.congestion_corridors (
             node_start, node_end, map_version, link_dirs, lengths, geom, total_length
         )
         SELECT
@@ -78,5 +78,5 @@ RETURN;
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.cache_tt_segment(bigint, bigint, text)
+ALTER FUNCTION gwolofs.congestion_cache_corridor(bigint, bigint, text)
     OWNER TO gwolofs;
