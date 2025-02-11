@@ -24,8 +24,7 @@ CREATE TABLE IF NOT EXISTS congestion_events.rodars_issue_locations
     linear_name_id integer,
     lanesaffectedpattern text,
     laneblocklevel integer,
-    roadclosuretype integer,
-    CONSTRAINT itsc_issue_location_pkey PRIMARY KEY (divisionid, issueid, locationindex, direction)
+    roadclosuretype integer
 )
 
 TABLESPACE pg_default;
@@ -35,7 +34,6 @@ ALTER TABLE IF EXISTS congestion_events.rodars_issue_locations OWNER TO congesti
 REVOKE ALL ON TABLE congestion_events.rodars_issue_locations FROM bdit_humans;
 
 GRANT ALL ON TABLE congestion_events.rodars_issue_locations TO dbadmin;
-
 
 GRANT ALL ON TABLE congestion_events.rodars_issue_locations TO events_bot;
 
