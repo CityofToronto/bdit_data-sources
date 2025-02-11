@@ -17,7 +17,8 @@ INSERT INTO congestion_events.rodars_issue_locations (
     locationdescription_toplevel, direction, roadname, centreline_id, linear_name_id,
     lanesaffectedpattern, laneblocklevel, roadclosuretype, geom
 )
-SELECT
+--rarely, you can get duplicate values from the unnested lanesaffected json.
+SELECT DISTINCT
     divisionid,
     issueid,
     timestamputc,
@@ -44,26 +45,3 @@ SELECT
     roadclosuretype,
     st_geomfromtext(geom_text, 4326) AS geom
 FROM locations;
---ON CONFLICT (divisionid, issueid, locationindex, direction)
---DO UPDATE SET
---divisionid = excluded.divisionid,
---issueid = excluded.issueid,
---timestamputc = excluded.timestamputc,
---locationindex = excluded.locationindex,
---mainroadname = excluded.mainroadname,
---fromroadname = excluded.fromroadname,
---toroadname = excluded.toroadname,
---direction_toplevel = excluded.direction_toplevel,
---lanesaffected = excluded.lanesaffected,
---streetnumber = excluded.streetnumber,
---locationtype = excluded.locationtype,
---groupid = excluded.groupid,
---groupdescription = excluded.groupdescription,
---lanesaffected_direction = excluded.lanesaffected_direction,
---roadname = excluded.roadname,
---centreline_id = excluded.centreline_id,
---linear_name_id = excluded.linear_name_id,
---lanesaffectedpattern = excluded.lanesaffectedpattern,
---laneblocklevel = excluded.laneblocklevel,
---roadclosuretype = excluded.roadclosuretype,
---geom = excluded.geom;
