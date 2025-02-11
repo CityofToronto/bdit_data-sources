@@ -3,7 +3,7 @@
 -- DROP FUNCTION IF EXISTS gwolofs.congestion_day_hr_segment_agg(date);
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_day_hr_segment_agg(
-	start_date date)
+    start_date date)
     RETURNS void
     LANGUAGE 'plpgsql'
     COST 100
