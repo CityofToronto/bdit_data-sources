@@ -14,7 +14,9 @@ AS $BODY$
 SELECT street_version
 FROM here.street_valid_range AS svr,
 LATERAL (
-    SELECT svr.valid_range * daterange(select_map_version.start_date, select_map_version.end_date, '[)') AS overlap
+    SELECT svr.valid_range * daterange(
+        congestion_select_map_version.start_date,
+        congestion_select_map_version.end_date, '[)') AS overlap
 ) AS lat
 WHERE UPPER(lat.overlap) - LOWER(lat.overlap) IS NOT NULL
 ORDER BY UPPER(lat.overlap) - LOWER(lat.overlap) DESC NULLS LAST
