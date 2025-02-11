@@ -5,17 +5,17 @@
 CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_segments
 (
     segment_id integer NOT NULL,
+    dt date NOT NULL,
+    time_grp tsrange NOT NULL,
     bin_range tsrange NOT NULL,
     tt numeric,
-    unadjusted_tt numeric,
-    total_length numeric,
-    length_w_data numeric,
     num_obs integer,
-    hr timestamp without time zone,
     CONSTRAINT congestion_raw_segments_exclude EXCLUDE USING gist (
-        hr WITH =,
-        bin_range WITH &&,
-        segment_id WITH =)
+        segment_id WITH =,
+        dt WITH =,
+        time_grp WITH =,
+        bin_range WITH &&
+    )
 )
 
 TABLESPACE pg_default;
@@ -32,9 +32,9 @@ GRANT ALL ON TABLE gwolofs.congestion_raw_segments TO gwolofs;
 
 -- DROP INDEX IF EXISTS gwolofs.dynamic_bin_hr_idx;
 
-CREATE INDEX IF NOT EXISTS dynamic_bin_hr_idx
+CREATE INDEX IF NOT EXISTS dynamic_bin_dt_idx
     ON gwolofs.congestion_raw_segments USING btree
-    (hr ASC NULLS LAST)
+    (dt ASC NULLS LAST)
     WITH (deduplicate_items=True)
     TABLESPACE pg_default;
 -- Index: dynamic_bin_idx
@@ -43,6 +43,6 @@ CREATE INDEX IF NOT EXISTS dynamic_bin_hr_idx
 
 CREATE INDEX IF NOT EXISTS dynamic_bin_idx
     ON gwolofs.congestion_raw_segments USING btree
-    (segment_id ASC NULLS LAST, hr ASC NULLS LAST)
+    (segment_id ASC NULLS LAST, dt ASC NULLS LAST)
     WITH (deduplicate_items=True)
     TABLESPACE pg_default;

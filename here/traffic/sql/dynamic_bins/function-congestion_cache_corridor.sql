@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_corridor(
 	node_start bigint,
 	node_end bigint,
 	map_version text,
-	OUT uid smallint,
+	OUT corridor_id smallint,
 	OUT link_dirs text[],
 	OUT lengths numeric[],
 	OUT total_length numeric)
@@ -25,16 +25,16 @@ BEGIN
     --check if the node pair and map_version have already been routed
     --and if so, return values
     SELECT
-        tt.uid,
+        tt.corridor_id,
         tt.link_dirs,
         tt.lengths,
         tt.total_length
-        INTO uid, link_dirs, lengths, total_length
+        INTO corridor_id, link_dirs, lengths, total_length
     FROM gwolofs.congestion_corridors AS tt
     WHERE
-        tt.node_start = cache_tt_segment.node_start
-        AND tt.node_end = cache_tt_segment.node_end
-        AND tt.map_version = cache_tt_segment.map_version;
+        tt.node_start = congestion_cache_corridor.node_start
+        AND tt.node_end = congestion_cache_corridor.node_end
+        AND tt.map_version = congestion_cache_corridor.map_version;
     IF FOUND THEN
         RETURN;
     END IF;
@@ -68,12 +68,12 @@ EXECUTE format (
             link_dirs = excluded.link_dirs,
             lengths = excluded.lengths,
             total_length = excluded.total_length
-        RETURNING uid, link_dirs, lengths, total_length
+        RETURNING corridor_id, link_dirs, lengths, total_length
     $$,
     routing_function, node_start, node_end, -- For routed_links
     map_version,      -- For INSERT SELECT values
     street_geoms_table                      -- For JOIN table
-) INTO uid, link_dirs, lengths, total_length;
+) INTO corridor_id, link_dirs, lengths, total_length;
 RETURN;
 END;
 $BODY$;
