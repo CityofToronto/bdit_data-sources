@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+-- FUNCTION: gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
 
--- DROP FUNCTION IF EXISTS gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
 
-CREATE OR REPLACE FUNCTION gwolofs.cache_tt_results(
+CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results(
 	uri_string text,
 	start_date date,
 	end_date date,
@@ -22,7 +22,7 @@ DECLARE map_version text;
 
 BEGIN
 
-SELECT gwolofs.select_map_version(cache_tt_results.start_date, cache_tt_results.end_date) INTO map_version;
+SELECT gwolofs.congestion_select_map_version(cache_tt_results.start_date, cache_tt_results.end_date) INTO map_version;
 
 EXECUTE format(
     $$
@@ -32,7 +32,7 @@ EXECUTE format(
             unnested.link_dir,
             unnested.length,
             total_length
-        FROM gwolofs.cache_tt_segment(%L, %L, %L),
+        FROM gwolofs.congestion_cache_corridor(%L, %L, %L),
         UNNEST(cache_tt_segment.link_dirs, cache_tt_segment.lengths) AS unnested(link_dir, length)
     ),
     
@@ -144,10 +144,10 @@ EXECUTE format(
             unnested.link_dir,
             unnested.len
         --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
-        --HAVING s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '1 hour'
+        --HAVING MAX(s5b.tx) + interval '5 minutes' <= dbo.tx + interval '1 hour'
     )
     
-    INSERT INTO gwolofs.dynamic_binning_results (
+    INSERT INTO gwolofs.congestion_raw_corridors (
         uri_string,
         time_grp, segment_uid, dt_start, dt_end, bin_range, tt,
         unadjusted_tt, total_length, length_w_data, num_obs
@@ -208,5 +208,5 @@ EXECUTE format(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+ALTER FUNCTION gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
     OWNER TO gwolofs;
