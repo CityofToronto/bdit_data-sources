@@ -1,6 +1,7 @@
 - [Airflow](#airflow)
   - [DAG Naming](#dag-naming)
   - [Contents of DAGs Folder](#contents-of-dags-folder)
+    - [Bluetooth](#bluetooth)
     - [Weather](#weather)
     - [Misc](#misc)
     - [Here](#here)
@@ -12,6 +13,7 @@
     - [**common\_tasks.py**](#common_taskspy)
     - [**dag\_functions.py**](#dag_functionspy)
     - [Miovision](#miovision)
+    - [RoDARS](#rodars)
     - [VDS (Formerly RESCU)](#vds-formerly-rescu)
     - [WYS](#wys)
   - [Common Tasks](#common-tasks)
@@ -33,6 +35,9 @@ You may notice that many older DAGs have not been renamed to this standard: it i
 ## Contents of DAGs Folder
 **Only put DAGs for data intake in this folder,** DAGs for data processing related to projects should be in their respective project repositories.
 
+### Bluetooth
+- [bluetooth_check_readers_temp.py](bluetooth_check_readers_temp.py): undocumented.  
+
 ### Weather
 - **[weather_pull.py](weather_pull.py)**: [readme](../weather/README.md#data-pipeline---weather_pull-dag).  
 - Deprecated: [pull_weather.py](pull_weather.py)
@@ -44,7 +49,8 @@ You may notice that many older DAGs have not been renamed to this standard: it i
 ### Here
 - **[pull_here.py](pull_here.py)**: [readme](../here/traffic/README.md#probe_path).  
 - **[pull_here_path.py](pull_here_path.py)**: [readme](../here/traffic/README.md#path).  
-- HERE Aggregations: [citywide_tti_aggregate.py](citywide_tti_aggregate.py).
+- HERE Aggregations: [tti_aggregate.py](tti_aggregate.py).
+- Deprecated: [citywide_tti_aggregate.py](citywide_tti_aggregate.py)
 
 ### Replication
 - [**replicators.py**](replicators.py): creates collisions and counts replicator DAGs as part of the MOVE -> bigdata replication process.   
@@ -57,7 +63,7 @@ You may notice that many older DAGs have not been renamed to this standard: it i
 
 ### GIS
 - [**assets_pull.py**](assets_pull.py): [readme](../gis/assets/README.md#assets).  
-- [**gcc_layers_pull.py**](gcc_layers_pull.py): [readme](../gis/gccview/README.md#gccview-pipeline).  
+- [**gcc_layers_pull.py**](gcc_layers_pull.py): [readme](../gis/gccview/README.md#gccview-pipeline). Runs on Morbius, Bancroft.  
 - [**vz_google_sheets.py**](vz_google_sheets.py): [readme](../gis/school_safety_zones/README.md#2-the-automated-data-pipeline).  
 - Deprecated: [**pull_interventions_dag.py**](pull_interventions_dag.py).
 
@@ -90,16 +96,20 @@ Contains helper functions to be used in multiple DAGs.
 - **[miovision_check.py](miovision_check.py)**: [readme](../volumes/miovision/api/readme.md#miovision_check).  
 - Deprecated: [pull_miovision.py](pull_miovision.py), [check_miovision.py](check_miovision.py).  
 
+### RoDARS
+- **[rodars_pull.py](rodars_pull.py)**: [readme](../events/road_permits/readme.md#rodars-dag). Runs on Morbius.  
+
 ### VDS (Formerly RESCU)
-- **[vds_check.py](vds_check.py)**: [readme](../volumes/vds/readme.md#vds_check-dag).  
-- **[vds_pull_vdsdata.py](vds_pull_vdsdata.py)**: [readme](../volumes/vds/readme.md#vds_pull_vdsdata-dag).  
-- **[vds_pull_vdsvehicledata.py](vds_pull_vdsvehicledata.py)**: [readme](../volumes/vds/readme.md#vds_pull_vdsvehicledata-dag).  
+- **[vds_check.py](vds_check.py)**: [readme](../volumes/vds/readme.md#vds_check-dag). Runs on Morbius.  
+- **[vds_pull_vdsdata.py](vds_pull_vdsdata.py)**: [readme](../volumes/vds/readme.md#vds_pull_vdsdata-dag). Runs on Morbius.  
+- **[vds_pull_vdsvehicledata.py](vds_pull_vdsvehicledata.py)**: [readme](../volumes/vds/readme.md#vds_pull_vdsvehicledata-dag). Runs on Morbius.  
 - Deprecated: [check_rescu.py](check_rescu.py). 
 
 ### WYS
-- [**refresh_wys_monthly.py**](refresh_wys_monthly.py): [readme](../wys/api/readme.md#wys_monthly_summary).
-- [**pull_wys.py**](pull_wys.py): [readme](../wys/api/readme.md#pull_wys).
+- [**wys_pull.py**](wys_pull.py): [readme](../wys/api/README.md#dag).
+- [**refresh_wys_monthly.py**](refresh_wys_monthly.py): [readme](../wys/api/README.md#wys_monthly_summary).
 - [**wys_check.py**](wys_check.py): Contains additional data quality checks for `pull_wys`.  
+- Deprecated [**pull_wys.py**](pull_wys.py).
 
 ## Common Tasks
 
