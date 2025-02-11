@@ -3,13 +3,13 @@
 -- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_corridor(bigint, bigint, text);
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_corridor(
-	node_start bigint,
-	node_end bigint,
-	map_version text,
-	OUT corridor_id smallint,
-	OUT link_dirs text[],
-	OUT lengths numeric[],
-	OUT total_length numeric)
+    node_start bigint,
+    node_end bigint,
+    map_version text,
+    OUT corridor_id smallint,
+    OUT link_dirs text[],
+    OUT lengths numeric[],
+    OUT total_length numeric)
     RETURNS record
     LANGUAGE 'plpgsql'
     COST 100
