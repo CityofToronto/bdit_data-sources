@@ -41,3 +41,6 @@ CREATE TRIGGER on_insert_delete_old
 AFTER INSERT ON congestion_events.rodars_issue_locations
 FOR EACH STATEMENT
 EXECUTE FUNCTION congestion_events.delete_old_rodars_issue_locations();
+
+COMMENT ON TABLE congestion_events.rodars_issue_locations IS
+'Raw RODARs data. See instead VIEW `congestion_events.rodars_locations`.';

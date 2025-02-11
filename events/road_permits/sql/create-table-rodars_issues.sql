@@ -41,3 +41,6 @@ REVOKE ALL ON TABLE congestion_events.rodars_issues FROM bdit_humans;
 GRANT ALL ON TABLE congestion_events.rodars_issues TO dbadmin;
 
 GRANT ALL ON TABLE congestion_events.rodars_issues TO events_bot;
+
+COMMENT ON TABLE congestion_events.rodars_issues IS
+'Raw RODARs data. See instead VIEW `congestion_events.rodars_locations`.';

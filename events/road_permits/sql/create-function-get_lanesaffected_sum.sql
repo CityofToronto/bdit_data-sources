@@ -44,7 +44,7 @@ $BODY$;
 
 ALTER FUNCTION itsc_factors.get_lanesaffected_sums(text) OWNER TO congestion_admins;
 
-GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO public;
+GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO bdit_humans;
 
 GRANT EXECUTE ON FUNCTION itsc_factors.get_lanesaffected_sums(text) TO congestion_admins;
 
