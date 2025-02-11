@@ -38,7 +38,7 @@ Here is a screenshot of the extremely detailed geographic/lane management plan U
 ## RODARS vs RODARS New ("rodars_new_approved")
 
 > [!IMPORTANT]  
-> In 2024 a new version of RODARS which should result in a more reliable data source.  
+> In 2024 a new version of RODARS debuted which should result in a more reliable data source.  
 
 **RODARS (New)**
 - RODARs New has only been around since 2024-03 (already has more than 28,000 issues!)
@@ -46,7 +46,7 @@ Here is a screenshot of the extremely detailed geographic/lane management plan U
 - QR codes will start appearing at sites in 2024/2025, which should help enforceability (citizen reporting/bylaw officers). 
   - There will be penalties.
 - Most records have `centreline_id`!
-- Contains detailed escription of lane closure pattern (`lanesaffectedpattern`).
+- Contains detailed description of lane closure pattern (`lanesaffectedpattern`).
 
 **RODARS (Old)**
 - Apparently fax was involved and not all forms were processed = completeness is a concern. 
@@ -225,7 +225,7 @@ HO  |HOV Open                                 |2024-06-25 20:00:14.220|
 `lanesaffected` is a loosely formatted json column in the ITSC issuelocationnew table. 
 
 Notes: 
-- This field is unpacked with `process_lanesaffected` function in [rodars_functions.py](./rodars_functions.py) and converted to tabular format. 
+- This field is unpacked with `process_lanesaffected` function in [rodars_functions.py](./rodars_functions.py) and converted to tabular format. There are lots of near duplicate records that get unpacked from this column, which prevents any meaningful unique constraints on the `congestion_events.rodars_issue_locations` table. 
 - Some of the same fields names are used in the top level and the nested json, `LaneApproaches`, eg. `RoadClosureType`. The `_toplevel` suffix is used in `congestion_events.rodars_issue_locations` for the top level fields. 
   - It is assumed the lower level details are more descriptive when available. 
 - FeatureId = centreline_id!
