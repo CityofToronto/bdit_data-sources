@@ -15,14 +15,10 @@ CREATE TABLE IF NOT EXISTS itsc_factors.lanesaffectedpattern
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS itsc_factors.lanesaffectedpattern
-OWNER TO dbadmin;
+OWNER TO congestion_admins;
 
 REVOKE ALL ON TABLE itsc_factors.lanesaffectedpattern FROM bdit_humans;
 
-GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO bdit_humans WITH GRANT OPTION;
-
-GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO dbadmin;
-
-GRANT ALL ON TABLE itsc_factors.lanesaffectedpattern TO rds_superuser WITH GRANT OPTION;
+GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO bdit_humans;
 
 GRANT SELECT ON TABLE itsc_factors.lanesaffectedpattern TO events_bot;
