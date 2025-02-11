@@ -3,8 +3,8 @@
 -- DROP FUNCTION IF EXISTS gwolofs.congestion_select_map_version(date, date);
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_select_map_version(
-	start_date date,
-	end_date date)
+    start_date date,
+    end_date date)
     RETURNS text
     LANGUAGE 'sql'
     COST 100
