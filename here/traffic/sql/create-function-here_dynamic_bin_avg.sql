@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+-- FUNCTION: gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
 
--- DROP FUNCTION IF EXISTS gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
 
-CREATE OR REPLACE FUNCTION gwolofs.here_dynamic_bin_avg(
+CREATE OR REPLACE FUNCTION gwolofs.congestion_dynamic_bin_avg(
     start_date date,
     end_date date,
     start_tod time without time zone,
@@ -30,7 +30,7 @@ DECLARE uri_string_func text :=
 
 BEGIN
 
-PERFORM gwolofs.cache_tt_results(
+PERFORM gwolofs.congestion_cache_tt_results(
     uri_string := uri_string_func,
     start_date := here_dynamic_bin_avg.start_date,
     end_date := here_dynamic_bin_avg.end_date,
@@ -46,7 +46,7 @@ WITH daily_means AS (
     SELECT
         dt_start::date,
         AVG(tt) AS daily_mean
-    FROM gwolofs.dynamic_binning_results
+    FROM gwolofs.congestion_raw_corridors
     WHERE uri_string = uri_string_func
     GROUP BY dt_start::date
 )
@@ -60,5 +60,7 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION gwolofs.here_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+ALTER FUNCTION gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
     OWNER TO gwolofs;
+
+COMMENT ON FUNCTION gwolofs.congestion_dynamic_bin_avg IS 'Previously gwolofs.here_dynamic_bin_avg.';
