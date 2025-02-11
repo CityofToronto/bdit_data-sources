@@ -18,28 +18,28 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_dynamic_bin_avg(
 AS $BODY$
 
 DECLARE uri_string_func text :=
-    here_dynamic_bin_avg.node_start::text || '/' ||
-    here_dynamic_bin_avg.node_end::text  || '/' ||
-    here_dynamic_bin_avg.start_tod::text || '/' ||
-    here_dynamic_bin_avg.end_tod::text || '/' ||
-    here_dynamic_bin_avg.start_date::text || '/' ||
-    here_dynamic_bin_avg.end_date::text || '/' ||
-    here_dynamic_bin_avg.holidays::text || '/' ||
-    here_dynamic_bin_avg.dow_list::text;
+    congestion_dynamic_bin_avg.node_start::text || '/' ||
+    congestion_dynamic_bin_avg.node_end::text  || '/' ||
+    congestion_dynamic_bin_avg.start_tod::text || '/' ||
+    congestion_dynamic_bin_avg.end_tod::text || '/' ||
+    congestion_dynamic_bin_avg.start_date::text || '/' ||
+    congestion_dynamic_bin_avg.end_date::text || '/' ||
+    congestion_dynamic_bin_avg.holidays::text || '/' ||
+    congestion_dynamic_bin_avg.dow_list::text;
     res numeric;
 
 BEGIN
 
 PERFORM gwolofs.congestion_cache_tt_results(
     uri_string := uri_string_func,
-    start_date := here_dynamic_bin_avg.start_date,
-    end_date := here_dynamic_bin_avg.end_date,
-    start_tod := here_dynamic_bin_avg.start_tod,
-    end_tod := here_dynamic_bin_avg.end_tod,
-    dow_list := here_dynamic_bin_avg.dow_list,
-    node_start := here_dynamic_bin_avg.node_start,
-    node_end := here_dynamic_bin_avg.node_end,
-    holidays := here_dynamic_bin_avg.holidays
+    start_date := congestion_dynamic_bin_avg.start_date,
+    end_date := congestion_dynamic_bin_avg.end_date,
+    start_tod := congestion_dynamic_bin_avg.start_tod,
+    end_tod := congestion_dynamic_bin_avg.end_tod,
+    dow_list := congestion_dynamic_bin_avg.dow_list,
+    node_start := congestion_dynamic_bin_avg.node_start,
+    node_end := congestion_dynamic_bin_avg.node_end,
+    holidays := congestion_dynamic_bin_avg.holidays
 );
 
 WITH daily_means AS (
@@ -63,4 +63,4 @@ $BODY$;
 ALTER FUNCTION gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
     OWNER TO gwolofs;
 
-COMMENT ON FUNCTION gwolofs.congestion_dynamic_bin_avg IS 'Previously gwolofs.here_dynamic_bin_avg.';
+COMMENT ON FUNCTION gwolofs.congestion_dynamic_bin_avg IS 'Previously gwolofs.congestion_dynamic_bin_avg.';
