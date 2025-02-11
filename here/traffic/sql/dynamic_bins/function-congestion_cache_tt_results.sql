@@ -22,23 +22,23 @@ DECLARE map_version text;
 
 BEGIN
 
-SELECT gwolofs.congestion_select_map_version(cache_tt_results.start_date, cache_tt_results.end_date) INTO map_version;
+SELECT gwolofs.congestion_select_map_version(congestion_cache_tt_results.start_date, congestion_cache_tt_results.end_date) INTO map_version;
 
 EXECUTE format(
     $$
     WITH segment AS (
         SELECT
-            uid AS segment_uid,
+            corridor_id,
             unnested.link_dir,
             unnested.length,
             total_length
         FROM gwolofs.congestion_cache_corridor(%L, %L, %L),
-        UNNEST(cache_tt_segment.link_dirs, cache_tt_segment.lengths) AS unnested(link_dir, length)
+        UNNEST(congestion_cache_corridor.link_dirs, congestion_cache_corridor.lengths) AS unnested(link_dir, length)
     ),
     
     segment_5min_bins AS (
         SELECT
-            seg.segment_uid,
+seg.corridor_id,
             ta.tx,
             seg.total_length,
             tsrange(
@@ -71,9 +71,9 @@ EXECUTE format(
             ta.tx,
             ta.dt,
             seg.total_length,
-            segment_uid
+            corridor_id
        WINDOW w AS (
-            PARTITION BY seg.segment_uid, ta.dt
+            PARTITION BY seg.corridor_id, ta.dt
             ORDER BY ta.tx
        )
     ),
@@ -112,7 +112,7 @@ EXECUTE format(
     
     unnested_db_options AS (
         SELECT
-            s5b.segment_uid,
+            s5b.corridor_id,
             dbo.time_grp,
             s5b.total_length,
             dbo.tx AS dt_start,
@@ -133,10 +133,8 @@ EXECUTE format(
             AND s5b_end.bin_rank = dbo.end_bin,
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
         UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
-        --we need to use nested data to determine length for these multi-period bins
-        WHERE dbo.start_bin != dbo.end_bin
         GROUP BY
-            s5b.segment_uid,
+            s5b.corridor_id,
             dbo.time_grp,
             s5b.total_length,
             dbo.tx, --stard_bin
@@ -148,61 +146,36 @@ EXECUTE format(
     )
     
     INSERT INTO gwolofs.congestion_raw_corridors (
-        uri_string,
-        time_grp, segment_uid, dt_start, dt_end, bin_range, tt,
-        unadjusted_tt, total_length, length_w_data, num_obs
+        uri_string, time_grp, corridor_id,  bin_range, tt, num_obs
     )
     --this query contains overlapping values which get eliminated
     --via on conflict with the exclusion constraint on congestion_raw_segments table.
-    SELECT DISTINCT ON (dt_start)
+    SELECT DISTINCT ON (dt_start) --distinct on ensures only the shortest option gets proposed for insert
         %L,
         time_grp,
-        segment_uid,
-        dt_start,
-        dt_end,
+        corridor_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(tt) AS unadjusted_tt,
-        total_length,
-        SUM(len) AS length_w_data,
         SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
     FROM unnested_db_options
     GROUP BY
         time_grp,
-        segment_uid,
+        corridor_id,
         dt_start,
         dt_end,
         total_length
     HAVING SUM(len) >= 0.8 * total_length
-    UNION
-    --these 5 minute bins already have sufficient length
-    --don't need to use nested data to validate.
-    SELECT
-        %L,
-        time_grp,
-        segment_uid,
-        tx AS dt_start,
-        tx + interval '5 minutes' AS dt_end,
-        tsrange(tx, tx + interval '5 minutes', '[)') AS bin_range,
-        total_length / length_w_data * unadjusted_tt AS tt,
-        unadjusted_tt,
-        total_length,
-        length_w_data,
-        num_obs --sum of here.ta_path sample_size for each segment
-    FROM segment_5min_bins
-    --we do not need to use nested data to determine length here.
-    WHERE sum_length >= 0.8
     ORDER BY
         dt_start,
         dt_end
     --exclusion constraint + ordered insert to prevent overlapping bins
-    ON CONFLICT ON CONSTRAINT dynamic_bins_unique_temp
+    ON CONFLICT ON CONSTRAINT congestion_raw_corridors_exclude
     DO NOTHING;
     $$,
     node_start, node_end, map_version, --segment CTE
     start_tod, end_tod, --segment_5min_bins CTE SELECT
     start_tod, end_tod, dow_list, start_date, end_date, --segment_5min_bins CTE WHERE
-    cache_tt_results.uri_string, cache_tt_results.uri_string --INSERT
+    congestion_cache_tt_results.uri_string, congestion_cache_tt_results.uri_string --INSERT
 );
 
 END;
