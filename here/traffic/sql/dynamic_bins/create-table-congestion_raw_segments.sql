@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_segments
 (
     segment_id integer NOT NULL,
     dt date NOT NULL,
-    time_grp tsrange NOT NULL,
+    time_grp timerange NOT NULL,
     bin_range tsrange NOT NULL,
     tt numeric,
     num_obs integer,

@@ -23,7 +23,10 @@ EXECUTE FORMAT(
         SELECT
             start_time,
             start_time + '1 hour'::interval AS end_time,
-            tsrange(start_time, start_time + '1 hour'::interval, '[)') AS time_grp
+            timerange(
+                start_time::time,
+                CASE start_time::time WHEN '23:00' THEN '24:00' ELSE start_time::time + '1 hour'::interval END,
+                '[)') AS time_grp
         FROM generate_series(
             %1$L::date + '00:00'::time,
             %1$L::date + '23 hour'::interval, '1 hour'::interval) AS hours(start_time)
@@ -54,9 +57,7 @@ EXECUTE FORMAT(
             ARRAY_AGG(links.length ORDER BY link_dir) AS lengths
         FROM here.ta_path AS ta
         JOIN time_bins AS tb ON ta.tx >= tb.start_time AND ta.tx < tb.end_time
---        JOIN congestion.network_links_23_4_geom AS links USING (link_dir)
         JOIN segments AS links USING (link_dir)
---        JOIN congestion.network_segments_23_4_geom AS segments USING (segment_id)
         WHERE
             ta.dt >= %1$L
             AND ta.dt < %1$L + interval '1 day'

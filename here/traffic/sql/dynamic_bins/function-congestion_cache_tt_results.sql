@@ -33,12 +33,15 @@ EXECUTE format(
             unnested.length,
             total_length
         FROM gwolofs.congestion_cache_corridor(%L, %L, %L),
-        UNNEST(congestion_cache_corridor.link_dirs, congestion_cache_corridor.lengths) AS unnested(link_dir, length)
+        UNNEST(
+            congestion_cache_corridor.link_dirs,
+            congestion_cache_corridor.lengths
+        ) AS unnested(link_dir, length)
     ),
     
     segment_5min_bins AS (
         SELECT
-seg.corridor_id,
+            seg.corridor_id,
             ta.tx,
             seg.total_length,
             tsrange(
@@ -52,7 +55,7 @@ seg.corridor_id,
             ARRAY_AGG(ta.link_dir ORDER BY link_dir) AS link_dirs,
             ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
             ARRAY_AGG(seg.length ORDER BY link_dir) AS lengths
-        FROM here.ta AS ta
+        FROM here.ta_path AS ta
         JOIN segment AS seg USING (link_dir)
         WHERE
             (
@@ -97,7 +100,10 @@ seg.corridor_id,
                     --dont need to generate options when start segment is already sufficient
                     WHEN sum_length >= 0.8 THEN bin_rank
                     --generate options until 1 bin has sufficient length, otherwise until last bin in group
-                    ELSE COALESCE(MIN(bin_rank) FILTER (WHERE sum_length >= 0.8) OVER w, MAX(bin_rank) OVER w)
+                    ELSE COALESCE(
+                        MIN(bin_rank) FILTER (WHERE sum_length >= 0.8) OVER w,
+                        MAX(bin_rank) OVER w
+                    )
                 END,
                 1
             ) AS end_bin
@@ -146,13 +152,14 @@ seg.corridor_id,
     )
     
     INSERT INTO gwolofs.congestion_raw_corridors (
-        uri_string, time_grp, corridor_id,  bin_range, tt, num_obs
+        uri_string, dt, time_grp, corridor_id,  bin_range, tt, num_obs
     )
     --this query contains overlapping values which get eliminated
     --via on conflict with the exclusion constraint on congestion_raw_segments table.
     SELECT DISTINCT ON (dt_start) --distinct on ensures only the shortest option gets proposed for insert
         %L,
-        time_grp,
+        dt_start::date AS dt,
+        timerange(lower(time_grp)::time, upper(time_grp)::time, '[)') AS time_grp,
         corridor_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
@@ -181,5 +188,8 @@ seg.corridor_id,
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
-    OWNER TO gwolofs;
+ALTER FUNCTION gwolofs.congestion_cache_tt_results(
+    text, date, date, time without time zone,
+    time without time zone, integer[], bigint, bigint, boolean
+)
+OWNER TO gwolofs;
