@@ -11,8 +11,7 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_day_hr_segment_agg(
 AS $BODY$
 
 DECLARE
-    map_version text := gwolofs.congestion_select_map_version(
-        dynamic_bin_congestion_ntwrk_hrly.start_date, dynamic_bin_congestion_ntwrk_hrly.end_date);
+    map_version text := gwolofs.congestion_select_map_version(start_date, start_date + 1);
     congestion_network_table text := 'network_links_' || map_version;
 
 BEGIN
@@ -59,8 +58,8 @@ EXECUTE FORMAT(
         JOIN time_bins AS tb ON ta.tx >= tb.start_time AND ta.tx < tb.end_time
         JOIN segments AS links USING (link_dir)
         WHERE
-            ta.dt >= %1$L
-            AND ta.dt < %1$L + interval '1 day'
+            ta.dt >= %1$L::date
+            AND ta.dt < %1$L::date + interval '1 day'
         GROUP BY
             links.segment_id,
             tb.time_grp,
@@ -149,7 +148,7 @@ EXECUTE FORMAT(
     )
     --distinct on ensures only the shortest option gets proposed for insert
     SELECT DISTINCT ON (time_grp, segment_id, dt_start)
-        lower(time_grp)::date AS dt,
+        dt_start::date AS dt,
         time_grp,
         segment_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
@@ -166,12 +165,13 @@ EXECUTE FORMAT(
     ORDER BY
         time_grp,
         segment_id,
-        bin_range --uses the option that ends first
+        dt_start,
+        dt_end --uses the option that ends first
     --exclusion constraint + ordered insert to prevent overlapping bins
-    ON CONFLICT ON CONSTRAINT dynamic_bins_unique
+    ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude
     DO NOTHING;
     $$, 
-    dynamic_bin_congestion_ntwrk_hrly.start_date,
+    start_date,
     congestion_network_table
     );
 
@@ -179,7 +179,7 @@ END;
 $BODY$;
 
 ALTER FUNCTION gwolofs.congestion_day_hr_segment_agg(date)
-    OWNER TO gwolofs;
+OWNER TO gwolofs;
 
 COMMENT ON FUNCTION gwolofs.congestion_day_hr_segment_agg(date)
-    IS 'Previously dynamic_bin_congestion_ntwrk_hrly';
+IS 'Dynamic bin aggregation of the congestion network by hourly periods.';
