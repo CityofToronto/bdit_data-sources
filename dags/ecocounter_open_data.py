@@ -191,7 +191,26 @@ def ecocounter_open_data_dag():
                 FROM open_data.cycling_permanent_counts_locations
                 ORDER BY location_dir_id;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
-    
+                
+    @task.bash(
+        env = {
+            'HOST': '{{ conn.ecocounter_bot.host }}',
+            'LOGIN': '{{ conn.ecocounter_bot.login }}',
+            'PGPASSWORD': '{{ conn.ecocounter_bot.password }}',
+            'EXPORT_PATH': EXPORT_PATH
+        }
+    )
+    def download_locations_open_data_geojson()->str:
+        return '''/usr/bin/ogr2ogr -f "GeoJSON" \
+            "$EXPORT_PATH/cycling_permanent_counts_locations.geojson" \
+            PG:"host=$HOST dbname=bigdata" \
+            -sql "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
+                            longitude, latitude, centreline_id, bin_size, latest_calibration_study,
+                            first_active, last_active, date_decommissioned, technology
+                        FROM open_data.cycling_permanent_counts_locations
+                        ORDER BY location_dir_id;" \
+            -nln cycling_permanent_counts_locations'''
+            
     @task.bash()
     def output_readme()->str:
         source='/home/airflow/data_scripts/volumes/open_data/sql/cycling_permanent_counts_readme.md'
@@ -220,6 +239,7 @@ def ecocounter_open_data_dag():
         update_locations >> [
             insert_and_download_data.expand(yr = yrs),
             download_locations_open_data(),
+            download_locations_open_data_geojson(),
             output_readme()
         ] >>
         status_message()
