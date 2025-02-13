@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
 (
     corridor_id smallint,
     dt date,
-    time_grp tsrange NOT NULL,
+    time_grp timerange NOT NULL,
     bin_range tsrange NOT NULL,
     tt numeric,
     num_obs integer,
