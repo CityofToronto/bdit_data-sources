@@ -22,7 +22,6 @@ WITH daily_totals AS (
             + vol_81_160_kph
         ) AS daily_volume
     FROM traffic.svc_study_speed
-    WHERE count_date >= '2019-01-01'
     GROUP BY
         study_id,
         count_date
@@ -36,7 +35,6 @@ WITH daily_totals AS (
         count_date,
         SUM(volume) AS daily_volume
     FROM traffic.svc_study_volume
-    WHERE count_date >= '2019-01-01'
     GROUP BY
         study_id,
         count_date
@@ -64,7 +62,6 @@ WITH daily_totals AS (
             + "6a_mt"
         ) AS daily_volume
     FROM traffic.svc_study_class
-    WHERE count_date >= '2019-01-01'
     GROUP BY
         study_id,
         count_date
