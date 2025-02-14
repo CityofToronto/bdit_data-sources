@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_day_hr_segment_agg(date)
+-- FUNCTION: gwolofs.congestion_network_hr_segment_agg(date)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_day_hr_segment_agg(date);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_network_hr_segment_agg(date);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_day_hr_segment_agg(
+CREATE OR REPLACE FUNCTION gwolofs.congestion_network_hr_segment_agg(
     start_date date)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -178,8 +178,8 @@ EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_day_hr_segment_agg(date)
+ALTER FUNCTION gwolofs.congestion_network_hr_segment_agg(date)
 OWNER TO gwolofs;
 
-COMMENT ON FUNCTION gwolofs.congestion_day_hr_segment_agg(date)
+COMMENT ON FUNCTION gwolofs.congestion_network_hr_segment_agg(date)
 IS 'Dynamic bin aggregation of the congestion network by hourly periods.';
