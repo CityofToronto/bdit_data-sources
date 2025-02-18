@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_network_hr_segment_agg(date)
+-- FUNCTION: gwolofs.congestion_network_segment_agg(date)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_network_hr_segment_agg(date);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_network_segment_agg(date);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_network_hr_segment_agg(
+CREATE OR REPLACE FUNCTION gwolofs.congestion_network_segment_agg(
     start_date date)
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -12,26 +12,14 @@ AS $BODY$
 
 DECLARE
     map_version text := gwolofs.congestion_select_map_version(start_date, start_date + 1);
-    congestion_network_table text := 'network_links_' || map_version;
+    congestion_network_table text := 'network_links_' || map_version
+    || CASE map_version WHEN '23_4' THEN '_geom' ELSE '' END; --temp fix version
 
 BEGIN
 
 EXECUTE FORMAT(
     $$
-    WITH time_bins AS (
-        SELECT
-            start_time,
-            start_time + '1 hour'::interval AS end_time,
-            timerange(
-                start_time::time,
-                CASE start_time::time WHEN '23:00' THEN '24:00' ELSE start_time::time + '1 hour'::interval END,
-                '[)') AS time_grp
-        FROM generate_series(
-            %1$L::date + '00:00'::time,
-            %1$L::date + '23 hour'::interval, '1 hour'::interval) AS hours(start_time)
-    ),
-
-    segments AS (
+    WITH segments AS (
         SELECT
             segment_id,
             link_dir,
@@ -43,7 +31,7 @@ EXECUTE FORMAT(
     segment_5min_bins AS (
         SELECT
             links.segment_id,
-            tb.time_grp,
+            timerange(tg.start_tod, tg.end_tod, '[)') AS time_grp,
             ta.tx,
             RANK() OVER w AS bin_rank,
             links.total_length,
@@ -55,18 +43,21 @@ EXECUTE FORMAT(
             ARRAY_AGG(links.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
             ARRAY_AGG(links.length ORDER BY link_dir) AS lengths
         FROM here.ta_path AS ta
-        JOIN time_bins AS tb ON ta.tx >= tb.start_time AND ta.tx < tb.end_time
+        JOIN gwolofs.congestion_time_grps AS tg ON
+            ta.tx >= %1$L::date + tg.start_tod
+            AND ta.tx < %1$L::date + tg.end_tod
         JOIN segments AS links USING (link_dir)
         WHERE
             ta.dt >= %1$L::date
             AND ta.dt < %1$L::date + interval '1 day'
         GROUP BY
             links.segment_id,
-            tb.time_grp,
+            tg.start_tod,
+            tg.end_tod,
             ta.tx,
             links.total_length
        WINDOW w AS (
-            PARTITION BY links.segment_id, tb.time_grp
+            PARTITION BY links.segment_id, tg.start_tod, tg.end_tod
             ORDER BY ta.tx
        )
     ),
@@ -178,8 +169,8 @@ EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_network_hr_segment_agg(date)
+ALTER FUNCTION gwolofs.congestion_network_segment_agg(date)
 OWNER TO gwolofs;
 
-COMMENT ON FUNCTION gwolofs.congestion_network_hr_segment_agg(date)
-IS 'Dynamic bin aggregation of the congestion network by hourly periods.';
+COMMENT ON FUNCTION gwolofs.congestion_network_segment_agg(date)
+IS 'Dynamic bin aggregation of the congestion network by hour and time periods.';
