@@ -5,7 +5,7 @@ WITH features AS (
             'type', 'Feature',
             'id', location_dir_id,
             'geometry', st_asgeojson(st_setsrid(st_makepoint(longitude, latitude), 4326))::jsonb,
-            'attributes', json_build_object(
+            'properties', json_build_object(
                 'location_dir_id', location_dir_id,
                 'location_name', location_name,
                 'direction', direction,
