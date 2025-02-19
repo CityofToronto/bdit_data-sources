@@ -35,6 +35,12 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 EXPORT_PATH = '/home/airflow/open_data/permanent-bike-counters' #'/data/open_data/permanent-bike-counters'
+BASH_ENV = {
+    'HOST': '{{ conn.ecocounter_bot.host }}',
+    'LOGIN': '{{ conn.ecocounter_bot.login }}',
+    'PGPASSWORD': '{{ conn.ecocounter_bot.password }}',
+    'EXPORT_PATH': EXPORT_PATH
+}
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -132,14 +138,7 @@ def ecocounter_open_data_dag():
             )
             return t.execute(context=context)
         
-        @task.bash(
-            env = {
-                'HOST': '{{ conn.ecocounter_bot.host }}',
-                'LOGIN': '{{ conn.ecocounter_bot.login }}',
-                'PGPASSWORD': '{{ conn.ecocounter_bot.password }}',
-                'EXPORT_PATH': EXPORT_PATH
-            }
-        )
+        @task.bash(env = BASH_ENV)
         def download_daily_open_data()->str:
             return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT
@@ -151,12 +150,7 @@ def ecocounter_open_data_dag():
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_daily.csv"'''
 
         @task.bash(
-            env = {
-                'HOST': '{{ conn.ecocounter_bot.host }}',
-                'LOGIN': '{{ conn.ecocounter_bot.login }}',
-                'PGPASSWORD': '{{ conn.ecocounter_bot.password }}',
-                'EXPORT_PATH': EXPORT_PATH
-            },
+            env = BASH_ENV,
             map_index_template="{{ yr }}"
         )
         def download_15min_open_data(yr)->str:
@@ -175,14 +169,7 @@ def ecocounter_open_data_dag():
         insert_daily(yr) >> download_daily_open_data()
         insert_15min(yr) >> download_15min_open_data(yr)
     
-    @task.bash(
-        env = {
-            'HOST': '{{ conn.ecocounter_bot.host }}',
-            'LOGIN': '{{ conn.ecocounter_bot.login }}',
-            'PGPASSWORD': '{{ conn.ecocounter_bot.password }}',
-            'EXPORT_PATH': EXPORT_PATH
-        }
-    )
+    @task.bash(env = BASH_ENV)
     def download_locations_open_data()->str:
         return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
                 "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
@@ -191,7 +178,13 @@ def ecocounter_open_data_dag():
                 FROM open_data.cycling_permanent_counts_locations
                 ORDER BY location_dir_id;" \
                 --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
-    
+                
+    @task.bash(env = BASH_ENV)
+    def download_locations_open_data_geojson()->str:
+        return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+    "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
+    --tuples-only -o "$EXPORT_PATH/cycling_permanent_counts_locations.geojson"'''
+            
     @task.bash()
     def output_readme()->str:
         source='/home/airflow/data_scripts/volumes/open_data/sql/cycling_permanent_counts_readme.md'
@@ -220,6 +213,7 @@ def ecocounter_open_data_dag():
         update_locations >> [
             insert_and_download_data.expand(yr = yrs),
             download_locations_open_data(),
+            download_locations_open_data_geojson(),
             output_readme()
         ] >>
         status_message()
