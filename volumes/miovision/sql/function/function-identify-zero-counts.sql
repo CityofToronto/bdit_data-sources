@@ -24,12 +24,12 @@ BEGIN
             v15.leg,
             MIN(v15.datetime_bin) AS range_start,
             MAX(v15.datetime_bin) + interval '15 minutes' AS range_end
-        FROM miovision_api.volumes_15min_mvt AS v15
+        FROM miovision_api.volumes_15min_mvt_unfiltered AS v15
         WHERE
             v15.datetime_bin >= start_date
             AND v15.datetime_bin < start_date + interval '1 day'
             --this script will only catch zeros for classification_uid 1,2,6,10
-            --since those are the ones that are zero padded in volumes_15min_mvt. Filter for additional speed.
+            --since those are the ones that are zero padded in volumes_15min_mvt_unfiltered. Filter for additional speed.
             AND v15.classification_uid IN (1,2,6,10)
             AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
