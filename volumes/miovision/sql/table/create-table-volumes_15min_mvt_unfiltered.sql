@@ -1,6 +1,4 @@
-﻿--testing as gwolofs.volumes_15min_mvt_unfiltered
-
-CREATE TABLE miovision_api.volumes_15min_mvt_unfiltered
+﻿CREATE TABLE miovision_api.volumes_15min_mvt_unfiltered
 (
     volume_15min_mvt_uid integer NOT NULL
     DEFAULT nextval(
@@ -72,39 +70,3 @@ SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt_unfi
 SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt_unfiltered', 2021::int);
 SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt_unfiltered', 2022::int);
 SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt_unfiltered', 2023::int);
-
-
-CREATE TABLE gwolofs.volume_15min_mvt_unfiltered_2024 PARTITION OF gwolofs.volumes_15min_mvt_unfiltered FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
-CREATE TABLE gwolofs.volume_15min_mvt_unfiltered_2023 PARTITION OF gwolofs.volumes_15min_mvt_unfiltered FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
-
-INSERT INTO gwolofs.volumes_15min_mvt_unfiltered (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-SELECT
-    v.intersection_uid,
-    datetime_bin_15(v.datetime_bin) AS datetime_bin,
-    v.classification_uid,
-    v.leg,
-    v.movement_uid,
-    SUM(volume)
-FROM miovision_api.volumes_2023 AS v
-GROUP BY
-    v.intersection_uid,
-    datetime_bin_15(v.datetime_bin),
-    v.classification_uid,
-    v.leg,
-    v.movement_uid;
-
-INSERT INTO gwolofs.volumes_15min_mvt_unfiltered (intersection_uid, datetime_bin, classification_uid, leg, movement_uid, volume)
-SELECT
-    v.intersection_uid,
-    datetime_bin_15(v.datetime_bin) AS datetime_bin,
-    v.classification_uid,
-    v.leg,
-    v.movement_uid,
-    SUM(volume)
-FROM miovision_api.volumes_2024 AS v
-GROUP BY
-    v.intersection_uid,
-    datetime_bin_15(v.datetime_bin),
-    v.classification_uid,
-    v.leg,
-    v.movement_uid;
