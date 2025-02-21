@@ -3,7 +3,9 @@
 --CREATE MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions AS
 
 WITH toronto_cardinal (d, leg_label) AS (
-    VALUES -- rotate compass by -17 degrees to match street grid
+    -- define cardinal directions in degrees, but rotated
+    -- by -17 degrees to match the orientation of the street grid
+    VALUES
     (360 - 17, 'north'),
     (90 - 17, 'east'),
     (180 - 17, 'south'),
@@ -11,7 +13,7 @@ WITH toronto_cardinal (d, leg_label) AS (
 ),
 
 node_edges AS (
-    -- collect inbound and outbound edges
+    -- Identify all connections between nodes and edges
     SELECT
         centreline_id AS edge_id,
         from_intersection_id AS node_id
@@ -26,16 +28,22 @@ node_edges AS (
 ),
 
 nodes AS (
-    SELECT
-        node_id,
-        COUNT(DISTINCT edge_id) AS degree
+    -- find nodes with a degree > 2
+    -- i.e. a legit intersection with three or more legs
+    SELECT node_id
     FROM node_edges
     GROUP BY node_id
-    -- only where it's a legit "intersection"
     HAVING COUNT(DISTINCT edge_id) > 2
 ),
 
 legs AS (
+    /*
+    In this step we find the legs of all the intersections
+    (either inbound or outbound) and measure their bearing
+    or compass direction of travel *away* from the reference
+    intersection. We also gather a partial "stub" geometry
+    to represent the leg.
+    */
     SELECT
         n.node_id AS intersection_centreline_id,
         edges_outbound.centreline_id AS leg_centreline_id,
@@ -48,6 +56,7 @@ legs AS (
             )
         )) AS stub_geom,
         degrees(ST_Azimuth(
+            -- first and seconds points of the line
             ST_PointN(edges_outbound.geom, 1)::geography,
             ST_PointN(edges_outbound.geom, 2)::geography
         )) AS azimuth
@@ -69,6 +78,8 @@ legs AS (
             1 -- to end
         ) AS stub_geom,
         degrees(ST_Azimuth(
+            -- last and second to last points of the line
+            -- (reverse of the above)
             ST_PointN(edges_inbound.geom, -1)::geography,
             ST_PointN(edges_inbound.geom, -2)::geography
         )) AS azimuth
@@ -78,10 +89,17 @@ legs AS (
 ),
 
 distances AS (
+    /*
+    The cross-join here computes the angular distance between each
+    of the cardinal directions and each of the legs.
+    The next steps will try to select the pairs that minimize the
+    total distance.
+    */
     SELECT
         legs.intersection_centreline_id,
         legs.leg_centreline_id,
         toronto_cardinal.leg_label,
+        -- *MATH*
         abs(180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)) AS angular_distance,
         stub_geom
     FROM legs
@@ -89,6 +107,10 @@ distances AS (
 ),
 
 leg1 AS (
+    /*
+    First, for each intersection, find the leg that best
+    aligns with any of the cardinal directions.
+    */
     SELECT DISTINCT ON (intersection_centreline_id)
         intersection_centreline_id,
         leg_centreline_id,
@@ -102,6 +124,9 @@ leg1 AS (
 ),
 
 leg2 AS (
+    /*
+    Next, find the second best match, dropping out cardinal...
+    */
     SELECT DISTINCT ON (intersection_centreline_id)
         intersection_centreline_id,
         leg_centreline_id,
@@ -114,6 +139,7 @@ leg2 AS (
         FROM leg1
         WHERE
             distances.intersection_centreline_id = leg1.intersection_centreline_id
+            -- should this be an OR?
             AND distances.leg_label = leg1.leg_label
     )
     ORDER BY
