@@ -226,7 +226,7 @@ unified_legs AS (
     SELECT * FROM leg1
     UNION
     SELECT * FROM leg2
-    UNION 
+    UNION
     SELECT * FROM leg3
     UNION
     SELECT * FROM leg4
@@ -257,7 +257,7 @@ ORDER BY
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id,
     -- take the best match of any repeatedly assigned legs
-    unified_legs.angular_distance ASC; 
+    unified_legs.angular_distance ASC;
 
 --ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO ???;
 
