@@ -244,7 +244,7 @@ SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id,
     unified_legs.leg_label AS leg,
-    -- first node of the leg is the intersection
+    -- last node of the leg is the intersection
     ST_PointN(unified_legs.stub_geom, -1) AS intersection_geom,
     edges.linear_name_full_legal AS street_name,
     unified_legs.stub_geom AS leg_stub_geom,
@@ -273,7 +273,7 @@ COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
 IS 'first (up to) 30m of the centreline segment geometry pointing inbound toward the intersection';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
-IS 'N, S, E, W cardinal direction';
+IS 'cardinal direction, one of (north, east, south, west)';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_full_geom
 IS 'complete geometry of the centreline edge';
