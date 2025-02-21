@@ -101,7 +101,7 @@ distances AS (
         toronto_cardinal.leg_label,
         -- *MATH*
         abs(180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)) AS angular_distance,
-        stub_geom
+        legs.stub_geom
     FROM legs
     CROSS JOIN toronto_cardinal
 ),
@@ -136,13 +136,14 @@ leg2 AS (
         angular_distance,
         stub_geom
     FROM distances
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM leg1
-        WHERE
-            distances.intersection_centreline_id = leg1.intersection_centreline_id
-            AND distances.leg_label = leg1.leg_label
-    )
+    WHERE
+        NOT EXISTS (
+            SELECT 1
+            FROM leg1
+            WHERE
+                distances.intersection_centreline_id = leg1.intersection_centreline_id
+                AND distances.leg_label = leg1.leg_label
+        )
     ORDER BY
         intersection_centreline_id,
         angular_distance ASC
