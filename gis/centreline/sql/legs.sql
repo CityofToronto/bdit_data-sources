@@ -231,6 +231,12 @@ unified_legs AS (
     SELECT * FROM leg4
 )
 
+/*
+The final select adds some useful attributes from the edge table,
+and also removes (via DISTINCT ON) legs assigned to more than one
+direction (this will happen in the fourth pass for intersections
+with 3 legs).
+*/
 SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id
@@ -249,7 +255,8 @@ JOIN gis_core.centreline_latest AS edges
 ORDER BY
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id,
-    unified_legs.angular_distance ASC; -- lop off any repeated legs
+    -- take the best match of any repeatedly assigned legs
+    unified_legs.angular_distance ASC; 
 
 /*
 ALTER MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions OWNER TO vz_intersection_admins;
