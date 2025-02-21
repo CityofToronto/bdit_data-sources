@@ -1,6 +1,6 @@
 --DROP MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions;
 
-CREATE MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions AS
+--CREATE MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions AS
 
 WITH toronto_cardinal (d, leg_label) AS (
     VALUES -- rotate compass by -17 degrees to match street grid
@@ -10,48 +10,71 @@ WITH toronto_cardinal (d, leg_label) AS (
     (270 - 17, 'west')
 ),
 
-legs AS (
+node_edges AS (
+    -- collect inbound and outbound edges
     SELECT
-        n.centreline_id AS intersection_centreline_id,
-        e_outbound.centreline_id AS leg_centreline_id,
-        ST_Reverse(ST_LineSubstring(
-            e_outbound.geom,
-            0, -- from start
-            LEAST(
-                30 / ST_Length(e_outbound.geom::geography), -- fraction at 30m
-                1 -- at most, the whole geometry
-            )
-        )) AS stub_geom,
-        degrees(ST_Azimuth(
-            n.geom::geography,
-            ST_PointN(e_outbound.geom, 2)::geography
-        )) AS azimuth
-    FROM vz_hin.centreline_nodes AS n
-    JOIN vz_hin.centreline_edges AS e_outbound
-        ON n.centreline_id = e_outbound.from_node_id
-    WHERE n.degree > 2 -- three or more legs
+        centreline_id AS edge_id,
+        from_intersection_id AS node_id
+    FROM gis_core.centreline_latest
 
     UNION
 
     SELECT
-        n.centreline_id AS intersection_centreline_id,
-        e_inbound.centreline_id AS leg_centreline_id,
+        centreline_id AS edge_id,
+        to_intersection_id AS node_id
+    FROM gis_core.centreline_latest
+),
+
+nodes AS (
+    SELECT
+        node_id,
+        COUNT(DISTINCT edge_id) AS degree
+    FROM node_edges
+    GROUP BY node_id
+    -- only where it's a legit "intersection"
+    HAVING COUNT(DISTINCT edge_id) > 2
+),
+
+legs AS (
+    SELECT
+        n.node_id AS intersection_centreline_id,
+        edges_outbound.centreline_id AS leg_centreline_id,
+        ST_Reverse(ST_LineSubstring(
+            edges_outbound.geom,
+            0, -- from start
+            LEAST(
+                30 / ST_Length(edges_outbound.geom::geography), -- fraction at 30m
+                1 -- at most, the whole geometry
+            )
+        )) AS stub_geom,
+        degrees(ST_Azimuth(
+            ST_PointN(edges_outbound.geom, 1)::geography,
+            ST_PointN(edges_outbound.geom, 2)::geography
+        )) AS azimuth
+    FROM nodes AS n
+    JOIN gis_core.centreline_latest AS edges_outbound
+        ON n.node_id = edges_outbound.from_intersection_id
+
+    UNION
+
+    SELECT
+        n.node_id AS intersection_centreline_id,
+        edges_inbound.centreline_id AS leg_centreline_id,
         ST_LineSubstring(
-            e_inbound.geom,
+            edges_inbound.geom,
             GREATEST(
-                1 - 30 / ST_Length(e_inbound.geom::geography), -- fraction at 30m
+                1 - 30 / ST_Length(edges_inbound.geom::geography), -- fraction at 30m
                 0 -- at most, the whole geometry
             ),
             1 -- to end
         ) AS stub_geom,
         degrees(ST_Azimuth(
-            n.geom::geography,
-            ST_PointN(e_inbound.geom, -2)::geography
+            ST_PointN(edges_inbound.geom, -1)::geography,
+            ST_PointN(edges_inbound.geom, -2)::geography
         )) AS azimuth
-    FROM vz_hin.centreline_nodes AS n
-    JOIN vz_hin.centreline_edges AS e_inbound
-        ON n.centreline_id = e_inbound.to_node_id
-    WHERE n.degree > 2 -- three or more legs
+    FROM nodes AS n
+    JOIN gis_core.centreline_latest AS edges_inbound
+        ON n.node_id = edges_inbound.to_intersection_id
 ),
 
 distances AS (
@@ -178,20 +201,20 @@ SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id,
     unified_legs.leg_label AS leg,
-    nodes.geom AS intersection_geom,
-    edges.street_name,
+    -- first node of the leg is the intersection
+    ST_PointN(unified_legs.stub_geom, -1) AS intersection_geom,
+    edges.linear_name_full_legal AS street_name,
     unified_legs.stub_geom AS leg_stub_geom,
     edges.geom AS leg_full_geom
 FROM unified_legs
-JOIN vz_hin.centreline_edges AS edges
+JOIN gis_core.centreline_latest AS edges
     ON unified_legs.leg_centreline_id = edges.centreline_id
-JOIN vz_hin.centreline_nodes AS nodes
-    ON unified_legs.intersection_centreline_id = nodes.centreline_id
 ORDER BY
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id,
     unified_legs.angular_distance ASC; -- lop off any repeated legs
 
+/*
 ALTER MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions OWNER TO vz_intersection_admins;
 
 CREATE UNIQUE INDEX ON vz_intersection.lpi_centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
@@ -211,3 +234,4 @@ IS 'N, S, E, W cardinal direction';
 
 COMMENT ON COLUMN vz_intersection.lpi_centreline_leg_directions.leg_full_geom
 IS 'complete geometry of the centreline edge';
+*/
