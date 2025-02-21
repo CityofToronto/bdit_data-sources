@@ -1,6 +1,6 @@
---DROP MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions;
+--DROP MATERIALIZED VIEW gis_core.centreline_leg_directions;
 
---CREATE MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions AS
+CREATE MATERIALIZED VIEW gis_core.centreline_leg_directions AS
 
 WITH toronto_cardinal (d, leg_label) AS (
     -- define cardinal directions in degrees, but rotated
@@ -258,24 +258,22 @@ ORDER BY
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC; 
 
-/*
-ALTER MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions OWNER TO vz_intersection_admins;
+--ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO ???;
 
-CREATE UNIQUE INDEX ON vz_intersection.lpi_centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
-CREATE INDEX ON vz_intersection.lpi_centreline_leg_directions USING GIST (leg_full_geom);
-CREATE INDEX ON vz_intersection.lpi_centreline_leg_directions USING GIST (leg_stub_geom);
+CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
+CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_full_geom);
+CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_stub_geom);
 
-CREATE INDEX ON vz_intersection.lpi_centreline_leg_directions (intersection_centreline_id);
+CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
 
-COMMENT ON MATERIALIZED VIEW vz_intersection.lpi_centreline_leg_directions
+COMMENT ON MATERIALIZED VIEW gis_core.centreline_leg_directions
 IS 'Automated mapping of centreline intersection legs onto the four cardinal directions';
 
-COMMENT ON COLUMN vz_intersection.lpi_centreline_leg_directions.leg_stub_geom
+COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
 IS 'first (up to) 30m of the centreline segment geometry pointing inbound toward the intersection';
 
-COMMENT ON COLUMN vz_intersection.lpi_centreline_leg_directions.leg
+COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
 IS 'N, S, E, W cardinal direction';
 
-COMMENT ON COLUMN vz_intersection.lpi_centreline_leg_directions.leg_full_geom
+COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_full_geom
 IS 'complete geometry of the centreline edge';
-*/
