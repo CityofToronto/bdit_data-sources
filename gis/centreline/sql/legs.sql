@@ -125,7 +125,9 @@ leg1 AS (
 
 leg2 AS (
     /*
-    Next, find the second best match, dropping out cardinal...
+    Next, find the second best match - the best match after
+    dropping out the cardinal direction which was assigned
+    on the first pass
     */
     SELECT DISTINCT ON (intersection_centreline_id)
         intersection_centreline_id,
@@ -139,7 +141,6 @@ leg2 AS (
         FROM leg1
         WHERE
             distances.intersection_centreline_id = leg1.intersection_centreline_id
-            -- should this be an OR?
             AND distances.leg_label = leg1.leg_label
     )
     ORDER BY
@@ -148,6 +149,11 @@ leg2 AS (
 ),
 
 leg3 AS (
+    /*
+    Next, find the third best match - the best match after
+    dropping out the cardinal directions which were assigned
+    on the first or second pass
+    */
     SELECT DISTINCT ON (intersection_centreline_id)
         intersection_centreline_id,
         leg_centreline_id,
@@ -176,6 +182,10 @@ leg3 AS (
 ),
 
 leg4 AS (
+    /*
+    Find the leg, if any, that is the closest match to the last
+    remaining cardinal direction
+    */
     SELECT DISTINCT ON (intersection_centreline_id)
         intersection_centreline_id,
         leg_centreline_id,
@@ -211,6 +221,7 @@ leg4 AS (
 ),
 
 unified_legs AS (
+    -- Union the results of the four passes
     SELECT * FROM leg1
     UNION
     SELECT * FROM leg2
