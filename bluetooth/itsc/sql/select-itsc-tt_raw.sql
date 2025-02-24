@@ -14,11 +14,8 @@ SELECT
     unmatched
 FROM public.traveltimepathrawdata
 WHERE
-    divisionid IN (
-        2, --RESCU (Stinson)
-        8046, --miovision tt
-        8026 --TPANA Bluetooth
-    )
+    --this table only has divisionid = 2 data
+    divisionid = 2 --RESCU (Stinson)
     AND timestamputc >= timezone('UTC', '2024-12-01'::timestamptz) --need tz conversion on RH side to make use of index. -- noqa: PRS
     --AND timestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
 --LIMIT 10000;
