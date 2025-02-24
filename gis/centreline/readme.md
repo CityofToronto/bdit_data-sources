@@ -27,6 +27,10 @@ Segments are stored in the partitioned table `gis_core.centreline`. The latest v
 
 Currently we are including only the following types:
 
+> [!IMPORTANT]
+> On 2025-02-24, we started to include the following five additional feature types: Bus lane, Trails, Access Roads, Other Ramp, and Laneway, in order to ensure consistency with MOVE.
+> On 2024-02-19, we started to include `Other`. 
+
 * 'Expressway'
 * 'Expressway Ramp'
 * 'Major Arterial'
@@ -38,6 +42,11 @@ Currently we are including only the following types:
 * 'Local'
 * 'Pending'
 * 'Other' (version >= `2024-02-19`)
+* 'Buslane' (verion >= `2025-02-24`)
+* 'Access Road' (verion >= `2025-02-24`)
+* 'Trails' (verion >= `2025-02-24`)
+* 'Other Ramp' (verion >= `2025-02-24`)
+* 'Laneway' (verion >= `2025-02-24`)
 
 #### Directionality
 
