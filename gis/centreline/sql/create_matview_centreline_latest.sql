@@ -6,7 +6,22 @@ WHERE
     version_date = (
         SELECT MAX(version_date)
         FROM gis_core.centreline
-    );
+    )
+    AND feature_code_desc IN (
+        'Expressway',
+        'Expressway Ramp',
+        'Major Arterial',
+        'Major Arterial Ramp',
+        'Minor Arterial',
+        'Minor Arterial Ramp',
+        'Collector',
+        'Collector Ramp',
+        'Local',
+        'Access Road',
+        'Other',
+        'Other Ramp',
+        'Laneway',
+        'Pending');
 
 CREATE TRIGGER refresh_trigger
 AFTER INSERT OR UPDATE OR DELETE
