@@ -611,7 +611,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         keep_adding = find_limit(return_json) #checks if all records fetched
         if keep_adding:
             #get next batch using offset (max_number)
-            return_json = get_data(mapserver, layer_id, max_number = total, record_max = record_count, include_additional_layers)
+            return_json = get_data(mapserver, layer_id, max_number = total, record_max = record_count, include_additional_layers=False)
     LOGGER.info('%s records from [mapserver: %s, layerID: %d] have been inserted into %s', total, mapserver, layer_id, output_table)
     
     if is_audited:
