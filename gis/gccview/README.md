@@ -91,6 +91,7 @@ The pipeline consists of two files, `gcc_puller_functions.py` for the functions 
 - con (used when manually pull): the path to the credential config file. Default is ~/db.cfg
 - primary_key (used when pulling an audited table): primary key for this layer, returned from dictionary pk_dict when pulling for the Airflow DAG, set it manually when pulling a layer yourself.
 - is_partitioned (Boolean): True if the layer will be inserted as a child table part of a parent table, False if the layer will be neither audited nor partitioned.
+- include_additional_layers (Boolean): True if pulling additional layers for centreline.
 
 In the DAG file, the arguments for each layer are stored in dictionaries called "bigdata_layers" and "ptc_layers", in the order above. The DAG will be executed once every 3 months, particularly on the 15th of every March, June, September, and December every year. The DAG will pull either audited table or partitioned table since the "is_partitioned" argument is not stored in dictionaries and are set to default value True.
 
@@ -139,6 +140,8 @@ There are 7 inputs that can be entered.
 `primary_key`(required when pulling an audited table): Primary key for the layer
 
 `is_partitioned`: Whether table will be a child table of a parent table or with no feature, specify the option on the command line will set this option to True; while not specifying will give the default False.
+
+`include_additional_layers`: Whether additional layer should be pulled (only applicable for centreline, specify the option on the command line will set this option to True; while not specifying will give the default False.
 
 Example of pulling the library layer (table with no feature) to the gis schema.
 
