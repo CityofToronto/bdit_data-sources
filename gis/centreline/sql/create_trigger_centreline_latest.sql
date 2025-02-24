@@ -7,6 +7,7 @@ AS $BODY$
 BEGIN
 
 REFRESH MATERIALIZED VIEW gis_core.centreline_latest;
+REFRESH MATERIALIZED VIEW gis_core.centreline_latest_all_feature;
 RETURN NULL;
 
 END;
