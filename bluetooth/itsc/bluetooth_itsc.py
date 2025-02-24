@@ -27,9 +27,10 @@ def fetch_and_insert_raw_tt_data(
     
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
-        select_query = sql.SQL(file.read()).format(
-            start = sql.Literal("2025-02-23 00:00:00 EST5EDT")
-        )
+        select_query = sql.SQL(file.read())
+        #.format(
+        #    start = sql.Literal("2025-02-23 00:00:00 EST5EDT")
+        #)
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info("Fetching TT data.")
@@ -51,6 +52,48 @@ def fetch_and_insert_raw_tt_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
+        cur.execute("TRUNCATE gwolofs.tt_raw;")
+        execute_values(cur, insert_query, df, page_size = 1000)
+
+def fetch_and_insert_raw_tt_pathdata(
+    select_conn = PostgresHook('itsc_postgres'),
+    insert_conn = PostgresHook('events_bot'),
+    start_date = datetime(2025, 2, 23)
+):
+    '''Fetch, process and insert data from ITS Central issuelocationnew table.
+    
+    - Fetches data from ITS Central `traveltimepathrawdata` table.  
+    - Inserts into RDS `gwolofs.tt_raw` table.
+    '''
+    
+    select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw_pathdata.sql')
+    with open(select_fpath, 'r', encoding="utf-8") as file:
+        select_query = sql.SQL(file.read())
+        #.format(
+        #    start = sql.Literal("2025-02-23 00:00:00 EST5EDT")
+        #)
+    try:
+        with select_conn.get_conn() as con, con.cursor() as cur:
+            LOGGER.info("Fetching TT data.")
+            cur.execute(select_query)
+            data = cur.fetchall()
+            df = pd.DataFrame(data)
+            df.columns=[x.name for x in cur.description]
+    except Error as exc:
+        LOGGER.critical("Error fetching TT data.")
+        LOGGER.critical(exc)
+        raise Exception() from exc
+    
+    #transform values for inserting
+    df = df.replace({pd.NaT: None, nan: None, '': None})
+    df = [tuple(x) for x in df.to_numpy()]
+    
+    insert_fpath = os.path.join(SQL_DIR, 'insert-tt_raw_pathdata.sql')
+    with open(insert_fpath, 'r', encoding="utf-8") as file:
+        insert_query = sql.SQL(file.read())
+        
+    with insert_conn.get_conn() as con, con.cursor() as cur:
+        cur.execute("TRUNCATE gwolofs.tt_raw;")
         execute_values(cur, insert_query, df, page_size = 1000)
 
 def fetch_and_insert_tt_path_data(
@@ -89,5 +132,6 @@ def fetch_and_insert_tt_path_data(
     with insert_conn.get_conn() as con, con.cursor() as cur:
         execute_values(cur, insert_query, df, page_size = 1000)
 
-fetch_and_insert_raw_tt_data()
-fetch_and_insert_tt_path_data()
+#fetch_and_insert_raw_tt_data()
+#fetch_and_insert_tt_path_data()
+fetch_and_insert_raw_tt_pathdata()

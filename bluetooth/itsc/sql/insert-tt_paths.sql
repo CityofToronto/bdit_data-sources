@@ -1,3 +1,4 @@
+TRUNCATE gwolofs.tt_paths;
 INSERT INTO gwolofs.tt_paths (
     division_id, path_id, source_id, algorithm, first_feature_start_off_set_meters,
     last_feature_end_off_set_meters, first_feature_forward, raw_data_types, external_data_origin,
