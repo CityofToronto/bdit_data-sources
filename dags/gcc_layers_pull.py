@@ -50,12 +50,19 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 type="integer",
                 title="mapserver",
                 description="mapserver for custom pull. Example: 0",
-            ),"pk": Param(
+            ),
+            "pk": Param(
                 default='',
                 type="string",
                 title="Primary Key.",
                 description="(Optional) primary key for custom pull. Example: area_id",
                 examples=['area_id', 'objectid'],
+            ),
+            "include_additional_feature": Param(
+                default=False,
+                type="boolean",
+                title="Include additional feature",
+                description="Flag to include additional feature type",
             ),
             "schema_name": Param(
                 default='',
@@ -81,7 +88,8 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 'layer_id': context["params"]["layer_id"],
                 'mapserver': context["params"]["mapserver"],
                 'pk': context["params"]["pk"],
-                'schema_name': context["params"]["schema_name"]
+                'schema_name': context["params"]["schema_name"],
+                'include_additional_feature':context["params"]["include_additional_feature"],
             })
             return dict({layer_name:layer})
                 
@@ -101,6 +109,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 schema_name = layer[1].get("schema_name"),
                 is_audited = layer[1].get("is_audited"),
                 primary_key = layer[1].get("pk"),
+                include_additional_feature = layer[1].get("include_additional_feature"),
                 con = conn
             )
 
