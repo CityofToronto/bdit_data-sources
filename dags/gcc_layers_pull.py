@@ -39,6 +39,12 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 title="is_audited",
                 description="Is the layer audited?",
             ),
+            "include_additional_feature": Param(
+                default=False,
+                type="boolean",
+                title="Include additional feature",
+                description="Flag to include additional feature type",
+            ),
             "layer_id": Param(
                 default=0,
                 type="integer",
@@ -57,12 +63,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 title="Primary Key.",
                 description="(Optional) primary key for custom pull. Example: area_id",
                 examples=['area_id', 'objectid'],
-            ),
-            "include_additional_feature": Param(
-                default=False,
-                type="boolean",
-                title="Include additional feature",
-                description="Flag to include additional feature type",
             ),
             "schema_name": Param(
                 default='',
@@ -101,18 +101,17 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             context["table_name"] = layer[0]
             #get db connection
             conn = PostgresHook(conn_id).get_conn()
-            
+            print(layer[1].get("include_additional_feature"))
             #pull and insert layer
             get_layer(
                 mapserver_n = layer[1].get("mapserver"),
                 layer_id = layer[1].get("layer_id"),
                 schema_name = layer[1].get("schema_name"),
                 is_audited = layer[1].get("is_audited"),
-                primary_key = layer[1].get("pk"),
                 include_additional_feature = layer[1].get("include_additional_feature"),
+                primary_key = layer[1].get("pk"),
                 con = conn
             )
-
             #refresh mat views as necessary
             agg_sql = layer[1].get("agg")
             if agg_sql is not None:
