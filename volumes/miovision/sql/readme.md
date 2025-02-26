@@ -1,7 +1,6 @@
 <!-- TOC -->
 
 - [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
-  - [Miovision Data Relationships at a Glance](#miovision-data-relationships-at-a-glance)
   - [Key Tables](#key-tables)
     - [`intersections`](#intersections)
     - [`classifications`](#classifications)
@@ -9,7 +8,7 @@
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`volumes_15min`](#volumes_15min)
+    - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
     - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
@@ -46,10 +45,6 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 # 2. `miovision_api` Table Structure
 
-## Miovision Data Relationships at a Glance
-
-![Miovision Data Entity Relationship Diagram](../img/Mio_ERD.png)
-
 ## Key Tables 
 
   - [Key Tables](#key-tables)
@@ -59,7 +54,7 @@ This folder contains sql scripts used in both the API and the old data dump proc
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`volumes_15min`](#volumes_15min)
+    - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
     - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
@@ -159,7 +154,7 @@ volume_15min_mvt_uid|serial|Unenforced foreign key to [`volumes_15min_mvt`](#vol
 
 ## Aggregated Data
 
-Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min`)](#volumes_15min) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](../getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables. The diagram below briefly describes the flow of data between key aggregate tables. 
+Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min_atr_filtered`)](#volumes_15min_atr_filtered) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](../getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables. The diagram below briefly describes the flow of data between key aggregate tables. 
 
 ```mermaid
   erDiagram
@@ -259,13 +254,12 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `volumes_15min`
-**(Use view `volumes_15min_filtered` to exclude anomalous_ranges)**
+### `volumes_15min_atr_filtered`  
+If you need ATR style Miovision data, use VIEW `miovision_api.volumes_15min_atr_filtered` which transforms TMC data from the `_mvt` tables to ATR style (entries and exits) and excludes anomalous_ranges. 
 
-Data table storing ATR versions of the 15-minute turning movement data. Data in
-`volumes` is stored in TMC format, so must be converted to ATR to be included in
-`volumes_15min`.
-                                                           
+> [!TIP]
+> Ensure indices are being applied during queries on this View using F7: Explain. Add WHERE clauses on datetime_bin, intersection_uid, and classification_uid. Otherwise materiailizing the whole view could take hours.  
+
 **ATR movements define leg as the approach direction of vehicles (like TMCs)**,
 and **direction as the cardinal direction of traffic travelling through that
 side of the intersection**. For a typical '+' intersection, there will be 8
@@ -276,7 +270,6 @@ diagram](../getting_started.md#From-Movement-Counts-to-Segment-Counts).
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-volume_15min_uid|integer|Unique identifier for table from sequence `miovision_api.volumes_15min_volume_15min_uid_seq`. |12412|
 intersection_uid|integer|Identifier linking to specific intersection stored in `intersections`|31|
 datetime_bin|timestamp without time zone|Start of 15-minute time bin in EDT|2017-12-11 14:15:00|
 classification_uid|text|Identifier linking to specific mode class stored in `classifications`|1|
@@ -284,9 +277,7 @@ leg|text|Segment leg of intersection|E|
 dir|text|Direction of traffic on specific leg|EB|
 volume|integer|Total 15-minute volume|107|
 
-[`miovision_api.movement_map`](#movement_map) is used to convert the TMC data to the ATR data. 
-
-A *Unique constraint* was added to the `miovision_api.volumes_15min` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `dir`.
+[`miovision_api.movement_map_new`](#movement_map_new) is a lookup table used to convert the TMC data to the ATR data. 
 
 ### `miovision_api.volumes_daily`
 
@@ -404,9 +395,6 @@ Reference table for transforming aggregated turning movement counts (see `volume
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
-leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
-dir|text|Direction on which 15-minute volume will be assigned|EB|
-leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
 movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
 leg|text|Intersection leg from which vehicle enters the intersection|E|
 entry_dir|text|Direction which vehicle enters the interseciton travelling|WB|
@@ -555,7 +543,6 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 | [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
 | [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
 | [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_volumes_15min(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes_15min.sql) | Clears data from `miovision_api.volumes_15min` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |  
 
 ## Helper Functions
 
