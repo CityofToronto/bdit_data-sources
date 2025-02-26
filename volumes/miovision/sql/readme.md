@@ -18,7 +18,7 @@
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.open_issues`](#miovision_apiopen_issues)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
-    - [`movement_map`](#movement_map)
+    - [`movement_map_new`](#movement_map_new)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
     - [`centreline_miovision`](#centreline_miovision)
@@ -398,9 +398,9 @@ These two tables are used to enforce standardized descriptions in the `investiga
 | uid    | very short descriptive text; primary key |
 | description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
 
-### `movement_map`
+### `movement_map_new`
 
-Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min`):
+Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min_atr_filtered`):
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
@@ -408,22 +408,22 @@ leg_new|text|Intersection leg on which 15-minute volume will be assigned|E|
 dir|text|Direction on which 15-minute volume will be assigned|EB|
 leg_old|text|Intersection leg on which 15-minute turning movement volume is currently assigned|W|
 movement_uid|integer|Identifier representing current turning movement - see `movements`|1|
+leg|text|Intersection leg from which vehicle enters the intersection|E|
+entry_dir|text|Direction which vehicle enters the interseciton travelling|WB|
+movement|text|Name of the movement, from `movements`|left|
+exit_leg|text|Intersection leg from which vehicle exits the intersection|S|
+exit_dir|text|Direction which vehicle exits the interseciton travelling|SB|
 
 Here are some example rows from the table:
 
-|leg_new|dir|leg_old|movement_uid|description of movement|
-|-------|---|-------|------------|-----------------------|
-| E | EB | E | 4 | Approached intersection from the east leg, u-turned, exited intersection from the east leg
-| E | EB | S | 3 | Approached intersection from the south leg, turned right, exited intersection from the east leg
-| E | EB | W | 1 | Approached intersection from the west leg, proceeded straight ahead, exited intersection from the east leg
-| E | EB | N | 2 | Approached intersection from the north leg, turned left, exited intersection from the east leg
+| movement_uid | movement | leg | entry_dir | exit_leg | exit_dir | description |
++--------------+----------+-----+-----------+----------+----------+----------+
+|            2 | left     | E   | WB        | S        | SB       | Approached intersection from the east leg going west, turned left, exited intersection from the south leg going south. |
+|            4 | u_turn   | E   | WB        | E        | EB       | Approached intersection from the east leg going west, u-turned, exited intersection from the east leg going east. |
+|            5 | cw       | E   | SB        | E        | SB       | A pedestrian entereted the intersection going south on the East crosswalk. The identical exit leg/direction implies it is only an entrance movement and will not be duplicated in the TMC view. |
+|            7 | enter    | E   | WB        | E        | WB       | A bike entereted the intersection travelling west from the east leg. The identical exit leg/direction implies it is only an entrance movement and will not be duplicated in the TMC view. |
 
-- `leg_new` (leg for ATR) - anything that crosses that side of the intersection
-- `dir` - heading of traffic crossing `leg_new`
-- `leg_old` (leg for TMC) - direction the vehicles approach into intersection
-- `movement_uid` - turning movement stored in `movements`
-
-The example above represents a mapping from TMC to ATR `E` leg and `EB` direction. The blue and green arrows in [this diagram](../getting_started.md#All-the-East-Leg-Crossings!) will help you visualize the movements described in the table.
+For a visual aid in understanding TMC to ATR conversion, see the [getting started readme](../getting_started.md#all-the-east-leg-crossings). 
 
 ### `periods`
 
