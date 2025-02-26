@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.fn_add_intersection_movement_padding_values()
 RETURNS trigger
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE

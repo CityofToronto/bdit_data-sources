@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_mvt(
     intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 
 COST 100
 VOLATILE
