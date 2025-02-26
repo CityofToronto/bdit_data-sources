@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION miovision_api.create_mm_nested_volumes_partitions(
     mm_ integer
 )
 RETURNS void
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 SECURITY DEFINER
 COST 100
 VOLATILE PARALLEL UNSAFE
