@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION miovision_api.create_yyyy_volumes_15min_partition(
     year_ integer
 )
 RETURNS void
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 SECURITY DEFINER
 COST 100
 VOLATILE PARALLEL UNSAFE

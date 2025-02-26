@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION miovision_api.identify_zero_counts(
     intersections integer [] DEFAULT ARRAY[]::integer []
 )
 RETURNS void
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 
 COST 100
 VOLATILE
