@@ -290,7 +290,7 @@ class MiovPuller:
 def process_data(conn, start_time, end_time, intersections):
     """Process Miovision into aggregate tables.
     
-    Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily, report_dates.
+    Tables: unacceptable_gaps, volumes_15min_mvt, volumes_15min, volumes_daily.
     """
     time_period = (start_time, end_time)
     find_gaps(conn, time_period, intersections)
@@ -298,7 +298,6 @@ def process_data(conn, start_time, end_time, intersections):
     agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
     aggregate_15_min(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period, intersections)
-    get_report_dates(conn, time_period, intersections)
 
 def find_gaps(conn, time_period, intersections = None):
     """Process aggregated miovision data from volumes_15min_mvt to identify gaps and insert
@@ -404,32 +403,6 @@ def aggregate_volumes_daily(conn, time_period, intersections = None):
                 cur.execute(daily_aggregation, query_params)
                 logger.info('Aggregation into miovision_api.volumes_daily table complete for intersections %s from %s to %s.',
                             [x.uid for x in intersections], time_period[0], time_period[1])
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def get_report_dates(conn, time_period, intersections = None):
-    """Aggregate into miovision_api.report_Dates.
-
-    First clears previous inserts for the date range.
-    Takes optional intersection param to clear/aggregate specific
-    for specific report dates. 
-    """
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date);"
-                cur.execute(delete_sql, time_period)
-                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date);"
-                cur.execute(report_dates, time_period)
-                logger.info('report_dates done')
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_report_dates(%s::date, %s::date, %s::integer []);"
-                cur.execute(delete_sql, query_params)
-                report_dates="SELECT miovision_api.get_report_dates(%s::date, %s::date, %s::integer []);"
-                cur.execute(report_dates, query_params)
-                logger.info('report_dates done')
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)

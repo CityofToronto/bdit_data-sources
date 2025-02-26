@@ -25,7 +25,7 @@ try:
     from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
-        get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
+        get_intersection_info, agg_zero_volume_anomalous_ranges
     )
     from volumes.miovision.api.pull_alert import run_alerts_api
 except:
@@ -177,23 +177,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_volumes_daily(conn, time_period=time_period, intersections=intersections)
 
-        @task
-        def get_report_dates_task(ds = None, **context):
-            mio_postgres = PostgresHook("miovision_api_bot")
-            time_period = (ds, ds_add(ds, 1))
-            #no user specified intersection
-            if context["params"]["intersection"] == [0]:
-                with mio_postgres.get_conn() as conn:
-                    get_report_dates(conn, time_period=time_period)
-            #user specified intersection
-            else:
-                INTERSECTIONS = tuple(context["params"]["intersection"])              
-                with mio_postgres.get_conn() as conn:
-                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
-                    get_report_dates(conn, time_period=time_period, intersections=intersections)
-
         find_gaps_task() >> aggregate_15_min_mvt_task() >> zero_volume_anomalous_ranges_task() >> aggregate_volumes_daily_task()
-        get_report_dates_task()
 
     t_done = ExternalTaskMarker(
             task_id="done",
