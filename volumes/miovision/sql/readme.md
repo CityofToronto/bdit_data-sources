@@ -405,7 +405,7 @@ exit_dir|text|Direction which vehicle exits the interseciton travelling|SB|
 Here are some example rows from the table:
 
 | movement_uid | movement | leg | entry_dir | exit_leg | exit_dir | description |
-+--------------+----------+-----+-----------+----------+----------+----------+
+|-------------|---------|----|----------|---------|---------|---------|
 |            2 | left     | E   | WB        | S        | SB       | Approached intersection from the east leg going west, turned left, exited intersection from the south leg going south. |
 |            4 | u_turn   | E   | WB        | E        | EB       | Approached intersection from the east leg going west, u-turned, exited intersection from the east leg going east. |
 |            5 | cw       | E   | SB        | E        | SB       | A pedestrian entereted the intersection going south on the East crosswalk. The identical exit leg/direction implies it is only an entrance movement and will not be duplicated in the TMC view. |
