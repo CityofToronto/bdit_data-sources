@@ -28,7 +28,6 @@
   - [Primary and Foreign Keys](#primary-and-foreign-keys)
     - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
   - [Other Tables](#other-tables)
-    - [`volumes_mvt_atr_xover`](#volumes_mvt_atr_xover)
 - [PostgreSQL Functions](#postgresql-functions)
   - [Aggregation Functions](#aggregation-functions)
   - [Clear Functions](#clear-functions)
@@ -43,7 +42,6 @@
     - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
-
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
 
 # 2. `miovision_api` Table Structure
@@ -534,15 +532,6 @@ The tables below are produced using functions explained [here](#aggregate_functi
 |`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
 
 
-### `volumes_mvt_atr_xover`
-
-**This is a crossover table to link `volumes_15min_mvt` to the `volumes_15min` table**. As described above, the TMC to ATR relationship is a many to many relationship. The [`aggregate_15_min()`](function/function-aggregate-volumes_15min.sql) function that populates `volumes_15min` also populates this table so that a record of which `volume_15min_mvt` bin corresponds to which `volume_15min` bin is kept, and vice versa. As a result, multiple entries of both `volume_15min_uid` and `volume_15min_mvt_uid` can be found in the query.
-
-**Field Name**|**Data Type**|**Description**|**Example**|
-:-----|:-----|:-----|:-----|
-volume_15min_mvt_uid|int|Unique identifier for `volumes_15min_mvt` table|14524|
-volume_15min_uid|serial|Unique identifier for table|12412|
-
 # PostgreSQL Functions
 
 This section describes the SQL functions in the `miovision_api` schema used to aggregate data and many helper functions including those used to clear data for re-processing and to create partition tables. 
@@ -551,7 +540,6 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 
 | Function | Comment |
 |---|---|
-| [`aggregate_15_min(start_date date, end_date date, intersections integer[])`](function/function-aggregate-volumes_15min.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` (turning movements counts/TMC) into `miovision_api.volumes_15min` (automatic traffic recorder /ATR). Also updates `miovision_api.volumes_mvt_atr_xover` and `miovision_api.volumes_15min_mvt.processed` column. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_volumes_15min()` to remove existing values before summarizing. |
 | [`aggregate_15_min_mvt(start_date date, end_date date)`](function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
 | [`aggregate_volumes_daily(start_date date, end_date date)`](function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
 | [`api_log(start_date date, end_date date, intersections integer[])`](function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
