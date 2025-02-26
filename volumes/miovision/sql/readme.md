@@ -517,8 +517,6 @@ The tables below are produced using functions explained [here](#aggregate_functi
 |------|-------|
 |`api_log`|Contains a record of the `start_date` and `end_date` for an `intersection_uid` and when the data was pulled as `date_added`|
 |`missing_dates`|Contains a record of the `intersection_uid` and the `dt` that were missing in the `volumes_15min` table, with `period_type` stated|
-|`report_dates`|Contains a record for each intersection-date combination in which at least forty 15-minute time bins exist between 6AM and 8PM|
-
 
 # PostgreSQL Functions
 
@@ -531,7 +529,6 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 | [`aggregate_15_min_mvt(start_date date, end_date date)`](function/function-aggregate-volumes_15min_mvt.sql) | Aggregates valid movements from `miovision_api.volumes` in to `miovision_api.volumes_15min_mvt` as 15 minute turning movement counts (TMC) bins and fills in gaps with 0-volume bins. Also updates foreign key in `miovision_api.volumes`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_15_min_mvt()` to remove existing values before summarizing. |
 | [`aggregate_volumes_daily(start_date date, end_date date)`](function/function-aggregate-volumes_daily.sql) | Aggregates data from `miovision_api.volumes_15min_mvt` into `miovision_api.volumes_daily`. Includes a delete clause to clear the table for those dates before any inserts. |
 | [`api_log(start_date date, end_date date, intersections integer[])`](function/function-api_log.sql) | Logs inserts from the api to miovision_api.volumes via the `miovision_api.api_log` table. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_api_log()` to remove existing values before summarizing. |
-| [`get_report_dates(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-get_report_dates.sql) | Logs the intersections/classes/dates added to `miovision_api.volumes_15min` to `miovision_api.report_dates`. Takes an optional intersection array parameter to aggregate only specific intersections. Use `clear_report_dates()` to remove existing values before summarizing. |
 | [`find_gaps(start_date date, end_date date)`](function/function-find_gaps.sql) | Find unacceptable gaps and insert into table `miovision_api.unacceptable_gaps`. |  
 | [`identify_zero_counts(start_date date)`](function/function-identify-zero-counts.sql) | Identifies intersection / classification (only classification_uids 1,2,6,10) combos with zero volumes for the start_date called. Inserts or updates anomaly into anomalous_range table unless an existing, overlapping, manual entery exists. | 
 
@@ -541,7 +538,6 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 |---|---|
 | [`clear_15_min_mvt(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes_15min_mvt.sql) | Clears data from `miovision_api.volumes_15min_mvt` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
 | [`clear_api_log(_start_date date, _end_date date, intersections integer[])`](function/function-clear-api_log.sql) | Clears data from `miovision_api.api_log` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
-| [`clear_report_dates(_start_date date, _end_date date, intersections integer[])`](function/function-clear-report_dates.sql) | Clears data from `miovision_api.report_dates` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
 | [`clear_volumes(start_date timestamp, end_date timestamp, intersections integer[])`](function/function-clear-volumes.sql) | Clears data from `miovision_api.volumes` in order to facilitate re-pulling. `intersections` param defaults to all intersections. |
 
 ## Helper Functions
