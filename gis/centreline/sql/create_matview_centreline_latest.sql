@@ -41,4 +41,4 @@ ALTER MATERIALIZED VIEW gis_core.centreline_latest OWNER TO gis_admins;
 GRANT SELECT ON gis_core.centreline_latest TO bdit_humans, bdit_bots;
 
 COMMENT ON MATERIALIZED VIEW gis_core.centreline_latest IS E''
-'Materialized view containing the latest version of centreline, derived from gis_core.centreline.';
+'Materialized view containing the latest version of centreline, derived from gis_core.centreline, excluding Busway and Trail.';

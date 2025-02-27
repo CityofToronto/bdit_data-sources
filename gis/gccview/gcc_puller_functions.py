@@ -652,7 +652,6 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, include_addit
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
     # get_layer function
-    LOGGER.info("include_additional_feature flag: %s", include_additional_feature)
 
     get_layer(
         mapserver_n = mapserver,

@@ -101,7 +101,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             context["table_name"] = layer[0]
             #get db connection
             conn = PostgresHook(conn_id).get_conn()
-            print(layer[1].get("include_additional_feature"))
             #pull and insert layer
             get_layer(
                 mapserver_n = layer[1].get("mapserver"),
