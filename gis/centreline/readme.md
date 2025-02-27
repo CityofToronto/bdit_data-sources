@@ -14,7 +14,7 @@ The centreline data are used by many other groups in the City and it's often imp
 
 ## How It's Structured
 
-* The `gis_core.centreline_latest` Materialized View contains the latest set of lines for road classes that are relevant to transportation. It includes all road classification but **excludes** `Trail` and `Buslane`.
+* The `gis_core.centreline_latest` Materialized View contains the latest set of lines for road classes that are relevant to transportation. It includes all road classification but **excludes** `Trail` and `Busway`.
 * The `gis_core.centreline_latest_all_feature` Materialized View contains the latest set of lines, **including all features**.
 * The `centreline_intersection_point_latest` Materialized View contains the latest set of unique intersections with unique id `intersection_id`. These are any location where two lines intersect, not strictly intersections in the transportation sense ([see more](#intersections-nodes))
 
@@ -29,7 +29,7 @@ Segments are stored in the partitioned table `gis_core.centreline`. These lines 
 Currently we are including only the following types:
 
 > [!IMPORTANT]
-> **2025-02-24**: Added `Buslane`, `Trail`, `Access Road`, `Other Ramp`, and `Laneway`, in order to ensure consistency with MOVE.
+> **2025-02-24**: Added `Busway`, `Trail`, `Access Road`, `Other Ramp`, and `Laneway`, in order to ensure consistency with MOVE.
 > 
 > **2024-02-19**: Added `Other`. 
 
@@ -46,7 +46,7 @@ Currently we are including only the following types:
 | Local               | ✅ | ✅ |
 | Pending             | ✅ | ✅ |
 | Other (added `2024-02-19`) | ✅ | ✅ |
-| Buslane (added `2025-02-24`) | ❌ | ✅ |
+| Busway (added `2025-02-24`) | ❌ | ✅ |
 | Access Road (added `2025-02-24`) | ✅ | ✅ |
 | Trail (added `2025-02-24`) | ❌ | ✅ |
 | Other Ramp (added `2025-02-24`) | ✅ | ✅ |
