@@ -315,10 +315,9 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
     base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
     # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        if include_additional_feature:
-            where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other', 'Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road')"
-        else:
-            where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
+        where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
+        if include_additional_feature: # Then add the additional 5 roadclasses
+            where += " OR \"FEATURE_CODE_DESC\" IN ('Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road')"
     elif mapserver == 'cot_geospatial27' and layer_id == 41:
         where = "OBJECTID>0"
     else:
