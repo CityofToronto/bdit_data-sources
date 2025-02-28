@@ -93,7 +93,7 @@ def fetch_and_insert_raw_tt_pathdata(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        cur.execute("TRUNCATE gwolofs.tt_raw;")
+        cur.execute("TRUNCATE gwolofs.tt_raw_pathdata;")
         execute_values(cur, insert_query, df, page_size = 1000)
 
 def fetch_and_insert_tt_path_data(
@@ -130,8 +130,9 @@ def fetch_and_insert_tt_path_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df, page_size = 1000)
+        #cur.execute("TRUNCATE gwolofs.tt_paths;")
+        execute_values(cur, insert_query, df)
 
 #fetch_and_insert_raw_tt_data()
-#fetch_and_insert_tt_path_data()
-fetch_and_insert_raw_tt_pathdata()
+fetch_and_insert_tt_path_data()
+#fetch_and_insert_raw_tt_pathdata()
