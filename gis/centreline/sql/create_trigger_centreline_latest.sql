@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION gis_core.centreline_latest_trigger()
 RETURNS trigger
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 COST 100
 VOLATILE NOT LEAKPROOF SECURITY DEFINER
 AS $BODY$
