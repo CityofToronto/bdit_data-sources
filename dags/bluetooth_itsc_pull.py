@@ -24,7 +24,7 @@ DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': datetime(2024, 11, 27),
+    'start_date': datetime(2024, 12, 1),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -49,26 +49,26 @@ default_args = {
 def bt_itsc_dag():
     @task
     def pull_raw_tt_data(ds = None):
-        "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issues`"
+        "Fetches data from ITS Central traveltimepathdata table, inserts into RDS gwolofs.tt_raw_pathdata table."
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
-        fetch_and_insert_raw_tt_data(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
+        fetch_and_insert_raw_tt_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
         
     @task
     def pull_tt_paths(ds = None):
-        "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issues`"
+        "Fetches data from ITS Central traveltimepathconfig table, inserts into RDS gwolofs.tt_paths table."
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
-        fetch_and_insert_tt_path_data(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
+        fetch_and_insert_tt_path_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
     
     @task
     def pull_raw_tt_pathdata(ds = None):
-        "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issue_locations`"
+        "Fetches data from ITS Central traveltimepathrawdata table, inserts into RDS gwolofs.tt_raw table."
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
-        fetch_and_insert_raw_tt_pathdata(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
+        fetch_and_insert_raw_tt_pathdata(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
 
     #these tasks are not dependent, but this helps so only one fails at a time
-    pull_tt_paths() >> pull_raw_tt_data() >> pull_raw_tt_pathdata()
+    pull_raw_tt_data() >> pull_raw_tt_pathdata() >> pull_tt_paths()
     
 bt_itsc_dag()

@@ -19,5 +19,5 @@ WHERE
         8046, --miovision tt
         8026 --TPANA Bluetooth
     )
-    AND timestamputc >= timezone('UTC', '2025-01-01'::timestamptz) --need tz conversion on RH side to make use of index. -- noqa: PRS
-    --AND timestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
+    AND timestamputc >= timezone('UTC', {start}::timestamptz) -- noqa: PRS
+    AND timestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
