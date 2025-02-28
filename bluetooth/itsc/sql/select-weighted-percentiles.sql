@@ -5,21 +5,25 @@ WITH weighted_data AS (
         date_trunc('hour', dt) AS hr,
         travel_time_s AS mean,
         SUM(num_samples) AS n,
-        SUM(SUM(num_samples)) OVER (PARTITION BY path_id, date_trunc('hour', dt)) AS total_sample,
+        SUM(SUM(num_samples)) OVER path_hr AS total_sample,
         --sum of samples which have appeared below that speed
-        SUM(SUM(num_samples)) OVER (PARTITION BY path_id, date_trunc('hour', dt) ORDER BY travel_time_s ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
-        -- / total_sample
-         / SUM(SUM(num_samples)) OVER (PARTITION BY path_id, date_trunc('hour', dt)) AS record_frac
+        SUM(SUM(num_samples)) OVER path_hr_tt / SUM(SUM(num_samples)) OVER path_hr AS record_frac
     FROM gwolofs.tt_raw
     WHERE path_id = 6759128 AND dt >= '2025-01-01' --date_trunc('hour', dt) = '2025-02-22 14:00'
     GROUP BY
         path_id,
         hr,
         travel_time_s
+    WINDOW
+        path_hr AS (PARTITION BY path_id, date_trunc('hour', dt)),
+        path_hr_tt AS (
+            PARTITION BY path_id, date_trunc('hour', dt)
+            ORDER BY travel_time_s ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        )
     ORDER BY
         path_id,
         hr,
-        SUM(SUM(num_samples)) OVER (PARTITION BY path_id, date_trunc('hour', dt) ORDER BY travel_time_s ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+        SUM(SUM(num_samples)) OVER path_hr_tt
 )
 
 --take the first value that exceeds 85% (as in percentile_disc)

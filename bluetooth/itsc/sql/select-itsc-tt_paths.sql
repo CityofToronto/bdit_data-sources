@@ -48,4 +48,6 @@ WHERE
         2, --RESCU (Stinson)
         8046, --miovision tt
         8026 --TPANA Bluetooth
-    );
+    )
+    AND paths.starttimestamputc >= timezone('UTC', {start}::timestamptz) -- noqa: PRS
+    AND paths.starttimestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
