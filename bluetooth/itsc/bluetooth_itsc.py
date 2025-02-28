@@ -7,6 +7,7 @@ from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowFailException, AirflowSkipException
 
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 SQL_DIR = '/data/home/gwolofs/bdit_data-sources/bluetooth/itsc/sql'
@@ -15,11 +16,11 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def fetch_and_insert_raw_tt_data(
+    start_date,
     select_conn = PostgresHook('itsc_postgres'),
-    insert_conn = PostgresHook('events_bot'),
-    start_date = datetime(2025, 2, 23)
+    insert_conn = PostgresHook('events_bot')
 ):
-    '''Fetch, process and insert data from ITS Central issuelocationnew table.
+    '''Fetches data from ITS Central, processes and inserts into RDS.
     
     - Fetches data from ITS Central `traveltimepathrawdata` table.  
     - Inserts into RDS `gwolofs.tt_raw` table.
@@ -27,10 +28,9 @@ def fetch_and_insert_raw_tt_data(
     
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
-        select_query = sql.SQL(file.read())
-        #.format(
-        #    start = sql.Literal("2025-02-23 00:00:00 EST5EDT")
-        #)
+        select_query = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date + " 00:00:00 Canada/Eastern")
+        )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info("Fetching TT data.")
@@ -52,26 +52,24 @@ def fetch_and_insert_raw_tt_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        cur.execute("TRUNCATE gwolofs.tt_raw;")
         execute_values(cur, insert_query, df, page_size = 1000)
 
 def fetch_and_insert_raw_tt_pathdata(
+    start_date,
     select_conn = PostgresHook('itsc_postgres'),
-    insert_conn = PostgresHook('events_bot'),
-    start_date = datetime(2025, 2, 23)
+    insert_conn = PostgresHook('events_bot')
 ):
-    '''Fetch, process and insert data from ITS Central issuelocationnew table.
+    '''Fetches data from ITS Central, processes and inserts into RDS.
     
-    - Fetches data from ITS Central `traveltimepathrawdata` table.  
-    - Inserts into RDS `gwolofs.tt_raw` table.
+    - Fetches data from ITS Central `traveltimepathdata` table.  
+    - Inserts into RDS `gwolofs.tt_raw_pathdata` table.
     '''
     
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw_pathdata.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
-        select_query = sql.SQL(file.read())
-        #.format(
-        #    start = sql.Literal("2025-02-23 00:00:00 EST5EDT")
-        #)
+        select_query = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date + " 00:00:00 Canada/Eastern")
+        )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info("Fetching TT data.")
@@ -93,27 +91,31 @@ def fetch_and_insert_raw_tt_pathdata(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        cur.execute("TRUNCATE gwolofs.tt_raw_pathdata;")
         execute_values(cur, insert_query, df, page_size = 1000)
 
 def fetch_and_insert_tt_path_data(
+    start_date,
     select_conn = PostgresHook('itsc_postgres'),
-    insert_conn = PostgresHook('events_bot'),
+    insert_conn = PostgresHook('events_bot')
 ):
-    '''Fetch, process and insert data from ITS Central traveltimepathconfig table.
+    '''Fetches data from ITS Central, processes and inserts into RDS.
     
-    - Fetches data from ITS Central
+    - Fetches data from ITS Central `traveltimepathconfig`, `traveltimepathfeature` tables.
     - Inserts into RDS `gwolofs.tt_paths` table.
     '''
-    
+        
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_paths.sql')
     with open(select_fpath, 'r', encoding="utf-8") as file:
-        select_query = sql.SQL(file.read())
+        select_query = sql.SQL(file.read()).format(
+            start = sql.Literal(start_date + " 00:00:00 Canada/Eastern")
+        )
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info("Fetching TT data.")
             cur.execute(select_query)
             data = cur.fetchall()
+            if data == []:
+                raise AirflowSkipException('No updated routes today, skipping task.')
             df = pd.DataFrame(data)
             df.columns=[x.name for x in cur.description]
     except Error as exc:
@@ -130,9 +132,4 @@ def fetch_and_insert_tt_path_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        #cur.execute("TRUNCATE gwolofs.tt_paths;")
         execute_values(cur, insert_query, df)
-
-#fetch_and_insert_raw_tt_data()
-fetch_and_insert_tt_path_data()
-#fetch_and_insert_raw_tt_pathdata()
