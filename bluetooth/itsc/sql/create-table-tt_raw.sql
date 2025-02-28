@@ -15,5 +15,13 @@ CREATE TABLE gwolofs.tt_raw (
     unmatched integer
 );
 
+ALTER TABLE gwolofs.tt_raw ADD CONSTRAINT tt_raw_path_dt_pkey
+PRIMARY KEY (path_id, dt);
+
+CREATE UNIQUE INDEX tt_raw_path_dt_idx
+ON gwolofs.tt_raw USING btree(
+    path_id, dt
+);
+
 ALTER TABLE gwolofs.tt_raw OWNER TO gwolofs;
 GRANT ALL ON gwolofs.tt_raw TO events_bot;
