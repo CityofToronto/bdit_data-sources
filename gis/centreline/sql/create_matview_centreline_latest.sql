@@ -4,7 +4,7 @@ SELECT *
 FROM gis_core.centreline
 WHERE
     version_date = (
-        SELECT MAX(version_date)
+        SELECT MAX(centreline.version_date)
         FROM gis_core.centreline
     )
     AND feature_code_desc IN (
