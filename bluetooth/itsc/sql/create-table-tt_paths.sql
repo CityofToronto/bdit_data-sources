@@ -30,8 +30,20 @@ CREATE TABLE gwolofs.tt_paths (
     severe_delay_clearance_speed_kmh double precision,
     path_type smallint,
     path_data_timeout_for_issue_creation_seconds integer,
-    encoded_polyline character varying
+    encoded_polyline character varying,
+    centreline_ids bigint [],
+    geom geometry,
+    CONSTRAINT tt_paths_pkey PRIMARY KEY (
+        division_id,
+        path_id,
+        start_timestamp
+    )
 );
 
 ALTER TABLE gwolofs.tt_paths OWNER TO gwolofs;
-GRANT ALL ON gwolofs.tt_raw TO events_bot;
+GRANT ALL ON gwolofs.tt_paths TO events_bot;
+
+CREATE TRIGGER add_bluetooth_path_geom_trigger
+BEFORE INSERT OR UPDATE ON gwolofs.tt_paths
+FOR EACH ROW
+EXECUTE FUNCTION gwolofs.add_bluetooth_path_geom();
