@@ -3,7 +3,7 @@ SELECT
     pathid AS path_id,
     rawdatatype AS raw_data_type,
     timezone('UTC', timestamputc) AT TIME ZONE 'Canada/Eastern' AS dt, --convert timestamp (without timezone) at UTC to EDT/ES AS dtT
-    round(traveltimems / 1000, 1) AS traveltime_s AS travel_time_s,
+    round(traveltimems / 1000, 1) AS travel_time_s,
     qualitymetric AS quality_metric,
     numsamples AS num_samples,
     congestionstartmeters AS congestion_start_meters,
@@ -16,6 +16,5 @@ FROM public.traveltimepathrawdata
 WHERE
     --this table only has divisionid = 2 data
     divisionid = 2 --RESCU (Stinson)
-    AND timestamputc >= timezone('UTC', '2024-12-01'::timestamptz) --need tz conversion on RH side to make use of index. -- noqa: PRS
-    --AND timestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
---LIMIT 10000;
+    AND timestamputc >= timezone('UTC', {start}::timestamptz) -- noqa: PRS
+    AND timestamputc < timezone('UTC', {start}::timestamptz + interval '1 day'); -- noqa: PRS
