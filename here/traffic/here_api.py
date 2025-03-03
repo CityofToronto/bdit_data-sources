@@ -39,7 +39,10 @@ def default_end_date():
     dt = datetime.today() - timedelta(days=3)
     return dt.date().strftime('%Y%m%d')
 
-def get_access_token(key_id, key_secret, token_url):
+def get_access_token(api_conn):
+    key_id = api_conn.password
+    key_secret = api_conn.extra_dejson['client_secret']
+    token_url = api_conn.extra_dejson['token_url']
     '''Uses Oauth1 to get an access token using the key_id and client_secret'''
     oauth1 = OAuth1(key_id, client_secret=key_secret)
     headers = {'content-type': 'application/json'}
@@ -109,21 +112,35 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
 
-def get_download_url(request_id, status_base_url, access_token, user_id):
+def get_download_url(request_id, status_base_url, access_token, user_id, api_conn):
     '''Pings to get status of request and then returns the download URL when it has successfully completed'''
 
     status='Pending'
     status_url = status_base_url + str(user_id) + '/requests/' + str(request_id)
-    status_header = {'Authorization': 'Bearer ' +  access_token}
-
-    while status != "Completed Successfully":
+    
+    #try polling same request_id for up to max_tokens hrs
+    token_counter=0
+    max_tokens=8
+    while status != "Completed Successfully" and token_counter < max_tokens:
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
+        status_header = {'Authorization': 'Bearer ' +  access_token}
         query_status = requests.get(status_url, headers = status_header)
         try:
             query_status.raise_for_status()
             status = str(query_status.json()['status'])
-        except (requests.exceptions.HTTPError, KeyError) as err:
+        except requests.exceptions.HTTPError as err:
+            error_desc = query_status.json()['error_description']
+            if error_desc.startswith('Token Validation Failure'):
+                #access token expires after 1 hr, try to generate up to max_tokens times.
+                LOGGER.info('Token expired; refreshing.')
+                access_token = get_access_token(api_conn)
+                token_counter+=1
+            else:
+                LOGGER.error("HTTP error in query status response.")
+                LOGGER.error(query_status.text)
+                raise HereAPIException(err)
+        except KeyError as err:
             error = 'Error in polling status of query request \n'
             error += 'err\n'
             error += 'Response was:\n'
@@ -139,9 +156,12 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
             LOGGER.warning("JSON error in query status response.")
             LOGGER.warning(query_status.text)
             continue
-
-    LOGGER.info('Requested query completed')
     
+    if token_counter==max_tokens:
+        LOGGER.error("Maximum number of token retries used.")
+        raise HereAPIException
+    
+    LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
 @click.group(invoke_without_command=True)
@@ -220,7 +240,7 @@ def pull_here_data(ctx, startdate, enddate):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, startdate, enddate, apis['query_url'], apis['user_id'], apis['user_email'])
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
 

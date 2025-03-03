@@ -7,9 +7,10 @@ CREATE TABLE miovision_api.anomalous_ranges (
     problem_level text NOT NULL,
     range_start timestamp NOT NULL,
     range_end timestamp,
+    leg text,
     CONSTRAINT miovision_qc_pkey PRIMARY KEY (uid),
-    CONSTRAINT miovision_qc_intersection_uid_classification_uid_time_range_key
-    UNIQUE NULLS NOT DISTINCT (intersection_uid, classification_uid, range_start, range_end),
+    CONSTRAINT miovision_qc_int_class_start_end_leg_key
+    UNIQUE NULLS NOT DISTINCT (intersection_uid, classification_uid, range_start, range_end, leg),
     CONSTRAINT miovision_qc_classification_uid_fkey FOREIGN KEY (classification_uid)
     REFERENCES miovision_api.classifications (classification_uid) MATCH SIMPLE
     ON UPDATE NO ACTION
@@ -67,13 +68,17 @@ IS 'Table to store anomalous ranges of Miovision data.
 Values are added to this table both manually by miovision_admins/miovision_data_detectives and
 automatically through a daily Airflow process that runs function miovision_api.identify_zero_counts(date).';
 
-COMMENT ON COLUMN miovision_api.intersection_uid
+COMMENT ON COLUMN miovision_api.anomalous_ranges.intersection_uid
 IS 'NULLs are allowed in the column intersection_uid to denote
-anomalous that affect all intersections.';
+anomalies that affect all intersections.';
 
-COMMENT ON COLUMN miovision_api.classification_uid
+COMMENT ON COLUMN miovision_api.anomalous_ranges.classification_uid
 IS 'NULLs are allowed in the column classification_uid to denote
-anomalous that affect all classifications.';
+anomalies that affect all classifications.';
+
+COMMENT ON COLUMN miovision_api.anomalous_ranges.leg
+IS 'NULLs are allowed in the column leg to denote
+anomalies that affect all legs.';
 
 COMMENT ON COLUMN miovision_api.anomalous_ranges.range_start
 IS 'Start of anomalous range. Inclusive. NULL values represent an unbounded range_start.';

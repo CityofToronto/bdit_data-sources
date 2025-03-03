@@ -4,11 +4,12 @@ import os
 from functools import partial
 
 import pendulum
-from psycopg2 import sql
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
+from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.python import get_current_context
+from airflow.models.param import Param
+
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
@@ -17,112 +18,133 @@ try:
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
-# Credentials - to be passed through PythonOperator
-# bigdata connection credentials
-bigdata_cred = PostgresHook("gcc_bot_bigdata")
-# On-prem server connection credentials
-ptc_cred = PostgresHook("gcc_bot")
-
-DAG_NAME = 'pull_gcc_layers'
-
-DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
-
-DEFAULT_ARGS = {
-    'owner': ','.join(DAG_OWNERS),
-    'depends_on_past': False,
-    'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
-    'email_on_failure': False, 
-    'retries': 0,
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
-}
-
-#-------------------------------------------------------------------------------------------------------
-bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
-              "centreline": [0, 2, 'gis_core', False], # VFH Layers
-              "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
-              "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
-              "intersection": [12, 42, 'gis_core', False],
-              "census_tract": [26, 7, 'gis_core', True],
-              "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
-              "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
-              #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
-              "cycling_infrastructure": [2, 49, 'gis', True], 
-              "traffic_camera": [2, 3, 'gis', True],
-              "permit_parking_area": [2, 11, 'gis', True],
-              "prai_transit_shelter": [2, 35, 'gis', True],
-              "traffic_bylaw_point": [2, 38, 'gis', True],
-              "traffic_bylaw_line": [2, 39, 'gis', True],
-              "loop_detector": [2, 46, 'gis', True],
-              "electrical_vehicle_charging_station": [20, 1, 'gis', True],
-              "day_care_centre": [22, 1, 'gis', True],
-              "middle_childcare_centre": [22, 2, 'gis', True],
-              "business_improvement_area": [23, 1, 'gis', True],
-              "proposed_business_improvement_area": [23, 13, 'gis', True],
-              "film_permit_all": [23, 9, 'gis', True],
-              "film_permit_parking_all": [23, 10, 'gis', True],
-              "hotel": [23, 12, 'gis', True],
-              "convenience_store": [26, 1, 'gis', True],
-              "supermarket": [26, 4, 'gis', True],
-              "place_of_worship": [26, 5, 'gis', True],
-              "ymca": [26, 6, 'gis', True],
-              "aboriginal_organization": [26, 45, 'gis', True],
-              "attraction": [26, 46, 'gis', True],
-              "dropin": [26, 47, 'gis', True],
-              "early_years_centre": [26, 48, 'gis', True],
-              "family_resource_centre": [26, 49, 'gis', True],
-              "food_bank": [26, 50, 'gis', True],
-              "longterm_care": [26, 53, 'gis', True],
-              "parenting_family_literacy": [26, 54, 'gis', True],
-              "retirement_home": [26, 58, 'gis', True],
-              "senior_housing": [26, 59, 'gis', True],
-              "shelter": [26, 61, 'gis', True],
-              "social_housing": [26, 62, 'gis', True],
-              "private_road": [27, 13, 'gis', True],
-              "school": [28, 17, 'gis', True],
-              "library": [28, 28, 'gis', True]
-             }
-
-
-ptc_layers = {"city_ward": [0, 0, 'gis', True],
-                  "centreline": [0, 2, 'gis', False],
-                  "intersection": [12, 42, 'gis', False],
-                  "centreline_intersection_point": [0, 19, 'gis', False],
-                  "ibms_grid": [11, 25, 'gis', True],
-                  "ibms_district": [11, 23, 'gis', True]
-                 }
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
-with DAG(
-    dag_id = DAG_NAME,
-    catchup=False,
-    default_args=DEFAULT_ARGS,
-    schedule='0 7 1 */3 *' #'@quarterly'
-) as gcc_layers_dag:
-    deployment = os.environ.get("DEPLOYMENT", "PROD")
-
-    if deployment == "DEV":
-        for layer, attributes in bigdata_layers.items():
-            pull_bigdata_layer = PythonOperator(
-                task_id = 'bigdata_task_'+ str(layer),
-                python_callable = get_layer,
-                op_args = attributes + [bigdata_cred]
+def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
+    @dag(
+        dag_id=dag_id,
+        default_args=default_args,
+        catchup=False,
+        tags=["bdit_data-sources", "gcc", name, "quarterly"],
+        params={
+            "layer_name": Param(
+                default='',
+                type="string",
+                title="Layer name.",
+                description="Layer name for custom pull. Example: city_ward",
+            ),
+            "is_audited": Param(
+                default=False,
+                type="boolean",
+                title="is_audited",
+                description="Is the layer audited?",
+            ),
+            "layer_id": Param(
+                default=0,
+                type="integer",
+                title="layer_id.",
+                description="layer_id for custom pull. Example: 0",
+            ),
+            "mapserver": Param(
+                default=0,
+                type="integer",
+                title="mapserver",
+                description="mapserver for custom pull. Example: 0",
+            ),"pk": Param(
+                default='',
+                type="string",
+                title="Primary Key.",
+                description="(Optional) primary key for custom pull. Example: area_id",
+                examples=['area_id', 'objectid'],
+            ),
+            "schema_name": Param(
+                default='',
+                type="string",
+                title="schema_name.",
+                description="schema_name for custom pull",
+                examples=['gis', 'gis_core'],
+            )
+        },
+        schedule='0 7 1 */3 *' #'@quarterly'
+    )
+    def gcc_layers_dag():
+        
+        @task()
+        def get_layers(name, **context):
+            layer_name = context["params"]["layer_name"]
+            if layer_name == "":
+                tables = Variable.get('gcc_layers', deserialize_json=True)
+                return tables[name]
+            #if layer_name param was used to trigger, return only the custom layer.
+            layer = dict({
+                'is_audited': context["params"]["is_audited"],
+                'layer_id': context["params"]["layer_id"],
+                'mapserver': context["params"]["mapserver"],
+                'pk': context["params"]["pk"],
+                'schema_name': context["params"]["schema_name"]
+            })
+            return dict({layer_name:layer})
+                
+                    
+        @task(map_index_template="{{ table_name }}")
+        def pull_layer(layer, conn_id):
+            #name mapped task
+            context = get_current_context()
+            context["table_name"] = layer[0]
+            #get db connection
+            conn = PostgresHook(conn_id).get_conn()
+            
+            #pull and insert layer
+            get_layer(
+                mapserver_n = layer[1].get("mapserver"),
+                layer_id = layer[1].get("layer_id"),
+                schema_name = layer[1].get("schema_name"),
+                is_audited = layer[1].get("is_audited"),
+                primary_key = layer[1].get("pk"),
+                con = conn
             )
 
-    for layer, attributes in ptc_layers.items():
-        pull_ptc_layer = PythonOperator(
-            task_id = 'VFH_task_'+ str(layer),
-            python_callable = get_layer,
-            op_args = attributes + [ptc_cred]
+            #refresh mat views as necessary
+            agg_sql = layer[1].get("agg")
+            if agg_sql is not None:
+                with conn.cursor() as cur:
+                    cur.execute(agg_sql)
+
+        layers = get_layers(name)
+        pull_layer.partial(conn_id = conn_id).expand(layer = layers)
+
+    generated_dag = gcc_layers_dag()
+
+    return generated_dag
+
+#get puller details from airflow variable
+DAGS = Variable.get('gcc_dags', deserialize_json=True)
+
+#identify the appropriate pullers based on deployment
+dep = os.environ.get("DEPLOYMENT", "PROD")
+filtered_dags = [
+    key for key, facts in DAGS.items() if dep in facts['deployments']
+]
+
+for item in filtered_dags:
+    DAG_NAME = 'gcc_pull_layers'
+    DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+
+    DEFAULT_ARGS = {
+        'owner': ','.join(DAG_OWNERS),
+        'depends_on_past': False,
+        'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
+        'email_on_failure': False, 
+        'retries': 0,
+        'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
+    }
+
+    dag_name = f"{DAG_NAME}_{item}"
+    globals()[dag_name] = (
+        create_gcc_puller_dag(
+            dag_id=dag_name,
+            default_args=DEFAULT_ARGS,
+            name=item,
+            conn_id=DAGS[item]['conn'],
         )
-
-        if layer in ['centreline', 'intersection']:
-            sql_refresh_mat_view = sql.SQL("SELECT {function_name}()").format(
-                function_name=sql.Identifier('gis', f'refresh_mat_view_{layer}_version_date')
-            )
-            refresh_mat_view = PythonOperator(
-                python_callable=lambda:ptc_cred.get_conn().cursor().execute(sql_refresh_mat_view),
-                task_id=f'refresh_{layer}_version_date',
-                retries = 0
-            )
-
-            pull_ptc_layer >> refresh_mat_view
+    )

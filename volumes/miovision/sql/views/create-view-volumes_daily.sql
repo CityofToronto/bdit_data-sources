@@ -24,6 +24,8 @@ CREATE VIEW miovision_api.volumes_daily AS (
             ar.classification_uid = v.classification_uid
             OR ar.classification_uid IS NULL
         )
+        --omitting join to ar.leg implies that a single leg outage is
+        --sufficient to exclude entire intersection.
         AND v.dt >= ar.range_start
         AND (
             v.dt < ar.range_end

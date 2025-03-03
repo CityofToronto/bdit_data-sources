@@ -1,12 +1,10 @@
 # GCCVIEW pipeline
   * [Overview](#overview)
   * [Where the layers are pulled](#where-the-layers-are-pulled)
-  * [How the script works](#how-the-script-works)
+  * [Data Pipeline](#data-pipeline)
   * [Adding new layers to GCC Puller DAG](#adding-new-layers-to-gcc-puller-dag)
-  * [Manually fetch layers - Using Jupyter Notebook](#manually-fetch-layers---using-jupyter-notebook)
-  * [Manually fetch layers - Using Click in command prompt](#manually-fetch-layers---using-click-in-command-prompt)
-
-
+  * [Manually fetch layers](#manually-fetch-layers)
+  * [Manually fetch layers using Airflow DAG](#manually-fetch-layers-using-airflow-dag)
 
 ## Overview
 
@@ -79,47 +77,93 @@ The GCC pipeline will be pulling multiple layers into the `gis_core` and `gis` s
 |private_road|27|13|
 |school|28|17|
 |library|28|28|
+|pavement_asset|2|36|
 
-## How the script works
+## Data Pipeline
 
-The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in five parameters. Here is a list that describes what each parameter means:
+The pipeline consists of two files, `gcc_puller_functions.py` for the functions and `/dags/gcc_layers_pull.py` for the Airflow DAG. The main function that fetches the layers is called `get_layer` and it takes in eight parameters. Here is a list that describes what each parameter means:
 
 - mapserver_n (int): ID of the mapserver that host the desired layer
 - layer_id (int): ID of the layer within the particular mapserver
 - schema_name (string): name of destination schema
-- is_audited (Boolean): True if the layer will be in a table that is audited, False if the layer will be inserted as a child table part of a parent table
+- is_audited (Boolean): True if the layer will be in a table that is audited, False if the layer will be non-audited
 - cred (Airflow PostgresHook): the Airflow PostgresHook that directs to credentials to enable a connection to a particular database
+- con (used when manually pull): the path to the credential config file. Default is ~/db.cfg
+- primary_key (used when pulling an audited table): primary key for this layer, returned from dictionary pk_dict when pulling for the Airflow DAG, set it manually when pulling a layer yourself.
+- is_partitioned (Boolean): True if the layer will be inserted as a child table part of a parent table, False if the layer will be neither audited nor partitioned.
 
-In the DAG file, the arguments for each layer are stored in dictionaries called "bigdata_layers" and "ptc_layers", in the order above. The DAG will be executed once every 3 months, particularly on the 15th of every March, June, September, and December every year.
+In the DAG file, the arguments for each layer are stored in dictionaries called "bigdata_layers" and "ptc_layers", in the order above. The DAG will be executed once every 3 months, particularly on the 15th of every March, June, September, and December every year. The DAG will pull either audited table or partitioned table since the "is_partitioned" argument is not stored in dictionaries and are set to default value True.
 
 ## Adding new layers to GCC Puller DAG
 1. Identify the mapserver_n and layer_id for the layer you wish to add. You can find COT transportation layers here: https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial2/FeatureServer, where mapserver_n is 2 and the layer_id is in brackets after the layer name.
-2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in [gcc_layers_pull.py](/dags/gcc_layers_pull.py) depending on the destination database. 
-3. If is_audited = True, you must also add a primary key for the new layer to "pk_dict" in [gcc_puller_functions.py](gcc_puller_functions.py).
+2. Add a new entry to "bigdata_layers" or "ptc_layers" dictionaries in airflow's variable depending on the destination database. 
+3. If is_audited = True, you must also add a primary key for the new layer to "gcc_layers" in the corresponding airflow variable.
 
-## Manually fetch layers - Using Jupyter Notebook
+## Manually fetch layers
 
-One option is to use [this notebook](./gcc_puller.ipynb) on Morbius server environment to fetch layer from gccview rest api and send it to postgresql in the schema you want.
+If you need to pull a layer as a one-off task, `gcc_puller_functions.py` allows you to pull any layer from the GCC Rest API. Please note that the script must be run locally or on a on-prem server as it needs connection to insideto.
 
-To use the Jupyter notebook:
-1. Know the name of the layer you want to fetch. 
-2. Look for the mapserver that host the layer, and the layer id using the tables above.
-3. Determine the schema of where you want the downloaded table to be.
-4. Enter the .cfg file path at the 'Config' code block.
-5. Enter the variables using the pre-existing template code block provided at the end of the notebook file.
-6. Execute the code blocks from top to bottom.
-7. Open pgAdmin, go to the specified schema and check if the layer's information had been pulled correctly.
+Before running the script, ensure that you have set up the appropriate environment with all necessary packages installed. You might have to set the `https_proxy` in your environment with your novell username and password in order to clone this repo or install packages. If you run into any issues, don't hestitate to ask a sysadmin. You can then install all packages in the `requirement.txt`, either with:
+1) Activate your virtual environment, it should automatically install them for you
 
-Note that if you want to pull a partitioned child table into your personal schema, you need to set up the parent table first. Refer to the .sql files in `/gis/gccview/sql`.
+    Pipenv:
 
-## Manually fetch layers - Using Click in command prompt
+    `pipenv shell`
 
-The second option is to execute `gcc_puller_functions.py` in command prompt (or venv in Morbius or other servers).
+    `pipenv install`
 
-There are 5 inputs that need to be entered, which are very similar to the ones listed above for function `get_layer`. The only difference is that the last parameter now needs to be a string that contains the path to your .cfg file.
+    Venv: 
 
-Run the following line to see the details of how to enter each parameter with Click.
+    `source .venv/bin/activate`
 
-```python3 {FULL_PATH_TO_gcc_puller_functions.py} --help```
+    `python3 -m pip install -r requirements.txt`  
+2) Install packages with pip if you are not using a virtual environment (you should) 
+  
+    `pip install -r requirements.txt`
 
-Note that if the script doesn't work, one reason might be because your credentials don't have access to the GCC API.
+
+Now you are set to run the script!
+
+There are 7 inputs that can be entered.
+
+`--mapserver`: Mapserver number, e.g. cotgeospatial_2 will be 2
+
+`--layer-id`: Layer id
+
+`--schema-name`: Name of destination schema
+
+`--con`(optional): The path to the credential config file. Default is ~/db.cfg
+
+`--is_audited`: Whether table will be audited or not, specify the option on the command line will set this option to True; while not specifying will give the default False.
+
+`primary_key`(required when pulling an audited table): Primary key for the layer
+
+`is_partitioned`: Whether table will be a child table of a parent table or with no feature, specify the option on the command line will set this option to True; while not specifying will give the default False.
+
+Example of pulling the library layer (table with no feature) to the gis schema.
+
+
+```python
+python3 bdit_data-sources/gis/gccview/gcc_puller_functions.py --mapserver 28 --layer-id 28 --schema-name gis --con db.cfg
+```
+
+Example of pulling the intersection layer (partitioned) to the gis_core schema.
+
+
+```python
+python3 bdit_data-sources/gis/gccview/gcc_puller_functions.py --mapserver 12 --layer-id 42 --schema-name gis_core --con db.cfg --is-partitioned
+```
+
+Example of pulling the city_ward layer (partitioned) to the gis_core schema.
+
+
+```python
+python3 bdit_data-sources/gis/gccview/gcc_puller_functions.py --mapserver 0 --layer-id 0 --schema-name gis_core --con db.cfg --is-audited --primary-key area_id
+```
+
+## Manually fetch layers using Airflow DAG
+
+You can also manually fetch layers using the Airflow DAG with custom parameters. Simply press `Trigger DAG w/ config` and input the layer details.
+
+![alt text](img/trigger.png)  
+![alt text](img/airflow_params.png)

@@ -1,5 +1,5 @@
 
-# *The RESCU schema is now deprecated. Please refer to [`vds` schema](../vds/readme.md).*
+# *The RESCU schema is now deprecated. Please refer to [`vds` schema](../vds/readme.md).* <!-- omit in toc -->
 - Use `vds.counts_15min` instead of `rescu.volumes_15min`
 - Identify RESCU sensors in the new schema using `vds.detector_inventory WHERE det_type = 'RESCU Detectors'`
 

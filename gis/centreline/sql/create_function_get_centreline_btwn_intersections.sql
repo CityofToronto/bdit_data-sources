@@ -8,29 +8,43 @@ CREATE OR REPLACE FUNCTION gis_core.get_centreline_btwn_intersections(
 )
 
 RETURNS record
-LANGUAGE 'sql'
+LANGUAGE sql
 COST 100
 STABLE STRICT PARALLEL UNSAFE
 AS $BODY$
     
-WITH results as (
-    SELECT * 
-    FROM pgr_dijkstra('SELECT id, source::int, target::int, cost::int 
-                      as cost from gis_core.routing_centreline_directional', _node_start, _node_end)
+WITH results AS (
+    SELECT *
+    FROM pgr_dijkstra('
+        SELECT
+            id,
+            source::int,
+            target::int,
+            cost_length::int AS cost
+        FROM gis_core.routing_centreline_directional',
+        _node_start,
+        _node_end
+    )
 )
 
-SELECT _node_start, _node_end, array_agg(centreline_id), ST_union(ST_linemerge(geom)) as geom 
-from results
-inner join gis_core.routing_centreline_directional on edge=id
+SELECT
+    get_centreline_btwn_intersections._node_start,
+    get_centreline_btwn_intersections._node_end,
+    array_agg(routing_centreline_directional.centreline_id ORDER BY path_seq),
+    st_union(st_linemerge(routing_centreline_directional.geom) ORDER BY path_seq) AS geom 
+FROM results
+INNER JOIN gis_core.routing_centreline_directional ON edge = id
 
 $BODY$;
 
 ALTER FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) OWNER TO gis_admins;
 
-COMMENT ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer)
-IS 'Routing function for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';
+COMMENT ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) IS
+'Routing function for centreline, takes in start intersection_id and end intersection_id and '
+'returns an array of centreline_id, as well as one line geometry between two intersections.';
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer)
+TO bdit_humans;
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer) TO gis_admins;
-
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections(integer, integer)
+TO gis_admins;
