@@ -8,7 +8,7 @@ import logging
 from typing import Optional, Callable, Any, Union
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+from airflow.providers.slack.notifications.slack_webhook import SlackWebhookNotifier
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from psycopg2 import sql, Error
@@ -77,7 +77,7 @@ def task_fail_slack_alert(
             of the file).
     
     Returns:
-        Any: The result of executing the SlackWebhookOperator.
+        Any: The result of executing the SlackWebhookNotifier.
     """
     if dev_mode or (dev_mode is None and not is_prod_mode()):
         SLACK_CONN_ID = "slack_data_pipeline_dev"
@@ -139,11 +139,9 @@ def task_fail_slack_alert(
     if extra_msg_str != "":
         slack_msg = slack_msg + extra_msg_str
 
-    failed_alert = SlackWebhookOperator(
-        task_id="slack_test",
+    failed_alert = SlackWebhookNotifier(
         slack_webhook_conn_id=SLACK_CONN_ID,
-        message=slack_msg,
-        username="airflow",
+        text=slack_msg,
         proxy=proxy,
     )
     return failed_alert.execute(context=context)
@@ -205,11 +203,9 @@ def send_slack_msg(
     else:
         proxy = None
 
-    slack_alert = SlackWebhookOperator(
-        task_id="slack_test",
+    slack_alert = SlackWebhookNotifier(
         slack_webhook_conn_id=SLACK_CONN_ID,
-        message=msg,
-        username="airflow",
+        text=msg,
         attachments=attachments,
         blocks=blocks,
         proxy=proxy,
