@@ -4,8 +4,8 @@
 
 CREATE TABLE IF NOT EXISTS gwolofs.congestion_corridors
 (
-    link_dirs text[] COLLATE pg_catalog."default",
-    lengths numeric[],
+    link_dirs text [] COLLATE pg_catalog."default",
+    lengths numeric [],
     geom geometry,
     total_length numeric,
     corridor_id smallint NOT NULL DEFAULT nextval('congestion_corridors_uid_seq'::regclass),
@@ -25,3 +25,6 @@ REVOKE ALL ON TABLE gwolofs.congestion_corridors FROM bdit_humans;
 GRANT SELECT ON TABLE gwolofs.congestion_corridors TO bdit_humans;
 
 GRANT ALL ON TABLE gwolofs.congestion_corridors TO gwolofs;
+
+COMMENT ON TABLE gwolofs.congestion_corridors IS
+'Stores cached travel time corridors to reduce routing time.';

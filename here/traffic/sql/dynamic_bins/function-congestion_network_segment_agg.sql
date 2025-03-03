@@ -3,11 +3,12 @@
 -- DROP FUNCTION IF EXISTS gwolofs.congestion_network_segment_agg(date);
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_network_segment_agg(
-    start_date date)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+    start_date date
+)
+RETURNS void
+LANGUAGE plpgsql
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE
