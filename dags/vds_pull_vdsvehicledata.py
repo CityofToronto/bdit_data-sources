@@ -3,7 +3,7 @@ import sys
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
@@ -17,7 +17,7 @@ sys.path.insert(0, repo_path)
 from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
-from dags.common_tasks import check_jan_1st
+from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -44,7 +44,7 @@ default_args = {
         os.path.join(repo_path,'dags/sql')
     ],
     doc_md=DOC_MD,
-    tags=['vds', 'vdsvehicledata', 'data_checks', 'pull'],
+    tags=["bdit_data-sources", 'vds', 'vdsvehicledata', 'data_checks', 'data_pull'],
     schedule='5 4 * * *' #daily at 4:05am
 )
 def vdsvehicledata_dag():
@@ -63,28 +63,29 @@ def vdsvehicledata_dag():
     @task_group(group_id='check_partitions')
     def check_partitions_TG():
 
-        create_partitions = PostgresOperator(
+        create_partitions = SQLExecuteQueryOperator(
             task_id='create_partitions',
+            pre_execute=check_jan_1st,
             sql="SELECT vds.partition_vds_yyyymm('raw_vdsvehicledata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True
         )
         
         #check if Jan 1, if so trigger partition creates.
-        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
+        create_partitions
 
     #this task group deletes any existing data from `vds.raw_vdsvehicledata` and then pulls and inserts from ITSC into RDS
     @task_group
     def pull_vdsvehicledata():
 
         #deletes data from vds.raw_vdsvehicledata
-        delete_vdsvehicledata_task = PostgresOperator(
+        delete_vdsvehicledata_task = SQLExecuteQueryOperator(
             sql="""DELETE FROM vds.raw_vdsvehicledata
                     WHERE
                     dt >= '{{ds}} 00:00:00'::timestamp
                     AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsvehicledata',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1,
             trigger_rule='none_failed'
@@ -106,19 +107,19 @@ def vdsvehicledata_dag():
         (5km/h speed bins), `vds.veh_length_15min` (1m length bins)"""
 
         #deletes from and then inserts new data into summary table vds.aggregate_15min_veh_speeds
-        summarize_speeds_task = PostgresOperator(
+        summarize_speeds_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_speeds_15min.sql", "insert/insert_veh_speeds_15min.sql"],
             task_id='summarize_speeds',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
         #deletes from and then insert new data into summary table vds.veh_length_15min
-        summarize_lengths_task = PostgresOperator(
+        summarize_lengths_task = SQLExecuteQueryOperator(
             sql=["delete/delete-veh_length_15min.sql", "insert/insert_veh_lengths_15min.sql"],
             task_id='summarize_lengths',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
@@ -141,7 +142,7 @@ def vdsvehicledata_dag():
                     "threshold": 0.7},
             retries=2
         )
-        check_avg_rows
+        wait_for_weather_timesensor() >> check_avg_rows
 
     [t_upstream_done, check_partitions_TG()] >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
 

@@ -8,10 +8,10 @@ import sys
 import pendulum
 from airflow import DAG
 from datetime import timedelta
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
-from airflow.operators.latest_only_operator import LatestOnlyOperator
+from airflow.operators.latest_only import LatestOnlyOperator
 
 # DAG Information
 dag_name = 'pull_weather'
@@ -40,6 +40,7 @@ default_args = {
     'owner': 'Natalie',
     'depends_on_past':False,
     'start_date': pendulum.datetime(2022, 11, 8, tz="America/Toronto"),
+    'end_date': pendulum.datetime(2024, 6, 3, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -50,7 +51,8 @@ default_args = {
 dag = DAG(
     dag_id = dag_name, 
     default_args=default_args, 
-    schedule='30 10 * * *', 
+    schedule='30 10 * * *',
+    tags=['weather', 'data_pull'],
     catchup=False)
 
 #=======================================#

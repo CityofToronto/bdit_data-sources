@@ -15,7 +15,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [Bluetooth Detectors](#bluetooth-detectors)
 - [Collisions](#collisions)
 - [Cycling App (inactive)](#cycling-app-inactive)
-- [Events (inactive)](#events-inactive)
+- [Events](#events)
 - [GIS - Geographic Data](#gis---geographic-data)
   - [Assets](#assets)
     - [Red Light Cameras](#red-light-cameras)
@@ -26,13 +26,12 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [Incidents (inactive)](#incidents-inactive)
 - [INRIX (inactive)](#inrix-inactive)
 - [Parking (inactive)](#parking-inactive)
-- [Road Closure (inactive)](#road-closure-inactive)
 - [TTC (inactive)](#ttc-inactive)
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
   - [RESCU - Loop Detectors (inactive)](#rescu---loop-detectors-inactive)
-  - [Short-term Counting Program](#short-term-counting-program)  
-  - [VDS](#vehicle-detector-station-vds)  
+  - [Short-term Counting Program](#short-term-counting-program)
+  - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
 - [Watch Your Speed signs](#watch-your-speed-signs)
 - [Weather](#weather)
 - [Open Data Releases](#open-data-releases)
@@ -60,11 +59,13 @@ The collisions dataset consists of data on individuals involved in traffic colli
 
 The Cycling App collected OD and trip data until 2016.
 
-## Events (inactive)
+## Events
 
 [`events/`](events/)
 
-How do special events impact traffic in the city? Data sources include the City's Open Data and TicketMaster.
+How does construction and special events impact traffic in the city?
+- City road permitting data (RoDARs)
+- (oudated) Special events from City's Open Data and TicketMaster
 
 ## GIS - Geographic Data
 
@@ -116,11 +117,6 @@ Data collected from a variety of traffic probes from 2007 to 2016 for major stre
 [`parking/`](parking/)
 
 This contains R and SQL files for pulling parking lots and parking tickets from Open Data. They might be useful but haven't been documented or automated.
-
-## Road Closure (inactive)
-[`road_closure/`](road_closure/)
-
-This directory contains a Python file to pull and parse the XML feed of road closures. This process hasn't been automated (and more recent versions of the API use JSON).
 
 ## TTC (inactive)
 [`ttc/`](ttc/) 

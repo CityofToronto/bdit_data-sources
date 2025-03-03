@@ -1,31 +1,38 @@
-# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.7.0/constraints-3.10.txt
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-no-providers-3.10.txt
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.8.4
+apache-airflow==2.10.2
 
 # Airflow service providers
-apache-airflow-providers-celery==3.6.1
-apache-airflow-providers-google==10.16.0
-apache-airflow-providers-postgres==5.10.2
-apache-airflow-providers-slack==8.6.1
+apache-airflow-providers-celery
+apache-airflow-providers-google
+apache-airflow-providers-postgres
+apache-airflow-providers-slack
+apache-airflow-providers-ftp
+apache-airflow-providers-http
 
 # Airflow dag list
-graphviz==0.20.2
+graphviz
 
 # Python dependency management
-pip-tools==7.3.0
+pip-tools==7.4.1
 
 # pipelines
 bs4==0.0.1
 env-canada==0.6.1
-geopandas==0.13.2
+geopandas==1.0.1
 holidays==0.31
+requests-oauthlib
 
 # development
-ipython==8.22.2
-ipykernel==6.29.3
+ipython
+ipykernel
 
 # linters
 pydocstyle==6.3.0
 pylint==2.17.5
+
+# testing
+pytest
+pytest-mock
