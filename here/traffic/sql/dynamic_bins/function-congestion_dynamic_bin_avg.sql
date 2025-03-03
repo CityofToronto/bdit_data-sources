@@ -1,20 +1,21 @@
--- FUNCTION: gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+-- FUNCTION: gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_dynamic_bin_avg(
     start_date date,
     end_date date,
     start_tod time without time zone,
     end_tod time without time zone,
-    dow_list integer[],
+    dow_list integer [],
     node_start bigint,
     node_end bigint,
-    holidays boolean)
-    RETURNS numeric
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+    holidays boolean
+)
+RETURNS numeric
+LANGUAGE plpgsql
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE uri_string_func text :=
@@ -30,6 +31,7 @@ DECLARE uri_string_func text :=
 
 BEGIN
 
+--caches the dynamic binning results for this query
 PERFORM gwolofs.congestion_cache_tt_results(
     uri_string := uri_string_func,
     start_date := congestion_dynamic_bin_avg.start_date,
@@ -42,6 +44,7 @@ PERFORM gwolofs.congestion_cache_tt_results(
     holidays := congestion_dynamic_bin_avg.holidays
 );
 
+--the way we currently do it; find daily averages and then average.
 WITH daily_means AS (
     SELECT
         dt_start::date,
@@ -60,7 +63,11 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_dynamic_bin_avg(date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
-    OWNER TO gwolofs;
+ALTER FUNCTION gwolofs.congestion_dynamic_bin_avg(
+    date, date, time without time zone, time without time zone, integer [], bigint, bigint, boolean
+)
+OWNER TO gwolofs;
 
-COMMENT ON FUNCTION gwolofs.congestion_dynamic_bin_avg IS 'Previously gwolofs.congestion_dynamic_bin_avg.';
+COMMENT ON FUNCTION gwolofs.congestion_dynamic_bin_avg IS
+'Meant to mimic the TT app process; caches results for a specific request and 
+then returns average TT.';
