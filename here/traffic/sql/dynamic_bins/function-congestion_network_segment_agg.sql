@@ -174,4 +174,5 @@ ALTER FUNCTION gwolofs.congestion_network_segment_agg(date)
 OWNER TO gwolofs;
 
 COMMENT ON FUNCTION gwolofs.congestion_network_segment_agg(date)
-IS 'Dynamic bin aggregation of the congestion network by hour and time periods.';
+IS 'Dynamic bin aggregation of the congestion network by hour and time periods. 
+Takes around 10 minutes to run for one day (hourly and period based aggregation)';
