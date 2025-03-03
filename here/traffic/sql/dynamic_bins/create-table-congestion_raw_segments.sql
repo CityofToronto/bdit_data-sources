@@ -28,21 +28,23 @@ REVOKE ALL ON TABLE gwolofs.congestion_raw_segments FROM bdit_humans;
 GRANT SELECT ON TABLE gwolofs.congestion_raw_segments TO bdit_humans;
 
 GRANT ALL ON TABLE gwolofs.congestion_raw_segments TO gwolofs;
--- Index: dynamic_bin_hr_idx
 
--- DROP INDEX IF EXISTS gwolofs.dynamic_bin_hr_idx;
+-- Index: congestion_raw_segments_dt_idx
 
-CREATE INDEX IF NOT EXISTS dynamic_bin_dt_idx
-    ON gwolofs.congestion_raw_segments USING btree
-    (dt ASC NULLS LAST)
-    WITH (deduplicate_items=True)
-    TABLESPACE pg_default;
--- Index: dynamic_bin_idx
+-- DROP INDEX IF EXISTS gwolofs.congestion_raw_segments_dt_idx;
 
--- DROP INDEX IF EXISTS gwolofs.dynamic_bin_idx;
+CREATE INDEX IF NOT EXISTS congestion_raw_segments_dt_idx
+ON gwolofs.congestion_raw_segments USING brin
+(dt)
+TABLESPACE pg_default;
+-- Index: congestion_raw_segments_segment_dt_idx
 
-CREATE INDEX IF NOT EXISTS dynamic_bin_idx
-    ON gwolofs.congestion_raw_segments USING btree
-    (segment_id ASC NULLS LAST, dt ASC NULLS LAST)
-    WITH (deduplicate_items=True)
-    TABLESPACE pg_default;
+-- DROP INDEX IF EXISTS gwolofs.congestion_raw_segments_segment_dt_idx;
+
+CREATE INDEX IF NOT EXISTS congestion_raw_segments_segment_dt_idx
+ON gwolofs.congestion_raw_segments USING btree
+(segment_id ASC NULLS LAST, dt ASC NULLS LAST)
+TABLESPACE pg_default;
+
+COMMENT ON TABLE gwolofs.congestion_raw_corridors IS
+'Stores dynamic binning results from standard HERE congestion network travel time aggregations.';

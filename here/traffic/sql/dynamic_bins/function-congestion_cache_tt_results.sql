@@ -1,6 +1,6 @@
--- FUNCTION: gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean)
+-- FUNCTION: gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean);
+-- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results(
     uri_string text,
@@ -8,21 +8,25 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results(
     end_date date,
     start_tod time without time zone,
     end_tod time without time zone,
-    dow_list integer[],
+    dow_list integer [],
     node_start bigint,
     node_end bigint,
-    holidays boolean)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+    holidays boolean
+)
+RETURNS void
+LANGUAGE plpgsql
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE map_version text;
 
 BEGIN
 
-SELECT gwolofs.congestion_select_map_version(congestion_cache_tt_results.start_date, congestion_cache_tt_results.end_date) INTO map_version;
+SELECT gwolofs.congestion_select_map_version(
+    congestion_cache_tt_results.start_date,
+    congestion_cache_tt_results.end_date
+) INTO map_version;
 
 EXECUTE format(
     $$
@@ -52,20 +56,20 @@ EXECUTE format(
             SUM(seg.length) AS length_w_data,
             SUM(seg.length / ta.mean * 3.6) AS unadjusted_tt,
             SUM(sample_size) AS num_obs,
-            ARRAY_AGG(ta.link_dir ORDER BY link_dir) AS link_dirs,
-            ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
-            ARRAY_AGG(seg.length ORDER BY link_dir) AS lengths
+            ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
+            ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY ta.link_dir) AS tts,
+            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
         FROM here.ta_path AS ta
         JOIN segment AS seg USING (link_dir)
         WHERE
             (
-                tod >= %L
+                ta.tod >= %L
                 AND --{ToD_and_or}
-                tod < %L
+                ta.tod < %L
             )
-            AND date_part('isodow', dt) = ANY(%L::int[])
-            AND dt >= %L
-            AND dt < %L
+            AND date_part('isodow', ta.dt) = ANY(%L::int[])
+            AND ta.dt >= %L
+            AND ta.dt < %L
             /*--{holiday_clause}
             AND NOT EXISTS (
                 SELECT 1 FROM ref.holiday WHERE ta.dt = holiday.dt
@@ -74,7 +78,7 @@ EXECUTE format(
             ta.tx,
             ta.dt,
             seg.total_length,
-            corridor_id
+            seg.corridor_id
        WINDOW w AS (
             PARTITION BY seg.corridor_id, ta.dt
             ORDER BY ta.tx
@@ -190,6 +194,9 @@ $BODY$;
 
 ALTER FUNCTION gwolofs.congestion_cache_tt_results(
     text, date, date, time without time zone,
-    time without time zone, integer[], bigint, bigint, boolean
+    time without time zone, integer [], bigint, bigint, boolean
 )
 OWNER TO gwolofs;
+
+COMMENT ON FUNCTION gwolofs.congestion_cache_tt_results IS
+'Caches the dynamic binning results for a request.';
