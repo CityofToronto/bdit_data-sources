@@ -3,7 +3,7 @@ import sys
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
 from functools import partial
 from airflow.sensors.external_task import ExternalTaskMarker
@@ -19,7 +19,7 @@ from volumes.vds.py.vds_functions import (
 )
 from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
-from dags.common_tasks import check_jan_1st
+from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -30,7 +30,7 @@ default_args = {
     'start_date': datetime(2021, 11, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 5,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
     'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
@@ -46,7 +46,7 @@ default_args = {
         os.path.join(repo_path,'dags/sql')
     ],
     doc_md=DOC_MD,
-    tags=['vds', 'vdsdata', 'data_checks', 'pull', 'detector_inventory'],
+    tags=["bdit_data-sources", 'vds', 'vdsdata', 'data_checks', 'data_pull', 'detector_inventory'],
     schedule='0 4 * * *' #daily at 4am
 )
 def vdsdata_dag():
@@ -94,20 +94,21 @@ def vdsdata_dag():
         """Task group checks if all necessary partitions exist and
         if not executes create functions."""
 
-        create_partitions = PostgresOperator(
+        create_partitions = SQLExecuteQueryOperator(
             task_id='create_partitions',
+            pre_execute=check_jan_1st,
             sql=[#partition by year and month:
                 "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div8001'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
                 "SELECT vds.partition_vds_yyyymm('raw_vdsdata_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt'::text)",
                 #partition by year only: 
                 "SELECT vds.partition_vds_yyyy('counts_15min_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
                 "SELECT vds.partition_vds_yyyy('counts_15min_bylane_div2'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True
         )
 
         #check if Jan 1, if so trigger partition creates.
-        check_jan_1st.override(task_id="check_partitions")() >> create_partitions
+        create_partitions
 
     @task_group
     def pull_vdsdata():
@@ -115,13 +116,13 @@ def vdsdata_dag():
         and then pulls and inserts from ITSC."""
 
         #deletes data from vds.raw_vdsdata
-        delete_raw_vdsdata_task = PostgresOperator(
+        delete_raw_vdsdata_task = SQLExecuteQueryOperator(
             sql="""DELETE FROM vds.raw_vdsdata
                     WHERE
                     dt >= '{{ds}} 00:00:00'::timestamp
                     AND dt < '{{ds}} 00:00:00'::timestamp + INTERVAL '1 DAY'""",
             task_id='delete_vdsdata',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1,
             trigger_rule='none_failed'
@@ -144,25 +145,30 @@ def vdsdata_dag():
         into the same table."""
         
         #first deletes and then inserts summarized data into RDS `vds.counts_15min`
-        summarize_v15_task = PostgresOperator(
+        summarize_v15_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min.sql", "insert/insert_counts_15min.sql"],
             task_id='summarize_v15',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
         #first deletes and then inserts summarized data into RDS `vds.counts_15min_bylane`
-        summarize_v15_bylane_task = PostgresOperator(
+        summarize_v15_bylane_task = SQLExecuteQueryOperator(
             sql=["delete/delete-counts_15min_bylane.sql", "insert/insert_counts_15min_bylane.sql"],
             task_id='summarize_v15_bylane',
-            postgres_conn_id='vds_bot',
+            conn_id='vds_bot',
             autocommit=True,
             retries=1
         )
 
-        summarize_v15_task
-        summarize_v15_bylane_task
+        summarize_v15_task, summarize_v15_bylane_task
+    
+    t_done = ExternalTaskMarker(
+        task_id="done",
+        external_dag_id="vds_check",
+        external_task_id="starting_point"
+    )
 
     @task_group
     def data_checks():
@@ -179,10 +185,18 @@ def vdsdata_dag():
                         "dt_col": 'datetime_15min',
                         "col_to_sum": 'num_obs',
                         "threshold": 0.7},
-                retries=2,
+                retries=0,
             )
-            check_avg_rows
+            wait_for_weather_timesensor() >> check_avg_rows
 
-    [update_inventories(), check_partitions()] >> pull_vdsdata() >> summarize_v15() >> data_checks()
+    [
+        [
+            update_inventories(),
+            check_partitions()
+        ] >>
+        pull_vdsdata() >>
+        summarize_v15() >> t_done >>
+        data_checks()
+    ]
 
 vdsdata_dag()

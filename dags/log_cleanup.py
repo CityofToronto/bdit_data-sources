@@ -16,7 +16,7 @@ AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'tasks')
 AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
-from airflow.operators.bash_operator import BashOperator
+from airflow.operators.bash import BashOperator
 from airflow.models import Variable 
 
 dag_name = 'log_cleanup'
@@ -62,6 +62,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       # Prevent the same DAG from running concurrently more than once.
       max_active_runs=1,
       schedule=schedule_interval,
+      tags=['bdit_data-sources', 'maintenance'],
       # This allows us to simplify `create_bash_task` below.
       template_searchpath=AIRFLOW_TASKS
     )
@@ -99,10 +100,10 @@ echo "Running Cleanup Process..."
 if [ $TYPE == file ];
 then
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type f -mtime +${MAX_LOG_AGE_IN_DAYS}"
-    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \\;"
 else
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type d -empty"
-    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \\;"
 fi
 echo "Executing Find Statement: ${FIND_STATEMENT}"
 FILES_MARKED_FOR_DELETE=`eval ${FIND_STATEMENT}`

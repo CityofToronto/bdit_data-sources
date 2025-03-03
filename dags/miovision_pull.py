@@ -8,13 +8,11 @@ import sys
 import os
 import pendulum
 from datetime import timedelta
-import configparser
-import dateutil.parser
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
@@ -24,12 +22,12 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_jan_1st, check_1st_of_month
+    from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
-        pull_data, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+        run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
     )
-    from volumes.miovision.api.pull_alert import pull_alerts
+    from volumes.miovision.api.pull_alert import run_alerts_api
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -75,26 +73,26 @@ def pull_miovision_dag():
     @task_group(tooltip="Tasks to check if necessary to create new partitions and if so, exexcute.")
     def check_partitions():
 
-        create_annual_partition = PostgresOperator(
+        create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
+            pre_execute=check_jan_1st,
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
                  "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
-            postgres_conn_id='miovision_api_bot',
+            conn_id='miovision_api_bot',
             autocommit=True
         )
       
-        create_month_partition = PostgresOperator(
+        create_month_partition = SQLExecuteQueryOperator(
             task_id='create_month_partition',
+            pre_execute=check_1st_of_month,
             sql="""SELECT miovision_api.create_mm_nested_volumes_partitions('volumes'::text, '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, '{{ macros.ds_format(ds, '%Y-%m-%d', '%m') }}'::int)""",
-            postgres_conn_id='miovision_api_bot',
+            conn_id='miovision_api_bot',
             autocommit=True,
-            trigger_rule='none_failed_min_one_success'
+            trigger_rule='none_failed'
         )
 
-        check_jan_1st.override(task_id="check_annual_partition")() >> create_annual_partition >> (
-            check_1st_of_month.override(task_id="check_month_partition")() >> create_month_partition
-        )
+        create_annual_partition >> create_month_partition
 
     @task(trigger_rule='none_failed', retries = 1)
     def pull_miovision(ds = None, **context):
@@ -103,29 +101,20 @@ def pull_miovision_dag():
         else:
             INTERSECTION = tuple(context["params"]["intersection"])
         
-        CONFIG = configparser.ConfigParser()
-        CONFIG.read(API_CONFIG_PATH)
-        api_key=CONFIG['API']
-        key=api_key['key']
-        start_time = dateutil.parser.parse(str(ds))
-        end_time = dateutil.parser.parse(str(ds_add(ds, 1)))
-        mio_postgres = PostgresHook("miovision_api_bot")
+        run_api(
+            start_date=ds,
+            end_date=ds_add(ds, 1),
+            intersection=INTERSECTION,
+            pull=True,
+            agg=False
+        )
 
-        with mio_postgres.get_conn() as conn:
-            pull_data(conn, start_time, end_time, INTERSECTION, key)
-
-    @task(task_id = 'pull_alerts', trigger_rule='none_failed', retries = 1)
-    def pull_alerts_task(ds):       
-        CONFIG = configparser.ConfigParser()
-        CONFIG.read(API_CONFIG_PATH)
-        api_key=CONFIG['API']
-        key=api_key['key']
-        start_date = dateutil.parser.parse(str(ds))
-        end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
-        mio_postgres = PostgresHook("miovision_api_bot")
-
-        with mio_postgres.get_conn() as conn:
-            pull_alerts(conn, start_date, end_date, key)
+    @task(trigger_rule='none_failed', retries = 1)
+    def pull_alerts(ds):
+        run_alerts_api(
+            start_date=ds,
+            end_date=ds_add(ds, 1)
+        )
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
@@ -159,7 +148,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_15_min_mvt(conn, time_period=time_period, intersections=intersections)
 
-        @task
+        @task(depends_on_past=True)
         def zero_volume_anomalous_ranges_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")  
             time_period = (ds, ds_add(ds, 1))          
@@ -261,12 +250,12 @@ def pull_miovision_dag():
         Compare the count of classification_uids appearing in today's pull vs the lookback period.
         '''
 
-        check_row_count
+        wait_for_weather_timesensor() >> check_row_count
         check_distinct_classification_uid
 
     (
         check_partitions() >>
-        [pull_miovision(), pull_alerts_task()] >>
+        [pull_miovision(), pull_alerts()] >>
         miovision_agg() >>
         t_done >>
         data_checks()
