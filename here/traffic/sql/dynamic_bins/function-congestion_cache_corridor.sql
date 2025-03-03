@@ -7,13 +7,14 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_corridor(
     node_end bigint,
     map_version text,
     OUT corridor_id smallint,
-    OUT link_dirs text[],
-    OUT lengths numeric[],
-    OUT total_length numeric)
-    RETURNS record
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL SAFE 
+    OUT link_dirs text [],
+    OUT lengths numeric [],
+    OUT total_length numeric
+)
+RETURNS record
+LANGUAGE plpgsql
+COST 100
+VOLATILE PARALLEL SAFE
 AS $BODY$
 
 DECLARE
@@ -23,7 +24,7 @@ DECLARE
 BEGIN
 
     --check if the node pair and map_version have already been routed
-    --and if so, return values
+    --and if so, return values, saving routing time
     SELECT
         tt.corridor_id,
         tt.link_dirs,
@@ -56,9 +57,9 @@ EXECUTE format (
             %4$L AS map_version,
             ARRAY_AGG(rl.link_dir ORDER BY rl.seq) AS link_dirs,
             --lengths in m
-            ARRAY_AGG(ST_Length(ST_Transform(streets.geom,2952)) ORDER BY rl.seq) AS lengths,
+            ARRAY_AGG(st_length(st_transform(streets.geom, 2952)) ORDER BY rl.seq) AS lengths,
             st_union(st_linemerge(streets.geom)) AS geom,
-            SUM(ST_Length(ST_Transform(streets.geom,2952))) AS total_length
+            SUM(ST_Length(ST_Transform(streets.geom, 2952))) AS total_length
         FROM routed_links AS rl
         JOIN here.%5$I AS streets USING (link_dir)
         --conflict would occur because of null values
@@ -79,4 +80,10 @@ END;
 $BODY$;
 
 ALTER FUNCTION gwolofs.congestion_cache_corridor(bigint, bigint, text)
-    OWNER TO gwolofs;
+OWNER TO gwolofs;
+
+COMMENT ON FUNCTION gwolofs.congestion_cache_corridor IS
+'Returns definition of a HERE corridor, given input nodes and map_version.
+First checks if corridor has already been cached and if so retrieves the
+cached values. If not, a new entry is added to gwolofs.congestion_corridors
+table and returned.';
