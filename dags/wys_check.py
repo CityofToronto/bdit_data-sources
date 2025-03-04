@@ -14,7 +14,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
@@ -63,6 +63,7 @@ def wys_check_dag():
     def data_checks():
 
         check_distinct_api_id = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_distinct_api_id",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="wys_bot",

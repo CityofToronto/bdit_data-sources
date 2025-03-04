@@ -26,7 +26,7 @@ try:
         get_data_for_date, update_locations
     )
     from wys.api.python.wys_google_sheet import pull_from_sheet
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month, check_if_dow
 except:
@@ -133,6 +133,7 @@ def pull_wys_dag():
     @task_group()
     def data_checks():
         check_row_count = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="wys_bot",
