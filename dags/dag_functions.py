@@ -23,7 +23,7 @@ def is_prod_mode() -> bool:
     repo_folder = os.path.basename(os.path.dirname(dags_folder))
     return repo_folder == PROD_ENV_PATH
 
-def slack_channel(channel) -> str:
+def slack_channel(channel: Optional[str] = None) -> str:
     "Returns a slack channel ID"
     if not is_prod_mode(): #always send to dev
         return "slack_data_pipeline_dev"
