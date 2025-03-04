@@ -83,7 +83,6 @@ def ecocounter_check_dag():
         task_id="check_unvalidated_sites",
         sql="select-unvalidated_sites.sql",
         conn_id="ecocounter_bot",
-        on_failure_callback=slack_alert_data_quality,
         params={
             "lookback": '7 days'
         }

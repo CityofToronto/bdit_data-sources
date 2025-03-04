@@ -6,12 +6,14 @@ import re
 import json
 import logging
 from typing import Optional, Callable, Any, Union
+from functools import partial
+from psycopg2 import sql, Error
+
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.slack.notifications.slack_webhook import SlackWebhookNotifier
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from psycopg2 import sql, Error
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -150,6 +152,11 @@ def task_fail_slack_alert(
         proxy=proxy,
     )
     notifier.notify(context=context)
+
+slack_alert_data_quality = partial(
+    task_fail_slack_alert,
+    channel="slack_data_pipeline_data_quality"
+)
 
 def get_readme_docmd(readme_path, dag_name):
     """Extracts a DAG doc_md from a .md file using html comments tags.
