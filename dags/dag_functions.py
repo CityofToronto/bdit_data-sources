@@ -144,12 +144,12 @@ def task_fail_slack_alert(
     if extra_msg_str != "":
         slack_msg = slack_msg + extra_msg_str
 
-    failed_alert = SlackWebhookNotifier(
+    notifier = SlackWebhookNotifier(
         slack_webhook_conn_id=slack_channel(channel),
         text=slack_msg,
         proxy=proxy,
     )
-    return failed_alert.execute(context=context)
+    notifier.notify(context=context)
 
 def get_readme_docmd(readme_path, dag_name):
     """Extracts a DAG doc_md from a .md file using html comments tags.
@@ -199,14 +199,14 @@ def send_slack_msg(
     else:
         proxy = None
 
-    slack_alert = SlackWebhookNotifier(
+    notifier = SlackWebhookNotifier(
         slack_webhook_conn_id=slack_channel(channel),
         text=msg,
         attachments=attachments,
         blocks=blocks,
         proxy=proxy,
     )
-    return slack_alert.execute(context=context)
+    notifier.notify(context=context)
 
 def check_not_empty(context: dict, conn_id:str, table:str) -> None:
     con = PostgresHook(conn_id).get_conn()
