@@ -7,7 +7,6 @@ import sys
 import os
 import logging
 import pendulum
-from functools import partial
 from datetime import timedelta
 
 from airflow.decorators import dag
@@ -17,7 +16,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -30,8 +29,6 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
-
-slack_alert_data_quality = partial(task_fail_slack_alert, channel = 'slack_data_pipeline_data_quality')
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -68,10 +65,10 @@ def ecocounter_check_dag():
     )
 
     check_site_outages = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_site_outages",
         sql="select-ongoing_outages.sql",
         conn_id="ecocounter_bot",
-        on_failure_callback=slack_alert_data_quality,
         params={
             "lookback": '100 days',
             "min_duration": '1 days'
@@ -82,6 +79,7 @@ def ecocounter_check_dag():
     '''
     
     check_unvalidated_sites = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_unvalidated_sites",
         sql="select-unvalidated_sites.sql",
         conn_id="ecocounter_bot",

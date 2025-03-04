@@ -20,7 +20,7 @@ from airflow.macros import ds_add
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
     from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
@@ -226,6 +226,7 @@ def pull_miovision_dag():
             "threshold": 0.7
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="miovision_api_bot",
