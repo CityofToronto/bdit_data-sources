@@ -7,18 +7,10 @@ This file contains the following custom operators:
 1. SQLCheckOperatorWithReturnValue: extends the functionalities of the original
    ``SQLCheckOperator``.
 """
-import psycopg2
-import os
-import sys
-from functools import partial
-
 from airflow.providers.common.sql.operators.sql import SQLCheckOperator
 from airflow.exceptions import AirflowException
 from airflow.utils.context import Context
-
-dags_path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-sys.path.insert(0, dags_path)
-from dag_functions import task_fail_slack_alert
+import psycopg2
 
 class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
     """A custom Airflow SQLCheckOperator that extends the original operator.
@@ -32,14 +24,7 @@ class SQLCheckOperatorWithReturnValue(SQLCheckOperator):
     3. Enable autocommit
 
     """
-    def __init__(self, *args, on_failure_callback=None, **kwargs):
-        # By default, send slack alerts from this operator to data quality channel
-        default_failure_callback = partial(
-            task_fail_slack_alert, channel='slack_data_pipeline_data_quality'
-        )
-        # Use the default callback if none is provided
-        super().__init__(*args,
-            on_failure_callback=on_failure_callback or default_failure_callback, **kwargs)
+
     def execute(self, context: Context = None):
         """Executes the Airflow operator.
 
