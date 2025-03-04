@@ -184,6 +184,7 @@ def pull_ecocounter_dag():
             "threshold": 0.7
         }
         check_volume = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_volume",
             sql="select-row_count_lookback.sql",
             conn_id="ecocounter_bot",
@@ -195,6 +196,7 @@ def pull_ecocounter_dag():
         '''
 
         check_distinct_flow_ids = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_distinct_flow_ids",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="ecocounter_bot",
