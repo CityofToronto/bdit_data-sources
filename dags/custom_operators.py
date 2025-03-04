@@ -8,6 +8,8 @@ This file contains the following custom operators:
    ``SQLCheckOperator``.
 """
 import psycopg2
+import os
+import sys
 from functools import partial
 
 from airflow.providers.common.sql.operators.sql import SQLCheckOperator
