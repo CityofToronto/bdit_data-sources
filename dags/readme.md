@@ -86,6 +86,7 @@ Contains common Airflow Task definitions which can be used in multiple DAGs.
 ### [**dag_functions.py**](dag_functions.py)
 Contains helper functions to be used in multiple DAGs.  
 - `is_prod_mode`: helper function to determine of slack messages should be sent to dev or prod slack channels.  
+- `slack_channel`: used for determing which slack channel to send messages to; forces DEV channel if `not is_prod_mode()`. 
 - `task_fail_slack_alert`: Sends Slack task-failure notifications.  
 - `send_slack_msg`: Send Slack notifications (not just for failures).  
 - `get_readme_docmd`: helper function to extract text from a readme file for use as an Airflow doc_md, which is displayed in the Airflow UI.  
