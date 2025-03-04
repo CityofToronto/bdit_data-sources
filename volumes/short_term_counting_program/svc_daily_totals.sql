@@ -4,7 +4,8 @@ WITH daily_totals AS (
     -- speed studies
     SELECT
         study_id,
-        count_date,
+        time_start::date AS count_date,
+        direction,
         SUM(
             vol_1_19_kph
             + vol_20_25_kph
@@ -24,21 +25,24 @@ WITH daily_totals AS (
     FROM traffic.svc_study_speed
     GROUP BY
         study_id,
-        count_date
-    HAVING COUNT(*) = 2 * 4 * 24
-    
+        time_start::date,
+        direction
+    HAVING COUNT(*) = 4 * 24 --15 minute bins
+
     UNION
-    
+
     -- volume studies
     SELECT
         study_id,
         count_date,
+        direction,
         SUM(volume) AS daily_volume
     FROM traffic.svc_study_volume
     GROUP BY
         study_id,
-        count_date
-    HAVING COUNT(*) = 2 * 4 * 24
+        count_date,
+        direction
+    HAVING COUNT(*) = 4 * 24
 
     UNION
 
@@ -46,6 +50,7 @@ WITH daily_totals AS (
     SELECT
         study_id,
         count_date,
+        direction,
         SUM(
             -- check that these are mutually exclusive
             motorcycle
@@ -64,16 +69,18 @@ WITH daily_totals AS (
     FROM traffic.svc_study_class
     GROUP BY
         study_id,
-        count_date
-    HAVING COUNT(*) = 2 * 4 * 24
+        count_date,
+        direction
+    HAVING COUNT(*) = 4 * 24
 )
 
 SELECT
-    study_id,
-    count_date,
-    centreline_id,
-    geom AS centreline_geom,
-    daily_volume
-FROM daily_totals
+    dt.study_id,
+    dt.count_date,
+    dt.direction,
+    cl.centreline_id,
+    cl.geom AS centreline_geom,
+    dt.daily_volume
+FROM daily_totals AS dt
 JOIN traffic.svc_metadata USING (study_id)
-JOIN gis_core.centreline_latest USING (centreline_id);
+JOIN gis_core.centreline_latest AS cl USING (centreline_id);
