@@ -30,7 +30,6 @@ GROUP BY
     time_start,
     time_end,
     direction
- --15 minute bins
 
 UNION
 
