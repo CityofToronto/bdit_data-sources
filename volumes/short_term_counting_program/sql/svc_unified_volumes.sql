@@ -60,7 +60,6 @@ SELECT
     time_end,
     direction,
     SUM(
-        -- check that these are mutually exclusive
         motorcycle
         + cars
         + "2a_4t"
@@ -81,6 +80,10 @@ GROUP BY
     time_start,
     time_end,
     direction;
+
+ALTER VIEW traffic.svc_unified_volumes OWNER TO traffic_admins;
+
+GRANT SELECT ON VIEW traffic.svc_unified_volumes TO bdit_humans;
 
 COMMENT ON VIEW traffic.svc_unified_volumes IS
 'A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.';
