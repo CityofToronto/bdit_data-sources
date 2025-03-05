@@ -101,10 +101,20 @@ def miovision_check_dag():
     Identify high volume movements missing from intersection_movements table and notify.
     '''
 
+    check_missing_centreline_ids = SQLCheckOperatorWithReturnValue(
+        task_id="check_missing_centreline_ids",
+        sql="select-missing-centreline_ids.sql",
+        conn_id="miovision_api_bot"
+    )
+    check_monitor_intersection_movements.doc_md = '''
+    Identify centreline_ids missing/outdated in centreline_miovision table and notify.
+    '''
+
     t_upstream_done >> [
         check_distinct_intersection_uid,
         check_open_anomalous_ranges,
-        check_monitor_intersection_movements
+        check_monitor_intersection_movements,
+        check_missing_centreline_ids
     ]
 
 miovision_check_dag()
