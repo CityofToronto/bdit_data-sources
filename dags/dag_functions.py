@@ -41,7 +41,8 @@ def task_fail_slack_alert(
     context: dict,
     extra_msg: Optional[Union[str, Callable[..., str]]] = "",
     use_proxy: Optional[bool] = False,
-    channel: Optional[str] = None
+    channel: Optional[str] = None,
+    emoji: Optional[str] = ':large_red_square:'
 ) -> Any:
     """Sends Slack task-failure notifications.
 
@@ -137,7 +138,7 @@ def task_fail_slack_alert(
         )
         proxy = None
     slack_msg = (
-        f":red_circle: {task_instance.dag_id}."
+        f"{emoji} {task_instance.dag_id}."
         f"{task_instance.task_id} "
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
@@ -155,7 +156,8 @@ def task_fail_slack_alert(
 
 slack_alert_data_quality = partial(
     task_fail_slack_alert,
-    channel="slack_data_pipeline_data_quality"
+    channel="slack_data_pipeline_data_quality",
+    emoji=":large_yellow_square:"
 )
 
 def get_readme_docmd(readme_path, dag_name):
