@@ -17,7 +17,7 @@ sys.path.insert(0, repo_path)
 from volumes.vds.py.vds_functions import (
     pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, pull_commsdeviceconfig
 )
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
@@ -177,6 +177,7 @@ def vdsdata_dag():
         divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
+                on_failure_callback=slack_alert_data_quality,
                 task_id=f"check_rows_vdsdata_div{divid}",
                 sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',

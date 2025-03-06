@@ -15,7 +15,7 @@ repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__f
 sys.path.insert(0, repo_path)
 
 from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 from dags.custom_operators import SQLCheckOperatorWithReturnValue
 from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
@@ -132,6 +132,7 @@ def vdsvehicledata_dag():
         "Data quality checks which may warrant re-running the DAG."
 
         check_avg_rows = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
             conn_id='vds_bot',

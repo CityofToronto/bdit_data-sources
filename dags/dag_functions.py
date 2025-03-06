@@ -6,12 +6,14 @@ import re
 import json
 import logging
 from typing import Optional, Callable, Any, Union
+from functools import partial
+from psycopg2 import sql, Error
+
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
-from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
+from airflow.providers.slack.notifications.slack_webhook import SlackWebhookNotifier
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from psycopg2 import sql, Error
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -23,11 +25,26 @@ def is_prod_mode() -> bool:
     repo_folder = os.path.basename(os.path.dirname(dags_folder))
     return repo_folder == PROD_ENV_PATH
 
+def slack_channel(channel: Optional[str] = None) -> str:
+    "Returns a slack channel ID"
+    if not is_prod_mode(): #always send to dev
+        return "slack_data_pipeline_dev"
+    
+    valid_channels = [
+        'slack_data_pipeline', 'slack_data_pipeline_dev', 'slack_data_pipeline_data_quality'
+    ]
+    if channel in valid_channels:
+        return channel
+    if channel is not None and channel not in valid_channels:
+        LOGGER.warning(f"Channel {channel} is not valid. Defaulting to `slack_data_pipeline`.")
+    return "slack_data_pipeline"
+
 def task_fail_slack_alert(
     context: dict,
     extra_msg: Optional[Union[str, Callable[..., str]]] = "",
     use_proxy: Optional[bool] = False,
-    dev_mode: Optional[bool] = None
+    channel: Optional[str] = None,
+    emoji: Optional[str] = ':large_red_square:'
 ) -> Any:
     """Sends Slack task-failure notifications.
 
@@ -71,19 +88,12 @@ def task_fail_slack_alert(
         use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
             usage is required to make the Slack webhook call on on-premises
             servers (default False).
-        dev_mode: A boolean to indicate if working in development mode to send
-            Slack alerts to data_pipeline_dev instead of the regular 
-            data_pipeline (default None, to be determined based on the location
-            of the file).
+        channel: ID of the Airflow connection with the details of the
+            Slack channel to send messages to.
     
     Returns:
-        Any: The result of executing the SlackWebhookOperator.
+        Any: The result of executing the SlackWebhookNotifier.
     """
-    if dev_mode or (dev_mode is None and not is_prod_mode()):
-        SLACK_CONN_ID = "slack_data_pipeline_dev"
-    else:
-        SLACK_CONN_ID = "slack_data_pipeline"
-
     task_instance = context["task_instance"]
     slack_ids = Variable.get("slack_member_id", deserialize_json=True)
     owners = context.get('dag').owner.split(',')
@@ -130,7 +140,7 @@ def task_fail_slack_alert(
         )
         proxy = None
     slack_msg = (
-        f":red_circle: {task_instance.dag_id}."
+        f"{emoji} {task_instance.dag_id}."
         f"{task_instance.task_id} "
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
         f"{list_names}, please, check the <{log_url}|logs>\n"
@@ -139,14 +149,18 @@ def task_fail_slack_alert(
     if extra_msg_str != "":
         slack_msg = slack_msg + extra_msg_str
 
-    failed_alert = SlackWebhookOperator(
-        task_id="slack_test",
-        slack_webhook_conn_id=SLACK_CONN_ID,
-        message=slack_msg,
-        username="airflow",
+    notifier = SlackWebhookNotifier(
+        slack_webhook_conn_id=slack_channel(channel),
+        text=slack_msg,
         proxy=proxy,
     )
-    return failed_alert.execute(context=context)
+    notifier.notify(context=context)
+
+slack_alert_data_quality = partial(
+    task_fail_slack_alert,
+    channel="slack_data_pipeline_data_quality",
+    emoji=":large_yellow_square:"
+)
 
 def get_readme_docmd(readme_path, dag_name):
     """Extracts a DAG doc_md from a .md file using html comments tags.
@@ -171,30 +185,21 @@ def send_slack_msg(
     attachments: Optional[list] = None,
     blocks: Optional[list] = None,
     use_proxy: Optional[bool] = False,
-    dev_mode: Optional[bool] = None
+    channel: Optional[str] = None
 ) -> Any:
     """Sends a message to Slack.
 
     Args:
         context: The calling Airflow task's context.
         msg : A string message be sent to Slack.
-        slack_conn_id: ID of the Airflow connection with the details of the
-            Slack channel to send messages to.
         attachments: List of dictionaries representing Slack attachments.
         blocks: List of dictionaries representing Slack blocks.
         use_proxy: A boolean to indicate whether to use a proxy or not. Proxy
             usage is required to make the Slack webhook call on on-premises
             servers (default False).
-        dev_mode: A boolean to indicate if working in development mode to send
-            Slack alerts to data_pipeline_dev instead of the regular 
-            data_pipeline (default None, to be determined based on the location
-            of the file).
+        channel: ID of the Airflow connection with the details of the
+            Slack channel to send messages to.
     """
-    if dev_mode or (dev_mode is None and not is_prod_mode()):
-        SLACK_CONN_ID = "slack_data_pipeline_dev"
-    else:
-        SLACK_CONN_ID = "slack_data_pipeline"
-
     if use_proxy:
         # get the proxy credentials from the Airflow connection ``slack``. It
         # contains username and password to set the proxy <username>:<password>
@@ -205,16 +210,14 @@ def send_slack_msg(
     else:
         proxy = None
 
-    slack_alert = SlackWebhookOperator(
-        task_id="slack_test",
-        slack_webhook_conn_id=SLACK_CONN_ID,
-        message=msg,
-        username="airflow",
+    notifier = SlackWebhookNotifier(
+        slack_webhook_conn_id=slack_channel(channel),
+        text=msg,
         attachments=attachments,
         blocks=blocks,
         proxy=proxy,
     )
-    return slack_alert.execute(context=context)
+    notifier.notify(context=context)
 
 def check_not_empty(context: dict, conn_id:str, table:str) -> None:
     con = PostgresHook(conn_id).get_conn()

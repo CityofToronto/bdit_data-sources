@@ -16,7 +16,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -65,6 +65,7 @@ def ecocounter_check_dag():
     )
 
     check_site_outages = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_site_outages",
         sql="select-ongoing_outages.sql",
         conn_id="ecocounter_bot",
@@ -78,6 +79,7 @@ def ecocounter_check_dag():
     '''
     
     check_unvalidated_sites = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_unvalidated_sites",
         sql="select-unvalidated_sites.sql",
         conn_id="ecocounter_bot",

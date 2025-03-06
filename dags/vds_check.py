@@ -17,7 +17,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -64,6 +64,7 @@ def vds_check_dag():
     )
 
     check_missing_centreline_id = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_missing_centreline_id",
         sql="select-missing_centreline.sql",
         conn_id="vds_bot"
@@ -73,6 +74,7 @@ def vds_check_dag():
     '''
 
     check_missing_expected_bins = SQLCheckOperatorWithReturnValue(
+        on_failure_callback=slack_alert_data_quality,
         task_id="check_missing_expected_bins",
         sql="select-missing_expected_bins.sql",
         conn_id="vds_bot"
