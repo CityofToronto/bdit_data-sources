@@ -82,7 +82,7 @@ GROUP BY
 
 ALTER VIEW traffic.svc_unified_volumes OWNER TO traffic_admins;
 
-GRANT SELECT ON VIEW traffic.svc_unified_volumes TO bdit_humans;
+GRANT SELECT ON TABLE traffic.svc_unified_volumes TO bdit_humans;
 
 COMMENT ON VIEW traffic.svc_unified_volumes IS
 'A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.';
