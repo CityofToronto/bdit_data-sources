@@ -20,7 +20,7 @@ HAVING COUNT(*) = 4 * 24; --15 minute bins
 
 ALTER VIEW traffic.svc_daily_totals OWNER TO traffic_admins;
 
-GRANT SELECT ON VIEW traffic.svc_daily_totals TO bdit_humans;
+GRANT SELECT ON TABLE traffic.svc_daily_totals TO bdit_humans;
 
 COMMENT ON VIEW traffic.svc_daily_totals IS
 'A daily summary of traffic.svc_unified_volumes by leg and centreline_id. 
