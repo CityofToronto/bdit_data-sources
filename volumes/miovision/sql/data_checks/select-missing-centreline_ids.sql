@@ -50,7 +50,8 @@ missing AS (
 SELECT
     NOT(COUNT(*) > 0) AS _check,
     CASE WHEN COUNT(*) = 1 THEN 'There is ' ELSE 'There are ' END || COUNT(*)
-    || ' Miovision legs which are missing/outdated in `miovision_api.centreline_miovision`.'
+    || ' Miovision legs which are missing/outdated in `miovision_api.centreline_miovision`. '
+    || 'See [readme](https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/miovision/sql/#centreline_miovision).' --noqa
     AS summ,
     array_agg(
         'intersection_uid: `' || intersection_uid
