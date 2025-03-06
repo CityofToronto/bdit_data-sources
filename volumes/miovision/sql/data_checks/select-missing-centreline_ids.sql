@@ -40,7 +40,10 @@ missing AS (
     JOIN miovision_api.active_intersections USING (intersection_uid)
     LEFT JOIN miovision_api.centreline_miovision AS cl USING (intersection_uid, leg)
     LEFT JOIN gis_core.centreline_latest AS latest USING (centreline_id)
-    WHERE cl.centreline_id IS NULL OR latest.centreline_id IS NULL
+    WHERE
+        cl.intersection_uid IS NULL --not in table (allowing for nulls)
+        --entry exists, but is no longer valid
+        OR (cl.centreline_id IS NOT NULL AND latest.centreline_id IS NULL)
     ORDER BY intersection_uid
 )
 
