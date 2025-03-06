@@ -35,6 +35,8 @@ def slack_channel(channel: Optional[str] = None) -> str:
     ]
     if channel in valid_channels:
         return channel
+    if channel is not None and channel not in valid_channels:
+        LOGGER.warning(f"Channel {channel} is not valid. Defaulting to `slack_data_pipeline`.")
     return "slack_data_pipeline"
 
 def task_fail_slack_alert(
