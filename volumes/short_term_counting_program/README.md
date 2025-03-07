@@ -35,7 +35,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 
 The City of Toronto collects ad-hoc traffic volume data for projects and service requests. The traffic data collection program serves many internal transportation projects and operations teams for project planning, capital planning, engineering design, project analysis, and operational functions like signal timing.
 
-The most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Automated Traffic Recorder** (ATR) count. TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. ATRs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
+The most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Midblock Speed-Volume-Classification (SVC)** count (previously known as the **Automated Traffic Recorder** (ATR) count). TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. SVCs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
 
 Other studies include pedestrian delay and classification, pedestrian crossover observation, stop-sign compliance, queue-delay, cordon count, and radar speed studies.
 
@@ -117,6 +117,22 @@ Look in the `traffic` schema for all ad-hoc data tables.
 
 ## Where can I find what data?
 
+Speed Volume Classification counts and Turning Movement Counts are being replicated into Bigdata `traffic` schema from MOVE (FLASHCROW database). Every table that is replicated has a link to internal documentation for the corresponding table on FLASHCROW in the table comment, viewable in table properties in PGAdmin.
+
+Public documentation including data dictionaries are accessible on the Open Data pages:
+
+- SVC: [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/) 
+- TMC: [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/)
+
+| Study Type                      | FlowLoad (study_source = 'OTI / FlowLoad')       | MOVE Loader (study_source = 'MOVE Load') | Spectrum API Loader (count_source = SPECTRUM / LEGACY) |
+|---------------------------------|--------------------------------------------------|------------------------------------------|--------------------------------------------------------|
+| Turning Movement Count          | All-time TMC data*                               | n/a                                      | September 2023 to present                              |
+| Volume ATR                      | All-time Volume ATRs**                           | n/a                                      | n/a                                                    |
+| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                      | n/a                                                    |
+| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded***     | n/a                                                    |
+
+The previous data structure is archived in schema `traffic_archive`. This is the (OUTDATED) Copy of (old schema) traffic counts from MOVE.
+
 | Study Type // Loading Mechanism | FlowLoad (`traffic.*`)                           | MOVE Loader (`traffic.atr_*`)        | Spectrum API Loader (`traffic.tmc_*`) |
 |---------------------------------|--------------------------------------------------|--------------------------------------|---------------------------------------|
 | Turning Movement Count          | All-time TMC data*                               | n/a                                  | September 2023 to present             |
@@ -134,12 +150,39 @@ Look in the `traffic` schema for all ad-hoc data tables.
 
 ### Core Tables
 
-The database is structured around three types of tables: metadata, count observations, and reference tables (spatial, temporal, or categorical).
+The database is structured around three types of tables: metadata, count observations, summry stats, and reference tables (spatial, temporal, or categorical).
 
+- Speed-Volume-Classification counts
+  - [`svc_metadata`]
+  - [`svc_study_class`]
+  - [`svc_study_speed`]
+  - [`svc_study_volume`]
+  - [`svc_summary_stats`]
+
+- Turning Movement Count (TMC)
+  - [`tmc_metadata`]
+  - [`tmc_study_data`]
+  - [`tmc_summary_stats`]
+- Reference
+  - [`fhwa_classes`]
+  - [`mto_length_bin_classification`]
+  - [`studies`]
+  - [`traffic_signal`]
+- Useful Views
+  - [`svc_daily_totals`] - A daily summary of traffic.svc_unified_volumes by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
+  - [`svc_unified_volumes`] - A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.
+
+
+study_id of SCV counts are common for a given centreline_id and multi-day study
+- study_id is common for the two directions of SVC traffic flow if they map to the same location (centreline_id). If they were done on opposite side of the an intereseciton (for example), they will still have separate study_ids
+- they can adapt to changing centreline versions, becuase it is location point based
+
+
+
+The previous data structure is archived in schema `traffic_archive`. This is the (OUTDATED) Copy of (old schema) traffic counts from MOVE.
 - Turning Movement Count (TMC)
   - [`countinfomics`](#tmc-metadata-countinfomics): metadata
   - [`det`](#tmc-observations-det): count observations
-- Automated Traffic Recorder (ATR)
   - [`countinfo`](#atr-metadata-countinfo): metadata
   - [`cnt_det`](#atr-observations-cnt_det): count observations
 - Spatial reference
@@ -147,9 +190,15 @@ The database is structured around three types of tables: metadata, count observa
 - Other reference
   - [`category`](#category): reference table for traffic count type or data source, used by _both_ TMC and ATR tables
 
-The following diagram shows the relationship between the above-mentioned tables.
+The following diagrams show the relationship between the above-mentioned tables.
 
-!['flow_tables_relationship'](../img/flow_tables_relationship.png)
+#### TMC Relations
+
+!['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_counting-FK_is_highlighted_green.png)
+
+#### SVC Relations
+
+!['svc_flow_tables_relationship'](../img/2025_ATR_ERD_svc_relations_short_term_counting-FK_is_highlighted_green.png)
 
 ### Other Useful Tables
 
