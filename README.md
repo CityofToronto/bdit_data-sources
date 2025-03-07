@@ -140,7 +140,9 @@ Deprecated. See [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds).
 ### Short-term Counting Program
 [`volumes/short_term_counting_program/`](volumes/short_term_counting_program/)
 
-Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through the internal application MOVE and data go as far back as 1994. 
+Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through the internal application MOVE and data go as far back as 1994. As of January 2025, The bulk of this data is now available to the public on the Open Data pages:
+-  [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/) 
+- [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/)
 
 ### Vehicle Detector Station (VDS)
 [`volumes/vds/`](volumes/vds/)
