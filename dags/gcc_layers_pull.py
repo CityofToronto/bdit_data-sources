@@ -4,7 +4,7 @@ import os
 from functools import partial
 
 import pendulum
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.python import get_current_context
@@ -14,7 +14,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from gis.gccview.gcc_puller_functions import get_layer
+    from gis.gccview.gcc_puller_functions import get_layer, get_data
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -93,7 +93,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             })
             return dict({layer_name:layer})
                 
-                    
         @task(map_index_template="{{ table_name }}")
         def pull_layer(layer, conn_id):
             #name mapped task
@@ -117,9 +116,27 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 with conn.cursor() as cur:
                     cur.execute(agg_sql)
 
-        layers = get_layers(name)
-        pull_layer.partial(conn_id = conn_id).expand(layer = layers)
+        @task(map_index_template="{{ table_name }}")
+        def compare_row_counts(conn_id, layer):
+            #name mapped task
+            context = get_current_context()
+            context["table_name"] = layer[0]
+            src_count = get_data(
+                    mapserver = layer[1].get("mapserver"),
+                    layer_id = layer[1].get("layer_id"),
+                    include_additional_feature = layer[1].get("include_additional_feature"),
+                    row_count_only = True
+                )
+            if layer[1].get("is_audited"):
+                "SELECT COUNT(*) FROM {schema}.{table};"
+            else:
+                "SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {{ ds }}"
 
+        layers = get_layers(name)
+        pull = pull_layer.partial(conn_id = conn_id).expand(layer = layers)
+        check = compare_row_counts.partial(conn_id = conn_id).expand(layer = layers)
+        pull >> check
+        
     generated_dag = gcc_layers_dag()
 
     return generated_dag
