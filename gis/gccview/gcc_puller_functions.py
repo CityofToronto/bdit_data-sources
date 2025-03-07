@@ -288,7 +288,7 @@ def to_time(input):
     time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
-def get_data(mapserver, layer_id, include_additional_feature, max_number = None, record_max = None):
+def get_data(mapserver, layer_id, include_additional_feature, max_number = None, record_max = None, row_count_only: bool = False):
     """
     Function to retreive layer data from GCCView rest api
 
@@ -309,6 +309,9 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
     include_additional_feature : bool
         Boolean flag to include additional 5 feature codes (Trails, Busway, Laneway, Acess Road, and Other Ramp)
         
+    row_count_only: bool
+        Use True to get row count only for data check.
+
     Returns
     --------
     return_json : json
@@ -331,7 +334,7 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
             "returnGeometry": "true",
             "returnTrueCurves": "false",
             "returnIdsOnly": "false",
-            "returnCountOnly": "false",
+            "returnCountOnly": f"{row_count_only}",
             "returnZ": "false",
             "returnM": "false",
             "orderByFields": "OBJECTID", 
@@ -358,6 +361,12 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
                 LOGGER.error("Query was not successful. Response: %s", r)
             return_json = r.json()
             break
+    
+    if row_count_only:
+        try:
+            return return_json['count']
+        except KeyError:
+            raise KeyError(f"Return json missing count field.")
     
     #check neccessary fields are contained in the return json.
     keys = ['fields', 'features', 'geometryType']
