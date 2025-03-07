@@ -71,10 +71,13 @@ def rodars_dag():
                     True AS "_check",
                     COUNT(DISTINCT divisionid::text || issueid::text) AS issue_count
                 FROM public.issuedata
-                WHERE divisionid IN (
-                    8048, --rodars new
-                    8014 --rodars (old)
-                )''',
+                WHERE
+                    --there could be issues created right after we pulled them
+                    timestamputc < '{{ ds }}'::date + interval '1 day'
+                    AND divisionid IN (
+                        8048, --rodars new
+                        8014 --rodars (old)
+                    )''',
             conn_id="itsc_postgres"
         )
         check_src_issue_count.doc_md = "Check the source issue count."
@@ -85,8 +88,10 @@ def rodars_dag():
                 SELECT
                     COUNT(DISTINCT divisionid::text || issueid::text)
                     = {{ti.xcom_pull(key='return_value', task_ids='data_checks.check_src_issue_count')[1]}} AS "_check",
-                    COUNT(DISTINCT divisionid::text || issueid::text) AS issue_count,
-                    {{ti.xcom_pull(key='return_value', task_ids='data_checks.check_src_issue_count')[1]}} AS src_count
+                    'Bigdata count: ' || TO_CHAR(COUNT(DISTINCT divisionid::text || issueid::text), '999,999,999,999,999')
+                    || ', ITSC count: '
+                    || TO_CHAR({{ti.xcom_pull(key='return_value', task_ids='data_checks.check_src_issue_count')[1]}}, '999,999,999,999,999')
+                    AS description
                 FROM congestion_events.rodars_issues
                 ''',
             conn_id="events_bot"
