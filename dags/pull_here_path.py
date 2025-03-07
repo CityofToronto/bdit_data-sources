@@ -49,6 +49,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      schedule='0 17 * * * ',
      catchup=False,
+     template_searchpath=os.path.join(repo_path,'dags/sql'),
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
      )
