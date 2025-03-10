@@ -2,6 +2,7 @@
 import configparser
 import requests
 import datetime
+from functools import partial
 from psycopg2 import connect
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -366,6 +367,7 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
         try:
             return return_json['count']
         except KeyError:
+            LOGGER.info('return_json %', return_json)
             raise KeyError(f"Return json missing count field.")
     
     #check neccessary fields are contained in the return json.
@@ -376,6 +378,24 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
             raise KeyError(f"Return json missing field: {k}")
     
     return return_json
+
+get_src_row_count = partial(get_data, max_number = None, record_max = None, row_count_only = True)
+
+def get_dest_row_count(conn, schema, table, is_audited, version_date):
+    with conn.cursor() as cur:
+        if is_audited:
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table};").format(
+                schema = sql.Identifier(schema),
+                table = sql.Identifier(table)
+            ))
+        else:
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date};").format(
+                schema = sql.Identifier(schema),
+                table = sql.Identifier(table),
+                version_date = sql.Literal(version_date)
+            ))
+        result = cur.fetchone()[0]
+        return result
 
 def find_limit(return_json):
     """
