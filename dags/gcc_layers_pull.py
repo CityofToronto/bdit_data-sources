@@ -9,12 +9,15 @@ from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.python import get_current_context
 from airflow.models.param import Param
+from airflow.exceptions import AirflowFailException
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
-    from gis.gccview.gcc_puller_functions import get_layer, get_data
+    from gis.gccview.gcc_puller_functions import (
+        get_layer, mapserver_name, get_src_row_count, get_dest_row_count
+    )
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -117,20 +120,29 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                     cur.execute(agg_sql)
 
         @task(map_index_template="{{ table_name }}")
-        def compare_row_counts(conn_id, layer):
+        def compare_row_counts(conn_id, layer, ds):
+            
+            mapserver = mapserver_name(layer[1].get("mapserver"))
+            schema = layer[1].get("schema_name")
+            is_audited = layer[1].get("is_audited")
+            include_additional_feature = layer[1].get("include_additional_feature")
+            layer_id = layer[1].get("layer_id")
+            table_name = layer[0]
+
             #name mapped task
             context = get_current_context()
-            context["table_name"] = layer[0]
-            src_count = get_data(
-                    mapserver = layer[1].get("mapserver"),
-                    layer_id = layer[1].get("layer_id"),
-                    include_additional_feature = layer[1].get("include_additional_feature"),
-                    row_count_only = True
+            context["table_name"] = table_name
+
+            src_count = get_src_row_count(
+                    mapserver = mapserver,
+                    layer_id = layer_id,
+                    include_additional_feature = include_additional_feature
                 )
-            if layer[1].get("is_audited"):
-                "SELECT COUNT(*) FROM {schema}.{table};"
-            else:
-                "SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {{ ds }}"
+            conn = PostgresHook(conn_id).get_conn()
+            dest_count = get_dest_row_count(conn, schema, table_name, is_audited, ds)
+            if src_count != dest_count:
+                raise AirflowFailException(f"src_count: {src_count}, dest_count: {dest_count}")
+            return True
 
         layers = get_layers(name)
         pull = pull_layer.partial(conn_id = conn_id).expand(layer = layers)
