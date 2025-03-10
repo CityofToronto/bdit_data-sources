@@ -7,6 +7,7 @@ from airflow.decorators import task, dag, task_group
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable 
 from airflow.macros import ds_add, ds_format
+from airflow.operators.python import get_current_context
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -96,10 +97,11 @@ def pull_here_path():
             "table": "here.ta_path",
             "lookback": '30 days',
             "dt_col": 'dt',
-            "threshold": 0.7
+            "threshold": 0.7,
+            "ds_offset": 1
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=slack_alert_data_quality,
+            #on_failure_callback=slack_alert_data_quality,
             task_id="check_row_count",
             sql="select-row_count_lookback.sql",
             conn_id="here_bot",
@@ -111,7 +113,7 @@ def pull_here_path():
         '''
 
         check_distinct_link_dirs = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=slack_alert_data_quality,
+            #on_failure_callback=slack_alert_data_quality,
             task_id="check_distinct_link_dirs",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="here_bot",
@@ -124,10 +126,8 @@ def pull_here_path():
         Compare the count of link_dirs appearing in today's pull vs the lookback period.
         '''
 
-        wait_for_weather_timesensor() >> [
-            check_row_count,
-            check_distinct_link_dirs
-        ]
+        check_row_count
+        check_distinct_link_dirs
 
     load_data() >> data_checks()
 

@@ -72,7 +72,8 @@ def wys_check_dag():
                 "lookback": '60 days',
                 "dt_col": 'datetime_bin',
                 "id_col": "api_id",
-                "threshold": 0.90                
+                "threshold": 0.90,
+                "ds_offset": 0
             }
         )
 

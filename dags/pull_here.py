@@ -116,7 +116,8 @@ def pull_here():
             "table": "here.ta",
             "lookback": '30 days',
             "dt_col": 'dt',
-            "threshold": 0.7
+            "threshold": 0.7,
+            "ds_offset": 1
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
@@ -144,10 +145,8 @@ def pull_here():
         Compare the count of link_dirs appearing in today's pull vs the lookback period.
         '''
 
-        wait_for_weather_timesensor() >> [
-            check_row_count,
-            check_distinct_link_dirs
-        ]
+        check_row_count
+        check_distinct_link_dirs
 
     load_data_run() >> trigger_dags() >> data_checks()
 
