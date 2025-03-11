@@ -9,8 +9,8 @@ WITH lookback AS ( --noqa: L045
         ARRAY_AGG(DISTINCT {{ params.id_col }}) AS daily_ids --noqa: L039
     FROM {{ params.table }}
     WHERE
-        {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
-        AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+        {{ params.dt_col }} >= '{{ ds }}'::date - {{ params.ds_offset }} - interval '{{ params.lookback }}'
+        AND {{ params.dt_col }} < '{{ ds }}'::date - {{ params.ds_offset }} + interval '1 day'
     --group by day then avg excludes missing days.
     GROUP BY _dt --noqa: L003
 ),
@@ -20,11 +20,11 @@ ids_dif AS (
     FROM (
         SELECT DISTINCT UNNEST(lb.daily_ids) AS ids_diff
         FROM lookback AS lb
-        WHERE _dt != '{{ ds }}'::date
+        WHERE _dt != '{{ ds }}'::date - {{ params.ds_offset }}
         EXCEPT
         SELECT UNNEST(today.daily_ids)
         FROM lookback AS today
-        WHERE _dt = '{{ ds }}'::date
+        WHERE _dt = '{{ ds }}'::date - {{ params.ds_offset }}
         ORDER BY ids_diff
     ) AS c
 )
@@ -50,8 +50,8 @@ FROM lookback AS today,
     lookback AS lb, --noqa: L025
     ids_dif AS c
 WHERE
-    lb._dt != '{{ ds }}'::date
-    AND today._dt = '{{ ds }}'::date
+    lb._dt != '{{ ds }}'::date - {{ params.ds_offset }}
+    AND today._dt = '{{ ds }}'::date - {{ params.ds_offset }}
 GROUP BY
     today.count,
     c.ids_diff

@@ -9,8 +9,8 @@ WITH lookback AS ( --noqa: L045
         ref.is_weekend_or_holiday({{ params.dt_col }}::date) AS is_weekend_or_holiday
     FROM {{ params.table }}
     WHERE
-        {{ params.dt_col }} >= '{{ ds }} 00:00:00'::timestamp - interval '{{ params.lookback }}'
-        AND {{ params.dt_col }} < '{{ ds }} 00:00:00'::timestamp + interval '1 day'
+        {{ params.dt_col }} >= '{{ ds }}'::date - {{ params.ds_offset }} - interval '{{ params.lookback }}'
+        AND {{ params.dt_col }} < '{{ ds }}'::date - {{ params.ds_offset }} + interval '1 day'
     --group by day then avg excludes missing days.
     GROUP BY _dt --noqa: L003
 )
@@ -27,7 +27,7 @@ SELECT
         FLOOR(thr.threshold * AVG(lb.count)),
         'FM9,999,999,999'
     ) AS passing_value,
-    weather.airport_weather_summary('{{ ds }}') AS weather_summary
+    weather.airport_weather_summary('{{ ds }}'::date - {{ params.ds_offset }}) AS weather_summary
 FROM lookback AS today
 JOIN lookback AS lb USING (is_weekend_or_holiday),
     LATERAL (
@@ -40,8 +40,8 @@ JOIN lookback AS lb USING (is_weekend_or_holiday),
         END
     ) AS thr (threshold)
 WHERE
-    today._dt = '{{ ds }}'::date
-    AND lb._dt != '{{ ds }}'::date
+    today._dt = '{{ ds }}'::date - {{ params.ds_offset }}
+    AND lb._dt != '{{ ds }}'::date - {{ params.ds_offset }}
 GROUP BY
     today.count,
     thr.threshold

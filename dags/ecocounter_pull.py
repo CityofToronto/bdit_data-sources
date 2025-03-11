@@ -181,7 +181,8 @@ def pull_ecocounter_dag():
             "table": "ecocounter.counts_unfiltered",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
-            "threshold": 0.7
+            "threshold": 0.7,
+            "ds_offset": 0
         }
         check_volume = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
