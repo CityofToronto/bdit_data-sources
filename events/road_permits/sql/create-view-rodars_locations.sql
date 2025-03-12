@@ -9,6 +9,8 @@ SELECT
     ii.divisionname,
     ii.issueid,
     ii.sourceid,
+    ii.issuetype,
+    it.issuetype_desc,
     ii.description,
     CASE ii.priority
         WHEN 5 THEN 'Critical'
@@ -79,6 +81,7 @@ SELECT
     lap.lane_open_bus,
     lap.lane_closed_bus
 FROM congestion_events.rodars_issues AS ii
+LEFT JOIN itsc_factors.issuetypes AS it USING (divisionid, issuetype)
 JOIN congestion_events.rodars_issue_locations AS iil
     ON iil.issueid = ii.issueid
     AND iil.divisionid = ii.divisionid
