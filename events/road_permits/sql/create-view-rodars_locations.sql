@@ -12,6 +12,12 @@ SELECT
     ii.issuetype,
     it.issuetype_desc,
     ii.description,
+    'https://itscentral.corp.toronto.ca/Issue/ViewInfo?entityId=4%7c' || ii.issueid::text || '%7c'
+    || ii.divisionid::text || '#TabContainerTabId=Info' AS internal_url,
+    CASE ii.divisionid
+        WHEN 8048 THEN 'https://rodars.transnomis.com/Permit/ApplicationMapView?permitId='
+        || ii.sourceid
+    END AS public_url,
     CASE ii.priority
         WHEN 5 THEN 'Critical'
         WHEN 4 THEN 'High'
