@@ -39,6 +39,12 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 title="is_audited",
                 description="Is the layer audited?",
             ),
+            "include_additional_feature": Param(
+                default=False,
+                type="boolean",
+                title="Include additional feature",
+                description="Flag to include additional feature type",
+            ),
             "layer_id": Param(
                 default=0,
                 type="integer",
@@ -50,7 +56,8 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 type="integer",
                 title="mapserver",
                 description="mapserver for custom pull. Example: 0",
-            ),"pk": Param(
+            ),
+            "pk": Param(
                 default='',
                 type="string",
                 title="Primary Key.",
@@ -81,7 +88,8 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 'layer_id': context["params"]["layer_id"],
                 'mapserver': context["params"]["mapserver"],
                 'pk': context["params"]["pk"],
-                'schema_name': context["params"]["schema_name"]
+                'schema_name': context["params"]["schema_name"],
+                'include_additional_feature':context["params"]["include_additional_feature"],
             })
             return dict({layer_name:layer})
                 
@@ -93,17 +101,16 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
             context["table_name"] = layer[0]
             #get db connection
             conn = PostgresHook(conn_id).get_conn()
-            
             #pull and insert layer
             get_layer(
                 mapserver_n = layer[1].get("mapserver"),
                 layer_id = layer[1].get("layer_id"),
                 schema_name = layer[1].get("schema_name"),
                 is_audited = layer[1].get("is_audited"),
+                include_additional_feature = layer[1].get("include_additional_feature"),
                 primary_key = layer[1].get("pk"),
                 con = conn
             )
-
             #refresh mat views as necessary
             agg_sql = layer[1].get("agg")
             if agg_sql is not None:

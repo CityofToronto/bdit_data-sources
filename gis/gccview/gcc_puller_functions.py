@@ -285,7 +285,7 @@ def to_time(input):
     time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
-def get_data(mapserver, layer_id, max_number = None, record_max = None):
+def get_data(mapserver, layer_id, include_additional_feature, max_number = None, record_max = None):
     """
     Function to retreive layer data from GCCView rest api
 
@@ -302,7 +302,10 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
 
     record_max : integer
         Number for parameter `resultRecordCount` in the query, indicating the number of rows this query is going to fetch
-
+    
+    include_additional_feature : bool
+        Boolean flag to include additional 5 feature codes (Trails, Busway, Laneway, Acess Road, and Other Ramp)
+        
     Returns
     --------
     return_json : json
@@ -313,6 +316,8 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
     # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
         where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
+        if include_additional_feature: # Then add the additional 5 roadclasses
+            where += " OR \"FEATURE_CODE_DESC\" IN ('Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road')"
     elif mapserver == 'cot_geospatial27' and layer_id == 41:
         where = "OBJECTID>0"
     else:
@@ -536,7 +541,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 # base main function, also compatible with Airflow
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None, primary_key = None, is_partitioned = True):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, include_additional_feature, cred = None, con = None, primary_key = None, is_partitioned = True):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -590,7 +595,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         LOGGER.error("Non-audited tables do not use the primary key.")
     #--------------------------------
     #get first data pull (no offset), create tables.
-    return_json = get_data(mapserver, layer_id)
+    return_json = get_data(mapserver, layer_id, include_additional_feature)
     if is_audited:
         (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
     elif is_partitioned:
@@ -605,7 +610,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         keep_adding = find_limit(return_json) #checks if all records fetched
         if keep_adding:
             #get next batch using offset (max_number)
-            return_json = get_data(mapserver, layer_id, max_number = total, record_max = record_count)
+            return_json = get_data(mapserver, layer_id, include_additional_feature,  max_number = total, record_max = record_count)
     LOGGER.info('%s records from [mapserver: %s, layerID: %d] have been inserted into %s', total, mapserver, layer_id, output_table)
     
     if is_audited:
@@ -630,7 +635,9 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
                 help = 'The path to the credential config file')
 @click.option('--is-partitioned', '-p', is_flag=True, show_default=True, default=False, 
                 help = 'Whether the table is supposed to be partitioned (T) or not partitioned (F)')
-def manual_get_layer(mapserver, layer_id, schema_name, is_audited, primary_key, con, is_partitioned=True):
+@click.option('--include_additional_feature', '-a', is_flag=True, show_default=True, default=False,
+                help = 'Whether additional layer should be pulled (only applicable for centreline')
+def manual_get_layer(mapserver, layer_id, schema_name, is_audited, include_additional_feature, primary_key, con, is_partitioned=True):
     """
     This script pulls a GIS layer from GCC servers into the databases of
     the Data and Analytics Unit.
@@ -644,11 +651,13 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, primary_key, 
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
     # get_layer function
+
     get_layer(
         mapserver_n = mapserver,
         layer_id = layer_id,
         schema_name = schema_name,
         is_audited = is_audited,
+        include_additional_feature = include_additional_feature,
         primary_key = primary_key,
         con=connection_obj,
         is_partitioned = is_partitioned

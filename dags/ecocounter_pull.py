@@ -26,7 +26,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import (
-        task_fail_slack_alert, send_slack_msg, get_readme_docmd
+        task_fail_slack_alert, slack_alert_data_quality, send_slack_msg, get_readme_docmd
     )
     from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
@@ -184,6 +184,7 @@ def pull_ecocounter_dag():
             "threshold": 0.7
         }
         check_volume = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_volume",
             sql="select-row_count_lookback.sql",
             conn_id="ecocounter_bot",
@@ -195,6 +196,7 @@ def pull_ecocounter_dag():
         '''
 
         check_distinct_flow_ids = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
             task_id="check_distinct_flow_ids",
             sql="select-sensor_id_count_lookback.sql",
             conn_id="ecocounter_bot",
