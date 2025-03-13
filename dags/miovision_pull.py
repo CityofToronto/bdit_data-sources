@@ -25,7 +25,7 @@ try:
     from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
-        get_report_dates, get_intersection_info, agg_zero_volume_anomalous_ranges
+        get_intersection_info, agg_zero_volume_anomalous_ranges
     )
     from volumes.miovision.api.pull_alert import run_alerts_api
 except:
@@ -77,8 +77,7 @@ def pull_miovision_dag():
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
             sql=["SELECT miovision_api.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
-                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
+                 "SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_mvt_unfiltered', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
             conn_id='miovision_api_bot',
             autocommit=True
         )
@@ -164,21 +163,6 @@ def pull_miovision_dag():
                     agg_zero_volume_anomalous_ranges(conn, time_period=time_period, intersections=intersections)
 
         @task
-        def aggregate_15_min_task(ds = None, **context):
-            mio_postgres = PostgresHook("miovision_api_bot")
-            time_period = (ds, ds_add(ds, 1))
-            #no user specified intersection
-            if context["params"]["intersection"] == [0]:
-                with mio_postgres.get_conn() as conn:
-                    aggregate_15_min(conn, time_period=time_period)
-            #user specified intersection
-            else:
-                INTERSECTIONS = tuple(context["params"]["intersection"])
-                with mio_postgres.get_conn() as conn:
-                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
-                    aggregate_15_min(conn, time_period=time_period, intersections=intersections)
-
-        @task
         def aggregate_volumes_daily_task(ds = None, **context):
             mio_postgres = PostgresHook("miovision_api_bot")  
             time_period = (ds, ds_add(ds, 1))          
@@ -193,23 +177,7 @@ def pull_miovision_dag():
                     intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
                     aggregate_volumes_daily(conn, time_period=time_period, intersections=intersections)
 
-        @task
-        def get_report_dates_task(ds = None, **context):
-            mio_postgres = PostgresHook("miovision_api_bot")
-            time_period = (ds, ds_add(ds, 1))
-            #no user specified intersection
-            if context["params"]["intersection"] == [0]:
-                with mio_postgres.get_conn() as conn:
-                    get_report_dates(conn, time_period=time_period)
-            #user specified intersection
-            else:
-                INTERSECTIONS = tuple(context["params"]["intersection"])              
-                with mio_postgres.get_conn() as conn:
-                    intersections = get_intersection_info(conn, intersection=INTERSECTIONS)
-                    get_report_dates(conn, time_period=time_period, intersections=intersections)
-
-        find_gaps_task() >> aggregate_15_min_mvt_task() >> [aggregate_15_min_task(), zero_volume_anomalous_ranges_task()] >> aggregate_volumes_daily_task()
-        get_report_dates_task()
+        find_gaps_task() >> aggregate_15_min_mvt_task() >> zero_volume_anomalous_ranges_task() >> aggregate_volumes_daily_task()
 
     t_done = ExternalTaskMarker(
             task_id="done",
@@ -220,7 +188,7 @@ def pull_miovision_dag():
     @task_group(tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG.")
     def data_checks():
         data_check_params = {
-            "table": "miovision_api.volumes_15min_mvt",
+            "table": "miovision_api.volumes_15min_mvt_unfiltered",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
             "threshold": 0.7

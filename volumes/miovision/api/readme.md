@@ -1,29 +1,29 @@
 <!-- TOC -->
 
 - [Overview](#overview)
-    - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
-        - [Turning Movement Count TMC](#turning-movement-count-tmc)
-        - [Turning Movement Count TMC Crosswalks](#turning-movement-count-tmc-crosswalks)
-        - [Error responses](#error-responses)
-    - [Input Files](#input-files)
-    - [How to run the api](#how-to-run-the-api)
-        - [TMCs Volumes](#tmcs-volumes)
-        - [Alerts](#alerts)
-    - [Classifications](#classifications)
-        - [API Classifications](#api-classifications)
-        - [Old Classifications csv dumps and datalink](#old-classifications-csv-dumps-and-datalink)
-    - [PostgreSQL Functions](#postgresql-functions)
-    - [Invalid Movements](#invalid-movements)
-    - [How the API works](#how-the-api-works)
-    - [Repulling data](#repulling-data)
+  - [Relevant Calls and Outputs](#relevant-calls-and-outputs)
+    - [Turning Movement Count (TMC)](#turning-movement-count-tmc)
+    - [Turning Movement Count (TMC) Crosswalks](#turning-movement-count-tmc-crosswalks)
+    - [Error responses](#error-responses)
+  - [Input Files](#input-files)
+  - [How to run the api](#how-to-run-the-api)
+    - [TMCs (Volumes)](#tmcs-volumes)
+    - [Alerts](#alerts)
+  - [Classifications](#classifications)
+    - [API Classifications](#api-classifications)
+    - [Old Classifications (csv dumps and datalink)](#old-classifications-csv-dumps-and-datalink)
+  - [PostgreSQL Functions](#postgresql-functions)
+  - [Invalid Movements](#invalid-movements)
+  - [How the API works](#how-the-api-works)
+  - [Repulling data](#repulling-data)
 - [Airflow DAGs](#airflow-dags)
-    - [miovision_pull](#miovision_pull)
-        - [check_partitions TaskGroup](#check_partitions-taskgroup)
-        - [miovision_agg TaskGroup](#miovision_agg-taskgroup)
-        - [data_checks TaskGroup](#data_checks-taskgroup)
-    - [miovision_check](#miovision_check)
-    - [miovision_hardware](#miovision_hardware)
-    - [Notes](#notes)
+  - [**`miovision_pull`**](#miovision_pull)
+    - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
+    - [`data_checks` TaskGroup](#data_checks-taskgroup)
+  - [**`miovision_check`**](#miovision_check)
+  - [**`miovision_hardware`**](#miovision_hardware)
+  - [Notes](#notes)
 
 <!-- /TOC -->
 <!-- /TOC -->
@@ -238,8 +238,7 @@ flowchart TB
             gaps["find_gaps\n(unacceptable_gaps)"]-->
             mvt["aggregate_15_min_mvt\n(volumes_15min_mvt)"]-->
             v15["aggregate_15_min\n(volumes_15min)"]-->
-            volumes_daily["aggregate_volumes_daily\n(volumes_daily)"]-->
-            report_dates["get_report_dates\n(report_dates)"]
+            volumes_daily["aggregate_volumes_daily\n(volumes_daily)"]
         end
         
         L---->|No|process_data
@@ -281,7 +280,6 @@ This task group completes various Miovision aggregations.
 - `aggregate_15_min_task` clears and then populates `miovision_api.volumes_15min` using `intersection_tmc.aggregate_15_min` function. 
 - `zero_volume_anomalous_ranges_task` identifies intersection / classification combos with zero volumes and adds/updates `miovision_api.anomalous_ranges` accordingly. Also refreshes `miovision_api.open_issues` table used for manual QC. 
 - `aggregate_volumes_daily_task` clears and then populates `miovision_api.volumes_daily` using `intersection_tmc.aggregate_volumes_daily` function.
-- `get_report_dates_task` clears and then populates `miovision_api.report_dates` using `intersection_tmc.get_report_dates` function.
 
 `done` signals that downstream `miovision_check` DAG can run.
 
