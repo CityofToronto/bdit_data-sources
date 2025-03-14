@@ -103,7 +103,7 @@ Historical data are acquired through the Traffic Analytics download portal. Data
 | tod | time | ✓ | Time of 5-minute observation bin; matches `tx` |
 | length | integer | | Link length in meters, rounded to integer |
 | mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
-| stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
+| stddev | numeric(4,1) | | Sample standard deviation of the observed speed(s). A value of `0` is given where the sample_size is `1`, though strictly speaking the sample standard deviation is undefined in this case. |
 | min_spd | integer | | Observed minimum speed |
 | max_spd | integer | | Observed maximum speed |
 | pct_50 | integer | | Observed median speed |
