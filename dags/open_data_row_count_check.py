@@ -19,7 +19,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
 
 #README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 #DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -52,10 +52,7 @@ def od_check_dag():
     def fetch_datasets():
         return Variable.get('open_data_ids', deserialize_json=True)
         
-    @task(
-        on_failure_callback = None,
-        map_index_template="{{ od_id }}"
-    )
+    @task(map_index_template="{{ od_id }}")
     def check_freshness(od_id = None, **context):
         #name mapped task
         context["od_id"] = od_id
@@ -76,12 +73,8 @@ def od_check_dag():
             max_offset = timedelta(days=60)
         
         if last_refreshed < datetime.now() - max_offset:
-            failure_msg = f"`{od_id}` is out of date. Last refreshed: `{last_refreshed}` (days old: {(datetime.now() - last_refreshed).days})."
-            context["task_instance"].xcom_push(
-                key="failure_msg",
-                value=failure_msg
-            )
-            raise AirflowFailException(failure_msg)
+            failure_msg = f"<https://open.toronto.ca/dataset/{od_id}/|`{od_id}`> is out of date. Last refreshed: `{last_refreshed}` (days old: {(datetime.now() - last_refreshed).days})."
+            context["task_instance"].xcom_push(key="failure_msg", value=failure_msg)
     
     @task(
         retries=0,
