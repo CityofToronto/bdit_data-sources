@@ -60,9 +60,13 @@ def od_check_dag():
         #get open data metadata
         params = {"id": od_id}
         package = requests.get(BASE_URL, params = params).json()
-        result = package.get('result')
-        refresh_rate = result.get('refresh_rate')
-        last_refreshed = dateutil.parser.parse(result.get('last_refreshed'))
+        try:
+            result = package.get('result')
+            refresh_rate = result.get('refresh_rate')
+            last_refreshed = dateutil.parser.parse(result.get('last_refreshed'))
+        except KeyError as e:
+            LOGGER.error("Problem retrieving Open Data portal info.")
+            raise AirflowFailException(e)
         LOGGER.info("`%s` last_refreshed: %s", od_id, last_refreshed)
         
         if refresh_rate == 'Daily':
