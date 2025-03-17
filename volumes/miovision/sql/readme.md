@@ -17,7 +17,7 @@
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
     - [`miovision_api.open_issues`](#miovision_apiopen_issues)
     - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
-    - [`movement_map_new`](#movement_map_new)
+    - [`movement_map`](#movement_map)
     - [`periods`](#periods)
     - [`intersection_movements`](#intersection_movements)
     - [`centreline_miovision`](#centreline_miovision)
@@ -277,7 +277,7 @@ leg|text|Segment leg of intersection|E|
 dir|text|Direction of traffic on specific leg|EB|
 volume|integer|Total 15-minute volume|107|
 
-[`miovision_api.movement_map_new`](#movement_map_new) is a lookup table used to convert the TMC data to the ATR data. 
+[`miovision_api.movement_map`](#movement_map) is a lookup table used to convert the TMC data to the ATR data. 
 
 ### `miovision_api.volumes_daily`
 
@@ -389,7 +389,7 @@ These two tables are used to enforce standardized descriptions in the `investiga
 | uid    | very short descriptive text; primary key |
 | description | full description / documentation of the category; refer directly to these tables for documentation of the available classifications. |
 
-### `movement_map_new`
+### `movement_map`
 
 Reference table for transforming aggregated turning movement counts (see `volumes_15min_mvt`) into segment-level volumes (see `volumes_15min_atr_filtered`):
 
@@ -399,8 +399,8 @@ movement_uid|integer|Identifier representing current turning movement - see `mov
 leg|text|Intersection leg from which vehicle enters the intersection|E|
 entry_dir|text|Direction which vehicle enters the interseciton travelling|WB|
 movement|text|Name of the movement, from `movements`|left|
-exit_leg|text|Intersection leg from which vehicle exits the intersection|S|
-exit_dir|text|Direction which vehicle exits the interseciton travelling|SB|
+exit_leg|text|Intersection leg from which vehicle exits the intersection. null for movements 5,6,7. |S|
+exit_dir|text|Direction which vehicle exits the interseciton travelling. null for movements 5,6,7. |SB|
 
 Here are some example rows from the table:
 
@@ -408,8 +408,8 @@ Here are some example rows from the table:
 |-------------|---------|----|----------|---------|---------|---------|
 |            2 | left     | E   | WB        | S        | SB       | Approached intersection from the east leg going west, turned left, exited intersection from the south leg going south. |
 |            4 | u_turn   | E   | WB        | E        | EB       | Approached intersection from the east leg going west, u-turned, exited intersection from the east leg going east. |
-|            5 | cw       | E   | SB        | E        | SB       | A pedestrian entereted the intersection going south on the East crosswalk. The identical exit leg/direction implies it is only an entrance movement and will not be duplicated in the TMC view. |
-|            7 | enter    | E   | WB        | E        | WB       | A bike entereted the intersection travelling west from the east leg. The identical exit leg/direction implies it is only an entrance movement and will not be duplicated in the TMC view. |
+|            5 | cw       | E   | SB        | null        | null       | A pedestrian entereted the intersection going south on the East crosswalk. There is no exit leg for pedestrian movements. |
+|            7 | enter    | E   | WB        | null        | null       | A bike entereted the intersection travelling west from the east leg. There is no exit leg for 'entry' movements. |
 
 For a visual aid in understanding TMC to ATR conversion, see the [getting started readme](../getting_started.md#all-the-east-leg-crossings). 
 
