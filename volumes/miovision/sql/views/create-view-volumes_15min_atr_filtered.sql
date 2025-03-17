@@ -10,7 +10,7 @@ CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
         mmm.entry_dir AS dir,
         SUM(v15.volume) AS volume
     FROM miovision_api.volumes_15min_mvt_filtered AS v15
-    JOIN miovision_api.miovision_movement_map_new AS mmm USING (movement_uid, leg)
+    JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
     GROUP BY
         v15.intersection_uid,
         v15.datetime_bin,
@@ -29,7 +29,8 @@ CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
         mmm.exit_dir,
         SUM(v15.volume) AS volume
     FROM miovision_api.volumes_15min_mvt_filtered AS v15
-    JOIN miovision_api.miovision_movement_map_new AS mmm USING (movement_uid, leg)
+    JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
+    WHERE mmm.exit_leg IS NOT NULL
     GROUP BY
         v15.intersection_uid,
         v15.datetime_bin,
