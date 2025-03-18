@@ -1,4 +1,4 @@
-CREATE VIEW miovision_api.volumes_15min_tmc AS (
+CREATE OR REPLACE VIEW miovision_api.volumes_15min_tmc AS (
     SELECT
         intersection_uid,
         datetime_bin,
