@@ -22,7 +22,7 @@ WITH temp AS (
     FROM new_rows AS im
     JOIN miovision_api.intersections AS i USING (intersection_uid)
     CROSS JOIN generate_series(
-        i.date_installed,
+        GREATEST(i.date_installed, '2019-01-01'::date), --this schema only stores data >= 2019
         LEAST(
             i.date_decommissioned,
             (CURRENT_TIMESTAMP AT TIME ZONE 'Canada/Eastern')::date
