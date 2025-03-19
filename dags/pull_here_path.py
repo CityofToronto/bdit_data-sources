@@ -45,7 +45,7 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     schedule='30 10 * * *' ,
+     schedule='0 17 * * * ',
      catchup=False,
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
