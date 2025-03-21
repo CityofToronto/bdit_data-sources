@@ -18,7 +18,7 @@ CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
         v15.leg,
         mmm.entry_dir
 
-    UNION
+    UNION ALL --there are no duplicate entries and exits
 
     --exits 
     SELECT
