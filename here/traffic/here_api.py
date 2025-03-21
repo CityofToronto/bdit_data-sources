@@ -120,7 +120,7 @@ def get_download_url(request_id, status_base_url, access_token, user_id, api_con
     
     #try polling same request_id for up to max_tokens hrs
     token_counter=0
-    max_tokens=8
+    max_tokens=16
     while status != "Completed Successfully" and token_counter < max_tokens:
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
