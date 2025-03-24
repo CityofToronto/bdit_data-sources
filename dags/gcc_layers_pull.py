@@ -140,8 +140,10 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id):
                 )
             conn = PostgresHook(conn_id).get_conn()
             dest_count = get_dest_row_count(conn, schema, table_name, is_audited, ds)
-            if src_count != dest_count:
-                raise AirflowFailException(f"src_count: {src_count}, dest_count: {dest_count}")
+            if src_count+1 != dest_count:
+                msg = f"`{schema}.{table_name}` - Source count: `{src_count}`, Bigdata count: `{dest_count}`"
+                context.get("task_instance").xcom_push(key="extra_msg", value=msg)
+                raise AirflowFailException(msg)
             return True
 
         layers = get_layers(name)
