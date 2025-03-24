@@ -16,21 +16,21 @@ WITH lookback AS ( --noqa: L045
 ),
 
 ids_dif AS (
-    SELECT ARRAY_AGG(ids_diff) AS ids_diff
+    SELECT ARRAY_AGG(c.ids_diff) AS ids_diff
     FROM (
         SELECT DISTINCT UNNEST(lb.daily_ids) AS ids_diff
         FROM lookback AS lb
-        WHERE _dt != '{{ ds }}'::date - {{ params.ds_offset }}
+        WHERE lb._dt != '{{ ds }}'::date - {{ params.ds_offset }}
         EXCEPT
         SELECT UNNEST(today.daily_ids)
         FROM lookback AS today
-        WHERE _dt = '{{ ds }}'::date - {{ params.ds_offset }}
+        WHERE today._dt = '{{ ds }}'::date - {{ params.ds_offset }}
         ORDER BY ids_diff
     ) AS c
 )
 
 SELECT
-    today.count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.count)) AS check,
+    today.count >= FLOOR({{ params.threshold }}::numeric * AVG(lb.count)) AS check, --noqa: CP02, RF02
     'Daily count: ' || to_char(today.count, 'FM9,999,999,999')
     AS ds_count,
     initcap('{{ params.lookback }}') || ' Lookback Avg: '
@@ -48,9 +48,9 @@ SELECT
     END AS id_diff
 FROM lookback AS today,
     lookback AS lb, --noqa: L025
-    ids_dif AS c
+    ids_dif AS c --noqa: AL05
 WHERE
-    lb._dt != '{{ ds }}'::date - {{ params.ds_offset }}
+    lb._dt != '{{ ds }}'::date - {{ params.ds_offset }} --noqa: LT02
     AND today._dt = '{{ ds }}'::date - {{ params.ds_offset }}
 GROUP BY
     today.count,
