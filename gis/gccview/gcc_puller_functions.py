@@ -660,7 +660,6 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, include_addit
         primary_key = primary_key,
         con=connection_obj,
         is_partitioned = is_partitioned
-        include_additional_layers = include_additional_layers
     )
 
 if __name__ == '__main__':
