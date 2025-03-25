@@ -313,16 +313,14 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
     """
     return_json = None
     base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
+    # Exclude negative objectids from ALL layers based on recommendation from GCC (#1138)
+    where = "OBJECTID>0"
     # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        where = "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other')"
+        feature_list = ['Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other']
         if include_additional_feature: # Then add the additional 5 roadclasses
-            where += " OR \"FEATURE_CODE_DESC\" IN ('Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road')"
-    elif mapserver == 'cot_geospatial27' and layer_id == 41:
-        # Exclude negative objectids from address point layer based on recommendation from GCC (internal use only)
-        where = "OBJECTID>0"
-    else:
-        where = "1=1"
+            feature_list += ['Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road']
+        where += " AND FEATURE_CODE_DESC IN ('{}')".format("','".join(feature_list))
         
     query = {"where": where,
             "outFields": "*",
