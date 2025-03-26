@@ -1,56 +1,50 @@
-﻿DROP TABLE IF EXISTS miovision.movement_map;
+CREATE TABLE miovision_api.movement_map (
+    movement_uid integer,
+    leg text,
+    entry_dir text,
+    movement text,
+    exit_leg text,
+    exit_dir text,
+    CONSTRAINT movement_map_pkey PRIMARY KEY (movement_uid, leg)
+);
 
-CREATE TABLE miovision.movement_map (
-	leg_new text,
-	dir text,
-	leg_old text,
-	movement_uid integer);
+COMMENT ON TABLE miovision_api.movement_map
+IS 'A more intuitive version of former `miovision_api.movement_map`.';
 
-INSERT INTO miovision.movement_map VALUES ('N','NB','N',4);
-INSERT INTO miovision.movement_map VALUES ('N','NB','E',3);
-INSERT INTO miovision.movement_map VALUES ('N','NB','S',1);
-INSERT INTO miovision.movement_map VALUES ('N','NB','W',2);
+INSERT INTO miovision_api.movement_map (
+    movement_uid, leg, entry_dir, movement, exit_leg, exit_dir
+)
+(
+    VALUES
+    (1, 'E', 'WB', 'thru', 'W', 'WB'),
+    (2, 'E', 'WB', 'left', 'S', 'SB'),
+    (3, 'E', 'WB', 'right', 'N', 'NB'),
+    (4, 'E', 'WB', 'u_turn', 'E', 'EB'),
+    (5, 'E', 'SB', 'cw', NULL, NULL),
+    (6, 'E', 'NB', 'ccw', NULL, NULL),
+    (7, 'E', 'WB', 'enter', NULL, NULL),
 
-INSERT INTO miovision.movement_map VALUES ('N','SB','N',4);
-INSERT INTO miovision.movement_map VALUES ('N','SB','N',3);
-INSERT INTO miovision.movement_map VALUES ('N','SB','N',1);
-INSERT INTO miovision.movement_map VALUES ('N','SB','N',2);
+    (1, 'N', 'SB', 'thru', 'S', 'SB'),
+    (2, 'N', 'SB', 'left', 'E', 'EB'),
+    (3, 'N', 'SB', 'right', 'W', 'WB'),
+    (4, 'N', 'SB', 'u_turn', 'N', 'NB'),
+    (5, 'N', 'EB', 'cw', NULL, NULL),
+    (6, 'N', 'WB', 'ccw', NULL, NULL),
+    (7, 'N', 'SB', 'enter', NULL, NULL),
 
-INSERT INTO miovision.movement_map VALUES ('E','EB','E',4);
-INSERT INTO miovision.movement_map VALUES ('E','EB','S',3);
-INSERT INTO miovision.movement_map VALUES ('E','EB','W',1);
-INSERT INTO miovision.movement_map VALUES ('E','EB','N',2);
+    (1, 'S', 'NB', 'thru', 'N', 'NB'),
+    (2, 'S', 'NB', 'left', 'W', 'WB'),
+    (3, 'S', 'NB', 'right', 'E', 'EB'),
+    (4, 'S', 'NB', 'u_turn', 'S', 'SB'),
+    (5, 'S', 'WB', 'cw', NULL, NULL),
+    (6, 'S', 'EB', 'ccw', NULL, NULL),
+    (7, 'S', 'NB', 'enter', NULL, NULL),
 
-INSERT INTO miovision.movement_map VALUES ('E','WB','E',4);
-INSERT INTO miovision.movement_map VALUES ('E','WB','E',3);
-INSERT INTO miovision.movement_map VALUES ('E','WB','E',1);
-INSERT INTO miovision.movement_map VALUES ('E','WB','E',2);
-
-INSERT INTO miovision.movement_map VALUES ('S','SB','S',4);
-INSERT INTO miovision.movement_map VALUES ('S','SB','W',3);
-INSERT INTO miovision.movement_map VALUES ('S','SB','N',1);
-INSERT INTO miovision.movement_map VALUES ('S','SB','E',2);
-
-INSERT INTO miovision.movement_map VALUES ('S','NB','S',4);
-INSERT INTO miovision.movement_map VALUES ('S','NB','S',3);
-INSERT INTO miovision.movement_map VALUES ('S','NB','S',1);
-INSERT INTO miovision.movement_map VALUES ('S','NB','S',2);
-
-INSERT INTO miovision.movement_map VALUES ('W','WB','W',4);
-INSERT INTO miovision.movement_map VALUES ('W','WB','N',3);
-INSERT INTO miovision.movement_map VALUES ('W','WB','E',1);
-INSERT INTO miovision.movement_map VALUES ('W','WB','S',2);
-
-INSERT INTO miovision.movement_map VALUES ('W','EB','W',4);
-INSERT INTO miovision.movement_map VALUES ('W','EB','W',3);
-INSERT INTO miovision.movement_map VALUES ('W','EB','W',1);
-INSERT INTO miovision.movement_map VALUES ('W','EB','W',2);
-
-INSERT INTO miovision.movement_map VALUES ('N','EB','N',5);
-INSERT INTO miovision.movement_map VALUES ('N','WB','N',6);
-INSERT INTO miovision.movement_map VALUES ('E','SB','E',5);
-INSERT INTO miovision.movement_map VALUES ('E','NB','E',6);
-INSERT INTO miovision.movement_map VALUES ('S','WB','S',5);
-INSERT INTO miovision.movement_map VALUES ('S','EB','S',6);
-INSERT INTO miovision.movement_map VALUES ('W','NB','W',5);
-INSERT INTO miovision.movement_map VALUES ('W','SB','W',6);
+    (1, 'W', 'EB', 'thru', 'E', 'EB'),
+    (2, 'W', 'EB', 'left', 'N', 'NB'),
+    (3, 'W', 'EB', 'right', 'S', 'SB'),
+    (4, 'W', 'EB', 'u_turn', 'W', 'WB'),
+    (5, 'W', 'NB', 'cw', NULL, NULL),
+    (6, 'W', 'SB', 'ccw', NULL, NULL),
+    (7, 'W', 'EB', 'enter', NULL, NULL)
+);

@@ -25,7 +25,7 @@ After identifying relevant intersection_uids in [`miovision_api.intersections`](
 |------------------------------------------|------------|-------------------|-------------------------------------|---------------------------------------|-------------------------|---------|
 | [miovision_api.volumes_daily](sql/readme.md#miovision_apivolumes_daily)              | 1 day      | By day / classification     | X                                   |      | `dt` | Prefiltering days with reasonable data. |
 | [miovision_api.volumes_15min_mvt_filtered](sql/readme.md#volumes_15min_mvt) | 15 minutes | TMC               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly TMC aggregations | 
-| [miovision_api.volumes_15min_filtered](sql/readme.md#volumes_15min)    | 15 minutes | ATR               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly ATR aggregations |
+| [miovision_api.volumes_15min_atr_filtered](sql/readme.md#volumes_15min_atr_filtered)    | 15 minutes | ATR               | X                                   | X                                     | `datetime_bin` | 15 minute or hourly ATR aggregations |
  
 \*`anomalous_range`: manual or automatically labelled date ranges of unusual or zero volumes.  
 \*\*`unacceptable_gaps`: short periods of at least 5 minutes with zero volumes across all modes which are assumed to be camera outages.  
@@ -92,7 +92,7 @@ Still fuzzy? Here's a diagram to help you picture it perfectly:
 
 #### Comparing TMC and ATR Counts
 
-The following example illustrates the differences between the TMC counts found in `volumes_15min_mvt` and `volumes_15min`.
+The following example illustrates the differences between the TMC counts found in `volumes_15min_mvt` and `volumes_15min_atr_filtered`.
 
 For light vehicles at King / Bay on 2020-10-15 9:00-9:15 (`intersection_uid = 17`, `datetime_bin = '2020-10-15 09:00:00'`, `classification_uid = 1`), the TMC and ATR movements are:
 
@@ -131,7 +131,7 @@ The ATR table exactly double-counts the number of vehicles travelling through in
 **In the TMC table (aka `volumes_15min_mvt`)**
 The `leg` represents the side of the intersection that the pedestrian is crossing. Pedestrian movements are tracked using `movement_uid` 5 or 6 (clockwise or counterclockwise, respectively). [This diagram](#Pedestrian-Movement) will help you visualize the clockwise and counterclockwise movements.
 
-**In the ATR table (aka `volumes_15min`)** 
+**In the ATR table (aka `volumes_15min_atr_filtered`)** 
 The `leg` represents the side of the intersection that the pedestrian is crossing. The `dir` represents which direction they are walking towards. So, if leg = N and dir = EB means that the pedestrian is at the North crosswalk crossing from the west side to the east side.
 
 ## See it in Code!
@@ -161,7 +161,7 @@ WHERE
 
 ### Scenario 2: Total Volume at an Intersection
 
-This example calculates the volume of light vehicles passing through an intersection (King and Bathurst) in all directions. Since movement is irrelevant, the ATR table (`miovision_api.volumes_15min`) is used. Vehicles should be counted only once, when they approach the intersection.
+This example calculates the volume of light vehicles passing through an intersection (King and Bathurst) in all directions. Since movement is irrelevant, the ATR table (`miovision_api.volumes_15min_atr_filtered`) is used. Vehicles should be counted only once, when they approach the intersection.
 
 Here's what it looks like:
 
@@ -172,7 +172,7 @@ Here's the corresponding code snippet:
 ```
 SELECT
     SUM(volume) 
-FROM miovision_api.volumes_15min
+FROM miovision_api.volumes_15min_atr_filtered
 WHERE 
     intersection_uid = 10 -- 10 = King and Bathurst
     AND leg != left(dir, 1) -- count approaches only
@@ -204,7 +204,7 @@ Here's the corresponding code snippet:
 SELECT
     SUM(volume) FILTER (WHERE dir = 'EB') AS eb_volume,
     SUM(volume) FILTER (WHERE dir = 'WB') AS wb_volume
-FROM miovision_api.volumes_15min
+FROM miovision_api.volumes_15min_atr_filtered
 WHERE 
     intersection_uid = 10 -- King and Bathurst
     AND leg = 'E' -- The screenline is on the east leg, so we only want counts from there
