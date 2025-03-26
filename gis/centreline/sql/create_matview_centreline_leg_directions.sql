@@ -55,8 +55,9 @@ legs AS (
                 1 -- at most, the whole geometry
             )
         )) AS stub_geom,
+        ST_Reverse(edges_outbound.geom) AS full_geom,
         degrees(ST_Azimuth(
-            -- first and seconds points of the line
+            -- first and second points of the line
             ST_PointN(edges_outbound.geom, 1)::geography,
             ST_PointN(edges_outbound.geom, 2)::geography
         )) AS azimuth
@@ -77,6 +78,7 @@ legs AS (
             ),
             1 -- to end
         ) AS stub_geom,
+        edges_inbound.geom AS full_geom,
         degrees(ST_Azimuth(
             -- last and second to last points of the line
             -- (reverse of the above)
@@ -101,7 +103,8 @@ distances AS (
         toronto_cardinal.leg_label,
         -- *MATH*
         abs(180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)) AS angular_distance,
-        legs.stub_geom
+        legs.stub_geom,
+        legs.full_geom
     FROM legs
     CROSS JOIN toronto_cardinal
 ),
@@ -116,7 +119,8 @@ leg1 AS (
         leg_centreline_id,
         leg_label,
         angular_distance,
-        stub_geom
+        stub_geom,
+        full_geom
     FROM distances
     ORDER BY
         intersection_centreline_id,
@@ -134,7 +138,8 @@ leg2 AS (
         leg_centreline_id,
         leg_label,
         angular_distance,
-        stub_geom
+        stub_geom,
+        full_geom
     FROM distances
     WHERE
         NOT EXISTS (
@@ -160,7 +165,8 @@ leg3 AS (
         leg_centreline_id,
         leg_label,
         angular_distance,
-        stub_geom
+        stub_geom,
+        full_geom
     FROM distances
     WHERE
         NOT EXISTS (
@@ -192,7 +198,8 @@ leg4 AS (
         leg_centreline_id,
         leg_label,
         angular_distance,
-        stub_geom
+        stub_geom,
+        full_geom
     FROM distances
     WHERE
         NOT EXISTS (
@@ -233,10 +240,9 @@ unified_legs AS (
 )
 
 /*
-The final select adds some useful attributes from the edge table,
-and also removes (via DISTINCT ON) legs assigned to more than one
-direction (this will happen in the fourth pass for intersections
-with 3 legs).
+The final select adds names from the edge table, and also removes
+(via DISTINCT ON) legs assigned to more than one direction
+(this will happen in the fourth pass for intersections with 3 legs).
 */
 SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
@@ -249,7 +255,7 @@ SELECT DISTINCT ON (
     ST_PointN(unified_legs.stub_geom, -1) AS intersection_geom,
     edges.linear_name_full_legal AS street_name,
     unified_legs.stub_geom AS leg_stub_geom,
-    edges.geom AS leg_full_geom
+    unified_legs.full_geom AS leg_full_geom
 FROM unified_legs
 JOIN gis_core.centreline_latest AS edges
     ON unified_legs.leg_centreline_id = edges.centreline_id
@@ -270,11 +276,11 @@ CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
 COMMENT ON MATERIALIZED VIEW gis_core.centreline_leg_directions
 IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190';
 
-COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
-IS 'first (up to) 30m of the centreline segment geometry pointing inbound toward the intersection';
-
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
 IS 'cardinal direction, one of (north, east, south, west)';
 
+COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
+IS 'first (up to) 30m of the centreline segment geometry pointing *inbound* toward the reference intersection';
+
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_full_geom
-IS 'complete geometry of the centreline edge';
+IS 'complete geometry of the centreline segment geometry, pointing *inbound* toward the reference intersection';
