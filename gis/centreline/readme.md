@@ -80,3 +80,9 @@ Intersections are stored in either of two tables, each of which is copied from a
     - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
     - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
+
+### Segments with reference to intersections
+
+The materialized view `gis_core.centreline_leg_directions` contains an automated determination of the cardinal direction ("north", "east", "south", or "west") of segments with reference to a 3- or 4-legged intersection. This may be useful where other datasets such as TMCs provide data for e.g. the "North approach", but don't actually specify which centreline edge this is.
+
+The orientation of some intersections makes this mapping non-trivial and it's possible and even likely that some datasets classify these cardinal directions differently or inconsistently. Please report any issues or inconsistencies you may find [here](https://github.com/CityofToronto/bdit_data-sources/issues/1190).
