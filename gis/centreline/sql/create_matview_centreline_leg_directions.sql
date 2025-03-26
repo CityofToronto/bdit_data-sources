@@ -268,7 +268,7 @@ CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_stub_geom);
 CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
 
 COMMENT ON MATERIALIZED VIEW gis_core.centreline_leg_directions
-IS 'Automated mapping of centreline intersection legs onto the four cardinal directions';
+IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
 IS 'first (up to) 30m of the centreline segment geometry pointing inbound toward the intersection';
