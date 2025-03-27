@@ -265,7 +265,7 @@ ORDER BY
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
---ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO ???;
+ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO gis_admins;;
 
 CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
 CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_full_geom);
