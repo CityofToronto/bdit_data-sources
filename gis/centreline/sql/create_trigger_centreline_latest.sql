@@ -8,6 +8,7 @@ BEGIN
 
 REFRESH MATERIALIZED VIEW gis_core.centreline_latest;
 REFRESH MATERIALIZED VIEW gis_core.centreline_latest_all_feature;
+REFRESH MATERIALIZED VIEW gis_core.centreline_leg_directions;
 RETURN NULL;
 
 END;
