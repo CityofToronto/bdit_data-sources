@@ -12,8 +12,10 @@ CREATE OR REPLACE VIEW miovision_api.volumes_15min_mvt_filtered AS (
     --anti join anomalous_ranges
     LEFT JOIN miovision_api.anomalous_ranges AS ar
         ON (ar.problem_level = ANY(ARRAY['do-not-use'::text, 'questionable'::text]))
-        AND ar.intersection_uid = v15.intersection_uid
         AND (
+            ar.intersection_uid = v15.intersection_uid
+            OR ar.intersection_uid IS NULL
+        ) AND (
             ar.classification_uid = v15.classification_uid
             OR ar.classification_uid IS NULL
         ) AND (
