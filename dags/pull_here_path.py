@@ -3,17 +3,20 @@ import os
 import pendulum
 from datetime import timedelta
 
-from airflow.decorators import task, dag
+from airflow.decorators import task, dag, task_group
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable 
 from airflow.macros import ds_add, ds_format
+from airflow.operators.python import get_current_context
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
     from here.traffic.here_api import get_access_token, get_download_url
     from here.traffic.here_api_path import query_dates
+    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from dags.common_tasks import wait_for_weather_timesensor
 except:
     raise ImportError("Cannot import slack alert functions")
 
@@ -47,6 +50,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      schedule='0 17 * * * ',
      catchup=False,
+     template_searchpath=os.path.join(repo_path,'dags/sql'),
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
      )
@@ -84,7 +88,47 @@ def pull_here_path():
     })
     def load_data()->str:
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
+    
+    @task_group(
+        tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
+    )
+    def data_checks():
+        data_check_params = {
+            "table": "here.ta_path",
+            "lookback": '30 days',
+            "dt_col": 'dt',
+            "threshold": 0.7,
+            "ds_offset": 1
+        }
+        check_row_count = SQLCheckOperatorWithReturnValue(
+            #on_failure_callback=slack_alert_data_quality,
+            task_id="check_row_count",
+            sql="select-row_count_lookback.sql",
+            conn_id="here_bot",
+            retries=0,
+            params=data_check_params | {"col_to_sum": 1},
+        )
+        check_row_count.doc_md = '''
+        Compare the row count today with the average row count from the lookback period.
+        '''
 
-    load_data()
+        check_distinct_link_dirs = SQLCheckOperatorWithReturnValue(
+            #on_failure_callback=slack_alert_data_quality,
+            task_id="check_distinct_link_dirs",
+            sql="select-sensor_id_count_lookback.sql",
+            conn_id="here_bot",
+            retries=0,
+            params=data_check_params | {
+                    "id_col": "link_dir"
+                },
+        )
+        check_distinct_link_dirs.doc_md = '''
+        Compare the count of link_dirs appearing in today's pull vs the lookback period.
+        '''
+
+        check_row_count
+        check_distinct_link_dirs
+
+    load_data() >> data_checks()
 
 pull_here_path()
