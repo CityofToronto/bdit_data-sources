@@ -40,7 +40,8 @@ _abbrev_street := regexp_REPLACE(_abbrev_street, '(?<=[A-Z][a-z]+ )(Circuit)(?![
 _abbrev_street := regexp_REPLACE(_abbrev_street, '(?<=[A-Z][a-z]+ )(Park)(?![a-z])(?! [A-Z])', 'Pk', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'Gate', 'Gt', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'Pathway', 'Pthwy', 'g');
-_abbrev_street := regexp_REPLACE(_abbrev_street, '\(.*\)', '', 'g');
+--removes anything between brackets
+_abbrev_street := regexp_REPLACE(_abbrev_street, '\(([^\(]+)\)', '', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, 'approximately', '', 'gi');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grove', ' Grv', 'g');
 _abbrev_street := regexp_REPLACE(_abbrev_street, ' Grv Rd', ' Grove Rd', 'g');
