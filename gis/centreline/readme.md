@@ -80,3 +80,15 @@ Intersections are stored in either of two tables, each of which is copied from a
     - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
     - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
+
+* `gis_core.intersection_degree`
+    - A view that provide information on intersection's related road classes, and connectivity degree.
+    | Column Name            | Description  |
+    |------------------------|-------------|
+    | `intersection_id`      | Unique identifier for each intersection |
+    | `feature_desc_list`    | A list of all road classes associated with the intersection, ordered by road order |
+    | `highest_order_feature` | The highest order of road class associated with the intersection. |
+    | `number_of_elevations` | Number of elevations this intersection has |
+    | `degree`              | The number of centreline segments connected to this intersection. |
+    | `centreline_list`     | An array of connected centreline_id. |
+    | `geom`            | Geometry of the intersection. |
