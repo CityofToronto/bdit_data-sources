@@ -264,7 +264,10 @@ def get_geometry(geometry_type, geom):
         'esriGeometryPolygon': polygon
     }
     func = switcher.get(geometry_type)
-    geometry = (func(geom)) 
+    try:
+        geometry = (func(geom))
+    except IndexError:
+        geometry = None
     return geometry
 
 def to_time(input):
