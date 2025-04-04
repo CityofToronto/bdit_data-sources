@@ -1,5 +1,5 @@
-DROP TABLE gwolofs.tt_paths;
-CREATE TABLE gwolofs.tt_paths (
+DROP TABLE bluetooth.itsc_tt_paths;
+CREATE TABLE bluetooth.itsc_tt_paths (
     division_id smallint,
     path_id integer,
     source_id character varying(1000),
@@ -40,10 +40,11 @@ CREATE TABLE gwolofs.tt_paths (
     )
 );
 
-ALTER TABLE gwolofs.tt_paths OWNER TO gwolofs;
-GRANT ALL ON gwolofs.tt_paths TO events_bot;
+ALTER TABLE bluetooth.itsc_tt_paths OWNER TO bt_admins;
 
 CREATE TRIGGER add_bluetooth_path_geom_trigger
-BEFORE INSERT OR UPDATE ON gwolofs.tt_paths
+BEFORE INSERT OR UPDATE ON bluetooth.itsc_tt_paths
 FOR EACH ROW
-EXECUTE FUNCTION gwolofs.add_bluetooth_path_geom();
+EXECUTE FUNCTION bluetooth.itsc_add_bluetooth_path_geom();
+
+GRANT SELECT, UPDATE, INSERT ON bluetooth.itsc_tt_paths TO events_bot;
