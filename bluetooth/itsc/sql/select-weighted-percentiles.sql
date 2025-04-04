@@ -8,7 +8,7 @@ WITH weighted_data AS (
         SUM(SUM(num_samples)) OVER path_hr AS total_sample,
         --sum of samples which have appeared below that speed
         SUM(SUM(num_samples)) OVER path_hr_tt / SUM(SUM(num_samples)) OVER path_hr AS record_frac
-    FROM gwolofs.tt_raw
+    FROM bluetooth.itsc_tt_raw
     WHERE path_id = 6759128 AND dt >= '2025-01-01' --date_trunc('hour', dt) = '2025-02-22 14:00'
     GROUP BY
         path_id,
