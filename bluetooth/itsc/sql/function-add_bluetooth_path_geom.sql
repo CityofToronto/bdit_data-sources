@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.add_bluetooth_path_geom()
+CREATE OR REPLACE FUNCTION bluetooth.itsc_add_bluetooth_path_geom()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Add geom by getting the matching paths from centreline_latest
@@ -10,5 +10,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION gwolofs.add_bluetooth_path_geom()
-OWNER TO gwolofs;
+ALTER FUNCTION bluetooth.itsc_add_bluetooth_path_geom()
+OWNER TO bt_admins;
+
+GRANT EXECUTE ON FUNCTION bluetooth.itsc_add_bluetooth_path_geom TO events_bot; 

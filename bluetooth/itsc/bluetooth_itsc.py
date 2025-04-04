@@ -23,7 +23,7 @@ def fetch_and_insert_raw_tt_data(
     '''Fetches data from ITS Central, processes and inserts into RDS.
     
     - Fetches data from ITS Central `traveltimepathrawdata` table.  
-    - Inserts into RDS `gwolofs.tt_raw` table.
+    - Inserts into RDS `bluetooth.itsc_tt_raw` table.
     '''
     
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw.sql')
@@ -62,7 +62,7 @@ def fetch_and_insert_raw_tt_pathdata(
     '''Fetches data from ITS Central, processes and inserts into RDS.
     
     - Fetches data from ITS Central `traveltimepathdata` table.  
-    - Inserts into RDS `gwolofs.tt_raw_pathdata` table.
+    - Inserts into RDS `bluetooth.itsc_tt_raw_pathdata` table.
     '''
     
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_raw_pathdata.sql')
@@ -101,7 +101,7 @@ def fetch_and_insert_tt_path_data(
     '''Fetches data from ITS Central, processes and inserts into RDS.
     
     - Fetches data from ITS Central `traveltimepathconfig`, `traveltimepathfeature` tables.
-    - Inserts into RDS `gwolofs.tt_paths` table.
+    - Inserts into RDS `bluetooth.itsc_tt_paths` table.
     '''
         
     select_fpath = os.path.join(SQL_DIR, 'select-itsc-tt_paths.sql')
