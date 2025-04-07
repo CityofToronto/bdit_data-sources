@@ -39,8 +39,8 @@ GRANT ALL ON TABLE bluetooth.itsc_tt_raw_pathdata TO rds_superuser WITH GRANT OP
 -- DROP INDEX IF EXISTS bluetooth.tt_raw_pathdata_path_dt__idx;
 
 CREATE UNIQUE INDEX IF NOT EXISTS tt_raw_pathdata_path_dt__idx
-    ON bluetooth.itsc_tt_raw_pathdata USING btree
-    (path_id ASC NULLS LAST, dt ASC NULLS LAST);
+ON bluetooth.itsc_tt_raw_pathdata USING btree
+(path_id ASC NULLS LAST, dt ASC NULLS LAST);
 
 -- Partitions SQL
 
