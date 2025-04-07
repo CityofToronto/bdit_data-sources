@@ -2,17 +2,18 @@ WITH centrelines AS (
     SELECT
         divisionid,
         pathid,
-        ARRAY_AGG(featureid ORDER BY featureindex) AS centreline_ids
+        ARRAY_AGG(featureid ORDER BY featureindex) AS centreline_ids --noqa: LT14
     FROM public.traveltimepathfeature
     GROUP BY
         divisionid,
         pathid
 )
+
 SELECT
     paths.divisionid AS division_id,
     paths.pathid AS path_id,
     paths.sourceid AS source_id,
-    paths.algorithm AS algorithm,
+    paths.algorithm,
     paths.firstfeaturestartoffsetmeters AS first_feature_start_off_set_meters,
     paths.lastfeatureendoffsetmeters AS last_feature_end_off_set_meters,
     paths.firstfeatureforward AS first_feature_forward,
