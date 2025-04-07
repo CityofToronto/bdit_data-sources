@@ -128,9 +128,7 @@ def od_check_dag():
         
         send_slack_msg(
             context=context,
-            msg=f""":open_data_to: page view analytics from `{last_month.format('MMMM Y')}`:
-            ```{dt_md}```
-            """
+            msg=f":open_data_to: page view analytics from `{last_month.format('MMMM Y')}`:```{dt_md}```"
         )
 
     ids=fetch_datasets()
