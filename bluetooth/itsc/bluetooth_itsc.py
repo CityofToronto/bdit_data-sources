@@ -1,7 +1,6 @@
 import os
 import logging
 import pandas as pd
-from datetime import datetime
 from numpy import nan
 from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
