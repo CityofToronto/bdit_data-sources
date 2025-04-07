@@ -1,13 +1,15 @@
 import os
 import sys
+import json
 import logging
 import requests
+import pendulum
+import pandas as pd
 from datetime import datetime, timedelta
 import dateutil.parser
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.operators.python import get_current_context
 from airflow.models.taskinstance import TaskInstance
 from airflow.exceptions import AirflowFailException
 
@@ -19,7 +21,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+from dags.dag_functions import task_fail_slack_alert, get_readme_docmd, send_slack_msg
 
 #README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 #DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -35,7 +37,7 @@ default_args = {
     'on_failure_callback': task_fail_slack_alert,
 }
 
-BASE_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show"
+BASE_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca"
 
 @dag(
     dag_id=DAG_NAME,
@@ -43,7 +45,7 @@ BASE_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package
     max_active_runs=1,
     #doc_md=DOC_MD,
     tags=['bdit_data-sources', 'open_data', 'data_check'],
-    schedule='@monthly', #monthly
+    schedule='0 0 5 * *', #fifth day of every month
     catchup=False,
 )
 
@@ -58,8 +60,9 @@ def od_check_dag():
         context["od_id"] = od_id
         
         #get open data metadata
-        params = {"id": od_id}
-        package = requests.get(BASE_URL, params = params).json()
+        p = {"id": od_id}
+        package_show_url = BASE_URL + "/api/3/action/package_show"
+        package = requests.get(package_show_url, params = p).json()
         try:
             result = package.get('result')
             refresh_rate = result.get('refresh_rate')
@@ -77,7 +80,9 @@ def od_check_dag():
             max_offset = timedelta(days=60)
         
         if last_refreshed < datetime.now() - max_offset:
-            failure_msg = f"<https://open.toronto.ca/dataset/{od_id}/|`{od_id}`> is out of date. Last refreshed: `{last_refreshed}` (days old: {(datetime.now() - last_refreshed).days})."
+            days_old=(datetime.now() - last_refreshed).days
+            md_url=f"<https://open.toronto.ca/dataset/{od_id}/|`{od_id}`>"
+            failure_msg = f"{md_url} is out of date. Last refreshed: `{last_refreshed}` (days old: {days_old})."
             context["task_instance"].xcom_push(key="failure_msg", value=failure_msg)
     
     @task(
@@ -97,7 +102,39 @@ def od_check_dag():
             ti.xcom_push(key="extra_msg", value=failure_extra_msg)
             raise AirflowFailException('One or more Open Data pages is outdated.')
     
+    @task()
+    def usage_stats(ids, **context):
+        # file clicks are also available under a different non-datastore resource
+        resource_id = "eb98a22e-b9d2-4b30-ab1c-fdc9c3fcf8d3" #'Page Views and Time Based Metrics.csv'
+        datastore_search_url = BASE_URL + "/api/3/action/datastore_search"
+        last_month = pendulum.now().subtract(months=1)
+        page_urls = [f"open.toronto.ca/dataset/{id}/" for id in ids]
+        p = {
+            "resource_id": resource_id,
+            "filters": json.dumps({
+                "Link Source -Page URL": page_urls,
+                "Month": last_month.format('YMM')
+            })
+        }
+        resource_search_data = requests.get(datastore_search_url, params = p).json()["result"]
+        # Convert to DataFrame and clean
+        df = pd.DataFrame(resource_search_data['records'])
+        df["Id"] = df["Link Source -Page URL"].str.extract(r'open.toronto.ca/dataset/([^/]+)')
+        
+        #filter columns and sort
+        df_sorted = df[["Id", "Sessions", "Users", "Views", "Avg Session Duration (Sec)"]]
+        df_sorted = df_sorted.sort_values(by="Views", ascending=False)
+        dt_md = df_sorted.to_markdown(index = False, tablefmt="slack")
+        
+        send_slack_msg(
+            context=context,
+            msg=f""":open_data_to: page view analytics from `{last_month.format('MMMM Y')}`:
+            ```{dt_md}```
+            """
+        )
+
     ids=fetch_datasets()
     check_freshness.expand(od_id = ids) >> freshness_message(ids)
+    usage_stats(ids)
 
 od_check_dag()
