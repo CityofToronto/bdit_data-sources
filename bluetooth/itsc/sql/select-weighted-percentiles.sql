@@ -31,7 +31,7 @@ SELECT
     path_id,
     hr,
     ROUND(AVG(mean), 0) AS unweighted_avg,
-    ROUND(SUM(mean*n/total_sample), 0) AS weighted_avg,
+    ROUND(SUM(mean * n / total_sample), 0) AS weighted_avg,
     MIN(mean) FILTER (WHERE record_frac >= 0.15) AS percentile_15th,
     MIN(mean) FILTER (WHERE record_frac >= 0.50) AS percentile_50th,
     MIN(mean) FILTER (WHERE record_frac >= 0.85) AS percentile_85th

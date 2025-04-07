@@ -1,13 +1,22 @@
 WITH updated AS (
-    SELECT division_id, path_id, start_timestamp, st_union(lat.geom) AS new_geom
-    FROM bluetooth.itsc_tt_paths,
-    LATERAL (
-        SELECT DISTINCT ON (centreline_id) centreline_id, centreline.geom
-        FROM gis_core.centreline
-        WHERE centreline.centreline_id = ANY(centreline_ids)
-        ORDER BY centreline_id, version_date DESC
-    ) AS lat
-    GROUP BY 1, 2, 3
+    SELECT
+        paths.division_id,
+        paths.path_id,
+        paths.start_timestamp,
+        st_union(lat.geom) AS new_geom
+    FROM bluetooth.itsc_tt_paths AS paths,
+        LATERAL (
+            SELECT DISTINCT ON (centreline.centreline_id)
+                centreline.centreline_id,
+                centreline.geom
+            FROM gis_core.centreline
+            WHERE centreline.centreline_id = ANY(centreline.centreline_ids)
+            ORDER BY centreline.centreline_id ASC, centreline.version_date DESC
+        ) AS lat
+    GROUP BY
+        paths.division_id,
+        paths.path_id,
+        paths.start_timestamp
 )
 
 UPDATE bluetooth.itsc_tt_paths

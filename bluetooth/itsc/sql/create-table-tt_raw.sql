@@ -52,6 +52,6 @@ ALTER TABLE IF EXISTS bluetooth.itsc_tt_raw_2025
 OWNER TO bt_admins;
 
 CREATE UNIQUE INDEX tt_raw_path_dt_idx
-ON bluetooth.itsc_tt_raw USING btree(
+ON bluetooth.itsc_tt_raw USING btree (
     path_id, dt
 );
