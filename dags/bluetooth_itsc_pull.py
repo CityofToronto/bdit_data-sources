@@ -52,9 +52,8 @@ def bt_itsc_dag():
     create_annual_partition = SQLExecuteQueryOperator(
             task_id='create_annual_partitions',
             pre_execute=check_jan_1st,
-            sql=["SELECT bluetooth.create_yyyy_volumes_partition('volumes', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'datetime_bin')",
-                 "SELECT bluetooth.create_yyyy_volumes_15min_partition('volumes_15min', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)",
-                 "SELECT bluetooth.create_yyyy_volumes_15min_partition('volumes_15min_mvt', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int)"],
+            sql=["SELECT bluetooth.create_yyyy_volumes_partition('itsc_tt_raw', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
+                 "SELECT bluetooth.create_yyyy_volumes_partition('itsc_tt_raw_pathdata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')"],
             conn_id='events_bot',
             autocommit=True
     )
