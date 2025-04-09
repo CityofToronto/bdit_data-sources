@@ -22,9 +22,6 @@ doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to
 DAG_NAME = 'here_dynamic_binning_agg'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
 
-# Slack alert
-SLACK_CONN_ID = 'slack_data_pipeline'
-
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
@@ -50,7 +47,7 @@ default_args = {
 def here_dynamic_binning_agg():
 
     aggregate_daily = SQLExecuteQueryOperator(
-        #sql="SELECT covid.generate_citywide_tti( '{{macros.ds_add(ds, -1)}}' )",
+        sql="SELECT '{{macros.ds_add(ds, -1)}}';",
         task_id='aggregate_daily',
         conn_id='congestion_bot',
         autocommit=True,
