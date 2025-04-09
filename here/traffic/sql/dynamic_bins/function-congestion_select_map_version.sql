@@ -28,5 +28,7 @@ $BODY$;
 ALTER FUNCTION gwolofs.congestion_select_map_version(date, date)
 OWNER TO gwolofs;
 
+GRANT EXECUTE ON FUNCTION gwolofs.congestion_select_map_version(date, date) TO congestion_bot;
+
 COMMENT ON FUNCTION gwolofs.congestion_select_map_version IS
 'Implement TT App selectMapVersion.py';
