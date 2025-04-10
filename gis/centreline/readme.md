@@ -78,10 +78,10 @@ Intersections are stored in either of two tables, each of which is copied from a
     - include trails and ferry routes
 * `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
     - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
-    - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
+    - contains additional elevation information such as elevation level (they are all zero), elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
 
-* `gis_core.intersection_degree`
+* `gis_core.intersection_classification`
     - A view that provide information on intersection's related road classes, and connectivity degree.
     | Column Name            | Description  |
     |------------------------|-------------|
