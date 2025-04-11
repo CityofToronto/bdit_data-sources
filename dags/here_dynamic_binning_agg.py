@@ -37,6 +37,8 @@ default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': pendulum.datetime(2023, 1, 1, tz="America/Toronto"),
+    #aggregation doesn't work on 24_4 yet (no congestion.network_links_24_4)
+    'end_date': pendulum.datetime(2025, 3, 17, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
