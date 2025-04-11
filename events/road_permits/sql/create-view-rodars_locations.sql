@@ -9,7 +9,15 @@ SELECT
     ii.divisionname,
     ii.issueid,
     ii.sourceid,
+    ii.issuetype,
+    it.issuetype_desc,
     ii.description,
+    'https://itscentral.corp.toronto.ca/Issue/ViewInfo?entityId=4%7c' || ii.issueid::text || '%7c'
+    || ii.divisionid::text || '#TabContainerTabId=Info' AS internal_url,
+    CASE ii.divisionid
+        WHEN 8048 THEN 'https://rodars.transnomis.com/Permit/ApplicationMapView?permitId='
+        || ii.sourceid
+    END AS public_url,
     CASE ii.priority
         WHEN 5 THEN 'Critical'
         WHEN 4 THEN 'High'
@@ -46,7 +54,6 @@ SELECT
     iil.fromroadname,
     iil.toroadname,
     iil.streetnumber,
-    itsc_factors.locationblocklevel.locationblocklevel,
     itsc_factors.roadclosuretype_old.roadclosuretype AS roadclosuretype_desc,
     iil.locationdescription_toplevel,
     d2.direction,
@@ -79,6 +86,7 @@ SELECT
     lap.lane_open_bus,
     lap.lane_closed_bus
 FROM congestion_events.rodars_issues AS ii
+LEFT JOIN itsc_factors.issuetypes AS it USING (divisionid, issuetype)
 JOIN congestion_events.rodars_issue_locations AS iil
     ON iil.issueid = ii.issueid
     AND iil.divisionid = ii.divisionid
@@ -88,8 +96,6 @@ LEFT JOIN itsc_factors.direction AS d1
     ON d1.code = iil.direction_toplevel
 LEFT JOIN itsc_factors.direction AS d2
     ON d2.code = iil.direction::numeric::integer
-LEFT JOIN itsc_factors.locationblocklevel
-    ON iil.laneblocklevel::numeric::integer = itsc_factors.locationblocklevel.code
 LEFT JOIN itsc_factors.roadclosuretype_old
     ON iil.roadclosuretype::numeric::integer = itsc_factors.roadclosuretype_old.code,
     LATERAL (
