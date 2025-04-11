@@ -191,7 +191,8 @@ def pull_miovision_dag():
             "table": "miovision_api.volumes_15min_mvt_unfiltered",
             "lookback": '60 days',
             "dt_col": 'datetime_bin',
-            "threshold": 0.7
+            "threshold": 0.7,
+            "ds_offset": 0
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
