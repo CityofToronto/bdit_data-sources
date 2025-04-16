@@ -58,21 +58,21 @@ def bt_itsc_dag():
             autocommit=True
     )
 
-    @task(trigger_rule='none_failed')
+    @task(trigger_rule='none_failed', retries = 2, retry_delay = '1 hour')
     def pull_raw_tt_data(ds = None):
         "Fetches data from ITS Central traveltimepathdata table, inserts into RDS bluetooth.itsc_tt_raw_pathdata table."
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
         fetch_and_insert_raw_tt_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
         
-    @task
+    @task(retries = 2, retry_delay = '1 hour')
     def pull_tt_paths(ds = None):
         "Fetches data from ITS Central traveltimepathconfig table, inserts into RDS bluetooth.itsc_tt_paths table."
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
         fetch_and_insert_tt_path_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
     
-    @task
+    @task(retries = 2, retry_delay = '1 hour')
     def pull_raw_tt_pathdata(ds = None):
         "Fetches data from ITS Central traveltimepathrawdata table, inserts into RDS bluetooth.itsc_tt_raw table."
         itsc_bot = PostgresHook('itsc_postgres')
