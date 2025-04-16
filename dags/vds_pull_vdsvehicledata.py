@@ -92,7 +92,7 @@ def vdsvehicledata_dag():
         )
 
         #get vdsvehicledata from ITSC and insert into RDS `vds.raw_vdsvehicledata`
-        @task(task_id='pull_raw_vdsvehicledata')
+        @task(task_id='pull_raw_vdsvehicledata', retries = 2, retry_delay = '1 hour')
         def pull_raw_vdsvehicledata_task(ds=None):
             itsc_bot = PostgresHook('itsc_postgres')
             vds_bot = PostgresHook('vds_bot')
