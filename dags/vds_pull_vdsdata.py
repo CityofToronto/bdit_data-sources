@@ -55,7 +55,7 @@ def vdsdata_dag():
         """This task group pulls the detector inventory and locations into bigdata.
         The vdsvehicledata DAG is also triggered after the lookups are updated."""
   
-        @task
+        @task(retries = 2, retry_delay = '1 hour')
         def pull_and_insert_detector_inventory():
             "Get vdsconfig from ITSC and insert into RDS `vds.vdsconfig`"
             itsc_bot = PostgresHook('itsc_postgres')
@@ -63,14 +63,14 @@ def vdsdata_dag():
 
             pull_detector_inventory(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
-        @task
+        @task(retries = 2, retry_delay = '1 hour')
         def pull_and_insert_entitylocations():
             "Get entitylocations from ITSC and insert into RDS `vds.entity_locations`"
             itsc_bot = PostgresHook('itsc_postgres')
             vds_bot = PostgresHook('vds_bot')
             pull_entity_locations(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
-        @task
+        @task(retries = 2, retry_delay = '1 hour')
         def pull_and_insert_commsdeviceconfig():
             "Get commsdeviceconfig from ITSC and insert into RDS `vds.config_comms_device`"
             itsc_bot = PostgresHook('itsc_postgres')
@@ -128,7 +128,7 @@ def vdsdata_dag():
             trigger_rule='none_failed'
         )
 
-        @task(task_id='pull_raw_vdsdata')
+        @task(task_id='pull_raw_vdsdata', retries = 2, retry_delay = '1 hour')
         def pull_raw_vdsdata_task(ds=None):
             "Get vdsdata from ITSC, transform, and insert into RDS `vds.raw_vdsdata`."
             itsc_bot = PostgresHook('itsc_postgres')
