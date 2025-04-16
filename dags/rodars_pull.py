@@ -47,14 +47,14 @@ default_args = {
 )
 
 def rodars_dag():
-    @task
+    @task(retries = 2, retry_delay = '1 hour')
     def pull_rodars_issues(ds = None):
         "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issues`"
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
         fetch_and_insert_issue_data(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
     
-    @task
+    @task(retries = 2, retry_delay = '1 hour')
     def pull_rodar_locations(ds = None):
         "Get RODARS data from ITSC and insert into bigdata `congestion_events.itsc_issue_locations`"
         itsc_bot = PostgresHook('itsc_postgres')
