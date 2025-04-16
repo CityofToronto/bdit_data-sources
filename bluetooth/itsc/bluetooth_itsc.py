@@ -9,7 +9,6 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowFailException, AirflowSkipException
 
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
-SQL_DIR = '/data/home/gwolofs/bdit_data-sources/bluetooth/itsc/sql'
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
