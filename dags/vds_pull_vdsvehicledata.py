@@ -136,11 +136,14 @@ def vdsvehicledata_dag():
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
-            params={"table": 'vds.veh_speeds_15min',
-                    "lookback": '60 days',
-                    "dt_col": 'datetime_15min',
-                    "col_to_sum": 'count',
-                    "threshold": 0.7},
+            params={
+                "table": 'vds.veh_speeds_15min',
+                "lookback": '60 days',
+                "dt_col": 'datetime_15min',
+                "col_to_sum": 'count',
+                "threshold": 0.7,
+                "ds_offset": 0
+            },
             retries=2
         )
         wait_for_weather_timesensor() >> check_avg_rows

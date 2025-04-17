@@ -181,11 +181,14 @@ def vdsdata_dag():
                 task_id=f"check_rows_vdsdata_div{divid}",
                 sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',
-                params={"table": f'vds.counts_15min_div{divid}',
-                        "lookback": '60 days',
-                        "dt_col": 'datetime_15min',
-                        "col_to_sum": 'num_obs',
-                        "threshold": 0.7},
+                params={
+                    "table": f'vds.counts_15min_div{divid}',
+                    "lookback": '60 days',
+                    "dt_col": 'datetime_15min',
+                    "col_to_sum": 'num_obs',
+                    "threshold": 0.7,
+                    "ds_offset": 0
+                },
                 retries=0,
             )
             wait_for_weather_timesensor() >> check_avg_rows

@@ -143,7 +143,8 @@ def pull_wys_dag():
                 "lookback": '60 days',
                 "dt_col": 'datetime_bin',
                 "col_to_sum": 'volume',
-                "threshold": 0.7
+                "threshold": 0.7,
+                "ds_offset": 0
             }
         )
 
