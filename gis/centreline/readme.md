@@ -82,13 +82,20 @@ Intersections are stored in either of two tables, each of which is copied from a
     - does not include cul-de-sacs, overpass/underpass
 
 * `gis_core.intersection_classification`
-    - A view that provide information on intersection's related road classes, and connectivity degree.
-    | Column Name            | Description  |
-    |------------------------|-------------|
-    | `intersection_id`      | Unique identifier for each intersection |
-    | `feature_desc_list`    | A list of all road classes associated with the intersection, ordered by road order |
-    | `highest_order_feature` | The highest order of road class associated with the intersection. |
-    | `number_of_elevations` | Number of elevations this intersection has |
-    | `degree`              | The number of centreline segments connected to this intersection. |
-    | `centreline_list`     | An array of connected centreline_id. |
-    | `geom`            | Geometry of the intersection. |
+    - A view that provides information on intersection's related road classes, road names, and connectivity degree.
+    | Column Name                 | Description  |
+    |-----------------------------|--------------|
+    | `intersection_id`           | Unique identifier for each intersection. |
+    | `intersection_desc`         | Intersection Name. |
+    | `distinct_feature_desc_list`| Disintct list of unique road class descriptions associated with the intersection. |
+    | `highest_order_feature`     | The highest-order road class associated with the intersection. |
+    | `all_feature_code_list`     | Full list of all road class descriptions (including duplicates). |
+    | `road_names`                | List of distinct road names connected at the intersection. |
+    | `degree`                    | Number of connected centreline segments. |
+    | `centreline_ids`            | Array of `centreline_id`s connected to the intersection. |
+    | `geom`                      | Intersection geometry. |
+    | `cent_geom`                 | Combined geometry of all associated centreline segments. |
+
+    - Known Caveats:
+ 
+    -  Boundary Intersections: Intersections along the city's boundary (e.g., Steeles Avenue) may connect to roads outside the city's jurisdiction. These may be classified as pseudo intersections and get filtered out in this view.
