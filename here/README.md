@@ -103,11 +103,11 @@ Historical data are acquired through the Traffic Analytics download portal. Data
 | tod | time | ✓ | Time of 5-minute observation bin; matches `tx` |
 | length | integer | | Link length in meters, rounded to integer |
 | mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
-| stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
+| stddev | numeric(4,1) | | Sample standard deviation of the observed speed(s). A value of `0` is given where the sample_size is `1`, though strictly speaking the sample standard deviation is undefined in this case. |
 | min_spd | integer | | Observed minimum speed |
 | max_spd | integer | | Observed maximum speed |
-| pct_50 | integer | | Observed median speed |
-| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins |
+| pct_50 | integer | | Median speed. Likely to have been interpolated between adjacent values rather than actually observed in the sample! |
+| pct_85 | integer | | 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins. This value may also be interpolated. |
 | confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
 | sample_size | integer | | the number of probe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
 
