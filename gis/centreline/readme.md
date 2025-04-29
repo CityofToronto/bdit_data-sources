@@ -99,3 +99,5 @@ Intersections are stored in either of two tables, each of which is copied from a
     - Known Caveats:
  
     -  Boundary Intersections: Intersections along the city's boundary (e.g., Steeles Avenue) may connect to roads outside the city's jurisdiction. These may be classified as pseudo intersections and get filtered out in this view.
+ 
+    -  Intersections where centrelines intersect with themselves (e.g. North Hills Terrace) are not included, since only the number of unique centreline_ids is considered for the degree and we filter where degree is below or equal 2.
