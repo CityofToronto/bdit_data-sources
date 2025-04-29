@@ -78,11 +78,32 @@ Intersections are stored in either of two tables, each of which is copied from a
     - include trails and ferry routes
 * `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
     - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
-    - contains additional elevation information such as elevation level, elevation unit, height restriction, etc
+    - contains additional elevation information such as elevation level (they are all zero), elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
+* `gis_core.intersection_classification`
+    - A view that provides information on intersection's related road classes, road names, and connectivity degree.
+    | Column Name                 | Description  |
+    |-----------------------------|--------------|
+    | `intersection_id`           | Unique identifier for each intersection. |
+    | `intersection_desc`         | Intersection Name. |
+    | `distinct_feature_desc_list`| Disintct list of unique road class descriptions associated with the intersection. |
+    | `highest_order_feature`     | The highest-order road class associated with the intersection. |
+    | `all_feature_code_list`     | Full list of all road class descriptions (including duplicates). |
+    | `road_names`                | List of distinct road names connected at the intersection. |
+    | `degree`                    | Number of connected centreline segments. |
+    | `centreline_ids`            | Array of `centreline_id`s connected to the intersection. |
+    | `geom`                      | Intersection geometry. |
+    | `cent_geom`                 | Combined geometry of all associated centreline segments. |
+
+    - Known Caveats:
+ 
+    -  Boundary Intersections: Intersections along the city's boundary (e.g., Steeles Avenue) may connect to roads outside the city's jurisdiction. These may be classified as pseudo intersections and get filtered out in this view.
+ 
+    -  Intersections where centrelines intersect with themselves (e.g. North Hills Terrace) are not included, since only the number of unique centreline_ids is considered for the degree and we filter where degree is below or equal 2.
 
 ### Segments with reference to intersections
 
 The materialized view `gis_core.centreline_leg_directions` contains an automated determination of the cardinal direction ("north", "east", "south", or "west") of segments with reference to a 3- or 4-legged intersection. This may be useful where other datasets such as TMCs provide data for e.g. the "North approach", but don't actually specify which centreline edge this is.
 
 The orientation of some intersections makes this mapping non-trivial and it's possible and even likely that some datasets classify these cardinal directions differently or inconsistently. Please report any issues or inconsistencies you may find [here](https://github.com/CityofToronto/bdit_data-sources/issues/1190).
+
