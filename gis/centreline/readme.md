@@ -82,6 +82,7 @@ Intersections are stored in either of two tables, each of which is copied from a
     - does not include cul-de-sacs, overpass/underpass
 * `gis_core.intersection_classification`
     - A view that provides information on intersection's related road classes, road names, and connectivity degree.
+    
     | Column Name                 | Description  |
     |-----------------------------|--------------|
     | `intersection_id`           | Unique identifier for each intersection. |
