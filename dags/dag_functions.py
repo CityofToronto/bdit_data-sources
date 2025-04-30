@@ -123,11 +123,6 @@ def task_fail_slack_alert(
 
     # Slack failure message
     if use_proxy:
-        # Temporarily accessing Airflow on Morbius through 8080 instead of Nginx
-        # Its hould be eventually removed
-        log_url = task_instance.log_url.replace(
-            "localhost", task_instance.hostname + ":8080"
-        )
         # get the proxy credentials from the Airflow connection ``slack``. It
         # contains username and password to set the proxy <username>:<password>
         proxy=(
