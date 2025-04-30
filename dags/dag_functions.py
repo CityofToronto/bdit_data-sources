@@ -122,6 +122,7 @@ def task_fail_slack_alert(
         )
 
     # Slack failure message
+    proxy = None
     if use_proxy:
         # get the proxy credentials from the Airflow connection ``slack``. It
         # contains username and password to set the proxy <username>:<password>
@@ -129,11 +130,10 @@ def task_fail_slack_alert(
             f"http://{BaseHook.get_connection('slack').password}"
             f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
         )
-    else:
-        log_url = task_instance.log_url.replace(
-            "localhost", task_instance.hostname
-        )
-        proxy = None
+    log_url = task_instance.log_url.replace(
+        "localhost", task_instance.hostname
+    )
+    
     slack_msg = (
         f"{emoji} {task_instance.dag_id}."
         f"{task_instance.task_id} "
