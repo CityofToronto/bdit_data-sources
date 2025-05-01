@@ -11,7 +11,7 @@ from airflow.macros import ds_add, ds_format
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
     from here.traffic.here_api import get_access_token, get_download_url
     from here.traffic.here_api_path import query_dates
 except:
