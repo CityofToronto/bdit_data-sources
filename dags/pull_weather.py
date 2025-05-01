@@ -25,7 +25,7 @@ try:
     sys.path.insert(0, repo_path)
     from weather.prediction_import import prediction_upsert
     from weather.historical_scrape import historical_upsert
-    from dags.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 except:
     raise ImportError("script import failed")
 
