@@ -22,7 +22,7 @@ from airflow.operators.latest_only import LatestOnlyOperator
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
 # pylint: enable=import-error
 
 DAG_NAME = 'replicator_table_check'

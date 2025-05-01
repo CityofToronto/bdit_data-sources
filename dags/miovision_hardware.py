@@ -10,7 +10,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
     from volumes.miovision.api.configuration_info import (
         get_cameras, get_configuration_dates
     )

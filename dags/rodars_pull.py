@@ -16,7 +16,7 @@ sys.path.insert(0, repo_path)
 from events.road_permits.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
-from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 
 README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
