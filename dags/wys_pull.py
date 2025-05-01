@@ -26,9 +26,9 @@ try:
         get_data_for_date, update_locations
     )
     from wys.api.python.wys_google_sheet import pull_from_sheet
-    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-    from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_jan_1st, check_1st_of_month, check_if_dow
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.common_tasks import check_jan_1st, check_1st_of_month, check_if_dow
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
@@ -55,7 +55,7 @@ default_args = {
     default_args=default_args,
     catchup=False,
     max_active_runs=5,
-    template_searchpath=os.path.join(repo_path,'dags/sql'),
+    template_searchpath=os.path.join(repo_path,'bdit_dag_utils/sql'),
     schedule='0 17 * * *', # Run at 5:00 PM local time every day
     tags=["wys", "data_pull", "partition_create", "data_checks", "google_sheets"],
     doc_md=DOC_MD

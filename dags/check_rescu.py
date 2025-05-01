@@ -14,7 +14,7 @@ import pendulum
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 
 dag_name = 'rescu_check'
 

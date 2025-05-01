@@ -14,8 +14,8 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     # pylint: disable=wrong-import-position
-    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality
-    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality
+    from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     # pylint: enable=import-error
 except:
     raise ImportError("Cannot import DAG helper functions.")

@@ -16,7 +16,7 @@ from airflow.operators.python import get_current_context
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 # pylint: disable=wrong-import-position
-from dags.dag_functions import task_fail_slack_alert, send_slack_msg, check_not_empty
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, check_not_empty
 # pylint: enable=import-error
 
 def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_args): 
@@ -32,7 +32,7 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
     )
     def replicator_DAG():
         f"""The main function of the {short_name} DAG."""
-        from dags.common_tasks import (
+        from bdit_dag_utils.utils.common_tasks import (
             wait_for_external_trigger, get_variable, copy_table
         )
 

@@ -17,9 +17,9 @@ sys.path.insert(0, repo_path)
 from volumes.vds.py.vds_functions import (
     pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, pull_commsdeviceconfig
 )
-from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-from dags.custom_operators import SQLCheckOperatorWithReturnValue
-from dags.common_tasks import check_jan_1st, wait_for_weather_timesensor
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+from bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -43,7 +43,7 @@ default_args = {
     max_active_runs=1,
     template_searchpath=[
         os.path.join(repo_path,'volumes/vds/sql'),
-        os.path.join(repo_path,'dags/sql')
+        os.path.join(repo_path,'bdit_dag_utils/sql')
     ],
     doc_md=DOC_MD,
     tags=["bdit_data-sources", 'vds', 'vdsdata', 'data_checks', 'data_pull', 'detector_inventory'],
