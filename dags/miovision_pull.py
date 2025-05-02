@@ -54,7 +54,7 @@ default_args = {
     dag_id=DAG_NAME,
     default_args=default_args,
     schedule='0 3 * * *',
-    template_searchpath=os.path.join(repo_path,'bdit_dag_utils/sql'),
+    template_searchpath=os.path.join(repo_path,'dags/sql'),
     catchup=False,
     params={
         "intersection": Param(
