@@ -15,7 +15,6 @@ try:
     from here.traffic.here_api_path import query_dates
     from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import wait_for_weather_timesensor
 except:
     raise ImportError("Cannot import slack alert functions")
 
@@ -30,7 +29,7 @@ Slack notifications is raised when the airflow process fails.
 dag_name = 'pull_here_path'
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -49,7 +48,7 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      schedule='0 17 * * * ',
      catchup=False,
-     template_searchpath=os.path.join(repo_path,'dags/sql'),
+     template_searchpath=os.path.join(repo_path,'here/traffic/sql'),
      doc_md = doc_md,
      tags=["HERE", "data_pull"]
      )
@@ -93,18 +92,16 @@ def pull_here_path():
     )
     def data_checks():
         data_check_params = {
-            "table": "here.ta_path",
             "lookback": '30 days',
-            "dt_col": 'dt',
             "threshold": 0.7
         }
         check_row_count = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
             task_id="check_row_count",
-            sql="select-row_count_lookback.sql",
+            sql="ta_path_row_count_check.sql",
             conn_id="here_bot",
             retries=0,
-            params=data_check_params | {"col_to_sum": 1},
+            params=data_check_params | {"col_to_sum": "sum_sample_size"},
         )
         check_row_count.doc_md = '''
         Compare the row count today with the average row count from the lookback period.
@@ -113,12 +110,10 @@ def pull_here_path():
         check_distinct_link_dirs = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
             task_id="check_distinct_link_dirs",
-            sql="select-sensor_id_count_lookback.sql",
+            sql="ta_path_row_count_check.sql",
             conn_id="here_bot",
             retries=0,
-            params=data_check_params | {
-                    "id_col": "link_dir"
-                },
+            params=data_check_params | {"col_to_sum": "num_link_dirs"},
         )
         check_distinct_link_dirs.doc_md = '''
         Compare the count of link_dirs appearing in today's pull vs the lookback period.
