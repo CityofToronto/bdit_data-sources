@@ -43,7 +43,7 @@ default_args = {
     max_active_runs=1,
     template_searchpath=[
         os.path.join(repo_path,'volumes/vds/sql'),
-        os.path.join(repo_path,'bdit_dag_utils/sql')
+        os.path.join(repo_path,'dags/sql')
     ],
     doc_md=DOC_MD,
     tags=["bdit_data-sources", 'vds', 'vdsdata', 'data_checks', 'data_pull', 'detector_inventory'],
