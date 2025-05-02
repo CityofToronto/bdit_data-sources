@@ -16,10 +16,9 @@ from airflow.macros import ds_add, ds_format
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from here.traffic.here_api import query_dates, get_access_token, get_download_url, HereAPIException
+    from here.traffic.here_api import query_dates, get_access_token, get_download_url
     from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality
     from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import wait_for_weather_timesensor
 except:
     raise ImportError("Cannot import slack alert functions")
 
