@@ -369,6 +369,8 @@ SENSYS SPEED|**DO NOT USE.**|Sensys permanent counters that collected speed data
 
 - `gis_core.centreline_leg_directions` - Maps the four cardinal directions (N, S, E, & W) referenced by TMCs onto specific edges of the centreline network for all 3- & 4-legged intersections.
 
+- `traffic.svc_centreline_directions` - Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto specific directions of travel along edges of the centreline network.
+
 ## Cycling Seasonality Adjustment
 
 A model was developed to adjust cycling counts for before after evaluations of new infrastructure based on sparse counts. It can be found in the [`cycling_seasonality`](cycling_seasonality/) folder
