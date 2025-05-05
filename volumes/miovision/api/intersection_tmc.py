@@ -476,6 +476,35 @@ def daterange(start_time, end_time, time_delta):
         yield curr_time
         curr_time += time_delta
 
+def add_new_intersections(conn):
+    from pandas import DataFrame
+    api_key = BaseHook.get_connection('miovision_api_key')
+    headers = {'Content-Type': 'application/json',
+           'apikey': api_key.extra_dejson['key']}
+    response = session.get(
+        URL_BASE + "/intersections?pageSize=1000",
+        params={},
+        headers=headers,
+        proxies=session.proxies
+    )
+    df_api = DataFrame(response.json()['intersections'])
+    df_api = df_api[['id', 'name', 'lat', 'long']]
+    df_api = df_api[df_api['name'] != 'Testing Lab'] #exclude Testing Lab
+    rows = [tuple(x) for x in df_api.to_numpy()] #convert to tuples for inserting
+    
+    insert_sql = '''
+    INSERT INTO miovision_api.intersections (id, api_name, lat, lng)
+    VALUES %s
+    ON CONFLICT ON CONSTRAINT miovision_intersections_id_uniq
+    DO NOTHING
+    RETURNING 'intersection_uid: `' || intersection_uid || '` - ' || api_name
+    '''
+    
+    with conn.cursor() as curr:
+        new_ints = execute_values(curr, insert_sql, rows, fetch=True)
+        logger.info('New rows %s', new_ints)
+    return new_ints
+
 class Intersection:
     def __init__(self, uid, id1, name, date_installed,
                  date_decommissioned):
