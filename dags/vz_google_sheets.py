@@ -85,7 +85,7 @@ def get_vz_data():
             AirflowFailException: If any invalid record is found.
         """
         #get name for mapped task 
-        from airflow.operators.python import get_current_context
+        from airflow.sdk import get_current_context
         context = get_current_context()
         context["task_year"] = spreadsheet["year"]
         
