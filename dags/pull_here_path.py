@@ -7,6 +7,7 @@ from airflow.decorators import task, dag, task_group
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable 
 from airflow.macros import ds_add, ds_format
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -50,7 +51,7 @@ default_args = {'owner': ','.join(names),
      catchup=False,
      template_searchpath=os.path.join(repo_path,'here/traffic/sql'),
      doc_md = doc_md,
-     tags=["HERE", "data_pull"]
+     tags=["HERE", "data_pull", "data_checks"]
      )
 
 def pull_here_path():
@@ -91,6 +92,13 @@ def pull_here_path():
         tooltip="Tasks to check critical data quality measures which could warrant re-running the DAG."
     )
     def data_checks():
+        insert_daily_summary = SQLExecuteQueryOperator(
+            task_id='create_month_partition',
+            sql="SELECT here.ta_path_daily_summary_insert('{{ (ds) }}'::date - 1)",
+            conn_id='here_bot',
+            autocommit=True
+        )
+        
         data_check_params = {
             "lookback": '30 days',
             "threshold": 0.7
@@ -118,11 +126,8 @@ def pull_here_path():
         check_distinct_link_dirs.doc_md = '''
         Compare the count of link_dirs appearing in today's pull vs the lookback period.
         '''
-
-        wait_for_weather_timesensor() >> [
-            check_row_count,
-            check_distinct_link_dirs
-        ]
+        
+        insert_daily_summary >> [check_row_count, check_distinct_link_dirs]
 
     load_data() >> data_checks()
 
