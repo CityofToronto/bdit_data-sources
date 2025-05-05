@@ -89,7 +89,7 @@ def ecocounter_open_data_dag():
         timeout=10*86400,
         mode="reschedule",
         poke_interval=3600*24,
-        target_time="{{ next_execution_date.replace(day=10) }}",
+        target_time="{{ data_interval_end.replace(day=10) }}",
     )
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
