@@ -5,7 +5,7 @@ WITH lookback AS ( --noqa: L045
         ref.is_weekend_or_holiday(dt::date) AS is_weekend_or_holiday
     FROM here.ta_path_daily_summary
     WHERE
-        dt >= '{{ ds }}'::date - 1 - interval '{{ params.lookback }}'
+        dt >= '{{macros.ds_add(ds, -1)}}'::date - interval '{{ params.lookback }}'
         AND dt < '{{ ds }}'::date
     GROUP BY dt
 )
@@ -22,8 +22,8 @@ SELECT
         FLOOR(thr.threshold * AVG(lb.count)),
         'FM9,999,999,999'
     ) AS passing_value,
-    weather.airport_weather_summary(('{{ ds }}'::date  --noqa: RF01
-    - interval '2 days')::date) AS weather_summary
+    weather.airport_weather_summary('{{macros.ds_add(ds, -1)}}'::date) --noqa: RF01
+    AS weather_summary
 FROM lookback AS today
 JOIN lookback AS lb USING (is_weekend_or_holiday),
     LATERAL (
@@ -39,8 +39,8 @@ JOIN lookback AS lb USING (is_weekend_or_holiday),
         END
     ) AS thr (threshold)
 WHERE
-    today.dt = '{{ ds }}'::date - 1
-    AND lb.dt != '{{ ds }}'::date - 1
+    today.dt = '{{macros.ds_add(ds, -1)}}'::date
+    AND lb.dt != '{{macros.ds_add(ds, -1)}}'::date
 GROUP BY
     today.count,
     thr.threshold
