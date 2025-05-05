@@ -10,7 +10,7 @@ import pendulum
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
-from airflow.operators.python import get_current_context
+from airflow.sdk import get_current_context
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
