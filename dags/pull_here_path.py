@@ -93,7 +93,7 @@ def pull_here_path():
     )
     def data_checks():
         insert_daily_summary = SQLExecuteQueryOperator(
-            task_id='create_month_partition',
+            task_id='insert_daily_summary',
             sql="SELECT here.ta_path_daily_summary_insert('{{ (ds) }}'::date - 1)",
             conn_id='here_bot',
             autocommit=True
