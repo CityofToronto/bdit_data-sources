@@ -9,7 +9,7 @@ import dateutil.parser
 from datetime import timedelta
 from googleapiclient.discovery import build
 
-from airflow.operators.python import get_current_context
+from airflow.sdk import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
