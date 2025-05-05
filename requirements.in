@@ -5,6 +5,7 @@
 apache-airflow==2.10.2
 
 # Airflow service providers
+apache-airflow-providers-standard
 apache-airflow-providers-celery
 apache-airflow-providers-google
 apache-airflow-providers-postgres
