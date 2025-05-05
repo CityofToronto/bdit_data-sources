@@ -7,6 +7,7 @@ WITH lookback AS ( --noqa: L045
     WHERE
         dt >= '{{ ds }}'::date - 1 - interval '{{ params.lookback }}'
         AND dt < '{{ ds }}'::date
+    GROUP BY dt
 )
 
 SELECT
