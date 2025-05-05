@@ -60,7 +60,7 @@ def task_fail_slack_alert(
             import pendulum
             from functools import partial
             from airflow import DAG
-            from airflow.operators.bash import BashOperator
+            from airflow.providers.standard.operators.bash import BashOperator
             
             repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
             sys.path.insert(0, repo_path)
