@@ -63,7 +63,7 @@ def blip_pipeline():
         sql = '''SELECT  (COUNT(*) > 0) AS "_check", 
                     'There are no data inserted for '|| '{{ ds }}' AS msg
                 FROM     bluetooth.aggr_5min
-                WHERE    datetime_bin >='{{ ds }}' and datetime_bin < '{{ tomorrow_ds }}' 
+                WHERE    datetime_bin >='{{ ds }}' and datetime_bin < '{{ macros.ds_add(ds, 1) }}' 
                 LIMIT 1'''
     ) 
 
