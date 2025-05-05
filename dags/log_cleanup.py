@@ -16,7 +16,7 @@ AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'tasks')
 AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
-from airflow.operators.bash import BashOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.models import Variable 
 
 dag_name = 'log_cleanup'

@@ -23,7 +23,7 @@ from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator
 from airflow.models import Variable 
 
 from dateutil.parser import parse

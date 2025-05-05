@@ -8,7 +8,7 @@ import os
 import pendulum
 from airflow import DAG
 from datetime import timedelta
-from airflow.operators.bash import BashOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.models import Variable 
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
