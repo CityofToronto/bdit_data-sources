@@ -50,7 +50,7 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             ``schema.table``.
     """
     #name mapped task
-    from airflow.operators.python import get_current_context
+    from airflow.sdk import get_current_context
     context = get_current_context()
     context["dest_table_name"] = table[1]
     
