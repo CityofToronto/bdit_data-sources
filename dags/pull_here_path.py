@@ -99,17 +99,19 @@ def pull_here_path():
             autocommit=True
         )
         
-        data_check_params = {
-            "lookback": '30 days',
-            "threshold": 0.7
-        }
+        params = Variable.get('here_check_params', deserialize_json=True)
+        
         check_row_count = SQLCheckOperatorWithReturnValue(
             on_failure_callback=slack_alert_data_quality,
             task_id="check_row_count",
             sql="ta_path_row_count_check.sql",
             conn_id="here_bot",
             retries=0,
-            params=data_check_params | {"col_to_sum": "sum_sample_size"},
+            params={
+                "col_to_sum": "sum_sample_size",
+                "lookback": params['ta_path_check_row_count_lookback'],
+                "threshold": params['ta_path_check_row_count_threshold']
+            }
         )
         check_row_count.doc_md = '''
         Compare the row count today with the average row count from the lookback period.
@@ -121,7 +123,11 @@ def pull_here_path():
             sql="ta_path_row_count_check.sql",
             conn_id="here_bot",
             retries=0,
-            params=data_check_params | {"col_to_sum": "num_link_dirs"},
+            params={
+                "col_to_sum": "num_link_dirs",
+                "lookback": params['ta_path_check_link_dir_lookback'],
+                "threshold": params['ta_path_check_link_dir_threshold']
+            }
         )
         check_distinct_link_dirs.doc_md = '''
         Compare the count of link_dirs appearing in today's pull vs the lookback period.
