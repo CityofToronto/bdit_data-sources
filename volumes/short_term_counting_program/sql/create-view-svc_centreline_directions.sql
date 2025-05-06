@@ -28,13 +28,21 @@ WITH to_cardinal (bearing, direction) AS (
 
 SELECT
     cl.centreline_id,
+    CASE
+        WHEN sq.angular_distance > radians(90) THEN to_intersection_id -- reversed
+        ELSE cl.from_intersection_id
+    END AS from_node,
+    CASE
+        WHEN sq.angular_distance > radians(90) THEN from_intersection_id -- reversed
+        ELSE cl.to_intersection_id
+    END AS to_node,
     sq.direction,
     CASE
-        WHEN sq.angular_distance > radians(90) THEN ST_Reverse(cl.geom)
+        WHEN sq.angular_distance > radians(90) THEN ST_Reverse(cl.geom) -- reversed
         ELSE cl.geom
     END AS centreline_geom_directed,
     CASE
-        WHEN degrees(sq.angular_distance) > 90 THEN (180 - degrees(sq.angular_distance))::real
+        WHEN sq.angular_distance > radians(90) THEN (180 - degrees(sq.angular_distance))::real -- reversed
         ELSE degrees(sq.angular_distance)::real
     END AS absolute_angular_distance
 FROM gis_core.centreline_latest AS cl
