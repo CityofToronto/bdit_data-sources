@@ -4,9 +4,8 @@ import logging
 import pendulum
 from datetime import datetime, timedelta
 
-from airflow.decorators import dag
+from airflow.decorators import dag, task
 from airflow.models import Variable
-from airflow.providers.standard.operators.python import ShortCircuitOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, SQLCheckOperator
 
 try:
@@ -40,17 +39,11 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 )
 def queen_park_refresh():
 
-    # check if its monday
-    def is_monday(date_to_pull):
-        execution_date = datetime.strptime(date_to_pull, "%Y-%m-%d")
-        return execution_date.weekday() == 0
-
     ## ShortCircuitOperator Tasks, python_callable returns True or False; False means skip downstream tasks
-    check_dow = ShortCircuitOperator(
-        task_id='check_dow',
-        python_callable=is_monday,
-        op_kwargs={'date_to_pull': '{{ macros.ds_add(ds, -1) }}'}
-    )
+    @task.short_circuit()
+    def check_dow(ds=None):
+        execution_date = datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)
+        return execution_date.weekday() == 0
 
     ## Postgres Tasks
     # Task to aggregate citywide tti daily
@@ -62,18 +55,18 @@ def queen_park_refresh():
                         END AS counts
                 FROM here.ta
                 WHERE
-                    dt >= '{{ macros.ds_add(ds, -8) }}'::date
-                    AND dt < '{{ macros.ds_add(ds, -1) }}'::date'''
+                    dt >= '{{ ds }}'::date - 8
+                    AND dt < '{{ ds }}'::date - 1'''
     )
 
     aggregate_queens_park = SQLExecuteQueryOperator(
-        sql='''select data_analysis.generate_queens_park_weekly('{{ macros.ds_add(ds, -8) }}') ''',
+        sql='''select data_analysis.generate_queens_park_weekly('{{ macros.ds_add(ds, -8) }}')''',
         task_id='aggregate_queens_park',
         conn_id='here_bot',
         autocommit=True,
         retries = 0
     )
     
-    check_dow >> check_weekly >> aggregate_queens_park
+    check_dow() >> check_weekly >> aggregate_queens_park
 
 queen_park_refresh()
