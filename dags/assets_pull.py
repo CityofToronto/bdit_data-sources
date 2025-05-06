@@ -22,22 +22,15 @@ import sys
 from psycopg2 import sql
 import requests
 from psycopg2.extras import execute_values
-from airflow import DAG
-from airflow.providers.standard.operators.python import PythonOperator
-from airflow.models import Variable 
-
 from dateutil.parser import parse
-from datetime import datetime
 import pendulum
 
-dag_name = 'traffic_signals_dag'
-
-# Credentials
+from airflow.decorators import dag, task
+from airflow.models import Variable 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-vz_cred = PostgresHook("vz_api_bot") # name of Conn Id defined in UI
-#vz_pg_uri = vz_cred.get_uri() # connection to RDS for psql via BashOperator
 
-# ------------------------------------------------------------------------------
+DAG_NAME = 'traffic_signals_dag'
+
 # Slack notification
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -45,8 +38,7 @@ from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
 
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
-
+names = dag_owners.get(DAG_NAME, ['Unknown']) #find dag owners w/default = Unknown    
 
 # ------------------------------------------------------------------------------
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
@@ -54,7 +46,6 @@ AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
 AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')
 
 DEFAULT_ARGS = {
-    'email': ['Cathy.Nangini@toronto.ca'],
     'email_on_failure': True,
     'email_on_retry': True,
     'owner': 'airflow',
@@ -432,41 +423,44 @@ def pull_traffic_signal():
     
 # ------------------------------------------------------------------------------
 # Set up the dag and task
-TRAFFIC_SIGNALS_DAG = DAG(
-    dag_id = dag_name,
+@dag(
+    dag_id = DAG_NAME,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
     template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
     tags=["bdit_data-sources", "data_pull", "traffic_signals"],
     schedule='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
-
-PULL_RLC = PythonOperator(
-    task_id='pull_rlc',
-    python_callable=pull_rlc,
-    dag=TRAFFIC_SIGNALS_DAG
-)
-
-PULL_APS = PythonOperator(
-    task_id='pull_aps',
-    python_callable=pull_aps,
-    dag=TRAFFIC_SIGNALS_DAG
-)
-
-PULL_PXO = PythonOperator(
-    task_id='pull_pxo',
-    python_callable=pull_pxo,
-    dag=TRAFFIC_SIGNALS_DAG
-)
-
-PULL_LPI = PythonOperator(
-    task_id='pull_lpi',
-    python_callable=pull_lpi,
-    dag=TRAFFIC_SIGNALS_DAG
-)
-
-PULL_TS = PythonOperator(
-    task_id='pull_ts',
-    python_callable=pull_traffic_signal,
-    dag=TRAFFIC_SIGNALS_DAG
-)
+def traffic_signals_dag():
+    @task
+    def pull_rlc():
+        vz_cred = PostgresHook("vz_api_bot")
+        pull_rlc(vz_cred)
+        
+    @task
+    def pull_aps():
+        vz_cred = PostgresHook("vz_api_bot")
+        pull_aps(vz_cred)
+        
+    @task
+    def pull_pxo():
+        vz_cred = PostgresHook("vz_api_bot")
+        pull_pxo(vz_cred)
+        
+    @task
+    def pull_lpi():
+        vz_cred = PostgresHook("vz_api_bot")
+        pull_lpi(vz_cred)
+        
+    @task
+    def pull_ts():
+        vz_cred = PostgresHook("vz_api_bot")
+        pull_traffic_signal(vz_cred)
+        
+    pull_rlc()
+    pull_aps()
+    pull_pxo()
+    pull_lpi()
+    pull_ts()
+    
+traffic_signals_dag()
