@@ -29,11 +29,11 @@ WITH to_cardinal (bearing, direction) AS (
 SELECT
     cl.centreline_id,
     CASE
-        WHEN sq.angular_distance > radians(90) THEN to_intersection_id -- reversed
+        WHEN sq.angular_distance > radians(90) THEN cl.to_intersection_id -- reversed
         ELSE cl.from_intersection_id
     END AS from_node,
     CASE
-        WHEN sq.angular_distance > radians(90) THEN from_intersection_id -- reversed
+        WHEN sq.angular_distance > radians(90) THEN cl.from_intersection_id -- reversed
         ELSE cl.to_intersection_id
     END AS to_node,
     sq.direction,
