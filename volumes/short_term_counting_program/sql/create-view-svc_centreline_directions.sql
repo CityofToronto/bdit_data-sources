@@ -28,36 +28,50 @@ WITH to_cardinal (bearing, direction) AS (
 
 SELECT
     cl.centreline_id,
-    sq.direction,
     CASE
-        WHEN sq.angular_distance > radians(90) THEN ST_Reverse(cl.geom)
+        WHEN r.reversed THEN cl.to_intersection_id
+        ELSE cl.from_intersection_id
+    END AS from_node,
+    CASE
+        WHEN r.reversed THEN cl.from_intersection_id
+        ELSE cl.to_intersection_id
+    END AS to_node,
+    ad.direction,
+    CASE
+        WHEN r.reversed THEN ST_Reverse(cl.geom)
         ELSE cl.geom
     END AS centreline_geom_directed,
     CASE
-        WHEN degrees(sq.angular_distance) > 90 THEN (180 - degrees(sq.angular_distance))::real
-        ELSE degrees(sq.angular_distance)::real
+        WHEN r.reversed THEN (180 - degrees(ad.angular_distance))::real
+        ELSE degrees(ad.angular_distance)::real
     END AS absolute_angular_distance
 FROM gis_core.centreline_latest AS cl
-CROSS JOIN LATERAL (
-    SELECT
-        to_cardinal.direction,
-        -- get the minimum angular distance between the compass bearing and centreline's azimuth
-        LEAST( -- math is done in radians
-            ABS(
-                ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
-                - to_cardinal.bearing
-            ),
-            (2 * PI()) - ABS(
-                ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
-                - to_cardinal.bearing
-            )
-        ) AS angular_distance
-    FROM to_cardinal
-) AS sq -- sq for sub-query
+CROSS JOIN
+    LATERAL (
+        SELECT
+            to_cardinal.direction,
+            -- get the minimum angular distance between the compass bearing and centreline's azimuth
+            LEAST( -- math is done in radians
+                ABS(
+                    ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
+                    - to_cardinal.bearing
+                ),
+                (2 * PI()) - ABS(
+                    ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
+                    - to_cardinal.bearing
+                )
+            ) AS angular_distance
+        FROM to_cardinal
+    ) AS ad, -- ad for angular distance
+    LATERAL (
+        -- edge geometry should be reversed where such a reversal
+        -- would reduce the angular distance
+        SELECT ad.angular_distance > radians(90) AS reversed
+    ) AS r
 -- exclude results where the cardinal direction is orthogonal, +/- 10 degrees
 WHERE
-    sq.angular_distance < radians(80)
-    OR sq.angular_distance > radians(100);
+    ad.angular_distance < radians(80)
+    OR ad.angular_distance > radians(100);
 
 CREATE UNIQUE INDEX ON traffic.svc_centreline_directions (centreline_id, direction);
 
