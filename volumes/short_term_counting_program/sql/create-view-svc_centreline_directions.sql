@@ -46,27 +46,28 @@ SELECT
         ELSE degrees(ad.angular_distance)::real
     END AS absolute_angular_distance
 FROM gis_core.centreline_latest AS cl
-CROSS JOIN LATERAL (
-    SELECT
-        to_cardinal.direction,
-        -- get the minimum angular distance between the compass bearing and centreline's azimuth
-        LEAST( -- math is done in radians
-            ABS(
-                ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
-                - to_cardinal.bearing
-            ),
-            (2 * PI()) - ABS(
-                ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
-                - to_cardinal.bearing
-            )
-        ) AS angular_distance
-    FROM to_cardinal
-) AS ad, -- ad for angular distance
-LATERAL (
-    -- edge geometry should be reversed where such a reversal
-    -- would reduce the angular distance
-    SELECT ad.angular_distance > radians(90) AS reversed
-) AS r
+CROSS JOIN
+    LATERAL (
+        SELECT
+            to_cardinal.direction,
+            -- get the minimum angular distance between the compass bearing and centreline's azimuth
+            LEAST( -- math is done in radians
+                ABS(
+                    ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
+                    - to_cardinal.bearing
+                ),
+                (2 * PI()) - ABS(
+                    ST_Azimuth(ST_PointN(cl.geom, 1)::geography, ST_PointN(cl.geom, -1)::geography)
+                    - to_cardinal.bearing
+                )
+            ) AS angular_distance
+        FROM to_cardinal
+    ) AS ad, -- ad for angular distance
+    LATERAL (
+        -- edge geometry should be reversed where such a reversal
+        -- would reduce the angular distance
+        SELECT ad.angular_distance > radians(90) AS reversed
+    ) AS r
 -- exclude results where the cardinal direction is orthogonal, +/- 10 degrees
 WHERE
     ad.angular_distance < radians(80)
