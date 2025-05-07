@@ -55,7 +55,7 @@ DEFAULT_ARGS = {
 }
 
 # ------------------------------------------------------------------------------
-def pull_rlc():
+def pull_rlc(vz_cred):
     '''
     Connect to bigdata RDS, pull Red Light Camera json file from Open Data API,
     and overwrite existing rlc table in the vz_safety_programs_staging schema.
@@ -140,7 +140,7 @@ def insert_data(conn, col_names, rows, ts_type):
             execute_values(cur, insert_query, rows)
 
 # ------------------------------------------------------------------------------
-def pull_aps():
+def pull_aps(vz_cred):
     
     '''
     Pulls Accessible Pedestrian Signals
@@ -179,7 +179,7 @@ def pull_aps():
     insert_data(conn, col_names, rows, 'Audible Pedestrian Signals')
 
 # ------------------------------------------------------------------------------
-def pull_pxo():
+def pull_pxo(vz_cred):
     '''
     Pulls Pedestrian Crossovers
     '''
@@ -266,7 +266,7 @@ def lastest_imp_date(obj):
                 formatted_date = latest_date.strftime("%Y-%m-%d")
                 return formatted_date
 
-def pull_lpi():
+def pull_lpi(vz_cred):
     '''
     Pulls Pedestrian Head Start Signals/Leading Pedestrian Intervals
     '''
@@ -325,7 +325,7 @@ def identify_temp_signals(px):
         return 'Temporary'
     return None
 
-def pull_traffic_signal():
+def pull_traffic_signal(vz_cred):
     '''
     This function would pull all records from https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
     into the bigdata database. One copy will be in vz_safety_programs_staging.signals_cart while another will be in
@@ -432,35 +432,35 @@ def pull_traffic_signal():
     schedule='0 4 * * 1-5')
     # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
 def traffic_signals_dag():
-    @task
-    def pull_rlc():
+    @task(task_id="pull_rlc")
+    def pull_rlc_task():
         vz_cred = PostgresHook("vz_api_bot")
         pull_rlc(vz_cred)
         
-    @task
-    def pull_aps():
+    @task(task_id="pull_aps")
+    def pull_aps_task():
         vz_cred = PostgresHook("vz_api_bot")
         pull_aps(vz_cred)
         
-    @task
-    def pull_pxo():
+    @task(task_id="pull_pxo")
+    def pull_pxo_task():
         vz_cred = PostgresHook("vz_api_bot")
         pull_pxo(vz_cred)
         
-    @task
-    def pull_lpi():
+    @task(task_id="pull_lpi")
+    def pull_lpi_task():
         vz_cred = PostgresHook("vz_api_bot")
         pull_lpi(vz_cred)
         
-    @task
-    def pull_ts():
+    @task(task_id="pull_ts")
+    def pull_ts_task():
         vz_cred = PostgresHook("vz_api_bot")
         pull_traffic_signal(vz_cred)
         
-    pull_rlc()
-    pull_aps()
-    pull_pxo()
-    pull_lpi()
-    pull_ts()
+    pull_rlc_task()
+    pull_aps_task()
+    pull_pxo_task()
+    pull_lpi_task()
+    pull_ts_task()
     
 traffic_signals_dag()
