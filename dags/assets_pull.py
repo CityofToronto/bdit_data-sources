@@ -37,13 +37,7 @@ sys.path.insert(0, repo_path)
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-
 names = dag_owners.get(DAG_NAME, ['Unknown']) #find dag owners w/default = Unknown    
-
-# ------------------------------------------------------------------------------
-AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
-AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
-AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')
 
 DEFAULT_ARGS = {
     'email_on_failure': True,
@@ -424,13 +418,12 @@ def pull_traffic_signal(vz_cred):
 # ------------------------------------------------------------------------------
 # Set up the dag and task
 @dag(
-    dag_id = DAG_NAME,
+    dag_id=DAG_NAME,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
-    template_searchpath=[os.path.join(AIRFLOW_ROOT, 'assets/rlc/airflow/tasks')],
     tags=["bdit_data-sources", "data_pull", "traffic_signals"],
-    schedule='0 4 * * 1-5')
-    # minutes past each hour | Hours (0-23) | Days of the month (1-31) | Months (1-12) | Days of the week (0-7, Sunday represented as either/both 0 and 7)
+    schedule='0 4 * * 1-5' #4am, monday-friday
+)
 def traffic_signals_dag():
     @task(task_id="pull_rlc")
     def pull_rlc_task():
