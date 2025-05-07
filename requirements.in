@@ -1,8 +1,8 @@
-# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-no-providers-3.10.txt
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-3.0.0/constraints-no-providers-3.10.txt
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.10.2
+apache-airflow==3.0.0
 
 # Airflow service providers
 apache-airflow-providers-standard
@@ -31,8 +31,7 @@ ipython
 ipykernel
 
 # linters
-pydocstyle==6.3.0
-pylint==2.17.5
+ruff
 
 # testing
 pytest
