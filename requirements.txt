@@ -38,11 +38,9 @@ apache-airflow[ftp,google,http,postgres,slack]==2.11.0
     #   apache-airflow-providers-common-compat
     #   apache-airflow-providers-common-io
     #   apache-airflow-providers-common-sql
-    #   apache-airflow-providers-fab
     #   apache-airflow-providers-ftp
     #   apache-airflow-providers-google
     #   apache-airflow-providers-http
-    #   apache-airflow-providers-imap
     #   apache-airflow-providers-postgres
     #   apache-airflow-providers-slack
     #   apache-airflow-providers-smtp
@@ -50,7 +48,12 @@ apache-airflow[ftp,google,http,postgres,slack]==2.11.0
 apache-airflow-providers-common-compat==1.7.3
     # via
     #   apache-airflow
-    #   apache-airflow-providers-fab
+    #   apache-airflow-task-sdk
+apache-airflow-providers-celery==3.10.6
+    # via -r requirements.in
+apache-airflow-providers-common-compat==1.6.1
+    # via
+    #   apache-airflow-core
     #   apache-airflow-providers-google
     #   apache-airflow-providers-slack
     #   apache-airflow-providers-smtp
@@ -58,7 +61,7 @@ apache-airflow-providers-common-io==1.6.2
     # via apache-airflow
 apache-airflow-providers-common-sql==1.27.4
     # via
-    #   apache-airflow
+    #   apache-airflow-core
     #   apache-airflow-providers-google
     #   apache-airflow-providers-postgres
     #   apache-airflow-providers-slack
@@ -103,7 +106,8 @@ asyncpg==0.30.0
 attrs==25.3.0
     # via
     #   aiohttp
-    #   apache-airflow
+    #   apache-airflow-core
+    #   apache-airflow-task-sdk
     #   cattrs
     #   jsonschema
     #   looker-sdk
@@ -616,8 +620,6 @@ ipython==8.37.0
     # via
     #   -r requirements.in
     #   ipykernel
-isort==5.13.2
-    # via pylint
 itsdangerous==2.2.0
     # via
     #   apache-airflow
@@ -784,7 +786,6 @@ packaging==25.0
     #   apache-airflow
     #   apispec
     #   build
-    #   connexion
     #   db-dtypes
     #   geopandas
     #   google-cloud-aiplatform
@@ -792,9 +793,6 @@ packaging==25.0
     #   gunicorn
     #   huggingface-hub
     #   ipykernel
-    #   limits
-    #   marshmallow
-    #   marshmallow-sqlalchemy
     #   pandas-gbq
     #   pyogrio
     #   pytest
@@ -1022,7 +1020,6 @@ python-dateutil==2.9.0.post0
     #   apache-airflow
     #   croniter
     #   env-canada
-    #   flask-appbuilder
     #   google-cloud-bigquery
     #   holidays
     #   jupyter-client
@@ -1067,7 +1064,6 @@ requests==2.32.4
     # via
     #   apache-airflow
     #   apache-airflow-providers-http
-    #   connexion
     #   gcsfs
     #   google-api-core
     #   google-cloud-bigquery
@@ -1085,6 +1081,8 @@ requests-oauthlib==2.0.0
     #   -r requirements.in
     #   google-auth-oauthlib
 requests-toolbelt==1.0.0
+    # via apache-airflow-providers-http
+retryhttp==1.3.2
     # via
     #   apache-airflow
     #   apache-airflow-providers-http
@@ -1124,7 +1122,6 @@ six==1.17.0
     #   opencensus
     #   prison
     #   python-dateutil
-    #   rfc3339-validator
     #   wirerope
 slack-sdk==3.36.0
     # via apache-airflow-providers-slack
@@ -1139,10 +1136,7 @@ snowballstemmer==3.0.1
 sqlalchemy==1.4.54
     # via
     #   alembic
-    #   apache-airflow
-    #   flask-appbuilder
-    #   flask-sqlalchemy
-    #   marshmallow-sqlalchemy
+    #   apache-airflow-core
     #   sqlalchemy-bigquery
     #   sqlalchemy-jsonfield
     #   sqlalchemy-spanner
@@ -1161,6 +1155,19 @@ sqlparse==0.5.3
     #   google-cloud-spanner
 stack-data==0.6.3
     # via ipython
+starlette==0.46.2
+    # via
+    #   -c constraints.txt
+    #   cadwyn
+    #   fastapi
+structlog==25.2.0
+    # via
+    #   -c constraints.txt
+    #   apache-airflow-task-sdk
+svcs==25.1.0
+    # via
+    #   -c constraints.txt
+    #   apache-airflow-core
 tabulate==0.9.0
     # via apache-airflow
 tenacity==9.1.2
@@ -1183,7 +1190,6 @@ tomli==2.2.1
     #   alembic
     #   build
     #   pip-tools
-    #   pylint
     #   pytest
 tomlkit==0.13.3
     # via pylint
@@ -1211,14 +1217,14 @@ typing-extensions==4.14.1
     #   alembic
     #   anyio
     #   asgiref
-    #   astroid
+    #   beautifulsoup4
+    #   cadwyn
     #   cattrs
     #   exceptiongroup
     #   google-cloud-aiplatform
     #   google-genai
     #   huggingface-hub
     #   ipython
-    #   limits
     #   looker-sdk
     #   multidict
     #   openai
@@ -1251,6 +1257,10 @@ virtualenv==20.33.1
     # via ray
 voluptuous==0.15.2
     # via env-canada
+watchfiles==1.0.5
+    # via
+    #   -c constraints.txt
+    #   uvicorn
 wcwidth==0.2.13
     # via prompt-toolkit
 websockets==15.0.1
