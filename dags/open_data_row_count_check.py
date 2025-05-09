@@ -76,6 +76,8 @@ def od_check_dag():
             max_offset = timedelta(days=3)
         elif refresh_rate == 'Monthly':
             max_offset = timedelta(days=60)
+        elif refresh_rate == 'Quarterly':
+            max_offset = timedelta(days=120)
         else:
             max_offset = timedelta(days=60)
         
