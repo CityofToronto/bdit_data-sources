@@ -1,3 +1,10 @@
+"""### open_data_checks DAG
+
+- open data uids are stored in Airflow variable: `open_data_ids`
+- `check_freshness` checks if datasets are outdated versus their stated refresh times
+- `usage_stats` reports usage stats from the previous month based on stats released to Open Data 
+"""
+
 import os
 import sys
 import json
@@ -21,10 +28,7 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['U
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd, send_slack_msg
-
-#README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
-#DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+from dags.dag_functions import task_fail_slack_alert, send_slack_msg
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -43,7 +47,7 @@ BASE_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca"
     dag_id=DAG_NAME,
     default_args=default_args,
     max_active_runs=1,
-    #doc_md=DOC_MD,
+    doc_md=__doc__,
     tags=['bdit_data-sources', 'open_data', 'data_check'],
     schedule='0 0 5 * *', #fifth day of every month
     catchup=False,
