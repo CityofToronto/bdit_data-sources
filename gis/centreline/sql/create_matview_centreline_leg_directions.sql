@@ -34,10 +34,11 @@ nodes AS (
     FROM node_edges
     JOIN gis_core.centreline_intersection_point_latest AS p
         ON node_edges.node_id = p.intersection_id
-    WHERE p.classification NOT IN (
-        'SEUML', -- "Pseudo-Intersection-Overpass/Underpass"
-        'XICSL' -- "Expressway Interchange, Single-Level"
-    )
+    WHERE
+        p.classification NOT IN (
+            'SEUML', -- "Pseudo-Intersection-Overpass/Underpass"
+            'XICSL' -- "Expressway Interchange, Single-Level"
+        )
     GROUP BY node_edges.node_id
     HAVING COUNT(DISTINCT node_edges.edge_id) > 2
 ),
