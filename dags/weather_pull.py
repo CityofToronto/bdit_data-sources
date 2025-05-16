@@ -7,7 +7,7 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
-from pendulum import datetime, duration
+import pendulum
 from datetime import timedelta, time
 
 from airflow.decorators import dag, task
@@ -36,7 +36,7 @@ except:
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': datetime(2024, 6, 3, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 6, 3, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -77,7 +77,7 @@ def weather_pull_dag():
 
     @task(
         retries=1,
-        retry_delay=duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
+        retry_delay=pendulum.duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
     )
     def pull_historical(station_id, ds=None):
         historical_upsert(
