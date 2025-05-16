@@ -1,5 +1,7 @@
 import os
 import sys
+import pendulum
+
 from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -25,7 +27,7 @@ DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': datetime(2021, 11, 1),
+    'start_date': pendulum.datetime(2021, 11, 1, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 5,
