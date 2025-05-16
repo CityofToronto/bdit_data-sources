@@ -30,10 +30,17 @@ node_edges AS (
 nodes AS (
     -- find nodes with a degree > 2
     -- i.e. a legit intersection with three or more legs
-    SELECT node_id
+    SELECT node_edges.node_id
     FROM node_edges
-    GROUP BY node_id
-    HAVING COUNT(DISTINCT edge_id) > 2
+    JOIN gis_core.centreline_intersection_point_latest AS p
+        ON node_edges.node_id = p.intersection_id
+    WHERE
+        p.classification NOT IN (
+            'SEUML', -- "Pseudo-Intersection-Overpass/Underpass"
+            'XICSL' -- "Expressway Interchange, Single-Level"
+        )
+    GROUP BY node_edges.node_id
+    HAVING COUNT(DISTINCT node_edges.edge_id) > 2
 ),
 
 legs AS (
