@@ -89,6 +89,8 @@ Intersections are stored in either of two tables, each of which is copied from a
     | `distinct_feature_desc_list`| Disintct list of unique road class descriptions associated with the intersection. |
     | `highest_order_feature`     | The highest-order road class associated with the intersection. |
     | `all_feature_code_list`     | Full list of all road class descriptions (including duplicates). |
+    |`classification_desc`        | Intersection Classification Description. |
+    |`elevation_feature_code_desc`| Elevation classification Description. |
     | `road_names`                | List of distinct road names connected at the intersection. |
     | `degree`                    | Number of connected centreline segments. |
     | `centreline_ids`            | Array of `centreline_id`s connected to the intersection. |

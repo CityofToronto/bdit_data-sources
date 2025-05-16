@@ -124,7 +124,6 @@ SELECT
     staging.distinct_feature_desc_list,
     staging.highest_order_feature,
     staging.all_feature_code_list,
-    staging.number_of_elevations,
     staging.classification_desc,
     elev.elevation_feature_code_desc,
     staging.road_names,
