@@ -130,15 +130,15 @@ def task_fail_slack_alert(
             f"http://{BaseHook.get_connection('slack').password}"
             f"@{json.loads(BaseHook.get_connection('slack').extra)['url']}"
         )
-    log_url = task_instance.log_url.replace(
-        "localhost", task_instance.hostname
-    )
+    #log_url = task_instance.log_url.replace(
+    #    "localhost", task_instance.hostname
+    #)
     
     slack_msg = (
         f"{emoji} {task_instance.dag_id}."
         f"{task_instance.task_id} "
         f"({context.get('ts_nodash_with_tz')}) FAILED.\n"
-        f"{list_names}, please, check the <{log_url}|logs>\n"
+        f"{list_names}, please, check the logs>\n" #<{log_url}|logs>\n"
     )
     
     if extra_msg_str != "":
