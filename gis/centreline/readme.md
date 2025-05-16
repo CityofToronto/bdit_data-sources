@@ -77,7 +77,7 @@ Intersections are stored in either of two tables, each of which is copied from a
     - contains additional boundary information such as ward, and municipality
     - include trails and ferry routes
 * `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
-    - **Not unique** on `intersection_id`: appears to be 1 row to describe every *turning* relationship between edges at a node. This does not appear to include thru-travel along a street or reflexive turns (U-turns), and includes all turns regardless of oneways (i.e. includes illegal turns).
+    - **Not unique** on `intersection_id`: appears to be 1 row to describe every *physical* (do the lines connect in 3D) relationship between crossing edges at a node with the `connected` column. Crossing means this layer doesn't include any pairs of centrelines with the same name. Nor does it account for bylawed turn restrictions or one-way directions (any manner of illegal turns or possibly U-turns will be described as `connected = 'Y'`).
     - contains additional elevation information such as elevation level (they are all zero), elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
 * `gis_core.intersection_classification`
