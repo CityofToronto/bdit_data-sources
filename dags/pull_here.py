@@ -7,10 +7,10 @@ import os
 import pendulum
 
 from datetime import timedelta
+from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.models import Variable
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group
 from airflow.macros import ds_add, ds_format
 
 try:

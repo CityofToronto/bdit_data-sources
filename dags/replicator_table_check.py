@@ -12,7 +12,7 @@ import os
 import sys
 import pendulum
 # pylint: disable=import-error
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook

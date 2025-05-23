@@ -8,11 +8,11 @@ import sys
 import os
 import pendulum
 
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group
 from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.macros import ds_add
 

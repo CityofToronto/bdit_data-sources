@@ -13,14 +13,14 @@ from datetime import timedelta
 import dateutil.parser
 import logging
 
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group
 from airflow.models import Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.macros import ds_add
 from airflow.exceptions import AirflowSkipException
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

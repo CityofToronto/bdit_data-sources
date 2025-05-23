@@ -6,10 +6,9 @@ import sys
 from functools import partial
 from pendulum import datetime, duration
 # pylint: disable=import-error
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group, get_current_context
 from airflow.models import Variable
 from airflow.exceptions import AirflowFailException
-from airflow.sdk import get_current_context
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
