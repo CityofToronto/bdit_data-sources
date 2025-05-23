@@ -3,8 +3,8 @@ import os
 
 from datetime import datetime, timedelta
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.sdk import dag, task
 from airflow.models import Variable
-from airflow.decorators import dag, task
 from airflow.macros import ds_add, ds_format
 
 import logging
