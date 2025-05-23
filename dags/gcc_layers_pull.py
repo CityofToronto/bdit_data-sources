@@ -4,10 +4,9 @@ import os
 from functools import partial
 
 import pendulum
-from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.sdk import get_current_context
+from airflow.sdk import dag, task, task_group, get_current_context
 from airflow.models.param import Param
 from airflow.exceptions import AirflowFailException
 
