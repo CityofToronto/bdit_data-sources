@@ -4,7 +4,7 @@ from typing import Tuple
 import logging
 import datetime
 # pylint: disable=import-error
-from airflow.decorators import task
+from airflow.sdk import task, get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.exceptions import AirflowFailException, AirflowSkipException
@@ -50,7 +50,6 @@ def copy_table(conn_id:str, table:Tuple[str, str], **context) -> None:
             ``schema.table``.
     """
     #name mapped task
-    from airflow.sdk import get_current_context
     context = get_current_context()
     context["dest_table_name"] = table[1]
     
