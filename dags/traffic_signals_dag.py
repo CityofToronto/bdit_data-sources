@@ -25,7 +25,7 @@ from psycopg2.extras import execute_values
 from dateutil.parser import parse
 import pendulum
 
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 from airflow.models import Variable 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 

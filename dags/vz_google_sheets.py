@@ -13,12 +13,13 @@ import pendulum
 from datetime import timedelta
 from dateutil.parser import parse
 from googleapiclient.discovery import build
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable 
-from airflow.models.param import Param
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
-from airflow.decorators import dag, task
+
+from airflow.sdk import dag, task, get_current_context
 from airflow.exceptions import AirflowFailException
+from airflow.models import Variable
+from airflow.models.param import Param
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -85,7 +86,6 @@ def get_vz_data():
             AirflowFailException: If any invalid record is found.
         """
         #get name for mapped task 
-        from airflow.sdk import get_current_context
         context = get_current_context()
         context["task_year"] = spreadsheet["year"]
         
