@@ -9,12 +9,11 @@ import dateutil.parser
 from datetime import timedelta
 from googleapiclient.discovery import build
 
-from airflow.sdk import get_current_context
+from airflow.models import Variable
+from airflow.sdk import task, dag, task_group, run_if, get_current_context
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
-from airflow.decorators import task, dag, task_group, run_if
-from airflow.sensors.external_task import ExternalTaskMarker
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from airflow.exceptions import AirflowFailException
 

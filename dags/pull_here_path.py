@@ -3,9 +3,9 @@ import os
 import pendulum
 from datetime import timedelta
 
-from airflow.decorators import task, dag
+from airflow.sdk import task, dag
 from airflow.hooks.base import BaseHook
-from airflow.models import Variable 
+from airflow.models import Variable
 from airflow.macros import ds_add, ds_format
 
 try:

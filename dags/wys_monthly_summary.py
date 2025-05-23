@@ -5,12 +5,12 @@ A Slack notification is raised when the airflow process fails.
 import sys
 import os
 import pendulum
+from dateutil.relativedelta import relativedelta
+from datetime import datetime, timedelta
 
 from airflow import DAG
-from datetime import datetime, timedelta
+from airflow.models import Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable 
-from dateutil.relativedelta import relativedelta
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
