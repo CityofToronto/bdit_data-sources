@@ -9,7 +9,7 @@
   - [rodars\_issue\_locations.lanesaffectedpatternn\`](#rodars_issue_locationslanesaffectedpatternn)
 - [Data Ops](#data-ops)
   - [RODARS DAG](#rodars-dag)
-  - [lanesaffectedd\`](#lanesaffectedd)
+  - [lanesaffected](#lanesaffected)
 
 
 # Introduction
@@ -246,7 +246,7 @@ HO  |HOV Open                                 |2024-06-25 20:00:14.220|
 
 <!-- rodars_pull_doc_md -->
 
-## lanesaffectedd`
+## lanesaffected
 
 `lanesaffected` is a loosely formatted json column in the ITSC issuelocationnew table. 
 
