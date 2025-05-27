@@ -205,7 +205,7 @@ def pull_wys_dag():
             for m_i in range(0, len(wards)):
                 rows = ti.xcom_pull(key="badrows", map_indexes=m_i, task_ids="read_google_sheets_tg.read_google_sheet")
                 if rows is not None:
-                    link=f"<https://drive.google.com/open?id={wards[m_i][0]}|Ward {m_i+1}>"
+                    link=f"<https://drive.google.com/open?id={wards[m_i][0]}|Ward {wards[m_i][3]}>"
                     msg=f"*{link}*: " + '\n' + '\n'.join([str(item) for item in rows])
                     badrows.append(msg)
             if badrows != []:
