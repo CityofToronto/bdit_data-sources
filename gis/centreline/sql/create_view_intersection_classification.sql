@@ -9,6 +9,7 @@ WITH all_intersections AS (
         intersections.intersection_desc,
         intersections.classification_desc,
         cent.feature_code_desc,
+        intersections.number_of_elevations,
         cent.centreline_id,
         cent.linear_name_full,
         cent.geom AS centreline_geom,
@@ -33,6 +34,7 @@ WITH all_intersections AS (
         intersections.intersection_desc,
         intersections.classification_desc,
         cent.feature_code_desc,
+        intersections.number_of_elevations,
         cent.centreline_id,
         cent.linear_name_full,
         cent.geom AS centreline_geom,
@@ -80,9 +82,11 @@ staging AS (
             1
         ] AS highest_order_feature,
         centreline_agg.all_feature_code_list,
+        dist_feature.number_of_elevations,
         centreline_agg.count_name,
         centreline_agg.linear_list AS road_names,
         array_length(centreline_agg.centreline_list, 1) AS degree,
+        dist_feature.classification_desc,
         centreline_agg.centreline_list AS centreline_ids,
         dist_feature.geom,
         centreline_agg.cent_geom
@@ -90,6 +94,7 @@ staging AS (
         all_intersections.intersection_id,
         all_intersections.intersection_desc,
         all_intersections.feature_code_desc,
+        all_intersections.classification_desc,
         all_intersections.number_of_elevations,
         all_intersections.geom,
         all_intersections.feature_code
@@ -98,13 +103,20 @@ staging AS (
     GROUP BY
         dist_feature.intersection_id,
         dist_feature.intersection_desc,
+        dist_feature.classification_desc,
+        dist_feature.number_of_elevations,
         dist_feature.geom,
         centreline_agg.linear_list,
         centreline_agg.count_name,
         centreline_agg.cent_geom,
         centreline_agg.centreline_list,
         centreline_agg.all_feature_code_list
-)
+),
+
+elev AS (SELECT DISTINCT
+    intersection_id,
+    elevation_feature_code_desc
+FROM gis_core.intersection_latest)
 
 SELECT
     staging.intersection_id,
@@ -112,12 +124,15 @@ SELECT
     staging.distinct_feature_desc_list,
     staging.highest_order_feature,
     staging.all_feature_code_list,
+    staging.classification_desc,
+    elev.elevation_feature_code_desc,
     staging.road_names,
     staging.degree,
     staging.centreline_ids,
     staging.geom,
     staging.cent_geom
 FROM staging
+LEFT JOIN elev USING (intersection_id)
 WHERE staging.count_name > 1 OR staging.degree > 2;
 
 ALTER TABLE gis_core.intersection_classification

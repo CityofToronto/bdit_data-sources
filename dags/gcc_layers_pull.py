@@ -14,7 +14,7 @@ from airflow.exceptions import AirflowFailException
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
     from gis.gccview.gcc_puller_functions import (
         get_layer, mapserver_name, get_src_row_count, get_dest_row_count
     )

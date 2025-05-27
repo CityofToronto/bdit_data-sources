@@ -74,10 +74,10 @@ Intersections are stored in either of two tables, each of which is copied from a
 
 * `gis_core.centreline_intersection_point` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial/FeatureServer/19))
     - **Almost** unique on `intersection_id`: **generally the preferred intersection layer**.
-    - contains additional boundary information such as ward, and municpality
+    - contains additional boundary information such as ward, and municipality
     - include trails and ferry routes
 * `gis_core.intersection` (pulled from [here](https://insideto-gis.toronto.ca/arcgis/rest/services/cot_geospatial12/FeatureServer/42))
-    - **Not unique** on `intersection_id`: appears to be 1 row to describe every relationship between edges at a node.  
+    - **Not unique** on `intersection_id`: appears to be 1 row to describe every *physical* (do the lines connect in 3D) relationship between crossing edges at a node with the `connected` column. Crossing means this layer doesn't include any pairs of centrelines with the same name. Nor does it account for bylawed turn restrictions or one-way directions (any manner of illegal turns or possibly U-turns will be described as `connected = 'Y'`).
     - contains additional elevation information such as elevation level (they are all zero), elevation unit, height restriction, etc
     - does not include cul-de-sacs, overpass/underpass
 * `gis_core.intersection_classification`
@@ -90,6 +90,8 @@ Intersections are stored in either of two tables, each of which is copied from a
     | `distinct_feature_desc_list`| Disintct list of unique road class descriptions associated with the intersection. |
     | `highest_order_feature`     | The highest-order road class associated with the intersection. |
     | `all_feature_code_list`     | Full list of all road class descriptions (including duplicates). |
+    |`classification_desc`        | Intersection Classification Description. |
+    |`elevation_feature_code_desc`| Elevation classification Description. |
     | `road_names`                | List of distinct road names connected at the intersection. |
     | `degree`                    | Number of connected centreline segments. |
     | `centreline_ids`            | Array of `centreline_id`s connected to the intersection. |

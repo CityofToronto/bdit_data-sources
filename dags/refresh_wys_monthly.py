@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
 
 dag_name = 'wys_monthly_summary'
 dag_owners = Variable.get('dag_owners', deserialize_json=True)

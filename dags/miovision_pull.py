@@ -20,9 +20,9 @@ from airflow.macros import ds_add
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-    from dags.custom_operators import SQLCheckOperatorWithReturnValue
-    from dags.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
         get_intersection_info, agg_zero_volume_anomalous_ranges
