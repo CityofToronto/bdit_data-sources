@@ -2,12 +2,14 @@
   - [RODARS vs RODARS New ("rodars\_new\_approved")](#rodars-vs-rodars-new-rodars_new_approved)
   - [What's included?](#whats-included)
 - [Querying RODARs Data](#querying-rodars-data)
-  - [Data Dictionary](#data-dictionary)
-    - [`congestion_events.rodars_locations`](#congestion_eventsrodars_locations)
-      - [`rodars_issue_locations.lanesaffectedpattern`](#rodars_issue_locationslanesaffectedpattern)
+  - [Querying by geom](#querying-by-geom)
+  - [Finding closed lanes:](#finding-closed-lanes)
+- [Data Dictionary](#data-dictionary)
+  - [congestion\_events.rodars\_locationss\`](#congestion_eventsrodars_locationss)
+  - [rodars\_issue\_locations.lanesaffectedpatternn\`](#rodars_issue_locationslanesaffectedpatternn)
 - [Data Ops](#data-ops)
   - [RODARS DAG](#rodars-dag)
-  - [`lanesaffected`](#lanesaffected)
+  - [lanesaffected](#lanesaffected)
 
 
 # Introduction
@@ -38,13 +40,15 @@ Here is a screenshot of the extremely detailed geographic/lane management plan U
 ## RODARS vs RODARS New ("rodars_new_approved")
 
 > [!IMPORTANT]  
-> In 2024 a new version of RODARS debuted which should result in a more reliable data source.  
+> In 2024 a new version of RODARS debuted which should result in a more reliable data source. 
 
 **RODARS (New)**
 - RODARs New has only been around since 2024-03 (already has more than 28,000 issues!)
+  - The transition has been gradual with about 90% of issues created in New RoDARS in 2025-03. 
 - An online form which contractors fill out directly. Approvals are done by work zone coordinators.
 - QR codes will start appearing at sites in 2024/2025, which should help enforceability (citizen reporting/bylaw officers). 
   - There will be penalties.
+  - The QR code destination can be found at `rodars_locations.public_url`.
 - Most records have `centreline_id`!
 - Contains detailed description of lane closure pattern (`lanesaffectedpattern`).
 
@@ -84,6 +88,8 @@ GROUP BY 1, 2 ORDER BY 1, 2;
 > [!WARNING]
 > Use of this data is largely untested. If you have an example of use, please help others by proposing a change to this readme!
 
+## Querying by geom
+
 You could query construction along specific centreline_ids and during specific dates using this sample query. 
 ```sql
 WITH target_geom AS (
@@ -114,10 +120,26 @@ WHERE
 > [!CAUTION]
 > For older time periods you may need to use `issue_geom` instead as `centreline_id` is not consistently populated.
 
-## Data Dictionary
+## Finding closed lanes:
 
-### `congestion_events.rodars_locations`
+```sql
+SELECT * FROM congestion_events.rodars_locations
+WHERE lane_closed_auto > 0
+AND status = 'In Progress'
+```
+
+You could also try look at **any** lane/capacity restriction:
+
+```sql
+SELECT * FROM congestion_events.rodars_locations
+WHERE lanesaffectedpattern <> 'LOWO' --the default value (lane open, sidewalk open)
+```
+
+# Data Dictionary
+
+## congestion_events.rodars_locationss`
 This view joins together issue metadata from `congestion_events.rodars_issues` and location descriptions from `congestion_events.rodars_issue_locations`.  
+- Note: only the latest version of each issue is currently retained in Bigdata. It would need to be investigated if contractors update lanes closed over time and if that would be useful.
 
 
 | Column                       | Sample                                                              | Description                                                                                                                                                                                           |
@@ -125,6 +147,8 @@ This view joins together issue metadata from `congestion_events.rodars_issues` a
 | divisionid                   | 8048                                                                | 8014 for RODARS, 8048 for "rodars_new_approved"                                                                                                                                                       |
 | divisionname                 | rodars_new_approved                                                 | Division name                                                                                                                                                                                         |
 | issueid                      | 9535420                                                             | An issueid may have more than one location in this table.                                                                                                                                             |
+| issuetype                      | 3                                                                 | See description in next column. table.                                                                                                                                             |
+| issuetype_desc                    | City Transit Work                                              | Issue description identified from ITS Central; may be useful for location specific issues. |
 | sourceid                     | Tor-RDAR2024-3658                                                   | This ID is helpful for searching on ITS Central                                                                                                                                                       |
 | description                  | City of Toronto Contract 24ECS-LU-08SU                              | This contract ID will yield helpful results on Google.                                                                                                                                                |
 | priority                     | High                                                                | Critical/High/Medium/Low/None                                                                                                                                                                         |
@@ -143,8 +167,7 @@ This view joins together issue metadata from `congestion_events.rodars_issues` a
 | fromroadname                 | James Hales Lane                                                    |                                                                                                                                                                                                       |
 | toroadname                   |                                                                     |                                                                                                                                                                                                       |
 | streetnumber                 |                                                                     |                                                                                                                                                                                                       |
-| locationblocklevel           | Full Closure with Emergency Access                                  | This field is the highest level "closure" description and seems   to frequently contradict lower level descriptions, as in this case.                                                                 |
-| roadclosuretype_desc         | No Closure                                                          | Another "closure" description. Contradicts above in this case.                                                                                                                                        |
+| roadclosuretype_desc         | No Closure                                                          | A "closure" description. Seems to be based off of `lanesaffectedpattern`. |
 | locationdescription_toplevel | Harbord St at James Hales Lane                                      | Another high level description                                                                                                                                                                        |
 | direction                    | West                                                                | Each direction on the affected street will have it's own entry.                                                                                                                                       |
 | roadname                     | Harbord St                                                          | lowest level description; roadname corresponding to centreline.                                                                                                                                       |
@@ -163,7 +186,7 @@ This view joins together issue metadata from `congestion_events.rodars_issues` a
 | lane_open_bus                | 0                                                                   |                                                                                                                                                                                                       |
 | lane_closed_bus              | 0                                                                   |                                                                                                                                                                                                       |
 
-#### `rodars_issue_locations.lanesaffectedpattern`
+## rodars_issue_locations.lanesaffectedpatternn`
 
 This column offers the most detailed look at the lane closures. However is has been under development since 2022 and some codes did not enter use until later. For example; Sidewalk closures were not noted until 2023-01-18 and the first bike lane closure on 2023-03-03. They may have not entered regular use until later. 
 
@@ -204,6 +227,9 @@ KO  |Bicycle Open                             |2024-04-04 19:30:37.703|
 HC  |HOV Closed                               |2024-05-10 21:00:13.375|
 HO  |HOV Open                                 |2024-06-25 20:00:14.220|
 
+> [!NOTE]
+> ~50% of the non-null values in this field are ‘LOWO’ = ‘Lane Open, Sidewalk Open’ which is the default value. This may be OK since one side of the road is generally unaffected?
+
 # Data Ops
 
 - Note there is a data dictionary from the vendor saved here: `K:\tra\GM Office\Big Data Group\Data Sources\RODARS\Municipal 511 Custom Datafeed API Documentation - 2.4 (Toronto).pdf`
@@ -220,7 +246,7 @@ HO  |HOV Open                                 |2024-06-25 20:00:14.220|
 
 <!-- rodars_pull_doc_md -->
 
-## `lanesaffected`
+## lanesaffected
 
 `lanesaffected` is a loosely formatted json column in the ITSC issuelocationnew table. 
 
