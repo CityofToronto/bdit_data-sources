@@ -3,9 +3,8 @@ import sys
 import pendulum
 from functools import partial
 
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
 
 DAG_NAME = 'rodars_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
@@ -16,8 +15,8 @@ sys.path.insert(0, repo_path)
 from events.road_permits.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
-from dags.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-from dags.custom_operators import SQLCheckOperatorWithReturnValue
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 
 README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -78,7 +77,8 @@ def rodars_dag():
                         8048, --rodars new
                         8014 --rodars (old)
                     )''',
-            conn_id="itsc_postgres"
+            conn_id="itsc_postgres",
+            retries=0
         )
         check_src_issue_count.doc_md = "Check the source issue count."
         
@@ -94,7 +94,8 @@ def rodars_dag():
                     AS description
                 FROM congestion_events.rodars_issues
                 ''',
-            conn_id="events_bot"
+            conn_id="events_bot",
+            retries=0
         )
         check_src_issue_count.doc_md = "Check the dest issue count vs the source issue count."
 
