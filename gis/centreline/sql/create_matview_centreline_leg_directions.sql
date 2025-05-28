@@ -17,7 +17,8 @@ node_edges AS (
     -- remove expressways because they don't *actually* intersect other streets
     SELECT
         centreline_id AS edge_id,
-        from_intersection_id AS node_id
+        from_intersection_id AS node_id,
+        feature_code_desc
     FROM gis_core.centreline_latest
     WHERE feature_code_desc != 'Expressway'
 
@@ -25,7 +26,8 @@ node_edges AS (
 
     SELECT
         centreline_id AS edge_id,
-        to_intersection_id AS node_id
+        to_intersection_id AS node_id,
+        feature_code_desc
     FROM gis_core.centreline_latest
     WHERE feature_code_desc != 'Expressway'
 ),
@@ -36,7 +38,10 @@ nodes AS (
     SELECT node_id
     FROM node_edges
     GROUP BY node_id
-    HAVING COUNT(DISTINCT edge_id) > 2
+    HAVING
+        COUNT(DISTINCT edge_id) > 2
+        -- no 'intersections' that are just ramps crossing eachother
+        AND ARRAY_AGG(DISTINCT feature_code_desc) != ARRAY['Expressway Ramp']
 ),
 
 legs AS (
