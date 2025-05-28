@@ -14,11 +14,11 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
 
 dag_name = 'wys_monthly_summary'
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 README_PATH = os.path.join(repo_path, 'wys/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, dag_name)
