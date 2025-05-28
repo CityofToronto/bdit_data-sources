@@ -14,13 +14,14 @@ from airflow.sensors.external_task import ExternalTaskSensor
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import functions to pull watch your speed data")
 
 DAG_NAME = 'wys_check'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'wys/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)

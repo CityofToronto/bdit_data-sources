@@ -29,15 +29,14 @@ from airflow.sdk import dag, task
 from airflow.models import Variable 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-DAG_NAME = 'traffic_signals_dag'
-
 # Slack notification
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(DAG_NAME, ['Unknown']) #find dag owners w/default = Unknown    
+DAG_NAME = 'traffic_signals_dag'
+names = owners.get(DAG_NAME, ['Unknown']) #find dag owners w/default = Unknown    
 
 DEFAULT_ARGS = {
     'email_on_failure': True,
