@@ -3,9 +3,8 @@ import sys
 import pendulum
 from functools import partial
 
-from airflow.decorators import dag, task, task_group
+from airflow.sdk import dag, task, task_group, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
 
 DAG_NAME = 'rodars_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
@@ -78,7 +77,8 @@ def rodars_dag():
                         8048, --rodars new
                         8014 --rodars (old)
                     )''',
-            conn_id="itsc_postgres"
+            conn_id="itsc_postgres",
+            retries=0
         )
         check_src_issue_count.doc_md = "Check the source issue count."
         
@@ -94,7 +94,8 @@ def rodars_dag():
                     AS description
                 FROM congestion_events.rodars_issues
                 ''',
-            conn_id="events_bot"
+            conn_id="events_bot",
+            retries=0
         )
         check_src_issue_count.doc_md = "Check the dest issue count vs the source issue count."
 
