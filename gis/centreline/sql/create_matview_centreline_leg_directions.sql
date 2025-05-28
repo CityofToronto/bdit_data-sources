@@ -72,6 +72,7 @@ legs AS (
     FROM nodes AS n
     JOIN gis_core.centreline_latest AS edges_outbound
         ON n.node_id = edges_outbound.from_intersection_id
+    WHERE edges_outbound.feature_code_desc != 'Expressway'
 
     UNION
 
@@ -96,6 +97,7 @@ legs AS (
     FROM nodes AS n
     JOIN gis_core.centreline_latest AS edges_inbound
         ON n.node_id = edges_inbound.to_intersection_id
+    WHERE edges_inbound.feature_code_desc != 'Expressway'
 ),
 
 distances AS (
