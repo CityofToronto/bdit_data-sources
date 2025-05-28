@@ -23,12 +23,13 @@ from airflow.exceptions import AirflowFailException
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-DAG_NAME = 'open_data_checks'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
-
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg
+from dags.dag_owners import owners
+
+DAG_NAME = 'open_data_checks'
+DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),

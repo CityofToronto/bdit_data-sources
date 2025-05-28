@@ -16,6 +16,7 @@ from airflow.macros import ds_add, ds_format
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
     from here.traffic.here_api import query_dates, get_access_token, get_download_url, HereAPIException
 except:
@@ -32,8 +33,7 @@ This pulles probe data in oppose to path in the pull_here_path DAG.
 """
 
 dag_name = 'pull_here'
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
