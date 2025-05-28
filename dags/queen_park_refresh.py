@@ -12,7 +12,8 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    #from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    from dags.dag_owners import owners
 except ImportError:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -20,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'queens_park_aggregation'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
+DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
 
 default_args = {'owner': ','.join(DAG_OWNERS),
                 'depends_on_past':False,
