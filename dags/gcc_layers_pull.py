@@ -13,6 +13,7 @@ from airflow.exceptions import AirflowFailException
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
     from gis.gccview.gcc_puller_functions import (
         get_layer, mapserver_name, get_src_row_count, get_dest_row_count
@@ -224,9 +225,9 @@ filtered_dags = [
 
 for item in filtered_dags:
     DAG_NAME = 'gcc_pull_layers'
-    DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+    DAG_OWNERS  = owners.get(DAG_NAME, ["Unknown"])
     downstream_aggs = DAGS[item].get('downstream_aggs', [])
-    
+
     DEFAULT_ARGS = {
         'owner': ','.join(DAG_OWNERS),
         'depends_on_past': False,

@@ -10,6 +10,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
     from volumes.miovision.api.configuration_info import (
         get_cameras, get_configuration_dates
@@ -18,7 +19,7 @@ except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'miovision_hardware'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)

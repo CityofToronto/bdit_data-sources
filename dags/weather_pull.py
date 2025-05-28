@@ -16,14 +16,11 @@ from airflow.models import Variable
 from airflow.operators.latest_only import LatestOnlyOperator
 from airflow.sensors.time_sensor import TimeSensor
 
-# DAG Information
-DAG_NAME = 'weather_pull'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
-
 #import python scripts
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from weather.prediction_import import prediction_upsert
     from weather.historical_scrape import historical_upsert
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
@@ -32,7 +29,9 @@ except:
     raise ImportError("script import failed")
 
 #DAG
- 
+DAG_NAME = 'weather_pull'
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
+
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,

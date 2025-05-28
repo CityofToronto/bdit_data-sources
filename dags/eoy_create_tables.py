@@ -24,13 +24,14 @@ logging.basicConfig(level=logging.INFO)
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg
     from bluetooth.sql.bt_eoy_create_tables import replace_bt_trigger
 except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'eoy_table_create'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 default_args = {'owner': ','.join(DAG_OWNERS), 
                 'depends_on_past':False,

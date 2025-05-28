@@ -14,6 +14,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     # pylint: disable=wrong-import-position
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     # pylint: enable=import-error
@@ -25,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'temp_bluetooth_check_readers'
-DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 def format_br_list(returned_list):
 # Format broken reader list into a text for slack message.    

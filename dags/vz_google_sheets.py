@@ -24,13 +24,14 @@ from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 # pylint: disable=wrong-import-position
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 from gis.school_safety_zones.schools import pull_from_sheet
 # pylint: enable=wrong-import-position
 
 DAG_NAME = 'vz_google_sheets'
-DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 DEFAULT_ARGS = {
     'owner': ','.join(DAG_OWNERS),
