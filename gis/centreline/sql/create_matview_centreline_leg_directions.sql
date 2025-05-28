@@ -14,10 +14,12 @@ WITH toronto_cardinal (d, leg_label) AS (
 
 node_edges AS (
     -- Identify all connections between nodes and edges
+    -- remove expressways because they don't *actually* intersect other streets
     SELECT
         centreline_id AS edge_id,
         from_intersection_id AS node_id
     FROM gis_core.centreline_latest
+    WHERE feature_code_desc != 'Expressway'
 
     UNION
 
@@ -25,22 +27,16 @@ node_edges AS (
         centreline_id AS edge_id,
         to_intersection_id AS node_id
     FROM gis_core.centreline_latest
+    WHERE feature_code_desc != 'Expressway'
 ),
 
 nodes AS (
     -- find nodes with a degree > 2
     -- i.e. a legit intersection with three or more legs
-    SELECT node_edges.node_id
+    SELECT node_id
     FROM node_edges
-    JOIN gis_core.centreline_intersection_point_latest AS p
-        ON node_edges.node_id = p.intersection_id
-    WHERE
-        p.classification NOT IN (
-            'SEUML', -- "Pseudo-Intersection-Overpass/Underpass"
-            'XICSL' -- "Expressway Interchange, Single-Level"
-        )
-    GROUP BY node_edges.node_id
-    HAVING COUNT(DISTINCT node_edges.edge_id) > 2
+    GROUP BY node_id
+    HAVING COUNT(DISTINCT edge_id) > 2
 ),
 
 legs AS (
