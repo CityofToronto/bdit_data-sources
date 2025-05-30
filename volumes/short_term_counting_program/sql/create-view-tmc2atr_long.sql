@@ -8,57 +8,57 @@ WITH json_bundled AS (
         time_end,
         json_build_object(
             'bike', json_build_object(
-                'n', json_build_object(
-                    'nb', n_bike_nb,
-                    'sb', n_bike_sb
+                'N', json_build_object(
+                    'NB', n_bike_nb,
+                    'SB', n_bike_sb
                 ),
-                'e', json_build_object(
-                    'eb', e_bike_eb,
-                    'wb', e_bike_wb
+                'E', json_build_object(
+                    'EB', e_bike_eb,
+                    'WB', e_bike_wb
                 ),
-                's', json_build_object(
-                    'nb', s_bike_nb,
-                    'sb', s_bike_sb
+                'S', json_build_object(
+                    'NB', s_bike_nb,
+                    'SB', s_bike_sb
                 ),
-                'w', json_build_object(
-                    'eb', w_bike_eb,
-                    'wb', w_bike_wb
+                'W', json_build_object(
+                    'EB', w_bike_eb,
+                    'WB', w_bike_wb
                 )
             ),
             'car', json_build_object(
-                'n', json_build_object(
-                    'nb', n_cars_nb,
-                    'sb', n_cars_sb
+                'N', json_build_object(
+                    'NB', n_cars_nb,
+                    'SB', n_cars_sb
                 ),
-                'e', json_build_object(
-                    'eb', e_cars_eb,
-                    'wb', e_cars_wb
+                'E', json_build_object(
+                    'EB', e_cars_eb,
+                    'WB', e_cars_wb
                 ),
-                's', json_build_object(
-                    'nb', s_cars_nb,
-                    'sb', s_cars_sb
+                'S', json_build_object(
+                    'NB', s_cars_nb,
+                    'SB', s_cars_sb
                 ),
-                'w', json_build_object(
-                    'eb', w_cars_eb,
-                    'wb', w_cars_wb
+                'W', json_build_object(
+                    'EB', w_cars_eb,
+                    'WB', w_cars_wb
                 )
             ),
             'truck', json_build_object(
-                'n', json_build_object(
-                    'nb', n_truck_nb,
-                    'sb', n_truck_sb
+                'N', json_build_object(
+                    'NB', n_truck_nb,
+                    'SB', n_truck_sb
                 ),
-                'e', json_build_object(
-                    'eb', e_truck_eb,
-                    'wb', e_truck_wb
+                'E', json_build_object(
+                    'EB', e_truck_eb,
+                    'WB', e_truck_wb
                 ),
-                's', json_build_object(
-                    'nb', s_truck_nb,
-                    'sb', s_truck_sb
+                'S', json_build_object(
+                    'NB', s_truck_nb,
+                    'SB', s_truck_sb
                 ),
-                'w', json_build_object(
-                    'eb', w_truck_eb,
-                    'wb', w_truck_wb
+                'W', json_build_object(
+                    'EB', w_truck_eb,
+                    'WB', w_truck_wb
                 )
             )
         ) AS counts    
