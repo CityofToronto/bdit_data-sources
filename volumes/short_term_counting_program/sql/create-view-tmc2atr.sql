@@ -1,7 +1,7 @@
 -- Transform turning movement counts into directed movements on legs
--- can't do this for peds :'-(
+-- can't do this for peds, and can only do some of the counts for bikes
 
-CREATE OR REPLACE VIEW traffic.tmc2atr AS
+CREATE OR REPLACE VIEW traffic.tmc2atr_wide AS
 
 SELECT
     id,
@@ -49,7 +49,7 @@ SELECT
     e_truck_t + s_truck_l + n_truck_r AS w_truck_wb
 FROM traffic.tmc_study_data;
 
-COMMENT ON VIEW traffic.tmc2atr IS
+COMMENT ON VIEW traffic.tmc2atr_wide IS
 'Mapping of short-term TMCs to ATR/SVC formatted counts on the legs of the intersection '
 'For columns like `e_truck_wb`, e(East) is the leg with reference to the intersection '
 'and wb(WestBound) is the direction of travel on that leg. `truck` is the type of vehicle.';

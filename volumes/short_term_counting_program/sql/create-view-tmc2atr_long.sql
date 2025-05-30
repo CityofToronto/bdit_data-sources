@@ -62,7 +62,7 @@ WITH json_bundled AS (
                 )
             )
         ) AS counts    
-    FROM nwessel.tmc2atr
+    FROM nwessel.tmc2atr_wide
 ),
 
 classified AS (
