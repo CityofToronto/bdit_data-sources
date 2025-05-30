@@ -116,4 +116,4 @@ SELECT
     END AS count
 FROM directed_text;
 
-COMMENT ON traffic.tmc2atr_long IS 'Long-formatted version of `tmc2atr`.'
+COMMENT ON VIEW traffic.tmc2atr_long IS 'Long-formatted version of `tmc2atr`.'
