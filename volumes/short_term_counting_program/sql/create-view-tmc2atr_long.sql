@@ -1,6 +1,6 @@
 CREATE OR REPLACE VIEW traffic.tmc2atr_long AS
 
-WITH bundled AS (
+WITH json_bundled AS (
     SELECT
         id,
         count_id,
@@ -73,7 +73,7 @@ classified AS (
         time_end,
         (json_each(counts)).key AS classification,
         (json_each(counts)).value AS counts
-    FROM bundled
+    FROM json_bundled
 ),
 
 legged AS (
@@ -97,8 +97,9 @@ directed_text AS (
         classification,
         leg,
         (json_each(counts)).key AS dir,
+        -- have to first parse JSON as text
         ((json_each(counts)).value)::text AS count_text
-    FROM nwessel.tmc2atr_by_mode_leg
+    FROM legged
 )
 
 SELECT
@@ -111,5 +112,8 @@ SELECT
     dir,
     CASE
         WHEN count_text ~ '\d' THEN count_text::smallint
+        -- 'null' text strings will become actual nulls
     END AS count
 FROM directed_text;
+
+COMMENT ON traffic.tmc2atr_long IS 'Long-formatted version of `tmc2atr`.'
