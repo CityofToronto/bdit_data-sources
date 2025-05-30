@@ -10,9 +10,11 @@ SELECT
     time_end,
     -- North leg traffic
     n_bike AS n_bike_sb,
-    CASE -- no where else for bikes to come from
+    -- if zero bikes enter the intersection, then zero bikes leave
+    -- but if there is a non-zero bike count entering, we can't say
+    -- where those bikes exit (yet), so the volume is NULL
+    CASE
         WHEN w_bike + e_bike + s_bike = 0 THEN 0
-        -- but if there is a non-zero bike count, we can't say where the bike exits
     END AS n_bike_nb,
     n_cars_l + n_cars_t + n_cars_r AS n_cars_sb,
     s_cars_t + e_cars_r + w_cars_l AS n_cars_nb,
@@ -46,3 +48,8 @@ SELECT
     w_truck_t + w_truck_r + w_truck_l AS w_truck_eb,
     e_truck_t + s_truck_l + n_truck_r AS w_truck_wb
 FROM traffic.tmc_study_data;
+
+COMMENT ON VIEW traffic.tmc2atr IS
+'Mapping of short-term TMCs to ATR/SVC formatted counts on the legs of the intersection '
+'For columns like `e_truck_wb`, e(East) is the leg with reference to the intersection '
+'and wb(WestBound) is the direction of travel on that leg. `truck` is the type of vehicle.';
