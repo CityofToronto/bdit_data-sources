@@ -43,6 +43,6 @@ SELECT
     END AS w_bike_wb,
     w_cars_t + w_cars_r + w_cars_l AS w_cars_eb,
     e_cars_t + s_cars_l + n_cars_r AS w_cars_wb,
-    w_truck_t + w_truck_r + w_truck_l AS w_cars_eb,
-    e_truck_t + s_truck_l + n_truck_r AS w_cars_wb
+    w_truck_t + w_truck_r + w_truck_l AS w_truck_eb,
+    e_truck_t + s_truck_l + n_truck_r AS w_truck_wb
 FROM traffic.tmc_study_data;
