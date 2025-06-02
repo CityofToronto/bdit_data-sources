@@ -1,6 +1,7 @@
 CREATE MATERIALIZED VIEW gis_core.centreline_intersection_point_latest AS
 
-SELECT *
+--in case of duplicate intersection_id (rare), only take the latest by objectid
+SELECT DISTINCT ON (intersection_id) *
 FROM gis_core.centreline_intersection_point
 WHERE 
     intersection_id IN (
@@ -30,4 +31,4 @@ GRANT SELECT ON gis_core.centreline_intersection_point_latest TO bdit_humans, bd
 
 COMMENT ON MATERIALIZED VIEW gis_core.centreline_intersection_point_latest IS E''
 'Materialized view containing the latest version of centreline intersection point,'
-'derived from gis_core.centreline_intersection_point.'
+'derived from gis_core.centreline_intersection_point. Removes some (rare) duplicate intersection_ids.'
