@@ -15,12 +15,6 @@ WHERE
         FROM gis_core.intersection
     );
 
-CREATE TRIGGER refresh_trigger
-AFTER INSERT OR UPDATE OR DELETE
-ON gis_core.intersection
-FOR EACH STATEMENT
-EXECUTE PROCEDURE gis_core.intersection_latest_trigger();
-
 CREATE INDEX gis_core_intersection_latest_geom ON gis_core.intersection_latest
 USING gist (geom);
 
