@@ -20,11 +20,11 @@ SELECT
     COUNT(DISTINCT c15.datetime_15min) AS distinct_dt_bins_present
 FROM vds.counts_15min_div2 AS c15
 JOIN vds.detector_inventory AS di USING (vdsconfig_uid, entity_location_uid),
-LATERAL (
-    SELECT
-        c15.datetime_15min::date AS dt,
-        date_part('isodow'::text, c15.datetime_15min) <= 5::double precision AS is_wkdy
-    ) AS dts
+    LATERAL (
+        SELECT
+            c15.datetime_15min::date AS dt,
+            date_part('isodow'::text, c15.datetime_15min) <= 5::double precision AS is_wkdy
+        ) AS dts
 WHERE
     c15.datetime_15min >= '{{ ds }} 00:00:00'::timestamp -- noqa: TMP
     AND c15.datetime_15min < '{{ ds }} 00:00:00'::timestamp + interval '1 DAY' -- noqa: TMP
