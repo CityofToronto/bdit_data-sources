@@ -3,11 +3,10 @@ import sys
 from datetime import datetime, timedelta
 from functools import partial
 
-from airflow.models import Variable
-from airflow.decorators import dag, task_group, task
+from airflow.sdk import dag, task_group, task, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 
 DAG_NAME = 'vds_pull_vdsdata'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
