@@ -13,13 +13,8 @@ WHERE
     AND version_date = (
         SELECT MAX(version_date)
         FROM gis_core.centreline_intersection_point
-    );
-
-CREATE TRIGGER refresh_trigger
-AFTER INSERT OR UPDATE OR DELETE
-ON gis_core.centreline_intersection_point
-FOR EACH STATEMENT
-EXECUTE PROCEDURE gis_core.centreline_intersection_point_latest_trigger();
+    )
+ORDER BY intersection_id, objectid DESC;
 
 CREATE INDEX gis_core_centreline_intersection_point_latest_geom
 ON gis_core.centreline_intersection_point_latest USING gist (geom);
