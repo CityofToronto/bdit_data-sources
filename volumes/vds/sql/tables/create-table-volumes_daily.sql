@@ -8,11 +8,13 @@ CREATE TABLE IF NOT EXISTS vds.volumes_daily (
     detector_id character varying COLLATE pg_catalog."default",
     dt date,
     is_wkdy boolean,
-    daily_count bigint,
+    is_holiday boolean,
+    daily_volume bigint,
     count_60day numeric,
     daily_obs bigint,
     daily_obs_expected bigint,
     avg_lanes_present numeric,
+    num_lanes_expected integer,
     distinct_dt_bins_present bigint
 )
 
