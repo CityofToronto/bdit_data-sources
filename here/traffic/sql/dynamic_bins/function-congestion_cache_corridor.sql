@@ -20,6 +20,7 @@ AS $BODY$
 DECLARE
     routing_function text := 'get_links_btwn_nodes_' || map_version;
     street_geoms_table text := 'routing_streets_' || map_version;
+    traffic_streets_table text := 'traffic_streets_' || map_version;
 
 BEGIN
 
@@ -49,7 +50,7 @@ EXECUTE format (
         )
         
         INSERT INTO gwolofs.congestion_corridors (
-            node_start, node_end, map_version, link_dirs, lengths, geom, total_length
+            node_start, node_end, map_version, link_dirs, lengths, geom, total_length, corridor_streets
         )
         SELECT
             %2$L AS node_start,
@@ -59,9 +60,11 @@ EXECUTE format (
             --lengths in m
             ARRAY_AGG(st_length(st_transform(streets.geom, 2952)) ORDER BY rl.seq) AS lengths,
             st_union(st_linemerge(streets.geom)) AS geom,
-            SUM(ST_Length(ST_Transform(streets.geom, 2952))) AS total_length
+            SUM(ST_Length(ST_Transform(streets.geom, 2952))) AS total_length,
+            string_agg(DISTINCT initcap(traffic_streets.st_name), ' / ') AS corridor_streets
         FROM routed_links AS rl
         JOIN here.%5$I AS streets USING (link_dir)
+        LEFT JOIN here_gis.%6$I AS traffic_streets USING (link_id)
         --conflict would occur because of null values
         ON CONFLICT (node_start, node_end, map_version)
         DO UPDATE
@@ -72,8 +75,9 @@ EXECUTE format (
         RETURNING corridor_id, link_dirs, lengths, total_length
     $$,
     routing_function, node_start, node_end, -- For routed_links
-    map_version,      -- For INSERT SELECT values
-    street_geoms_table                      -- For JOIN table
+    map_version,      -- For INSERT / SELECT values
+    street_geoms_table,       -- For JOIN here.%5$I AS streets
+    traffic_streets_table     -- For LEFT JOIN here_gis.%6$I AS traffic_streets
 ) INTO corridor_id, link_dirs, lengths, total_length;
 RETURN;
 END;
