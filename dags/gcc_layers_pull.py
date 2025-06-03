@@ -4,11 +4,11 @@ import os
 from functools import partial
 import pendulum
 
-from airflow.sdk import dag, task, task_group, get_current_context
+from airflow.sdk import dag, task, task_group, get_current_context, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models.param import Param
 from airflow.exceptions import AirflowFailException
-from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -22,7 +22,7 @@ except:
 
 
 # the DAG runs at 7 am on the first day of January, April, July, and October
-def create_gcc_puller_dag(dag_id, default_args, name, conn_id, dags_to_trigger):
+def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
     @dag(
         dag_id=dag_id,
         default_args=default_args,
@@ -147,24 +147,29 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, dags_to_trigger):
             check = compare_row_counts(conn_id, layer)
             pull >> check
 
-        # Create a task group for triggering the DAGs
-        @task_group(group_id='trigger_dags_tasks')
-        def trigger_dags():
-            # Define TriggerDagRunOperator for each dag to trigger
-            trigger_operators = []
-            for dag_id in dags_to_trigger:
-                trigger_operator = TriggerDagRunOperator(
-                    task_id=f'trigger_{dag_id}',
-                    trigger_dag_id=dag_id,
-                    logical_date = '{{ ds }}',
-                    reset_dag_run = True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
+        # Create a task group for triggering the aggs
+        @task_group(group_id='trigger_agg_tasks')
+        def trigger_aggs(conn_id, downstream_aggs):
+            # Define SQLExecuteQueryOperator for each agg to trigger
+
+            prev_task=None
+            for task_id in downstream_aggs:
+                sql_operator = SQLExecuteQueryOperator(
+                    task_id=task_id,
+                    sql=downstream_aggs[task_id],
+                    conn_id=conn_id,
+                    autocommit=True,
+                    retries = 0
                 )
-                trigger_operators.append(trigger_operator)
-        
+                # Create sequential dependency chain
+                if prev_task:
+                    prev_task >> sql_operator
+                prev_task = sql_operator
+                
         layers = get_layers(name)
         [
             pull_and_check.partial(conn_id = conn_id).expand(layer = layers) >>
-            trigger_dags()
+            trigger_aggs(conn_id, downstream_aggs)
         ]
         
     generated_dag = gcc_layers_dag()
@@ -175,12 +180,19 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, dags_to_trigger):
 #Dictionary keys correspond to keys in `gcc_layers` variable.
 #"conn": Postgres connection ID.
 #"deployment": A list of the deployments to deploy this DAG on.
-#"downstream_dags":
+#"downstream_aggs": An ordered list of sqls to run after layers are finished pulling.
 DAGS = {
     "bigdata": {
         "conn": "gcc_bot_bigdata",
         "deployments": ["DEV"],
-        "downstream_dags": ["gcc_aggregate_bigdata"]
+        "downstream_aggs": {
+            "centreline_latest": "REFRESH MATERIALIZED VIEW gis_core.centreline_latest;",
+            "centreline_latest_all_feature": "REFRESH MATERIALIZED VIEW gis_core.centreline_latest_all_feature;",
+            "centreline_intersection_point_latest": "REFRESH MATERIALIZED VIEW gis_core.centreline_intersection_point_latest;",
+            "intersection_latest": "REFRESH MATERIALIZED VIEW gis_core.intersection_latest;",
+            "centreline_leg_directions": "REFRESH MATERIALIZED VIEW gis_core.centreline_leg_directions;",
+            "svc_centreline_directions": "REFRESH MATERIALIZED VIEW traffic.svc_centreline_directions;"
+        }
     },
     "ptc": {
         "conn": "gcc_bot",
@@ -188,7 +200,10 @@ DAGS = {
     },
     "sirius": {
         "conn": "gcc_bot_sirius",
-        "deployments": ["DEV"]
+        "deployments": ["DEV"],
+        "downstream_aggs": {
+            "centreline_latest": "REFRESH MATERIALIZED VIEW gis.centreline_latest;"
+        }
     }
 }
 
@@ -201,7 +216,7 @@ filtered_dags = [
 for item in filtered_dags:
     DAG_NAME = 'gcc_pull_layers'
     DAG_OWNERS  = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
-    downstream_dags = DAGS[item].get('downstream_dags', [])
+    downstream_aggs = DAGS[item].get('downstream_aggs', [])
     
     DEFAULT_ARGS = {
         'owner': ','.join(DAG_OWNERS),
@@ -219,6 +234,6 @@ for item in filtered_dags:
             default_args=DEFAULT_ARGS,
             name=item,
             conn_id=DAGS[item]['conn'],
-            dags_to_trigger=downstream_dags
+            aggs_to_trigger=downstream_aggs
         )
     )
