@@ -200,3 +200,30 @@ OWNER TO gwolofs;
 
 COMMENT ON FUNCTION gwolofs.congestion_cache_tt_results IS
 'Caches the dynamic binning results for a request.';
+
+-- overload the function for more straightforward situation of daily corridor agg
+CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results_daily(
+    start_date date,
+    node_start bigint,
+    node_end bigint
+)
+RETURNS void
+LANGUAGE sql
+COST 100
+VOLATILE PARALLEL UNSAFE
+AS
+$BODY$
+SELECT gwolofs.congestion_cache_tt_results(
+    uri_string := NULL::text,
+    start_date := congestion_cache_tt_results_daily.start_date,
+    end_date := congestion_cache_tt_results_daily.start_date + 1,
+    start_tod := '00:00'::time without time zone,
+    end_tod := '24:00'::time without time zone,
+    dow_list := ARRAY[extract('isodow' from congestion_cache_tt_results_daily.start_date)]::int[],
+    node_start := congestion_cache_tt_results_daily.node_start,
+    node_end := congestion_cache_tt_results_daily.node_end,
+    holidays := True)
+$BODY$;
+
+COMMENT ON FUNCITON gwolofs.congestion_cache_tt_results_daily
+IS 'A simplified version of `congestion_cache_tt_results` for aggregating entire days of data.'
