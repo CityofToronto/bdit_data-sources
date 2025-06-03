@@ -25,6 +25,7 @@
     - [vds.veh\_length\_15min](#vdsveh_length_15min)
     - [vds.individual\_outages](#vdsindividual_outages)
     - [vds.network\_outages](#vdsnetwork_outages)
+    - [`vds.volumes_daily`](#vdsvolumes_daily)
   - [Raw Data](#raw-data)
     - [vds.raw\_vdsdata](#vdsraw_vdsdata)
     - [vds.raw\_vdsvehicledata](#vdsraw_vdsvehicledata)
@@ -43,6 +44,7 @@
     - [**No data for a specific sensor?**](#no-data-for-a-specific-sensor)
     - [Updating `vds.centreline_vds`](#updating-vdscentreline_vds)
 
+<!-- /TOC -->
 <!-- /TOC -->
 # Vehicle Detector System (VDS) data 
 
@@ -429,6 +431,26 @@ It is recommended to add a where clause using `vdsconfig_uid` to get faster resu
 | date_range    |  daterange    | [1993-01-11,1993-01-15)  |
 | duration_days    |  numeric     | 2.5729166666666667  |
 
+### `vds.volumes_daily`
+
+`volumes_daily` table is aggregated daily by the `vds_pull_vdsdata` Airflow DAG to help speed up sensor evaluation/selection. It is based off of counts_15min table, so issues with [expected_bins](#sensor-type-incorrectly-classified) can impact data quality here too. 
+
+**Approx row count**:            1,068,300
+
+| Column Name              | Data Type         | Sample            | Comments   |
+|--------------------------|-------------------|-------------------|------------|
+| vdsconfig_uid            | integer           | 66                |            |
+| entity_location_uid      | integer           | 10399             |            |
+| detector_id              | character varying | DS0020DSA ALLEN03 |            |
+| dt                       | date              | 2009-03-07        |            |
+| is_wkdy                  | boolean           | False             |            |
+| daily_count              | bigint            | 4785              | Daily vehicles detected. |
+| count_60day              | numeric           | 4785.0            | Avg volume from the last 60 days. **Note:** includes only dates which have the same `is_wkdy` value. |
+| daily_obs                | bigint            | None              | Number of daily observations |
+| daily_obs_expected       | bigint            | 8640              | Number of daily observations expected based on the reporting frequency (`detector_inventory.expected_bins`) |
+| avg_lanes_present        | numeric           | None              | Avg of num_lanes across day's observations |
+| distinct_dt_bins_present | bigint            | 96                | Distinct 15 minute bins present. |
+
 ## Raw Data
 
 ### vds.raw_vdsdata
@@ -535,8 +557,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   - `done` marks `update_inventories` as done to trigger downstream data pull tasks + DAG
 
   **`check_partitions`**  
-  - `check_partitions` checks if the date is January 1st. If not, the next task is skipped.
-  - `create_partitions` creates new partitions for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. 
+  - `create_partitions` creates new partitions for `raw_vdsdata`, `counts_15min`, `counts_15min_bylane` before pulling data. Uses a `pre_execute` clause to skip task unless it is January 1st.
 
   **`pull_vdsdata`**  
   - `delete_vdsdata` deletes existing data from RDS `vds.raw_vdsdata` to enable easy rerunning of tasks.  
@@ -545,6 +566,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   **`summarize_v15`**  
   - `summarize_v15` first deletes and then inserts a summary of `vds.raw_vdsdata` into `vds.counts_15min`.  
   - `summarize_v15_bylane` first deletes and then inserts summary of `vds.raw_vdsdata` into `vds.counts_15min_bylane`. 
+  - `summarize_volmes_daily_task` first deletes and then inserts summary of `vds.counts_15min` into `vds.volumes_daily`. 
 
   **`data_checks`**  
   - `wait_for_weather` delays the downstream data check by a few hours until the historical weather is available to add context.  
@@ -567,8 +589,7 @@ A daily DAG to pull [VDS data](https://github.com/CityofToronto/bdit_data-source
   `starting_point` senses for external `vds_pull_vdsdata` task `update_inventories.done` to finish to ensure detector inventory is up to date before `raw_vdsvehicledata` insert (due to on-insert trigger to update foreign keys). 
 
   **`check_partitions`**  
-  - `check_partitions` checks if the date is January 1st. If not, the next task is skipped.
-  - `create_partitions` creates new partitions for `raw_vdsvehicledata` before pulling data. 
+  - `create_partitions` creates new partitions for `raw_vdsvehicledata` before pulling data. Uses a `pre_execute` clause to skip task unless it is January 1st.
 
   **`pull_vdsvehicledata`**  
   - `delete_vdsvehicledata` first deletes existing data from RDS `vds.raw_vdsvehicledata` to enable easy rerunning of tasks.
