@@ -99,7 +99,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
         def pull_and_check(conn_id, layer):
             
             @task(map_index_template="{{ table_name }}")
-            def pull_layer(layer, conn_id):
+            def pull_layer(conn_id, layer):
                 #name mapped task
                 context = get_current_context()
                 context["table_name"] = layer[0]
