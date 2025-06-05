@@ -45,28 +45,28 @@ EXECUTE FORMAT(
     
     segment_5min_bins AS (
         SELECT
-            links.segment_id,
+            seg.segment_id,
             ta.tx,
+            seg.total_length,
             RANK() OVER w AS bin_rank,
-            links.total_length,
-            SUM(links.length) / links.total_length AS sum_length,
-            SUM(links.length) AS length_w_data,
-            SUM(links.length / ta.mean * 3.6) AS unadjusted_tt,
+            SUM(seg.length) / seg.total_length AS sum_length,
+            SUM(seg.length) AS length_w_data,
+            SUM(seg.length / ta.mean * 3.6) AS unadjusted_tt,
             SUM(sample_size) AS num_obs,
-            ARRAY_AGG(ta.link_dir ORDER BY link_dir) AS link_dirs,
-            ARRAY_AGG(links.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
-            ARRAY_AGG(links.length ORDER BY link_dir) AS lengths
+            ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
+            ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY ta.link_dir) AS tts,
+            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
         FROM here.ta_path AS ta
-        JOIN segments AS links USING (link_dir)
+        JOIN segments AS seg USING (link_dir)
         WHERE
             ta.dt >= %1$L::date
             AND ta.dt < %1$L::date + interval '1 day'
         GROUP BY
-            links.segment_id,
+            seg.segment_id,
             ta.tx,
-            links.total_length
+            seg.total_length
        WINDOW w AS (
-            PARTITION BY links.segment_id
+            PARTITION BY seg.segment_id
             ORDER BY ta.tx
        )
     ),
@@ -90,7 +90,10 @@ EXECUTE FORMAT(
                     --dont need to generate options when start segment is already sufficient
                     WHEN sum_length >= 0.8 THEN bin_rank
                     --generate options until 1 bin has sufficient length, otherwise until last bin in group
-                    ELSE COALESCE(MIN(bin_rank) FILTER (WHERE sum_length >= 0.8) OVER w, MAX(bin_rank) OVER w)
+                    ELSE COALESCE(
+                        MIN(bin_rank) FILTER (WHERE sum_length >= 0.8) OVER w,
+                        MAX(bin_rank) OVER w
+                    )
                 END,
                 1
             ) AS end_bin
@@ -166,11 +169,14 @@ EXECUTE FORMAT(
         RETURNING inserted.bin_start, inserted.segment_id, inserted.bin_range, inserted.tt, inserted.num_obs
     )
 
-    INSERT INTO gwolofs.congestion_raw_segments (dt, bin_start, segment_id, bin_range, tt, num_obs)
+    INSERT INTO gwolofs.congestion_raw_segments (
+        dt, bin_start, segment_id, bin_range, tt, num_obs
+    )
     SELECT bin_start::date AS dt, bin_start, segment_id, bin_range, tt, num_obs
-    FROM inserted;
+    FROM inserted
+    ON CONFLICT DO NOTHING;
     
-    $$, 
+    $$,
     start_date,
     congestion_network_table
     );
