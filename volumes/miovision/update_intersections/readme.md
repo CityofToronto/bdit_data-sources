@@ -12,8 +12,8 @@ For the main Miovision readme, see [here](../readme.md).
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
 	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
-- [New Intersection Activation Dates.py](#new-intersection-activation-datespy)
-- [Adding many intersections](#adding-many-intersections)
+	- [Adding many intersections (Archived)](#adding-many-intersections-archived)
+	- [Alternate Method of finding `px` (Archived)](#alternate-method-of-finding-px-archived)
 
 <!-- /TOC -->
 
@@ -31,83 +31,49 @@ Adding intersections is not as simple as removing an intersection. We will first
 
 ## Update `miovision_api.intersections`:
 
-Look at the table [`miovision_api.intersections`](../readme.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. Once everything is done, have a member of `miovision_admins` do an INSERT INTO this table to include the new intersections.
+Look at the table [`miovision_api.intersections`](../readme.md#intersections) to see what information about the new intersections is needed to update the table. The steps needed to find details such as id, coordinates, px, int_id, geom, which leg_restricted etc are described below. This process is normally done by a member of `miovision_admins`; otherwise you will need to prepare queries for an admin to run. 
 
 1. **Name and ID**  
-    The new intersection's `api_name`, `id`, can be found using the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. The key needed to authorize the API is the same one used by the Miovision Airflow user. The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
+	The new intersection's `api_name`, `id`, `lat` and `lng` are automatically added by the `miovision_pull` pipeline each day from the [Miovision API](https://api.miovision.com/intersections) /intersections endpoint. 
+
+2. **Intersection Name**
+   The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
-2. **date installed**  
-    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by running the [script](new_intersection_activation_dates.py) in this folder to find the date of the first records from the API. 
-
-3.  **date_decommissioned**  
-    `date_decommissioned` is described under (#removing-intersections). 
-		
-4. **px**  
-    `px` is a uid used to identify signalized intersections. For 1 or 2 `px` is is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
-
-	**Alternate method** - For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
+3. **date installed**  
+    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by querying:
+	
 	```sql
-	WITH intersections(id, intersection_name_api) AS (
-	VALUES
-		--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
-		('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
-		('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
-	)
-
-	SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
-	FROM intersections AS i,
-	LATERAL (
-		SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
-	) AS agg
-	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
-	```
-<p align="center">
-	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
-</p>
-
-5. **Restricted legs**  
-    In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
-
-6. **Insert statement**  
-    Prepare an insert statement for the new intersection(s). Alternatively [this](#adding-many-intersections) section contains a python snippet you can use to do the same via a spreadsheet, which may be helpful for adding a large number of intersections. 
-
-	```sql
-	INSERT INTO miovision_api.intersections(intersection_uid, id, intersection_name,
-	date_installed, lat, lng, geom, street_main, street_cross, int_id, px, 
-	n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name)
-
-	WITH new_intersections (intersection_uid, id, intersection_name, date_installed, px,
-							n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, api_name) AS (
-		VALUES
-			(67, '11dcfdc5-2b37-45c0-ac79-3d6926553582', 'Sheppard / Keele', 
-				'2021-06-16'::date, '0600', null, null, null, null, 'Sheppard Avenue West and Keele Street'),
-			(68, '9ed9e7f3-9edc-4f58-ae5b-8c9add746886', 'Steeles / Jane', 
-				'2021-05-12'::date, '0535', null, null, null, null, 'Steeles Avenue West and Jane Street')
-	)
-
-	SELECT
-		ni.intersection_uid, --sequential 
-		ni.id, --from api
-		ni.intersection_name, --cleaned name
-		ni.date_installed, --identify via communication or new_intersection_activation_dates.py
-		ts.latitude,
-		ts.longitude,
-		ts.geom,
-		ts.main_street AS street_main,
-		ts.side1_street AS street_cross,
-		ts.node_id AS int_id,
-		ni.px::integer AS px, 
-		ni.n_leg_restricted,
-		ni.e_leg_restricted,
-		ni.s_leg_restricted,
-		ni.w_leg_restricted.
-		api_name --from api 
-	FROM new_intersections AS ni
-	JOIN gis.traffic_signal AS ts USING (px)
+	SELECT MIN(datetime_bin)::date FROM miovision_api.volumes WHERE intersection_uid = 122;
 	```
 
-7. **Update geojson**  
-	Update the [geojson intersections file](../geojson/mio_intersections.geojson) using `ogr2ogr`. This geojson file is helpful as a publically accessible record of our Miovision intersections. 
+4.  **date_decommissioned**  
+    `date_decommissioned` is described under [#removing-intersections](#removing-intersections). 
+		
+5. **px**  
+    `px` is a uid used to identify signalized intersections. In most cases, `px` is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
+
+6. **Restricted legs**  
+    In order to find out which leg of that intersection is restricted (**no cars approaching from that leg**), go to Google Map to find out the direction of traffic.
+
+7. **Update Traffic Signal Info**  
+    After identifying the Px number, you can grab some additional columns from `gis.traffic_signal`:
+
+	```sql
+	UPDATE miovision_api.intersections
+	SET
+		lat = ts.latitude,
+		lng = ts.longitude,
+		geom = ts.geom,
+		street_main = ts.main_street,
+		street_cross = ts.side1_street,
+		int_id = ts.node_id,
+		px = ts.px::integer
+	FROM gis.traffic_signal AS ts
+	WHERE ts.px = '0539' AND intersection_uid = 122
+	```
+
+8. **Update geojson**  
+	Update the [geojson intersections file](../geojson/mio_intersections.geojson) using `ogr2ogr`. This geojson file is helpful as a publically accessible record of our Miovision intersections. You will have to make an issue and commit this change. 
 
 ```bash
 cd ~/bdit_data-sources &&
@@ -115,7 +81,7 @@ rm -f volumes/miovision/geojson/mio_intersections.geojson &&
 ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"host=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com dbname=bigdata" -sql "SELECT * FROM miovision_api.intersections ORDER BY date_installed" -nln miovision_installations
 ```
 
-8. **Update `miovision_api.centreline_miovision`**
+9. **Update `miovision_api.centreline_miovision`**
 
 	[`miovision_api.centreline_miovision`](../sql/readme.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
 
@@ -132,11 +98,8 @@ Now that the updated table of [`miovision_api.intersections`](../readme.md#inter
 
 We need to find out all valid movements for the new intersections from the data but we don't have that yet, so the following has to be done.
 
-1. **Populate `miovision_api.volumes`**  
-    If there is no data for the intersections in `miovision_api.volumes`, you will first need to run the [api script](../api/intersection_tmc.py) with the following command line to only include intersections that we want as well as skipping the data processing process:  
-		`python3 intersection_tmc.py run-api-cli --start_date={DATE INSTALLED} --end_date={TODAYS DATE} --intersection=35 --intersection=38 --pull`  
-
-	Include `--pull` and not `--agg` to only pull data and skip data processing and gaps finding since we are only interested in finding valid movements in this step. Note that multiple intersections have to be stated that way in order to be included in the list of intersections to be pulled. 
+1. **~~Populate `miovision_api.volumes`~~**  
+    `volumes` table is now automatically populated for new intersections since [#1214](https://github.com/CityofToronto/bdit_data-sources/pull/1214). 
 
 2. **Insert into `intersection_movements`**  
     Now that there is data in `miovision_api.volumes`, run the SELECT query below and validate those new intersection movements. The line `HAVING COUNT(DISTINCT datetime_bin::time) >= 20` is there to make sure that the movement is actually legit and not just a single observation. `volume::numeric / classification_volume >= 0.005` is a suggested addition to make sure that for lower volume modes (bicycles), we don't filter out a small volume but large percentage (> 5 / 1000).  
@@ -283,11 +246,10 @@ We need to find out all valid movements for the new intersections from the data 
 
 Now that the intersection is configured and the raw volumes data is in the database, we have to finish aggregating the data.
 
-1. **Backfill `miovision_api.volumes`**   
-    If not already complete, use the [api script](../api/intersection_tmc.py) with `--pull` to backfill `miovision_api.volumes` table between the date_installed and current date (exclusive). Skip aggregating data by omitting `--agg` flag. 
+1. **~~Backfill `miovision_api.volumes`~~**   
 
 2. **Backfill additional tables**  
-	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and current date (exclusive). Skip pulling data by omitting `--pull` flag. 
+	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and current date (exclusive). **Skip pulling data by omitting `--pull` flag.** See readme [here](../api/readme.md#how-to-run-the-api). 
 
 3. **QC Aggregate Tables**  
     Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter. 
@@ -358,11 +320,7 @@ Now that the intersection is configured and the raw volumes data is in the datab
 4. **Done!**  
     From the next day onwards, the process will pull in both OLD and NEW intersections data via the automated Airflow process.
 
-# [New Intersection Activation Dates.py](new_intersection_activation_dates.py)
-
-Jupyter notebook to help identify new intersections and first date of data for each new intersection.
-
-# Adding many intersections  
+## Adding many intersections (Archived)  
 
 Below is an optional method to import new intersections using an excel table and python. You may find it easier to use a simple SQL insert statement for one or two intersections. 
 
@@ -422,3 +380,24 @@ with psycopg2.connect(**postgres_settings) as conn:
         if conn.notices != []:
             print(conn.notices)
 ```
+
+## Alternate Method of finding `px` (Archived)
+For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
+	```sql
+	WITH intersections(id, intersection_name_api) AS (
+	VALUES
+		--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
+		('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
+		('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
+	)
+
+	SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
+	FROM intersections AS i,
+	LATERAL (
+		SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
+	) AS agg
+	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
+	```
+<p align="center">
+	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
+</p>
