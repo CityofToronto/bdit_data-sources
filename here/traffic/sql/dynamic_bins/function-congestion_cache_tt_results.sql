@@ -43,7 +43,8 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
 
 SELECT gwolofs.congestion_select_map_version(
     congestion_cache_tt_results.start_date,
-    congestion_cache_tt_results.end_date
+    congestion_cache_tt_results.end_date,
+    'path'
 ) INTO map_version;
 
 EXECUTE FORMAT(
