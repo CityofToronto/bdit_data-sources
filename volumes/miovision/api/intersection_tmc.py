@@ -477,6 +477,7 @@ def daterange(start_time, end_time, time_delta):
         curr_time += time_delta
 
 def add_new_intersections(conn):
+    """Pulls all intersections from Miovision API and inserts into database. Conflicts are skipped. New intersections are returned."""
     from pandas import DataFrame
     api_key = BaseHook.get_connection('miovision_api_key')
     headers = {'Content-Type': 'application/json',
@@ -493,8 +494,13 @@ def add_new_intersections(conn):
     rows = [tuple(x) for x in df_api.to_numpy()] #convert to tuples for inserting
     
     insert_sql = '''
+    WITH new_ints (id, api_name, lat, lng) AS (VALUES %s)
     INSERT INTO miovision_api.intersections (id, api_name, lat, lng)
-    VALUES %s
+    SELECT ni.id, ni.api_name, ni.lat, ni.lng
+    FROM new_ints AS ni
+    --anti join existing intersections to prevent unnecessary serial allocation
+    LEFT JOIN miovision_api.intersections USING (id)
+    WHERE intersections.id IS NULL
     ON CONFLICT ON CONSTRAINT miovision_intersections_id_uniq
     DO NOTHING
     RETURNING 'intersection_uid: `' || intersection_uid || '` - ' || api_name
