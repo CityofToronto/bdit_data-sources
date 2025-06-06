@@ -66,7 +66,9 @@ HERE updates their maps on an annual basis (usually) to keep up with Toronto's e
 
 Refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh, when we receive new `here_gis.streets_##_#` and `here_gis.streets_att_##_#` tables.
 
-For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`.
+For `here.ta_path`, refer to table `here.street_valid_range_path` for the corresponding street version. This is different than the `here.street_valid_range` table for `here.ta` because we pulled the data at a different time, meaning the data is mapped to a different version.
+
+For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1` in `here.ta`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`. However, if you are pulling data from `here.ta_path`, the corresponding street version is `22_2`, relevant table will be `here.routing_streets_22_2`.
 
 # HERE data at a glance
 
