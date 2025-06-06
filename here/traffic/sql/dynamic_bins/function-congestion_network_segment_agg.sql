@@ -12,7 +12,7 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE
-    map_version text := gwolofs.congestion_select_map_version(start_date, start_date + 1);
+    map_version text := gwolofs.congestion_select_map_version(start_date, start_date + 1, 'path');
     congestion_network_table text := 'network_links_' || map_version
     || CASE map_version WHEN '23_4' THEN '_geom' ELSE '' END; --temp fix version
 
