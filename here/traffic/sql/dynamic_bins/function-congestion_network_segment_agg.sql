@@ -166,13 +166,22 @@ EXECUTE FORMAT(
         --exclusion constraint + ordered insert to prevent overlapping bins
         ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude_temp
         DO NOTHING
-        RETURNING inserted.bin_start, inserted.segment_id, inserted.bin_range, inserted.tt, inserted.num_obs
+        RETURNING
+            inserted.bin_start, inserted.segment_id, inserted.bin_range,
+            inserted.tt, inserted.num_obs
     )
 
     INSERT INTO gwolofs.congestion_raw_segments (
-        dt, bin_start, segment_id, bin_range, tt, num_obs
+        dt, bin_start, segment_id, bin_range, tt, num_obs, hr
     )
-    SELECT bin_start::date AS dt, bin_start, segment_id, bin_range, tt, num_obs
+    SELECT
+        bin_start::date AS dt,
+        bin_start,
+        segment_id,
+        bin_range,
+        tt,
+        num_obs,
+        date_trunc('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
     FROM inserted
     ON CONFLICT DO NOTHING;
     
