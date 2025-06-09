@@ -21,7 +21,6 @@ DECLARE
     routing_function text := 'get_links_btwn_nodes_' || map_version;
     street_geoms_table text := 'routing_streets_' || map_version;
     traffic_streets_table text := 'traffic_streets_' || map_version;
-    routing_nodes_table text := 'routing_nodes_' || map_version;
 
 BEGIN
 
@@ -65,23 +64,13 @@ EXECUTE format (
             SUM(ST_Length(ST_Transform(streets.geom, 2952))) AS total_length,
             string_agg(DISTINCT initcap(traffic_streets.st_name),
                 ' / ' ORDER BY initcap(traffic_streets.st_name)) AS corridor_streets,
-            string_agg(DISTINCT initcap(from_streets.st_name),
-                ' / ' ORDER BY initcap(from_streets.st_name)) AS corridor_start,
-            string_agg(DISTINCT initcap(to_streets.st_name),
-                ' / ' ORDER BY initcap(to_streets.st_name)) AS corridor_end
+            gwolofs.identify_node_streets(%2$L, %4$L,
+                array_agg(DISTINCT initcap(traffic_streets.st_name))) AS corridor_start,
+            gwolofs.identify_node_streets(%3$L, %4$L,
+                array_agg(DISTINCT initcap(traffic_streets.st_name))) AS corridor_end
         FROM routed_links AS rl
         JOIN here.%5$I AS streets USING (link_dir)
         LEFT JOIN here_gis.%6$I AS traffic_streets USING (link_id)
-        LEFT JOIN here.%7$I AS from_node ON from_node.node_id = %2$L
-        LEFT JOIN here_gis.%6$I AS from_streets
-            ON from_node.link_id = from_streets.link_id
-            AND from_streets.st_name <> traffic_streets.st_name
-            AND from_streets.st_name IS NOT NULL
-        LEFT JOIN here.%7$I AS to_node ON to_node.node_id = %3$L
-        LEFT JOIN here_gis.%6$I AS to_streets
-            ON to_node.link_id = to_streets.link_id
-            AND to_streets.st_name <> traffic_streets.st_name
-            AND to_streets.st_name IS NOT NULL
         --conflict would occur because of null values
         ON CONFLICT (node_start, node_end, map_version)
         DO UPDATE
@@ -98,8 +87,7 @@ EXECUTE format (
     routing_function, node_start, node_end, -- For routed_links
     map_version,      -- For INSERT / SELECT values
     street_geoms_table,       -- For JOIN here.%5$I AS streets
-    traffic_streets_table,     -- For LEFT JOIN here_gis.%6$I AS traffic_streets
-    routing_nodes_table       -- For LEFT JOIN here.%7$I AS from_node / to_node
+    traffic_streets_table     -- For LEFT JOIN here_gis.%6$I AS traffic_streets
 ) INTO corridor_id, link_dirs, lengths, total_length;
 RETURN;
 END;
