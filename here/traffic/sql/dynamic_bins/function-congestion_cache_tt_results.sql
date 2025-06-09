@@ -32,7 +32,6 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
     tt numeric,
     num_obs integer,
     uri_string text,
-    dt date,
     CONSTRAINT congestion_raw_corridors_exclude_temp EXCLUDE USING gist (
         bin_range WITH &&,
         corridor_id WITH =,
@@ -179,12 +178,11 @@ EXECUTE FORMAT(
         --this query contains overlapping values which get eliminated
         --via on conflict with the exclusion constraint on congestion_raw_segments table.
         INSERT INTO congestion_raw_corridors_temp AS inserted (
-            uri_string, dt, time_grp, corridor_id, bin_range, tt, num_obs
+            uri_string, time_grp, corridor_id, bin_range, tt, num_obs
         )
         --distinct on ensures only the shortest option gets proposed for insert
         SELECT DISTINCT ON (dt_start)
             %9$L, --uristring
-            dt_start::date AS dt,
             timerange(lower(time_grp)::time, upper(time_grp)::time, '[)') AS time_grp,
             corridor_id,
             tsrange(dt_start, dt_end, '[)') AS bin_range,
@@ -204,14 +202,24 @@ EXECUTE FORMAT(
         --exclusion constraint + ordered insert to prevent overlapping bins
         ON CONFLICT ON CONSTRAINT congestion_raw_corridors_exclude_temp
         DO NOTHING
-        RETURNING inserted.uri_string, inserted.dt, inserted.time_grp, inserted.corridor_id, inserted.bin_range, inserted.tt, inserted.num_obs
+        RETURNING
+            inserted.uri_string, inserted.time_grp, inserted.corridor_id,
+            inserted.bin_range, inserted.tt, inserted.num_obs
     )
     
     --insert into the final table
     INSERT INTO gwolofs.congestion_raw_corridors (
-        uri_string, dt, time_grp, corridor_id,  bin_range, tt, num_obs
+        uri_string, dt, time_grp, corridor_id,  bin_range, tt, num_obs, hr
     )
-    SELECT uri_string, dt, time_grp, corridor_id,  bin_range, tt, num_obs
+    SELECT
+        uri_string,
+        lower(bin_range)::date AS dt,
+        time_grp,
+        corridor_id,
+        bin_range,
+        tt,
+        num_obs,
+        date_trunc('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
     FROM inserted
     ON CONFLICT DO NOTHING;
     
