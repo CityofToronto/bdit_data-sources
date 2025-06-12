@@ -68,6 +68,10 @@ Refer to table `here.street_valid_range` for which street version correspond to 
 
 For `here.ta_path`, refer to table `here.street_valid_range_path` for the corresponding street version. This is different than the `here.street_valid_range` table for `here.ta` because we pulled the data at a different time, meaning the data is mapped to a different version.
 
+> [!NOTE]  
+> A one-day gap on 2024-10-28 in the 23_4 map version is due to a repull in 2025 using map version 24_4, creating one day range for 24_4 inserted within the original 23_4 range.
+
+
 For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1` in `here.ta`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`. However, if you are pulling data from `here.ta_path`, the corresponding street version is `22_2`, relevant table will be `here.routing_streets_22_2`.
 
 # HERE data at a glance
