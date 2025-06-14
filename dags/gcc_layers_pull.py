@@ -74,7 +74,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                 examples=['gis', 'gis_core'],
             )
         },
-        schedule='0 7 1 */3 *' #'@quarterly'
+        schedule='0 7 1 * *' #first day of each month
     )
     def gcc_layers_dag():
         

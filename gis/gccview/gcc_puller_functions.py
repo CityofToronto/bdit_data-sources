@@ -1,7 +1,8 @@
 # The official new GCC puller functions file
 import configparser
 import requests
-import datetime
+from datetime import datetime
+import pendulum
 from functools import partial
 from psycopg2 import connect
 from psycopg2 import sql
@@ -186,21 +187,46 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     insert_column = sql.SQL(',').join(insert_column_list)
     
     # Date format YYYY-MM-DD, for the SQL query
-    today_string = datetime.date.today().strftime('%Y-%m-%d')
+    partition_date = pendulum.today()
+    today_string = partition_date.to_date_string()
+    
+    # Date format _YYYY, to be attached at the end of output_table name
+    yr_attachment = '_' + today_string[0:4]
+    yr_partition_start = partition_date.start_of('year')
+    yr_partition_end = yr_partition_start + pendulum.duration(years=1)
+    output_table_with_yr = output_table + yr_attachment
+    
     # Date format _YYYYMMDD, to be attached at the end of output_table name
-    date_attachment = datetime.date.today().strftime('_%Y%m%d')
+    date_attachment = partition_date.strftime('_%Y%m%d')
     output_table_with_date = output_table + date_attachment
     index_name = output_table_with_date + '_idx'
+    
     
     with con:
         with con.cursor() as cur:
             
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)").format(schema_child_table = sql.Identifier(schema_name, output_table_with_date),
-                                                                                                                                            schema_parent_table = sql.Identifier(schema_name, output_table))
+            yr_partition_sql = sql.SQL(
+                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES FROM (%s) TO (%s) PARTITION BY LIST (version_date);"
+            ).format(
+                schema_child_table = sql.Identifier(schema_name, output_table_with_yr),
+                schema_parent_table = sql.Identifier(schema_name, output_table)
+            )
+            cur.execute(yr_partition_sql, (yr_partition_start.to_date_string(), yr_partition_end.to_date_string()))
+            
+            create_sql = sql.SQL(
+                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)"
+            ).format(
+                schema_child_table = sql.Identifier(schema_name, output_table_with_date),
+                schema_parent_table = sql.Identifier(schema_name, output_table_with_yr)
+            )
             cur.execute(create_sql, (today_string, ))
 
-            index_sql = sql.SQL("CREATE INDEX IF NOT EXISTS {idx_name} ON {schema_child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
-                                                                                                                schema_child_table=sql.Identifier(schema_name, output_table_with_date))
+            index_sql = sql.SQL(
+                "CREATE INDEX IF NOT EXISTS {idx_name} ON {schema_child_table} USING gist (geom)"
+            ).format(
+                idx_name=sql.Identifier(index_name),
+                schema_child_table=sql.Identifier(schema_name, output_table_with_date)
+            )
             cur.execute(index_sql)
             
     return insert_column, output_table
@@ -286,7 +312,7 @@ def to_time(input):
         Time in the type of postgresql timestamp without time zone
     """
     
-    time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
+    time = datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
 def get_data(mapserver, layer_id, include_additional_feature, max_number = None, record_max = None, row_count_only: bool = False):
@@ -441,7 +467,7 @@ def insert_data(output_table, insert_column, return_json, schema_name, con, is_a
     features = return_json['features']
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
-    today_string = datetime.date.today().strftime('%Y-%m-%d')
+    today_string = pendulum.today().strftime('%Y-%m-%d')
     
     for feature in features:
         geom = feature['geometry']
@@ -511,7 +537,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     # Name the temporary table '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
-    date = datetime.date.today().strftime('%Y-%m-%d')
+    date = pendulum.today().strftime('%Y-%m-%d')
     
     # Find if old table exists
     with con:
