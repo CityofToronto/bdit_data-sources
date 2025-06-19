@@ -1,4 +1,4 @@
-REATE TABLE IF NOT EXISTS here.street_valid_range_path
+CREATE TABLE IF NOT EXISTS here.street_valid_range_path
 (
     street_version text COLLATE pg_catalog."default",
     valid_range daterange
