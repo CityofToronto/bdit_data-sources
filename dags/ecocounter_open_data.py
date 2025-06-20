@@ -8,13 +8,12 @@ import logging
 import pendulum
 from functools import partial
 
-from airflow.decorators import dag, task, task_group
-from airflow.models import Variable 
 from airflow.hooks.base import BaseHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.date_time import DateTimeSensor
+from airflow.providers.standard.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
-from airflow.operators.python import get_current_context
+from airflow.sdk import dag, task, task_group, get_current_context
+from airflow.models import Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -89,7 +88,7 @@ def ecocounter_open_data_dag():
         timeout=10*86400,
         mode="reschedule",
         poke_interval=3600*24,
-        target_time="{{ next_execution_date.replace(day=10) }}",
+        target_time="{{ data_interval_end.replace(day=10) }}",
     )
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
