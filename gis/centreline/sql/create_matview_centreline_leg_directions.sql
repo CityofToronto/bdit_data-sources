@@ -14,17 +14,22 @@ WITH toronto_cardinal (d, leg_label) AS (
 
 node_edges AS (
     -- Identify all connections between nodes and edges
+    -- remove expressways because they don't *actually* intersect other streets
     SELECT
         centreline_id AS edge_id,
-        from_intersection_id AS node_id
+        from_intersection_id AS node_id,
+        feature_code_desc
     FROM gis_core.centreline_latest
+    WHERE feature_code_desc != 'Expressway'
 
     UNION
 
     SELECT
         centreline_id AS edge_id,
-        to_intersection_id AS node_id
+        to_intersection_id AS node_id,
+        feature_code_desc
     FROM gis_core.centreline_latest
+    WHERE feature_code_desc != 'Expressway'
 ),
 
 nodes AS (
@@ -33,7 +38,10 @@ nodes AS (
     SELECT node_id
     FROM node_edges
     GROUP BY node_id
-    HAVING COUNT(DISTINCT edge_id) > 2
+    HAVING
+        COUNT(DISTINCT edge_id) > 2
+        -- no 'intersections' that are just ramps crossing eachother
+        AND ARRAY_AGG(DISTINCT feature_code_desc) != ARRAY['Expressway Ramp']
 ),
 
 legs AS (
@@ -64,6 +72,7 @@ legs AS (
     FROM nodes AS n
     JOIN gis_core.centreline_latest AS edges_outbound
         ON n.node_id = edges_outbound.from_intersection_id
+    WHERE edges_outbound.feature_code_desc != 'Expressway'
 
     UNION
 
@@ -88,6 +97,7 @@ legs AS (
     FROM nodes AS n
     JOIN gis_core.centreline_latest AS edges_inbound
         ON n.node_id = edges_inbound.to_intersection_id
+    WHERE edges_inbound.feature_code_desc != 'Expressway'
 ),
 
 distances AS (
