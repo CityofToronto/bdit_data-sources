@@ -61,7 +61,7 @@ WITH json_bundled AS (
                     'WB', w_truck_wb
                 )
             )
-        ) AS counts    
+        ) AS counts
     FROM nwessel.tmc2atr_wide
 ),
 
