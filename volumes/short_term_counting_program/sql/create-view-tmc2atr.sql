@@ -1,7 +1,10 @@
 /*
-if zero bikes enter the intersection, then zero bikes leave
-but if there is a non-zero bike count entering, we can't say
-where those bikes exit (yet), so the volume is NULL
+Convert short-term TMCs into approach and exit counts for each
+of the three available modes.
+
+If no bikes enter the intersection, then no bikes leave but if
+there is a non-zero bike count entering, we can't say where those
+bikes exit (yet), so the volume is NULL.
 */
 
 CREATE OR REPLACE VIEW traffic.tmc2atr AS
@@ -12,6 +15,8 @@ WITH json_bundled AS (
         count_id,
         time_start,
         time_end,
+        -- three-tier nested JSON object which will be unpacked in the next
+        -- step into a long-format view
         json_build_object( -- classification level
             'bike', json_build_object( -- approach level
                 'N', json_build_object( -- direction level
@@ -124,3 +129,9 @@ FROM directed_text;
 
 COMMENT ON VIEW traffic.tmc2atr
 IS 'Mapping of short-term TMCs to ATR/SVC-formatted counts on the legs of the intersection';
+
+COMMENT ON COLUMN traffic.tmc2atr.leg
+IS 'Leg relative to TMC intersection';
+
+COMMENT ON COLUMN traffic.tmc2atr.dir
+IS 'Direction of travel on the `leg`';
