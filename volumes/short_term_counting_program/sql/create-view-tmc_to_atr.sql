@@ -7,7 +7,7 @@ there is a non-zero bike count entering, we can't say where those
 bikes exit (yet), so the volume is NULL.
 */
 
-CREATE OR REPLACE VIEW traffic.tmc2atr AS
+CREATE OR REPLACE VIEW traffic.tmc_to_atr AS
 
 WITH json_bundled AS (
     SELECT
@@ -127,11 +127,11 @@ SELECT
     END AS count
 FROM directed_text;
 
-COMMENT ON VIEW traffic.tmc2atr
+COMMENT ON VIEW traffic.tmc_to_atr
 IS 'Mapping of short-term TMCs to ATR/SVC-formatted counts on the legs of the intersection';
 
-COMMENT ON COLUMN traffic.tmc2atr.leg
+COMMENT ON COLUMN traffic.tmc_to_atr.leg
 IS 'Leg relative to TMC intersection';
 
-COMMENT ON COLUMN traffic.tmc2atr.dir
+COMMENT ON COLUMN traffic.tmc_to_atr.dir
 IS 'Direction of travel on the `leg`';
