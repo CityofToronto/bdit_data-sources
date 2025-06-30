@@ -105,3 +105,37 @@ ALTER TABLE collisions.a OWNER TO collisions_bot;
 ### Updating Existing Tables
 
 If you need to update an existing table to match any new modifications introduced by the MOVE team, e.g., dropping columns or changing column types, you should update the replicated table definition according to these changes. If the updated table has dependencies, you need to save and drop them to apply the new changes and then update these dependencies and re-create them again. The [`public.deps_save_and_drop_dependencies_dryrun`](https://github.com/CityofToronto/bdit_pgutils/blob/master/create-function-deps_save_and_drop_dependencies_dryrun.sql) and `public.deps_restore_dependencies` functions might help updating the dependencies in complex cases. Finally, if there are any changes in the table's name or schema, you should also update the `collisions_tables` variable.
+
+### Using Updatable VIEW as replication destination
+
+If you want to use different column names in the destination table than the source table, use the following method:
+1. Alter the column names in the destination table to your liking: 
+```sql
+ALTER TABLE IF EXISTS traffic.centreline2_midblocks RENAME centreline_id TO midblock_id;
+```
+2. Create a view which effectively reverses that change, so the column names match the source table:
+```sql
+CREATE OR REPLACE VIEW traffic.centreline2_midblocks_view AS
+    SELECT
+        --midblock_id is the name in the destination table, centreline_id is the name in the source table
+        centreline2_midblocks.midblock_id AS centreline_id,
+        --all the other columns without renaming:
+        centreline2_midblocks.midblock_name,
+        ...
+    FROM traffic.centreline2_midblocks;
+
+ALTER TABLE traffic.centreline2_midblocks_view OWNER TO traffic_bot;
+COMMENT ON VIEW traffic.centreline2_midblocks_view IS '(DO NOT USE) Use `traffic.centreline2_midblocks` instead.';
+
+--same permissions are the same as `traffic.centreline2_midblocks` except: 
+REVOKE ALL ON TABLE traffic.centreline2_midblocks_view FROM bdit_humans;
+```
+3. Update the Airflow variable with the replication table pair.  
+`["move_staging.centreline2_midblocks", "traffic.centreline2_midblocks"]` becomes:  
+```json
+[
+    "move_staging.centreline2_midblocks", --source
+    "traffic.centreline2_midblocks_view", --insert target (updatable VIEW)
+    "traffic.centreline2_midblocks" --target for `COMMENT ON TABLE...`
+]
+```
