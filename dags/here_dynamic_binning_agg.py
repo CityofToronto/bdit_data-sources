@@ -12,8 +12,7 @@ or trigger just one day: airflow dags trigger -e 2023-11-02 here_dynamic_binning
 import sys
 import os
 import logging
-import pendulum
-from datetime import timedelta
+from pendulum import duration, datetime
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.models import Variable
@@ -36,13 +35,13 @@ DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["U
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': pendulum.datetime(2023, 1, 1, tz="America/Toronto"),
+    'start_date': datetime(2019, 1, 1, tz="America/Toronto"),
     #aggregation doesn't work on 24_4 yet (no congestion.network_links_24_4)
-    'end_date': pendulum.datetime(2025, 3, 17, tz="America/Toronto"),
+    #'end_date': datetime(2025, 3, 17, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
-    'retries': 0,
-    'retry_delay': timedelta(minutes=5),
+    'retries': 1,
+    'retry_delay': duration(minutes=5),
     'on_failure_callback': task_fail_slack_alert
 }
 
@@ -65,7 +64,8 @@ def here_dynamic_binning_agg():
         task_id='aggregate_daily',
         conn_id='congestion_bot',
         autocommit=True,
-        retries = 0
+        retries = 0,
+        execution_timeout=duration(minutes=30)
     )
     aggregate_daily
 
