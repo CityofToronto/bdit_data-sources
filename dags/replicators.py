@@ -4,8 +4,7 @@
 import os
 import sys
 from functools import partial
-from datetime import timedelta
-import pendulum
+from pendulum import datetime, duration
 # pylint: disable=import-error
 from airflow.decorators import dag, task, task_group
 from airflow.models import Variable
@@ -98,8 +97,24 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
 
     return generated_dag
 
-#get replicator details from airflow variable
-REPLICATORS = Variable.get('replicators', deserialize_json=True)
+"""Dictionary of replicator DAGs to create
+
+dag_name: dag_id
+tables: name of Airflow variable to get list of (src/dest) tables to replicate
+conn: name of Airflow connection of bot used for replication
+"""
+REPLICATORS =  {
+    "counts": {
+        "dag_name": "counts_replicator",
+        "tables": "counts_tables",
+        "conn": "traffic_bot"
+    },
+    "collisions": {
+        "dag_name": "collisions_replicator",
+        "tables": "collisions_tables",
+        "conn": "collisions_bot"
+    }
+}
 
 #generate replicator DAGs from dict
 for replicator, dag_items in REPLICATORS.items():
@@ -112,7 +127,7 @@ for replicator, dag_items in REPLICATORS.items():
         "start_date": pendulum.datetime(2023, 10, 31, tz="America/Toronto"),
         "email_on_failure": False,
         "retries": 3,
-        "retry_delay": timedelta(minutes=60),
+        "retry_delay": pendulum.duration(minutes=60),
         "on_failure_callback": task_fail_slack_alert,
     }
 
