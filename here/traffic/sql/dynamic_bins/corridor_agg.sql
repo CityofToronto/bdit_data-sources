@@ -6,9 +6,14 @@ SELECT gwolofs.congestion_cache_tt_results_daily(
 )
 FROM gwolofs.congestion_corridors
 JOIN gwolofs.congestion_projects USING (project_id),
-generate_series('2025-02-01', '2025-02-28', '1 day'::interval) AS dates(dt)
-WHERE
+generate_series('2025-01-01', '2025-02-28', '1 day'::interval) AS dates(dt)
+WHERE 
     congestion_projects.description IN (
-        'bluetooth_corridors', 'scrutinized-cycleway-corridors'
+        'Avenue Road cycleway installation',
+        'bluetooth_corridors',
+        'scrutinized-cycleway-corridors'
+    )
+    AND corridor_id NOT IN (
+        SELECT DISTINCT corridor_id FROM gwolofs.congestion_raw_corridors WHERE dt >= '2025-01-01' AND dt < '2025-02-28'
     )
     AND map_version = '23_4';
