@@ -12,12 +12,12 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
     uri_string text COLLATE pg_catalog."default",
     dt date,
     hr timestamp without time zone,
-    CONSTRAINT congestion_raw_corridors_exclude EXCLUDE USING gist (
-        bin_range WITH &&,
-        corridor_id WITH =,
-        time_grp WITH =,
-        uri_string WITH =
-    )
+    CONSTRAINT congestion_raw_corridors_pkey PRIMARY KEY (corridor_id, bin_range, time_grp),
+    CONSTRAINT corridor_fkey FOREIGN KEY (corridor_id)
+        REFERENCES gwolofs.congestion_corridors (corridor_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+        NOT VALID
 )
 
 TABLESPACE pg_default;

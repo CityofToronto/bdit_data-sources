@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_corridors
     corridor_end text COLLATE pg_catalog."default",
     project_id integer,
     CONSTRAINT congestion_corridors_pkey PRIMARY KEY (node_start, node_end, map_version),
+    CONSTRAINT corridor_pkey UNIQUE NULLS NOT DISTINCT (corridor_id),
     CONSTRAINT project_id_fk FOREIGN KEY (project_id)
         REFERENCES gwolofs.congestion_projects (project_id) MATCH SIMPLE
         ON UPDATE NO ACTION

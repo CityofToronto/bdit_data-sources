@@ -36,7 +36,7 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
         bin_range WITH &&,
         corridor_id WITH =,
         time_grp WITH =,
-        uri_string WITH =
+        coalesce(uri_string, '') WITH = --this is the only column in constraint which is nullable
     )
 );
 
@@ -268,5 +268,5 @@ SELECT gwolofs.congestion_cache_tt_results(
     holidays := True)
 $BODY$;
 
-COMMENT ON FUNCITON gwolofs.congestion_cache_tt_results_daily
+COMMENT ON FUNCTION gwolofs.congestion_cache_tt_results_daily
 IS 'A simplified version of `congestion_cache_tt_results` for aggregating entire days of data.'
