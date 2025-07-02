@@ -454,6 +454,8 @@ leg| text | A segment that forms part of a miovision intersection, identified by
 - 78: Bloor and Kingsway is a 4 legged intersection, but the south leg is not in the centreline (private road / cemetery entrance).
 - 68: Steeles and Jane, N leg is outside of TO (used null entry).
 - 105: Bayview and Brickworks - North leg (entry into Brickworks) is not on centreline (used null entry).
+- 125: Two north legs (highway ramps)
+- 123,124,127: Queensway midblock cameras; legs would not make sense.
 
 ### `alerts`
 
