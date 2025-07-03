@@ -1,3 +1,11 @@
+/*
+This query looks for intersection legs with no entry or outdated entry in `centreline_miovision`.
+
+Exceptions:
+- Leg is labelled as restricted in intersections table
+- When leg does not exist in centreline, but is a valid movement, add a null entry in `centreline_miovision` to opt out of notifications. 
+*/
+
 WITH valid_legs AS (
     SELECT
         intersection_uid,
@@ -13,6 +21,8 @@ WITH valid_legs AS (
 missing AS (
     SELECT
         vl.intersection_uid,
+        ai.api_name,
+        ai.geom,
         vl.leg,
         CASE
             WHEN
@@ -23,7 +33,7 @@ missing AS (
                 THEN 'Entry is outdated (no longer in `gis_core.centreline_latest`).'
         END AS description
     FROM valid_legs AS vl
-    JOIN miovision_api.active_intersections USING (intersection_uid)
+    JOIN miovision_api.active_intersections AS ai USING (intersection_uid)
     LEFT JOIN miovision_api.centreline_miovision AS cl USING (intersection_uid, leg)
     LEFT JOIN gis_core.centreline_latest AS latest USING (centreline_id)
     WHERE
