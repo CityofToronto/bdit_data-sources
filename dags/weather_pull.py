@@ -96,7 +96,7 @@ def weather_pull_dag():
     Checks if historical inputs do not exist or are all nulls.
     '''
 
-    no_backfill >> wait_till_1030am >> pull_prediction()
+    #no_backfill >> wait_till_1030am >> pull_prediction()
     [
         pull_historical.override(task_id = 'pull_historical_city')(station_id=31688),
         pull_historical.override(task_id = 'pull_historical_airport')(station_id=51459)
