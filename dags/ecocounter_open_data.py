@@ -187,7 +187,7 @@ def ecocounter_open_data_dag():
             
     @task.bash()
     def output_readme()->str:
-        source='/home/airflow/bdit_data-sources/_/volumes/open_data/sql/cycling_permanent_counts_readme.md'
+        source='/home/airflow/bdit_repos/bdit_data-sources/_/volumes/open_data/sql/cycling_permanent_counts_readme.md'
         dest='cycling_permanent_counts_readme.pdf'
         return f'''pandoc -V geometry:margin=1in -o "{EXPORT_PATH}/{dest}" "{source}"'''
     
