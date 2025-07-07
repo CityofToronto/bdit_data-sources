@@ -23,6 +23,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Relevant Tables](#relevant-tables)
 - [Useful Views](#useful-views)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
+- [What's the old FLOW Oracle Schema?](#whats-the-old-flow-oracle-schema)
 
 ## Introduction
 
@@ -244,3 +245,7 @@ Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and 
 ## Cycling Seasonality Adjustment
 
 A model was developed to adjust cycling counts for before after evaluations of new infrastructure based on sparse counts. It can be found in the [`cycling_seasonality`](cycling_seasonality/) folder
+
+## What's the old FLOW Oracle Schema?
+
+This is documented in [`traffic_archive`/](traffic_archive) folder
