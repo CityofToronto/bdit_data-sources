@@ -49,9 +49,7 @@ apache-airflow-providers-common-compat==1.7.3
     # via
     #   apache-airflow
     #   apache-airflow-task-sdk
-apache-airflow-providers-celery==3.10.6
-    # via -r requirements.in
-apache-airflow-providers-common-compat==1.6.1
+apache-airflow-providers-common-compat==1.7.2
     # via
     #   apache-airflow-core
     #   apache-airflow-providers-google
@@ -800,7 +798,6 @@ packaging==25.0
     #   sqlalchemy-bigquery
 pandas==2.3.1
     # via
-    #   apache-airflow-providers-google
     #   db-dtypes
     #   env-canada
     #   geopandas
@@ -957,6 +954,7 @@ pyarrow==21.0.0
     # via
     #   apache-airflow-providers-google
     #   db-dtypes
+    #   google-cloud-aiplatform
     #   pandas-gbq
 pyasn1==0.6.1
     # via
@@ -1082,7 +1080,7 @@ requests-oauthlib==2.0.0
     #   google-auth-oauthlib
 requests-toolbelt==1.0.0
     # via apache-airflow-providers-http
-retryhttp==1.3.2
+retryhttp==1.3.3
     # via
     #   apache-airflow
     #   apache-airflow-providers-http
@@ -1160,7 +1158,7 @@ starlette==0.46.2
     #   -c constraints.txt
     #   cadwyn
     #   fastapi
-structlog==25.2.0
+structlog==25.4.0
     # via
     #   -c constraints.txt
     #   apache-airflow-task-sdk
@@ -1216,6 +1214,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   alembic
     #   anyio
+    #   apache-airflow-core
     #   asgiref
     #   beautifulsoup4
     #   cadwyn
