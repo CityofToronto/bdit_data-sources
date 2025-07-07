@@ -1,11 +1,21 @@
 # Traffic Archive <!-- omit in toc -->
 
-This folder contains sql & documentation used for processing old count data coming from the FLOW system in an Oracle database.
+This folder contains sql & documentation used for processing old count data coming from the FLOW system in an Oracle database. Many of these objects now live, frozen in amber, in the `traffic_flow_archive` schema.
 
-- [Traffic Archive](#traffic-archive)
-  - [Contents](#contents)
-  - [Old documentation](#old-documentation)
-
+- [Contents](#contents)
+- [Old Documentation](#old-documentation)
+  - [Core Tables](#core-tables)
+  - [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics)
+  - [TMC Observations (`det`)](#tmc-observations-det)
+  - [ATR Metadata (`countinfo`)](#atr-metadata-countinfo)
+  - [ATR Observations (`cnt_det`)](#atr-observations-cnt_det)
+  - [Spatial-Temporal Reference (`arterydata`)](#spatial-temporal-reference-arterydata)
+    - [What is an arterycode?](#what-is-an-arterycode)
+    - [From arterycode to centreline](#from-arterycode-to-centreline)
+  - [`category`](#category)
+    - [Category Reference](#category-reference)
+  - [Artery groups and count groups](#artery-groups-and-count-groups)
+  - [Load Sources Summary](#load-sources-summary)
 
 ## Contents
 
@@ -17,15 +27,12 @@ There are two ERDs
 ![Entity Relationship Diagram of some traffic count tables](countinfomics.png)
 ![Entity Relationship Diagram of some traffic count tables](flow_tables_relationship.png)
 
-[`exploring relationships.ipynb`](exploring relationships.ipynb) is a jupyter notebook exploring relationships between the various tables. This has surely been superseded by deeper dives performed by the MOVE team.
-
-[`cal_dictionary.md`](cal_dictionary.md) is a data dictionary for `TRAFFIC.CAL`
-
-
-## Old documentation
+- [`exploring relationships.ipynb`](exploring relationships.ipynb) is a jupyter notebook exploring relationships between the various tables. This has surely been superseded by deeper dives performed by the MOVE team.
+- [`cal_dictionary.md`](cal_dictionary.md) is a data dictionary for `TRAFFIC.CAL`
+- [`sql/`] contains a sql dump for the entire legacy schema and some exploratory queries.
 
 
-
+## Old Documentation
 
 ### Core Tables
 
@@ -42,7 +49,7 @@ The previous data structure is archived in schema `traffic_archive`. This is the
 
 The following diagrams show the relationship between the above-mentioned tables.
 
-### (ARCHIVED TO traffic_archive) TMC Metadata (`countinfomics`)
+### TMC Metadata (`countinfomics`)
 
 This table contains Turning Movement Count metadata only. This table contains the location reference, date, and source for each Turning Movement Count. Each Turning Movement Count is defined by a unique `count_info_id`.
 
@@ -62,7 +69,7 @@ Routine hours are the "typical" hours during which data would be collected. Scho
 - Routine Hours: 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00
 - School Hours: 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00
 
-### (ARCHIVED TO traffic_archive) TMC Observations (`det`)
+### TMC Observations (`det`)
 This table contains individual data entries for Turning Movement Counts in 15-minute non-continuous increments. This is a "wide" format, where each direction-mode-movement has its own column. For a long (instead of wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
 
 Field Name|Type|Description
@@ -119,13 +126,13 @@ S_OTHER|number|South side - optional field
 E_OTHER|number|East side - optional field
 W_OTHER|number|West side - optional field
 
-### (ARCHIVED TO traffic_archive) ATR Metadata (`countinfo`)
+### ATR Metadata (`countinfo`)
 
 Similar to [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics), this table contains the location reference, date, and data type/source from all sources other than Turning Movement Counts.
 
 See [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics).
 
-### (ARCHIVED TO traffic_archive) ATR Observations (`cnt_det`)
+### ATR Observations (`cnt_det`)
 
 This table contains individual data entries for all counts or sources other than Turning Movement Counts.
 
@@ -136,7 +143,7 @@ count|bigint|Vehicle count
 timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
 speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts.
 
-### (ARCHIVED TO traffic_archive) Spatial-Temporal Reference (`arterydata`)
+### Spatial-Temporal Reference (`arterydata`)
 
 This table contains the location information of each volume count.
 
@@ -161,7 +168,7 @@ Given an arterycode, you can find the corresponding modern-day location by cross
 
 
 
-### (ARCHIVED TO traffic_archive) `category`
+### `category`
 
 This is a reference table referencing the count type or data source of each entry.
 
