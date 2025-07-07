@@ -4,7 +4,7 @@ import logging
 import pendulum
 from datetime import datetime, timedelta
 
-#from airflow.sdk import dag, task
+#from airflow.sdk import dag, task, Variable #also uncomment task_fail_slack_alert!
 from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, SQLCheckOperator
@@ -12,7 +12,7 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    #from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 except ImportError:
     raise ImportError("Cannot import DAG helper functions.")
 
@@ -29,7 +29,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'email_on_success': False,
                 'retries': 0,
                 'retry_delay': timedelta(minutes=5),
-                'on_failure_callback': task_fail_slack_alert
+                #'on_failure_callback': task_fail_slack_alert
                 }
 
 @dag(
