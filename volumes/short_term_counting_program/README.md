@@ -67,7 +67,7 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
 * Each count station is given a unique identifier to avoid duplicate records
 * Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents
 
-### Automated Traffic Record (ATR)
+### Midblock Speed-Volume-Classification (SVC) (Previously Automated Traffic Record (ATR))
 
 - Volume
   - Direction
@@ -101,7 +101,7 @@ The City of Toronto retains a traffic counting contractor who conducts data coll
 
 Data are collected through various technologies. Originally, data were collected by field staff who would manually observe and record volumes. Pneumatic road tubes were introduced to record motor vehicle volumes, speeds, and classifications. More recently, counting has shifted to video observation.
 
-Once the City receives data from the contractor, staff load the data into our database. Until recently, staff would load data files into a legacy Oracle database through an application called "FlowLoad". Data would then be retrieved through a user interface application called "Flow", where the data were formatted into nice reports. In recent years, "Flow" was replaced by [MOVE](https://github.com/CityofToronto/bdit_flashcrow).
+Once the City receives data from the contractor, staff load the data into our database. Until recently, staff would load data files into a legacy Oracle database through an application called "FlowLoad". Data would then be retrieved through a user interface application called "Flow", where the data were formatted into nice reports. In recent years, "Flow" was replaced by [MOVE](https://github.com/CityofToronto/bdit_flashcrow). For TMC's an API has been set up to ingest data directly from the contractor into the MOVE database, then copied into bigdata. An API for SVC's is in the works.
 
 ## How often is data updated?
 
@@ -111,7 +111,7 @@ TMCs are processed automatically, nightly, once made available from the contract
 
 ## Where can I access the data?
 
-Internal to the Transportation Data & Analytics team, data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS.
+Internal to the Transportation Data & Analytics team, legacy data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS. Newer data is loaded directly into MOVE and then replicated to the `bigdata` RDS.
 
 Look in the `traffic` schema for all ad-hoc data tables.
 
@@ -153,9 +153,12 @@ The mapping of tables between Bigdata-MOVE-Open Data is summarized below. Replic
 | `tmc_study_data` | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
 | `tmc_summary_stats` | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
 | `fhwa_classes` | - | `fwha_classification.png` | Provides a reference for the FWHA classification system. [Notion doc](https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab) |
-| `studies` | - | included in `svc_summary_data` | Contains metadata for all study types available in MOVE. Copied from "move_staging"."counts2_studies" |
-| `traffic_signal` | - | - | Contains a mapping of `centrelineId` to `px` crossing numbers. This table is frequently joined to `arteries_centreline` to get an `arterycode` to `px` mapping |
+| `midblocks` | `centreline2.midblocks` | - | Simplified midblock network to which MOVE2 conflates studies to. Includes improved naming for midblock segments. |
+| `intersections` | `centreline2.intersections` | - | Simplified intersection file that corresponds to the midblocks used by MOVE 2. |
+| `pxo` | `centreline2.pxo` | - | Contains a mapping of `intersection_id` or `midblock_id` to `px` crossing numbers for pedestrian cross-overs. | 
+| `traffic_signal` | `centreline2.traffic_signal` | - | Contains a mapping of `intersection_id` or `midblock_id` to `px` crossing numbers for traffic control signals. |
 | `mto_length_bin_classification` | - | - | MTO 6 length bin classification guide. Used to summarize vehicle lengths observed |
+| `studies` | `counts2.studies` | included in `svc_summary_data` | Contains metadata for all study types available in MOVE. Copied from "move_staging"."counts2_studies", this table uses the legacy data structure and only use it when comparing to whats in the MOVE web application. |
 
 Useful Views
   - `svc_daily_totals` - A daily summary of `traffic.svc_unified_volumes` by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
@@ -166,7 +169,7 @@ Note on `study_id`
 - This means `study_id` is common for the two directions of traffic at a midblock SVC count if they map to the same location (centreline_id). If they were done on opposite side of the an interseciton (a common scenario), the two directions will have separate `study_id`. This scenario still requires manual matching of studies to group directional data obtained on the same day, if desired.
 - Because `study_id` is point-location-based, it will adapt to version changes of the Toronto centreline
 
-#### (ARCHEVED TO traffic_archive) Load Sources Summary
+#### (ARCHIVED TO traffic_archive) Load Sources Summary
 
 The previous data structure is archived in schema `traffic_archive`. This is the (OUTDATED) Copy of (old schema) traffic counts from MOVE.
 
@@ -184,7 +187,7 @@ The previous data structure is archived in schema `traffic_archive`. This is the
 ***Classification ATR data is spotty for two reasons: 1) the legacy loader did not allow for co-located Speed/Vol ATR and Classification ATR data to be loaded for the same day; 2) there is curently no loading mechanism for Classification ATR data post-May 2023, when the MOVE Loader was introduced.
 
 
-#### (ARCHEVED TO traffic_archive) Core Tables
+#### (ARCHIVED TO traffic_archive) Core Tables
 
 The previous data structure is archived in schema `traffic_archive`. This is the (OUTDATED) Copy of (old schema) traffic counts from MOVE.
 - Turning Movement Count (TMC)
@@ -201,7 +204,7 @@ The following diagrams show the relationship between the above-mentioned tables.
 
 #### TMC Relations
 
-!['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_counting-FK_is_highlighted_green.png)
+!['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_count-FK_is_highlighted_green.png)
 
 #### SVC Relations
 
@@ -210,11 +213,13 @@ The following diagrams show the relationship between the above-mentioned tables.
 ### Other Useful Tables
 
 #### `studies` <!-- omit in toc -->
+FOR LEGACY PURPOSES ONLY, this is conflated to the legacy MOVE centreline.
+
 A human-friendly interpretation of studies. Grouped by colocated arterycodes and with single-day ATR "counts" into continuous study days.
 
 Find at `traffic.studies`.
 
-#### Artery groups and count groups (ARCHEVED TO traffic_archive) <!-- omit in toc -->
+#### Artery groups and count groups (ARCHIVED TO traffic_archive) <!-- omit in toc -->
 A gaggle of cascading tables that aggregate "counts" into "studies" (counts at the same location that occurred on continuous days) and "arterycodes" into "arterycode groups" (counts that occured at the same location). These intermediary tables are used to create [`studies`](#studies).
 
 - `traffic.arteries_groups`
@@ -249,7 +254,7 @@ Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and 
 
 ## Relevant Tables
 
-### (ARCHEVED TO traffic_archive) TMC Metadata (`countinfomics`)
+### (ARCHIVED TO traffic_archive) TMC Metadata (`countinfomics`)
 
 This table contains Turning Movement Count metadata only. This table contains the location reference, date, and source for each Turning Movement Count. Each Turning Movement Count is defined by a unique `count_info_id`.
 
@@ -269,7 +274,7 @@ Routine hours are the "typical" hours during which data would be collected. Scho
 - Routine Hours: 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00
 - School Hours: 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00
 
-### (ARCHEVED TO traffic_archive) TMC Observations (`det`)
+### (ARCHIVED TO traffic_archive) TMC Observations (`det`)
 This table contains individual data entries for Turning Movement Counts in 15-minute non-continuous increments. This is a "wide" format, where each direction-mode-movement has its own column. For a long (instead of wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
 
 Field Name|Type|Description
@@ -353,13 +358,13 @@ Pedestrians are only counted when they cross the roadway, meaning that pedestria
 
 For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
 
-### (ARCHEVED TO traffic_archive) ATR Metadata (`countinfo`)
+### (ARCHIVED TO traffic_archive) ATR Metadata (`countinfo`)
 
 Similar to [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics), this table contains the location reference, date, and data type/source from all sources other than Turning Movement Counts.
 
 See [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics).
 
-### (ARCHEVED TO traffic_archive) ATR Observations (`cnt_det`)
+### (ARCHIVED TO traffic_archive) ATR Observations (`cnt_det`)
 
 This table contains individual data entries for all counts or sources other than Turning Movement Counts.
 
@@ -370,7 +375,7 @@ count|bigint|Vehicle count
 timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
 speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts.
 
-### (ARCHEVED TO traffic_archive) Spatial-Temporal Reference (`arterydata`)
+### (ARCHIVED TO traffic_archive) Spatial-Temporal Reference (`arterydata`)
 
 This table contains the location information of each volume count.
 
@@ -392,7 +397,7 @@ It's very important to understand the humble arterycode. The arterycode identifi
 
 Given an arterycode, you can find the corresponding modern-day location by cross-referencing with `traffic.arteries_centreline`.
 
-### (ARCHEVED TO traffic_archive) `category`
+### (ARCHIVED TO traffic_archive) `category`
 
 This is a reference table referencing the count type or data source of each entry.
 
