@@ -20,7 +20,6 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
     - [TMC Relations](#tmc-relations)
     - [SVC Relations](#svc-relations)
   - [Other Useful Tables](#other-useful-tables)
-- [Relevant Tables](#relevant-tables)
 - [Useful Views](#useful-views)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
 - [What's the old FLOW Oracle Schema?](#whats-the-old-flow-oracle-schema)
@@ -45,16 +44,12 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
   - Pedestrian: pedestrian volume by leg of intersection crossed
 
 #### Data Elements <!-- omit in toc -->
-* Location Identifier (SLSN *Node* ID)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
 	- vehicle types
 	- cyclists and pedestrian counts are approach only
 	
 #### Notes <!-- omit in toc -->
-* No regular data load schedule
-* Data files collected by 2-3 staff members
-* Manually geo-reference volume data to an SLSN node during data import process
 * Counts are typically conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
 * If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded
 * Volumes are available at both signalized and non-signalized intersections
@@ -76,7 +71,6 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
   - Volume
 
 #### Data Elements <!-- omit in toc -->
-* Location Identifier (SLSN *Link* ID)
 * Direction
 * 15 min aggregated interval time
 * 15 min volume
@@ -85,7 +79,6 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
 #### Notes <!-- omit in toc -->
 * The counts represent roadway and direction(s), not on a lane-by-lane level
 * No regular data load schedule
-* Manually geo-reference volume data to an SLSN node during data import process
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
 
@@ -213,8 +206,6 @@ A human-friendly interpretation of studies. Grouped by colocated arterycodes and
 
 Find at `traffic.studies`.
 
-
-
 #### New TMCs <!-- omit in toc -->
 Recent TMCs (September 2023 and on) loaded through new mechanisms. Includes 14-hour TMC data. Designed to mimic the legacy data tables for backwards compatibility.
 
@@ -228,11 +219,6 @@ Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and 
   - `atr_metadata`
     - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
   - `atr_study`
-
-## Relevant Tables
-
-
-
 
 ## Useful Views
 
