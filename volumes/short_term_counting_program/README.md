@@ -14,6 +14,9 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
   - [Core Tables](#core-tables)
+    - [Vehicle movement](#vehicle-movement)
+    - [Bike movement](#bike-movement)
+    - [Pedestrian movement](#pedestrian-movement)
     - [TMC Relations](#tmc-relations)
     - [SVC Relations](#svc-relations)
   - [Other Useful Tables](#other-useful-tables)
@@ -160,6 +163,35 @@ Note on `study_id`
 - Because `study_id` is point-location-based, it will adapt to version changes of the Toronto centreline
 
 
+#### Vehicle movement
+The following image depicts motor vehicle movements. This example shows south approach, or northbound travel, movements.
+
+- `S_[CARS|TRUCK|BUS]_L`
+- `S_[CARS|TRUCK|BUS]_T`
+- `S_[CARS|TRUCK|BUS]_R`
+
+!['tmc_turning_movements'](../img/tmc_movements.png)
+
+Notes:
+- Exits can be calculated by summing associated movements.
+- U-turns are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+#### Bike movement
+
+At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg. Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+#### Pedestrian movement
+
+Pedestrians are counted based on the side of the intersection they cross on. The example below shows `S_PEDS` or pedestrians crossing on the south side of the intersection. Note that they could be travelling either east or west in this example.
+
+!['tmc_ped_cross'](../img/ped_cross_movement.png)
+
+Pedestrians are only counted when they cross the roadway, meaning that pedestrians who turn at the intersections without crossing the roadway are _not_ counted.
+
+For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
+
+
+
 
 #### TMC Relations
 
@@ -168,6 +200,8 @@ Note on `study_id`
 #### SVC Relations
 
 !['svc_flow_tables_relationship'](../img/2025_ATR_ERD_svc_relations_short_term_counting-FK_is_highlighted_green.png)
+
+
 
 ### Other Useful Tables
 
