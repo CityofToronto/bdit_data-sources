@@ -185,17 +185,219 @@ Pedestrians are only counted when they cross the roadway, meaning that pedestria
 For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
 
 
-
-
 #### TMC Relations
 
 !['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_count-FK_is_highlighted_green.png)
+
+##### `tmc.metadata`
+Remember, TMCs can occur at both intersections and midblocks.
+| |column_name |data_type|is_nullable|description|
+| --------------- | ---------- | ------- | --------- | --------- |
+| 1|`count_id`|bigint |NO |Unique identifier for each count. Spectrum counts share the same `request_id` or `study_id` as `count_id`|
+| 2|`count_date`|date |NO |Date the count was conducted. For Turning Movement Counts, studies are conducted on one day only.|
+| 3|`count_type`|text |NO |Disaggregate hour scheme during which the count was conducted, Routine or School hours |
+| 4|`count_duration`|text |NO |Duration of count (14, 8R, 8S). 14 = 14-hours of data collected over a continuous period from 6:00am-8:00pm. 8R = 8-hours of data collected during the non-continuous Routine schedule of 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00. 8S = 8-hours of data collected during the non-continuous School schedule of 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00|
+| 5|`count_location_name` |text |NO |Human-readable name of the location where the count was conducted generated from the initial study request.|
+| 6|`count_source`|text |NO |Method/contractor from which the count was loaded/performed by.|
+| 7|`midblock_id` |integer|YES|The most current Midblock ID reference spatially joined to the point geometry of the count location. Join to `traffic.centreline2_intersections`.|
+| 8|`intersection_id` |integer |YES|The most current Intersection ID reference spatially joined to the point geometry of the count location. Join to `traffic.centreline2_intersections`.|
+| 9|`centreline_feature_code` |integer|YES|Centreline feature code for midblock types. Type of road the count occurred on (Local, Collector, Major etc.) |
+| 10|`centreline_intersection_classification`|character varying|YES|Type of intersection the count occurred on, see `gis.centreline_intersection` for descriptions. |
+| 11|`centreline_properties` |jsonb|YES|Centreline features from other layers spatially joined. Includes PXOs, Traffic Signals and Schools with specified radii. Nested JSON structure.|
+| 12|`count_geom`|geom |NO |Point geometry representation of the study.|
+
+##### `traffic.tmc_study_data`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+| 1|`id` |bigint |NO |Unique row identifier. |
+| 2|`count_id` |bigint |NO |Unique identifier for each count. Spectrum counts share the same `request_id` or `study_id` as `count_id`. |
+| 3|`time_start` |timestamp without time zone|NO |Start time of the 15-minute interval |
+| 4|`time_end` |timestamp without time zone|NO |End time of the 15-minute interval |
+| 5|`n_cars_r` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn.|
+| 6|`n_cars_t` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through. |
+| 7|`n_cars_l` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn. |
+| 8|`s_cars_r` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn.|
+| 9|`s_cars_t` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through. |
+|10|`s_cars_l` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn. |
+|11|`e_cars_r` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn.|
+|12|`e_cars_t` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through. |
+|13|`e_cars_l` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn. |
+|14|`w_cars_r` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn.|
+|15|`w_cars_t` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through. |
+|16|`w_cars_l` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn. |
+|17|`n_truck_r`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn.|
+|18|`n_truck_t`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through. |
+|19|`n_truck_l`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn. |
+|20|`s_truck_r`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn.|
+|21|`s_truck_t`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through. |
+|22|`s_truck_l`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn. |
+|23|`e_truck_r`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn.|
+|24|`e_truck_t`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through. |
+|25|`e_truck_l`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn. |
+|26|`w_truck_r`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn.|
+|27|`w_truck_t`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through. |
+|28|`w_truck_l`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn. |
+|29|`n_bus_r`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn. |
+|30|`n_bus_t`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through.|
+|31|`n_bus_l`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn.|
+|32|`s_bus_r`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn. |
+|33|`s_bus_t`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through.|
+|34|`s_bus_l`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn.|
+|35|`e_bus_r`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn. |
+|36|`e_bus_t`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through.|
+|37|`e_bus_l`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn.|
+|38|`w_bus_r`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn. |
+|39|`w_bus_t`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through.|
+|40|`w_bus_l`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn.|
+|41|`n_peds` |integer|NO |Volume of pedestrians that cross the north leg (approach) of the intersection. |
+|42|`s_peds` |integer|NO |Volume of pedestrians that cross the south leg (approach) of the intersection. |
+|43|`e_peds` |integer|NO |Volume of pedestrians that cross the east leg (approach) of the intersection.|
+|44|`w_peds` |integer|NO |Volume of pedestrians that cross the west leg (approach) of the intersection.|
+|45|`n_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
+NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, i.e. in a southbound direction, plus bicycles riding in the crosswalk area across the west leg.|
+|46|`s_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
+NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, i.e. in a northbound direction, plus bicycles riding in the crosswalk area across the east leg.|
+|47|`e_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
+NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, i.e. in a westbound direction, plus bicycles riding in the crosswalk area across the north leg.|
+|48|`w_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
+NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, i.e. in a eastbound direction, plus bicycles riding in the crosswalk area across the south leg.|
+|49|`n_other`|integer|NO | |
+|50|`s_other`|integer|NO | |
+|51|`e_other`|integer|NO | |
+|52|`w_other`|integer|NO | |
+
+##### `traffic.tmc_summary_stats`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+|1 |`count_id` |bigint |false |Unique identifier for each Turning Movement Count. Use this ID to cross-reference 15-minute observations in tmc_raw_data files.|
+|2 |`count_veh_total` |numeric |false |Total motor vehicle volume over the count duration. Motor vehicles include cars, trucks, and buses.|
+|3 |`count_heavy_pct_total` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), over the count duration|
+|4 |`count_total_bikes` |numeric |false |Total bicycle volume over the count duration.|
+|5 |`count_total_peds` |numeric |false |Total pedestrian volume crossing any leg of the intersection, over the count duration. NOTE: Pedestrians are counted once for each leg of the intersection they cross. For example, if a pedestrian crosses the north leg, then the east leg, they are counted once crossing the north leg, and once crossing the east leg.|
+|6 |`am_peak_time_start` |timestamp without time zone |false |Start of the AM Peak hour. The AM Peak hour is the continuous one-hour period between 6:30-10:30AM during which the total number of motor vehicles (cars, trucks, buses) that enter the intersection is the greatest.|
+|7 |`am_peak_total_veh` |numeric |false |Volume of motor vehicles observed during the AM peak hour.|
+|8 |`am_peak_heavy_pct` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), during the AM peak hour.|
+|9 |`am_peak_bikes` |numeric |false |Volume of bicycles observed during the AM peak hour.|
+|10 |`pm_peak_time_start` |timestamp without time zone |false |Start of the PM Peak hour. The PM Peak hour is the continuous one-hour period between 2:00-8:00PM during which the total number of motor vehicles (cars, trucks, buses) that enter the intersection is the greatest.|
+|11 |`pm_peak_total_veh` |numeric |false |Volume of motor vehicles observed during the PM peak hour.|
+|12 |`pm_peak_heavy_pct` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), during the PM peak hour.|
+|13 |`pm_peak_bikes` |numeric |false |Volume of bicycles observed during the PM peak hour.|
+|14 |`count_veh_n_appr` |numeric |false |Volume of motor vehicles that enter the intersection from the north leg (approach), over the count duration|
+|15 |`count_heavy_pct_n_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the north leg (approach), over the count duration|
+|16 |`count_bikes_n_appr` |numeric |false |Volume of bicycles that enter the intersection from the north leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, plus bicycles riding in the crosswalk area across the west leg|
+|17 |`count_veh_e_appr` |numeric |false |Volume of vehicles that enter the intersection from the east leg (approach), over the count duration|
+|18 |`count_heavy_pct_e_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the east leg (approach), over the count duration|
+|19 |`count_bikes_e_appr` |numeric |false |Volume of bicycles that enter the intersection from the east leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, plus bicycles riding in the crosswalk area across the north leg|
+|20 |`count_veh_s_appr` |numeric |false |Volume of vehicles that enter the intersection from the south leg (approach), over the count duration|
+|21 |`count_heavy_pct_s_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the south leg (approach), over the count duration|
+|22 |`count_bikes_s_appr` |numeric |false |Volume of bicycles that enter the intersection from the south leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, plus bicycles riding in the crosswalk area across the east leg|
+|23 |`count_veh_w_appr` |numeric |false |Volume of vehicles that enter the intersection from the west leg (approach), over the count duration|
+|24 |`count_heavy_pct_w_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the west leg (approach), over the count duration|
+|25 |`count_bikes_w_appr` |numeric |false |Volume of bicycles that enter the intersection from the west leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, plus bicycles riding in the crosswalk area across the south leg|
 
 #### SVC Relations
 
 !['svc_flow_tables_relationship'](../img/2025_ATR_ERD_svc_relations_short_term_counting-FK_is_highlighted_green.png)
 
+##### `traffic.svc_metadata`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+|1 |`study_id` |integer |NO |Unique identifier for each SVC study. Use this ID to cross-reference 15-minute observations in svc_raw_data files. Spectrum counts the `study_id` correlates to the `request_id`|
+|2 |`study_start_date` |date |NO |Date on which the count started|
+|3 |`study_end_date` |date |NO |Date on which the count ended|
+|4 |`study_type` |text |NO |Type of data collected (ATR_VOLUME = Volume data only, ATR_SPEED_VOLUME = Speed and volume data, VEHICLE_CLASS = Vehicle classification and volume data)|
+|5 |`study_duration` |integer |NO |Count duration, in hours|
+|6 |`study_location_name` |text |NO |Human-readable name of the location where the count was conducted generated by the study request (e.g. Bloor St: Yonge St - Park Rd)|
+|7 |`study_source` |text |NO |Vendor / Contractor or software used to load the study.|
+|8 |`study_geom` |USER-DEFINED |NO |Point based geometry representation of the study location.|
+|9 |`midblock_id` |integer |YES |Current reference id to to the MOVE centreline, based on a spatial join using the `study_geom` field. Join to `traffic.centreline2_midblocks`|
+|10 |`centreline_type` |integer |YES |SVCs should always be on a mid-block.|
+|11 |`centreline_feature_code` |integer |YES |Classification of mid-block (Local, Collector, Arterial etc..)|
+|12 |`centreline_road_id` |integer |YES |Roll-up id to select all segments of a given road. For example all Kingston Rd. segments would share the same road_id.|
+|13 |`centreline_properties` |jsonb |YES |Other gcc layers spatially joined into a json structure that contains nearby schools, PXOs or traffic signals that belong to the midblock segment.|
 
+##### `traffic.svc_study_class`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+| 1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
+| 2|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+| 3|`count_info_id`|integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+| 4|`direction`|text |NO |Direction of travel.|
+| 5|`count_date` |date |NO |Date the count occurred.|
+| 6|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin.|
+| 7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin.|
+| 8|`motorcycle` |integer|NO |Volume of FWHA Class 1 vehicles (motorcycles). Includes all two- or three-wheeled motorized vehicles.|
+| 9|`cars` |integer|NO |Volume of FWHA Class 2 vehicles (passenger cars). Includes station wagons.|
+|10|`2a_4t`|integer|NO |Volume of FWHA Class 3 vehicles (other two-axle, four-tire single unit vehicles). Includes pickups, vans, and campers.|
+|11|`buses`|integer|NO |Volume of FWHA Class 4 vehicles (buses).|
+|12|`2a_su`|integer|NO |Volume of FWHA Class 5 vehicles (two-axle single unit trucks).|
+|13|`3a_su`|integer|NO |Volume of FWHA Class 6 vehicles (three-axle single unit trucks).|
+|14|`4a_su`|integer|NO |Volume of FWHA Class 7 vehicles (four or more axle single unit trucks)|
+|15|`4a_st`|integer|NO |Volume of FWHA Class 8 vehicles (four or less axle single trailer trucks).|
+|16|`5a_st`|integer|NO |Volume of FWHA Class 9 vehicles (five-axle single trailer trucks).|
+|17|`6a_st`|integer|NO |Volume of FWHA Class 10 vehicles (six or more axle single trailer trucks).|
+|18|`5a_mt`|integer|NO |Volume of FWHA Class 11 vehicles (five or less axle multi-trailer trucks).|
+|19|`6a_mt`|integer|NO |Volume of FWHA Class 12 vehicles (six-axle multi-trailer trucks).|
+|20|`other`|integer|NO |Volume of FWHA Class 13 vehicles (seven or more axle multi-trailer trucks).|
+
+##### `traffic.svc_study_speed`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+| 1|`id`|bigint |NO |Unique row identifier for each 15-minute interval. |
+| 2|`study_id`|integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+| 3|`count_info_id` |integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+| 4|`direction` |text |NO |Direction of travel|
+| 5|`count_date`|date |NO |Date the count occurred. |
+| 6|`time_start`|timestamp without time zone|NO |Start of the 15-minute time bin|
+| 7|`time_end`|timestamp without time zone|NO |End of the 15-minute time bin|
+| 8|`vol_1_19_kph`|integer|NO |Volume of vehicles travelling between 1-19kph|
+| 9|`vol_20_25_kph` |integer|NO |Volume of vehicles travelling between 20-25kph |
+|10|`vol_26_30_kph` |integer|NO |Volume of vehicles travelling between 26-30kph |
+|11|`vol_31_35_kph` |integer|NO |Volume of vehicles travelling between 31-35kph |
+|12|`vol_36_40_kph` |integer|NO |Volume of vehicles travelling between 36-40kph |
+|13|`vol_41_45_kph` |integer|NO |Volume of vehicles travelling between 41-45kph |
+|14|`vol_46_50_kph` |integer|NO |Volume of vehicles travelling between 46-50kph |
+|15|`vol_51_55_kph` |integer|NO |Volume of vehicles travelling between 51-55kph |
+|16|`vol_56_60_kph` |integer|NO |Volume of vehicles travelling between 56-60kph |
+|17|`vol_61_65_kph` |integer|NO |Volume of vehicles travelling between 61-65kph |
+|18|`vol_66_70_kph` |integer|NO |Volume of vehicles travelling between 66-70kph |
+|19|`vol_71_75_kph` |integer|NO |Volume of vehicles travelling between 71-75kph |
+|20|`vol_76_80_kph` |integer|NO |Volume of vehicles travelling between 76-80kph |
+|21|`vol_81_160_kph`|integer|NO |Volume of vehicles travelling between 81-160kph|
+
+##### `traffic.svc_study_volume`
+| |column_name|data_type|is_nullable|description|
+|---|---|---|---|---|
+|1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
+|2|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+|3|`count_info_id`|integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+|4|`direction`|text |NO |Direction of travel|
+|5|`count_date` |date |NO |Date the count occurred. |
+|6|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin. |
+|7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin. |
+|8|`volume` |integer|NO |Vehicle volume observed during the 15-minute period. |
+
+##### `traffic.svc_summary_stats`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+|1 |`study_id` |integer |false |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to `trafffic.svc_metadata`.|
+|2 |`total_days` |numeric |false |Total number of days in the study.|
+|3 |`total_veh` |numeric |false |Total number of vehicles counted over the duration of the study.|
+|4 |`daily_avg_vol` |numeric |false |The average daily vehicle volume over the count duration. Calculated by summing the grand total of vehicles observed over the count duration, divided by the count duration in days.|
+|5 |`total_weekend_days` |numeric |false |Total number of weekend days that the study occurred on (if any).|
+|6 |`avg_weekend_vol` |numeric |false |Most traffic volume counts are conducted during the week. A handful of counts are done on weekends, or over periods of one or two weeks. For these counts, we calculate the average weekend daily volume. Similar to the average daily volume but considers only volume observations that fall on a weekend (Saturday or Sunday).|
+|7 |`total_weekdays` |numeric |false |Total number of weekdays that the study occurred on (if any).|
+|8 |`avg_weekday_vol` |numeric |false |The average weekday daily vehicle volume over the count duration. If the study was conducted on weekdays only, this is the same as the average daily volume. If the study was conducted on a weekend, this value will be none. If the study was conducted over both weekdays and weekends (i.e. one or two weeks), this is the average daily volume of weekdays only.|
+|9 |`heavy_pct` |numeric |false |If vehicle classification was collected, the percentage of motor vehicles considered heavy vehicles over the count duration. Put simply, this is the percentage of buses, single-unit, and articulated trucks. The percentage is calculated by summing the volume of vehicles in FWHA classes 4-13 inclusive, over the total vehicle volume.|
+|10 |`avg_weekday_am_peak_hour_start` |time without time zone |false |Start of the average weekday AM peak hour. The AM peak hour is the one-hour continuous period between 6:30-10:30am during which the highest motor vehicle volume is observed moving through the roadway, for all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none. For counts with a duration longer than 24 hours, the AM peak is calculated by first calculating ""average"" volumes for each 15-minute period in the day, then finding the hour with the highest motor vehicle volume based on the averaged volumes.|
+|11 |`avg_weekday_am_peak_vol` |numeric |false |Average motor vehicles counted during the AM peak hour. Includes the sum of all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none.|
+|12 |`avg_weekday_pm_peak_hour_start` |time without time zone |false |Start of the average weekday PM peak hour. The PM peak hour is the one-hour continuous period between 2:00-8:00pm during which the highest motor vehicle volume is observed moving through the roadway, for all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none. For counts with a duration longer than 24 hours, the PM peak is calculated by first calculating ""average"" volumes for each 15-minute period in the day, then finding the hour with the highest motor vehicle volume based on the averaged volumes.|
+|13 |`avg_weekday_pm_peak_vol` |numeric |false |Average motor vehicles counted during the PM peak hour. Includes the sum of all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none.|
+|14 |`pct_15` |numeric |false |If speed data are available for the study, the 15th percentile speed is the speed at or below which 15% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|15 |`pct_50` |numeric |false |If speed data are available for the study, the 50th percentile speed is the speed at or below which 50% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|16 |`pct_85` |numeric |false |If speed data are available for the study, the 85th percentile speed is the speed at or below which 85% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|17 |`pct_95` |numeric |false |If speed data are available for the study, the 95th percentile speed is the speed at or below which 95% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|18 |`mean_speed` |numeric |false |If speed data are available for the count, the mean (average) speed of all vehicles over the entire count duration. NOT the same as 50th percentile speed. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
 
 ### Other Useful Tables
 
