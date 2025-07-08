@@ -253,14 +253,10 @@ Remember, TMCs can occur at both intersections and midblocks.
 |42|`s_peds` |integer|NO |Volume of pedestrians that cross the south leg (approach) of the intersection. |
 |43|`e_peds` |integer|NO |Volume of pedestrians that cross the east leg (approach) of the intersection.|
 |44|`w_peds` |integer|NO |Volume of pedestrians that cross the west leg (approach) of the intersection.|
-|45|`n_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
-NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, i.e. in a southbound direction, plus bicycles riding in the crosswalk area across the west leg.|
-|46|`s_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
-NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, i.e. in a northbound direction, plus bicycles riding in the crosswalk area across the east leg.|
-|47|`e_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
-NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, i.e. in a westbound direction, plus bicycles riding in the crosswalk area across the north leg.|
-|48|`w_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach).
-NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, i.e. in a eastbound direction, plus bicycles riding in the crosswalk area across the south leg.|
+|45|`n_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, i.e. in a southbound direction, plus bicycles riding in the crosswalk area across the west leg.|
+|46|`s_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, i.e. in a northbound direction, plus bicycles riding in the crosswalk area across the east leg.|
+|47|`e_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, i.e. in a westbound direction, plus bicycles riding in the crosswalk area across the north leg.|
+|48|`w_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, i.e. in a eastbound direction, plus bicycles riding in the crosswalk area across the south leg.|
 |49|`n_other`|integer|NO | |
 |50|`s_other`|integer|NO | |
 |51|`e_other`|integer|NO | |
