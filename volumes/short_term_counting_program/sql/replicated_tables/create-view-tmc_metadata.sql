@@ -27,8 +27,10 @@ FROM traffic_staging.tmc_metadata;
 
 ALTER TABLE traffic.tmc_metadata
 OWNER TO traffic_bot;
+
 COMMENT ON VIEW traffic.tmc_metadata
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#tmc.table.metadata.';
+IS 'Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE midblock intersections.
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#tmcmetadata';
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE traffic.tmc_metadata TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.tmc_metadata TO rds_superuser WITH GRANT OPTION;
