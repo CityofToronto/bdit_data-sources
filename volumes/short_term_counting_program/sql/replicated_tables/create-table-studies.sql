@@ -34,5 +34,4 @@ GRANT ALL ON TABLE traffic.studies TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.studies TO traffic_bot;
 
 COMMENT ON TABLE traffic.studies
-IS 'Contains metadata for all study types available in MOVE.
-Copied from "move_staging"."counts2_studies" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS '(DO NOT USE) Only use this if you’re comparing directly to MOVE 1 web app. Contains metadata for all study types available in MOVE.';

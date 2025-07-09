@@ -34,5 +34,4 @@ GRANT ALL ON TABLE traffic.centreline2_intersections TO replicator_bot;
 GRANT ALL ON TABLE traffic.centreline2_intersections TO traffic_bot;
 
 COMMENT ON TABLE traffic.centreline2_intersections
-IS 'Contains the MOVE centreline intersection network, these intersections have been filtered to only include intersections that are used in the MOVE midblock network.
-Copied from "move_staging"."centreline2_intersections" by bigdata repliactor DAG at 2025-07-07 12:02.';
+IS 'Contains the MOVE centreline intersection network. These intersections have been filtered to only include intersections that are used in the MOVE midblock network (traffic.centreline2_midblocks).';

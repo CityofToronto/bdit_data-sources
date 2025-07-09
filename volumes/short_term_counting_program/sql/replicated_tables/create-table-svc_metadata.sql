@@ -34,5 +34,5 @@ GRANT ALL ON TABLE traffic.svc_metadata TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.svc_metadata TO traffic_bot;
 
 COMMENT ON TABLE traffic.svc_metadata
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#atr.table.metadata_json.
-Copied from "move_staging"."svc_metadata" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Table containing the metadata for SVCs.
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#trafficsvc_metadata';
