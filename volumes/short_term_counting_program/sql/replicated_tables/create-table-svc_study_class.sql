@@ -41,8 +41,9 @@ GRANT ALL ON TABLE traffic.svc_study_class TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.svc_study_class TO traffic_bot;
 
 COMMENT ON TABLE traffic.svc_study_class
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#atr.table.study-class-human.
-Copied from "move_staging"."svc_study_class" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Table containing 15-minute observations for classification ATRs (SVCs).
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#trafficsvc_study_class';
+
 -- Index: svc_study_class_count_date_idx
 
 -- DROP INDEX IF EXISTS traffic.svc_study_class_count_date_idx;

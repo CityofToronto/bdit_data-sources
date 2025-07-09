@@ -22,6 +22,5 @@ ALTER VIEW traffic.svc_daily_totals OWNER TO traffic_admins;
 
 GRANT SELECT ON TABLE traffic.svc_daily_totals TO bdit_humans;
 
-COMMENT ON VIEW traffic.svc_daily_totals IS
-'A daily summary of traffic.svc_unified_volumes by leg and centreline_id. 
-Only rows with data for every 15 minute timebin are included. ';
+COMMENT ON VIEW traffic.svc_daily_totals
+IS 'A daily summary of `traffic.svc_unified_volumes` by `direction` and `midblock_id`. Only rows with data for every 15 minute timebin are included.';
