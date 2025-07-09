@@ -39,5 +39,5 @@ GRANT ALL ON TABLE traffic.svc_summary_stats TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.svc_summary_stats TO traffic_bot;
 
 COMMENT ON TABLE traffic.svc_summary_stats
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#atr.view.summary-stats.
-Copied from "move_staging"."svc_summary_stats" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Count level summary statistics for all ATRs (SVCs).
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#trafficsvc_summary_stats';

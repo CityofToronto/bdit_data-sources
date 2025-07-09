@@ -46,5 +46,5 @@ GRANT ALL ON TABLE traffic.tmc_summary_stats TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.tmc_summary_stats TO traffic_bot;
 
 COMMENT ON TABLE traffic.tmc_summary_stats
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#tmc.view.summary-stats.
-Copied from "move_staging"."tmc_summary_stats" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Count level summary statistics for all TMCs.
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#traffictmc_summary_stats';

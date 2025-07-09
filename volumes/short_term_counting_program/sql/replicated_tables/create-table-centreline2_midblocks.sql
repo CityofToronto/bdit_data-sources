@@ -43,5 +43,4 @@ GRANT ALL ON TABLE traffic.centreline2_midblocks TO replicator_bot;
 GRANT ALL ON TABLE traffic.centreline2_midblocks TO traffic_bot;
 
 COMMENT ON TABLE traffic.centreline2_midblocks
-IS 'Contains the MOVE centreline midblock network, these midblocks have been simplified from the gcc set to be more representative of a transportation users view of the network. `midblock_id` is the parent column and `centreline_id_array` contains the full list of GCC centrelines that were unioned into a single geom.
-Copied from "move_staging"."centreline2_midblocks" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Contains the MOVE centreline midblock network. These midblocks have been simplified from the GCC set to be more representative of a transportation users view of the network. `midblock_id` is the parent column and `centreline_id_array` contains the full list of GCC centrelines that were unioned into a single geom.';

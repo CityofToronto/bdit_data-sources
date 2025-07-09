@@ -22,8 +22,9 @@ FROM traffic_staging.centreline2_pxo;
 
 ALTER TABLE traffic.centreline2_pxo
 OWNER TO traffic_bot;
+
 COMMENT ON VIEW traffic.centreline2_pxo
-IS 'Contains a mapping of `midblock_id`/`intersection_id` to `pxo` crossing numbers.';
+IS 'Contains a mapping of Pedestrian Crossovers (`pxo`) to `midblock_id`/`intersection_id`. Uses the MOVE midblock network. Note PXOs can be at intersections (intersection_id) or on midblocks (midblock_id).';
 
 GRANT SELECT, REFERENCES, TRIGGER ON TABLE traffic.centreline2_pxo TO bdit_humans WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.centreline2_pxo TO rds_superuser WITH GRANT OPTION;
