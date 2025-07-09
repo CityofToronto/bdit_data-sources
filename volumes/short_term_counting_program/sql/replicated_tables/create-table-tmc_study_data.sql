@@ -73,8 +73,9 @@ GRANT ALL ON TABLE traffic.tmc_study_data TO rds_superuser WITH GRANT OPTION;
 GRANT ALL ON TABLE traffic.tmc_study_data TO traffic_bot;
 
 COMMENT ON TABLE traffic.tmc_study_data
-IS 'Documentation: https://move-etladmin.intra.prod-toronto.ca/docs/database_schema.html#tmc.table.study_human.
-Copied from "move_staging"."tmc_study_data" by bigdata repliactor DAG at 2025-07-04 13:50.';
+IS 'Table containing 15-minute observations for TMCs.
+Documentation: https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/short_term_counting_program/README.md#traffictmc_study_data';
+
 -- Index: tmc_study_data_time_start_idx
 
 -- DROP INDEX IF EXISTS traffic.tmc_study_data_time_start_idx;

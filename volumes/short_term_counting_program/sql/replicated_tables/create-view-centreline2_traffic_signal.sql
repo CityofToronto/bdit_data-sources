@@ -28,8 +28,9 @@ FROM traffic_staging.centreline2_traffic_signal;
 
 ALTER TABLE traffic.centreline2_traffic_signal
 OWNER TO traffic_bot;
+
 COMMENT ON VIEW traffic.centreline2_traffic_signal
-IS 'Contains a mapping of `midblock_id`/`intersection_id` to `px` crossing numbers.';
+IS 'Contains a mapping of Traffic Signals (`px`) to `midblock_id`/`intersection_id`. Uses the MOVE midblock network. Note traffic signals can be at intersections (intersection_id) or on midblocks (midblock_id). See also `gis.traffic_signals` for more parameters for each signal (join on px).';
 
 GRANT SELECT,
 REFERENCES,
