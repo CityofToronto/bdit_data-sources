@@ -52,7 +52,7 @@ accyear | n_collisions | n_involved
 2018 | 62323 | 108142
 2019 | 64209 | 107997
 
-but be aware that due to the ever-refreshing nature of collisions mentioned in the [Readme.md](Readme.md), these numbers will surely change by small amounts with time.
+but be aware that due to the ever-refreshing nature of collisions mentioned in the [readme.md](readme.md), these numbers will surely change by small amounts with time.
 
 For the vast majority of records, it's possible to determine whether the collision event comes from TPS or CRC from the length of the `ACCNB` field. A value other than `NULL` in the `events.changed` field indicates that some aspect of the collision data (usually information about people involved in collision events) has been validated. If we want the number of events, involved and validated involved from the data subdivided by year and data source, we'd do:
 
