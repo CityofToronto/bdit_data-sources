@@ -28,7 +28,7 @@ from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme
 DAG_NAME = 'replicator_table_check'
 DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
 
-README_PATH = os.path.join(repo_path, 'collisions/Readme.md')
+README_PATH = os.path.join(repo_path, 'collisions/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
 default_args = {
