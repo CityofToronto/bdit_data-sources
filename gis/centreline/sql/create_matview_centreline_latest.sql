@@ -23,12 +23,6 @@ WHERE
         'Laneway',
         'Pending');
 
-CREATE TRIGGER refresh_trigger
-AFTER INSERT OR UPDATE OR DELETE
-ON gis_core.centreline
-FOR EACH STATEMENT
-EXECUTE PROCEDURE gis_core.centreline_latest_trigger();
-
 CREATE INDEX gis_core_centreline_latest_geom ON gis_core.centreline_latest USING gist (geom);
 
 CREATE UNIQUE INDEX centreline_latest_unique
