@@ -4,6 +4,21 @@
 >
 > We are building out a new collision intake pipeline to replace the legacy collisions. Eventually (within the next few months-year), we will be winding down this legacy collision dataset. Please see [the new documentation here](./NewCollisions.md).
 
+- [Collisions](#collisions)
+  - [Data Sources \& Pipelines](#data-sources--pipelines)
+  - [Table Structure on the `bigdata` PostgreSQL Database](#table-structure-on-the-bigdata-postgresql-database)
+    - [Collisions Schema (`events` and `involved` Tables)](#collisions-schema-events-and-involved-tables)
+    - [Important Limitations and Caveats About `collisions.acc`](#important-limitations-and-caveats-about-collisionsacc)
+  - [The Daily Collision Replicator](#the-daily-collision-replicator)
+    - [Replicating New Tables](#replicating-new-tables)
+    - [Updating Existing Tables](#updating-existing-tables)
+    - [Changing Column Names During Replication](#changing-column-names-during-replication)
+      - [Using Updatable VIEW as replication destination](#using-updatable-view-as-replication-destination)
+      - [Using TABLE + VIEW](#using-table--view)
+
+
+# Collisions
+
 The collisions dataset contains information about traffic collisions and the people involved, that occurred in the City of Toronto’s Right-of-Way, from approximately 1985 to present, as reported by Toronto Police Services (TPS) or Collision Reporting Centres (CRC). Most of the information in this document pertains to collision data stored in the `bigdata` PostgreSQL database.
 
 
@@ -106,7 +121,9 @@ ALTER TABLE collisions.a OWNER TO collisions_bot;
 
 If you need to update an existing table to match any new modifications introduced by the MOVE team, e.g., dropping columns or changing column types, you should update the replicated table definition according to these changes. If the updated table has dependencies, you need to save and drop them to apply the new changes and then update these dependencies and re-create them again. The [`public.deps_save_and_drop_dependencies_dryrun`](https://github.com/CityofToronto/bdit_pgutils/blob/master/create-function-deps_save_and_drop_dependencies_dryrun.sql) and `public.deps_restore_dependencies` functions might help updating the dependencies in complex cases. Finally, if there are any changes in the table's name or schema, you should also update the `collisions_tables` variable.
 
-### Using Updatable VIEW as replication destination
+### Changing Column Names During Replication
+
+#### Using Updatable VIEW as replication destination
 
 If you want to use different column names in the destination table than the source table, use the following method:
 1. Alter the column names in the destination table to your liking: 
@@ -136,6 +153,24 @@ REVOKE ALL ON TABLE traffic.centreline2_midblocks_view FROM bdit_humans;
 [
     "move_staging.centreline2_midblocks", --source
     "traffic.centreline2_midblocks_view", --insert target (updatable VIEW)
-    "traffic.centreline2_midblocks" --target for `COMMENT ON TABLE...`
+    "traffic.centreline2_midblocks" --target for `COMMENT ON TABLE/VIEW...`
+]
+```
+
+#### Using TABLE + VIEW
+
+If you want to make more extensive changes to the final data than renaming columns, you can also use this alternate method:
+
+1. Move replication table destination to `traffic_staging`
+
+2. Create a view that references new `traffic_staging` destination in `traffic`. 
+
+3. Update the Airflow variable with the replication table pair:
+`["move_staging.centreline2_midblocks", "traffic.centreline2_midblocks"]` becomes:  
+```json
+[
+    "move_staging.centreline2_midblocks", --source
+    "traffic_staging.centreline2_midblocks" --data gets inserted here
+    "traffic.centreline2_midblocks_view", --target for `COMMENT ON TABLE/VIEW...` and also a view which transforms `traffic_staging` data
 ]
 ```
