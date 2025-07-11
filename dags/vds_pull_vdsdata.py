@@ -1,12 +1,12 @@
 import os
 import sys
-from airflow.decorators import dag, task_group, task
 from datetime import datetime, timedelta
+from functools import partial
+
+from airflow.sdk import dag, task_group, task, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
-from functools import partial
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 
 DAG_NAME = 'vds_pull_vdsdata'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
@@ -141,8 +141,8 @@ def vdsdata_dag():
     @task_group
     def summarize_v15():
         """Task group deletes any existing data from RDS summary tables
-        (vds.volumes_15min, vds.volumes_15min_bylane) and then inserts
-        into the same table."""
+        (vds.volumes_15min, vds.volumes_15min_bylane, vds.volumes_daily) and then inserts
+        into the same tables."""
         
         #first deletes and then inserts summarized data into RDS `vds.counts_15min`
         summarize_v15_task = SQLExecuteQueryOperator(
@@ -161,8 +161,17 @@ def vdsdata_dag():
             autocommit=True,
             retries=1
         )
+        
+        #first deletes and then inserts summarized data into RDS `vds.volumes_daily`
+        summarize_volmes_daily_task = SQLExecuteQueryOperator(
+            sql=["delete/delete-volumes_daily.sql", "insert/insert_volumes_daily.sql"],
+            task_id='summarize_volmes_daily',
+            conn_id='vds_bot',
+            autocommit=True,
+            retries=1
+        )
 
-        summarize_v15_task, summarize_v15_bylane_task
+        (summarize_v15_task, summarize_v15_bylane_task) >> summarize_volmes_daily_task
     
     t_done = ExternalTaskMarker(
         task_id="done",
