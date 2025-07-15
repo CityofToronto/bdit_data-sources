@@ -20,6 +20,7 @@ BEGIN
 
 --using a temp table to aply the exclusion constraint should prevent the
 --insert from getting bogged down by large constraint on main table over time
+DROP TABLE IF EXISTS congestion_raw_segments_temp;
 CREATE TEMPORARY TABLE congestion_raw_segments_temp (
     segment_id integer NOT NULL,
     bin_start timestamp without time zone NOT NULL,
