@@ -163,7 +163,7 @@ EXECUTE FORMAT(
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
         UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
         --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
-        --WHERE s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '1 hour'
+        WHERE s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '30 minutes'
         GROUP BY
             s5b.corridor_id,
             dbo.time_grp,
