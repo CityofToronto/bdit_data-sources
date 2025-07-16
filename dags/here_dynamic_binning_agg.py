@@ -42,7 +42,7 @@ default_args = {
     'email_on_success': False,
     'retries': 1,
     'retry_delay': duration(minutes=5),
-    'on_failure_callback': task_fail_slack_alert
+    #'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -64,8 +64,8 @@ def here_dynamic_binning_agg():
         task_id='aggregate_daily',
         conn_id='congestion_bot',
         autocommit=True,
-        retries = 0,
-        execution_timeout=duration(minutes=30)
+        retries = 1,
+        execution_timeout=duration(hours=1)
     )
     aggregate_daily
 
