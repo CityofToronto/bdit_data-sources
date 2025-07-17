@@ -1,4 +1,4 @@
-# Collisions
+# Legacy Collisions
 
 The collisions dataset contains information about traffic collisions and the people involved, that occurred in the City of Toronto’s Right-of-Way, from approximately 1985 to present, as reported by Toronto Police Services (TPS) or Collision Reporting Centres (CRC). Most of the information in this document pertains to collision data stored in the `bigdata` PostgreSQL database.
 
