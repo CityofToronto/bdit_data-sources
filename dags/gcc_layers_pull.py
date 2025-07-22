@@ -117,7 +117,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                 )
 
             @task(map_index_template="{{ table_name }}")
-            def compare_row_counts(conn_id, layer, ds):
+            def compare_row_counts(conn_id, layer, data_interval_end):
                 
                 mapserver = mapserver_name(layer[1].get("mapserver"))
                 schema = layer[1].get("schema_name")
@@ -136,7 +136,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                         include_additional_feature = include_additional_feature
                     )
                 conn = PostgresHook(conn_id).get_conn()
-                dest_count = get_dest_row_count(conn, schema, table_name, is_audited, ds)
+                dest_count = get_dest_row_count(conn, schema, table_name, is_audited, data_interval_end)
                 if src_count != dest_count:
                     msg = f"`{schema}.{table_name}` - Source count: `{src_count}`, Bigdata count: `{dest_count}`"
                     context.get("task_instance").xcom_push(key="extra_msg", value=msg)
