@@ -188,7 +188,7 @@ def vdsdata_dag():
         divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
-                on_failure_callback=slack_alert_data_quality,
+                on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
                 task_id=f"check_rows_vdsdata_div{divid}",
                 sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',
