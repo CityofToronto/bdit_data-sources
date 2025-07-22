@@ -135,7 +135,7 @@ def vdsvehicledata_dag():
         "Data quality checks which may warrant re-running the DAG."
 
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=slack_alert_data_quality,
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
