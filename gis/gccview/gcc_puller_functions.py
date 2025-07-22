@@ -415,7 +415,7 @@ def get_dest_row_count(conn, schema, table, is_audited, version_date):
                 table = sql.Identifier(table)
             ))
         else:
-            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date};").format(
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date}::date;").format(
                 schema = sql.Identifier(schema),
                 table = sql.Identifier(table),
                 version_date = sql.Literal(version_date)
