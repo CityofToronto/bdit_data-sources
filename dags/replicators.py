@@ -124,10 +124,10 @@ for replicator, dag_items in REPLICATORS.items():
     default_args = {
         "owner": ",".join(DAG_OWNERS),
         "depends_on_past": False,
-        "start_date": pendulum.datetime(2023, 10, 31, tz="America/Toronto"),
+        "start_date": datetime(2023, 10, 31, tz="America/Toronto"),
         "email_on_failure": False,
         "retries": 3,
-        "retry_delay": pendulum.duration(minutes=60),
+        "retry_delay": duration(minutes=60),
         "on_failure_callback": task_fail_slack_alert,
     }
 
