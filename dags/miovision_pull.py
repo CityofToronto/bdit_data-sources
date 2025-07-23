@@ -7,7 +7,6 @@ pulled data, checking row count and distinct classification_uids compared to a l
 import sys
 import os
 import pendulum
-from datetime import timedelta
 
 from airflow.decorators import dag, task, task_group
 from airflow.models.param import Param
@@ -46,7 +45,7 @@ default_args = {
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': pendulum.duration(minutes=5),
     'on_failure_callback': task_fail_slack_alert
 }
 
@@ -99,10 +98,13 @@ def pull_miovision_dag():
             INTERSECTION = ()
         else:
             INTERSECTION = tuple(context["params"]["intersection"])
-        
+            
+        #one second before midnight next day
+        end_date = pendulum.from_format(ds, 'YYYY-MM-DD').naive() + pendulum.duration(days=1, seconds=-1)
+
         run_api(
             start_date=ds,
-            end_date=ds_add(ds, 1),
+            end_date=end_date,
             intersection=INTERSECTION,
             pull=True,
             agg=False

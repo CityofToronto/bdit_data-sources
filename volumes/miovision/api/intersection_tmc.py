@@ -1,7 +1,7 @@
 import sys
 import json
 from requests import Session, exceptions
-import datetime
+import pendulum
 import pytz
 import dateutil.parser
 import psycopg2
@@ -45,9 +45,9 @@ def logger():
 logger = logger()
 logger.debug('Start')
 
-time_delta = datetime.timedelta(days=1, seconds=-1)
-default_start = str(datetime.date.today()-time_delta)
-default_end = str(datetime.date.today())
+time_delta = pendulum.duration(days=1)
+default_start = str(pendulum.today().naive()-time_delta)
+default_end = str(pendulum.today().naive()-pendulum.duration(seconds=1))
 TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
@@ -548,7 +548,7 @@ def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     """
     #advised by Miovision to use non-overlapping end_time after encountering duplicates between successive pulls
-    time_delta = datetime.timedelta(hours=24, seconds=-1)
+    time_delta = pendulum.duration(days=1)
     intersections = get_intersection_info(conn, intersection=intersection)
 
     if len(intersections) == 0:
