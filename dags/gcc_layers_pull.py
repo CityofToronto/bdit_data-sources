@@ -197,13 +197,21 @@ DAGS = {
     },
     "ptc": {
         "conn": "gcc_bot",
-        "deployments": ["DEV", "PROD"]
+        "deployments": ["DEV", "PROD"],
+        "downstream_aggs": {
+            "ibms_joined": "REFRESH MATERIALIZED VIEW gis.ibms_joined;",
+            "centreline_version_date": "REFRESH MATERIALIZED VIEW gis.centreline_version_date;",
+            "intersection_version_date": "REFRESH MATERIALIZED VIEW gis.intersection_version_date;",
+            "centreline_intersection_point_version_date": "REFRESH MATERIALIZED VIEW gis.centreline_intersection_point_version_date;"
+        }
     },
     "sirius": {
         "conn": "gcc_bot_sirius",
         "deployments": ["DEV"],
         "downstream_aggs": {
-            "centreline_latest": "REFRESH MATERIALIZED VIEW gis.centreline_latest;"
+            "centreline_latest": "REFRESH MATERIALIZED VIEW gis.centreline_latest;",
+            "centreline_version_date": "REFRESH MATERIALIZED VIEW gis.centreline_version_date;",
+            "intersection_version_date": "REFRESH MATERIALIZED VIEW gis.intersection_version_date;"
         }
     }
 }
