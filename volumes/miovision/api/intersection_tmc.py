@@ -578,7 +578,8 @@ def pull_data(conn, start_time, end_time, intersection, key):
         sys.exit(3)
 
     for c_start_t in daterange(start_time, end_time, time_delta):
-        c_end_t = c_start_t + time_delta
+        #-1s for (sometimes) inclusive end time
+        c_end_t = c_start_t + time_delta - pendulum.duration(seconds=1)
         table = []
         for c_intersec in intersections:
             if c_intersec.is_active(c_start_t):
