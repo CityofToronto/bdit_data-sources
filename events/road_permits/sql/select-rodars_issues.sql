@@ -20,8 +20,8 @@ WITH issues AS (
             8048, --rodars new
             8014 --rodars (old)
         )
-        AND timestamputc >= {start}::date -- noqa: PRS, LT02
-        AND timestamputc < {start}::date + interval '1 day' -- noqa: PRS
+        AND timestamputc >= TIMEZONE('America/Toronto', {start}::date) AT TIME ZONE 'UTC' -- noqa: PRS, LT02
+        AND timestamputc < TIMEZONE('America/Toronto', {start}::date + 1) AT TIME ZONE 'UTC' -- noqa: PRS
     ORDER BY
         divisionid ASC,
         issueid ASC,
