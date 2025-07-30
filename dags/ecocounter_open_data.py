@@ -12,8 +12,7 @@ from airflow.hooks.base import BaseHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
-from airflow.sdk import dag, task, task_group, get_current_context
-from airflow.models import Variable
+from airflow.sdk import dag, task, task_group, get_current_context, Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
