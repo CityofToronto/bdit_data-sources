@@ -16,7 +16,6 @@ from datetime import datetime, timedelta
 import dateutil.parser
 
 from airflow.decorators import dag, task
-from airflow.models import Variable
 from airflow.models.taskinstance import TaskInstance
 from airflow.exceptions import AirflowFailException
 

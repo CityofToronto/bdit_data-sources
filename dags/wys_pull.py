@@ -9,8 +9,7 @@ import dateutil.parser
 from datetime import timedelta
 from googleapiclient.discovery import build
 
-from airflow.models import Variable
-from airflow.sdk import task, dag, task_group, run_if, get_current_context
+from airflow.sdk import task, dag, task_group, run_if, get_current_context, Variable
 from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator

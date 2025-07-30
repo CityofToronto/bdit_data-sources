@@ -9,8 +9,7 @@ import logging
 import pendulum
 from datetime import timedelta
 
-from airflow.sdk import dag
-from airflow.models import Variable
+from airflow.sdk import dag, Variable
 from airflow.sensors.external_task import ExternalTaskSensor
 
 try:

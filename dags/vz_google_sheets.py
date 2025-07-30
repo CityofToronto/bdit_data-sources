@@ -14,9 +14,8 @@ from datetime import timedelta
 from dateutil.parser import parse
 from googleapiclient.discovery import build
 
-from airflow.sdk import dag, task, get_current_context
+from airflow.sdk import dag, task, get_current_context, Variable
 from airflow.exceptions import AirflowFailException
-from airflow.models import Variable
 from airflow.models.param import Param
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
