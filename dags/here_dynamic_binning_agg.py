@@ -12,6 +12,7 @@ or trigger just one day: airflow dags trigger -e 2023-11-02 here_dynamic_binning
 import sys
 import os
 import logging
+from datetime import timedelta
 from pendulum import duration, datetime
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
@@ -65,7 +66,7 @@ def here_dynamic_binning_agg():
         conn_id='congestion_bot',
         autocommit=True,
         retries = 1,
-        execution_timeout=duration(hours=1)
+        execution_timeout=timedelta(hours=1)
     )
     aggregate_daily
 
