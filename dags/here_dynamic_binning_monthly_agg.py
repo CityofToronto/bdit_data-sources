@@ -37,7 +37,7 @@ default_args = {
 @dag(
     DAG_NAME,
     default_args=default_args,
-    schedule='* 10 1 * *', # 10am, first day of month
+    schedule='0 16 1 * *', # 4pm, first day of month
     template_searchpath=os.path.join(repo_path,'here/traffic/sql/dynamic_bins'),
     doc_md = doc_md,
     tags=["HERE", "aggregation"],
