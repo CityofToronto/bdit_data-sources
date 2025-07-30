@@ -13,10 +13,9 @@ import pendulum
 import logging
 from datetime import timedelta
 
-from airflow.sdk import dag, task, task_group
+from airflow.sdk import dag, task, task_group, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
