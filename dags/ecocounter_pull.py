@@ -13,8 +13,7 @@ from datetime import timedelta
 import dateutil.parser
 import logging
 
-from airflow.sdk import dag, task, task_group
-from airflow.models import Variable
+from airflow.sdk import dag, task, task_group, Variable
 from airflow.hooks.base import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator

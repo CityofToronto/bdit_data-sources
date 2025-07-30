@@ -4,10 +4,9 @@ import logging
 import pendulum
 from datetime import timedelta
 
-from airflow.sdk import dag
+from airflow.sdk import dag, Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, SQLCheckOperator
 from airflow.operators.sql import SQLCheckOperator
-from airflow.models import Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
