@@ -3,7 +3,7 @@ import sys
 from functools import partial
 from datetime import datetime, timedelta
 
-from airflow.decorators import dag, task
+from airflow.decorators import dag, task, task_group
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 
@@ -17,6 +17,7 @@ from events.road_permits.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 
 README_PATH = os.path.join(repo_path, 'events/road_permits/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -60,9 +61,41 @@ def rodars_dag():
         itsc_bot = PostgresHook('itsc_postgres')
         events_bot = PostgresHook('events_bot')
         fetch_and_insert_location_data(select_conn=itsc_bot, insert_conn=events_bot, start_date=ds)
-    #add a delete task to remove outdated revisions?
 
+    @task_group
+    def data_checks():
+        check_src_issue_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_src_issue_count",
+            sql='''
+                SELECT
+                    True AS "_check",
+                    COUNT(DISTINCT divisionid::text || issueid::text) AS issue_count
+                FROM public.issuedata
+                WHERE divisionid IN (
+                    8048, --rodars new
+                    8014 --rodars (old)
+                )''',
+            conn_id="itsc_postgres"
+        )
+        check_src_issue_count.doc_md = "Check the source issue count."
+        
+        check_dest_issue_count = SQLCheckOperatorWithReturnValue(
+            task_id="check_dest_issue_count",
+            sql='''
+                SELECT
+                    COUNT(DISTINCT divisionid::text || issueid::text)
+                    = {{ti.xcom_pull(key='return_value', task_ids='data_checks.check_src_issue_count')[1]}} AS "_check",
+                    COUNT(DISTINCT divisionid::text || issueid::text) AS issue_count,
+                    {{ti.xcom_pull(key='return_value', task_ids='data_checks.check_src_issue_count')[1]}} AS src_count
+                FROM congestion_events.rodars_issues
+                ''',
+            conn_id="events_bot"
+        )
+        check_src_issue_count.doc_md = "Check the dest issue count vs the source issue count."
+
+        check_src_issue_count >> check_dest_issue_count
+        
     #these tasks are not dependent, but this helps so only one fails at a time
-    pull_rodars_issues() >> pull_rodar_locations()
+    pull_rodars_issues() >> pull_rodar_locations() >> data_checks()
 
 rodars_dag()
