@@ -16,8 +16,8 @@ WITH issues AS (
         divisionid,
         issueid
     HAVING
-        MAX(timestamputc) >= {start}::date -- noqa: PRS, LT02
-        AND MAX(timestamputc) < {start}::date + interval '1 day' -- noqa: PRS
+        MAX(timestamputc) >= TIMEZONE('America/Toronto', {start}::date) AT TIME ZONE 'UTC' -- noqa: PRS, LT02
+        AND MAX(timestamputc) < TIMEZONE('America/Toronto', {start}::date + 1) AT TIME ZONE 'UTC' -- noqa: PRS
 )
 
 SELECT
