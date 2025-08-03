@@ -1,20 +1,20 @@
-﻿DROP SCHEMA gtfs_raph CASCADE;
-CREATE SCHEMA gtfs_raph;
+﻿DROP SCHEMA gtfs CASCADE;
+CREATE SCHEMA gtfs;
 
-CREATE TABLE gtfs_raph.feed_info (
+CREATE TABLE gtfs.feed_info (
 feed_id serial,
 insert_date timestamptz
 );
 
 
-CREATE TABLE gtfs_raph.calendar_dates_imp (
+CREATE TABLE gtfs.calendar_dates_imp (
 service_id smallint not null,
 date_ DATE not null ,
 exception_type smallint not null,
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.calendar_imp(
+CREATE TABLE gtfs.calendar_imp(
 service_id smallint not null,
  monday boolean not null,
  tuesday boolean not null,
@@ -28,7 +28,7 @@ service_id smallint not null,
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.calendar_dates  (
+CREATE TABLE gtfs.calendar_dates  (
 service_id int,
 date_ BIGINT ,
 exception_type  int,
@@ -36,7 +36,7 @@ feed_id int
 );
 
 
-CREATE TABLE gtfs_raph.calendar (
+CREATE TABLE gtfs.calendar (
 service_id INT ,
 monday INT,
 tuesday INT,
@@ -50,7 +50,7 @@ end_date bigint ,
 feed_id INT 
 );
 
-CREATE TABLE gtfs_raph.routes(
+CREATE TABLE gtfs.routes(
 route_id int PRIMARY KEY,
 agency_id smallint NOT NULL,
 route_short_name TEXT NOT NULL,
@@ -63,7 +63,7 @@ route_text_color CHAR(6),
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.stop_times(
+CREATE TABLE gtfs.stop_times(
 trip_id bigint NOT NULL,
 arrival_time interval NOT NULL,
 departure_time interval NOT NULL,
@@ -76,7 +76,7 @@ shape_dist_traveled numeric(7,4) DEFAULT 0 ,
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.stops(
+CREATE TABLE gtfs.stops(
 stop_id INT PRIMARY KEY,
 stop_code TEXT NOT NULL,
 stop_name TEXT NOT NULL,
@@ -93,7 +93,7 @@ wheelchair_boarding SMALLINT ,
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.shapes (
+CREATE TABLE gtfs.shapes (
 shape_id BIGINT NOT NULL,
 shape_pt_lat TEXT NOT NULL,
 shape_pt_lon TEXT NOT NULL,
@@ -102,14 +102,14 @@ shape_dist_traveled numeric(7,4) DEFAULT 0 ,
 feed_id int
 );
 
-CREATE TABLE gtfs_raph.shapes_geom(
+CREATE TABLE gtfs.shapes_geom(
 shape_id BIGINT NOT NULL,
 feed_id int,
 geom GEOMETRY(LineString, 4326)
 
 );
 
-CREATE TABLE gtfs_raph.trips(
+CREATE TABLE gtfs.trips(
 route_id INT NOT NULL,
 service_id SMALLINT NOT NULL,
 trip_id BIGINT NOT NULL,
@@ -122,4 +122,4 @@ wheelchair_accessible SMALLINT,
 feed_id int
 );
 
-ALTER TABLE gtfs_raph.trips ADD COLUMN bikes_allowed INTEGER;
+ALTER TABLE gtfs.trips ADD COLUMN bikes_allowed INTEGER;

@@ -1,7 +1,7 @@
 ﻿/*Creates views to display only the most recent GTFS schedule for each table type
 */
 
-SET search_path = gtfs_raph, pg_catalog;
+SET search_path = gtfs, pg_catalog;
 
 
 CREATE VIEW calendar_latest AS (
