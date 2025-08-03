@@ -1,23 +1,23 @@
 ﻿
-create or replace function gtfs_raph.calendar_dates_insert() returns trigger as
+create or replace function gtfs.calendar_dates_insert() returns trigger as
 $BODY$
 BEGIN
-INSERT INTO gtfs_raph.calendar_dates_imp
+INSERT INTO gtfs.calendar_dates_imp
 VALUES(NEW.service_id, to_date(NEW.date_::TEXT, 'YYYYMMDD'), NEW.exception_type, NEW.feed_id);
 RETURN NULL;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
-ALTER FUNCTION gtfs_raph.calendar_dates_insert()
+ALTER FUNCTION gtfs.calendar_dates_insert()
   OWNER TO rdumas;
 
-create trigger calendar_dates_insert BEFORE insert on gtfs_raph.calendar_dates for each row execute procedure gtfs_raph.calendar_dates_insert();
+create trigger calendar_dates_insert BEFORE insert on gtfs.calendar_dates for each row execute procedure gtfs.calendar_dates_insert();
 
-create or replace function gtfs_raph.calendar_insert() returns trigger as
+create or replace function gtfs.calendar_insert() returns trigger as
 $BODY$
 BEGIN
-INSERT INTO gtfs_raph.calendar_imp
+INSERT INTO gtfs.calendar_imp
 VALUES (
 NEW.service_id,
 NEW.monday = 1,
@@ -35,13 +35,13 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
-ALTER FUNCTION gtfs_raph.calendar_insert()
+ALTER FUNCTION gtfs.calendar_insert()
   OWNER TO rdumas;
 
-  create trigger calendar_insert BEFORE insert on gtfs_raph.calendar for each row execute procedure gtfs_raph.calendar_insert();
+  create trigger calendar_insert BEFORE insert on gtfs.calendar for each row execute procedure gtfs.calendar_insert();
 
 
-CREATE OR REPLACE FUNCTION gtfs_raph.trg_mk_geom()
+CREATE OR REPLACE FUNCTION gtfs.trg_mk_geom()
   RETURNS trigger AS
 $BODY$
     BEGIN
@@ -54,7 +54,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER
   COST 100;
-ALTER FUNCTION gtfs_raph.trg_mk_geom()
+ALTER FUNCTION gtfs.trg_mk_geom()
   OWNER TO rdumas;
 
-  create trigger create_geom BEFORE INSERT on gtfs_raph.stops for each row execute procedure gtfs_raph.trg_mk_geom();
+  create trigger create_geom BEFORE INSERT on gtfs.stops for each row execute procedure gtfs.trg_mk_geom();
