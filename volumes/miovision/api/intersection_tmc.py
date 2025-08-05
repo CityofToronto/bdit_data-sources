@@ -508,6 +508,9 @@ class Intersection:
         if self.date_decommissioned is not None:
             return ((cdate > self.date_installed)
                     & (cdate < self.date_decommissioned))
+        #also try pulling intersection if it has not been configured yet
+        if self.date_installed is None:
+            return True
         return cdate > self.date_installed
 
 
