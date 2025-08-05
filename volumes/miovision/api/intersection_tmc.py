@@ -1,7 +1,7 @@
 import sys
 import json
 from requests import Session, exceptions
-import datetime
+import pendulum
 import pytz
 import dateutil.parser
 import psycopg2
@@ -45,9 +45,9 @@ def logger():
 logger = logger()
 logger.debug('Start')
 
-time_delta = datetime.timedelta(days=1)
-default_start = str(datetime.date.today()-time_delta)
-default_end = str(datetime.date.today())
+time_delta = pendulum.duration(days=1)
+default_start = str(pendulum.today().naive()-time_delta)
+default_end = str(pendulum.today().naive()-pendulum.duration(seconds=1))
 TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
@@ -508,6 +508,9 @@ class Intersection:
         if self.date_decommissioned is not None:
             return ((cdate > self.date_installed)
                     & (cdate < self.date_decommissioned))
+        #also try pulling intersection if it has not been configured yet
+        if self.date_installed is None:
+            return True
         return cdate > self.date_installed
 
 
@@ -547,7 +550,8 @@ def check_dst(start_time, end_time):
 def pull_data(conn, start_time, end_time, intersection, key):
     """Pulls data from Miovision API for the specified range and intersection(s) and inserts into volumes table.
     """
-    time_delta = datetime.timedelta(hours=24)
+    #advised by Miovision to use non-overlapping end_time after encountering duplicates between successive pulls
+    time_delta = pendulum.duration(days=1)
     intersections = get_intersection_info(conn, intersection=intersection)
 
     if len(intersections) == 0:
@@ -577,7 +581,8 @@ def pull_data(conn, start_time, end_time, intersection, key):
         sys.exit(3)
 
     for c_start_t in daterange(start_time, end_time, time_delta):
-        c_end_t = c_start_t + time_delta
+        #-1s for (sometimes) inclusive end time
+        c_end_t = c_start_t + time_delta - pendulum.duration(seconds=1)
         table = []
         for c_intersec in intersections:
             if c_intersec.is_active(c_start_t):
