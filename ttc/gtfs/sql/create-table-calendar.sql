@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS gtfs.calendar
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.calendar
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.calendar FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.calendar FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.calendar TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.calendar TO dbadmin;
+GRANT ALL ON TABLE gtfs.calendar TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.calendar TO gtfs_bot;
 

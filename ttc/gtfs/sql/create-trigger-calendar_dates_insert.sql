@@ -17,9 +17,9 @@ END;
 $BODY$;
 
 ALTER FUNCTION gtfs.calendar_dates_insert()
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
-GRANT EXECUTE ON FUNCTION gtfs.calendar_dates_insert() TO dbadmin;
+GRANT EXECUTE ON FUNCTION gtfs.calendar_dates_insert() TO gtfs_admins;
 
 GRANT EXECUTE ON FUNCTION gtfs.calendar_dates_insert() TO gtfs_bot;
 

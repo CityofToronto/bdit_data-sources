@@ -28,9 +28,9 @@ END;
 $BODY$;
 
 ALTER FUNCTION gtfs.mk_shape_geom()
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
-GRANT EXECUTE ON FUNCTION gtfs.mk_shape_geom() TO dbadmin;
+GRANT EXECUTE ON FUNCTION gtfs.mk_shape_geom() TO gtfs_admins;
 
 GRANT EXECUTE ON FUNCTION gtfs.mk_shape_geom() TO gtfs_bot;
 
