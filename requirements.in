@@ -19,7 +19,7 @@ pip-tools==7.4.1
 
 # pipelines
 bs4==0.0.1
-env-canada
+#env-canada 3moving to Morbius for Python 3.12
 geopandas==1.0.1
 holidays==0.31
 requests-oauthlib
