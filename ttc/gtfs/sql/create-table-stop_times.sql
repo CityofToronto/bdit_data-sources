@@ -24,14 +24,14 @@ CREATE TABLE IF NOT EXISTS gtfs.stop_times
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.stop_times
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.stop_times FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.stop_times FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.stop_times TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.stop_times TO dbadmin;
+GRANT ALL ON TABLE gtfs.stop_times TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.stop_times TO gtfs_bot;
 -- Index: fki_stop_times_feed_id_fkey

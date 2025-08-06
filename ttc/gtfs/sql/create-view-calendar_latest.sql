@@ -20,8 +20,8 @@ FROM gtfs.calendar_imp
 ORDER BY calendar_imp.feed_id ASC, calendar_imp.end_date DESC;
 
 ALTER TABLE gtfs.calendar_latest
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 GRANT SELECT ON TABLE gtfs.calendar_latest TO bdit_humans;
-GRANT ALL ON TABLE gtfs.calendar_latest TO dbadmin;
+GRANT ALL ON TABLE gtfs.calendar_latest TO gtfs_admins;
 

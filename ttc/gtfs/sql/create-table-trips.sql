@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS gtfs.trips
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.trips
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.trips FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.trips FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.trips TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.trips TO dbadmin;
+GRANT ALL ON TABLE gtfs.trips TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.trips TO gtfs_bot;
 -- Index: fki_trips_feed_id_fkey

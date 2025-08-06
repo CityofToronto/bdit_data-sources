@@ -26,14 +26,14 @@ CREATE TABLE IF NOT EXISTS gtfs.calendar_imp
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.calendar_imp
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.calendar_imp FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.calendar_imp FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.calendar_imp TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.calendar_imp TO dbadmin;
+GRANT ALL ON TABLE gtfs.calendar_imp TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.calendar_imp TO gtfs_bot;
 -- Index: fki_calendar_imp_feed_id_fkey

@@ -12,8 +12,8 @@ FROM gtfs.shapes_geom
 JOIN gtfs.calendar_latest USING (feed_id);
 
 ALTER TABLE gtfs.shapes_geom_latest
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 GRANT SELECT ON TABLE gtfs.shapes_geom_latest TO bdit_humans;
-GRANT ALL ON TABLE gtfs.shapes_geom_latest TO dbadmin;
+GRANT ALL ON TABLE gtfs.shapes_geom_latest TO gtfs_admins;
 
