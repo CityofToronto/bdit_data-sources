@@ -1,11 +1,10 @@
-# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.10.2/constraints-no-providers-3.10.txt
+# Airflow constraints pulled from https://raw.githubusercontent.com/apache/airflow/constraints-2.11.0/constraints-no-providers-3.10.txt
 -c constraints.txt
 
 # Airflow
-apache-airflow==2.10.2
+apache-airflow==2.11.0
 
 # Airflow service providers
-apache-airflow-providers-celery
 apache-airflow-providers-google
 apache-airflow-providers-postgres
 apache-airflow-providers-slack
@@ -20,7 +19,7 @@ pip-tools==7.4.1
 
 # pipelines
 bs4==0.0.1
-env-canada==0.6.1
+env-canada
 geopandas==1.0.1
 holidays==0.31
 requests-oauthlib
