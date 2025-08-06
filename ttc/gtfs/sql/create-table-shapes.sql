@@ -20,14 +20,14 @@ CREATE TABLE IF NOT EXISTS gtfs.shapes
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.shapes
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.shapes FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.shapes FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.shapes TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.shapes TO dbadmin;
+GRANT ALL ON TABLE gtfs.shapes TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.shapes TO gtfs_bot;
 -- Index: fki_shapes_feed_id_fkey

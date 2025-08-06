@@ -18,8 +18,8 @@ FROM gtfs.trips
 JOIN gtfs.calendar_latest USING (feed_id, service_id);
 
 ALTER TABLE gtfs.trips_latest
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 GRANT SELECT ON TABLE gtfs.trips_latest TO bdit_humans;
-GRANT ALL ON TABLE gtfs.trips_latest TO dbadmin;
+GRANT ALL ON TABLE gtfs.trips_latest TO gtfs_admins;
 

@@ -18,9 +18,9 @@ END;
 $BODY$;
 
 ALTER FUNCTION gtfs.trg_mk_geom()
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
-GRANT EXECUTE ON FUNCTION gtfs.trg_mk_geom() TO dbadmin;
+GRANT EXECUTE ON FUNCTION gtfs.trg_mk_geom() TO gtfs_admins;
 
 GRANT EXECUTE ON FUNCTION gtfs.trg_mk_geom() TO gtfs_bot;
 

@@ -28,14 +28,14 @@ CREATE TABLE IF NOT EXISTS gtfs.stops
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS gtfs.stops
-OWNER TO dbadmin;
+OWNER TO gtfs_admins;
 
 REVOKE ALL ON TABLE gtfs.stops FROM bdit_humans;
 REVOKE ALL ON TABLE gtfs.stops FROM gtfs_bot;
 
 GRANT SELECT ON TABLE gtfs.stops TO bdit_humans;
 
-GRANT ALL ON TABLE gtfs.stops TO dbadmin;
+GRANT ALL ON TABLE gtfs.stops TO gtfs_admins;
 
 GRANT INSERT, SELECT, UPDATE ON TABLE gtfs.stops TO gtfs_bot;
 -- Index: fki_stops_feed_id_fkey
