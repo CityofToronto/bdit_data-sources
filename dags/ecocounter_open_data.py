@@ -8,17 +8,16 @@ import logging
 import pendulum
 from functools import partial
 
-from airflow.decorators import dag, task, task_group
-from airflow.models import Variable 
 from airflow.hooks.base import BaseHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.date_time import DateTimeSensor
+from airflow.providers.standard.sensors.date_time import DateTimeSensor
 from airflow.macros import ds_format
-from airflow.operators.python import get_current_context
+from airflow.sdk import dag, task, task_group, get_current_context, Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
     from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 except ModuleNotFoundError:
@@ -30,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'ecocounter_open_data'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -89,7 +88,7 @@ def ecocounter_open_data_dag():
         timeout=10*86400,
         mode="reschedule",
         poke_interval=3600*24,
-        target_time="{{ next_execution_date.replace(day=10) }}",
+        target_time="{{ data_interval_end.replace(day=10) }}",
     )
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.

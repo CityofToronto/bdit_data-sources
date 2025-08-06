@@ -10,14 +10,16 @@ import pendulum
 from datetime import timedelta
 from functools import partial
 
-from airflow.decorators import dag
-from airflow.models import Variable 
+from airflow.sdk import dag, Variable
 from airflow.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from dags.dag_owners import owners
+    from airflow3_bdit_dag_utils.utils.dag_functions import (
+        task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    )
     from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -26,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 DAG_NAME = 'vds_check'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -64,7 +66,7 @@ def vds_check_dag():
     )
 
     check_missing_centreline_id = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=slack_alert_data_quality,
+        on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
         task_id="check_missing_centreline_id",
         sql="select-missing_centreline.sql",
         conn_id="vds_bot"
@@ -74,7 +76,7 @@ def vds_check_dag():
     '''
 
     check_missing_expected_bins = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=slack_alert_data_quality,
+        on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
         task_id="check_missing_expected_bins",
         sql="select-missing_expected_bins.sql",
         conn_id="vds_bot"

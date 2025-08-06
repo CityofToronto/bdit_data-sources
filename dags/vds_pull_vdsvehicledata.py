@@ -1,23 +1,25 @@
 import os
 import sys
-from airflow.decorators import dag, task_group, task
+import pendulum
+from functools import partial
 from datetime import datetime, timedelta
+
+from airflow.sdk import dag, task_group, task, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
-from functools import partial
 from airflow.sensors.external_task import ExternalTaskSensor
-
-DAG_NAME = 'vds_pull_vdsvehicledata'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 
 from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
 from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 from airflow3_bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
+
+DAG_NAME = 'vds_pull_vdsvehicledata'
+DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
 
 README_PATH = os.path.join(repo_path, 'volumes/vds/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
@@ -25,7 +27,7 @@ DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': datetime(2021, 11, 1),
+    'start_date': pendulum.datetime(2021, 11, 1, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 5,
@@ -132,7 +134,7 @@ def vdsvehicledata_dag():
         "Data quality checks which may warrant re-running the DAG."
 
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=slack_alert_data_quality,
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
