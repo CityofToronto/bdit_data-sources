@@ -99,10 +99,20 @@ def gtfs_pull():
         """Downloads data and saves in `open_data/gtfs` folder inside Airflow home directory."""
         
         #download file
-        gtfs_download=requests.get(download_url)
-       
-        if gtfs_download.status_code != 200:
-            raise Exception('Error' + str(gtfs_download.status_code))
+        try:
+            gtfs_download=requests.get(download_url)
+            gtfs_download.raise_for_status()
+        except requests.exceptions.HTTPError as err_h:
+            LOGGER.error("Invalid HTTP response: %s", err_h)
+        except requests.exceptions.ConnectionError as err_c:
+            LOGGER.error("Network problem: %s", err_c)
+        except requests.exceptions.Timeout as err_t:
+            LOGGER.error("Timeout: %s", err_t)
+        except requests.exceptions.RequestException as err:
+            LOGGER.error("Error: %s", err)
+        else:
+            if gtfs_download.status_code != 200:
+                LOGGER.error("Query was not successful. Response: %s", gtfs_download)
     
         #create new folder
         last_refreshed = str(ti.xcom_pull(key='last_refreshed', task_ids='download_url'))
@@ -138,6 +148,7 @@ def gtfs_pull():
         /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.stop_times(trip_id, arrival_time, departure_time, stop_id, stop_sequence, stop_headsign, pickup_type, drop_off_type, shape_dist_traveled) FROM 'stop_times.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
         /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.stops(stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, parent_station, stop_timezone, wheelchair_boarding) FROM 'stops.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
         /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.trips(route_id, service_id, trip_id, trip_headsign, trip_short_name, direction_id, block_id, shape_id, bikes_allowed, wheelchair_accessible) FROM 'trips.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
+        rm -rf {dir}
         """
 
     #Update feed_id attribute across all the tables
