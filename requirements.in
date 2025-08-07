@@ -9,10 +9,10 @@ pip-tools==7.4.1
 
 # pipelines - use task.virtualenv instead
 #bs4==0.0.1
-#env-canada 3moving to Morbius for Python 3.12
-#geopandas==1.0.1
-#holidays==0.31
-#requests-oauthlib
+env-canada
+geopandas==1.0.1
+holidays==0.31
+requests-oauthlib
 
 # development
 ipython
