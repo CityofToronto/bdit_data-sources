@@ -150,7 +150,7 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     #create pandas df and restructure
     final = pd.concat(dfs, ignore_index=True)
     final.rename(columns={0: "alertId", 1: "alertStartDateTime", 2: "alertEndDateTime", 3: "intersection_id", 4: "type"}, inplace = True)
-    final.replace({np.NaN: None}, inplace = True)
+    final.replace({np.nan: None}, inplace = True)
     #convert to tuples for inserting
     values = list(final.itertuples(index=False, name=None))
 

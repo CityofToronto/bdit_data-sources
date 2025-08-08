@@ -91,7 +91,7 @@ def validate_school_info(con, row):
     
     return ret_val
 
-def within_toronto(con, coords):
+def within_toronto(engine, coords):
     """
     Returns whether all the coordinate pairs in the string are within the boundaries of Toronto.
 
@@ -112,8 +112,12 @@ def within_toronto(con, coords):
             pairs_str = coords.split(';')
             pairs = [tuple(map(float, i.split(','))) for i in pairs_str]
             
+            con = engine.raw_connection()
             to_boundary_sql = "SELECT * FROM gis.toronto_boundary"
-            to_boundary = gpd.GeoDataFrame.from_postgis(to_boundary_sql, con).to_crs(epsg=2952).buffer(50).to_crs(epsg=4326)
+            try:
+                to_boundary = gpd.GeoDataFrame.from_postgis(to_boundary_sql, con).to_crs(epsg=2952).buffer(50).to_crs(epsg=4326)
+            finally:
+                con.close()
             
             for pair in pairs:
                 point = Point(pair[1], pair[0]) # GeoPandas uses long-lat coordinate order
