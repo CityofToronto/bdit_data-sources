@@ -21,7 +21,7 @@ Start with [bdit_collisions/pipelines](https://github.com/CityofToronto/bdit_col
 
 ### Where can I find the dataset?
 
-As of 2025-08-13, you can find the new dataset in `bigdata`, under the `collisions_compare` schema.
+As of 2025-08-13, you can find the new dataset in `bigdata`, under the `collisions_pipeline` schema.
 
 ### Table Structure
 
@@ -42,5 +42,5 @@ Additional purpose-built views:
 
 ### Who to contact with questions?
 
-Please direct your questions, bugs, and requests to the Collision Pipeline Team (Natalie, Adam, Maddy, Leo).
+Please direct your questions, bugs, and requests to the Collision Pipeline Team (Natalie, Adam, Maddy, Leo). Or, [log an issue in bdit_collisions](https://github.com/CityofToronto/bdit_collisions/issues).
 
