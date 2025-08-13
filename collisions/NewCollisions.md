@@ -13,7 +13,19 @@ The *new* collision dataset contains information about traffic collisions, and t
 - Data Source: Toronto Police Services (TPS) reported collisions ONLY
 - No verified or human edited data
 
+### Documentation
+
+The new collision pipeline is thoroughly documented in [bdit_collisions](https://github.com/CityofToronto/bdit_collisions/tree/qa).
+
+Start with [bdit_collisions/pipelines](https://github.com/CityofToronto/bdit_collisions/tree/qa/pipelines), and follow the breadcrumbs from there.
+
+### Where can I find the dataset?
+
+As of 2025-08-13, you can find the new dataset in `bigdata`, under the `collisions_compare` schema.
+
 ### Table Structure
+
+There are three main materialized views: `event_location`, `involved`, and `vehicle`. These three concepts have been intentionally separated to address some of the shortcomings of the legacy dataset (`ACC`) (e.g. inconsistent event-level data across involved rows, a super wide table).
 
 Core views:
 
@@ -27,4 +39,8 @@ Additional purpose-built views:
 - `damage_city_property`: Collisions that resulted in damage to City of Toronto property. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#city_dmg-view)
 - `acc`: A backwards-compatible translation of the new dataset to the legacy structure. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#acc-view)
 - `vz`: Collision classifications for Vision Zero. Classified by involved road users, collision impact type/scenario, and location. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#vz_view-view)
+
+### Who to contact with questions?
+
+Please direct your questions, bugs, and requests to the Collision Pipeline Team (Natalie, Adam, Maddy, Leo).
 
