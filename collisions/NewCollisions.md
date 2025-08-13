@@ -24,7 +24,7 @@ Core views:
 Additional purpose-built views:
 
 - `sla`: SLA between collision date and load date. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#sla-view)
-- `damage_city_property`: Collisions that resulted in damage to City of Toronto property. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#damage_city_property-view)
+- `damage_city_property`: Collisions that resulted in damage to City of Toronto property. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#city_dmg-view)
 - `acc`: A backwards-compatible translation of the new dataset to the legacy structure. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#acc-view)
 - `vz`: Collision classifications for Vision Zero. Classified by involved road users, collision impact type/scenario, and location. [LINK](https://github.com/CityofToronto/bdit_collisions/tree/qa/views#vz_view-view)
 
