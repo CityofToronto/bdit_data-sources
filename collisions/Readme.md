@@ -1,5 +1,9 @@
 # Legacy Collisions
 
+> [!Important]
+>
+> We are building out a new collision intake pipeline to replace the legacy collisions. Eventually (within the next few months-year), we will be winding down this legacy collision dataset. Please see [the new documentation here](./NewCollisions.md).
+
 The collisions dataset contains information about traffic collisions and the people involved, that occurred in the City of Toronto’s Right-of-Way, from approximately 1985 to present, as reported by Toronto Police Services (TPS) or Collision Reporting Centres (CRC). Most of the information in this document pertains to collision data stored in the `bigdata` PostgreSQL database.
 
 

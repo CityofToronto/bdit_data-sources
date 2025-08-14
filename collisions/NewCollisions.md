@@ -12,6 +12,7 @@ The *new* collision dataset contains information about traffic collisions, and t
 - Date Range: January 1, 2023 to present
 - Data Source: Toronto Police Services (TPS) reported collisions ONLY
 - No verified or human edited data
+- As of 2025-08-14, we are _not_ filtering out private property collisions (but will introduce this soon)
 
 ### Documentation
 
