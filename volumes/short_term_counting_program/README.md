@@ -7,35 +7,28 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Introduction](#introduction)
 - [What is counted?](#what-is-counted)
   - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
-  - [Automated Traffic Record (ATR)](#automated-traffic-record-atr)
+  - [Midblock Speed-Volume-Classification (SVC) (Previously Automated Traffic Record (ATR))](#midblock-speed-volume-classification-svc-previously-automated-traffic-record-atr)
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
 - [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
   - [Core Tables](#core-tables)
-  - [Other Useful Tables](#other-useful-tables)
-- [Relevant Tables](#relevant-tables)
-  - [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics)
-  - [TMC Observations (`det`)](#tmc-observations-det)
     - [Vehicle movement](#vehicle-movement)
     - [Bike movement](#bike-movement)
     - [Pedestrian movement](#pedestrian-movement)
-  - [ATR Metadata (`countinfo`)](#atr-metadata-countinfo)
-  - [ATR Observations (`cnt_det`)](#atr-observations-cnt_det)
-  - [Spatial-Temporal Reference (`arterydata`)](#spatial-temporal-reference-arterydata)
-    - [What is an arterycode?](#what-is-an-arterycode)
-    - [From arterycode to centreline](#from-arterycode-to-centreline)
-  - [`category`](#category)
-    - [Category Reference](#category-reference)
+    - [TMC Relations](#tmc-relations)
+    - [SVC Relations](#svc-relations)
+  - [Other Useful Tables](#other-useful-tables)
 - [Useful Views](#useful-views)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
+- [What's the old FLOW Oracle Schema?](#whats-the-old-flow-oracle-schema)
 
 ## Introduction
 
 The City of Toronto collects ad-hoc traffic volume data for projects and service requests. The traffic data collection program serves many internal transportation projects and operations teams for project planning, capital planning, engineering design, project analysis, and operational functions like signal timing.
 
-The most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Automated Traffic Recorder** (ATR) count. TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. ATRs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
+The most common traffic studies conducted are the **Turning Movement Count** (TMC) and the **Midblock Speed-Volume-Classification (SVC)** count (previously known as the **Automated Traffic Recorder** (ATR) count). TMCs observe movements of motor vehicle, bicycle, and pedestrian volumes at intersections. SVCs observe volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road.
 
 Other studies include pedestrian delay and classification, pedestrian crossover observation, stop-sign compliance, queue-delay, cordon count, and radar speed studies.
 
@@ -51,23 +44,19 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
   - Pedestrian: pedestrian volume by leg of intersection crossed
 
 #### Data Elements <!-- omit in toc -->
-* Location Identifier (SLSN *Node* ID)
 * 15 min aggregated interval time
 * 15 min aggregated volume per movement (turning and approach) by:
 	- vehicle types
 	- cyclists and pedestrian counts are approach only
 	
 #### Notes <!-- omit in toc -->
-* No regular data load schedule
-* Data files collected by 2-3 staff members
-* Manually geo-reference volume data to an SLSN node during data import process
 * Counts are typically conducted on Tuesdays, Wednesdays, and/or Thursdays during school season (September - June) for 1 to 3 consecutive days
 * If collected data varies more than defined historical value threshold by 10%, the collected data will not be loaded
 * Volumes are available at both signalized and non-signalized intersections
 * Each count station is given a unique identifier to avoid duplicate records
 * Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents
 
-### Automated Traffic Record (ATR)
+### Midblock Speed-Volume-Classification (SVC) (Previously Automated Traffic Record (ATR))
 
 - Volume
   - Direction
@@ -82,7 +71,6 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
   - Volume
 
 #### Data Elements <!-- omit in toc -->
-* Location Identifier (SLSN *Link* ID)
 * Direction
 * 15 min aggregated interval time
 * 15 min volume
@@ -91,7 +79,6 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
 #### Notes <!-- omit in toc -->
 * The counts represent roadway and direction(s), not on a lane-by-lane level
 * No regular data load schedule
-* Manually geo-reference volume data to an SLSN node during data import process
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
 
@@ -101,7 +88,7 @@ The City of Toronto retains a traffic counting contractor who conducts data coll
 
 Data are collected through various technologies. Originally, data were collected by field staff who would manually observe and record volumes. Pneumatic road tubes were introduced to record motor vehicle volumes, speeds, and classifications. More recently, counting has shifted to video observation.
 
-Once the City receives data from the contractor, staff load the data into our database. Until recently, staff would load data files into a legacy Oracle database through an application called "FlowLoad". Data would then be retrieved through a user interface application called "Flow", where the data were formatted into nice reports. In recent years, "Flow" was replaced by [MOVE](https://github.com/CityofToronto/bdit_flashcrow).
+Once the City receives data from the contractor, staff load the data into our database. Until recently, staff would load data files into a legacy Oracle database through an application called "FlowLoad". Data would then be retrieved through a user interface application called "Flow", where the data were formatted into nice reports. In recent years, "Flow" was replaced by [MOVE](https://github.com/CityofToronto/bdit_flashcrow). For TMC's an API has been set up to ingest data directly from the contractor into the MOVE database, then copied into bigdata. An API for SVC's is in the works.
 
 ## How often is data updated?
 
@@ -111,164 +98,64 @@ TMCs are processed automatically, nightly, once made available from the contract
 
 ## Where can I access the data?
 
-Internal to the Transportation Data & Analytics team, data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS.
+Internal to the Transportation Data & Analytics team, legacy data flows from legacy Oracle database, nightly to MOVE (`flashcrow` RDS), and is then replicated to the `bigdata` RDS. Newer data is loaded directly into MOVE and then replicated to the `bigdata` RDS.
 
 Look in the `traffic` schema for all ad-hoc data tables.
 
 ## Where can I find what data?
 
-| Study Type // Loading Mechanism | FlowLoad (`traffic.*`)                           | MOVE Loader (`traffic.atr_*`)        | Spectrum API Loader (`traffic.tmc_*`) |
-|---------------------------------|--------------------------------------------------|--------------------------------------|---------------------------------------|
-| Turning Movement Count          | All-time TMC data*                               | n/a                                  | September 2023 to present             |
-| Volume ATR                      | All-time Volume ATRs**                           | n/a                                  | n/a                                   |
-| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                  | n/a                                   |
-| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded*** | n/a                                   |
+Speed Volume Classification counts and Turning Movement Counts are being replicated into Bigdata `traffic` schema from MOVE (FLASHCROW database). Every table that is replicated has a link to internal documentation for the corresponding table on FLASHCROW in the table comment, viewable in table properties in PGAdmin.
 
-*The `traffic.*` tables contain all-time TMC and Speed/Vol ATR data from all loading mechanisms
+Public documentation including data dictionaries are accessible on the Open Data pages:
 
-**Around 2021, we stopped collecting Volume-only ATR counts, and switched to Speed/Vol ATR counts, as they're a similar price but more data rich
+- SVC: [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/) 
+- TMC: [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/)
 
-***Classification ATR data is spotty for two reasons: 1) the legacy loader did not allow for co-located Speed/Vol ATR and Classification ATR data to be loaded for the same day; 2) there is curently no loading mechanism for Classification ATR data post-May 2023, when the MOVE Loader was introduced.
+Load Sources Summary
+
+| Study Type                      | FlowLoad (study_source = 'OTI / FlowLoad')       | MOVE Loader (study_source = 'MOVE Load') | Spectrum API Loader (count_source = SPECTRUM / LEGACY) |
+|---------------------------------|--------------------------------------------------|------------------------------------------|--------------------------------------------------------|
+| Turning Movement Count          | All-time TMC data*                               | n/a                                      | September 2023 to present                              |
+| Volume ATR                      | All-time Volume ATRs**                           | n/a                                      | n/a                                                    |
+| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                      | n/a                                                    |
+| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded***     | n/a                                                    |
+
 
 ## How is the data structured?
 
 ### Core Tables
 
-The database is structured around three types of tables: metadata, count observations, and reference tables (spatial, temporal, or categorical).
+The database is structured around three types of tables: metadata, count observations, summary stats, and reference tables (spatial, temporal, or categorical).
 
-- Turning Movement Count (TMC)
-  - [`countinfomics`](#tmc-metadata-countinfomics): metadata
-  - [`det`](#tmc-observations-det): count observations
-- Automated Traffic Recorder (ATR)
-  - [`countinfo`](#atr-metadata-countinfo): metadata
-  - [`cnt_det`](#atr-observations-cnt_det): count observations
-- Spatial reference
-  - [`arterydata`](#spatial-temporal-reference-arterydata): an internal reference system that maps a count to a location, used by _both_ TMC and ATR tables
-- Other reference
-  - [`category`](#category): reference table for traffic count type or data source, used by _both_ TMC and ATR tables
+The mapping of tables between Bigdata-MOVE-Open Data is summarized below. Replicated tables have a documentation link in the table comment, viewable in PGAdmin in table properties.
 
-The following diagram shows the relationship between the above-mentioned tables.
+| Bigdata `traffic` Table         | MOVE (FLASHCROW) Table       | Open Data file | Description |
+|---------------------------------|------------------------------|------------------------------------------|--------------------------|
+| `svc_metadata` | `atr.metadata_json` | included in `svc_summary_data` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| `svc_study_class` | `atr.study_class_human` | `svc_raw_data_class_*` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| `svc_study_speed` | `atr.study_speed_human` | `svc_raw_data_speed_*` | Table containing 15-minute observations for speed volume ATRs (SVCs). |
+| `svc_study_volume` | `atr.study_volume_human` | `svc_raw_data_volume_*` | Raw SVC volume counts. |
+| `svc_summary_stats` | `atr.summary_stats` | `svc_summary_data` and `svc_most_recent_summary_data` | Summary statistics for ATR (SVC) counts. Join to atr.metadata_json for full study metadata. |
+| `tmc_metadata` | `tmc.metadata` | included in `tmc_summary_data` | Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE centreline. |
+| `tmc_study_data` | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
+| `tmc_summary_stats` | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
+| `fhwa_classes` | - | `fwha_classification.png` | Provides a reference for the FWHA classification system. [Notion doc](https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab) |
+| `midblocks` | `centreline2.midblocks` | - | Simplified midblock network to which MOVE2 conflates studies to. Includes improved naming for midblock segments. |
+| `intersections` | `centreline2.intersections` | - | Simplified intersection file that corresponds to the midblocks used by MOVE 2. |
+| `pxo` | `centreline2.pxo` | - | Contains a mapping of `intersection_id` or `midblock_id` to `px` crossing numbers for pedestrian cross-overs. | 
+| `traffic_signal` | `centreline2.traffic_signal` | - | Contains a mapping of `intersection_id` or `midblock_id` to `px` crossing numbers for traffic control signals. |
+| `mto_length_bin_classification` | - | - | MTO 6 length bin classification guide. Used to summarize vehicle lengths observed |
+| `studies` | `counts2.studies` | included in `svc_summary_data` | Contains metadata for all study types available in MOVE. Copied from "move_staging"."counts2_studies", this table uses the legacy data structure and only use it when comparing to whats in the MOVE web application. |
 
-!['flow_tables_relationship'](../img/flow_tables_relationship.png)
+Useful Views
+  - `svc_daily_totals` - A daily summary of `traffic.svc_unified_volumes` by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
+  - `svc_unified_volumes` - A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.
 
-### Other Useful Tables
+Note on `study_id`
+- The SVC count identifier `study_id` are common for a given centreline_id and multi-day study
+- This means `study_id` is common for the two directions of traffic at a midblock SVC count if they map to the same location (centreline_id). If they were done on opposite side of the an interseciton (a common scenario), the two directions will have separate `study_id`. This scenario still requires manual matching of studies to group directional data obtained on the same day, if desired.
+- Because `study_id` is point-location-based, it will adapt to version changes of the Toronto centreline
 
-#### `studies` <!-- omit in toc -->
-A human-friendly interpretation of studies. Grouped by colocated arterycodes and with single-day ATR "counts" into continuous study days.
-
-Find at `traffic.studies`.
-
-#### Artery groups and count groups <!-- omit in toc -->
-A gaggle of cascading tables that aggregate "counts" into "studies" (counts at the same location that occurred on continuous days) and "arterycodes" into "arterycode groups" (counts that occured at the same location). These intermediary tables are used to create [`studies`](#studies).
-
-- `traffic.arteries_groups`
-  - arterycodes describe a count-location
-  - for ATR counts, an arterycode *also* describes a direction
-  - for a two-way street where a count was conducted to observe traffic in both directions, two arterycodes exist for this one road segment
-  - as such, there can be multiple arterycodes that exist at the same physical road segment
-  - this table groups arterycodes that belong together at the same location
-- `traffic.arteries_centreline`
-  - a mapping of legacy arterycodes to current centreline nodes and segments
-  - this is the output of the MOVE conflation
-- `traffic.counts_multiday_runs`
-  - aggregates single-day ATR "counts" into continuous multi-day "studies"
-- `traffic.arteries_counts_groups`
-  - brings together artery groups and count groups
-  - single-day counts aggregated into continous studies (`count_group_id`) at colocated arterycodes (`artery_group_id`)
-
-
-#### New TMCs <!-- omit in toc -->
-Recent TMCs (September 2023 and on) loaded through new mechanisms. Includes 14-hour TMC data. Designed to mimic the legacy data tables for backwards compatibility.
-
-  - `tmc_metadata_legacy`
-    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
-  - `tmc_study_legacy`
-
-#### New ATRs <!-- omit in toc -->
-Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and volume data only. Designed to mimic the legacy data tables for backwards compatibility.
-
-  - `atr_metadata`
-    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
-  - `atr_study`
-
-## Relevant Tables
-
-### TMC Metadata (`countinfomics`)
-
-This table contains Turning Movement Count metadata only. This table contains the location reference, date, and source for each Turning Movement Count. Each Turning Movement Count is defined by a unique `count_info_id`.
-
-Field Name|Type|Description
-----------|----|-----------
-count_info_id|bigint|Unique ID for a count linked to [`det`](#tmc-observations-det) table containing detailed count entries
-arterycode|bigint|ID number linked to [`arterydata`](#spatial-temporal-reference-arterydata) table containing information for the count location
-count_type|varchar(1)|Count hours<sup>1</sup> during which data are recorded, Routine (R) or School/Pedestrian (P)
-count_date|date|Date on which the count was conducted
-day_no|bigint|Day of the week (ISO standard; 1 = Monday, 7 = Sunday)
-category_id|int|ID number linked to [`category`](#category) table containing the text description of the count type or source
-
-1 - Routine and School Hours
-
-Routine hours are the "typical" hours during which data would be collected. School hours were specifically selected to observe school pickup, dropoff, and lunch periods. We are moving towards continuous collection periods (e.g. 6:00am-8:00pm), but legacy data are still reported during these standard 8-hour disaggregate periods.
-
-- Routine Hours: 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00
-- School Hours: 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00
-
-### TMC Observations (`det`)
-This table contains individual data entries for Turning Movement Counts in 15-minute non-continuous increments. This is a "wide" format, where each direction-mode-movement has its own column. For a long (instead of wide) version of this table, see the matview `traffic.tmc_miovision_long_format`.
-
-Field Name|Type|Description
-----------|----|-----------
-ID|Autonumber|Autonumber function
-COUNT_INFO_ID|number|Unique ID number for a count linked to [`countinfomics`](#tmc-metadata-countinfomics) table containing count metadata (higher-level information)
-COUNT_TIME|Date/Time|Effective time of counts (**time displayed is the end time period**)
-N_CARS_R|number|S/B cars turning right
-N_CARS_T|number|S/B cars going through
-N_CARS_L|number|S/B cars turning left
-S_CARS_R|number|N/B cars turning right
-S_CARS_T|number|N/B cars going through
-S_CARS_L|number|N/B cars turning left
-E_CARS_R|number|W/B cars turning right
-E_CARS_T|number|W/B cars going through
-E_CARS_L|number|W/B cars turning left
-W_CARS_R|number|E/B cars turning right
-W_CARS_T|number|E/B cars going through
-W_CARS_L|number|E/B cars turning left
-N_TRUCK_R|number|S/B trucks turning right
-N_TRUCK_T|number|S/B trucks going through
-N_TRUCK_L|number|S/B trucks turning left
-S_TRUCK_R|number|N/B trucks turning right
-S_TRUCK_T|number|N/B trucks going through
-S_TRUCK_L|number|N/B trucks turning left
-E_TRUCK_R|number|W/B trucks turning right
-E_TRUCK_T|number|W/B trucks going through
-E_TRUCK_L|number|W/B trucks turning left
-W_TRUCK_R|number|E/B trucks turning right
-W_TRUCK_T|number|E/B trucks going through
-W_TRUCK_L|number|E/B trucks turning left
-N_BUS_R|number|S/B buses turning right
-N_BUS_T|number|S/B buses going through
-N_BUS_L|number|S/B buses turning left
-S_BUS_R|number|N/B buses turning right
-S_BUS_T|number|N/B buses going through
-S_BUS_L|number|N/B buses turning left
-E_BUS_R|number|W/B buses turning right
-E_BUS_T|number|W/B buses going through
-E_BUS_L|number|W/B buses turning left
-W_BUS_R|number|E/B buses turning right
-W_BUS_T|number|E/B buses going through
-W_BUS_L|number|E/B buses turning left
-N_PEDS|number|North side pedestrians
-S_PEDS|number|South side pedestrians
-E_PEDS|number|East side pedestrians
-W_PEDS|number|West side pedestrians
-N_BIKE|number|S/B bicycles from the north side
-S_BIKE|number|N/B bicylcles from the south side
-E_BIKE|number|W/B bicycles from the east side
-W_BIKE|number|E/B bicycles from the west side
-N_OTHER|number|North side  - optional field
-S_OTHER|number|South side - optional field
-E_OTHER|number|East side - optional field
-W_OTHER|number|West side - optional field
 
 #### Vehicle movement
 The following image depicts motor vehicle movements. This example shows south approach, or northbound travel, movements.
@@ -297,67 +184,239 @@ Pedestrians are only counted when they cross the roadway, meaning that pedestria
 
 For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
 
-### ATR Metadata (`countinfo`)
 
-Similar to [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics), this table contains the location reference, date, and data type/source from all sources other than Turning Movement Counts.
+#### TMC Relations
 
-See [TMC Metadata (`countinfomics`)](#tmc-metadata-countinfomics).
+!['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_count-FK_is_highlighted_green.png)
 
-### ATR Observations (`cnt_det`)
+##### `tmc.metadata`
+Remember, TMCs can occur at both intersections and midblocks.
+| |column_name |data_type|is_nullable|description|
+| --------------- | ---------- | ------- | --------- | --------- |
+| 1|`count_id`|bigint |NO |Unique identifier for each count. Spectrum counts share the same `request_id` or `study_id` as `count_id`|
+| 2|`count_date`|date |NO |Date the count was conducted. For Turning Movement Counts, studies are conducted on one day only.|
+| 3|`count_type`|text |NO |Disaggregate hour scheme during which the count was conducted, Routine or School hours |
+| 4|`count_duration`|text |NO |Duration of count (14, 8R, 8S). 14 = 14-hours of data collected over a continuous period from 6:00am-8:00pm. 8R = 8-hours of data collected during the non-continuous Routine schedule of 7:30 - 9:30 / 10:00 - 12:00 / 13:00 - 15:00 / 16:00 - 18:00. 8S = 8-hours of data collected during the non-continuous School schedule of 7:30 - 9:30 / 10:00 - 11:00 / 12:00 - 13:30 / 14:15 - 15:45 / 16:00 - 18:00|
+| 5|`count_location_name` |text |NO |Human-readable name of the location where the count was conducted generated from the initial study request.|
+| 6|`count_source`|text |NO |Method/contractor from which the count was loaded/performed by.|
+| 7|`midblock_id` |integer|YES|The most current Midblock ID reference spatially joined to the point geometry of the count location. Join to `traffic.centreline2_intersections`.|
+| 8|`intersection_id` |integer |YES|The most current Intersection ID reference spatially joined to the point geometry of the count location. Join to `traffic.centreline2_intersections`.|
+| 9|`centreline_feature_code` |integer|YES|Centreline feature code for midblock types. Type of road the count occurred on (Local, Collector, Major etc.) |
+| 10|`centreline_intersection_classification`|character varying|YES|Type of intersection the count occurred on, see `gis.centreline_intersection` for descriptions. |
+| 11|`centreline_properties` |jsonb|YES|Centreline features from other layers spatially joined. Includes PXOs, Traffic Signals and Schools with specified radii. Nested JSON structure.|
+| 12|`count_geom`|geom |NO |Point geometry representation of the study.|
 
-This table contains individual data entries for all counts or sources other than Turning Movement Counts.
+##### `traffic.tmc_study_data`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+| 1|`id` |bigint |NO |Unique row identifier. |
+| 2|`count_id` |bigint |NO |Unique identifier for each count. Spectrum counts share the same `request_id` or `study_id` as `count_id`. |
+| 3|`time_start` |timestamp without time zone|NO |Start time of the 15-minute interval |
+| 4|`time_end` |timestamp without time zone|NO |End time of the 15-minute interval |
+| 5|`n_cars_r` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn.|
+| 6|`n_cars_t` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through. |
+| 7|`n_cars_l` |integer|NO |Volume of cars that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn. |
+| 8|`s_cars_r` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn.|
+| 9|`s_cars_t` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through. |
+|10|`s_cars_l` |integer|NO |Volume of cars that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn. |
+|11|`e_cars_r` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn.|
+|12|`e_cars_t` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through. |
+|13|`e_cars_l` |integer|NO |Volume of cars that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn. |
+|14|`w_cars_r` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn.|
+|15|`w_cars_t` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through. |
+|16|`w_cars_l` |integer|NO |Volume of cars that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn. |
+|17|`n_truck_r`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn.|
+|18|`n_truck_t`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through. |
+|19|`n_truck_l`|integer|NO |Volume of trucks that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn. |
+|20|`s_truck_r`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn.|
+|21|`s_truck_t`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through. |
+|22|`s_truck_l`|integer|NO |Volume of trucks that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn. |
+|23|`e_truck_r`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn.|
+|24|`e_truck_t`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through. |
+|25|`e_truck_l`|integer|NO |Volume of trucks that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn. |
+|26|`w_truck_r`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn.|
+|27|`w_truck_t`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through. |
+|28|`w_truck_l`|integer|NO |Volume of trucks that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn. |
+|29|`n_bus_r`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a right turn. |
+|30|`n_bus_t`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and continue through.|
+|31|`n_bus_l`|integer|NO |Volume of buses that enter the intersection from the north leg (approach), in a southbound direction of travel, and make a left turn.|
+|32|`s_bus_r`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a right turn. |
+|33|`s_bus_t`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and continue through.|
+|34|`s_bus_l`|integer|NO |Volume of buses that enter the intersection from the south leg (approach), in a northbound direction of travel, and make a left turn.|
+|35|`e_bus_r`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a right turn. |
+|36|`e_bus_t`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and continue through.|
+|37|`e_bus_l`|integer|NO |Volume of buses that enter the intersection from the east leg (approach), in a westbound direction of travel, and make a left turn.|
+|38|`w_bus_r`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a right turn. |
+|39|`w_bus_t`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and continue through.|
+|40|`w_bus_l`|integer|NO |Volume of buses that enter the intersection from the west leg (approach), in a eastbound direction of travel, and make a left turn.|
+|41|`n_peds` |integer|NO |Volume of pedestrians that cross the north leg (approach) of the intersection. |
+|42|`s_peds` |integer|NO |Volume of pedestrians that cross the south leg (approach) of the intersection. |
+|43|`e_peds` |integer|NO |Volume of pedestrians that cross the east leg (approach) of the intersection.|
+|44|`w_peds` |integer|NO |Volume of pedestrians that cross the west leg (approach) of the intersection.|
+|45|`n_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, i.e. in a southbound direction, plus bicycles riding in the crosswalk area across the west leg.|
+|46|`s_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, i.e. in a northbound direction, plus bicycles riding in the crosswalk area across the east leg.|
+|47|`e_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, i.e. in a westbound direction, plus bicycles riding in the crosswalk area across the north leg.|
+|48|`w_bike` |integer|NO |Volume of bicycles that enter the intersection from the north leg (approach). NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, i.e. in a eastbound direction, plus bicycles riding in the crosswalk area across the south leg.|
+|49|`n_other`|integer|NO | |
+|50|`s_other`|integer|NO | |
+|51|`e_other`|integer|NO | |
+|52|`w_other`|integer|NO | |
 
-Field Name|Type|Description
-----------|----|-----------
-count_info_id|bigint|Unique ID number for a count linked to [`countinfo`](#atr-metadata-countinfo) table containing count metadata (higher-level information)
-count|bigint|Vehicle count
-timecount|Date/Time|Effective time of counts (**time displayed is the end time period**) (**except for ATRs, where time is the start of the count**)
-speed_class|int|Speed class codes indicating speed bins associated with the 'prj_volume.speed_classes' table. speed_class=0 refers to non-speed counts.
+##### `traffic.tmc_summary_stats`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+|1 |`count_id` |bigint |false |Unique identifier for each Turning Movement Count. Use this ID to cross-reference 15-minute observations in tmc_raw_data files.|
+|2 |`count_veh_total` |numeric |false |Total motor vehicle volume over the count duration. Motor vehicles include cars, trucks, and buses.|
+|3 |`count_heavy_pct_total` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), over the count duration|
+|4 |`count_total_bikes` |numeric |false |Total bicycle volume over the count duration.|
+|5 |`count_total_peds` |numeric |false |Total pedestrian volume crossing any leg of the intersection, over the count duration. NOTE: Pedestrians are counted once for each leg of the intersection they cross. For example, if a pedestrian crosses the north leg, then the east leg, they are counted once crossing the north leg, and once crossing the east leg.|
+|6 |`am_peak_time_start` |timestamp without time zone |false |Start of the AM Peak hour. The AM Peak hour is the continuous one-hour period between 6:30-10:30AM during which the total number of motor vehicles (cars, trucks, buses) that enter the intersection is the greatest.|
+|7 |`am_peak_total_veh` |numeric |false |Volume of motor vehicles observed during the AM peak hour.|
+|8 |`am_peak_heavy_pct` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), during the AM peak hour.|
+|9 |`am_peak_bikes` |numeric |false |Volume of bicycles observed during the AM peak hour.|
+|10 |`pm_peak_time_start` |timestamp without time zone |false |Start of the PM Peak hour. The PM Peak hour is the continuous one-hour period between 2:00-8:00PM during which the total number of motor vehicles (cars, trucks, buses) that enter the intersection is the greatest.|
+|11 |`pm_peak_total_veh` |numeric |false |Volume of motor vehicles observed during the PM peak hour.|
+|12 |`pm_peak_heavy_pct` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), during the PM peak hour.|
+|13 |`pm_peak_bikes` |numeric |false |Volume of bicycles observed during the PM peak hour.|
+|14 |`count_veh_n_appr` |numeric |false |Volume of motor vehicles that enter the intersection from the north leg (approach), over the count duration|
+|15 |`count_heavy_pct_n_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the north leg (approach), over the count duration|
+|16 |`count_bikes_n_appr` |numeric |false |Volume of bicycles that enter the intersection from the north leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the north leg, plus bicycles riding in the crosswalk area across the west leg|
+|17 |`count_veh_e_appr` |numeric |false |Volume of vehicles that enter the intersection from the east leg (approach), over the count duration|
+|18 |`count_heavy_pct_e_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the east leg (approach), over the count duration|
+|19 |`count_bikes_e_appr` |numeric |false |Volume of bicycles that enter the intersection from the east leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the east leg, plus bicycles riding in the crosswalk area across the north leg|
+|20 |`count_veh_s_appr` |numeric |false |Volume of vehicles that enter the intersection from the south leg (approach), over the count duration|
+|21 |`count_heavy_pct_s_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the south leg (approach), over the count duration|
+|22 |`count_bikes_s_appr` |numeric |false |Volume of bicycles that enter the intersection from the south leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the south leg, plus bicycles riding in the crosswalk area across the east leg|
+|23 |`count_veh_w_appr` |numeric |false |Volume of vehicles that enter the intersection from the west leg (approach), over the count duration|
+|24 |`count_heavy_pct_w_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the west leg (approach), over the count duration|
+|25 |`count_bikes_w_appr` |numeric |false |Volume of bicycles that enter the intersection from the west leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, plus bicycles riding in the crosswalk area across the south leg|
 
-### Spatial-Temporal Reference (`arterydata`)
+#### SVC Relations
 
-This table contains the location information of each volume count.
+!['svc_flow_tables_relationship'](../img/2025_ATR_ERD_svc_relations_short_term_counting-FK_is_highlighted_green.png)
 
-Field Name|Type|Description
-----------|----|-----------
-arterycode|bigint|ID number referred to by [`countinfomics`](#tmc-metadata-countinfomics) and [`countinfo`](#atr-metadata-countinfo)
-street1|text|first street name
-street2|text|second street name
-location|text|full description of count location (**do not use PX references, not consistent and can change without warning from upstream sources**)
-apprdir|text|direction of the approach referred to by this arterycode
-sideofint|text|the side of the intersection that the arterycode refers to
-linkid|text|in the format of 8digits @ 8digits, with each 8 digits referring to a node
+##### `traffic.svc_metadata`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+|1 |`study_id` |integer |NO |Unique identifier for each SVC study. Use this ID to cross-reference 15-minute observations in svc_raw_data files. Spectrum counts the `study_id` correlates to the `request_id`|
+|2 |`study_start_date` |date |NO |Date on which the count started|
+|3 |`study_end_date` |date |NO |Date on which the count ended|
+|4 |`study_type` |text |NO |Type of data collected (ATR_VOLUME = Volume data only, ATR_SPEED_VOLUME = Speed and volume data, VEHICLE_CLASS = Vehicle classification and volume data)|
+|5 |`study_duration` |integer |NO |Count duration, in hours|
+|6 |`study_location_name` |text |NO |Human-readable name of the location where the count was conducted generated by the study request (e.g. Bloor St: Yonge St - Park Rd)|
+|7 |`study_source` |text |NO |Vendor / Contractor or software used to load the study.|
+|8 |`study_geom` |USER-DEFINED |NO |Point based geometry representation of the study location.|
+|9 |`midblock_id` |integer |YES |Current reference id to to the MOVE centreline, based on a spatial join using the `study_geom` field. Join to `traffic.centreline2_midblocks`|
+|10 |`centreline_type` |integer |YES |SVCs should always be on a mid-block.|
+|11 |`centreline_feature_code` |integer |YES |Classification of mid-block (Local, Collector, Arterial etc..)|
+|12 |`centreline_road_id` |integer |YES |Roll-up id to select all segments of a given road. For example all Kingston Rd. segments would share the same road_id.|
+|13 |`centreline_properties` |jsonb |YES |Other gcc layers spatially joined into a json structure that contains nearby schools, PXOs or traffic signals that belong to the midblock segment.|
 
-#### What is an arterycode?
+##### `traffic.svc_study_class`
+| |column_name|data_type|is_nullable|description|
+|----------------|-----------|---------|-----------|-----------|
+| 1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
+| 2|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+| 3|`count_info_id`|integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+| 4|`direction`|text |NO |Direction of travel.|
+| 5|`count_date` |date |NO |Date the count occurred.|
+| 6|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin.|
+| 7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin.|
+| 8|`motorcycle` |integer|NO |Volume of FWHA Class 1 vehicles (motorcycles). Includes all two- or three-wheeled motorized vehicles.|
+| 9|`cars` |integer|NO |Volume of FWHA Class 2 vehicles (passenger cars). Includes station wagons.|
+|10|`2a_4t`|integer|NO |Volume of FWHA Class 3 vehicles (other two-axle, four-tire single unit vehicles). Includes pickups, vans, and campers.|
+|11|`buses`|integer|NO |Volume of FWHA Class 4 vehicles (buses).|
+|12|`2a_su`|integer|NO |Volume of FWHA Class 5 vehicles (two-axle single unit trucks).|
+|13|`3a_su`|integer|NO |Volume of FWHA Class 6 vehicles (three-axle single unit trucks).|
+|14|`4a_su`|integer|NO |Volume of FWHA Class 7 vehicles (four or more axle single unit trucks)|
+|15|`4a_st`|integer|NO |Volume of FWHA Class 8 vehicles (four or less axle single trailer trucks).|
+|16|`5a_st`|integer|NO |Volume of FWHA Class 9 vehicles (five-axle single trailer trucks).|
+|17|`6a_st`|integer|NO |Volume of FWHA Class 10 vehicles (six or more axle single trailer trucks).|
+|18|`5a_mt`|integer|NO |Volume of FWHA Class 11 vehicles (five or less axle multi-trailer trucks).|
+|19|`6a_mt`|integer|NO |Volume of FWHA Class 12 vehicles (six-axle multi-trailer trucks).|
+|20|`other`|integer|NO |Volume of FWHA Class 13 vehicles (seven or more axle multi-trailer trucks).|
 
-It's very important to understand the humble arterycode. The arterycode identifier system is an internal legacy location reference system that describes intersections and segments of the Toronto street network _where a count has occurred_. Arterycodes do not describe the entire Toronto transportation network.
+##### `traffic.svc_study_speed`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+| 1|`id`|bigint |NO |Unique row identifier for each 15-minute interval. |
+| 2|`study_id`|integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+| 3|`count_info_id` |integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+| 4|`direction` |text |NO |Direction of travel|
+| 5|`count_date`|date |NO |Date the count occurred. |
+| 6|`time_start`|timestamp without time zone|NO |Start of the 15-minute time bin|
+| 7|`time_end`|timestamp without time zone|NO |End of the 15-minute time bin|
+| 8|`vol_1_19_kph`|integer|NO |Volume of vehicles travelling between 1-19kph|
+| 9|`vol_20_25_kph` |integer|NO |Volume of vehicles travelling between 20-25kph |
+|10|`vol_26_30_kph` |integer|NO |Volume of vehicles travelling between 26-30kph |
+|11|`vol_31_35_kph` |integer|NO |Volume of vehicles travelling between 31-35kph |
+|12|`vol_36_40_kph` |integer|NO |Volume of vehicles travelling between 36-40kph |
+|13|`vol_41_45_kph` |integer|NO |Volume of vehicles travelling between 41-45kph |
+|14|`vol_46_50_kph` |integer|NO |Volume of vehicles travelling between 46-50kph |
+|15|`vol_51_55_kph` |integer|NO |Volume of vehicles travelling between 51-55kph |
+|16|`vol_56_60_kph` |integer|NO |Volume of vehicles travelling between 56-60kph |
+|17|`vol_61_65_kph` |integer|NO |Volume of vehicles travelling between 61-65kph |
+|18|`vol_66_70_kph` |integer|NO |Volume of vehicles travelling between 66-70kph |
+|19|`vol_71_75_kph` |integer|NO |Volume of vehicles travelling between 71-75kph |
+|20|`vol_76_80_kph` |integer|NO |Volume of vehicles travelling between 76-80kph |
+|21|`vol_81_160_kph`|integer|NO |Volume of vehicles travelling between 81-160kph|
 
-#### From arterycode to centreline
+##### `traffic.svc_study_volume`
+| |column_name|data_type|is_nullable|description|
+|---|---|---|---|---|
+|1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
+|2|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+|3|`count_info_id`|integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
+|4|`direction`|text |NO |Direction of travel|
+|5|`count_date` |date |NO |Date the count occurred. |
+|6|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin. |
+|7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin. |
+|8|`volume` |integer|NO |Vehicle volume observed during the 15-minute period. |
 
-Given an arterycode, you can find the corresponding modern-day location by cross-referencing with `traffic.arteries_centreline`.
+##### `traffic.svc_summary_stats`
+| |column_name |data_type|is_nullable|description|
+|---|---|---|---|---|
+|1 |`study_id` |integer |false |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to `trafffic.svc_metadata`.|
+|2 |`total_days` |numeric |false |Total number of days in the study.|
+|3 |`total_veh` |numeric |false |Total number of vehicles counted over the duration of the study.|
+|4 |`daily_avg_vol` |numeric |false |The average daily vehicle volume over the count duration. Calculated by summing the grand total of vehicles observed over the count duration, divided by the count duration in days.|
+|5 |`total_weekend_days` |numeric |false |Total number of weekend days that the study occurred on (if any).|
+|6 |`avg_weekend_vol` |numeric |false |Most traffic volume counts are conducted during the week. A handful of counts are done on weekends, or over periods of one or two weeks. For these counts, we calculate the average weekend daily volume. Similar to the average daily volume but considers only volume observations that fall on a weekend (Saturday or Sunday).|
+|7 |`total_weekdays` |numeric |false |Total number of weekdays that the study occurred on (if any).|
+|8 |`avg_weekday_vol` |numeric |false |The average weekday daily vehicle volume over the count duration. If the study was conducted on weekdays only, this is the same as the average daily volume. If the study was conducted on a weekend, this value will be none. If the study was conducted over both weekdays and weekends (i.e. one or two weeks), this is the average daily volume of weekdays only.|
+|9 |`heavy_pct` |numeric |false |If vehicle classification was collected, the percentage of motor vehicles considered heavy vehicles over the count duration. Put simply, this is the percentage of buses, single-unit, and articulated trucks. The percentage is calculated by summing the volume of vehicles in FWHA classes 4-13 inclusive, over the total vehicle volume.|
+|10 |`avg_weekday_am_peak_hour_start` |time without time zone |false |Start of the average weekday AM peak hour. The AM peak hour is the one-hour continuous period between 6:30-10:30am during which the highest motor vehicle volume is observed moving through the roadway, for all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none. For counts with a duration longer than 24 hours, the AM peak is calculated by first calculating ""average"" volumes for each 15-minute period in the day, then finding the hour with the highest motor vehicle volume based on the averaged volumes.|
+|11 |`avg_weekday_am_peak_vol` |numeric |false |Average motor vehicles counted during the AM peak hour. Includes the sum of all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none.|
+|12 |`avg_weekday_pm_peak_hour_start` |time without time zone |false |Start of the average weekday PM peak hour. The PM peak hour is the one-hour continuous period between 2:00-8:00pm during which the highest motor vehicle volume is observed moving through the roadway, for all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none. For counts with a duration longer than 24 hours, the PM peak is calculated by first calculating ""average"" volumes for each 15-minute period in the day, then finding the hour with the highest motor vehicle volume based on the averaged volumes.|
+|13 |`avg_weekday_pm_peak_vol` |numeric |false |Average motor vehicles counted during the PM peak hour. Includes the sum of all available directions (one or both directions). Bicycles are not included. Calculated for weekdays only. If the study was conducted on a weekend, this value will be none.|
+|14 |`pct_15` |numeric |false |If speed data are available for the study, the 15th percentile speed is the speed at or below which 15% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|15 |`pct_50` |numeric |false |If speed data are available for the study, the 50th percentile speed is the speed at or below which 50% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|16 |`pct_85` |numeric |false |If speed data are available for the study, the 85th percentile speed is the speed at or below which 85% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|17 |`pct_95` |numeric |false |If speed data are available for the study, the 95th percentile speed is the speed at or below which 95% of vehicles travel. Calculated over all count days. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
+|18 |`mean_speed` |numeric |false |If speed data are available for the count, the mean (average) speed of all vehicles over the entire count duration. NOT the same as 50th percentile speed. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
 
-### `category`
+### Other Useful Tables
 
-This is a reference table referencing the count type or data source of each entry.
+#### `studies` <!-- omit in toc -->
+FOR LEGACY PURPOSES ONLY, this is conflated to the legacy MOVE centreline.
 
-Field Name|Type|Description
-----------|----|-----------
-category_id|int|ID number referred to by [`countinfomics`](#tmc-metadata-countinfomics) and [`countinfo`](#atr-metadata-countinfo)
-category_name|text|name of the count type or data source
+A human-friendly interpretation of studies. Grouped by colocated arterycodes and with single-day ATR "counts" into continuous study days.
 
-#### Category Reference
+Find at `traffic.studies`.
 
-Category Name|Status|Meaning
--------------|------|-------
-24 HOUR|-|Volume ATR
-RESCU|**DO NOT USE.** For current RESCU data and pipeline information, see [volumes/vds](../vds).|Volume ATR data from RESCU permanent counters. Highway and major arterial in-road loop detectors.
-CLASS|-|Vehicle Classification ATR
-SPEED|-|Speed / Volume ATR
-MANUAL|**Don't use this without further investigation.**|Likely counts loaded via manual counting boards.
-PERM STN|**Don't use this without further investigation.** Unclear how this is different from other specified permanent counters.|Permanent Count Stations
-BICYCLE|**DO NOT USE.** For current Eco-Counter data and pipeline information, see [volumes/ecocounter](../ecocounter).|Bicycle Volume ATR from Eco-Counter permanent count stations, manually loaded via portable device.
-SPD OCC|**DO NOT USE.**|Likely a permanent counter that collected speed ("SPD") and occupancy ("OCC") data.
-SENSYS SPEED|**DO NOT USE.**|Sensys permanent counters that collected speed data.
+#### New TMCs <!-- omit in toc -->
+Recent TMCs (September 2023 and on) loaded through new mechanisms. Includes 14-hour TMC data. Designed to mimic the legacy data tables for backwards compatibility.
+
+  - `tmc_metadata_legacy`
+    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
+  - `tmc_study_legacy`
+
+#### New ATRs <!-- omit in toc -->
+Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and volume data only. Designed to mimic the legacy data tables for backwards compatibility.
+
+  - `atr_metadata`
+    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
+  - `atr_study`
 
 ## Useful Views
 
@@ -374,3 +433,7 @@ SENSYS SPEED|**DO NOT USE.**|Sensys permanent counters that collected speed data
 ## Cycling Seasonality Adjustment
 
 A model was developed to adjust cycling counts for before after evaluations of new infrastructure based on sparse counts. It can be found in the [`cycling_seasonality`](cycling_seasonality/) folder
+
+## What's the old FLOW Oracle Schema?
+
+This is documented in [`traffic_archive`/](traffic_archive) folder
