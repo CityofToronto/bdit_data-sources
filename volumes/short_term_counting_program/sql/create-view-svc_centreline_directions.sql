@@ -78,7 +78,7 @@ CREATE UNIQUE INDEX ON traffic.svc_centreline_directions (centreline_id, directi
 ALTER MATERIALIZED VIEW traffic.svc_centreline_directions OWNER TO gis_admins;
 
 COMMENT ON MATERIALIZED VIEW traffic.svc_centreline_directions
-IS 'Maps SVC directions like "NB" or "SB" to a direction on a centreline geometry';
+IS 'Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto specific directions of travel along edges of the `gis_core.centreline_latest` network.';
 
 COMMENT ON COLUMN traffic.svc_centreline_directions.geom_directed
 IS 'centreline segment geom drawn in the direction of `direction`';
