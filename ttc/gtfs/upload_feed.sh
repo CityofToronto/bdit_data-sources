@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e  # Exit on any error
 cd $1
 /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.calendar(service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday, start_date, end_date) FROM 'calendar.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
