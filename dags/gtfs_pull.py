@@ -138,13 +138,14 @@ def gtfs_pull():
     )
     def upload_feed(dir):
         """Copies data into database. Fails on any errors."""
-        return f"upload_feed.sh {dir}"
+        script_path = os.path.join(repo_path, 'ttc/gtfs/upload_feed.sh')
+        return f"{script_path} {dir}"
 
     #Update feed_id attribute across all the tables
     update_feed_id = SQLExecuteQueryOperator(
         task_id='update_feed_id',
         conn_id='gtfs_bot',
-        sql="sql/update_feed.sql",
+        sql="sql/update_feed_id.sql",
         autocommit=True,
         retries = 0
     )
