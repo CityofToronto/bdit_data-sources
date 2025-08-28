@@ -31,7 +31,7 @@ default_args = {
     'email_on_success': False,
     'retries': 1,
     'retry_delay': duration(hours=1),
-    'on_failure_callback': task_fail_slack_alert
+    #'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -53,8 +53,7 @@ def here_dynamic_binning_monthly_agg():
         sql="select-check_missing_days.sql",
         task_id="check_missing_dates",
         conn_id='congestion_bot',
-        retries = 1,
-        execution_timeout=timedelta(minutes=10)
+        retries = 0
     )
     
     aggregate_monthly = SQLExecuteQueryOperator(
