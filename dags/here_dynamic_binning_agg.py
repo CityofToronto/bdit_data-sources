@@ -65,8 +65,8 @@ def here_dynamic_binning_agg():
         task_id='aggregate_daily',
         conn_id='congestion_bot',
         autocommit=True,
-        retries = 1,
-        execution_timeout=timedelta(hours=1)
+        retries = 2,
+        hook_params={"options": "-c statement_timeout=10800000ms"} #3 hours
     )
     aggregate_daily
 
