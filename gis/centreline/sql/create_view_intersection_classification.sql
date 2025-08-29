@@ -62,6 +62,13 @@ centreline_agg AS (
         count(DISTINCT all_intersections.linear_name_full) AS count_name,
         array_agg(DISTINCT all_intersections.linear_name_full) AS linear_list,
         array_agg(all_intersections.feature_code_desc) AS all_feature_code_list,
+        jsonb_agg(
+            jsonb_build_array(
+                all_intersections.centreline_id,
+                all_intersections.linear_name_full,
+                all_intersections.feature_code_desc
+            )
+        ) AS road_name_class,
         st_union(all_intersections.centreline_geom) AS cent_geom
     FROM all_intersections
     GROUP BY all_intersections.intersection_id
@@ -85,6 +92,7 @@ staging AS (
         dist_feature.number_of_elevations,
         centreline_agg.count_name,
         centreline_agg.linear_list AS road_names,
+        centreline_agg.road_name_class,
         array_length(centreline_agg.centreline_list, 1) AS degree,
         dist_feature.classification_desc,
         centreline_agg.centreline_list AS centreline_ids,
@@ -108,15 +116,18 @@ staging AS (
         dist_feature.geom,
         centreline_agg.linear_list,
         centreline_agg.count_name,
+        centreline_agg.road_name_class,
         centreline_agg.cent_geom,
         centreline_agg.centreline_list,
         centreline_agg.all_feature_code_list
 ),
 
-elev AS (SELECT DISTINCT
-    intersection_id,
-    elevation_feature_code_desc
-FROM gis_core.intersection_latest)
+elev AS (
+    SELECT DISTINCT
+        intersection_id,
+        elevation_feature_code_desc
+    FROM gis_core.intersection_latest
+)
 
 SELECT
     staging.intersection_id,
@@ -127,6 +138,7 @@ SELECT
     staging.classification_desc,
     elev.elevation_feature_code_desc,
     staging.road_names,
+    staging.road_name_class,
     staging.degree,
     staging.centreline_ids,
     staging.geom,
