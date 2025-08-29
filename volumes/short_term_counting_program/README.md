@@ -404,20 +404,6 @@ A human-friendly interpretation of studies. Grouped by colocated arterycodes and
 
 Find at `traffic.studies`.
 
-#### New TMCs <!-- omit in toc -->
-Recent TMCs (September 2023 and on) loaded through new mechanisms. Includes 14-hour TMC data. Designed to mimic the legacy data tables for backwards compatibility.
-
-  - `tmc_metadata_legacy`
-    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
-  - `tmc_study_legacy`
-
-#### New ATRs <!-- omit in toc -->
-Recent ATRs (May 2022 and on) loaded through new mechanisms. Includes speed and volume data only. Designed to mimic the legacy data tables for backwards compatibility.
-
-  - `atr_metadata`
-    - includes additional metadata like centreline, geometry, corresponding study request, and human-readable location name
-  - `atr_study`
-
 ## Useful Views
 
 - `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
