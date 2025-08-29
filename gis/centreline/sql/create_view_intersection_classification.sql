@@ -63,9 +63,10 @@ centreline_agg AS (
         array_agg(DISTINCT all_intersections.linear_name_full) AS linear_list,
         array_agg(all_intersections.feature_code_desc) AS all_feature_code_list,
         jsonb_agg(jsonb_build_array(
-            all_intersections.centreline_id, 
-        all_intersections.linear_name_full, 
-        all_intersections.feature_code_desc)) AS road_name_class,
+            all_intersections.centreline_id,
+            all_intersections.linear_name_full,
+            all_intersections.feature_code_desc)
+        ) AS road_name_class,
         st_union(all_intersections.centreline_geom) AS cent_geom
     FROM all_intersections
     GROUP BY all_intersections.intersection_id
@@ -119,10 +120,11 @@ staging AS (
         centreline_agg.all_feature_code_list
 ),
 
-elev AS (SELECT DISTINCT
-    intersection_id,
-    elevation_feature_code_desc
-FROM gis_core.intersection_latest)
+elev AS (
+    SELECT DISTINCT
+        intersection_id,
+        elevation_feature_code_desc
+    FROM gis_core.intersection_latest)
 
 SELECT
     staging.intersection_id,
