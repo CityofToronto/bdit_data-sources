@@ -16,7 +16,7 @@ CREATE OR REPLACE VIEW miovision_api.volumes_15min_mvt_filtered AS (
             FROM miovision_api.anomalous_ranges AS ar
             LEFT JOIN miovision_api.movement_map
                 ON ar.leg = movement_map.exit_leg
-            WHERE 
+            WHERE
                 (ar.problem_level = ANY(ARRAY['do-not-use', 'questionable']))
                 AND (
                     ar.intersection_uid = v15.intersection_uid
