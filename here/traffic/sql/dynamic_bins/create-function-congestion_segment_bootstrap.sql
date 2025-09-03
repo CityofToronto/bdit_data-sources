@@ -1,99 +1,89 @@
-/*
---test
-SELECT tt_array[ceiling(random() * 3)]
-FROM (VALUES(ARRAY[1,2,3])) AS val(tt_array)
-CROSS JOIN generate_series(1,100,1)
-*/
-
-
+--DROP FUNCTION gwolofs.congestion_segment_bootstrap(date,bigint,integer);
 
 CREATE OR REPLACE FUNCTION gwolofs.congestion_segment_bootstrap(
-	mnth date,
-	segment_ids bigint[],
-    n_resamples int)
-    RETURNS TABLE(
-        segment_id integer, mnth date, is_wkdy boolean, hr numeric,
-        avg_tt real, n bigint, ci_lower real, ci_upper real
-    ) 
+    mnth date,
+    segment_id bigint,
+    n_resamples int
+    )
+    RETURNS VOID
     LANGUAGE SQL
     COST 100
     VOLATILE PARALLEL SAFE 
 AS $BODY$
 
-WITH raw_obs AS (
+    SELECT setseed(('0.'||replace(mnth::text, '-', ''))::numeric);
+    
+    WITH raw_obs AS (
+        SELECT
+            --segment_id and mnth don't need to be in group by until end
+            EXTRACT('isodow' FROM dt) IN (1, 2, 3, 4, 5) AS is_wkdy,
+            EXTRACT('hour' FROM hr) AS hr,
+            ARRAY_AGG(tt::real) AS tt_array,
+            AVG(tt::real) AS avg_tt,
+            COUNT(*) AS n
+        FROM gwolofs.congestion_raw_segments
+        WHERE -- same params as the above aggregation
+            dt >= congestion_segment_bootstrap.mnth
+            AND dt < congestion_segment_bootstrap.mnth + interval '1 month'
+            AND segment_id = congestion_segment_bootstrap.segment_id
+        GROUP BY
+            segment_id,
+            is_wkdy,
+            EXTRACT('hour' FROM hr)
+    ),
+    
+    random_selections AS (
+        SELECT
+            raw_obs.is_wkdy,
+            raw_obs.hr,
+            raw_obs.avg_tt,
+            raw_obs.n,
+            sample_group.group_id,
+            --get a random observation from the array of tts
+            AVG(raw_obs.tt_array[ceiling(random() * raw_obs.n)]) AS rnd_avg_tt
+        FROM raw_obs
+        CROSS JOIN generate_series(1, n)
+        -- 200 resamples (could be any number)
+        CROSS JOIN generate_series(1, congestion_segment_bootstrap.n_resamples) AS sample_group(group_id)
+        GROUP BY
+            raw_obs.is_wkdy,
+            raw_obs.hr,
+            raw_obs.avg_tt,
+            raw_obs.n,
+            sample_group.group_id
+    )
+    
+    INSERT INTO gwolofs.congestion_segments_monthly_bootstrap (
+        segment_id, mnth, is_wkdy, hr, avg_tt, n, n_resamples, ci_lower, ci_upper
+    )
     SELECT
-        segment_id,
-        congestion_segment_bootstrap.mnth AS mnth,
-        EXTRACT('isodow' FROM dt) IN (1, 2, 3, 4, 5) AS is_wkdy,
-        EXTRACT('hour' FROM hr) AS hr,
-        ARRAY_AGG(tt::real) AS tt_array,
-        AVG(tt::real) AS avg_tt,
-        COUNT(*) AS n
-    FROM gwolofs.congestion_raw_segments
-    WHERE -- same params as the above aggregation
-        dt >= congestion_segment_bootstrap.mnth
-        AND dt < congestion_segment_bootstrap.mnth + interval '1 month'
-        AND segment_id = ANY(congestion_segment_bootstrap.segment_ids)
-    GROUP BY
-        segment_id,
+        congestion_segment_bootstrap.segment_id,
+        congestion_segment_bootstrap.mnth,
         is_wkdy,
-        EXTRACT('hour' FROM hr)
-),
-
-random_selections AS (
-    SELECT
-        raw_obs.segment_id,
-        raw_obs.is_wkdy,
-        raw_obs.hr,
-        raw_obs.avg_tt,
-        raw_obs.n,
-        raw_obs.mnth,
-        sample_group.group_id,
-        --get a random observation from the array of tts
-        AVG(raw_obs.tt_array[ceiling(random() * raw_obs.n)]) AS rnd_avg_tt
-    FROM raw_obs
-    CROSS JOIN generate_series(1, n)
-    -- 200 resamples (could be any number)
-    CROSS JOIN generate_series(1, congestion_segment_bootstrap.n_resamples) AS sample_group(group_id)
+        hr,
+        avg_tt::real,
+        n,
+        n_resamples,
+        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_lower,
+        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_upper
+    FROM random_selections
     GROUP BY
-        raw_obs.segment_id,
-        raw_obs.is_wkdy,
-        raw_obs.hr,
-        raw_obs.avg_tt,
-        raw_obs.n,
-        raw_obs.mnth,
-        sample_group.group_id
-)
-
-SELECT
-    segment_id,
-    mnth,
-    is_wkdy,
-    hr,
-    avg_tt::real,
-    n,
-    percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_lower,
-    percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_upper
-FROM random_selections
-GROUP BY
-    segment_id,
-    mnth,
-    is_wkdy,
-    hr,
-    avg_tt,
-    n;
+        is_wkdy,
+        hr,
+        avg_tt,
+        n;
 
     $BODY$;
 
---6:52 for 100
-/*example
-SELECT congestion_segment_bootstrap.*
-FROM gwolofs.congestion_segment_bootstrap(
-    mnth := '2025-05-01'::date,
-    segment_ids := (SELECT ARRAY(SELECT segment_id FROM generate_series(1,100) AS a(segment_id))),
-    n_resamples := 300
+GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(date,bigint,integer) TO congestion_bot;
+
+/*Usage example: (works best one segment at a time with Lateral)
+SELECT *
+FROM UNNEST('{1,2,3,4,5,6,7,8,9}'::bigint[]) AS unnested(segment_id)
+LATERAL (
+    SELECT gwolofs.congestion_segment_bootstrap(
+                    mnth := '2025-06-01'::date,
+                    segment_ids := segment_id,
+                    n_resamples := 300)
 )
 */
-
---6.5 hours estimate for all
---SELECT COUNT(DISTINCT segment_id) / 100.0 * 352 / 60 / 60 FROM congestion.network_segments_24_4 ORDER BY 1
