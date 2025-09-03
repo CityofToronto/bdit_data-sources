@@ -1,12 +1,12 @@
 import os
 import sys
 import logging
-from datetime import timedelta
 from pendulum import duration, datetime
 
 from airflow.models import Variable
-from airflow.decorators import dag
+from airflow.decorators import dag, task
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -27,10 +27,8 @@ default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': datetime(2019, 1, 1, tz="America/Toronto"),
-    'email_on_failure': False,
-    'email_on_success': False,
     'retries': 1,
-    'retry_delay': duration(hours=1),
+    'retry_delay': duration(hours=1)
     #'on_failure_callback': task_fail_slack_alert
 }
 
@@ -64,9 +62,51 @@ def here_dynamic_binning_monthly_agg():
         task_id='aggregate_monthly',
         conn_id='congestion_bot',
         autocommit=True,
-        retries = 1,
-        execution_timeout=timedelta(hours=1)
+        retries = 1
     )
-    check_missing_dates >> aggregate_monthly
+    
+    create_groups = SQLExecuteQueryOperator(
+        sql="segment_grouping.sql",
+        task_id="create_segment_groups",
+        #TODO: update sql to work for different map versions
+        start_date=datetime(2025, 4, 1, tz="America/Toronto"),
+        conn_id='congestion_bot',
+        retries = 0,
+        params={"max_group_size": 100}
+    )
+    
+    delete_data = SQLExecuteQueryOperator(
+        sql="DELETE FROM gwolofs.congestion_segments_monthly_bootstrap WHERE mnth = '{{ ds }}' AND n_resamples = 300",
+        task_id="delete_bootstrap_results",
+        conn_id='congestion_bot',
+        retries=0
+    )
+    
+    @task
+    def expand_groups(**context):
+        return context["ti"].xcom_pull(task_ids="create_segment_groups")[0][0]
+    
+    @task(retries=0, max_active_tis_per_dag=1)
+    def bootstrap_agg(segments, ds):
+        print(f"segments: {segments}")
+        postgres_cred = PostgresHook("congestion_bot")
+        query="""SELECT *
+            FROM UNNEST(%s::bigint[]) AS unnested(segment_id),
+            LATERAL (
+                SELECT gwolofs.congestion_segment_bootstrap(
+                                mnth := %s::date,
+                                segment_id := segment_id,
+                                n_resamples := 300)
+            ) AS lat"""
+        with postgres_cred.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (segments, ds))
+                conn.commit()
+    
+    expand = expand_groups()
+    
+    check_missing_dates >> aggregate_monthly >> create_groups >> delete_data
+    delete_data >> expand
+    bootstrap_agg.expand(segments=expand)
 
 here_dynamic_binning_monthly_agg()
