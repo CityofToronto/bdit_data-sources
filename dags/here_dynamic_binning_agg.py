@@ -12,7 +12,6 @@ or trigger just one day: airflow dags trigger -e 2023-11-02 here_dynamic_binning
 import sys
 import os
 import logging
-from datetime import timedelta
 from pendulum import duration, datetime
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
@@ -23,6 +22,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_functions import task_fail_slack_alert
+    from dags.custom_operators import SQLCheckOperatorWithReturnValue
 except:
     raise ImportError("Cannot import slack alert functions")
     
@@ -37,8 +37,6 @@ default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
     'start_date': datetime(2019, 1, 1, tz="America/Toronto"),
-    #aggregation doesn't work on 24_4 yet (no congestion.network_links_24_4)
-    #'end_date': datetime(2025, 3, 17, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 1,
@@ -59,6 +57,14 @@ default_args = {
 #to add: catchup, one task at a time, depends on past.
 
 def here_dynamic_binning_agg():
+    check_not_empty = SQLCheckOperatorWithReturnValue(
+        task_id="check_not_empty",
+        sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path WHERE dt = '{{ ds }}'",
+        conn_id="congestion_bot",
+        retries=1,
+        retry_delay=duration(days=1)
+    )
+    
     aggregate_daily = SQLExecuteQueryOperator(
         sql=["DELETE FROM gwolofs.congestion_raw_segments WHERE dt = '{{ ds }}'",
              "SELECT gwolofs.congestion_network_segment_agg('{{ ds }}'::date);"],
@@ -68,6 +74,7 @@ def here_dynamic_binning_agg():
         retries = 2,
         hook_params={"options": "-c statement_timeout=10800000ms"} #3 hours
     )
-    aggregate_daily
+    
+    check_not_empty >> aggregate_daily
 
 here_dynamic_binning_agg()
