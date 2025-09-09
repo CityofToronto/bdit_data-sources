@@ -7,12 +7,11 @@ CREATE TABLE IF NOT EXISTS traffic.svc_summary_stats
     study_id integer NOT NULL,
     total_days numeric NOT NULL,
     total_veh numeric NOT NULL,
-    daily_avg_vol numeric NOT NULL,
+    avg_daily_vol numeric NOT NULL,
     total_weekend_days numeric,
     avg_weekend_vol numeric,
     total_weekdays numeric,
     avg_weekday_vol numeric,
-    heavy_pct numeric,
     avg_weekday_am_peak_hour_start time without time zone,
     avg_weekday_am_peak_vol numeric,
     avg_weekday_pm_peak_hour_start time without time zone,
@@ -22,6 +21,9 @@ CREATE TABLE IF NOT EXISTS traffic.svc_summary_stats
     pct_85 numeric,
     pct_95 numeric,
     mean_speed numeric,
+    total_schooldays integer,
+    pct_heavy numeric,
+    pct_truck numeric,
     CONSTRAINT summary_stats_pkey PRIMARY KEY (study_id)
 )
 
