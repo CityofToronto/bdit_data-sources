@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS traffic.tmc_summary_stats
     count_veh_w_appr numeric NOT NULL,
     count_heavy_pct_w_appr numeric NOT NULL,
     count_bikes_w_appr numeric NOT NULL,
+    is_school_day integer,
     CONSTRAINT tmc_summary_stats_pkey PRIMARY KEY (count_id)
 )
 
