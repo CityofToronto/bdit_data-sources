@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_segments
     dt date NOT NULL,
     bin_start timestamp without time zone NOT NULL,
     bin_range tsrange NOT NULL,
-    tt numeric,
+    tt real,
     num_obs integer,
-    hr timestamp without time zone,
+    hr smallint,
     CONSTRAINT congestion_raw_segments_pkey PRIMARY KEY (segment_id, dt, bin_start)
 ) PARTITION BY RANGE (dt);
 

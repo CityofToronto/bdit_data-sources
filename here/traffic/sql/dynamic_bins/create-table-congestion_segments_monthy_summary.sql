@@ -7,15 +7,15 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_segments_monthy_summary
     segment_id integer,
     mnth date,
     is_wkdy boolean,
-    hr double precision,
-    avg_tt numeric,
-    stdev numeric,
-    percentile_05 numeric,
-    percentile_15 numeric,
-    percentile_50 numeric,
-    percentile_85 numeric,
-    percentile_95 numeric,
-    num_quasi_obs bigint
+    hr smallint,
+    avg_tt real,
+    stdev real,
+    percentile_05 real,
+    percentile_15 real,
+    percentile_50 real,
+    percentile_85 real,
+    percentile_95 real,
+    num_quasi_obs smallint
 )
 
 TABLESPACE pg_default;
