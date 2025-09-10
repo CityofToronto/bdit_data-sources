@@ -7,11 +7,11 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
     corridor_id smallint,
     time_grp timerange NOT NULL,
     bin_range tsrange NOT NULL,
-    tt numeric,
+    tt real,
     num_obs integer,
     uri_string text COLLATE pg_catalog."default",
     dt date,
-    hr timestamp without time zone,
+    hr smallint,
     CONSTRAINT congestion_raw_corridors_pkey PRIMARY KEY (corridor_id, bin_range, time_grp),
     CONSTRAINT corridor_fkey FOREIGN KEY (corridor_id)
         REFERENCES gwolofs.congestion_corridors (corridor_id) MATCH SIMPLE
