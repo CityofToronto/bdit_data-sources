@@ -7,12 +7,12 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_segments_monthly_bootstrap
     segment_id integer NOT NULL,
     mnth date NOT NULL,
     is_wkdy boolean NOT NULL,
-    hr numeric NOT NULL,
+    hr smallint NOT NULL,
     avg_tt real,
-    n bigint,
+    n smallint,
     ci_lower real,
     ci_upper real,
-    n_resamples integer NOT NULL,
+    n_resamples smallint NOT NULL,
     CONSTRAINT congestion_segments_monthly_bootstrap_pkey PRIMARY KEY (segment_id, mnth, is_wkdy, hr, n_resamples)
 )
 

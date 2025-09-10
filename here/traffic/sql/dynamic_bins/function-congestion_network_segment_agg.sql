@@ -140,7 +140,7 @@ EXECUTE FORMAT(
             unnested.len
     ),
 
-    inserted AS (    
+    inserted AS (
         --this query contains overlapping values which get eliminated
         --via on conflict with the exclusion constraint on congestion_raw_segments table.
         INSERT INTO congestion_raw_segments_temp AS inserted (
@@ -180,9 +180,9 @@ EXECUTE FORMAT(
         bin_start,
         segment_id,
         bin_range,
-        tt,
+        tt::real,
         num_obs,
-        date_trunc('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
+        date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
     FROM inserted
     ON CONFLICT DO NOTHING;
     

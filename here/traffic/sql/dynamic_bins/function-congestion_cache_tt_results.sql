@@ -218,9 +218,9 @@ EXECUTE FORMAT(
         time_grp,
         corridor_id,
         bin_range,
-        tt,
+        tt::real,
         num_obs,
-        date_trunc('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
+        date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
     FROM inserted
     ON CONFLICT DO NOTHING;
     
