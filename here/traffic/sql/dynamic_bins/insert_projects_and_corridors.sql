@@ -1,10 +1,12 @@
 --for naming corridor_streets.
 --need help with corridor_start and corridor_end locations - not sure how to turn here nodes into names. Intersection conflation?
 WITH named_corridors AS (
-    SELECT corridor_id, string_agg(DISTINCT initcap(st_name), ' / ') AS corridor_streets
+    SELECT
+        corridor_id,
+        string_agg(DISTINCT initcap(st_name), ' / ') AS corridor_streets
     FROM gwolofs.congestion_corridors,
-    UNNEST (congestion_corridors.link_dirs) AS unnested(link_dir)
-    LEFT JOIN here_gis.traffic_streets_24_4 ON link_id = trim(trailing 'T|F' from link_dir)::int
+        UNNEST(congestion_corridors.link_dirs) AS unnested (link_dir)
+    LEFT JOIN here_gis.traffic_streets_24_4 ON link_id = trim(TRAILING 'T|F' FROM link_dir)::int
     WHERE map_version = '24_4'
     GROUP BY corridor_id
     ORDER BY corridor_id DESC
@@ -29,12 +31,12 @@ WITH project AS (
 corridors AS (
     SELECT corridor_id
     FROM bluetooth.here_cn_23_4_lookup AS bt,
-    gwolofs.congestion_cache_corridor(bt.here_fnode, bt.here_tnode, '24_4')
+        gwolofs.congestion_cache_corridor(bt.here_fnode, bt.here_tnode, '24_4')
 )
 
 --add project_id to corridors
 UPDATE gwolofs.congestion_corridors
-SET project_id = (SELECT project_id FROM project) 
+SET project_id = (SELECT project_id FROM project)
 WHERE corridor_id IN (SELECT corridor_id FROM corridors)
 RETURNING corridor_id;
 

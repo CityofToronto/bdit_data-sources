@@ -61,19 +61,19 @@ ALTER TABLE IF EXISTS gwolofs.congestion_raw_segments_2025
 OWNER TO gwolofs;
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.dt
-    IS 'The date of aggregation for the record. Records may not overlap dates.';
+IS 'The date of aggregation for the record. Records may not overlap dates.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.bin_start
-    IS 'The start of the observation. It is recommended to use `hr` to group the bin instead. This column is used in the primary key, although the main constraint occurs during insert (non overlapping ranges).';
+IS 'The start of the observation. It is recommended to use `hr` to group the bin instead. This column is used in the primary key, although the main constraint occurs during insert (non overlapping ranges).';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.bin_range
-    IS 'Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.';
+IS 'Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.tt
-    IS 'Travel time in seconds.';
+IS 'Travel time in seconds.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.num_obs
-    IS 'The sum of the sample size from here.ta_path.';
+IS 'The sum of the sample size from here.ta_path.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_segments.hr
-    IS 'The hour the majority of the record occured in. Ties are rounded up.';
+IS 'The hour the majority of the record occured in. Ties are rounded up.';
