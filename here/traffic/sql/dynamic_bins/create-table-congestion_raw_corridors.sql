@@ -14,10 +14,10 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
     hr smallint,
     CONSTRAINT congestion_raw_corridors_pkey PRIMARY KEY (corridor_id, bin_range, time_grp),
     CONSTRAINT corridor_fkey FOREIGN KEY (corridor_id)
-        REFERENCES gwolofs.congestion_corridors (corridor_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE CASCADE
-        NOT VALID
+    REFERENCES gwolofs.congestion_corridors (corridor_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE CASCADE
+    NOT VALID
 )
 
 TABLESPACE pg_default;
@@ -62,19 +62,19 @@ COMMENT ON TABLE gwolofs.congestion_raw_corridors IS
 'Stores dynamic binning results for custom corridor based travel time requests.';
 
 COMMENT ON TABLE gwolofs.congestion_raw_corridors
-    IS 'Stores dynamic binning results from standard HERE congestion network travel time aggregations.';
+IS 'Stores dynamic binning results from standard HERE congestion network travel time aggregations.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_corridors.bin_range
-    IS 'Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.';
+IS 'Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_corridors.tt
-    IS 'Travel time in seconds.';
+IS 'Travel time in seconds.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_corridors.num_obs
-    IS 'The sum of the sample size from here.ta_path.';
+IS 'The sum of the sample size from here.ta_path.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_corridors.dt
-    IS 'The date of aggregation for the record. Records may not overlap dates.';
+IS 'The date of aggregation for the record. Records may not overlap dates.';
 
 COMMENT ON COLUMN gwolofs.congestion_raw_corridors.hr
-    IS 'The hour the majority of the record occured in. Ties are rounded up.';
+IS 'The hour the majority of the record occured in. Ties are rounded up.';
