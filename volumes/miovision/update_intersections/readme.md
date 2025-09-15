@@ -382,22 +382,24 @@ with psycopg2.connect(**postgres_settings) as conn:
 ```
 
 ## Alternate Method of finding `px` (Archived)
-For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
-	```sql
-	WITH intersections(id, intersection_name_api) AS (
-	VALUES
-		--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
-		('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
-		('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
-	)
+For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so:  
 
-	SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
-	FROM intersections AS i,
-	LATERAL (
-		SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
-	) AS agg
-	LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
-	```
+```sql
+WITH intersections(id, intersection_name_api) AS (
+VALUES
+	--note that suffixes had to be shortened to meet the threshold for matching `_get_intersection_id`
+	('fe0550e0-ef27-49f2-a469-4e8511771e4a', 'Eglinton Ave E and Kennedy Rd'),
+	('ff494e5c-628e-4d83-9cc3-13af52dbb88f', 'Bathurst St and Fort York Bl')
+)
+
+SELECT i.id, SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), _get_intersection_id[3], ts.px::int, ts.geom
+FROM intersections AS i,
+LATERAL (
+	SELECT * FROM gis._get_intersection_id(SPLIT_PART(i.intersection_name_api, ' and ', 1), SPLIT_PART(i.intersection_name_api, ' and ', 2), 0)
+) AS agg
+LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
+```
+ 
 <p align="center">
 	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
 </p>
