@@ -4,11 +4,11 @@ CREATE OR REPLACE FUNCTION gwolofs.congestion_segment_bootstrap(
     mnth date,
     segment_id bigint,
     n_resamples int
-    )
-    RETURNS VOID
-    LANGUAGE SQL
-    COST 100
-    VOLATILE PARALLEL SAFE 
+)
+RETURNS void
+LANGUAGE SQL
+COST 100
+VOLATILE PARALLEL SAFE
 AS $BODY$
 
     SELECT setseed(('0.'||replace(mnth::text, '-', ''))::numeric);
@@ -75,7 +75,9 @@ AS $BODY$
 
     $BODY$;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(date,bigint,integer) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(
+    date, bigint, integer
+) TO CONGESTION_BOT;
 
 /*Usage example: (works best one segment at a time with Lateral)
 SELECT *

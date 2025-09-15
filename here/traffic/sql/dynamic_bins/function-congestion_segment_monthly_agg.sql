@@ -5,10 +5,10 @@
 CREATE OR REPLACE FUNCTION gwolofs.congestion_segment_monthly_agg(
     mon date
 )
-    RETURNS VOID
-    LANGUAGE SQL
-    COST 100
-    VOLATILE PARALLEL UNSAFE
+RETURNS void
+LANGUAGE SQL
+COST 100
+VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 INSERT INTO gwolofs.congestion_segments_monthy_summary (
@@ -46,7 +46,7 @@ OWNER TO gwolofs;
 
 GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO PUBLIC;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO CONGESTION_BOT;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO gwolofs;
+GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO GWOLOFS;
 

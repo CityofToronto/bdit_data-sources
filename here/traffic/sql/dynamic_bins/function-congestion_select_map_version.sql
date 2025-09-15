@@ -5,7 +5,7 @@
 CREATE OR REPLACE FUNCTION gwolofs.congestion_select_map_version(
     start_date date,
     end_date date,
-    agg_type text default null, --null or 'path'
+    agg_type text DEFAULT NULL, --null or 'path'
     OUT selected_version text
 )
 RETURNS text
