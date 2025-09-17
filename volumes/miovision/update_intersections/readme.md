@@ -40,10 +40,28 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
    The `intersection_name` is an internal name following the convention `[E / W street name] / [N / S street name]`.
 		
 3. **date installed**  
-    `date_installed` is the *date of the first row of data from the location* (so if the first row has a `datetime_bin` of '2020-10-05 12:15', the `date_installed` is '2020-10-05'). `date_installed` can be found by querying:
+    to update `date_installed`, the following script can be run, where the temp table contains the first date of which a recording was made for a specific intersection_uid (previously defined). The output is then joined on the intersections table:
 	
 	```sql
-	SELECT MIN(datetime_bin)::date FROM miovision_api.volumes WHERE intersection_uid = 122;
+	-- Drop temp table if it exists
+	DROP TABLE IF EXISTS temp_min_dates;
+
+	-- Recreate temp table with restriction to specific intersection_uids
+	CREATE TEMP TABLE temp_min_dates AS
+	SELECT intersection_uid, MIN(datetime_bin)::date AS min_datetime
+	FROM miovision_api.volumes
+	WHERE intersection_uid IN ('intersection_uids you want to input')
+	GROUP BY intersection_uid;
+
+	-- Create index
+	CREATE INDEX idx_temp_intersection_uid ON temp_min_dates(intersection_uid);
+
+	-- Perform the update
+	UPDATE miovision_api.intersections AS i
+	SET date_installed = t.min_datetime
+	FROM temp_min_dates AS t
+	WHERE i.intersection_uid = t.intersection_uid;
+
 	```
 
 4.  **date_decommissioned**  
