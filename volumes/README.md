@@ -52,7 +52,7 @@ Short term traffic count programs are traffic monitoring programs that collect t
 - **Description:** One of the most sought-after traffic data types is the TMC, also known as an Intersection Count. In a TMC, vehicle movements (e.g., left, through, and right turns) and volumes for all legs of the intersection are captured, for a specific period of time.
 - **Data collection method:** Turning movement counts traditionally were conducted using person-recorders that manually observe and record the data or by deploying technology such a cameras. Now, they are collected using video-based collection.
 - The use of any technology or innovative methods should be tested for accuracy prior to being an acceptable method to collect turning movement count data
-- **Collected data**: vehicles and bicycles are counted by their turning movements (left, through, right, u-turn) by direction of approach; pedestrians are counted by the leg of the intersection crossed
+- **Collected data**: vehicles are counted by their turning movements (left, through, right, u-turn) by direction of approach; bicycles (both street and on crosswalk) are counted by their turning movements (through only) by direction of approach; pedestrians are counted by the leg of the intersection crossed
   - **Bins**: counted in 15-minute increments
   - **Modes**: vehicles (cars, trucks, busses), cyclists, pedestrians, other active transportation modes 
  - **Date range and updates:** January 5, 1993 to present; ad hoc updates
