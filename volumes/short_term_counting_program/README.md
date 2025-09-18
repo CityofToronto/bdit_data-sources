@@ -172,7 +172,7 @@ Notes:
 
 #### Bike movement
 
-At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg. Bike totals also include "bikes on sidewalk". Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
+At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg and the number of "bikes on crosswalk". Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
 
 #### Pedestrian movement
 
