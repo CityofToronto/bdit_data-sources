@@ -147,10 +147,6 @@ The mapping of tables between Bigdata-MOVE-Open Data is summarized below. Replic
 | `mto_length_bin_classification` | - | - | MTO 6 length bin classification guide. Used to summarize vehicle lengths observed |
 | `studies` | `counts2.studies` | included in `svc_summary_data` | Contains metadata for all study types available in MOVE. Copied from "move_staging"."counts2_studies", this table uses the legacy data structure and only use it when comparing to whats in the MOVE web application. |
 
-Useful Views
-  - `svc_daily_totals` - A daily summary of `traffic.svc_unified_volumes` by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
-  - `svc_unified_volumes` - A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.
-
 Note on `study_id`
 - The SVC count identifier `study_id` are common for a given centreline_id and multi-day study
 - This means `study_id` is common for the two directions of traffic at a midblock SVC count if they map to the same location (centreline_id). If they were done on opposite side of the an interseciton (a common scenario), the two directions will have separate `study_id`. This scenario still requires manual matching of studies to group directional data obtained on the same day, if desired.
@@ -398,10 +394,12 @@ Remember, TMCs can occur at both intersections and midblocks.
 |19 |`pct_truck` |numeric |false |If vehicle classification was collected, the percentage of motor vehicles considered trucks vehicles over the count duration. Put simply, this is the percentage of buses, single-unit, and articulated trucks. The percentage is calculated by summing the volume of vehicles in FWHA classes 4-13 inclusive and including pickups, over the total vehicle volume.|
 |20 |`mean_speed` |numeric |false |If speed data are available for the count, the mean (average) speed of all vehicles over the entire count duration. NOT the same as 50th percentile speed. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
 
-## Useful Views
-
+## Views Based on Core Tables
+### Current
+- `svc_daily_totals` - A daily summary of `traffic.svc_unified_volumes` by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
+- `svc_unified_volumes` - A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.
+### Pending Deprecation
 - `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
-
 - `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement asset information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [Update pavement assets #620](https://github.com/CityofToronto/bdit_data-sources/issues/620).
 
 - `gis_core.centreline_leg_directions` - Maps the four cardinal directions (N, S, E, & W) referenced by TMCs onto specific edges of the centreline network for all 3- & 4-legged intersections.
