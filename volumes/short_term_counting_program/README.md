@@ -398,15 +398,6 @@ Remember, TMCs can occur at both intersections and midblocks.
 |19 |`pct_truck` |numeric |false |If vehicle classification was collected, the percentage of motor vehicles considered trucks vehicles over the count duration. Put simply, this is the percentage of buses, single-unit, and articulated trucks. The percentage is calculated by summing the volume of vehicles in FWHA classes 4-13 inclusive and including pickups, over the total vehicle volume.|
 |20 |`mean_speed` |numeric |false |If speed data are available for the count, the mean (average) speed of all vehicles over the entire count duration. NOT the same as 50th percentile speed. If the count was conducted on a two-way road, and both directions of travel were observed, counts from both directions are included in the calculation.|
 
-### Other Useful Tables
-
-#### `studies` <!-- omit in toc -->
-FOR LEGACY PURPOSES ONLY, this is conflated to the legacy MOVE centreline.
-
-A human-friendly interpretation of studies. Grouped by colocated arterycodes and with single-day ATR "counts" into continuous study days.
-
-Find at `traffic.studies`.
-
 ## Useful Views
 
 - `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
