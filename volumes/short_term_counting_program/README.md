@@ -170,6 +170,8 @@ Notes:
 
 At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg and the number of "bikes on crosswalk". Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
 
+!['tmc_bike_cross'](../img/tmc_cycling_movements.png)
+
 #### Pedestrian movement
 
 Pedestrians are counted based on the side of the intersection they cross on. The example below shows `S_PEDS` or pedestrians crossing on the south side of the intersection. Note that they could be travelling either east or west in this example.
