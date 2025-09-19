@@ -110,3 +110,52 @@ The materialized view `gis_core.centreline_leg_directions` contains an automated
 
 The orientation of some intersections makes this mapping non-trivial and it's possible and even likely that some datasets classify these cardinal directions differently or inconsistently. Please report any issues or inconsistencies you may find [here](https://github.com/CityofToronto/bdit_data-sources/issues/1190).
 
+## MOVE Centreline
+
+The tables described here reference the centreline that underpins the MOVE Exports product. It is a simplified view of the centreline that merges midblock segments into continuous segments between nodes that is more representative of how we view the road/transportation network. The intersections are then filtered to only contain the nodes that match the endpoints of the merged edges.
+
+Additionally, these tables are what you would use to join to the studies included in the `traffic` schema as they're conflated to this version of the centreline. Studies can also be joined using their `lat` and `lng` coordinates via a spatial join if using a different version of the centreline.
+
+If you would like to join to a non-simplified centreline, then you need to `unnest` the `centreline_id_array` column and then perform a join using that.
+
+### `traffic.centreline2_midblocks`
+
+| Column Name                 | Description  |
+|-----------------------------|--------------|
+| `midblock_id`               | Unique identifier for the segment. It's the lowest id of the merged segments. |
+| `midblock_name`             | A name to reresent the midblock segment. Generated in MOVE ETL. Regex rules are applied to clean up the naming.|
+| `centreline_type`           | Denotes if intersection or midblock. |
+| `feature_code`              | Specifies the road class of the segment. |
+| `linear_name_id`            | Identifies the road that the segment belongs to. |
+| `linear_name_full`          | The legal name of the road the segment belongs to. |
+| `properties`                | A JSON object containing a spatial join of nearby hospitals, schools, pxo's or traffic signals that are along or nearby the segment. |
+| `from_intersection_id`      | `intersection_id` of the node at one of the endpoints. |
+| `from_intersection_name`    | Non-regexed name for the intersection, please join to `traffic.centreline2_intersections` for the clean name. |
+| `to_intersection_id`        | `intersection_id` of the node at one of the endpoints.|
+| `to_intersection_name`      | Non-regexed name for the intersection, please join to `traffic.centreline2_intersections` for the clean name.|
+| `lat`                       | Latitude of the midpoint of the segment. |
+| `lng`                       | Longitude of the midpoint of the segment. |
+| `geom`                      | Geometry of the segment. |
+| `centreline_id_array`       | An array containing the list of `midblock_id`'s that are represented by the simplified segment. |
+| `shape_length`              | The length of the shape according to GCC. However there is an existing issue relating to the accuracy of the length. |
+
+### `traffic.centreline2_intersections`
+
+| Column Name                 | Description  |
+|-----------------------------|--------------|
+| `intersection_id`           | Unique identifier of the intersection. |
+| `centreline_type`           | Denotes whether `midblock` or `intersection`. |
+| `intersection_name`         | The cleaned up name of the intersection. This field is unique. |
+| `classification`            | The classification of the intersection (Major, minor etc..) |
+| `feature_code`              | The feature code of the specific "level" of the intersection. |
+| `properties`                | A JSON object containing a spatial join of nearby hospitals, schools, pxo's or traffic signals that are along or nearby the segment. |
+| `lat`                       | Latitude of the intersection. |
+| `lng`                       | Longitude of the intersction. |
+| `geom`                      | The geometry of the intersection. |
+| `date_effective`            | The date the intersection was updated by GCC. |
+
+
+
+
+
+
