@@ -5,7 +5,7 @@ owners = {
     "congestion_aggregation": ["natalie", "gabe"],
     "congestion_refresh": ["natalie", "gabe"],
     "counts_replicator": ["natalie", "gabe", "maddy"],
-    "ecocounter_check": ["gabe", "chris"],
+    "ecocounter_check": ["gabe", "david"],
     "ecocounter_open_data": ["gabe"],
     "ecocounter_pull": ["gabe"],
     "eoy_table_create": ["natalie", "gabe"],
@@ -14,7 +14,7 @@ owners = {
     "lake_shore_signal_timing_refresh": ["natalie", "gabe"],
     "log_cleanup": ["natalie", "gabe"],
     "miovision_alerts": ["gabe"],
-    "miovision_check": ["chris", "gabe"],
+    "miovision_check": ["david", "gabe"],
     "miovision_hardware": ["gabe"],
     "miovision_open_data": ["gabe"],
     "miovision_pull": ["natalie", "gabe"],
@@ -36,7 +36,7 @@ owners = {
     "vz_google_sheets": ["natalie", "gabe"],
     "vz_map_checks": ["gabe"],
     "weather_pull": ["natalie", "gabe"],
-    "wys_check": ["chris", "gabe"],
+    "wys_check": ["david", "gabe"],
     "wys_monthly_summary": ["natalie", "gabe"],
     "wys_pull": ["gabe", "natalie"]
 }
