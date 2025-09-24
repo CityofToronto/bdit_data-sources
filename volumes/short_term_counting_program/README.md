@@ -13,20 +13,21 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Where can I access the data?](#where-can-i-access-the-data)
 - [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
-  - [Core Tables](#core-tables)
+- [Turning Movement Counts](#turning-movement-counts)
+  - [History of Bicycle Data in TMCs](#history-of-bicycle-data-in-tmcs)
+  - [`traffic.tmc_metadata` View](#traffictmc_metadata-view)
+  - [`traffic.tmc_study_data`](#traffictmc_study_data)
+  - [`traffic.tmc_summary_stats`](#traffictmc_summary_stats)
+  - [Turning Movements by Classification](#turning-movements-by-classification)
     - [Vehicle movement](#vehicle-movement)
-    - [Bike movement](#bike-movement)
+    - [Bicycle movements](#bicycle-movements)
     - [Pedestrian movement](#pedestrian-movement)
-    - [TMC Relations](#tmc-relations)
-      - [`tmc.metadata`](#tmcmetadata)
-      - [`traffic.tmc_study_data`](#traffictmc_study_data)
-      - [`traffic.tmc_summary_stats`](#traffictmc_summary_stats)
-    - [SVC Relations](#svc-relations)
-      - [`traffic.svc_metadata`](#trafficsvc_metadata)
-      - [`traffic.svc_study_class`](#trafficsvc_study_class)
-      - [`traffic.svc_study_speed`](#trafficsvc_study_speed)
-      - [`traffic.svc_study_volume`](#trafficsvc_study_volume)
-      - [`traffic.svc_summary_stats`](#trafficsvc_summary_stats)
+- [Speed Volume Classification Counts](#speed-volume-classification-counts)
+  - [`traffic.svc_metadata`](#trafficsvc_metadata)
+  - [`traffic.svc_study_class`](#trafficsvc_study_class)
+  - [`traffic.svc_study_speed`](#trafficsvc_study_speed)
+  - [`traffic.svc_study_volume`](#trafficsvc_study_volume)
+  - [`traffic.svc_summary_stats`](#trafficsvc_summary_stats)
 - [Views Based on Core Tables](#views-based-on-core-tables)
   - [Current](#current)
   - [Pending Deprecation](#pending-deprecation)
@@ -51,6 +52,7 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
   - Motor vehicle: Through / Left / Right
   - Cyclist: cyclist volume by approach leg (this includes bikes in crosswalks on Spectrum counts.)
   - Pedestrian: pedestrian volume by leg of intersection crossed
+- See here [for the data dictionaries](#turning-movement-counts)
 
 #### Data Elements <!-- omit in toc -->
 * 15 min aggregated interval time
@@ -66,6 +68,8 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
 * Data will not be collected under irregular traffic conditions (construction, closure, etc), but it maybe skewed by unplanned incidents
 
 ### Midblock Speed-Volume-Classification (SVC) (Previously Automated Traffic Record (ATR))
+
+See [Speed Volume Classification Counts](#speed-volume-classification-counts) for the data dictionaries
 
 - Volume
   - Direction
@@ -132,22 +136,20 @@ Load Sources Summary
 
 ## How is the data structured?
 
-### Core Tables
-
 The database is structured around three types of tables: metadata, count observations, summary stats, and reference tables (spatial, temporal, or categorical).
 
 The mapping of tables between Bigdata-MOVE-Open Data is summarized below. Replicated tables have a documentation link in the table comment, viewable in PGAdmin in table properties.
 
 | Bigdata `traffic` Table         | MOVE (FLASHCROW) Table       | Open Data file | Description |
 |---------------------------------|------------------------------|------------------------------------------|--------------------------|
-| [`svc_metadata`](#atrmetadata_json) | `atr.metadata_json` | included in `svc_summary_data` | Table containing 15-minute observations for classification ATRs (SVCs). |
-| [`svc_study_class`](#atrstudy_class_human) | `atr.study_class_human` | `svc_raw_data_class_*` | Table containing 15-minute observations for classification ATRs (SVCs). |
-| [`svc_study_speed`](#atrstudy_speed_human) | `atr.study_speed_human` | `svc_raw_data_speed_*` | Table containing 15-minute observations for speed volume ATRs (SVCs). |
-| [`svc_study_volume`](#atrstudy_volume_human) | `atr.study_volume_human` | `svc_raw_data_volume_*` | Raw SVC volume counts. |
-| [`svc_summary_stats`](#atrsummary_stats) | `atr.summary_stats` | `svc_summary_data` and `svc_most_recent_summary_data` | Summary statistics for ATR (SVC) counts. Join to atr.metadata_json for full study metadata. |
-| [`tmc_metadata`](#tmcmetadata) | `tmc.metadata` | included in `tmc_summary_data` | Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE centreline. |
-| [`tmc_study_data`](#tmcstudy_human) | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
-| [`tmc_summary_stats`](#tmcsummary_stats) | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
+| [`svc_metadata`](#trafficsvc_metadata) | `atr.metadata_json` | included in `svc_summary_data` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| [`svc_study_class`](#trafficsvc_study_class) | `atr.study_class_human` | `svc_raw_data_class_*` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| [`svc_study_speed`](#trafficsvc_study_speed) | `atr.study_speed_human` | `svc_raw_data_speed_*` | Table containing 15-minute observations for speed volume ATRs (SVCs). |
+| [`svc_study_volume`](#trafficsvc_study_volume) | `atr.study_volume_human` | `svc_raw_data_volume_*` | Raw SVC volume counts. |
+| [`svc_summary_stats`](#trafficsvc_summary_stats) | `atr.summary_stats` | `svc_summary_data` and `svc_most_recent_summary_data` | Summary statistics for ATR (SVC) counts. Join to atr.metadata_json for full study metadata. |
+| [`tmc_metadata`](#traffictmc_metadata-view) | `tmc.metadata` | included in `tmc_summary_data` | Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE centreline. |
+| [`tmc_study_data`](#traffictmc_study_data) | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
+| [`tmc_summary_stats`](#traffictmc_summary_stats) | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
 | `fhwa_classes` | - | `fwha_classification.png` | Provides a reference for the FWHA classification system. [Notion doc](https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab) |
 | `midblocks` | `centreline2.midblocks` | - | Simplified midblock network to which MOVE2 conflates studies to. Includes improved naming for midblock segments. |
 | `intersections` | `centreline2.intersections` | - | Simplified intersection file that corresponds to the midblocks used by MOVE 2. |
@@ -161,43 +163,21 @@ Note on `study_id`
 - This means `study_id` is common for the two directions of traffic at a midblock SVC count if they map to the same location (centreline_id). If they were done on opposite side of the an interseciton (a common scenario), the two directions will have separate `study_id`. This scenario still requires manual matching of studies to group directional data obtained on the same day, if desired.
 - Because `study_id` is point-location-based, it will adapt to version changes of the Toronto centreline
 
-
-#### Vehicle movement
-The following image depicts motor vehicle movements. This example shows south approach, or northbound travel, movements.
-
-- `S_[CARS|TRUCK|BUS]_L`
-- `S_[CARS|TRUCK|BUS]_T`
-- `S_[CARS|TRUCK|BUS]_R`
-
-!['tmc_turning_movements'](../img/tmc_movements.png)
-
-Notes:
-- Exits can be calculated by summing associated movements.
-- U-turns are currently not available [in `bigdata`](#where-can-i-access-the-data).
-
-#### Bike movement
-
-At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg and the number of "bikes on crosswalk". Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
-
-!['tmc_bike_cross'](../img/tmc_cycling_movements.png)
-
-#### Pedestrian movement
-
-Pedestrians are counted based on the side of the intersection they cross on. The example below shows `S_PEDS` or pedestrians crossing on the south side of the intersection. Note that they could be travelling either east or west in this example.
-
-!['tmc_ped_cross'](../img/ped_cross_movement.png)
-
-Pedestrians are only counted when they cross the roadway, meaning that pedestrians who turn at the intersections without crossing the roadway are _not_ counted.
-
-For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
-
-
-#### TMC Relations
+## Turning Movement Counts
 
 !['tmc_flow_tables_relationship'](../img/2025_TMC_ERD_relations_short_term_count-FK_is_highlighted_green.png)
 
-##### `tmc.metadata`
+### History of Bicycle Data in TMCs
+
+* Prior to 1994, bikes were not counted at all, the data may appear in the database as either `0` or `null` values. 
+* From 1994 to 2014, bikes were occasionally counter. Caution is required in interpreting `0`s since they could instead represent `null`. It appears however that _most_ counts in this period count at least one bike.
+* From 2014 onward, bikes were always counted in TMCs and zero values, where they exist, should be taken at face value.
+* For counts conducted from September 2023 on, the bike count includes bicycles on the road riding into the intersection plus bicycles riding in the adjacent crosswalk area. See [Bicycle movements](#bicycle-movements)
+* At some point recently we began receiving full bicycle turning movements. These are not yet entering the database, but they're available by request and there are plans to bring them into the database. 
+
+### `traffic.tmc_metadata` View
 Remember, TMCs can occur at both intersections and midblocks.
+
 | |column_name |data_type|is_nullable|description|
 | --------------- | ---------- | ------- | --------- | --------- |
 | 1|`count_id`|bigint |NO |Unique identifier for each count. Spectrum counts share the same `request_id` or `study_id` as `count_id`|
@@ -213,7 +193,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 | 11|`centreline_properties` |jsonb|YES|Centreline features from other layers spatially joined. Includes PXOs, Traffic Signals and Schools with specified radii. Nested JSON structure.|
 | 12|`count_geom`|geom |NO |Point geometry representation of the study.|
 
-##### `traffic.tmc_study_data`
+### `traffic.tmc_study_data`
 | |column_name|data_type|is_nullable|description|
 |----------------|-----------|---------|-----------|-----------|
 | 1|`id` |bigint |NO |Unique row identifier. |
@@ -269,7 +249,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 |51|`e_other`|integer|NO | |
 |52|`w_other`|integer|NO | |
 
-##### `traffic.tmc_summary_stats`
+### `traffic.tmc_summary_stats`
 | |column_name |data_type|is_nullable|description|
 |---|---|---|---|---|
 |1 |`count_id` |bigint |false |Unique identifier for each Turning Movement Count. Use this ID to cross-reference 15-minute observations in tmc_raw_data files.|
@@ -299,11 +279,47 @@ Remember, TMCs can occur at both intersections and midblocks.
 |25 |`count_heavy_pct_w_appr` |numeric |false |Percentage of motor vehicle volume considered heavy vehicles (truck/bus), that enter the intersection from the west leg (approach), over the count duration|
 |26 |`count_bikes_w_appr` |numeric |false |Volume of bicycles that enter the intersection from the west leg (approach), over the count duration NOTE: For counts conducted September 2023 and after, this includes bicycles on the road riding into the intersection from the west leg, plus bicycles riding in the crosswalk area across the south leg|
 
-#### SVC Relations
+### Turning Movements by Classification
+
+The three sections below explain what is counted and how it is represented for vehicles, bicycles and pedestrians.
+
+#### Vehicle movement
+The following image depicts motor vehicle movements. This example shows south approach, or northbound travel, movements.
+
+- `S_[CARS|TRUCK|BUS]_L`
+- `S_[CARS|TRUCK|BUS]_T`
+- `S_[CARS|TRUCK|BUS]_R`
+
+!['tmc_turning_movements'](../img/tmc_movements.png)
+
+Notes:
+- Exits can be calculated by summing associated movements.
+- U-turns are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+#### Bicycle movements
+
+At the time of writing, bike totals are reported only by the number of cyclists that enter the intersection from a given approach/leg and the number of "bikes on crosswalk". Turning movements are currently not available [in `bigdata`](#where-can-i-access-the-data).
+
+!['tmc_bike_cross'](../img/tmc_cycling_movements.png)
+
+
+#### Pedestrian movement
+
+Pedestrians are counted based on the side of the intersection they cross on. The example below shows `S_PEDS` or pedestrians crossing on the south side of the intersection. Note that they could be travelling either east or west in this example.
+
+!['tmc_ped_cross'](../img/ped_cross_movement.png)
+
+Pedestrians are only counted when they cross the roadway, meaning that pedestrians who turn at the intersections without crossing the roadway are _not_ counted.
+
+For 3-legged or "T" intersections, pedestrians have typically _not_ been counted on the side of the intersection without a crosswalk, even when present in large numbers. The count in these cases will be given as zero. Going forward however (circa late 2024), the intention is to count that sidewalk as though it was a crossing of a typical 4-legged intersection.
+
+
+
+## Speed Volume Classification Counts
 
 !['svc_flow_tables_relationship'](../img/2025_ATR_ERD_svc_relations_short_term_counting-FK_is_highlighted_green.png)
 
-##### `traffic.svc_metadata`
+### `traffic.svc_metadata`
 | |column_name|data_type|is_nullable|description|
 |----------------|-----------|---------|-----------|-----------|
 |1 |`study_id` |integer |NO |Unique identifier for each SVC study. Use this ID to cross-reference 15-minute observations in svc_raw_data files. Spectrum counts the `study_id` correlates to the `request_id`|
@@ -320,7 +336,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 |12 |`centreline_road_id` |integer |YES |Roll-up id to select all segments of a given road. For example all Kingston Rd. segments would share the same road_id.|
 |13 |`centreline_properties` |jsonb |YES |Other gcc layers spatially joined into a json structure that contains nearby schools, PXOs or traffic signals that belong to the midblock segment.|
 
-##### `traffic.svc_study_class`
+### `traffic.svc_study_class`
 | |column_name|data_type|is_nullable|description|
 |----------------|-----------|---------|-----------|-----------|
 | 1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
@@ -344,7 +360,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 |19|`6a_mt`|integer|NO |Volume of FWHA Class 12 vehicles (six-axle multi-trailer trucks).|
 |20|`other`|integer|NO |Volume of FWHA Class 13 vehicles (seven or more axle multi-trailer trucks).|
 
-##### `traffic.svc_study_speed`
+### `traffic.svc_study_speed`
 | |column_name |data_type|is_nullable|description|
 |---|---|---|---|---|
 | 1|`id`|bigint |NO |Unique row identifier for each 15-minute interval. |
@@ -369,7 +385,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 |20|`vol_76_80_kph` |integer|NO |Volume of vehicles travelling between 76-80kph |
 |21|`vol_81_160_kph`|integer|NO |Volume of vehicles travelling between 81-160kph|
 
-##### `traffic.svc_study_volume`
+### `traffic.svc_study_volume`
 | |column_name|data_type|is_nullable|description|
 |---|---|---|---|---|
 |1|`id` |bigint |NO |Unique row identifier for each 15-minute interval. |
@@ -381,7 +397,7 @@ Remember, TMCs can occur at both intersections and midblocks.
 |7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin. |
 |8|`volume` |integer|NO |Vehicle volume observed during the 15-minute period. |
 
-##### `traffic.svc_summary_stats`
+### `traffic.svc_summary_stats`
 | |column_name |data_type|is_nullable|description|
 |---|---|---|---|---|
 |1 |`study_id` |integer |false |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to `trafffic.svc_metadata`.|
