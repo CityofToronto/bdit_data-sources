@@ -199,19 +199,21 @@ DAGS = {
         "conn": "gcc_bot",
         "deployments": ["DEV", "PROD"],
         "downstream_aggs": {
-            "ibms_joined": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.ibms_joined;",
-            "centreline_version_date": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.centreline_version_date;",
-            "intersection_version_date": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.intersection_version_date;",
-            "centreline_intersection_point_version_date": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.centreline_intersection_point_version_date;"
+            "ibms_joined": "SELECT gis.refresh_mat_view_ibms_joined();",
+            "centreline_version_date": "SELECT gis.refresh_mat_view_centreline_version_date();",
+            "intersection_version_date": "SELECT gis.refresh_mat_view_intersection_version_date();",
+            "centreline_intersection_point_version_date": "SELECT gis.refresh_mat_view_centreline_intersection_point_version_date();",
+            "municipalities_abbr": "SELECT gis.refresh_mat_view_municipalities_abbr();"           
         }
     },
     "sirius": {
         "conn": "gcc_bot_sirius",
         "deployments": ["DEV"],
         "downstream_aggs": {
-            "centreline_latest": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.centreline_latest;",
-            "centreline_version_date": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.centreline_version_date;",
-            "intersection_version_date": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis.intersection_version_date;"
+            "centreline_latest": "SELECT gis.refresh_mat_view_centreline_latest();",
+            "centreline_version_date": "SELECT gis.refresh_mat_view_centreline_version_date();",
+            "intersection_version_date": "SELECT gis.refresh_mat_view_intersection_version_date();",
+            "municipalities_abbr": "SELECT gis.refresh_mat_view_municipalities_abbr();"           
         }
     }
 }
