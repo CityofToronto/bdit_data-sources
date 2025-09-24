@@ -18,9 +18,18 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
     - [Bike movement](#bike-movement)
     - [Pedestrian movement](#pedestrian-movement)
     - [TMC Relations](#tmc-relations)
+      - [`tmc.metadata`](#tmcmetadata)
+      - [`traffic.tmc_study_data`](#traffictmc_study_data)
+      - [`traffic.tmc_summary_stats`](#traffictmc_summary_stats)
     - [SVC Relations](#svc-relations)
-  - [Other Useful Tables](#other-useful-tables)
-- [Useful Views](#useful-views)
+      - [`traffic.svc_metadata`](#trafficsvc_metadata)
+      - [`traffic.svc_study_class`](#trafficsvc_study_class)
+      - [`traffic.svc_study_speed`](#trafficsvc_study_speed)
+      - [`traffic.svc_study_volume`](#trafficsvc_study_volume)
+      - [`traffic.svc_summary_stats`](#trafficsvc_summary_stats)
+- [Views Based on Core Tables](#views-based-on-core-tables)
+  - [Current](#current)
+  - [Pending Deprecation](#pending-deprecation)
 - [Cycling Seasonality Adjustment](#cycling-seasonality-adjustment)
 - [What's the old FLOW Oracle Schema?](#whats-the-old-flow-oracle-schema)
 
@@ -131,14 +140,14 @@ The mapping of tables between Bigdata-MOVE-Open Data is summarized below. Replic
 
 | Bigdata `traffic` Table         | MOVE (FLASHCROW) Table       | Open Data file | Description |
 |---------------------------------|------------------------------|------------------------------------------|--------------------------|
-| `svc_metadata` | `atr.metadata_json` | included in `svc_summary_data` | Table containing 15-minute observations for classification ATRs (SVCs). |
-| `svc_study_class` | `atr.study_class_human` | `svc_raw_data_class_*` | Table containing 15-minute observations for classification ATRs (SVCs). |
-| `svc_study_speed` | `atr.study_speed_human` | `svc_raw_data_speed_*` | Table containing 15-minute observations for speed volume ATRs (SVCs). |
-| `svc_study_volume` | `atr.study_volume_human` | `svc_raw_data_volume_*` | Raw SVC volume counts. |
-| `svc_summary_stats` | `atr.summary_stats` | `svc_summary_data` and `svc_most_recent_summary_data` | Summary statistics for ATR (SVC) counts. Join to atr.metadata_json for full study metadata. |
-| `tmc_metadata` | `tmc.metadata` | included in `tmc_summary_data` | Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE centreline. |
-| `tmc_study_data` | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
-| `tmc_summary_stats` | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
+| [`svc_metadata`](#atrmetadata_json) | `atr.metadata_json` | included in `svc_summary_data` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| [`svc_study_class`](#atrstudy_class_human) | `atr.study_class_human` | `svc_raw_data_class_*` | Table containing 15-minute observations for classification ATRs (SVCs). |
+| [`svc_study_speed`](#atrstudy_speed_human) | `atr.study_speed_human` | `svc_raw_data_speed_*` | Table containing 15-minute observations for speed volume ATRs (SVCs). |
+| [`svc_study_volume`](#atrstudy_volume_human) | `atr.study_volume_human` | `svc_raw_data_volume_*` | Raw SVC volume counts. |
+| [`svc_summary_stats`](#atrsummary_stats) | `atr.summary_stats` | `svc_summary_data` and `svc_most_recent_summary_data` | Summary statistics for ATR (SVC) counts. Join to atr.metadata_json for full study metadata. |
+| [`tmc_metadata`](#tmcmetadata) | `tmc.metadata` | included in `tmc_summary_data` | Count-level study metadata for TMCs that contains all counts including both 14 and 8 hour legacy counts. Studies have been joined to the MOVE centreline. |
+| [`tmc_study_data`](#tmcstudy_human) | `tmc.study_human` | `tmc_raw_data_*` | Table containing 15-minute observations for TMCs |
+| [`tmc_summary_stats`](#tmcsummary_stats) | `tmc.summary_stats` | `tmc_summary_data` and `tmc_most_recent_summary_data` | Count level summary statistics for all TMCs. |
 | `fhwa_classes` | - | `fwha_classification.png` | Provides a reference for the FWHA classification system. [Notion doc](https://www.notion.so/bditto/Feature-Classification-ATRs-27ece0049d654c9ba06136bffc07e2e8?pvs=4#e618feab5f8d4bb48e88f879915cbeab) |
 | `midblocks` | `centreline2.midblocks` | - | Simplified midblock network to which MOVE2 conflates studies to. Includes improved naming for midblock segments. |
 | `intersections` | `centreline2.intersections` | - | Simplified intersection file that corresponds to the midblocks used by MOVE 2. |
