@@ -68,8 +68,6 @@ def here_dynamic_binning_monthly_agg():
     create_groups = SQLExecuteQueryOperator(
         sql="segment_grouping.sql",
         task_id="create_segment_groups",
-        #TODO: update sql to work for different map versions
-        start_date=datetime(2025, 4, 1, tz="America/Toronto"),
         conn_id='congestion_bot',
         retries = 0,
         params={"max_group_size": 100}
