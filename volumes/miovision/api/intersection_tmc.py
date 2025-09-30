@@ -12,7 +12,7 @@ import traceback
 from time import sleep
 from collections import namedtuple
 
-from airflow.hooks.base import BaseHook
+from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 class BreakingError(Exception):
