@@ -3,7 +3,7 @@ import os
 import pendulum
 from datetime import timedelta
 
-from airflow.sdk import dag, task, Variable
+from airflow.sdk import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 try:
