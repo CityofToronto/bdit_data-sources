@@ -8,7 +8,7 @@ to avoid those getting too big.
 import os
 import sys
 import pendulum
-from airflow import DAG
+from airflow.sdk import DAG, Variable
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
 AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)

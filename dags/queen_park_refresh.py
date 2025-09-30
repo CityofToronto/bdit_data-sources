@@ -4,9 +4,8 @@ import logging
 import pendulum
 from datetime import datetime, timedelta
 
-#from airflow.sdk import dag, task, Variable #also uncomment task_fail_slack_alert!
+#from airflow.sdk import dag, task #also uncomment task_fail_slack_alert!
 from airflow.decorators import dag, task
-from airflow.models import Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, SQLCheckOperator
 
 try:

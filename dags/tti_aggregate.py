@@ -5,8 +5,8 @@ import pendulum
 from datetime import datetime, timedelta
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sdk import dag, task, Variable
-from airflow.macros import ds_add, ds_format
+from airflow.sdk import dag, task
+from airflow.sdk.execution_time.macros import ds_add, ds_format
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

@@ -15,7 +15,7 @@ from psycopg2.extras import execute_values
 from requests import Session, exceptions
 from requests.exceptions import RequestException
 
-from airflow.hooks.base import BaseHook
+from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
