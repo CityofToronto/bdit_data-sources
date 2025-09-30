@@ -187,7 +187,7 @@ We need to find out all valid movements for the new intersections from the data 
 
 
 3. **Add additional modes to `intersection_movements`**  
-    The step before only include valid intersection movements for
+    The step before only includes valid intersection movements for
 	`classification_uid IN (1,2,6,10)` which are light vehicles, cyclists and
 	pedestrians. The reason is that the counts for other mode may not pass the
 	mark of having 20 distinct datetime_bin. However, we know that if vehicles
@@ -218,7 +218,12 @@ We need to find out all valid movements for the new intersections from the data 
 	```
 
 4. **Review `intersection_movements`**  
-    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). **Though, the valid movements should be manually reviewed.**  
+    Once the above is finished, we have completed updating the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). **Though, the valid movements should be manually reviewed looking at the following criteria.**
+
+	- are there any major vehicle movements missing: through/left/right
+    - are there any ped movements missing: clockwise/ccw
+    - if any of these are missing, investigate and see if that movement is legitimately not allowed (usually through the leg restriction clause of the intersection - should be updated before)
+
     Below is an example script + output you can use to aggregate movements into a more readable format for QC. In particular look for intersections with very short lists of valid movements, or no valid movements for certain classifications.  
 
     | intersection_uid | leg | movements                                                                                                                                                                                    |
