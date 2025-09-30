@@ -10,10 +10,10 @@ import sys
 import pendulum
 from datetime import timedelta, time
 
-from airflow.sdk import dag, task, Variable
+from airflow.sdk import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.operators.latest_only import LatestOnlyOperator
-from airflow.sensors.time_sensor import TimeSensor
+from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
+from airflow.providers.standard.sensors.time import TimeSensor
 
 #import python scripts
 try:
