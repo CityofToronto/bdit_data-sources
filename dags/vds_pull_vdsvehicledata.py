@@ -4,10 +4,10 @@ import pendulum
 from functools import partial
 from datetime import datetime, timedelta
 
-from airflow.sdk import dag, task_group, task, Variable
+from airflow.sdk import dag, task_group, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)

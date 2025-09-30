@@ -10,8 +10,8 @@ import pendulum
 from datetime import timedelta
 from functools import partial
 
-from airflow.sdk import dag, Variable
-from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.sdk import dag
+from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

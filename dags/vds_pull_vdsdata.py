@@ -1,10 +1,9 @@
 import os
 import sys
-from airflow.sdk import dag, task_group, task, Variable, Variable
 from datetime import datetime, timedelta
 from functools import partial
 
-from airflow.sdk import dag, task_group, task, Variable, Variable
+from airflow.sdk import dag, task_group, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.external_task import ExternalTaskMarker

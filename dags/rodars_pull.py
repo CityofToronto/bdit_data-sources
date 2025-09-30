@@ -3,7 +3,7 @@ import sys
 import pendulum
 from functools import partial
 
-from airflow.sdk import dag, task, task_group, Variable
+from airflow.sdk import dag, task, task_group
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
