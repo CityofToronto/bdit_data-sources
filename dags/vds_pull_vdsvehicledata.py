@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from airflow.sdk import dag, task_group, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -47,19 +46,9 @@ default_args = {
     ],
     doc_md=DOC_MD,
     tags=["bdit_data-sources", 'vds', 'vdsvehicledata', 'data_checks', 'data_pull'],
-    schedule='5 4 * * *' #daily at 4:05am
+    schedule=None #triggered by vds_pull_vdsdata
 )
 def vdsvehicledata_dag():
-
-    t_upstream_done = ExternalTaskSensor(
-        task_id="starting_point",
-        external_dag_id="vds_pull_vdsdata",
-        external_task_id="update_inventories.done",
-        poke_interval=3600, #retry hourly
-        mode="reschedule",
-        timeout=86400, #one day
-        execution_delta=timedelta(minutes=5)
-    )
 
     #this task group checks if all necessary partitions exist and if not executes create functions.
     @task_group(group_id='check_partitions')
@@ -147,6 +136,6 @@ def vdsvehicledata_dag():
         )
         wait_for_weather_timesensor() >> check_avg_rows
 
-    [t_upstream_done, check_partitions_TG()] >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
+    check_partitions_TG() >> pull_vdsvehicledata() >> summarize_vdsvehicledata() >> data_checks()
 
 vdsvehicledata_dag()
