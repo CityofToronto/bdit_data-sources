@@ -51,7 +51,7 @@ Other studies include pedestrian delay and classification, pedestrian crossover 
 - Intersection approach leg: N / S / E / W
 - Type of movement:
   - Motor vehicle: Through / Left / Right
-  - Cyclist: cyclist volume by approach leg (this includes bikes in crosswalks on Spectrum counts.)
+  - Cyclist: cyclist volume by approach leg (Includes "Bikes in Crosswalk" from September 2023 to present: [See here](#bicycle-movements))
   - Pedestrian: pedestrian volume by leg of intersection crossed
 - See here [for the data dictionaries](#turning-movement-counts)
 
@@ -127,15 +127,21 @@ These datasets are published in disaggregate and summary versions on Open Data, 
 
 Speed Volume Classification counts and Turning Movement Counts are being replicated into Bigdata `traffic` schema from MOVE (FLASHCROW database). Every table that is replicated has a link to internal documentation for the corresponding table on FLASHCROW in the table comment, viewable in table properties in PGAdmin.
 
-Load Sources Summary
+### Load Sources Summary
+All tables are accessed via the `traffic.*` schema.
 
-| Study Type                      | FlowLoad (study_source = 'OTI / FlowLoad')       | MOVE Loader (study_source = 'MOVE Load') | Spectrum API Loader (count_source = SPECTRUM / LEGACY) |
-|---------------------------------|--------------------------------------------------|------------------------------------------|--------------------------------------------------------|
-| Turning Movement Count          | All-time TMC data*                               | n/a                                      | September 2023 to present                              |
-| Volume ATR                      | All-time Volume ATRs**                           | n/a                                      | n/a                                                    |
-| Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                      | n/a                                                    |
-| Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded***     | n/a                                                    |
+| `bigdata` Table Name                                    | Study Type                      | FlowLoad (`study_source` = 'OTI / FlowLoad')       | MOVE Loader (`study_source` = 'MOVE Load') | Spectrum API Loader (`count_source` = SPECTRUM / LEGACY) |
+|---------------------------------------------------------|---------------------------------|--------------------------------------------------|------------------------------------------|--------------------------------------------------------|
+| `tmc_metadata`, `tmc_study_data`, `tmc_summary_data`    | Turning Movement Count          | All-time TMC data*                               | n/a                                      | September 2023 to present                              |
+| `svc_metadata`, `svc_study_volume`, `svc_summary_stats` | Volume ATR                      | All-time Volume ATRs**                           | n/a                                      | n/a                                                    |
+| `svc_metadata`, `svc_study_speed`, `svc_summary_stats`  | Speed / Volume ATR              | All-time Speed/Vol ATRs*                         | May 2023 to present                      | n/a                                                    |
+| `svc_metadata`, `svc_study_class`, `svc_summary_stats`  | Vehicle Classification ATR      | Classification ATR data from 1985 to May 2023*** | No Classification ATR data loaded***     | n/a                                                    |
 
+*The `traffic.*` tables contain all-time TMC and Speed/Vol ATR data from all loading mechanisms
+
+**Around 2021, we stopped collecting Volume-only ATR counts, and switched to Speed/Vol ATR counts, as they're a similar price but more data rich
+
+***Classification ATR data is spotty for two reasons: 1) the legacy loader did not allow for co-located Speed/Vol ATR and Classification ATR data to be loaded for the same day; 2) there is curently no loading mechanism for Classification ATR data post-May 2023, when the MOVE Loader was introduced.
 
 ## How is the data structured?
 
