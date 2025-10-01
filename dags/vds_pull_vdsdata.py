@@ -3,10 +3,11 @@ import sys
 from datetime import datetime, timedelta
 from functools import partial
 
-from airflow.sdk import dag, task_group, task
+from airflow.sdk import dag, task_group, task, TriggerRule
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
@@ -17,7 +18,7 @@ from volumes.vds.py.vds_functions import (
 )
 from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
-from airflow3_bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
+from airflow3_bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor, check_if_dow
 
 DAG_NAME = 'vds_pull_vdsdata'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
@@ -78,10 +79,11 @@ def vdsdata_dag():
             vds_bot = PostgresHook('vds_bot')
             pull_commsdeviceconfig(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
-        t_done = ExternalTaskMarker(
-                task_id="done",
-                external_dag_id="vds_pull_vdsvehicledata",
-                external_task_id="starting_point"
+        t_done = TriggerDagRunOperator(
+            task_id="done",
+            trigger_dag_id="vds_pull_vdsvehicledata",
+            logical_date="{{ ds }}",
+            reset_dag_run=True
         )
 
         [
@@ -173,14 +175,25 @@ def vdsdata_dag():
         )
 
         (summarize_v15_task, summarize_v15_bylane_task) >> summarize_volmes_daily_task
-    
-    t_done = ExternalTaskMarker(
-        task_id="done",
-        external_dag_id="vds_check",
-        external_task_id="starting_point"
-    )
 
-    @task_group
+    @task.short_circuit(ignore_downstream_trigger_rules=False)
+    def check_dow(ds=None):
+        execution_date = datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)
+        return execution_date.weekday() == 4 #only notify on Thursdays
+    
+    t_done = TriggerDagRunOperator(
+        task_id="done",
+        trigger_dag_id="vds_check",
+        logical_date="{{ ds }}",
+        reset_dag_run=True
+    )
+    
+    t_empty = EmptyOperator(
+        task_id="continue",
+        trigger_rule=TriggerRule.NONE_FAILED
+    )
+    
+    @task_group()
     def data_checks():
         "Data quality checks which may warrant re-running the DAG."
         
@@ -206,8 +219,9 @@ def vdsdata_dag():
             check_partitions()
         ] >>
         pull_vdsdata() >>
-        summarize_v15() >> t_done >>
-        data_checks()
+        summarize_v15() >>
+        check_dow() >> t_done >>
+        t_empty >> data_checks()
     ]
 
 vdsdata_dag()
