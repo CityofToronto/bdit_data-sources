@@ -11,7 +11,6 @@ from datetime import timedelta
 from functools import partial
 
 from airflow.sdk import dag
-from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -55,16 +54,6 @@ default_args = {
 )
 def vds_check_dag():
 
-    t_upstream_done = ExternalTaskSensor(
-        task_id="starting_point",
-        external_dag_id="vds_pull_vdsdata",
-        external_task_id="done",
-        poke_interval=3600, #retry hourly
-        mode="reschedule",
-        timeout=86400, #one day
-        execution_delta=timedelta(days=-6, hours=1) #pull_vds scheduled at '0 4 * * *'
-    )
-
     check_missing_centreline_id = SQLCheckOperatorWithReturnValue(
         on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
         task_id="check_missing_centreline_id",
@@ -85,9 +74,7 @@ def vds_check_dag():
     Identify intersections which appeared within the lookback period that did not appear today.
     '''
 
-    t_upstream_done >> [
-        check_missing_centreline_id,
-        check_missing_expected_bins
-    ]
-
+    check_missing_centreline_id,
+    check_missing_expected_bins
+    
 vds_check_dag()
