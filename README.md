@@ -165,6 +165,8 @@ Daily historical weather conditions and predictions from Environment Canada.
 
 - [Travel Times - Bluetooth](https://open.toronto.ca/dataset/travel-times-bluetooth/) contains data for all the bluetooth segments collected by the city. The travel times are 5 minute average travel times. The real-time feed is currently not operational. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
 - [Watch Your Speed Signs](#watch-your-speed-signs) give feedback to drivers to encourage them to slow down, they also record speed of vehicles passing by the sign. Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly.  [see the WYS README for links to these datasets](wys/#open-data)
+- [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/): ad-hoc counts of motor vehicle, bicycle, and pedestrian volumes at intersections. [see the Short Term Counting Program documentation for more info](volumes/short_term_counting_program/)
+- [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/): ad-hoc observations of volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road. [see the Short Term Counting Program documentation for more info](volumes/short_term_counting_program/)
 
 For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has released the following datasets, which are typically a subset of larger datasets specific to the pilot:
 
