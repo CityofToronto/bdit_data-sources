@@ -439,9 +439,11 @@ For 3-legged or "T" intersections, pedestrians have typically _not_ been counted
 ### Current
 - `svc_daily_totals` - A daily summary of `traffic.svc_unified_volumes` by leg and centreline_id. Only rows with data for every 15 minute timebin are included. 
 - `svc_unified_volumes` - A unified view of Speed, Volume, and Classification study volumes by 15 minute bin.
+- `tmc_to_atr`: Mapping of short-term TMCs to ATR/SVC-formatted counts on the legs of the intersection
+
 ### Pending Deprecation
-- `traffic.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`. 
-- `traffic.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid. Used, for example, to link an arterycode to pavement asset information in vz_analysis.gcc_pavement_asset. This view uses the intermediate table `gis_shared_streets.centreline_pavement_180430` which was last updated three years ago and it will be updated via issue [Update pavement assets #620](https://github.com/CityofToronto/bdit_data-sources/issues/620).
+- `traffic_archive.tmc_miovision_long_format` - Takes the wide TMC table `traffic.det` and transforms it into a long format designed to be integrated with miovision-derived TMCs as in `miovision_api.volumes_15min_mvt`, not yet updated to use the new TMC tables. 
+- `traffic_archive.artery_objectid_pavement_asset` - A lookup view between artery codes and objectid of pavement assets (`gis.pavement_asset`). This view uses the conflation table `gis_shared_streets.centreline_pavement_180430` which was last updated in 2020.
 
 - `gis_core.centreline_leg_directions` - Maps the four cardinal directions (N, S, E, & W) referenced by TMCs onto specific edges of the centreline network for all 3- & 4-legged intersections.
 
