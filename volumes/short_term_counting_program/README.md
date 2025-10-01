@@ -8,6 +8,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [What is counted?](#what-is-counted)
   - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
   - [Midblock Speed-Volume-Classification (SVC) (Previously Automated Traffic Record (ATR))](#midblock-speed-volume-classification-svc-previously-automated-traffic-record-atr)
+  - [Other Count Types](#other-count-types)
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
@@ -95,6 +96,10 @@ See [Speed Volume Classification Counts](#speed-volume-classification-counts) fo
 * No regular data load schedule
 * Typical ATR counts 24h * 3 days at location in either 1 or both directions
 * Each PCS/ATR is given a unique identifier to avoid duplicate records
+
+### Other Count Types
+
+There are other counts conducted but they are not being loaded automatically into the database at the moment.
 
 ## Where does it come from?
 
