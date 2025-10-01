@@ -11,6 +11,7 @@ Short-term Traffic volume data (traffic counts and turning movements) from the F
 - [Where does it come from?](#where-does-it-come-from)
 - [How often is data updated?](#how-often-is-data-updated)
 - [Where can I access the data?](#where-can-i-access-the-data)
+  - [Open Data](#open-data)
 - [Where can I find what data?](#where-can-i-find-what-data)
 - [How is the data structured?](#how-is-the-data-structured)
 - [Turning Movement Counts](#turning-movement-counts)
@@ -115,14 +116,16 @@ Internal to the Transportation Data & Analytics team, legacy data flows from leg
 
 Look in the `traffic` schema for all ad-hoc data tables.
 
-## Where can I find what data?
+### Open Data 
 
-Speed Volume Classification counts and Turning Movement Counts are being replicated into Bigdata `traffic` schema from MOVE (FLASHCROW database). Every table that is replicated has a link to internal documentation for the corresponding table on FLASHCROW in the table comment, viewable in table properties in PGAdmin.
-
-Public documentation including data dictionaries are accessible on the Open Data pages:
+These datasets are published in disaggregate and summary versions on Open Data, including documentation and data dictionaries:
 
 - SVC: [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/) 
 - TMC: [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/)
+
+## Where can I find what data?
+
+Speed Volume Classification counts and Turning Movement Counts are being replicated into Bigdata `traffic` schema from MOVE (FLASHCROW database). Every table that is replicated has a link to internal documentation for the corresponding table on FLASHCROW in the table comment, viewable in table properties in PGAdmin.
 
 Load Sources Summary
 
