@@ -403,13 +403,12 @@ If you just want linear (ATR-style) volumes on midblocks, you can use the handy 
 
 | |column_name|data_type|is_nullable|description|
 |----------------|-----------|---------|-----------|-----------|
-| 2|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
-| 3|`count_info_id`|integer|NO |Unique identifier for legacy counts, each count_info_id represents a single day and direction for an SVC study.|
-| 4|`direction`|text |NO |Direction of travel.|
-| 5|`count_date` |date |NO |Date the count occurred.|
-| 6|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin.|
-| 7|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin.|
-| 8|`volume` |integer|NO |Vehicle volume observed during the 15-minute period. |
+| 1|`study_id` |integer|NO |Unique identifier for each study. Look for other rows with the same study_id to identify a continuous SVC count. Join to traffic.svc_metadata or traffic.svc_summary_stats for rollup statistics.|
+| 2|`direction`|text |NO |Direction of travel.|
+| 3|`count_date` |date |NO |Date the count occurred.|
+| 4|`time_start` |timestamp without time zone|NO |Start of the 15-minute time bin.|
+| 5|`time_end` |timestamp without time zone|NO |End of the 15-minute time bin.|
+| 6|`volume` |integer|NO |Vehicle volume observed during the 15-minute period. |
 
 
 ### `traffic.svc_study_class`
