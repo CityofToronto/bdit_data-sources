@@ -138,40 +138,42 @@ EXECUTE FORMAT(
             s5b_end.tx, --end_bin
             unnested.link_dir,
             unnested.len
-    ),
-
-    inserted AS (
-        --this query contains overlapping values which get eliminated
-        --via on conflict with the exclusion constraint on congestion_raw_segments table.
-        INSERT INTO congestion_raw_segments_temp AS inserted (
-            bin_start, segment_id, bin_range, tt, num_obs
-        )
-        --distinct on ensures only the shortest option gets proposed for insert
-        SELECT DISTINCT ON (segment_id, dt_start)
-            dt_start AS bin_start,
-            segment_id,
-            tsrange(dt_start, dt_end, '[)') AS bin_range,
-            total_length / SUM(len) * SUM(tt) AS tt,
-            SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
-        FROM unnested_db_options
-        GROUP BY
-            segment_id,
-            dt_start,
-            dt_end,
-            total_length
-        HAVING SUM(len) >= 0.8 * total_length
-        ORDER BY
-            segment_id,
-            dt_start,
-            dt_end --uses the option that ends first
-        --exclusion constraint + ordered insert to prevent overlapping bins
-        ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude_temp
-        DO NOTHING
-        RETURNING
-            inserted.bin_start, inserted.segment_id, inserted.bin_range,
-            inserted.tt, inserted.num_obs
     )
 
+    --this query contains overlapping values which get eliminated
+    --via on conflict with the exclusion constraint on congestion_raw_segments table.
+    INSERT INTO congestion_raw_segments_temp AS inserted (
+        bin_start, segment_id, bin_range, tt, num_obs
+    )
+    --distinct on ensures only the shortest option gets proposed for insert
+    SELECT DISTINCT ON (segment_id, dt_start)
+        dt_start AS bin_start,
+        segment_id,
+        tsrange(dt_start, dt_end, '[)') AS bin_range,
+        total_length / SUM(len) * SUM(tt) AS tt,
+        SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
+    FROM unnested_db_options
+    GROUP BY
+        segment_id,
+        dt_start,
+        dt_end,
+        total_length
+    HAVING SUM(len) >= 0.8 * total_length
+    ORDER BY
+        segment_id,
+        dt_start,
+        dt_end --uses the option that ends first
+    --exclusion constraint + ordered insert to prevent overlapping bins
+    ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude_temp
+    DO NOTHING;
+    
+    $$,
+    start_date,
+    congestion_network_table
+    );
+
+    ANALYZE congestion_raw_segments_temp;
+    
     INSERT INTO gwolofs.congestion_raw_segments (
         dt, bin_start, segment_id, bin_range, tt, num_obs, hr
     )
@@ -183,13 +185,8 @@ EXECUTE FORMAT(
         tt::real,
         num_obs,
         date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
-    FROM inserted
+    FROM congestion_raw_segments_temp
     ON CONFLICT DO NOTHING;
-    
-    $$,
-    start_date,
-    congestion_network_table
-    );
 
     DROP TABLE congestion_raw_segments_temp;
 
