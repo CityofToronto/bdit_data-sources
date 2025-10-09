@@ -19,7 +19,7 @@ SELECT
     segment_id,
     congestion_segment_monthly_agg.mon AS mnth,
     date_part('isodow', dt) <= 5 AS is_wkdy,
-    date_part('hour', hr) AS hr,
+    hr,
     AVG(tt) AS avg_tt,
     stddev(tt) AS stdev,
     PERCENTILE_CONT(0.05) WITHIN GROUP (ORDER BY tt) AS percentile_05,
@@ -36,7 +36,7 @@ WHERE
     AND holiday.holiday IS NULL
 GROUP BY
     segment_id,
-    date_part('hour', hr),
+    hr,
     is_wkdy;
 
 $BODY$;
