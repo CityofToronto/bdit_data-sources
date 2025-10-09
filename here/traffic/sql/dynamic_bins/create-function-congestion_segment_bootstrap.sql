@@ -17,7 +17,7 @@ AS $BODY$
         SELECT
             --segment_id and mnth don't need to be in group by until end
             EXTRACT('isodow' FROM dt) IN (1, 2, 3, 4, 5) AS is_wkdy,
-            EXTRACT('hour' FROM hr) AS hr,
+            hr,
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
             COUNT(*) AS n
@@ -29,7 +29,7 @@ AS $BODY$
         GROUP BY
             segment_id,
             is_wkdy,
-            EXTRACT('hour' FROM hr)
+            hr
     ),
     
     random_selections AS (
@@ -77,7 +77,7 @@ AS $BODY$
 
 GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(
     date, bigint, integer
-) TO CONGESTION_BOT;
+) TO congestion_bot;
 
 /*Usage example: (works best one segment at a time with Lateral)
 SELECT *
