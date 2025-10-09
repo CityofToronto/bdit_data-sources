@@ -44,7 +44,7 @@ EXECUTE FORMAT(
         FROM congestion.%2$I
     ),
     
-    segment_5min_bins AS (
+    segment_5min_bins AS MATERIALIZED (
         SELECT
             seg.segment_id,
             ta.tx,
