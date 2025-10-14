@@ -23,7 +23,6 @@ CREATE TABLE census2021.dgrf_ontario_gtha (
 );
 
 -- Add indexes for efficient filtering and joining
-CREATE INDEX idx_dgrf_ontario_gtha_pr ON census2021.dgrf_ontario_gtha (prdguid_pridugd);
 CREATE INDEX idx_dgrf_ontario_gtha_cd ON census2021.dgrf_ontario_gtha (cddguid_dridugd);
 CREATE INDEX idx_dgrf_ontario_gtha_csd ON census2021.dgrf_ontario_gtha (csddguid_sdridugd);
 CREATE INDEX idx_dgrf_ontario_gtha_da ON census2021.dgrf_ontario_gtha (dadguid_adidugd);
