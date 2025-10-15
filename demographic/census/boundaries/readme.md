@@ -1,8 +1,8 @@
 # 2021 Census Boundary Files
 
 ## Overview
-The boundary files downloaded from  were downloaded from the Statistics Canada website:
-- URL: [https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21). These files include geospatial data for administrative and statistical geographic areas: Census Tracts (CT), Dissemination Areas (DA), and Dissemination Blocks (DB) in the Greater Toronto and Hamilton Area (GTHA).
+The boundary files were downloaded from the Statistics Canada website:
+- [URL:](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21). These files include geospatial data for administrative and statistical geographic areas: Census Tracts (CT), Dissemination Areas (DA), and Dissemination Blocks (DB) in the Greater Toronto and Hamilton Area (GTHA).
 
 The files used here are shapefiles (`.shp`) stored in the directory:
 ```
