@@ -65,9 +65,16 @@ def here_dynamic_binning_agg():
         retry_delay=duration(days=1)
     )
     
+    delete_daily = SQLExecuteQueryOperator(
+        sql="DELETE FROM gwolofs.congestion_raw_segments WHERE dt = '{{ ds }}'",
+        task_id='delete_daily',
+        conn_id='congestion_bot',
+        autocommit=True,
+        retries = 2
+    )
+    
     aggregate_daily = SQLExecuteQueryOperator(
-        sql=["DELETE FROM gwolofs.congestion_raw_segments WHERE dt = '{{ ds }}'",
-             "SELECT gwolofs.congestion_network_segment_agg('{{ ds }}'::date);"],
+        sql="SELECT gwolofs.congestion_network_segment_agg('{{ ds }}'::date);",
         task_id='aggregate_daily',
         conn_id='congestion_bot',
         autocommit=True,
@@ -75,6 +82,6 @@ def here_dynamic_binning_agg():
         hook_params={"options": "-c statement_timeout=10800000ms"} #3 hours
     )
     
-    check_not_empty >> aggregate_daily
+    check_not_empty >> delete_daily >> aggregate_daily
 
 here_dynamic_binning_agg()
