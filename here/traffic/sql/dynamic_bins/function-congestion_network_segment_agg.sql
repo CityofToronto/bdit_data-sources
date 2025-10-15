@@ -31,52 +31,52 @@ CREATE TEMPORARY TABLE congestion_raw_segments_temp (
         bin_range WITH &&,
         segment_id WITH =
     )
-);
+) ON COMMIT DROP;
 
 EXECUTE FORMAT(
     $$
-    WITH segments AS (
-        SELECT
-            segment_id,
-            link_dir,
-            length,
-            SUM(length) OVER (PARTITION BY segment_id) AS total_length
-        FROM congestion.%2$I
-    ),
-    
-    segment_5min_bins AS MATERIALIZED (
+        DROP TABLE IF EXISTS segment_5min_bins;
+        CREATE TEMP TABLE segment_5min_bins ON COMMIT DROP AS
         SELECT
             seg.segment_id,
             ta.tx,
-            seg.total_length,
-            RANK() OVER w AS bin_rank,
-            SUM(seg.length) / seg.total_length AS sum_length,
+            seg.segment_length AS total_length,
+            ROW_NUMBER() OVER w AS bin_rank,
+            SUM(seg.length) / seg.segment_length AS sum_length,
             SUM(seg.length) AS length_w_data,
             SUM(seg.length / ta.mean * 3.6) AS unadjusted_tt,
             SUM(sample_size) AS num_obs,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
-            ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY ta.link_dir) AS tts,
+            ARRAY_AGG(lat.tt ORDER BY ta.link_dir) AS tts,
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
         FROM here.ta_path AS ta
-        JOIN segments AS seg USING (link_dir)
+        JOIN congestion.%1$I AS seg USING (link_dir),
+        LATERAL (
+            SELECT seg.length / ta.mean * 3.6 AS tt
+        ) AS lat
         WHERE
-            ta.dt >= %1$L::date
-            AND ta.dt < %1$L::date + interval '1 day'
+            ta.dt >= %2$L::date
+            AND ta.dt < %2$L::date + interval '1 day'
         GROUP BY
             seg.segment_id,
             ta.tx,
-            seg.total_length
-       WINDOW w AS (
+            seg.segment_length
+        WINDOW w AS (
             PARTITION BY seg.segment_id
             ORDER BY ta.tx
-       )
-    ),
+        );
+    $$, congestion_network_table, start_date);
+
+    CREATE INDEX idx_s5b_segment_rank ON segment_5min_bins(segment_id, bin_rank);
+    CREATE INDEX idx_s5b_segment_tx ON segment_5min_bins(segment_id, tx);
+    ANALYZE segment_5min_bins;
     
-    dynamic_bin_options AS (
-        --within each segment/hour, generate all possible forward looking bin combinations
-        --don't generate options for bins with sufficient length
-        --also don't generate options past the next bin with 80%% length
-        SELECT
+    --within each segment/hour, generate all possible forward looking bin combinations
+    --don't generate options for bins with sufficient length
+    --also don't generate options past the next bin with 80% length
+    DROP TABLE IF EXISTS dynamic_bin_options;
+    CREATE TEMP TABLE dynamic_bin_options ON COMMIT DROP AS
+    SELECT
             tx,
             segment_id,
             bin_rank AS start_bin,
@@ -103,11 +103,14 @@ EXECUTE FORMAT(
             PARTITION BY segment_id
             ORDER BY tx
             --look only forward for end_bin options
-            RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-        )
-    ),
+            ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+        );
     
-    unnested_db_options AS (
+    CREATE INDEX idx_dbo_composite ON dynamic_bin_options(segment_id, start_bin, end_bin);
+    CREATE INDEX idx_dbo_segment_tx ON dynamic_bin_options(segment_id, tx);
+    ANALYZE dynamic_bin_options;
+    
+    WITH unnested_db_options AS (
         SELECT
             dbo.segment_id,
             s5b.total_length,
@@ -167,11 +170,6 @@ EXECUTE FORMAT(
     ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude_temp
     DO NOTHING;
     
-    $$,
-    start_date,
-    congestion_network_table
-    );
-
     ANALYZE congestion_raw_segments_temp;
     
     INSERT INTO gwolofs.congestion_raw_segments (
