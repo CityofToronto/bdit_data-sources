@@ -61,9 +61,8 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 OR lower(comms.source_id::text) ~ similar_to_escape('%wavetronix%'::text) THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'RESCU Detectors'::text THEN 45 --20 sec bins
             WHEN dtypes.det_type = 'Blue City AI'::text THEN 1 --15 min bins
-            WHEN dtypes.det_type = 'Houston Radar'::text THEN 1 --15 min bins
+            WHEN lower(comms.source_id) LIKE 'houston radar%'::text THEN 30 --30 sec bins
             --some unique cases
-            WHEN pairs.vdsconfig_uid = ANY (ARRAY[5621308, 5621332]) THEN 30
             WHEN pairs.vdsconfig_uid = ANY (ARRAY[3683400, 3683403]) THEN 3
             ELSE NULL::integer
         END AS expected_bins,
@@ -76,7 +75,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
             WHEN
                 lower(comms.source_id::text) ~ similar_to_escape('%whd%'::text)
                 OR lower(comms.source_id::text) ~ similar_to_escape('%wavetronix%'::text) THEN 'Wavetronix'::text
-            WHEN lower(c.detector_id::text) ~ similar_to_escape('%(whalespout)|(houstonradar)%'::text) THEN 'Radar'::text
+            WHEN lower(comms.source_id) LIKE 'houston radar%'::text THEN 'Radar'::text
             WHEN dtypes.det_type = 'RESCU Detectors'::text THEN 'Inductive'::text
             ELSE NULL::text
         END AS det_tech
@@ -119,8 +118,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                 WHEN
                     lower(comms.source_id::text) ~~ '%wavetronix%'::text THEN 'Wavetronix'::text
                 WHEN
-                    lower(c.detector_id::text) ~ similar_to_escape('%(whalespout)|(houstonradar)%'::text)
-                    THEN 'Houston Radar'::text
+                    lower(comms.source_id) LIKE 'houston radar%'::text THEN 'Houston Radar'::text
                 WHEN
                     (c.detector_id::text ~~ ANY ('{%SMARTMICRO%,"%YONGE HEATH%","%YONGE DAVISVILLE%","%YONGE AND ROXBOROUGH%"}'::text[]))
                     --new lakeshore/spadina smartmicro sensors
