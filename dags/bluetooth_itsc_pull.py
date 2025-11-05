@@ -4,10 +4,9 @@ import pendulum
 from functools import partial
 from datetime import timedelta
 
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task, Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
 
 DAG_NAME = 'bluetooth_itsc_pull'
 DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
@@ -23,6 +22,9 @@ from dags.common_tasks import check_jan_1st
 
 README_PATH = os.path.join(repo_path, 'bluetooth/itsc/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
+
+ITSC_BOT = 'itsc_postgres'
+BDIT_BOT = 'events_bot'
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -55,29 +57,29 @@ def bt_itsc_dag():
             pre_execute=check_jan_1st,
             sql=["SELECT bluetooth.create_yyyy_volumes_partition('itsc_tt_raw', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')",
                  "SELECT bluetooth.create_yyyy_volumes_partition('itsc_tt_raw_pathdata', '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int, 'dt')"],
-            conn_id='events_bot',
+            conn_id=BDIT_BOT,
             autocommit=True
     )
 
     @task(trigger_rule='none_failed', retries = 2, retry_delay = timedelta(hours=1))
     def pull_raw_tt_data(ds = None):
         "Fetches data from ITS Central traveltimepathdata table, inserts into RDS bluetooth.itsc_tt_raw_pathdata table."
-        itsc_bot = PostgresHook('itsc_postgres')
-        events_bot = PostgresHook('events_bot')
+        itsc_bot = PostgresHook(ITSC_BOT)
+        events_bot = PostgresHook(BDIT_BOT)
         fetch_and_insert_raw_tt_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
         
     @task(retries = 2, retry_delay = timedelta(hours=1))
     def pull_tt_paths(ds = None):
         "Fetches data from ITS Central traveltimepathconfig table, inserts into RDS bluetooth.itsc_tt_paths table."
-        itsc_bot = PostgresHook('itsc_postgres')
-        events_bot = PostgresHook('events_bot')
+        itsc_bot = PostgresHook(ITSC_BOT)
+        events_bot = PostgresHook(BDIT_BOT)
         fetch_and_insert_tt_path_data(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
     
     @task(retries = 2, retry_delay = timedelta(hours=1))
     def pull_raw_tt_pathdata(ds = None):
         "Fetches data from ITS Central traveltimepathrawdata table, inserts into RDS bluetooth.itsc_tt_raw table."
-        itsc_bot = PostgresHook('itsc_postgres')
-        events_bot = PostgresHook('events_bot')
+        itsc_bot = PostgresHook(ITSC_BOT)
+        events_bot = PostgresHook(BDIT_BOT)
         fetch_and_insert_raw_tt_pathdata(start_date=ds, select_conn=itsc_bot, insert_conn=events_bot)
 
     #these tasks are not dependent, but this helps so only one fails at a time
