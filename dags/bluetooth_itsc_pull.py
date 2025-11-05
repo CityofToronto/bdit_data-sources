@@ -17,8 +17,8 @@ sys.path.insert(0, repo_path)
 from bluetooth.itsc.bluetooth_itsc import (
     fetch_and_insert_raw_tt_data, fetch_and_insert_tt_path_data, fetch_and_insert_raw_tt_pathdata
 )
-from dags.dag_functions import task_fail_slack_alert, get_readme_docmd
-from dags.common_tasks import check_jan_1st
+from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
+from airflow3_bdit_dag_utils.utils.common_tasks import check_jan_1st
 
 README_PATH = os.path.join(repo_path, 'bluetooth/itsc/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
