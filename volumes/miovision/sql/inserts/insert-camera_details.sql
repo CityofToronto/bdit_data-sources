@@ -1,5 +1,5 @@
 WITH camera_details (
-    id, camera_id, camera_label
+    camera_id, camera_label, id
 ) AS (
     VALUES %s --noqa: PRS
 )
