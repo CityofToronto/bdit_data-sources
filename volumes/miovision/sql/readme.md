@@ -481,6 +481,7 @@ WHERE a.intersection_uid IS NULL
 
 ### camera_details
 This table contains details of Miovision cameras, which we are sometimes required to provide to maintenance. It is updated daily by `miovision_hardware` Airflow DAG. Join to `miovision_api.active_intersections AS ai ON ai.id = camera_details.intersection_id`.  
+**Note:** first_seen is only accurate for cameras added after 2025-11-06 (See #1230). 
 
 | column_name     | data_type   | sample                               |
 |:----------------|:------------|:-------------------------------------|
@@ -488,6 +489,7 @@ This table contains details of Miovision cameras, which we are sometimes require
 | camera_id       | text        | Miovision SmartView 360 NWC          |
 | camera_label    | text        | 1ebf4ec0-88fd-49ec-8cf4-3e0ae0af0128 |
 | last_seen       | date        | 2024-12-05                           |
+| first_seen      | date        | 2025-11-06                           |
 
 ### configuration_updates
 This table stores the last updated date of Miovision detection configurations. This may be useful at some point in the future to determine for which dates calibration studies are relevant. It was only populated starting 2024-12-05, so the MIN `updated_time` was the most recent update at that point. Further configuration details can be seen in Miovision One.  
