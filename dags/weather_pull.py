@@ -7,23 +7,19 @@ A Slack notification is raised when the airflow process fails.
 """
 import os
 import sys
-from pendulum import datetime, duration
+import pendulum
 from datetime import timedelta, time
 
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-from airflow.operators.latest_only import LatestOnlyOperator
-from airflow.sensors.time_sensor import TimeSensor
-
-# DAG Information
-DAG_NAME = 'weather_pull'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
+from airflow.providers.standard.sensors.time import TimeSensor
 
 #import python scripts
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from weather.prediction_import import prediction_upsert
     from weather.historical_scrape import historical_upsert
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
@@ -32,11 +28,13 @@ except:
     raise ImportError("script import failed")
 
 #DAG
- 
+DAG_NAME = 'weather_pull'
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
+
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past':False,
-    'start_date': datetime(2024, 6, 3, tz="America/Toronto"),
+    'start_date': pendulum.datetime(2024, 6, 3, tz="America/Toronto"),
     'email_on_failure': False,
     'email_on_success': False,
     'retries': 0,
@@ -77,7 +75,7 @@ def weather_pull_dag():
 
     @task(
         retries=1,
-        retry_delay=duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
+        retry_delay=pendulum.duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
     )
     def pull_historical(station_id, ds=None):
         historical_upsert(
