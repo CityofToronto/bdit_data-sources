@@ -15,7 +15,14 @@ CREATE TABLE IF NOT EXISTS miovision_validation.mio_spec_processed_counts
     movement_name text COLLATE pg_catalog."default",
     movement_uids integer[],
     spec_count numeric,
-    miovision_api_volume numeric
+    miovision_api_volume numeric,
+    bin_error numeric GENERATED ALWAYS AS (
+    CASE
+        WHEN (spec_count > (0)::numeric) THEN round(((miovision_api_volume - spec_count) / spec_count), 4)
+        WHEN ((spec_count = (0)::numeric) AND (miovision_api_volume = (0)::numeric)) THEN (0)::numeric
+        WHEN ((spec_count = (0)::numeric) AND (miovision_api_volume > (0)::numeric)) THEN (1)::numeric
+        ELSE NULL::numeric
+    END) STORED
 )
 
 TABLESPACE pg_default;
