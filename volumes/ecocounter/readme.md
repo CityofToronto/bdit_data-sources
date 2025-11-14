@@ -73,6 +73,8 @@ Some of the newer sites have flows labelled in the system as "IN" and "OUT". Bel
 From an email from Pierre, of Ecocounter:
 > The IN and OUT disparities are configured during the setup of the counter. With the Zelt system that you own, there can only be two directions: IN and OUT, but there can be several flows. In the case of Murray Ross Parkway, some details about the direction were left in the comments section: IN – Northbound. In the following two examples, both counting sites have four loops installed on the bike paths, but in one case, four flows were configured, and only two for the second site. In the first example, both IN flows have the same name, but they have different flowId.
 
+Newer installations have recently (~2024-2025) begun to distinguish between counts for bikes and (E-?)scooters. Where this is configured, there should be twice as many flows. One half are for scooters and the other half for bikes. How we determine which is which is something that we're still in the process of figuring out. We also don't have a lot of clarity yet on what exactly gets counted or how well they're distinguished from other modes.
+
 ## Discontinuities
 
 Since 2023, periodic ground-truth counts have been used to calibrate sensors. Following these studies, if sensitivity of a sensor is adjusted, the new sensitivity is logged in `ecocounter.sensitivity_history` and will result in a discontinuity in the raw volumes. However, if you use `ecocounter.counts.calibrated_volumes`, you should not see a discontinuity as both before and after volumes are adjusted to match ground-truth observations using appropriate calibration factors. 
