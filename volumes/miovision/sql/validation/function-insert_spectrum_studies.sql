@@ -21,7 +21,9 @@ RETURNS void AS $$
         --AND tmc.count_date > '2025-01-01'::date
         AND tmc.count_type = 'TMC'::text
         AND dupes.count_id IS NULL;
-$$ LANGUAGE sql;
+$$
+LANGUAGE sql
+SECURITY DEFINER;
 
 ALTER FUNCTION miovision_validation.insert_spectrum_studies OWNER TO miovision_validators;
 

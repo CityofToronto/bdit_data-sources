@@ -52,7 +52,9 @@ RETURNS void AS $$
     WHERE
         spectrum_studies.count_date = inserted.count_date
         AND spectrum_studies.intersection_uid = inserted.intersection_uid;
-$$ LANGUAGE sql;
+$$
+LANGUAGE sql
+SECURITY DEFINER;
 
 ALTER FUNCTION miovision_validation.insert_processed_counts OWNER TO miovision_validators;
 
