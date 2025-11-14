@@ -239,6 +239,7 @@ Row count: 73
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | date_decommissioned | timestamp without time zone |                     |
 | direction_main      | USER-DEFINED                | Westbound | Grouping column used for Open Data. A custom datatype was created to force this to be one of `Northbound`/`Southbound`/`Westbound`/`Eastbound`. You will need to coerce this column to text (::text) for comparison. |
+| mode_counted | text | 'bike' | distinguishes between flows that count bikes and those that count (e)scooters. Value should be one of 'bike', 'scooter', or NULL |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document sensitivity changes and anomalous ranges in the Ecocounter data when identified.
