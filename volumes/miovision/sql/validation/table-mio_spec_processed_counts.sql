@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS miovision_validation.mio_spec_processed_counts
         WHEN ((spec_count = (0)::numeric) AND (miovision_api_volume = (0)::numeric)) THEN (0)::numeric
         WHEN ((spec_count = (0)::numeric) AND (miovision_api_volume > (0)::numeric)) THEN (1)::numeric
         ELSE NULL::numeric
-    END) STORED
+    END) STORED,
+    CONSTRAINT mio_spec_processed_counts_pkey PRIMARY KEY (intersection_uid, count_date, datetime_bin, leg, spec_class, movement_name)
 )
 
 TABLESPACE pg_default;
