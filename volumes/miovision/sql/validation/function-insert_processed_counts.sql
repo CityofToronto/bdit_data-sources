@@ -1,10 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_validation.insert_processed_counts()
 RETURNS void AS $$
-    WITH inserted AS (
-        INSERT INTO miovision_validation.mio_spec_processed_counts (
-            intersection_uid, count_id, count_date, datetime_bin, spec_movements, leg, spec_class,
-            classification_uids, movement_name, movement_uids, spec_count, miovision_api_volume
-        )
+    WITH to_insert AS (
         SELECT
             studies.intersection_uid,
             studies.count_id,
@@ -43,15 +39,38 @@ RETURNS void AS $$
             mmp.spec_class,
             mmp.mio_movement,
             mmp.mio_move_uid
-        RETURNING intersection_uid, count_date
+    ),
+    
+    --only insert results with both non-zero spectrum and miovision api results.
+    grouped AS (
+        SELECT
+            intersection_uid,
+            count_date
+        FROM to_insert
+        GROUP BY
+            intersection_uid,
+            count_date
+        HAVING SUM(spec_count) > 0 AND SUM(miovision_api_volume) > 0
+    ),
+
+    inserted AS (
+        INSERT INTO miovision_validation.mio_spec_processed_counts (
+            intersection_uid, count_id, count_date, datetime_bin, spec_movements, leg, spec_class,
+            classification_uids, movement_name, movement_uids, spec_count, miovision_api_volume
+        )
+        SELECT
+            intersection_uid, count_id, count_date, datetime_bin, spec_movements, leg, spec_class,
+            classification_uids, movement_name, movement_uids, spec_count, miovision_api_volume
+        FROM to_insert
+        JOIN grouped USING (intersection_uid, count_date)
     )
 
     UPDATE miovision_validation.spectrum_studies
     SET processed = True
-    FROM inserted
+    FROM grouped
     WHERE
-        spectrum_studies.count_date = inserted.count_date
-        AND spectrum_studies.intersection_uid = inserted.intersection_uid;
+        spectrum_studies.count_date = grouped.count_date
+        AND spectrum_studies.intersection_uid = grouped.intersection_uid;
 $$
 LANGUAGE sql
 SECURITY DEFINER;
