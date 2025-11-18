@@ -4,9 +4,9 @@ SELECT
     v15.intersection_uid,
     v15.datetime_bin,
     v15.classification_uid,
-    v15.exit_leg,
-    v15.exit_dir,
-    SUM(v15.volume) AS volume
+    v15.leg,
+    v15.dir,
+    v15.volume
 FROM miovision_api.volumes_15min_atr_unfiltered AS v15
 LEFT JOIN miovision_api.unacceptable_gaps USING (datetime_bin, intersection_uid)
 WHERE
