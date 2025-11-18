@@ -17,11 +17,11 @@ WITH consecutive_ranges AS (
     JOIN miovision_api.anomalous_ranges AS ar2
     ON
         ar1.intersection_uid = ar2.intersection_uid
-        AND ar1.classification_uid = ar2.classification_uid
+        AND COALESCE(ar1.classification_uid, 0) = COALESCE(ar2.classification_uid, 0)
+        AND COALESCE(ar1.leg, '') = COALESCE(ar2.leg, '')
         AND ar1.notes = ar2.notes
         AND ar1.investigation_level = ar2.investigation_level
         AND ar1.problem_level = ar2.problem_level
-        AND ar1.leg = ar2.leg
         AND ar1.range_end = ar2.range_start
 ),
 
