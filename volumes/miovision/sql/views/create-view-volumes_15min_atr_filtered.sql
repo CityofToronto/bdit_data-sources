@@ -4,13 +4,13 @@ SELECT
     v15.intersection_uid,
     v15.datetime_bin,
     v15.classification_uid,
-    mmm.exit_leg,
-    mmm.exit_dir,
+    v15.exit_leg,
+    v15.exit_dir,
     SUM(v15.volume) AS volume
 FROM miovision_api.volumes_15min_atr_unfiltered AS v15
-LEFT JOIN miovision_api.unacceptable_gaps AS un USING (datetime_bin, intersection_uid)
+LEFT JOIN miovision_api.unacceptable_gaps USING (datetime_bin, intersection_uid)
 WHERE
-    un.datetime_bin IS NULL
+    unacceptable_gaps.datetime_bin IS NULL
     AND NOT EXISTS ( --anti join anomalous_ranges
         SELECT 1
         FROM miovision_api.anomalous_ranges AS ar
@@ -30,7 +30,7 @@ WHERE
                 v15.datetime_bin <= ar.range_end
                 OR ar.range_end IS NULL
             )
-);
+    );
 
 ALTER VIEW miovision_api.volumes_15min_atr_filtered OWNER TO miovision_admins;
 
