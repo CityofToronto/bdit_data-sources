@@ -15,7 +15,7 @@ WHERE
         SELECT 1
         FROM miovision_api.anomalous_ranges AS ar
         WHERE
-            ar.problem_level = ANY(ARRAY['do-not-use'::text, 'questionable'::text])
+            ar.problem_level IN ('do-not-use', 'questionable')
             AND (
                 ar.intersection_uid = v15.intersection_uid
                 OR ar.intersection_uid IS NULL
