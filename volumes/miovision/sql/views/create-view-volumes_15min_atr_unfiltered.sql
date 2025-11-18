@@ -11,9 +11,15 @@ SELECT
     v15.classification_uid,
     v15.leg,
     mmm.entry_dir AS dir,
-    v15.volume
+    SUM(v15.volume)::int AS volume
 FROM miovision_api.volumes_15min_mvt_unfiltered AS v15
 JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
+GROUP BY
+    v15.intersection_uid,
+    v15.datetime_bin,
+    v15.classification_uid,
+    v15.leg,
+    dir
 
 UNION ALL --there are no duplicate entries and exits
 
@@ -24,10 +30,16 @@ SELECT
     v15.classification_uid,
     mmm.exit_leg AS leg,
     mmm.exit_dir AS dir,
-    v15.volume
+    SUM(v15.volume)::int AS volume
 FROM miovision_api.volumes_15min_mvt_unfiltered AS v15
 JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
-WHERE mmm.exit_leg IS NOT NULL;
+WHERE mmm.exit_leg IS NOT NULL
+GROUP BY
+    v15.intersection_uid,
+    v15.datetime_bin,
+    v15.classification_uid,
+    mmm.exit_leg,
+    mmm.exit_dir;
 
 ALTER VIEW miovision_api.volumes_15min_atr_unfiltered OWNER TO miovision_admins;
 
