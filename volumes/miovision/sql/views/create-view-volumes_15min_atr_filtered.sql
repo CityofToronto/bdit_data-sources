@@ -35,7 +35,7 @@ WHERE
 ALTER VIEW miovision_api.volumes_15min_atr_filtered OWNER TO miovision_admins;
 
 COMMENT ON VIEW miovision_api.volumes_15min_atr_filtered IS E''
-'A ATR style transformation of miovision_api.volumes_15min_mvt with anomalous_ranges labeled '
+'An ATR style transformation of miovision_api.volumes_15min_mvt with anomalous_ranges labeled '
 '''do-not-use'' or ''questionable'' filtered out, unacceptable_gaps anti-joined, 
 and only common (>0.05%) movements (`intersection_movements`) included.';
 
