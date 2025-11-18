@@ -1,42 +1,35 @@
-DROP VIEW miovision_api.volumes_15min_atr_filtered;
-CREATE VIEW miovision_api.volumes_15min_atr_filtered AS (
+CREATE OR REPLACE VIEW miovision_api.volumes_15min_atr_filtered AS
 
-    --entries
-    SELECT
-        v15.intersection_uid,
-        v15.datetime_bin,
-        v15.classification_uid,
-        v15.leg,
-        mmm.entry_dir AS dir,
-        SUM(v15.volume) AS volume
-    FROM miovision_api.volumes_15min_mvt_filtered AS v15
-    JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
-    GROUP BY
-        v15.intersection_uid,
-        v15.datetime_bin,
-        v15.classification_uid,
-        v15.leg,
-        mmm.entry_dir
-
-    UNION ALL --there are no duplicate entries and exits
-
-    --exits 
-    SELECT
-        v15.intersection_uid,
-        v15.datetime_bin,
-        v15.classification_uid,
-        mmm.exit_leg,
-        mmm.exit_dir,
-        SUM(v15.volume) AS volume
-    FROM miovision_api.volumes_15min_mvt_filtered AS v15
-    JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
-    WHERE mmm.exit_leg IS NOT NULL
-    GROUP BY
-        v15.intersection_uid,
-        v15.datetime_bin,
-        v15.classification_uid,
-        mmm.exit_leg,
-        mmm.exit_dir
+SELECT
+    v15.intersection_uid,
+    v15.datetime_bin,
+    v15.classification_uid,
+    mmm.exit_leg,
+    mmm.exit_dir,
+    SUM(v15.volume) AS volume
+FROM miovision_api.volumes_15min_atr_unfiltered AS v15
+LEFT JOIN miovision_api.unacceptable_gaps AS un USING (datetime_bin, intersection_uid)
+WHERE
+    un.datetime_bin IS NULL
+    AND NOT EXISTS ( --anti join anomalous_ranges
+        SELECT 1
+        FROM miovision_api.anomalous_ranges AS ar
+        WHERE
+            ar.problem_level = ANY(ARRAY['do-not-use'::text, 'questionable'::text])
+            AND (
+                ar.intersection_uid = v15.intersection_uid
+                OR ar.intersection_uid IS NULL
+            ) AND (
+                ar.classification_uid = v15.classification_uid
+                OR ar.classification_uid IS NULL
+            )
+            -- leg is ignored here
+            -- any anomalousness on a leg removes all ATR counts
+            AND v15.datetime_bin >= ar.range_start
+            AND (
+                v15.datetime_bin <= ar.range_end
+                OR ar.range_end IS NULL
+            )
 );
 
 ALTER VIEW miovision_api.volumes_15min_atr_filtered OWNER TO miovision_admins;
