@@ -9,29 +9,34 @@ DECLARE
 
 BEGIN
 
-    --delete one day anomalous_ranges
-    DELETE FROM miovision_api.anomalous_ranges AS ar
-    WHERE
-        ar.range_start = delete_anomalous_ranges.ds
-        AND ar.range_end = delete_anomalous_ranges.ds + 1
-        AND ar.investigation_level = 'auto_flagged'
-        AND ar.intersection_uid = ANY(target_intersections);
+    WITH ranges_to_split AS (
+        DELETE FROM miovision_api.anomalous_ranges
+        WHERE
+            investigation_level = 'auto_flagged'
+            AND intersection_uid = ANY(target_intersections)
+            --overlaps
+            AND delete_anomalous_ranges.ds::timestamp <@ tsrange(range_start, range_end, '[)')
+        RETURNING intersection_uid, classification_uid, notes, uid, investigation_level, problem_level, range_start, range_end, leg
+    )
 
-    --roll back range ends by one day
-    UPDATE miovision_api.anomalous_ranges AS ar
-    SET range_end = range_end - interval '1 day'
-    WHERE
-        ar.range_end = delete_anomalous_ranges.ds + 1
-        AND ar.investigation_level = 'auto_flagged'
-        AND ar.intersection_uid = ANY(target_intersections);
+    --inserts 0-2 anomalous ranges to replace deleted one
+    INSERT INTO miovision_api.anomalous_ranges (
+        intersection_uid, classification_uid, notes, investigation_level, problem_level, leg, range_start, range_end
+    )
+    SELECT intersection_uid, classification_uid, notes, investigation_level, problem_level, leg,
+        --rolls end back
+        range_start, LEAST(delete_anomalous_ranges.ds, range_end) AS range_end
+    FROM ranges_to_split
+    --new range is still valid after roll back
+    WHERE range_start < LEAST(delete_anomalous_ranges.ds, range_end)
+    UNION
+    SELECT intersection_uid, classification_uid, notes, investigation_level, problem_level, leg,
+        --rolls start forward
+        GREATEST(delete_anomalous_ranges.ds + 1, range_start) AS range_start, range_end
+    FROM ranges_to_split
+    --new range is still valid after roll forward
+    WHERE GREATEST(delete_anomalous_ranges.ds + 1, range_start) < range_end;
 
-    --roll forward range starts by one day
-    UPDATE miovision_api.anomalous_ranges AS ar
-    SET range_start = range_start + interval '1 day'
-    WHERE
-        ar.range_start = delete_anomalous_ranges.ds
-        AND ar.investigation_level = 'auto_flagged'
-        AND ar.intersection_uid = ANY(target_intersections);
 END;
 
 $$ LANGUAGE plpgsql;
