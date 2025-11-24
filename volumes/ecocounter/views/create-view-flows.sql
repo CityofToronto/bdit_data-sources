@@ -12,7 +12,8 @@ CREATE OR REPLACE VIEW ecocounter.flows AS (
         includes_contraflow,
         first_active,
         last_active,
-        date_decommissioned
+        date_decommissioned,
+        mode_counted
     FROM ecocounter.flows_unfiltered
     WHERE validated
 );
