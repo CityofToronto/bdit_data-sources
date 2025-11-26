@@ -1,44 +1,42 @@
 CREATE OR REPLACE FUNCTION miovision_validation.insert_processed_counts()
 RETURNS void AS $$
+
     WITH to_insert AS (
         SELECT
             studies.intersection_uid,
             studies.count_id,
             studies.count_date,
             dat.time_start AS datetime_bin,
-            ARRAY_AGG(mmp.spec_movement ORDER BY mmp.spec_movement) AS spec_movements,
-            mmp.mio_leg AS leg,
             mmp.spec_class,
-            ARRAY_AGG(unnested.mio_class ORDER BY unnested.mio_class) AS classification_uids,
+            mmp.mio_leg AS leg,
             mmp.mio_movement AS movement_name,
-            mmp.mio_move_uid AS movement_uids,
-            SUM(lat.spectrum_count) AS spec_count,
-            COALESCE(SUM(v15.volume), 0) AS miovision_api_volume
+            mmp.spec_movements,
+            mmp.classification_uids,
+            mmp.movement_uids,
+            lat.spectrum_count AS spec_count,
+            mv.miovision_api_volume
         FROM miovision_validation.spectrum_studies AS studies
         --get the time bins from tmc study
         JOIN traffic.tmc_study_data AS dat USING (count_id)
         --cross join to get every movement
-        CROSS JOIN miovision_validation.spec_class_move_map_agg AS mmp
-        LEFT JOIN miovision_api.volumes_15min_mvt_unfiltered AS v15
-            ON v15.datetime_bin = dat.time_start
-            AND v15.intersection_uid = studies.intersection_uid
-            AND v15.leg = mmp.mio_leg
-            AND v15.classification_uid = ANY(mmp.mio_class_uid)
-            AND v15.movement_uid = ANY(mmp.mio_move_uid),
+        CROSS JOIN miovision_validation.spec_class_move_map AS mmp,
+        --sum the right element of the spectrum study json based on spec_movement
         LATERAL (
-            SELECT NULLIF(to_jsonb(dat.*) ->> mmp.spec_movement, ''::text)::numeric AS spectrum_count
+            SELECT SUM(NULLIF(to_jsonb(dat.*) ->> unnested.spec_movement, ''::text)::numeric) AS spectrum_count
+            FROM UNNEST(mmp.spec_movements) AS unnested(spec_movement)
         ) AS lat(spectrum_count),
-        UNNEST(mmp.mio_class_uid) AS unnested(mio_class)
+        --lateral select Miovision volumes
+        LATERAL (
+            SELECT COALESCE(SUM(v15.volume), 0) AS miovision_api_volume
+            FROM miovision_api.volumes_15min_mvt_unfiltered AS v15
+            WHERE
+                v15.datetime_bin = dat.time_start
+                AND v15.intersection_uid = studies.intersection_uid
+                AND v15.leg = mmp.mio_leg
+                AND v15.classification_uid = ANY(mmp.classification_uids)
+                AND v15.movement_uid = ANY(mmp.movement_uids)
+        ) AS mv(miovision_api_volume)
         WHERE studies.processed = False
-        GROUP BY
-            studies.intersection_uid,
-            studies.count_id,
-            studies.count_date,
-            dat.time_start,
-            mmp.mio_leg,
-            mmp.spec_class,
-            mmp.mio_movement,
-            mmp.mio_move_uid
     ),
     
     --only insert results with both non-zero spectrum and miovision api results.
