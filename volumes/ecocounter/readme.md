@@ -1,30 +1,31 @@
 <!-- TOC -->
 
 - [Bicycle loop detectors](#bicycle-loop-detectors)
-    - [Installation types](#installation-types)
-    - [Ecocounter data](#ecocounter-data)
-        - [Flows - what we know](#flows---what-we-know)
-    - [Discontinuities](#discontinuities)
-    - [Using the Ecocounter API](#using-the-ecocounter-api)
-        - [Note](#note)
-    - [Historical data](#historical-data)
-    - [ecocounter_pull DAG](#ecocounter_pull-dag)
-    - [ecocounter_check DAG](#ecocounter_check-dag)
-    - [ecocounter_open_data DAG](#ecocounter_open_data-dag)
+  - [Installation types](#installation-types)
+  - [Ecocounter data](#ecocounter-data)
+    - [Flows - what we know](#flows---what-we-know)
+  - [Discontinuities](#discontinuities)
+  - [Using the Ecocounter API](#using-the-ecocounter-api)
+    - [Note](#note)
+  - [Historical data](#historical-data)
+  - [ecocounter\_pull DAG](#ecocounter_pull-dag)
+  - [ecocounter\_check DAG](#ecocounter_check-dag)
+  - [ecocounter\_open\_data DAG](#ecocounter_open_data-dag)
 - [SQL Tables](#sql-tables)
-    - [Main Tables](#main-tables)
-        - [ecocounter.sites_unfiltered](#ecocountersites_unfiltered)
-        - [ecocounter.counts](#ecocountercounts)
-        - [ecocounter.counts_unfiltered](#ecocountercounts_unfiltered)
-        - [ecocounter.flows_unfiltered](#ecocounterflows_unfiltered)
-    - [QC Tables](#qc-tables)
-        - [ecocounter.calibration_factors](#ecocountercalibration_factors)
-        - [ecocounter.sensitivity_history](#ecocountersensitivity_history)
-        - [ecocounter.anomalous_ranges](#ecocounteranomalous_ranges)
-    - [Validation](#validation)
-        - [ecocounter.manual_counts_matched](#ecocountermanual_counts_matched)
-        - [ecocounter.manual_counts_info](#ecocountermanual_counts_info)
-        - [ecocounter.manual_counts_raw](#ecocountermanual_counts_raw)
+  - [Main Tables](#main-tables)
+    - [ecocounter.sites\_unfiltered\`](#ecocountersites_unfiltered)
+      - [`site_description` Naming Convention](#site_description-naming-convention)
+    - [ecocounter.counts\`](#ecocountercounts)
+    - [ecocounter.counts\_unfiltered\`](#ecocountercounts_unfiltered)
+    - [ecocounter.flows\_unfiltered\`](#ecocounterflows_unfiltered)
+  - [QC Tables](#qc-tables)
+    - [ecocounter.calibration\_factors\`](#ecocountercalibration_factors)
+    - [ecocounter.sensitivity\_history\`](#ecocountersensitivity_history)
+    - [ecocounter.anomalous\_ranges\`](#ecocounteranomalous_ranges)
+  - [Validation](#validation)
+    - [ecocounter.manual\_counts\_matched\`](#ecocountermanual_counts_matched)
+    - [ecocounter.manual\_counts\_info\`](#ecocountermanual_counts_info)
+    - [ecocounter.manual\_counts\_raw\`](#ecocountermanual_counts_raw)
 
 <!-- /TOC -->
 # Bicycle loop detectors
@@ -189,6 +190,21 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | linear_name_full     | text                        | | Main road name taken from centreline. Useful for filtering all sensors on one corridor. |
 | side_street          | text                        | | Side street name | 
 | technology           | text                        | | Technology description, useful when unioning with other data sources. | 
+
+#### `site_description` Naming Convention
+The following are guidelines to follow when naming Ecocounter sites: 
+- Follow format: `Main Rd, description`
+  - description should follow the format `west of Spadina Ave`. 
+- If there are sites on both sides of the road, remove direction (ie. EB/WB) from site name. 
+- Use abbreviated street suffixes 
+- Lower cased directions 
+- Use `(retired)` to indicate discontinuity 
+- Removed York-U / area names 
+- If applicable, specify MUP in brackets `(multi-use path)`
+
+When renaming sites already published to Open data, use the following scripts:
+- [sql updates](./updates/ecocounter_sites_rename.sql): update tables where site_description was inserted.
+- [bash updates](./updates/open_data_reexport.sh): reexport data
 
 ### ecocounter.counts`
 This view contains calibrated (`calibrated_volume`) and raw (`raw_volume`) volumes for Ecocoutner flows. 
