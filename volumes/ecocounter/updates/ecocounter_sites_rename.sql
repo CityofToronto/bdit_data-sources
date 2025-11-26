@@ -1,6 +1,6 @@
 -- Table: gwolofs.ecocounter_rename
 
--- DROP TABLE IF EXISTS gwolofs.ecocounter_rename;
+DROP TABLE IF EXISTS gwolofs.ecocounter_rename;
 
 CREATE TABLE IF NOT EXISTS gwolofs.ecocounter_rename
 (
@@ -41,15 +41,15 @@ VALUES
     ('Sherbourne St, North of Wellesley St E', 'Sherbourne St, north of Wellesley St E'),
     ('Yonge St, North of Davenport Rd', 'Yonge St, north of Davenport Rd'),
     ('Sherbourne St, North of Wellesley St E (retired)', 'Sherbourne St, north of Wellesley St E (retired)'),
-    ('YorkU - Evelyn Wiggins Dr, North of Murray Ross Pkwy', 'Evelyn Wiggins Dr, north of Murray Ross Pkwy'),
+    ('YorkU - Evelyn Wiggins Dr, North of Murray Ross Pkwy', 'Evelyn Wiggins Dr, north of Murray Ross Pkwy (cycletrack)'),
     ('Bloor St W at Oakmount Rd, Display Counter', 'Bloor St W, west of Oakmount Rd'),
     ('Steeles Ave E and McCowan Rd WB', 'Steeles Ave E, east of McCowan Rd'),
     ('Steeles Ave E and Midland Ave EB', 'Steeles Ave E, east of Midland Ave'),
     ('Steeles Ave E and Midland Ave WB', 'Steeles Ave E, east of Midland Ave'),
     ('Multi-use path south-east of Keele & Sheppard', 'Keele St, south of Sheppard Ave W (multi-use path)'),
     ('Multi-use path south of Sheppard Ave at Sentinel Rd', 'Sheppard Ave W, west of Sentinel Rd (multi-use path)'),
-    ('Millwood - NE of Donlands', 'Donlands Ave, south of Millwood Rd'),
-    ('Millwood - NW of Pape', 'Pape Ave, south of Millwood Rd')
+    ('Millwood - NE of Donlands', 'Millwood Rd, north of Donlands Ave'),
+    ('Millwood - NW of Pape', 'Millwood Rd, north of Pape Ave')
 );
 
 UPDATE ecocounter.open_data_15min_counts AS og
