@@ -1,17 +1,17 @@
 import sys
 import os
-
-from datetime import datetime, timedelta
-from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
-from airflow.decorators import dag, task
-from airflow.macros import ds_add, ds_format
-
 import logging
 import pendulum
+from datetime import datetime, timedelta
+
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.sdk import dag, task
+from airflow.sdk.execution_time.macros import ds_add, ds_format
+
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 except:
     raise ImportError("Cannot import slack alert functions")
@@ -28,7 +28,7 @@ Slack notifications is raised when the airflow process fails.
 
 """
 DAG_NAME = 'tti_aggregate'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"]) 
 
 default_args = {'owner': ','.join(DAG_OWNERS),
                 'depends_on_past':False,

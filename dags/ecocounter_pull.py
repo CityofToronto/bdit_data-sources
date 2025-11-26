@@ -13,18 +13,18 @@ from datetime import timedelta
 import dateutil.parser
 import logging
 
-from airflow.decorators import dag, task, task_group
-from airflow.models import Variable
-from airflow.hooks.base import BaseHook
+from airflow.sdk import dag, task, task_group
+from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.macros import ds_add
+from airflow.sdk.execution_time.macros import ds_add
 from airflow.exceptions import AirflowSkipException
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import (
         task_fail_slack_alert, slack_alert_data_quality, send_slack_msg, get_readme_docmd
     )
@@ -38,7 +38,7 @@ except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'ecocounter_pull'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
