@@ -75,24 +75,24 @@ def eoy_create_table_dag():
 
         here_create_tables = SQLExecuteQueryOperator(
                         task_id='here_create_tables',
-                        sql="SELECT here.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
+                        sql="SELECT here.create_yearly_tables('{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
                         conn_id='here_bot',
                         autocommit=True)
         here_path_create_tables = SQLExecuteQueryOperator(
                         task_id='here_path_create_tables',
-                        sql="SELECT here.create_yearly_tables_path('{{ task_instance.xcom_pull('yr') }}')",
+                        sql="SELECT here.create_yearly_tables_path('{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
                         conn_id='here_bot',
                         autocommit=True)
         
         bt_create_tables = SQLExecuteQueryOperator(
                         task_id='bluetooth_create_tables',
-                        sql="SELECT bluetooth.create_obs_tables('{{ task_instance.xcom_pull('yr') }}')",
+                        sql="SELECT bluetooth.create_obs_tables('{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
                         conn_id='bt_bot',
                         autocommit=True)
         
         congestion_create_table = SQLExecuteQueryOperator(
                         task_id='congestion_create_table',
-                        sql="SELECT congestion.create_yearly_tables('{{ task_instance.xcom_pull('yr') }}')",
+                        sql="SELECT congestion.create_yearly_tables('{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
                         conn_id='congestion_bot',
                         autocommit=True)
         
