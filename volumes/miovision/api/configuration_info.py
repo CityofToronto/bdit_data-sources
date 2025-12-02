@@ -11,7 +11,7 @@ from psycopg2.extras import execute_values
 from datetime import datetime
 import logging
 
-from airflow.hooks.base_hook import BaseHook
+from airflow.sdk.bases.hook import BaseHook
 
 from .intersection_tmc import get_intersection_info
 
