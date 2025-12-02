@@ -46,7 +46,7 @@ default_args = {
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 5 * * FRI', # Run at 5 AM on Friday
+    schedule=None, # Triggered by vds_pull_vdsdata
     catchup=False,
     template_searchpath=os.path.join(repo_path,'volumes/vds/sql/select'),
     tags=["bdit_data-sources", "vds", "data_checks", "weekly"],

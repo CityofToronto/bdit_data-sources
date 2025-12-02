@@ -8,7 +8,7 @@ import pendulum
 from datetime import timedelta
 
 from airflow.sdk.bases.hook import BaseHook
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, task, task_group, Variable
 from airflow.sdk.execution_time.macros import ds_add, ds_format
 
