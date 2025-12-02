@@ -13,8 +13,8 @@ from dags.dag_owners import owners
 from events.road_permits.rodars_functions import (
     fetch_and_insert_issue_data, fetch_and_insert_location_data
 )
-from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 
 DAG_NAME = 'rodars_pull'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])

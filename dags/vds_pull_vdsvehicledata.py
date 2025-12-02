@@ -13,9 +13,9 @@ sys.path.insert(0, repo_path)
 from dags.dag_owners import owners
 
 from volumes.vds.py.vds_functions import pull_raw_vdsvehicledata
-from airflow3_bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
-from airflow3_bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
-from airflow3_bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+from bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
 
 DAG_NAME = 'vds_pull_vdsvehicledata'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
