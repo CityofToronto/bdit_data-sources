@@ -98,8 +98,19 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
 
     return generated_dag
 
-#get replicator details from airflow variable
-REPLICATORS = Variable.get('replicators', deserialize_json=True)
+#Dictionary of DAGs to create
+REPLICATORS = {
+    "counts": {
+        "dag_name": "counts_replicator",
+        "tables": "counts_tables",
+        "conn": "traffic_bot"
+    },
+    "collisions": {
+        "dag_name": "collisions_replicator",
+        "tables": "collisions_tables",
+        "conn": "collisions_bot"
+    }
+}
 
 #generate replicator DAGs from dict
 for replicator, dag_items in REPLICATORS.items():
