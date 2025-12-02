@@ -6,7 +6,6 @@ from datetime import timedelta
 
 from airflow.sdk import dag
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator, SQLCheckOperator
-from airflow.operators.sql import SQLCheckOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
