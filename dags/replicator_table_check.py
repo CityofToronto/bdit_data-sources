@@ -11,22 +11,23 @@ Checks for:
 import os
 import sys
 import pendulum
+
 # pylint: disable=import-error
-from airflow.decorators import dag, task
-from airflow.models import Variable
+from airflow.sdk import dag, task, Variable
 from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.operators.latest_only import LatestOnlyOperator
+from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 # pylint: disable=wrong-import-position
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
 # pylint: enable=import-error
 
 DAG_NAME = 'replicator_table_check'
-DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
 README_PATH = os.path.join(repo_path, 'collisions/Readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)

@@ -6,15 +6,15 @@ import sys
 from functools import partial
 from datetime import timedelta
 import pendulum
+
 # pylint: disable=import-error
-from airflow.decorators import dag, task, task_group
-from airflow.models import Variable
+from airflow.sdk import dag, task, task_group, get_current_context
 from airflow.exceptions import AirflowFailException
-from airflow.operators.python import get_current_context
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
+from dags.dag_owners import owners
 # pylint: disable=wrong-import-position
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, check_not_empty
 # pylint: enable=import-error
@@ -98,13 +98,24 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
 
     return generated_dag
 
-#get replicator details from airflow variable
-REPLICATORS = Variable.get('replicators', deserialize_json=True)
+#Dictionary of DAGs to create
+REPLICATORS = {
+    "counts": {
+        "dag_name": "counts_replicator",
+        "tables": "counts_tables",
+        "conn": "traffic_bot"
+    },
+    "collisions": {
+        "dag_name": "collisions_replicator",
+        "tables": "collisions_tables",
+        "conn": "collisions_bot"
+    }
+}
 
 #generate replicator DAGs from dict
 for replicator, dag_items in REPLICATORS.items():
     DAG_NAME = dag_items['dag_name']
-    DAG_OWNERS = Variable.get("dag_owners", deserialize_json=True).get(DAG_NAME, ["Unknown"])
+    DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 
     default_args = {
         "owner": ",".join(DAG_OWNERS),
