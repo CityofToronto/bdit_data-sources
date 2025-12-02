@@ -47,6 +47,15 @@ default_args = {'owner': ','.join(names),
                        'LANG':'C.UTF-8'}
                 }
 
+DAGS_TO_TRIGGER = [
+    "tti_aggregate",
+    "congestion_aggregation",
+    "congestion_refresh",
+    "queens_park_aggregation",
+    "rapidto_aggregation",
+    "congestion_aggregate_temp"
+]
+
 @dag(dag_id = dag_name,
      default_args=default_args,
      schedule='0 17 * * * ' ,
@@ -94,7 +103,6 @@ def pull_here():
     def trigger_dags(**kwargs):
         # Define TriggerDagRunOperator for each dag to trigger
         trigger_operators = []
-        DAGS_TO_TRIGGER = Variable.get('here_dag_triggers', deserialize_json=True)
         for dag_id in DAGS_TO_TRIGGER:
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',
