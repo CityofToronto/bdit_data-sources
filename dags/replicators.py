@@ -8,7 +8,7 @@ from datetime import timedelta
 import pendulum
 
 # pylint: disable=import-error
-from airflow.sdk import dag, task, task_group, get_current_context, Variable
+from airflow.sdk import dag, task, task_group, get_current_context
 from airflow.exceptions import AirflowFailException
 
 # import custom operators and helper functions
