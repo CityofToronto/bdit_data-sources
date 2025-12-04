@@ -41,7 +41,7 @@ VALUES
     ('Sherbourne St, North of Wellesley St E', 'Sherbourne St, north of Wellesley St E'),
     ('Yonge St, North of Davenport Rd', 'Yonge St, north of Davenport Rd'),
     ('Sherbourne St, North of Wellesley St E (retired)', 'Sherbourne St, north of Wellesley St E (retired)'),
-    ('YorkU - Evelyn Wiggins Dr, North of Murray Ross Pkwy', 'Evelyn Wiggins Dr, north of Murray Ross Pkwy (cycletrack)'),
+    ('YorkU - Evelyn Wiggins Dr, North of Murray Ross Pkwy', 'Evelyn Wiggins Dr, north of Murray Ross Pkwy (two-way cycle track)'),
     ('Bloor St W at Oakmount Rd, Display Counter', 'Bloor St W, west of Oakmount Rd'),
     ('Steeles Ave E and McCowan Rd WB', 'Steeles Ave E, east of McCowan Rd'),
     ('Steeles Ave E and Midland Ave EB', 'Steeles Ave E, east of Midland Ave'),
