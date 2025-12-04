@@ -191,13 +191,14 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 #### `site_description` Naming Convention
 The following are guidelines to follow when naming Ecocounter sites: 
 - Follow format: `Main Rd, description`
-  - description should follow the format `west of Spadina Ave`. 
-- If there are sites on both sides of the road, remove direction (ie. EB/WB) from site name. 
+  - description should follow the format `west of Spadina Ave`
+  - If sites are on opposite sides of the intersection: `Steeles Ave, at McCowan Rd`
+- If there are sites on both sides of the road, remove direction (ie. EB/WB) from site name and use the `flow_direction` field instead to indicate directionality of travel
 - Use abbreviated street suffixes 
 - Lower cased directions 
 - Use `(retired)` to indicate discontinuity 
 - Removed York-U / area names 
-- If applicable, specify MUP in brackets `(multi-use path)`
+- If amiguous, specify infrastructure type in brackets `(multi-use path)`, `(two-way cycle track)`
 
 When renaming sites already published to Open data, use the following scripts:
 - [sql updates](./updates/ecocounter_sites_rename.sql): update tables where site_description was inserted.
