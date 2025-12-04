@@ -1,5 +1,7 @@
 WITH all_outages AS (
-    SELECT COUNT(*) AS cnt
+    SELECT
+        COUNT(*) AS cnt,
+        COUNT(*) FILTER (WHERE classification_uid IS NOT NULL) AS partial_outage
     FROM miovision_api.open_issues
     WHERE COALESCE(classification_uid, 0) != 2
 ),
@@ -21,7 +23,7 @@ SELECT
         WHEN
             COUNT(total_outages.*) = 1 THEN ' full outages.' ELSE ' full outages '
         || 'and '
-        || (SELECT cnt FROM all_outages
+        || (SELECT partial_outage FROM all_outages
         )
         || ' partial outages. See `miovision_api.open_issues`.'
     END AS summ, --gap_threshold
