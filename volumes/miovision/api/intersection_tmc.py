@@ -417,14 +417,14 @@ def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
                 #this function includes a delete query preceeding the insert.
                 anomalous_range_sql="""SELECT *
                     FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
-                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date)) AS agg"""
+                    LATERAL (SELECT miovision_api.identify_anomalous_ranges(start_date::date)) AS agg"""
                 cur.execute(anomalous_range_sql, time_period)
                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete')
             else:
                 query_params = time_period + ([x.uid for x in intersections], )
                 anomalous_range_sql="""SELECT *
                     FROM generate_series(%s::date, %s::date - interval '1 day', interval '1 day') AS dates(start_date),
-                    LATERAL (SELECT miovision_api.identify_zero_counts(start_date::date, %s::integer [])) AS agg"""
+                    LATERAL (SELECT miovision_api.identify_anomalous_ranges(start_date::date, %s::integer [])) AS agg"""
                 cur.execute(anomalous_range_sql, query_params)
                 logger.info('Aggregation of zero volume periods into anomalous_ranges table complete for intersections %s',
                             [x.uid for x in intersections])
