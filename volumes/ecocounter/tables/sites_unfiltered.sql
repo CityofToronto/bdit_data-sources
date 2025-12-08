@@ -30,6 +30,7 @@ REVOKE ALL ON TABLE ecocounter.sites_unfiltered FROM ecocounter_bot;
 
 GRANT ALL ON TABLE ecocounter.sites_unfiltered TO ecocounter_admins;
 GRANT SELECT, INSERT ON TABLE ecocounter.sites_unfiltered TO ecocounter_bot;
+GRANT SELECT ON ecocounter.sites_unfiltered TO ecocounter_data_detectives;
 
 COMMENT ON TABLE ecocounter.sites_unfiltered IS E''
 'CAUTION: Use VIEW `ecocounter.sites` which includes only sites verified by a human.'
@@ -58,3 +59,23 @@ COMMENT ON COLUMN ecocounter.sites_unfiltered.first_active IS E''
 COMMENT ON COLUMN ecocounter.sites_unfiltered.last_active IS E''
 'Last timestamp site_id appears in ecocounter.counts_unfiltered. '
 'Updated using trigger with each insert on ecocounter.counts_unfiltered. ';
+
+-- Trigger: audit_trigger_row
+
+-- DROP TRIGGER IF EXISTS audit_trigger_row ON ecocounter.sites_unfiltered;
+
+CREATE OR REPLACE TRIGGER audit_trigger_row
+AFTER INSERT OR DELETE OR UPDATE 
+ON ecocounter.sites_unfiltered
+FOR EACH ROW
+EXECUTE FUNCTION ecocounter.if_modified_func('true');
+
+-- Trigger: audit_trigger_stm
+
+-- DROP TRIGGER IF EXISTS audit_trigger_stm ON ecocounter.sites_unfiltered;
+
+CREATE OR REPLACE TRIGGER audit_trigger_stm
+AFTER TRUNCATE
+ON ecocounter.sites_unfiltered
+FOR EACH STATEMENT
+EXECUTE FUNCTION ecocounter.if_modified_func('true');
