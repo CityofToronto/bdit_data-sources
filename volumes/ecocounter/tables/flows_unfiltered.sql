@@ -39,6 +39,7 @@ REVOKE ALL ON TABLE ecocounter.flows_unfiltered FROM ecocounter_bot;
 
 GRANT ALL ON TABLE ecocounter.flows_unfiltered TO ecocounter_admins;
 GRANT SELECT, INSERT ON TABLE ecocounter.flows_unfiltered TO ecocounter_bot;
+GRANT SELECT ON ecocounter.flows_unfiltered TO ecocounter_data_detectives;
 
 COMMENT ON TABLE ecocounter.flows_unfiltered IS E''
 'CAUTION: Use VIEW `ecocounter.flows` which includes only flows verified by a human. '
@@ -73,3 +74,23 @@ ON ecocounter.flows_unfiltered USING btree (flow_id ASC NULLS LAST)
 TABLESPACE pg_default;
 
 CREATE TYPE travel_directions AS ENUM ('Northbound', 'Southbound', 'Westbound', 'Eastbound');
+
+-- Trigger: audit_trigger_row
+
+-- DROP TRIGGER IF EXISTS audit_trigger_row ON ecocounter.flows_unfiltered;
+
+CREATE OR REPLACE TRIGGER audit_trigger_row
+AFTER INSERT OR DELETE OR UPDATE 
+ON ecocounter.flows_unfiltered
+FOR EACH ROW
+EXECUTE FUNCTION ecocounter.if_modified_func('true');
+
+-- Trigger: audit_trigger_stm
+
+-- DROP TRIGGER IF EXISTS audit_trigger_stm ON ecocounter.flows_unfiltered;
+
+CREATE OR REPLACE TRIGGER audit_trigger_stm
+AFTER TRUNCATE
+ON ecocounter.flows_unfiltered
+FOR EACH STATEMENT
+EXECUTE FUNCTION ecocounter.if_modified_func('true');

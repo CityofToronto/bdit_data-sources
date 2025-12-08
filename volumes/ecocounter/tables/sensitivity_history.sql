@@ -27,6 +27,26 @@ COMMENT ON TABLE ecocounter.sensitivity_history IS
 'Stores sensitivity adjustments for each flow as date ranges to '
 'ranges when data is comparable.';
 
+-- Trigger: audit_trigger_row
+
+-- DROP TRIGGER IF EXISTS audit_trigger_row ON ecocounter.sensitivity_history;
+
+CREATE OR REPLACE TRIGGER audit_trigger_row
+AFTER INSERT OR DELETE OR UPDATE 
+ON ecocounter.sensitivity_history
+FOR EACH ROW
+EXECUTE FUNCTION ecocounter.if_modified_func('true');
+
+-- Trigger: audit_trigger_stm
+
+-- DROP TRIGGER IF EXISTS audit_trigger_stm ON ecocounter.sensitivity_history;
+
+CREATE OR REPLACE TRIGGER audit_trigger_stm
+AFTER TRUNCATE
+ON ecocounter.sensitivity_history
+FOR EACH STATEMENT
+EXECUTE FUNCTION ecocounter.if_modified_func('true');
+
 /*
 --initial code used to populate
 
