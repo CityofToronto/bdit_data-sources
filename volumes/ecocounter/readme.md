@@ -248,17 +248,17 @@ Row count: 73
 | flow_id | numeric | 104042943 | Primary key |
 | site_id | numeric | 100042943 | |
 | validated | boolean | True  | |
-| includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. |
+| includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. FALSE could indicate the sensor does not count contraflow OR only counts contraflow. |
 | replaces_flow_id | numeric | | `flow_id` of earlier flow that this one replaces |
 | replaced_by_flow_id | numeric | 353363669 | `flow_id` of flow this one is replaced by |
-| flow_direction | text | westbound (includes contraflow) |  |
+| flow_direction | text | westbound (includes contraflow) | Direction of travel. Include `contraflow` in brackets if applicable. |
 | flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
 | first_active | timestamp without time zone | | First timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | date_decommissioned | timestamp without time zone |                     |
-| direction_main      | USER-DEFINED                | Westbound | Grouping column used for Open Data. A custom datatype was created to force this to be one of `Northbound`/`Southbound`/`Westbound`/`Eastbound`. You will need to coerce this column to text (::text) for comparison. |
+| direction_main      | USER-DEFINED                | Westbound | Grouping column used for Open Data indicating the side of the road. When `direction_main` is opposite to `flow_direction`, the flow is contraflow. A custom datatype was created to force this to be one of `Northbound`/`Southbound`/`Westbound`/`Eastbound`. You will need to coerce this column to text (::text) for comparison. |
 | mode_counted | text | 'bike' | distinguishes between flows that count bikes and those that count (e)scooters. Value should be one of 'bike', 'scooter', or NULL |
 
 ## QC Tables
