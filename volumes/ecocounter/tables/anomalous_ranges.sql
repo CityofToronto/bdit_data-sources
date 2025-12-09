@@ -1,6 +1,6 @@
 CREATE TABLE ecocounter.anomalous_ranges (
     uid smallserial PRIMARY KEY,
-    flow_id numeric REFERENCES ecocounter.anomalous_ranges (flow_id),
+    flow_id numeric REFERENCES ecocounter.flows_unfiltered (flow_id),
     site_id numeric REFERENCES ecocounter.sites_unfiltered (site_id),
     time_range tsrange NOT NULL,
     notes text NOT NULL,
