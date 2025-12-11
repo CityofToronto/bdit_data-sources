@@ -5,17 +5,17 @@ Slack notifications is raised when the airflow process fails.
 import sys
 import os
 import pendulum
-
 from datetime import timedelta
-from airflow.hooks.base import BaseHook
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.models import Variable
-from airflow.decorators import dag, task, task_group
-from airflow.macros import ds_add, ds_format
+
+from airflow.sdk.bases.hook import BaseHook
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.sdk import dag, task, task_group, Variable
+from airflow.sdk.execution_time.macros import ds_add, ds_format
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
     from here.traffic.here_api import query_dates, get_access_token, get_download_url, HereAPIException
 except:
@@ -32,8 +32,7 @@ This pulles probe data in oppose to path in the pull_here_path DAG.
 """
 
 dag_name = 'pull_here'
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+names = owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
 default_args = {'owner': ','.join(names),
                 'depends_on_past':False,
@@ -47,6 +46,15 @@ default_args = {'owner': ','.join(names),
                 'env':{'LC_ALL':'C.UTF-8', #Necessary for Click
                        'LANG':'C.UTF-8'}
                 }
+
+DAGS_TO_TRIGGER = [
+    "tti_aggregate",
+    "congestion_aggregation",
+    "congestion_refresh",
+    "queens_park_aggregation",
+    "rapidto_aggregation",
+    "congestion_aggregate_temp"
+]
 
 @dag(dag_id = dag_name,
      default_args=default_args,
@@ -95,7 +103,6 @@ def pull_here():
     def trigger_dags(**kwargs):
         # Define TriggerDagRunOperator for each dag to trigger
         trigger_operators = []
-        DAGS_TO_TRIGGER = Variable.get('here_dag_triggers', deserialize_json=True)
         for dag_id in DAGS_TO_TRIGGER:
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',

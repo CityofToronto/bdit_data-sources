@@ -14,8 +14,7 @@ import requests
 import psycopg2
 from datetime import datetime, timedelta
 
-from airflow.decorators import dag, task
-from airflow.models import Variable
+from airflow.sdk import dag, task, Variable
 from airflow.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models.taskinstance import TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
