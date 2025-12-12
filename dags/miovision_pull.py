@@ -19,7 +19,9 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import (
+        task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd, send_slack_msg
+    )
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     from bdit_dag_utils.utils.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
