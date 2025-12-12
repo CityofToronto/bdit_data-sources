@@ -34,3 +34,49 @@ FROM (
 ) AS vals(flow_id, flow_direction, direction_main, includes_contraflow, validated, replaces_flow_id, date_decommissioned, flow_geom, notes)
 WHERE
     vals.flow_id = fu.flow_id;
+
+--add a new flow 53341333 to replace what was 353341333 before it was reused:
+INSERT INTO ecocounter.flows_unfiltered (
+    flow_id,
+     site_id,
+     flow_direction,
+     flow_geom,
+     bin_size,
+     notes,
+     replaced_by_flow_id,
+     includes_contraflow,
+     validated,
+     first_active,
+     last_active,
+     date_decommissioned,
+     direction_main,
+     mode_counted
+)
+VALUES (
+    53341333,
+    300028396,
+    'Westbound',
+    '0102000020E6100000020000001F522D79C0D953C0A50989D25CD54540FBFD651EBDD953C084EC014C5ED54540',
+    '00:15:00',
+    'bike - eastbound main (prior to 2025 this was westbound bike main+contraflow). This flow_id was originally 353341333, but it was reused for the opposite direction so we changed the original to 53341333.',
+    353554898,
+    true,
+    false,
+    '2022-10-26 02:15:00',
+    '2024-01-01 00:00:00',
+    '2024-01-01 00:00:00',
+    'Westbound',
+    null
+);
+
+UPDATE ecocounter.counts_unfiltered
+SET flow_id = 53341333
+WHERE flow_id = 353341333 AND datetime_bin < '2024-01-01';
+
+UPDATE ecocounter.sensitivity_history
+SET flow_id = 53341333
+WHERE flow_id = 353341333 AND lower(date_range) < '2024-01-01';
+
+UPDATE ecocounter.flows_unfiltered
+SET first_active = '2025-06-27 10:45:00'
+WHERE flow_id = 353341333;
