@@ -12,7 +12,6 @@ aiohttp==3.12.15
     # via
     #   aiohttp-cors
     #   apache-airflow-providers-http
-    #   env-canada
     #   gcloud-aio-auth
     #   gcsfs
     #   litellm
@@ -195,8 +194,6 @@ docstring-parser==0.17.0
     # via google-cloud-aiplatform
 email-validator==2.2.0
     # via flask-appbuilder
-env-canada==0.8.0
-    # via -r requirements.in
 exceptiongroup==1.3.0
     # via
     #   anyio
@@ -267,12 +264,8 @@ gcloud-aio-storage==9.5.0
     # via apache-airflow-providers-google
 gcsfs==2025.7.0
     # via apache-airflow-providers-google
-geographiclib==2.0
-    # via geopy
 geopandas==1.0.1
     # via -r requirements.in
-geopy==2.4.1
-    # via env-canada
 google-ads==28.0.0
     # via apache-airflow-providers-google
 google-analytics-admin==0.24.1
@@ -597,8 +590,6 @@ idna==3.10
     #   httpx
     #   requests
     #   yarl
-imageio==2.37.0
-    # via env-canada
 immutabledict==4.2.1
     # via apache-airflow-providers-google
 importlib-metadata==8.7.0
@@ -671,8 +662,6 @@ lockfile==0.12.2
     #   python-daemon
 looker-sdk==25.10.0
     # via apache-airflow-providers-google
-lxml==6.0.0
-    # via env-canada
 mako==1.3.10
     # via alembic
 markdown-it-py==3.0.0
@@ -723,9 +712,7 @@ nest-asyncio==1.6.0
 numpy==2.2.6
     # via
     #   db-dtypes
-    #   env-canada
     #   geopandas
-    #   imageio
     #   pandas
     #   pandas-gbq
     #   pyogrio
@@ -804,7 +791,6 @@ pandas==2.3.1
     # via
     #   apache-airflow-providers-google
     #   db-dtypes
-    #   env-canada
     #   geopandas
     #   google-cloud-aiplatform
     #   pandas-gbq
@@ -818,10 +804,6 @@ pendulum==3.1.0
     # via apache-airflow
 pexpect==4.9.0
     # via ipython
-pillow==11.3.0
-    # via
-    #   env-canada
-    #   imageio
 pip-tools==7.4.1
     # via -r requirements.in
 platformdirs==4.3.8
@@ -1021,7 +1003,6 @@ python-dateutil==2.9.0.post0
     # via
     #   apache-airflow
     #   croniter
-    #   env-canada
     #   flask-appbuilder
     #   google-cloud-bigquery
     #   holidays
@@ -1245,12 +1226,10 @@ universal-pathlib==0.2.6
     # via apache-airflow
 uritemplate==4.2.0
     # via google-api-python-client
-urllib3==2.5.0
+urllib3==2.6.0
     # via requests
 virtualenv==20.33.1
     # via ray
-voluptuous==0.15.2
-    # via env-canada
 wcwidth==0.2.13
     # via prompt-toolkit
 websockets==15.0.1
