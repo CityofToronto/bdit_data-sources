@@ -476,6 +476,47 @@ def daterange(start_time, end_time, time_delta):
         yield curr_time
         curr_time += time_delta
 
+def add_new_intersections(conn):
+    """Pulls all intersections from Miovision API and inserts into database. Conflicts are skipped. New intersections are returned."""
+    from pandas import DataFrame
+    api_key = BaseHook.get_connection('miovision_api_key')
+    headers = {'Content-Type': 'application/json',
+           'apikey': api_key.extra_dejson['key']}
+    response = session.get(
+        URL_BASE + "/intersections?pageSize=1000",
+        params={},
+        headers=headers,
+        proxies=session.proxies
+    )
+    df_api = DataFrame(response.json()['intersections'])
+    df_api = df_api[['id', 'name', 'lat', 'long']]
+    df_api = df_api[df_api['name'] != 'Testing Lab'] #exclude Testing Lab
+    rows = [tuple(x) for x in df_api.to_numpy()] #convert to tuples for inserting
+    
+    insert_sql = '''
+    WITH new_ints (id, api_name, lat, lng) AS (VALUES %s),
+
+    to_insert AS (
+        SELECT ni.id, ni.api_name, ni.lat, ni.lng
+        FROM new_ints AS ni
+        --anti join existing intersections to prevent unnecessary serial allocation
+        LEFT JOIN miovision_api.intersections USING (id)
+        WHERE intersections.id IS NULL
+    )
+    
+    INSERT INTO miovision_api.intersections (id, api_name, lat, lng)
+    SELECT id, api_name, lat, lng
+    FROM to_insert
+    ON CONFLICT ON CONSTRAINT miovision_intersections_id_uniq
+    DO NOTHING
+    RETURNING 'intersection_uid: `' || intersection_uid || '` - ' || api_name
+    '''
+    
+    with conn.cursor() as curr:
+        new_ints = execute_values(curr, insert_sql, rows, fetch=True)
+        logger.info('New rows %s', new_ints)
+    return new_ints
+
 class Intersection:
     def __init__(self, uid, id1, name, date_installed,
                  date_decommissioned):
@@ -523,14 +564,15 @@ def get_intersection_info(conn, intersection=()):
         with conn.cursor() as cur:
             sql_query = """SELECT intersection_uid,
                                 id,
-                                intersection_name,
+                                COALESCE(intersection_name, api_name) AS intersection_name,
                                 date_installed,
                                 date_decommissioned
                         FROM miovision_api.intersections"""
             if len(intersection) > 0:
-                sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
+                sql_query += """ WHERE intersection_uid = ANY(%s::integer[]) ORDER BY intersection_uid DESC"""
                 cur.execute(sql_query, (list(intersection),))
             else:
+                sql_query += " ORDER BY intersection_uid DESC"
                 cur.execute(sql_query)
             intersection_list = cur.fetchall()
     except psycopg2.Error as exc:
