@@ -74,6 +74,9 @@ Some of the newer sites have flows labelled in the system as "IN" and "OUT". Bel
 From an email from Pierre, of Ecocounter:
 > The IN and OUT disparities are configured during the setup of the counter. With the Zelt system that you own, there can only be two directions: IN and OUT, but there can be several flows. In the case of Murray Ross Parkway, some details about the direction were left in the comments section: IN – Northbound. In the following two examples, both counting sites have four loops installed on the bike paths, but in one case, four flows were configured, and only two for the second site. In the first example, both IN flows have the same name, but they have different flowId.
 
+Newer installations have recently (~2024-2025) begun to distinguish between counts for bikes and (E-?)scooters. Where this is configured, there should be twice as many flows. One half are for scooters and the other half for bikes. In our database, we distinguish between them with the `mode_counted` field on the `flows` table.
+For new sites, the distinction is visible on the Eco-visio website under "Manage Sites" -> "counting Flows" tab (for those with Manager/Admin level permissions). We don't yet have a lot of clarity on what exactly gets counted as what or how well scooters and bikes are distinguished from eachother or other modes.
+
 ## Discontinuities
 
 Since 2023, periodic ground-truth counts have been used to calibrate sensors. Following these studies, if sensitivity of a sensor is adjusted, the new sensitivity is logged in `ecocounter.sensitivity_history` and will result in a discontinuity in the raw volumes. However, if you use `ecocounter.counts.calibrated_volumes`, you should not see a discontinuity as both before and after volumes are adjusted to match ground-truth observations using appropriate calibration factors. 
@@ -256,6 +259,7 @@ Row count: 73
 | last_active | timestamp without time zone | | Last timestamp flow_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | date_decommissioned | timestamp without time zone |                     |
 | direction_main      | USER-DEFINED                | Westbound | Grouping column used for Open Data. A custom datatype was created to force this to be one of `Northbound`/`Southbound`/`Westbound`/`Eastbound`. You will need to coerce this column to text (::text) for comparison. |
+| mode_counted | text | 'bike' | distinguishes between flows that count bikes and those that count (e)scooters. Value should be one of 'bike', 'scooter', or NULL |
 
 ## QC Tables
 These tables are used by  `ecocounter_admins` to document sensitivity changes and anomalous ranges in the Ecocounter data when identified.
