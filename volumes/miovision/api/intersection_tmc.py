@@ -564,14 +564,15 @@ def get_intersection_info(conn, intersection=()):
         with conn.cursor() as cur:
             sql_query = """SELECT intersection_uid,
                                 id,
-                                intersection_name,
+                                COALESCE(intersection_name, api_name) AS intersection_name,
                                 date_installed,
                                 date_decommissioned
                         FROM miovision_api.intersections"""
             if len(intersection) > 0:
-                sql_query += """ WHERE intersection_uid = ANY(%s::integer[])"""
+                sql_query += """ WHERE intersection_uid = ANY(%s::integer[]) ORDER BY intersection_uid DESC"""
                 cur.execute(sql_query, (list(intersection),))
             else:
+                sql_query += " ORDER BY intersection_uid DESC"
                 cur.execute(sql_query)
             intersection_list = cur.fetchall()
     except psycopg2.Error as exc:
