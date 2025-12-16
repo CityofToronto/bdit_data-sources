@@ -80,3 +80,57 @@ WHERE flow_id = 353341333 AND lower(date_range) < '2024-01-01';
 UPDATE ecocounter.flows_unfiltered
 SET first_active = '2025-06-27 10:45:00'
 WHERE flow_id = 353341333;
+
+UPDATE ecocounter.flows_unfiltered
+SET last_active = (SELECT max(datetime_bin) FROM ecocounter.counts_unfiltered WHERE flow_id = 53341333 AND datetime_bin < '2024-01-01' AND volume > 0)
+WHERE flow_id = 53341333;
+
+--Update 353341334 and add 53341334 to represent it before the direction was changed: 
+UPDATE ecocounter.flows_unfiltered
+SET includes_contraflow = False
+WHERE flow_id = 353341334;
+
+--add a new flow 53341334 to replace what was 353341334 before it was reused:
+INSERT INTO ecocounter.flows_unfiltered (
+    flow_id,
+    site_id,
+    flow_direction,
+    bin_size,
+    notes,
+    replaced_by_flow_id,
+    includes_contraflow,
+    validated,
+    first_active,
+    last_active,
+    date_decommissioned,
+    direction_main,
+    mode_counted
+)
+VALUES (
+    53341334,
+    300028396,
+    'Eastbound',
+    '00:15:00',
+    'Eastbound bike main+contraflow. This flow_id was originally 353341334, but it was reused starting in 2025 for the opposite direction so we changed the original to 53341334.',
+    353554898,
+    true,
+    false,
+    '2022-10-26 02:15:00',
+    (SELECT max(datetime_bin) FROM ecocounter.counts_unfiltered WHERE flow_id = 53341334 AND datetime_bin < '2024-01-01' AND volume > 0),
+    '2024-01-01 00:00:00',
+    'Eastbound',
+    'bike'
+);
+
+--adjust 353341334 to 53341334 before 2024.
+UPDATE ecocounter.counts_unfiltered
+SET flow_id = 53341334
+WHERE flow_id = 353341334 AND datetime_bin < '2024-01-01';
+
+UPDATE ecocounter.sensitivity_history
+SET flow_id = 53341334
+WHERE flow_id = 353341334 AND lower(date_range) < '2024-01-01';
+
+UPDATE ecocounter.flows_unfiltered
+SET first_active = '2025-06-27 10:45:00'
+WHERE flow_id = 353341334;
