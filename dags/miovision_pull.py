@@ -8,13 +8,11 @@ import sys
 import os
 import pendulum
 
-from airflow.decorators import dag, task, task_group
-from airflow.models.param import Param
-from airflow.models import Variable
+from airflow.sdk import dag, task, task_group, Param
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sensors.external_task import ExternalTaskMarker
+from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.macros import ds_add
+from airflow.sdk.execution_time.macros import ds_add
 from airflow.exceptions import AirflowSkipException
 
 try:
@@ -34,7 +32,7 @@ except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'miovision_pull'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = "Gabe"
 
 README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
