@@ -15,8 +15,7 @@ import logging
 from pendulum import duration, datetime
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.models import Variable
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -31,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation."
 DAG_NAME = 'here_dynamic_binning_agg'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
+DAG_OWNERS = "Gabe"
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),

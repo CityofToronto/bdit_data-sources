@@ -3,8 +3,7 @@ import sys
 import logging
 from pendulum import duration, datetime
 
-from airflow.models import Variable
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
@@ -21,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation."
 DAG_NAME = 'here_dynamic_binning_monthly_agg'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"]) 
+DAG_OWNERS = "Gabe"
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
