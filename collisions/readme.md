@@ -147,7 +147,7 @@ COMMENT ON VIEW traffic.centreline2_midblocks_view IS '(DO NOT USE) Use `traffic
 --same permissions are the same as `traffic.centreline2_midblocks` except: 
 REVOKE ALL ON TABLE traffic.centreline2_midblocks_view FROM bdit_humans;
 ```
-3. Update the Airflow variable with the replication table pair.  
+3. Update the Airflow variable (ie. `counts_tables`) with the replication table pair.  
 `["move_staging.centreline2_midblocks", "traffic.centreline2_midblocks"]` becomes:  
 ```json
 [
@@ -165,7 +165,7 @@ If you want to make more extensive changes to the final data than renaming colum
 
 2. Create a view that references new `traffic_staging` destination in `traffic`. 
 
-3. Update the Airflow variable with the replication table pair:
+3. Update the Airflow variable (ie. `counts_tables`) with the replication table pair:
 `["move_staging.centreline2_midblocks", "traffic.centreline2_midblocks"]` becomes:  
 ```json
 [
