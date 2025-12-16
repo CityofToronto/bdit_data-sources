@@ -3,8 +3,7 @@ import os
 import pendulum
 from datetime import timedelta
 
-from airflow.decorators import dag
-from airflow.models import Variable
+from airflow.sdk import dag
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 try:
@@ -16,7 +15,7 @@ except:
     raise ImportError("Cannot import DAG helper functions.")
 
 DAG_NAME = 'miovision_validation'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ["Unknown"])
+DAG_OWNERS = "gabe"
 
 README_PATH = os.path.join(repo_path, 'volumes/miovision/api/readme.md')
 #DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
