@@ -1,11 +1,13 @@
+-c constraints.txt
+
 # Airflow
-apache-airflow[google,postgres,slack,ftp,http]==2.11.0
+apache-airflow[google,postgres,slack,ftp,http,fab,standard]==3.1.5
 
 # Airflow dag list
 graphviz
 
 # Python dependency management
-pip-tools==7.4.1
+pip-tools==7.5.2
 
 # pipelines
 # bs4==0.0.1
