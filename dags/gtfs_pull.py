@@ -14,7 +14,7 @@ import requests
 import psycopg2
 from datetime import datetime, timedelta
 
-from airflow.sdk import dag, task, Variable
+from airflow.sdk import dag, task
 from airflow.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models.taskinstance import TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -23,12 +23,13 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-DAG_NAME = 'gtfs_pull'
-DAG_OWNERS = Variable.get('dag_owners', deserialize_json=True).get(DAG_NAME, ['Unknown'])
-
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+from dags.dag_owners import owners
+
+DAG_NAME = 'gtfs_pull'
+DAG_OWNERS  = owners.get(DAG_NAME, ["Unknown"])
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
