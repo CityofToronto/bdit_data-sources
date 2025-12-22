@@ -51,8 +51,6 @@ DAGS_TO_TRIGGER = [
     "tti_aggregate",
     "congestion_aggregation",
     "congestion_refresh",
-    "queens_park_aggregation",
-    "rapidto_aggregation",
     "congestion_aggregate_temp"
 ]
 
