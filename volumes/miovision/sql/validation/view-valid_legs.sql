@@ -1,16 +1,17 @@
---DROP VIEW gwolofs.miovision_valid_legs;
+--DROP VIEW miovision_validation.valid_legs_view;
 
-CREATE OR REPLACE VIEW gwolofs.miovision_valid_legs AS
+CREATE OR REPLACE VIEW miovision_validation.valid_legs_view AS
 
 WITH individual_tests AS (
     SELECT
         ael.intersection_uid,
         ael.intersection_name,
-        ael.data_date AS dt,
+        ael.dt,
         ael.classification,
         ael.leg,
         ael.pass
-    FROM miovision_validation.agg_error_leg AS ael
+    FROM miovision_validation.spec_error_agg_leg AS ael
+    --FROM miovision_validation.golden_error_agg_leg AS ael
     --this test applies to all modes
     WHERE classification NOT IN ('vehicle_light')
     
@@ -23,7 +24,8 @@ WITH individual_tests AS (
         pel.classification,
         pel.leg,
         pass_95th_percentile
-    FROM miovision_validation.percentle_error_leg AS pel
+    FROM miovision_validation.spec_error_percentile_leg AS pel
+    --FROM miovision_validation.golden_error_percentile_leg AS pel
     --this test does not apply to vehicles, which are measured at the movement level
     WHERE classification NOT IN ('vehicle_all', 'vehicle_light')
     
@@ -36,7 +38,8 @@ WITH individual_tests AS (
         pem.classification,
         pem.leg,
         pem.pass_85th_percentile
-    FROM miovision_validation.percentle_error_mvmt AS pem
+    FROM miovision_validation.spec_error_percentile_mvmt AS pem
+    --FROM miovision_validation.golden_error_percentile_mvmt AS pem
     --this only applies to vehicles, while bikes/peds are measured at the leg level
     WHERE
         classification IN ('vehicle_all')
@@ -53,8 +56,9 @@ SELECT
         WHEN 'pedestrian' THEN '{6}' 
         WHEN 'bike_tmc' THEN '{2}'
         WHEN 'bike_approach' THEN '{10}'
-        WHEN 'vehicle_all' THEN '{1, 3, 4, 5, 9}'
-        WHEN 'vehicle_light' THEN '{1}'
+        WHEN 'vehicle_all' THEN '{1, 3, 4, 5, 8, 9}'
+        WHEN 'vehicle_heavy' THEN '{3, 4, 5, 9}'
+        WHEN 'vehicle_light' THEN '{1, 8}'
     END AS classification_uids,
     leg,
     bool_and(pass) AS all_pass
@@ -67,4 +71,11 @@ GROUP BY
     classification_uids,
     leg;
 
-SELECT * FROM gwolofs.miovision_valid_legs WHERE all_pass;
+SELECT * FROM miovision_validation.valid_legs_view WHERE all_pass;
+
+ALTER TABLE miovision_validation.valid_legs_view
+OWNER TO miovision_validators;
+
+GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO bdit_humans;
+GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO miovision_validation_bot;
+GRANT ALL ON TABLE miovision_validation.valid_legs_view TO miovision_validators;
