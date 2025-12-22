@@ -32,7 +32,11 @@ default_args = {
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(
+        task_fail_slack_alert,
+        use_proxy = True,
+        troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds"
+    ),
     'catchup': True,
 }
 
