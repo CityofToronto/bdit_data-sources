@@ -1,6 +1,8 @@
---DROP VIEW gwolofs.miovision_valid_intersections;
+--DROP VIEW miovision_validation.valid_intersections;
 
-CREATE OR REPLACE VIEW gwolofs.miovision_valid_intersections AS
+--DROP VIEW miovision_validation.valid_intersections_view;
+
+CREATE VIEW miovision_validation.valid_intersections_view AS
 SELECT
     intersection_uid,
     intersection_name,
@@ -9,7 +11,7 @@ SELECT
     classification,
     classification_uids,
     bool_and(all_pass) AS all_pass
-FROM gwolofs.miovision_valid_legs
+FROM miovision_validation.valid_legs_view
 GROUP BY
     intersection_uid,
     intersection_name,
@@ -18,4 +20,11 @@ GROUP BY
     classification,
     classification_uids;
 
-SELECT * FROM gwolofs.miovision_valid_intersections WHERE all_pass;
+SELECT * FROM miovision_validation.valid_intersections_view WHERE all_pass;
+
+ALTER TABLE miovision_validation.valid_intersections_view
+OWNER TO miovision_validators;
+
+GRANT SELECT ON TABLE miovision_validation.valid_intersections_view TO bdit_humans;
+GRANT SELECT ON TABLE miovision_validation.valid_intersections_view TO miovision_validation_bot;
+GRANT ALL ON TABLE miovision_validation.valid_intersections_view TO miovision_validators;
