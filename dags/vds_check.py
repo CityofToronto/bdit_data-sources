@@ -73,7 +73,7 @@ def vds_check_dag():
             slack_alert_data_quality,
             use_proxy=True,
             troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds#new-sensor-type-added"
-            #troubleshooting_tips=Variable.get("troubleshooting_tips", deserialize_json=True).get("vds")
+            #troubleshooting_tips=Variable.get("troubleshooting_tips", deserialize_json=True).get("vds") #alt method for internal sources
         ),
         task_id="check_missing_expected_bins",
         sql="select-missing_expected_bins.sql",
