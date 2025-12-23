@@ -10,8 +10,8 @@ WITH individual_tests AS (
         ael.classification,
         ael.leg,
         ael.pass
-    FROM miovision_validation.spec_error_agg_leg AS ael
-    --FROM miovision_validation.golden_error_agg_leg AS ael
+    --FROM miovision_validation.spec_error_agg_leg AS ael
+    FROM miovision_validation.golden_error_agg_leg AS ael
     --this test applies to all modes
     WHERE classification NOT IN ('vehicle_light')
     
@@ -23,9 +23,9 @@ WITH individual_tests AS (
         pel.dt,
         pel.classification,
         pel.leg,
-        pass_95th_percentile
-    FROM miovision_validation.spec_error_percentile_leg AS pel
-    --FROM miovision_validation.golden_error_percentile_leg AS pel
+        pass_80th_percentile
+    --FROM miovision_validation.spec_error_percentile_leg AS pel
+    FROM miovision_validation.golden_error_percentile_leg AS pel
     --this test does not apply to vehicles, which are measured at the movement level
     WHERE classification NOT IN ('vehicle_all', 'vehicle_light')
     
@@ -37,9 +37,9 @@ WITH individual_tests AS (
         pem.dt,
         pem.classification,
         pem.leg,
-        pem.pass_85th_percentile
-    FROM miovision_validation.spec_error_percentile_mvmt AS pem
-    --FROM miovision_validation.golden_error_percentile_mvmt AS pem
+        pem.pass_80th_percentile
+    --FROM miovision_validation.spec_error_percentile_mvmt AS pem
+    FROM miovision_validation.golden_error_percentile_mvmt AS pem
     --this only applies to vehicles, while bikes/peds are measured at the leg level
     WHERE
         classification IN ('vehicle_all')
