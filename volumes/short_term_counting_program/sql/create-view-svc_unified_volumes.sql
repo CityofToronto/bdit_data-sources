@@ -3,7 +3,7 @@ CREATE OR REPLACE VIEW traffic.svc_unified_volumes AS
 -- speed studies
 SELECT
     study_id,
-    time_start::date AS count_date,
+    count_date,
     time_start,
     time_end,
     direction,
@@ -26,7 +26,7 @@ SELECT
 FROM traffic.svc_study_speed
 GROUP BY
     study_id,
-    time_start::date,
+    count_date,
     time_start,
     time_end,
     direction
