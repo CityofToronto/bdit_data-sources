@@ -88,7 +88,7 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
             
         # Waits for an external trigger
         [
-            wait_for_external_trigger() >>
+            #wait_for_external_trigger() >>
             copy_tables_with_checks.partial(conn_id=conn).expand(tables=tables) >>
             status_message(tables=tables)
         ]
