@@ -24,7 +24,8 @@ def create_replicator_dag(dag_id, short_name, tables_var, conn, doc_md, default_
         catchup=False,
         max_active_runs=5,
         max_active_tasks=5,
-        schedule=None, #triggered externally
+        schedule="30 6 * * *", #temporary daily trigger while Airflow 3 related breaking API change is addressed
+        #schedule=None, #triggered externally
         doc_md=doc_md,
         tags=[short_name, "replicator"]
     )
