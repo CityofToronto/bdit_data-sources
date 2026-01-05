@@ -15,13 +15,14 @@ import logging
 from pendulum import duration, datetime
 
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sdk import dag, task
+from airflow.sdk import dag
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
-    from dags.dag_functions import task_fail_slack_alert
-    from dags.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.common_tasks import check_jan_1st
 except:
     raise ImportError("Cannot import slack alert functions")
     
