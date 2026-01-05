@@ -43,7 +43,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
     `date_decommissioned` is described under (#removing-intersections). 
 		
 4. **px**  
-    `px` is a uid used to identify signalized intersections. For 1 or 2 `px` is is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below. Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
+    `px` is a uid used to identify signalized intersections. For 1 or 2 `px` is is easiest to find manually by searching the intersection name (location) in ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
 
 	**Alternate method** - For a large list of intersections you could convert to values and use `gis._get_intersection_id()` to identify the intersection_ids, px, and geom like so: 
 	```sql
@@ -64,6 +64,23 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 <p align="center">
 	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
 </p>
+
+After updating `px`, it can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below:
+	
+```sql
+UPDATE miovision_api.intersections
+SET
+	street_main = initcap(main_street),
+	street_cross = initcap(side1_street),
+	int_id = ts.node_id, 
+	lat = ts.latitude,
+	lng = ts.longitude,
+	geom = ts.geom
+FROM gis.traffic_signal AS ts
+WHERE
+	ts.px::int = intersections.px::int
+	AND intersections.intersection_uid IN (141, 142)
+```
 
 5. **Restricted legs**  
     In order to find out which leg of that intersection is restricted (no cars approaching from that leg), go to Google Map to find out the direction of traffic.
