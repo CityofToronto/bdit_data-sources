@@ -32,6 +32,7 @@ logging.basicConfig(level=logging.DEBUG)
 doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation."
 DAG_NAME = 'here_dynamic_binning_agg'
 DAG_OWNERS = "Gabe"
+CONN_ID = "congestion_bot"
 
 default_args = {
     'owner': ','.join(DAG_OWNERS),
@@ -41,7 +42,7 @@ default_args = {
     'email_on_success': False,
     'retries': 1,
     'retry_delay': duration(minutes=5),
-    #'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': task_fail_slack_alert
 }
 
 @dag(
@@ -57,10 +58,24 @@ default_args = {
 #to add: catchup, one task at a time, depends on past.
 
 def here_dynamic_binning_agg():
+    create_partitions = SQLExecuteQueryOperator(
+            task_id='create_partitions',
+            pre_execute=check_jan_1st,
+            sql=#partition by year
+                """SELECT gwolofs.partition_yyyy(
+                    base_table := ''congestion_raw_segments'',
+                    year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int,
+                    partition_owner := 'gwolofs',
+                    schema_ := 'gwolofs'
+                );""",
+            conn_id=CONN_ID,
+            autocommit=True
+    )
+    
     check_not_empty = SQLCheckOperatorWithReturnValue(
         task_id="check_not_empty",
         sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path WHERE dt = '{{ ds }}'",
-        conn_id="congestion_bot",
+        conn_id=CONN_ID,
         retries=1,
         retry_delay=duration(days=1)
     )
@@ -68,7 +83,7 @@ def here_dynamic_binning_agg():
     delete_daily = SQLExecuteQueryOperator(
         sql="DELETE FROM gwolofs.congestion_raw_segments WHERE dt = '{{ ds }}'",
         task_id='delete_daily',
-        conn_id='congestion_bot',
+        conn_id=CONN_ID,
         autocommit=True,
         retries = 2
     )
@@ -76,12 +91,12 @@ def here_dynamic_binning_agg():
     aggregate_daily = SQLExecuteQueryOperator(
         sql="SELECT gwolofs.congestion_network_segment_agg('{{ ds }}'::date);",
         task_id='aggregate_daily',
-        conn_id='congestion_bot',
+        conn_id=CONN_ID,
         autocommit=True,
         retries = 2,
         hook_params={"options": "-c statement_timeout=10800000ms"} #3 hours
     )
     
-    check_not_empty >> delete_daily >> aggregate_daily
+    create_partitions >> check_not_empty >> delete_daily >> aggregate_daily
 
 here_dynamic_binning_agg()
