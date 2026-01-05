@@ -84,6 +84,21 @@ def pull_here_path():
     def load_data()->str:
         return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
 
-    load_data()
+    # Create a task group for triggering the DAGs
+    @task_group
+    def trigger_dags_tasks():
+        # Define TriggerDagRunOperator for each DAG to trigger
+        trigger_operators = []
+        DAGS_TO_TRIGGER = Variable.get('here_path_dag_triggers', deserialize_json=True)
+        for dag_id in DAGS_TO_TRIGGER:
+            trigger_operator = TriggerDagRunOperator(
+                task_id=f'trigger_{dag_id}',
+                trigger_dag_id=dag_id,
+                logical_date='{{ ds }}',
+                reset_dag_run=True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
+            )
+            trigger_operators.append(trigger_operator)
+
+    load_data() >> trigger_dags_tasks()
 
 pull_here_path()
