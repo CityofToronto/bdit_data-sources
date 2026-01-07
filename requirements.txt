@@ -12,11 +12,10 @@ aiofiles==25.1.0
     # via gcloud-aio-storage
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.2
+aiohttp==3.13.3
     # via
     #   aiohttp-cors
     #   apache-airflow-providers-http
-    #   connexion
     #   gcloud-aio-auth
     #   gcsfs
     #   litellm
@@ -289,7 +288,7 @@ fastapi-cli[standard-no-fastapi-cloud-cli]==0.0.16
     #   fastapi
 fastuuid==0.14.0
     # via litellm
-filelock==3.20.1
+filelock==3.20.2
     # via
     #   huggingface-hub
     #   ray
@@ -836,12 +835,11 @@ markdown-it-py==4.0.0
 markupsafe==3.0.3
     # via
     #   -c constraints.txt
-    #   connexion
     #   jinja2
     #   mako
     #   werkzeug
     #   wtforms
-marshmallow==4.1.1
+marshmallow==4.1.2
     # via
     #   flask-appbuilder
     #   marshmallow-sqlalchemy
