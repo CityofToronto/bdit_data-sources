@@ -18,6 +18,7 @@ from airflow.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
 from airflow.models.taskinstance import TaskInstance
+from airflow.sdk.execution_time.macros import ds_add
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -81,7 +82,7 @@ def replicator_DAG():
         ti.xcom_push(key="dest_tables", value=dest_tables)
     
     @task()
-    def updated_tables(ds):
+    def updated_tables(ds = None):
         """This task finds tables in `move_staging` with comments
         indicating they are up to date ("last updated on {ds}")."""
 
@@ -97,7 +98,7 @@ def replicator_DAG():
 
         con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
-            cur.execute(updated_tables_sql, (f'%Last updated on {ds}%',))
+            cur.execute(updated_tables_sql, (f'%Last updated on {ds_add(ds, 1)}%',))
             updated_tables = [tbl[0] for tbl in cur.fetchall()]
 
         return updated_tables
@@ -121,7 +122,7 @@ def replicator_DAG():
             with con.cursor() as cur:
                 cur.execute(sql, (sch, tbl))
                 result = cur.fetchone()[0]
-                if result != ds:
+                if result != ds_add(ds, 1):
                     not_updated = not_updated + [f"`{table}` last updated: {result}"]
         
         if not_updated != []:
@@ -166,7 +167,7 @@ def replicator_DAG():
             raise AirflowFailException('There were tables copied from `move_staging` by bigdata replicators which were not up to date.')
 
     @task()
-    def outdated_remove(ds, ti: TaskInstance | None = None):
+    def outdated_remove(ds = None, ti: TaskInstance | None = None):
         """This task finds outdated tables in `move_staging` based on
          comments not matching "last updated on {ds}"."""
 
@@ -185,7 +186,7 @@ def replicator_DAG():
 
         con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
-            cur.execute(outdated_tables_sql, (f'%Last updated on {ds}%',))
+            cur.execute(outdated_tables_sql, (f'%Last updated on {ds_add(ds, 1)}%',))
             failures = [tbl[0] for tbl in cur.fetchall()]
 
         if failures != []:
