@@ -5,10 +5,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pip-compile"
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     reviewers:
-      - "tahaislam"
+      - "radumas"
     target-branch: "master"
