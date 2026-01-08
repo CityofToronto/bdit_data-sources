@@ -10,6 +10,7 @@ The centreline data are used by many other groups in the City and it's often imp
     - [Directionality](#directionality)
     - [Lineage](#lineage)
   - [Intersections (nodes)](#intersections-nodes)
+- [Routing](#routing)
 
 
 ## How It's Structured
@@ -110,3 +111,44 @@ The materialized view `gis_core.centreline_leg_directions` contains an automated
 
 The orientation of some intersections makes this mapping non-trivial and it's possible and even likely that some datasets classify these cardinal directions differently or inconsistently. Please report any issues or inconsistencies you may find [here](https://github.com/CityofToronto/bdit_data-sources/issues/1190).
 
+## Routing
+
+There are two functions in the `gis_core` schema to route with centreline directionally:
+
+- `gis_core.get_centreline_btwn_intersections`
+
+Standard shortest path routing (no turn restrictions).
+Example:
+```sql
+SELECT *
+FROM gis_core.get_centreline_btwn_intersections(13470206, 13469906);
+```
+
+- `gis_core.get_centreline_btwn_intersections_trsp`
+
+Shortest path routing that incorporates turn restrictions with the use of `gis_core.centreline_routing_restrictions`.
+Example:
+```sql
+SELECT *
+FROM gis_core.get_centreline_btwn_intersections_trsp(13470206, 13469906);
+```
+
+### Inputs
+
+Both functions uses the same input:
+
+| Parameter     | Type    | Description                |
+| ------------- | ------- | -------------------------- |
+| `_node_start` | integer | Start centreline intersection_id |
+| `_node_end`   | integer | End centreline intersection_id    |
+
+### Outputs
+
+Both functions return one record with the following fields:
+
+| Field             | Type     | Description                                                |
+| ----------------- | -------- | ---------------------------------------------------------- |
+| `_node_start_out` | integer  | Start centreline intersection_id                        |
+| `_node_end`       | integer  | End centreline intersection_id                           |
+| `links`           | text[]   | Array of `centreline_id` that makes up the routed segment    |
+| `geom`            | geometry | Merged directionaly line geometry of the route |
