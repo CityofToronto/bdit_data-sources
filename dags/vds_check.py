@@ -10,7 +10,7 @@ import pendulum
 from datetime import timedelta
 from functools import partial
 
-from airflow.sdk import dag
+from airflow.sdk import dag, Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -55,7 +55,11 @@ default_args = {
 def vds_check_dag():
 
     check_missing_centreline_id = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
+        on_failure_callback=partial(
+            slack_alert_data_quality,
+            use_proxy=True,
+            troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds#updating-vdscentreline_vds"
+        ),
         task_id="check_missing_centreline_id",
         sql="select-missing_centreline.sql",
         conn_id="vds_bot"
@@ -65,7 +69,12 @@ def vds_check_dag():
     '''
 
     check_missing_expected_bins = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
+        on_failure_callback=partial(
+            slack_alert_data_quality,
+            use_proxy=True,
+            troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds#new-sensor-type-added"
+            #troubleshooting_tips=Variable.get("troubleshooting_tips", deserialize_json=True).get("vds") #alt method for internal sources
+        ),
         task_id="check_missing_expected_bins",
         sql="select-missing_expected_bins.sql",
         conn_id="vds_bot"

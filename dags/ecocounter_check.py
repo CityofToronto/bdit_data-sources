@@ -8,6 +8,7 @@ import os
 import logging
 import pendulum
 from datetime import timedelta
+from functools import partial
 
 from airflow.sdk import dag
 from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
@@ -65,7 +66,7 @@ def ecocounter_check_dag():
     )
 
     check_site_outages = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=slack_alert_data_quality,
+        on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
         task_id="check_site_outages",
         sql="select-ongoing_outages.sql",
         conn_id="ecocounter_bot",
@@ -79,7 +80,7 @@ def ecocounter_check_dag():
     '''
     
     check_unvalidated_sites = SQLCheckOperatorWithReturnValue(
-        on_failure_callback=slack_alert_data_quality,
+        on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
         task_id="check_unvalidated_sites",
         sql="select-unvalidated_sites.sql",
         conn_id="ecocounter_bot",

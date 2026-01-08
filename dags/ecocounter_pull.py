@@ -195,25 +195,7 @@ def pull_ecocounter_dag():
         Compare the row count today with the average row count from the lookback period.
         '''
 
-        check_distinct_flow_ids = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=slack_alert_data_quality,
-            task_id="check_distinct_flow_ids",
-            sql="select-sensor_id_count_lookback.sql",
-            conn_id="ecocounter_bot",
-            retries=0,
-            params=data_check_params | {
-                    "id_col": "flow_id",
-                    "threshold": 0.85
-                },
-        )
-        check_distinct_flow_ids.doc_md = '''
-        Compare the count of flow_ids appearing in today's pull vs the lookback period.
-        '''
-
-        wait_for_weather_timesensor() >> [
-            check_volume,
-            check_distinct_flow_ids
-        ]
+        wait_for_weather_timesensor() >> check_volume
 
     (
         pull_recent_outages(),
