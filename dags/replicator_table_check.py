@@ -34,6 +34,38 @@ DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 README_PATH = os.path.join(repo_path, 'collisions/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 
+SQLs={
+    "updated_tables_sql": """
+        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
+        FROM pg_description AS pgd
+        JOIN pg_class AS pgc ON pgd.objoid = pgc.oid
+        JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
+        WHERE
+            pgn.nspname = 'move_staging'
+            AND pgc.relkind = 'r'
+            AND pgd.description ILIKE %s;""",
+    "not_copied_dest_sql": """
+        SELECT substring(pgd.description, '\d{4}-\d{2}-\d{2}') AS date_updated
+        FROM pg_description AS pgd
+        JOIN pg_class AS pgc ON pgd.objoid = pgc.oid
+        JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
+        WHERE
+            pgn.nspname = %s
+            AND pgc.relname = %s;""",
+    "outdated_tables_sql": """
+        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
+        FROM pg_namespace AS pgn
+        JOIN pg_class AS pgc ON pgc.relnamespace = pgn.oid
+        LEFT JOIN pg_description AS pgd ON pgd.objoid = pgc.oid
+        WHERE
+            pgn.nspname = 'move_staging'
+            AND (
+                pgd.description NOT ILIKE %s
+                OR pgd.description IS NULL
+            )
+            AND pgc.relkind = 'r';"""
+}
+
 default_args = {
     "owner": ",".join(DAG_OWNERS),
     "depends_on_past": False,
@@ -58,8 +90,8 @@ def replicator_DAG():
     #backfill is meaningless since comparing to current table comments.
     no_backfill = LatestOnlyOperator(task_id = 'no_backfill')
 
-    @task()
-    def tables_to_copy(ti: TaskInstance | None = None):
+    @task(do_xcom_push=True, multiple_outputs=True)
+    def get_table_info(ds = None):
         """This task finds all the replicators from `replicators` airflow variable,
         and then finds all the tables listed for replication by looking at the Airflow variable
         listed in the `tables` key item in the replicator dictionaries."""
@@ -77,44 +109,24 @@ def replicator_DAG():
             #the last element is the destination for the table comment with date updated.
             temp_dest = [tbl[-1] for tbl in tables]
             dest_tables = dest_tables + temp_dest
-
-        ti.xcom_push(key="src_tables", value=src_tables)
-        ti.xcom_push(key="dest_tables", value=dest_tables)
-    
-    @task()
-    def updated_tables(ds = None):
-        """This task finds tables in `move_staging` with comments
-        indicating they are up to date ("last updated on {ds}")."""
-
-        updated_tables_sql = """
-        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
-        FROM pg_description AS pgd
-        JOIN pg_class AS pgc ON pgd.objoid = pgc.oid
-        JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
-        WHERE
-            pgn.nspname = 'move_staging'
-            AND pgc.relkind = 'r'
-            AND pgd.description ILIKE %s"""
-
+        
+        sql = SQLs["updated_tables_sql"]
         con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
-            cur.execute(updated_tables_sql, (f'%Last updated on {ds_add(ds, 1)}%',))
+            cur.execute(sql, (f'%Last updated on {ds_add(ds, 1)}%',))
             updated_tables = [tbl[0] for tbl in cur.fetchall()]
-
-        return updated_tables
+        
+        return {
+            "src_tables": src_tables,
+            "dest_tables": dest_tables,
+            "updated_tables": updated_tables
+        }
     
     @task
     def not_copied_dest(ds = None, ti: TaskInstance | None = None):
-        dest_tables = ti.xcom_pull(task_ids="tables_to_copy", key="dest_tables")
-        sql = """
-        SELECT substring(pgd.description, '\d{4}-\d{2}-\d{2}') AS date_updated
-        FROM pg_description AS pgd
-        JOIN pg_class AS pgc ON pgd.objoid = pgc.oid
-        JOIN pg_namespace pgn ON pgc.relnamespace = pgn.oid
-        WHERE
-            pgn.nspname = %s
-            AND pgc.relname = %s
-        """
+        dest_tables = ti.xcom_pull(task_ids="get_table_info", key="dest_tables")
+        sql = SQLs["not_copied_dest_sql"]
+        
         con = PostgresHook("replicator_bot").get_conn()
         not_updated = []
         for table in dest_tables:
@@ -137,11 +149,12 @@ def replicator_DAG():
         return 0
     
     @task()
-    def not_copied_src(updated_tables: list, ti: TaskInstance | None = None):
+    def not_copied_src(ti: TaskInstance | None = None):
         """This task finds tables which are up to date according to their comments in `move_staging` schema
         but are not being copied by the replicator due to not being included in the Airflow variables."""
-        tables_to_copy = ti.xcom_pull(task_ids="tables_to_copy", key="src_tables")
-        failures = [value for value in updated_tables if value not in tables_to_copy]
+        src_tables = ti.xcom_pull(task_ids="get_table_info", key="src_tables")
+        updated_tables = ti.xcom_pull(task_ids="get_table_info", key="updated_tables")
+        failures = [value for value in updated_tables if value not in src_tables]
         if failures != []:
             #send message with details of failure using task_fail_slack_alert
             failure_extra_msg = [
@@ -152,11 +165,12 @@ def replicator_DAG():
             raise AirflowFailException('There were up to date tables in `move_staging` which were not copied by bigdata replicators.')
 
     @task()
-    def not_up_to_date(updated_tables: list, ti: TaskInstance | None = None):
+    def not_up_to_date(ti: TaskInstance | None = None):
         """This task finds tables which are being copied by the bigdata replicator via Airflow variables
         which are not up to date according to their comments in `move_staging` schema."""
-        tables_to_copy = ti.xcom_pull(task_ids="tables_to_copy", key="src_tables")
-        failures = [value for value in tables_to_copy if value not in updated_tables]
+        src_tables = ti.xcom_pull(task_ids="get_table_info", key="src_tables")
+        updated_tables = ti.xcom_pull(task_ids="get_table_info", key="updated_tables")
+        failures = [value for value in src_tables if value not in updated_tables]
         if failures != []:
             #send message with details of failure using task_fail_slack_alert
             failure_extra_msg = [
@@ -170,23 +184,11 @@ def replicator_DAG():
     def outdated_remove(ds = None, ti: TaskInstance | None = None):
         """This task finds outdated tables in `move_staging` based on
          comments not matching "last updated on {ds}"."""
-
-        outdated_tables_sql = """
-        SELECT pgn.nspname::text || '.' || pgc.relname::text, pgd.description
-        FROM pg_namespace AS pgn
-        JOIN pg_class AS pgc ON pgc.relnamespace = pgn.oid
-        LEFT JOIN pg_description AS pgd ON pgd.objoid = pgc.oid
-        WHERE
-            pgn.nspname = 'move_staging'
-            AND (
-                pgd.description NOT ILIKE %s
-                OR pgd.description IS NULL
-            )
-            AND pgc.relkind = 'r';"""
-
+        
+        sql = SQLs["outdated_tables_sql"]
         con = PostgresHook("replicator_bot").get_conn()
         with con.cursor() as cur:
-            cur.execute(outdated_tables_sql, (f'%Last updated on {ds_add(ds, 1)}%',))
+            cur.execute(sql, (f'%Last updated on {ds_add(ds, 1)}%',))
             failures = [tbl[0] for tbl in cur.fetchall()]
 
         if failures != []:
@@ -198,11 +200,10 @@ def replicator_DAG():
             ti.xcom_push(key="extra_msg", value=failure_extra_msg)
             raise AirflowFailException('There were outdated tables in bigdata `move_staging` schema.')
     
-    updated_tables = updated_tables()
-    no_backfill >> tables_to_copy() >> updated_tables >> (
+    no_backfill >> get_table_info() >> (
         not_copied_dest(),
-        not_copied_src(updated_tables),
-        not_up_to_date(updated_tables),
+        not_copied_src(),
+        not_up_to_date(),
         outdated_remove()
     )
     
