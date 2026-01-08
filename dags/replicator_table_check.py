@@ -90,7 +90,7 @@ def replicator_DAG():
     #backfill is meaningless since comparing to current table comments.
     no_backfill = LatestOnlyOperator(task_id = 'no_backfill')
 
-    @task(do_xcom_push=True, multiple_outputs=True)
+    @task(multiple_outputs=True)
     def get_table_info(ds = None):
         """This task finds all the replicators from `replicators` airflow variable,
         and then finds all the tables listed for replication by looking at the Airflow variable
