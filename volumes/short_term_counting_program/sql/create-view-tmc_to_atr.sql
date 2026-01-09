@@ -46,7 +46,7 @@ WITH json_bundled AS (
                     'WB', e_cars_t + e_cars_r + e_cars_l
                 ),
                 'S', json_build_object(
-                    'NB', s_cars_t + s_cars_r + s_cars_t,
+                    'NB', s_cars_t + s_cars_r + s_cars_l,
                     'SB', n_cars_t + e_cars_l + w_cars_r
                 ),
                 'W', json_build_object(
@@ -64,7 +64,7 @@ WITH json_bundled AS (
                     'WB', e_truck_t + e_truck_r + e_truck_l
                 ),
                 'S', json_build_object(
-                    'NB', s_truck_t + s_truck_r + s_truck_t,
+                    'NB', s_truck_t + s_truck_r + s_truck_l,
                     'SB', n_truck_t + e_truck_l + w_truck_r
                 ),
                 'W', json_build_object(
