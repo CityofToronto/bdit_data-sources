@@ -82,12 +82,12 @@ WITH json_bundled AS (
                     'WB', e_bus_t + e_bus_r + e_bus_l
                 ),
                 'S', json_build_object(
-                    'NB', s_bus_t + s_bus_r + s_bus_l,
-                    'SB', n_bus_t + e_bus_l + w_bus_r
+                    'SB', n_bus_t + e_bus_l + w_bus_r,
+                    'NB', s_bus_t + s_bus_r + s_bus_l
                 ),
                 'W', json_build_object(
-                    'EB', w_bus_t + w_bus_r + w_bus_l,
-                    'WB', e_bus_t + s_bus_l + n_bus_r
+                    'WB', e_bus_t + s_bus_l + n_bus_r,
+                    'EB', w_bus_t + w_bus_r + w_bus_l
                 )
             )
         ) AS counts
