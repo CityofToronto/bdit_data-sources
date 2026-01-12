@@ -71,6 +71,24 @@ WITH json_bundled AS (
                     'EB', w_truck_t + w_truck_r + w_truck_l,
                     'WB', e_truck_t + s_truck_l + n_truck_r
                 )
+            ),
+            'bus', json_build_object(
+                'N', json_build_object(
+                    'NB', s_bus_t + e_bus_r + w_bus_l,
+                    'SB', n_bus_l + n_bus_t + n_bus_r
+                ),
+                'E', json_build_object(
+                    'EB', w_bus_t + n_bus_l + s_bus_r,
+                    'WB', e_bus_t + e_bus_r + e_bus_l
+                ),
+                'S', json_build_object(
+                    'NB', s_bus_t + s_bus_r + s_bus_l,
+                    'SB', n_bus_t + e_bus_l + w_bus_r
+                ),
+                'W', json_build_object(
+                    'EB', w_bus_t + w_bus_r + w_bus_l,
+                    'WB', e_bus_t + s_bus_l + n_bus_r
+                )
             )
         ) AS counts
     FROM traffic.tmc_study_data
