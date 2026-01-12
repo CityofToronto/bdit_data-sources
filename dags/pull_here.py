@@ -51,7 +51,8 @@ DAGS_TO_TRIGGER = [
     "tti_aggregate",
     "congestion_aggregation",
     "congestion_refresh",
-    "congestion_aggregate_temp"
+    "congestion_aggregate_temp",
+    "rapidto_aggregation",
 ]
 
 @dag(dag_id = dag_name,
