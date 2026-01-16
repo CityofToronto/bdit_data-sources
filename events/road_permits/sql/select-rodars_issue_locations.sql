@@ -26,16 +26,17 @@ SELECT
     i.timestamputc,
     --Old rodars data doesn't have this value
     COALESCE(iln.locationindex, 0) AS locationindex,
-    iln.mainroadname,
-    iln.fromroadname,
-    iln.toroadname,
+    ilnt.mainroadname,
+    ilnt.fromroadname,
+    ilnt.toroadname,
     iln.direction AS direction_toplevel,
     iln.lanesaffected,
     iln.geometry,
     iln.streetnumber,
     iln.locationtype,
     iln.groupid::integer,
-    iln.groupdescription
+    ilnt.groupdescription
 --Note there are multiple locations for each issue (unique locationindex)
 FROM public.issuelocationnew AS iln
 JOIN issues AS i USING (divisionid, issueid, timestamputc)
+JOIN public.issuelocationnewtranslation AS ilnt USING (issueid, timestamputc, locationindex)

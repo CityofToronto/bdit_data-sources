@@ -31,7 +31,7 @@ default_args = {
     'retries': 1,
     'retry_delay': pendulum.duration(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    #'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
     'catchup': True,
 }
 
