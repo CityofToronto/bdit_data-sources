@@ -39,4 +39,8 @@ SELECT
 --Note there are multiple locations for each issue (unique locationindex)
 FROM public.issuelocationnew AS iln
 JOIN issues AS i USING (divisionid, issueid, timestamputc)
-JOIN public.issuelocationnewtranslation AS ilnt USING (issueid, timestamputc, locationindex)
+LEFT JOIN public.issuelocationnewtranslation AS ilnt
+    ON iln.issueid = ilnt.issueid
+    AND iln.timestamputc = ilnt.timestamputc
+    AND iln.locationindex = ilnt.locationindex
+    AND ilnt.lang = 'en-us';
