@@ -9,6 +9,7 @@ from psycopg2 import sql, Error
 from psycopg2.extras import execute_values
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowSkipException
 
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
@@ -77,7 +78,7 @@ def process_lanesaffected(json_str):
     return lanes
 
 def fetch_and_insert_issue_data(
-    select_conn = PostgresHook('rodars_postgres'),
+    select_conn = PostgresHook('itsc_postgres'),
     insert_conn = PostgresHook('events_bot'),
     start_date = None
 ):
@@ -111,7 +112,7 @@ def fetch_and_insert_issue_data(
         execute_values(cur, insert_query, df_final)
 
 def fetch_and_insert_location_data(
-    select_conn = PostgresHook('rodars_postgres'),
+    select_conn = PostgresHook('itsc_postgres'),
     insert_conn = PostgresHook('events_bot'),
     start_date = None
 ):
@@ -134,8 +135,11 @@ def fetch_and_insert_location_data(
             LOGGER.info("Fetching RODARS data.")
             cur.execute(select_query)
             data = cur.fetchall()
-            df = pd.DataFrame(data)
-            df.columns=[x.name for x in cur.description]
+            if len(data) == 0:
+                raise AirflowSkipException("No rows found")
+            else:
+                df = pd.DataFrame(data)
+                df.columns=[x.name for x in cur.description]
     except Error as exc:
         LOGGER.critical("Error fetching RODARS data.")
         LOGGER.critical(exc)
