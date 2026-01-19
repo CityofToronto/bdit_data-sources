@@ -117,7 +117,7 @@ There are two functions in the `gis_core` schema to route with centreline direct
 
 - `gis_core.get_centreline_btwn_intersections`
 
-Standard shortest path routing (no turn restrictions).
+Standard shortest path routing (all edges used).
 Example:
 ```sql
 SELECT *
@@ -126,7 +126,10 @@ FROM gis_core.get_centreline_btwn_intersections(13470206, 13469906);
 
 - `gis_core.get_centreline_btwn_intersections_trsp`
 
-Shortest path routing that incorporates turn restrictions with the use of `gis_core.centreline_routing_restrictions`.
+Shortest path routing that only consider when a path is physically connected with the use of `gis_core.centreline_routing_restrictions`. For example, if a path does not intersect in real life (e.g. different elevation like an overpass), it will be get routed through.
+
+Note: Actual turn restrictions are NOT restricted at this moment.
+
 Example:
 ```sql
 SELECT *
