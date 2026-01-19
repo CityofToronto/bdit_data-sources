@@ -31,7 +31,7 @@ default_args = {
     'retries': 1,
     'retry_delay': pendulum.duration(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    #'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
     'catchup': True,
 }
 
@@ -68,6 +68,7 @@ def rodars_dag():
             task_id="check_src_issue_count",
             sql='select-check_src_issue_count.sql',
             conn_id="itsc_postgres",
+            trigger_rule="none_failed", #in case pull_rodar_locations is marked as skipped (zero rows fetched)
             retries=0
         )
         check_src_issue_count.doc_md = "Check the source issue count."
