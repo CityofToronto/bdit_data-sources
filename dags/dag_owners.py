@@ -38,5 +38,6 @@ owners = {
     "weather_pull": ["natalie", "gabe"],
     "wys_check": ["david", "gabe"],
     "wys_monthly_summary": ["natalie", "gabe"],
-    "wys_pull": ["gabe", "natalie"]
+    "wys_pull": ["gabe", "natalie"],
+    "ksi_open_data": ["natalie"]
 }
