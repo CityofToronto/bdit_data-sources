@@ -11,6 +11,7 @@ owners = {
     "eoy_table_create": ["natalie", "gabe"],
     "gcc_pull_layers": ["gabe", "natalie"],
     "here_dynamic_binning_agg": ["gabe"],
+    "here_dynamic_binning_monthly_agg": ["gabe"],
     "lake_shore_signal_timing_refresh": ["natalie", "gabe"],
     "log_cleanup": ["natalie", "gabe"],
     "miovision_alerts": ["gabe"],
