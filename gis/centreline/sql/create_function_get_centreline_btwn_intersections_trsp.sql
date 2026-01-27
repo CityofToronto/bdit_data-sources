@@ -3,16 +3,17 @@
 -- DROP FUNCTION IF EXISTS gis_core.get_centreline_btwn_intersections_trsp(integer, integer);
 
 CREATE OR REPLACE FUNCTION gis_core.get_centreline_btwn_intersections_trsp(
-	_node_start integer,
-	_node_end integer,
-	OUT _node_start_out integer,
-	OUT _node_end integer,
-	OUT links text[],
-	OUT geom geometry)
-    RETURNS record
-    LANGUAGE 'sql'
-    COST 100
-    STABLE STRICT PARALLEL UNSAFE
+    _node_start integer,
+    _node_end integer,
+    OUT _node_start_out integer,
+    OUT _node_end integer,
+    OUT links text [],
+    OUT geom geometry
+)
+RETURNS record
+LANGUAGE sql
+COST 100
+STABLE STRICT PARALLEL UNSAFE
 AS $BODY$
     
 WITH results AS (
@@ -42,15 +43,23 @@ INNER JOIN gis_core.routing_centreline_directional ON edge = id
 $BODY$;
 
 ALTER FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer)
-    OWNER TO gis_admins;
+OWNER TO gis_admins;
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(
+    integer, integer
+) TO public;
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(
+    integer, integer
+) TO bdit_humans;
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer) TO gis_admins;
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(
+    integer, integer
+) TO gis_admins;
 
-GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer) TO tt_request_bot;
+GRANT EXECUTE ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(
+    integer, integer
+) TO tt_request_bot;
 
 COMMENT ON FUNCTION gis_core.get_centreline_btwn_intersections_trsp(integer, integer)
-    IS 'Routing function that incorporates turning restrictions for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';
+IS 'Routing function that incorporates turning restrictions for centreline, takes in start intersection_id and end intersection_id and returns an array of centreline_id, as well as one line geometry between two intersections.';

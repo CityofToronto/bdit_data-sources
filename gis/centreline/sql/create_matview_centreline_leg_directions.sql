@@ -112,7 +112,9 @@ distances AS (
         legs.leg_centreline_id,
         toronto_cardinal.leg_label,
         -- *MATH*
-        abs(180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)) AS angular_distance,
+        abs(
+            180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)
+        ) AS angular_distance,
         legs.stub_geom,
         legs.full_geom
     FROM legs
@@ -133,7 +135,7 @@ leg1 AS (
         full_geom
     FROM distances
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -160,7 +162,7 @@ leg2 AS (
                 AND distances.leg_label = leg1.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -194,7 +196,7 @@ leg3 AS (
                 AND distances.leg_label = leg2.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -234,7 +236,7 @@ leg4 AS (
                 AND distances.leg_label = leg3.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -270,16 +272,18 @@ FROM unified_legs
 JOIN gis_core.centreline_latest AS edges
     ON unified_legs.leg_centreline_id = edges.centreline_id
 ORDER BY
-    unified_legs.intersection_centreline_id,
-    unified_legs.leg_centreline_id,
+    unified_legs.intersection_centreline_id ASC,
+    unified_legs.leg_centreline_id ASC,
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
 ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO gis_admins;;
 
-CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
-CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_full_geom);
-CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_stub_geom);
+CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (
+    intersection_centreline_id, leg_centreline_id
+);
+CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_full_geom);
+CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_stub_geom);
 
 CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
 
