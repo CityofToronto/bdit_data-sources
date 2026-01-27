@@ -56,8 +56,8 @@ def ksi_opan_data():
         check_deleted_collision = SQLExecuteQueryOperator(
             task_id="check_deleted_collision",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision_id comparing to last updated. collision_id: '||
-                    ARRAY_TO_STRING(array_agg(collision_id), ', ') AS missing
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision_id comparing to last updated.  '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id FROM open_data.ksi
                     except all
@@ -69,8 +69,8 @@ def ksi_opan_data():
         check_dup_collision = SQLExecuteQueryOperator(
             task_id="check_dup_collision",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated. collision_id: '||
-                    ARRAY_TO_STRING(array_agg(collision_id), ', ') AS missing
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated.  '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id, per_no FROM open_data.ksi
                     except all
@@ -79,9 +79,20 @@ def ksi_opan_data():
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        return check_deleted_collision, check_dup_collision
+        check_null_fatal_no = SQLExecuteQueryOperator(
+            task_id="check_null_fatal_no",
+            sql='''
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' of NULL fatal_no for fatals.  '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
+                    FROM(
+                    SELECT collision_id FROM natalie.ksi_open_data_Test WHERE injury = 'Fatal' AND fatal_no IS NULL) AS diff;
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        return check_deleted_collision, check_dup_collision, check_null_fatal_no
     
-    check_deleted_collision, check_dup_collision = data_checks()
+    check_deleted_collision, check_dup_collision, check_null_fatal_no = data_checks()
 
     @task
     def summarize_checks(*check_results):
@@ -101,6 +112,7 @@ def ksi_opan_data():
     checks_summary = summarize_checks(
         check_deleted_collision.output,
         check_dup_collision.output,
+        check_null_fatal_no.output
     )
 
     refresh_ksi_staging = SQLExecuteQueryOperator(
@@ -128,15 +140,21 @@ def ksi_opan_data():
     )
 
     @task()
-    def checks_failed_message(summary: dict, **context):
+    def checks_failed_message(summary: dict,  **context):
         slack_ids = Variable.get("slack_member_id", deserialize_json=True)
         owners = context.get('dag').owner.split(',')
         list_names = " ".join([slack_ids.get(name, name) for name in owners])
+        ti = context["ti"]
+        url = ti.log_url
+        url = url.replace(
+                'checks_failed_message', "approve_refresh/required_actions"
+            )
         send_slack_msg(
             context=context,
             msg=(
                 f"{list_names}:cat_yell: KSI open data checks failed, refresh paused for approval. Table will not be refreshed until manual approval.\n"
-                f"{summary['details']}"
+                f"{summary['details']}\n"
+                f"Approve/reject *<{url}|here>*."
             ),
             channel="slack_data_pipeline_dev",
         )
@@ -156,10 +174,10 @@ def ksi_opan_data():
         defaults="Approve",
         assigned_users=[
                 {"id": "1", "name": "admin"},
-                {"id": "3", "name": "nchan"},
-                {"id": "6", "name": "gwolofs"}, #gotta add david
-            ],
-    )   
+                {"id": "4", "name": "natalie"},
+                {"id": "44", "name": "dmcelroy"},
+            ])
+
 
     @task()
     def status_message(**context):
@@ -170,7 +188,8 @@ def ksi_opan_data():
             )
         
     branch = decide_approval(checks_summary)
-    refresh_ksi_staging >> data_checks() >> checks_summary >> branch
+
+    refresh_ksi_staging >> [check_deleted_collision, check_dup_collision, check_null_fatal_no]  >> checks_summary >> branch
 
     # if no data checks failed
     # continue with refresh
