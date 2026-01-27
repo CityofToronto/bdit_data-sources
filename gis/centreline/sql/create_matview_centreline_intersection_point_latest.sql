@@ -5,14 +5,14 @@ SELECT DISTINCT ON (intersection_id) *
 FROM gis_core.centreline_intersection_point
 WHERE
     intersection_id IN (
-        SELECT from_intersection_id
-        FROM gis_core.centreline_latest
+        SELECT cent_f.from_intersection_id
+        FROM gis_core.centreline_latest AS cent_f
         UNION
-        SELECT to_intersection_id
-        FROM gis_core.centreline_latest
+        SELECT cent_t.to_intersection_id
+        FROM gis_core.centreline_latest AS cent_t
     )
     AND version_date = (
-        SELECT MAX(version_date)
+        SELECT MAX(centreline_intersection_point.version_date)
         FROM gis_core.centreline_intersection_point
     )
 ORDER BY intersection_id ASC, objectid DESC;
