@@ -115,6 +115,17 @@ The orientation of some intersections makes this mapping non-trivial and it's po
 
 There are two functions in the `gis_core` schema to route with centreline directionally:
 
+- `gis_core.get_centreline_btwn_intersections_trsp`
+
+Shortest path routing that only consider when a path is physically connected with the use of `gis_core.centreline_routing_restrictions`. For example, if a path does not intersect in real life (e.g. different elevation like an overpass), it will not get routed through.
+
+Note: Bylaw turn restrictions are **NOT** restricted at this moment.
+
+Example:
+```sql
+SELECT *
+FROM gis_core.get_centreline_btwn_intersections_trsp(13470206, 13469906);
+```
 - `gis_core.get_centreline_btwn_intersections`
 
 Standard shortest path routing (all edges used).
@@ -124,17 +135,6 @@ SELECT *
 FROM gis_core.get_centreline_btwn_intersections(13470206, 13469906);
 ```
 
-- `gis_core.get_centreline_btwn_intersections_trsp`
-
-Shortest path routing that only consider when a path is physically connected with the use of `gis_core.centreline_routing_restrictions`. For example, if a path does not intersect in real life (e.g. different elevation like an overpass), it will be get routed through.
-
-Note: Actual turn restrictions are NOT restricted at this moment.
-
-Example:
-```sql
-SELECT *
-FROM gis_core.get_centreline_btwn_intersections_trsp(13470206, 13469906);
-```
 
 ### Inputs
 
