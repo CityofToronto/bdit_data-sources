@@ -21,12 +21,13 @@ WHERE
         'Other',
         'Other Ramp',
         'Laneway',
-        'Pending');
+        'Pending'
+    );
 
 CREATE INDEX gis_core_centreline_latest_geom ON gis_core.centreline_latest USING gist (geom);
 
 CREATE UNIQUE INDEX centreline_latest_unique
-ON gis_core.centreline_latest USING btree(
+ON gis_core.centreline_latest USING btree (
     centreline_id ASC
 );
 
