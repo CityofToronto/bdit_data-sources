@@ -81,7 +81,7 @@ default_args = {
     catchup=False,
     max_active_runs=1,
     #loosely coupled with the two replicator DAGs which are externally triggered at 430am
-    schedule='0 7 * * *',
+    schedule='0 8 * * *',
     doc_md=DOC_MD,
     tags=["replicator", "data_checks"]
 )
