@@ -72,6 +72,8 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 
 3. Checks for deleted collisions and person pair from previous day
 
+4. Checks for duplicated collision records
+
 All these check might be valid changes that got carried through from verification processes. When check fails, an alert will be send to slack for humans to confirm that these discrepancy is intended, then with `human in the loop` operators, users with permission can approve the pipeline to continue with refreshes and updates.
 
 ## Pipeline

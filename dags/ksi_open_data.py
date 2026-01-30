@@ -44,15 +44,15 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule=None,
+    schedule='0 0 * * *',
     catchup=False,
     tags=["collision", "open_data"]
 )
 
 def ksi_opan_data():
+
     @task_group()
     def data_checks():
-
         check_deleted_collision = SQLExecuteQueryOperator(
             task_id="check_deleted_collision",
             sql='''
@@ -61,12 +61,12 @@ def ksi_opan_data():
                     FROM(
                     SELECT DISTINCT collision_id FROM open_data.ksi
                     except all
-                    SELECT DISTINCT collision_id FROM natalie.ksi_open_data_Test) AS diff;
+                    SELECT DISTINCT collision_id FROM open_data_staging.ksi) AS diff;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        check_dup_collision = SQLExecuteQueryOperator(
+        check_missing_person = SQLExecuteQueryOperator(
             task_id="check_dup_collision",
             sql='''
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated.  '||
@@ -74,7 +74,7 @@ def ksi_opan_data():
                     FROM(
                     SELECT DISTINCT collision_id, per_no FROM open_data.ksi
                     except all
-                    SELECT DISTINCT collision_id, per_no FROM natalie.ksi_open_data_Test) AS diff;
+                    SELECT DISTINCT collision_id, per_no FROM open_data_staging.ksi) AS diff;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
@@ -85,14 +85,32 @@ def ksi_opan_data():
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' of NULL fatal_no for fatals.  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
-                    SELECT collision_id FROM natalie.ksi_open_data_Test WHERE injury = 'Fatal' AND fatal_no IS NULL) AS diff;
+                    SELECT collision_id FROM open_data_staging.ksi WHERE injury = 'Fatal' AND fatal_no IS NULL AND accdate >= '2017-01-01') AS diff;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        return check_deleted_collision, check_dup_collision, check_null_fatal_no
+        check_dup_collisions = SQLExecuteQueryOperator(
+            task_id="check_dup_collisions",
+            sql='''
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' of duplicated collision record,  '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
+                    FROM(
+                    SELECT 
+                    collision_id, 
+                    (accdate, stname1, streetype1, dir1, stname2, streetype2, dir2, stname3, streetype3, dir3, per_inv, acclass, accloc, traffictl, impactype, visible, light, rdsfcond, changed, road_class, failtorem, longitude, latitude, veh_no, vehtype, initdir, per_no, invage, injury, safequip, drivact, drivcond, pedact, pedcond, manoeuver, pedtype, cyclistype, cycact, cyccond, road_user, fatal_no, wardname, division, neighbourhood, aggressive, distracted, city_damage, cyclist, motorcyclist, other_micromobility, older_adult, pedestrian, red_light, school_child, heavy_truck)::text AS records, 
+                    count(1)
+                    FROM open_data_staging.ksi
+                    group by collision_id, records
+                    having count(1) >1
+                    ) AS diff;                    
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions
     
-    check_deleted_collision, check_dup_collision, check_null_fatal_no = data_checks()
+    check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions = data_checks()
 
     @task
     def summarize_checks(*check_results):
@@ -111,8 +129,9 @@ def ksi_opan_data():
 
     checks_summary = summarize_checks(
         check_deleted_collision.output,
-        check_dup_collision.output,
-        check_null_fatal_no.output
+        check_missing_person.output,
+        check_null_fatal_no.output,
+        check_dup_collisions.output
     )
 
     refresh_ksi_staging = SQLExecuteQueryOperator(
@@ -189,7 +208,7 @@ def ksi_opan_data():
         
     branch = decide_approval(checks_summary)
 
-    refresh_ksi_staging >> [check_deleted_collision, check_dup_collision, check_null_fatal_no]  >> checks_summary >> branch
+    refresh_ksi_staging >> [check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions]  >> checks_summary >> branch
 
     # if no data checks failed
     # continue with refresh
@@ -199,7 +218,6 @@ def ksi_opan_data():
     branch >> checks_failed_message(checks_summary) >> approve_refresh >> truncate_and_copy
 
     truncate_and_copy >> status_message()
-
 
 ksi_opan_data()
 
