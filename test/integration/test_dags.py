@@ -6,14 +6,21 @@ Example:
     pytest -v test/integration/test_dags.py::test_file_imports
 """
 import os
-from typing import Tuple
+import sys
 import re
-from datetime import datetime
 import pytest
+from typing import Tuple
+from datetime import datetime
 from unittest import mock
+from pathlib import Path
+
 from airflow.models import DagBag
 from airflow.models.connection import Connection
 
+# Add submodule to Python path
+REPO_ROOT = Path(__file__).parent.parent.parent
+SUBMODULE_PATH = REPO_ROOT / "bdit_dag_utils"
+sys.path.insert(0, str(SUBMODULE_PATH))
 
 # CONSTANTS
 DAG_FOLDER = "dags"
