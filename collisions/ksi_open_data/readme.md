@@ -15,9 +15,9 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 | stname2 | text | Secondary street name |
 | streetype2 | text | Secondary street type |
 | dir2 | text | Secondary street direction |
-| stname3 | text | ? | 
-| streetype3 | text | ?e |
-| dir3 | text | ? |
+| stname3 | text | Tertiary street name | 
+| streetype3 | text | Tertiary street type|
+| dir3 | text | Tertiary street direction |
 | per_inv | integer | Number of persons involved |
 | acclass | text | Collision classification |
 | accloc | text | Collision location |

@@ -85,7 +85,7 @@ def ksi_opan_data():
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' of NULL fatal_no for fatals.  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
-                    SELECT collision_id FROM open_data_staging.ksi WHERE injury = 'Fatal' AND fatal_no IS NULL AND accdate >= '2017-01-01') AS diff;
+                    SELECT collision_id FROM open_data_staging.ksi WHERE injury = 'Fatal' AND fatal_no IS NULL) AS diff;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
@@ -118,7 +118,7 @@ def ksi_opan_data():
 
         for results in check_results:
             ok, missing = results[0]
-            # grab list of errored collisions
+            # grab the list of errored collision_ids if False
             if ok is False: 
                 errors.append(missing)
 
@@ -220,5 +220,3 @@ def ksi_opan_data():
     truncate_and_copy >> status_message()
 
 ksi_opan_data()
-
-
