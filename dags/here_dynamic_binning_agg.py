@@ -77,7 +77,8 @@ def here_dynamic_binning_agg():
         sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path WHERE dt = '{{ ds }}'",
         conn_id=CONN_ID,
         retries=1,
-        retry_delay=duration(days=1)
+        retry_delay=duration(days=1),
+        trigger_rule='none_failed'
     )
     
     delete_daily = SQLExecuteQueryOperator(
