@@ -16,3 +16,5 @@ updates:
     reviewers:
       - "radumas"
     target-branch: "master"
+    #only security updates and exclude version updates
+    open-pull-requests-limit: 0
