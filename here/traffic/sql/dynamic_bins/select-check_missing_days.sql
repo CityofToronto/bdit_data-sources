@@ -2,8 +2,8 @@ WITH distinct_days AS (
     SELECT DISTINCT dt
     FROM gwolofs.congestion_raw_segments
     WHERE
-        dt >= '{{ ds }}'::date --noqa: TMP
-        AND dt < '{{ ds }}'::date + interval '1 month' --noqa: TMP
+        dt >= '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date --noqa: TMP
+        AND dt < '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month' --noqa: TMP
 )
 
 SELECT
@@ -12,9 +12,9 @@ SELECT
     || string_agg(dates.dt::date::text, ', ') AS _summary
 FROM
     generate_series(
-        '{{ ds }}'::date,
+        '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date,
         --one day before start of next month
-        ('{{ ds }}'::date + interval '1 month')::date - 1,
+        ('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month')::date - 1,
         '1 day'
     ) AS dates (dt)
 LEFT JOIN distinct_days USING (dt)

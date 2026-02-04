@@ -3,8 +3,8 @@ WITH segments AS (
     SELECT DISTINCT segment_id
     FROM gwolofs.congestion_raw_segments
     WHERE
-        dt >= '{{ ds }}'::date --noqa: TMP
-        AND dt < '{{ ds }}'::date + '1 month'::interval --noqa: TMP
+        dt >= '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date --noqa: TMP
+        AND dt < '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + '1 month'::interval --noqa: TMP
 ),
 
 group_size AS (
