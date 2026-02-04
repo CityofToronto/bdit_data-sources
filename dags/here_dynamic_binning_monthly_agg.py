@@ -6,6 +6,8 @@ from pendulum import duration, datetime
 from airflow.sdk import dag, task
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowFailException
+from airflow.task.trigger_rule import TriggerRule
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -75,7 +77,7 @@ def here_dynamic_binning_monthly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM gwolofs.congestion_segments_monthly_bootstrap WHERE mnth = '{{ ds }}' AND n_resamples = 300",
+        sql="DELETE FROM gwolofs.congestion_segments_monthly_bootstrap WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resamples = 300",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
@@ -85,7 +87,11 @@ def here_dynamic_binning_monthly_agg():
     def expand_groups(**context):
         return context["ti"].xcom_pull(task_ids="create_segment_groups")[0][0]
     
-    @task(retries=0, max_active_tis_per_dag=1)
+    @task(
+        retries=0,
+        max_active_tis_per_dag=1,
+        on_failure_callback=None #downstream task to notify
+    )
     def bootstrap_agg(segments, ds):
         print(f"segments: {segments}")
         postgres_cred = PostgresHook(CONN_ID)
@@ -93,7 +99,7 @@ def here_dynamic_binning_monthly_agg():
             FROM UNNEST(%s::bigint[]) AS unnested(segment_id),
             LATERAL (
                 SELECT gwolofs.congestion_segment_bootstrap(
-                                mnth := %s::date,
+                                mnth := date_trunc('month', %s::date)::date,
                                 segment_id := segment_id,
                                 n_resamples := 300)
             ) AS lat"""
@@ -102,10 +108,15 @@ def here_dynamic_binning_monthly_agg():
                 cur.execute(query, (segments, ds))
                 conn.commit()
     
+    @task(trigger_rule=TriggerRule.ONE_FAILED)
+    def notify_on_upstream_failure():
+        """Task to notify on upstream mapped task failure."""
+        raise AirflowFailException("An upstream mapped task failed.")
+    
     expand = expand_groups()
     
     check_missing_dates >> aggregate_monthly >> create_groups >> delete_data
     delete_data >> expand
-    bootstrap_agg.expand(segments=expand)
+    bootstrap_agg.expand(segments=expand) >> notify_on_upstream_failure()
 
 here_dynamic_binning_monthly_agg()
