@@ -41,7 +41,7 @@ END;
 
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION miovision_api.get_intersections_uids
+ALTER FUNCTION miovision_api.delete_anomalous_ranges
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.get_intersections_uids TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.delete_anomalous_ranges TO miovision_api_bot;
