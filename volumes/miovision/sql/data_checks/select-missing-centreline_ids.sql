@@ -9,12 +9,12 @@ Exceptions:
 WITH valid_legs AS (
     SELECT
         intersection_uid,
-        UNNEST(ARRAY[
+        UNNEST(array_remove(ARRAY[
             CASE WHEN e_leg_restricted IS NULL THEN 'E' END,
             CASE WHEN n_leg_restricted IS NULL THEN 'N' END,
             CASE WHEN s_leg_restricted IS NULL THEN 'S' END,
             CASE WHEN w_leg_restricted IS NULL THEN 'W' END
-        ]) AS leg
+        ], NULL)) AS leg
     FROM miovision_api.active_intersections
 ),
 
@@ -37,12 +37,9 @@ missing AS (
     LEFT JOIN miovision_api.centreline_miovision AS cl USING (intersection_uid, leg)
     LEFT JOIN gis_core.centreline_latest AS latest USING (centreline_id)
     WHERE
-        vl.leg IS NOT NULL
-        AND (
-            cl.intersection_uid IS NULL --not in table (allowing for nulls)
-            --entry exists, but is no longer valid
-            OR (cl.centreline_id IS NOT NULL AND latest.centreline_id IS NULL)
-        )
+        cl.intersection_uid IS NULL --not in table (allowing for nulls)
+        --entry exists, but is no longer valid
+        OR (cl.centreline_id IS NOT NULL AND latest.centreline_id IS NULL)
     ORDER BY intersection_uid
 )
 
@@ -57,4 +54,4 @@ SELECT
         || '`, leg: `' || leg || '` '
         || description
     ) AS gaps
-FROM missing
+FROM missing;
