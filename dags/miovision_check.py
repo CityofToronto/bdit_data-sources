@@ -12,6 +12,7 @@ from functools import partial
 
 from airflow.sdk import dag
 from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -101,6 +102,16 @@ def miovision_check_dag():
     Identify high volume movements missing from intersection_movements table and notify.
     '''
 
+    clean_miovision_centrelines = SQLExecuteQueryOperator(
+        task_id='clean_miovision_centrelines',
+        sql = [
+            "SELECT miovision_api.delete_outdated_centreline_ids();",
+            "SELECT miovision_api.assign_centrelines();",
+        ],
+        conn_id='miovision_api_bot',
+        autocommit=True
+    )
+    
     check_missing_centreline_ids = SQLCheckOperatorWithReturnValue(
         task_id="check_missing_centreline_ids",
         sql="select-missing-centreline_ids.sql",
@@ -114,7 +125,7 @@ def miovision_check_dag():
         check_distinct_intersection_uid,
         check_open_anomalous_ranges,
         check_monitor_intersection_movements,
-        check_missing_centreline_ids
+        clean_miovision_centrelines >> check_missing_centreline_ids
     ]
 
 miovision_check_dag()
