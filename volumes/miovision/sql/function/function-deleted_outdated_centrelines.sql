@@ -20,7 +20,9 @@ RETURNS void AS $$
     AND od.intersection_uid = cm.intersection_uid
     AND od.leg = cm.leg;
 
-$$ LANGUAGE sql;
+$$
+LANGUAGE sql
+SECURITY DEFINER;
 
 COMMENT ON FUNCTION miovision_api.delete_outdated_centreline_ids
 IS 'Function to deleted outdated centrelines from `miovision_api.centreline_miovision`.';
