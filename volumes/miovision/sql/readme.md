@@ -31,6 +31,7 @@
   - [Aggregation Functions](#aggregation-functions)
   - [Clear Functions](#clear-functions)
   - [Helper Functions](#helper-functions)
+  - [centreline\_miovision Functions](#centreline_miovision-functions)
   - [Partitioning Functions](#partitioning-functions)
   - [Deprecated Functions](#deprecated-functions)
 - [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
@@ -551,6 +552,15 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 |---|---|
 | [`find_invalid_movements(start_date timestamp, end_date timestamp)`](function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
 | [`get_intersections_uids(intersections integer[])`](function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
+
+## centreline_miovision Functions
+
+The functions are run weekly in `miovision_check` DAG to keep the `centreline_miovision` table up to date.
+
+| Function | Comment |
+|---|---|
+| [`assign_centrelines()`](function/function-assign_centrelines.sql) | Function to insert new centrelines into `miovision_api.centreline_miovision` based on closest aligned values from `gis_core.centreline_leg_directions`. |
+| [`delete_outdated_centreline_ids()`](function/function-deleted_outdated_centrelines.sql) | Function to deleted outdated centrelines from `miovision_api.centreline_miovision`. |  
 
 ## Partitioning Functions  
 
