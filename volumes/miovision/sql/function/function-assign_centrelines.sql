@@ -29,7 +29,8 @@ RETURNS void AS $$
         AND vl.leg = UPPER(LEFT(cld.leg, 1))
     WHERE cl.intersection_uid IS NULL --not in table (allowing for nulls)
 
-$$ LANGUAGE sql;
+$$ LANGUAGE sql
+SECURITY DEFINER;
 
 COMMENT ON FUNCTION miovision_api.assign_centrelines
 IS 'Function to insert new centrelines into `miovision_api.centreline_miovision` based on closest aligned values from `gis_core.centreline_leg_directions`.';
