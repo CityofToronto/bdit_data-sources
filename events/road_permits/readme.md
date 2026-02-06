@@ -94,7 +94,7 @@ You could query construction along specific centreline_ids and during specific d
 ```sql
 WITH target_geom AS (
     SELECT unnest(links)::integer AS centreline_id
-    FROM gis_core.get_centreline_btwn_intersections_trsp(13466931, 13463747)
+    FROM gis_core.get_centreline_btwn_intersections(13466931, 13463747)
 )
 
 --visualizing results in dbeaver is preferable to pgadmin due to better handling of overlapping geoms.
@@ -107,7 +107,7 @@ WHERE tsrange(starttimestamp, endtimestamp, '[)') @> tsrange('2024-12-01', '2025
 Or you could cast a wider net by using `st_intersects` to also include intersecting cross streets:
 ```sql
 WITH target_geom AS (
-    SELECT * FROM gis_core.get_centreline_btwn_intersections_trsp(13466931, 13463747)
+    SELECT * FROM gis_core.get_centreline_btwn_intersections(13466931, 13463747)
 )
 
 SELECT rl.*
