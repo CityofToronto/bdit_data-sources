@@ -1,44 +1,45 @@
 <!-- TOC -->
 
-- [miovision_api Table Structure](#miovision_api-table-structure)
-    - [Key Tables](#key-tables)
-        - [intersections](#intersections)
-        - [classifications](#classifications)
-        - [movements](#movements)
-        - [volumes](#volumes)
-    - [Aggregated Data](#aggregated-data)
-        - [volumes_15min_mvt](#volumes_15min_mvt)
-        - [volumes_15min_atr_filtered](#volumes_15min_atr_filtered)
-        - [miovision_api.volumes_daily](#miovision_apivolumes_daily)
-        - [unacceptable_gaps](#unacceptable_gaps)
-        - [gapsize_lookup](#gapsize_lookup)
-    - [Reference Tables](#reference-tables)
-        - [miovision_api.breaks](#miovision_apibreaks)
-        - [miovision_api.anomalous_ranges](#miovision_apianomalous_ranges)
-        - [miovision_api.open_issues](#miovision_apiopen_issues)
-        - [miovision_api.anomaly_investigation_levels and miovision_api.anomaly_problem_levels](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
-        - [movement_map](#movement_map)
-        - [periods](#periods)
-        - [intersection_movements](#intersection_movements)
-        - [centreline_miovision](#centreline_miovision)
-        - [alerts](#alerts)
-        - [camera_details](#camera_details)
-        - [configuration_updates](#configuration_updates)
-    - [Primary and Foreign Keys](#primary-and-foreign-keys)
-        - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-    - [Other Tables](#other-tables)
+- [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
+  - [Key Tables](#key-tables)
+    - [`intersections`](#intersections)
+    - [`classifications`](#classifications)
+    - [`movements`](#movements)
+    - [`volumes`](#volumes)
+  - [Aggregated Data](#aggregated-data)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
+    - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
+    - [`unacceptable_gaps`](#unacceptable_gaps)
+    - [`gapsize_lookup`](#gapsize_lookup)
+  - [Reference Tables](#reference-tables)
+    - [`miovision_api.breaks`](#miovision_apibreaks)
+    - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
+    - [`miovision_api.open_issues`](#miovision_apiopen_issues)
+    - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
+    - [`movement_map`](#movement_map)
+    - [`periods`](#periods)
+    - [`intersection_movements`](#intersection_movements)
+    - [`centreline_miovision`](#centreline_miovision)
+    - [`alerts`](#alerts)
+    - [camera\_details](#camera_details)
+    - [configuration\_updates](#configuration_updates)
+  - [Primary and Foreign Keys](#primary-and-foreign-keys)
+    - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
+  - [Other Tables](#other-tables)
 - [PostgreSQL Functions](#postgresql-functions)
-    - [Aggregation Functions](#aggregation-functions)
-    - [Clear Functions](#clear-functions)
-    - [Helper Functions](#helper-functions)
-    - [Partitioning Functions](#partitioning-functions)
-    - [Deprecated Functions](#deprecated-functions)
-- [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
-    - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-    - [Part II - Working Machine](#part-ii---working-machine)
-    - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
-        - [An applied example](#an-applied-example)
-        - [Identifying new anomalies](#identifying-new-anomalies)
+  - [Aggregation Functions](#aggregation-functions)
+  - [Clear Functions](#clear-functions)
+  - [Helper Functions](#helper-functions)
+  - [centreline\_miovision Functions](#centreline_miovision-functions)
+  - [Partitioning Functions](#partitioning-functions)
+  - [Deprecated Functions](#deprecated-functions)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+  - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
+  - [Part II - Working Machine](#part-ii---working-machine)
+  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
+    - [An applied example](#an-applied-example)
+    - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
@@ -551,6 +552,15 @@ This section describes the SQL functions in the `miovision_api` schema used to a
 |---|---|
 | [`find_invalid_movements(start_date timestamp, end_date timestamp)`](function/function-find_invalid_movements.sql) | Used exclusively within `intersection_tmc.py` `insert_data` function to raise notice in the logs about invalid movements. |
 | [`get_intersections_uids(intersections integer[])`](function/function-get_intersection_uids.sql) | Returns all intersection_uids if optional `intersections` param is omitted, otherwise returns only the intersection_uids provided as an integer array to intersections param. Used in `miovision_api.clear_*` functions. Example usage: `SELECT miovision_api.get_intersections_uids() --returns all intersection_uids` or `SELECT miovision_api.get_intersections_uids(ARRAY[1,2,3]::integer[]) --returns only {1,2,3}` |  
+
+## centreline_miovision Functions
+
+The functions are run weekly in `miovision_check` DAG to keep the `centreline_miovision` table up to date.
+
+| Function | Comment |
+|---|---|
+| [`assign_centrelines()`](function/function-assign_centrelines.sql) | Function to insert new centrelines into `miovision_api.centreline_miovision` based on closest aligned values from `gis_core.centreline_leg_directions`. |
+| [`delete_outdated_centreline_ids()`](function/function-deleted_outdated_centrelines.sql) | Function to deleted outdated centrelines from `miovision_api.centreline_miovision`. |  
 
 ## Partitioning Functions  
 
