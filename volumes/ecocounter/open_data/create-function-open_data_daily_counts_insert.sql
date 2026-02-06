@@ -31,9 +31,8 @@ AS $BODY$
         cc.datetime_bin::date,
         f.bin_size
     HAVING
-        SUM(calibrated_volume) > 0
         --all datetime bins present, corrected for bin size
-        AND COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
+        COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
     ON CONFLICT (site_id, direction, dt)
     DO NOTHING;
 
