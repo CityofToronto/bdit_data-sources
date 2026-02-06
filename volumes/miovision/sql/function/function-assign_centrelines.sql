@@ -11,7 +11,7 @@ RETURNS void AS $$
                 CASE WHEN w_leg_restricted IS NULL THEN 'W' END
             ], NULL)) AS leg,
             px
-        FROM miovision_api.active_intersections
+        FROM miovision_api.intersections
     )
     
     INSERT INTO miovision_api.centreline_miovision (centreline_id, intersection_uid, leg)
