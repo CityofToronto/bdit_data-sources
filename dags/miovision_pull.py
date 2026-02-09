@@ -13,17 +13,20 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sdk.execution_time.macros import ds_add
+from airflow.exceptions import AirflowSkipException
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import (
+        task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd, send_slack_msg
+    )
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     from bdit_dag_utils.utils.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
         run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
-        get_intersection_info, agg_zero_volume_anomalous_ranges
+        get_intersection_info, agg_zero_volume_anomalous_ranges, add_new_intersections
     )
     from volumes.miovision.api.pull_alert import run_alerts_api
 except:
@@ -90,31 +93,50 @@ def pull_miovision_dag():
         )
 
         create_annual_partition >> create_month_partition
-
-    @task(trigger_rule='none_failed', retries = 1)
-    def pull_miovision(ds = None, **context):
-        if context["params"]["intersection"] == [0]:
-            INTERSECTION = ()
-        else:
-            INTERSECTION = tuple(context["params"]["intersection"])
+    
+    @task_group
+    def pull_data():
+        @task(trigger_rule='none_failed')
+        def pull_intersections(**context):
+            mio_postgres = PostgresHook("miovision_api_bot")
+            with mio_postgres.get_conn() as conn:
+                new_ints = add_new_intersections(conn)
+            if len(new_ints) > 0:
+                extra_msg = '\n'.join([str(item) for item in new_ints])
+                send_slack_msg(
+                    context=context,
+                    msg=""":large_yellow_square: There were new Miovision intersections added automagically.
+                    @Gabe They require your attention :meow_floof_pat:
+                    Find help <https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/update_intersections/readme.md#adding-intersections|here>""",
+                    attachments=[{"text": extra_msg}]
+                )
+            if new_ints == []:
+                #Mark skipped to visually identify which days added new ints in the UI.
+                raise AirflowSkipException('No new intersections to add. Marking task as skipped.')
+        
+        @task(trigger_rule='none_failed', retries = 1)
+        def pull_miovision(ds = None, **context):
+            if context["params"]["intersection"] == [0]:
+                INTERSECTION = ()
+            else:
+                INTERSECTION = tuple(context["params"]["intersection"])
             
-        #one second before midnight next day
-        end_date = pendulum.from_format(ds, 'YYYY-MM-DD').naive() + pendulum.duration(days=1, seconds=-1)
+            run_api(
+                start_date=ds,
+                end_date=ds_add(ds, 1),
+                intersection=INTERSECTION,
+                pull=True,
+                agg=False
+            )
 
-        run_api(
-            start_date=ds,
-            end_date=end_date,
-            intersection=INTERSECTION,
-            pull=True,
-            agg=False
-        )
-
-    @task(trigger_rule='none_failed', retries = 1)
-    def pull_alerts(ds):
-        run_alerts_api(
-            start_date=ds,
-            end_date=ds_add(ds, 1)
-        )
+        @task(trigger_rule='none_failed', retries = 1)
+        def pull_alerts(ds):
+            run_alerts_api(
+                start_date=ds,
+                end_date=ds_add(ds, 1)
+            )
+            
+        [pull_intersections() >> pull_miovision(), pull_alerts()]
 
     @task_group(tooltip="Tasks to aggregate newly pulled Miovision data.")
     def miovision_agg():
@@ -225,7 +247,7 @@ def pull_miovision_dag():
 
     (
         check_partitions() >>
-        [pull_miovision(), pull_alerts()] >>
+        pull_data() >>
         miovision_agg() >>
         t_done >>
         data_checks()

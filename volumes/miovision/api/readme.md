@@ -19,6 +19,7 @@
 - [Airflow DAGs](#airflow-dags)
   - [**`miovision_pull`**](#miovision_pull)
     - [`check_partitions` TaskGroup](#check_partitions-taskgroup)
+    - [`pull_data` TaskGroup](#pull_data-taskgroup)
     - [`miovision_agg` TaskGroup](#miovision_agg-taskgroup)
     - [`data_checks` TaskGroup](#data_checks-taskgroup)
   - [**`miovision_check`**](#miovision_check)
@@ -265,12 +266,12 @@ This section describes the Airflow DAGs which we use to pull, aggregate, and run
 This updated Miovision DAG runs daily at 3am. The pull data tasks and subsequent summarization tasks are separated out into individual Python taskflow tasks to enable more fine-grained control from the Airflow UI. An intersection parameter is available in the DAG config to enable the use of a backfill command for a specific intersections via a list of integer intersection_uids.  
 
 ### `check_partitions` TaskGroup  
-  - `check_annual_partition` checks if date is January 1st and if so runs `create_annual_partitions`.  
-  - `create_annual_partitions` contains any partition creates necessary for a new year.  
-  - `check_month_partition` checks if date is 1st of any month and if so runs `create_month_partition`.  
-  - `create_month_partition` contains any partition creates necessary for a new month.  
- 
-`pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function. 
+  - `create_annual_partitions` contains any partition creates necessary for a new year. Uses a pre_execute to run only on Jan 1st.  
+  - `create_month_partition` contains any partition creates necessary for a new month. Uses a pre_execute to run only on 1st of each month.  
+
+### `pull_data` TaskGroup  
+- `pull_intersections` pulls new intersections from the API into the database. If new intersections are found, a slack notification is sent, otherwise task is marked as skipped.  
+- `pull_miovision` pulls data from the API and inserts into `miovision_api.volumes` using `intersection_tmc.pull_data` function.  
 - `pull_alerts` pulls alerts occuring on this day from the API and inserts into [`miovision_api.alerts`](../sql/readme.md#alerts), updating `end_time` of existing alerts.  
 
 ### `miovision_agg` TaskGroup

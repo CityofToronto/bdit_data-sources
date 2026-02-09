@@ -63,6 +63,9 @@ This folder contains sql scripts used in both the API and the old data dump proc
 
 Reference table for each unique intersection at which data has been collected, you can also see them [on this map.](../geojson/mio_intersections.geojson):
 
+> [!TIP]
+> This table contains intersections that are decommissioned (`date_decommissioned`) and may contain intersections that are not yet producing data (empty `date_installed`). You can use `miovision_api.active_intersections` view to filter these two categories out. 
+
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
 intersection_uid|integer|Unique identifier for table|10|
