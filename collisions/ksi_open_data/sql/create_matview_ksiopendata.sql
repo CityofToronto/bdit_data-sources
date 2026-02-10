@@ -146,3 +146,15 @@ LEFT JOIN LATERAL (
 ORDER BY accdate;
 -- 18 secs
 -- 13 secs
+
+CREATE UNIQUE INDEX ksi_uid_idx
+    ON open_data_staging.ksi USING btree
+    (uid);
+
+ALTER MATERIALIZED VIEW open_data_staging.ksi
+    OWNER to collisions_bot;
+
+REVOKE ALL ON  open_data_staging.ksi FROM bdit_humans;
+
+COMMENT ON MATERIALIZED VIEW open_data_staging.ksi
+    IS 'Staging materialized view for open_data.ksi, refreshes daily through airflow DAG ksi_opendata on ec2.';

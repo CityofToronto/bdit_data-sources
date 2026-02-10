@@ -59,6 +59,8 @@ ALTER TABLE IF EXISTS open_data.ksi
 
 GRANT SELECT ON TABLE open_data.ksi TO od_extract_svc;
 
+GRANT ALL ON TABLE open_data.ksi TO collisions_bot;
+
 REVOKE ALL ON TABLE open_data.ksi FROM bdit_humans;
 
 COMMENT ON TABLE open_data.ksi
