@@ -4,14 +4,8 @@ SELECT
     events.collision_id,
     events.accdate,
     events.stname1,
-    events.streetype1,
-    events.dir1,
     events.stname2,
-    events.streetype2,
-    events.dir2,
     events.stname3,
-    events.streetype3,
-    events.dir3,
     events.per_inv,
     acclass.description AS acclass,
     accloc.description AS accloc,
@@ -57,27 +51,60 @@ SELECT
     events.red_light,
     events.school_child,
     events.heavy_truck
-FROM collisions.events
+FROM (
+	SELECT     events.collision_id,
+    events.accdate,
+    concat_ws(' ', events.stname1, events.streetype1, events.dir1) AS stname1,
+	concat_ws(' ', events.stname2, events.streetype2, events.dir2) AS stname2, 
+	concat_ws(' ', events.stname3, events.streetype3, events.dir3) AS stname3,
+    events.per_inv,
+    events.acclass,
+    events.accloc,
+    events.traffictl,
+    events.impactype,
+    events.visible,
+    events.light,
+    events.rdsfcond,
+    events.changed,
+    events.road_class,
+    events.failtorem,
+    events.longitude,
+    events.latitude,
+    events.aggressive,
+    events.distracted,
+    events.city_damage,
+    events.cyclist,
+    events.motorcyclist,
+    events.other_micromobility,
+    events.older_adult,
+    events.pedestrian,
+    events.red_light,
+    events.school_child,
+    events.heavy_truck,
+	ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326) AS events_geom
+	FROM collisions.events 
+	WHERE events.accdate >= '2000-01-01' -- only 2000 and above 
+		AND events.ksi IS true) AS events -- only killed or seriously injuried
 INNER JOIN collisions.involved USING (collision_id)
 LEFT JOIN collision_factors.acclass ON events.acclass = acclass.acclass::int
-LEFT JOIN collision_factors.accloc ON events.accloc = accloc.accloc::int
-LEFT JOIN collision_factors.traffictl ON events.traffictl = traffictl.traffictl::int
-LEFT JOIN collision_factors.visible ON events.visible = visible.visible::int
+LEFT JOIN collision_factors.accloc ON events.accloc = accloc.accloc::int and (accdate > accloc.date_valid or accloc.date_valid is null)
+LEFT JOIN collision_factors.traffictl ON events.traffictl = traffictl.traffictl::int and (accdate > traffictl.date_valid or traffictl.date_valid is null)
+LEFT JOIN collision_factors.visible ON events.visible = visible.visible::int and (accdate > visible.date_valid or visible.date_valid is null)
 LEFT JOIN collision_factors.light ON events.light = light.light::int
-LEFT JOIN collision_factors.rdsfcond ON events.rdsfcond = rdsfcond.rdsfcond::int
-LEFT JOIN collision_factors.vehtype ON involved.vehtype = vehtype.vehtype::int 
+LEFT JOIN collision_factors.rdsfcond ON events.rdsfcond = rdsfcond.rdsfcond::int and (accdate > rdsfcond.date_valid or rdsfcond.date_valid is null)
+LEFT JOIN collision_factors.vehtype ON involved.vehtype = vehtype.vehtype::int and (accdate > vehtype.date_valid or vehtype.date_valid is null)
 LEFT JOIN collision_factors.initdir ON involved.initdir = initdir.initdir::int 
 LEFT JOIN collision_factors.injury ON involved.injury = injury.injury::int 
-LEFT JOIN collision_factors.safequip ON involved.safequip = safequip.safequip::int 
+LEFT JOIN collision_factors.safequip ON involved.safequip = safequip.safequip::int and (accdate > safequip.date_valid or safequip.date_valid is null)
 LEFT JOIN collision_factors.drivact ON involved.drivact = drivact.drivact::int 
-LEFT JOIN collision_factors.drivcond ON involved.drivcond = drivcond.drivcond::int 
+LEFT JOIN collision_factors.drivcond ON involved.drivcond = drivcond.drivcond::int and (accdate > drivcond.date_valid or drivcond.date_valid is null)
 LEFT JOIN collision_factors.pedact ON involved.pedact = pedact.pedact::int 
-LEFT JOIN collision_factors.pedcond ON involved.pedcond = pedcond.pedcond::int 
-LEFT JOIN collision_factors.manoeuver ON involved.manoeuver = manoeuver.manoeuver::int 
+LEFT JOIN collision_factors.pedcond ON involved.pedcond = pedcond.pedcond::int and (accdate > pedcond.date_valid or pedcond.date_valid is null)
+LEFT JOIN collision_factors.manoeuver ON involved.manoeuver = manoeuver.manoeuver::int and (accdate > manoeuver.date_valid or manoeuver.date_valid is null)
 LEFT JOIN collision_factors.pedtype ON involved.pedtype = pedtype.pedtype::int 
 LEFT JOIN collision_factors.cyclistype ON involved.cyclistype = cyclistype.cyclistype::int 
 LEFT JOIN collision_factors.cycact ON involved.cycact = cycact.cycact::int 
-LEFT JOIN collision_factors.cyccond ON involved.cyccond = cyccond.cyccond::int
+LEFT JOIN collision_factors.cyccond ON involved.cyccond = cyccond.cyccond::int and (accdate > cyccond.date_valid or cyccond.date_valid is null)
 LEFT JOIN LATERAL (
 		SELECT case when accdate - date_valid > INTERVAL '0 days' then 'Y' else null end as orders, description, impactype
 		FROM collision_factors.impactype 
@@ -89,21 +116,20 @@ LEFT JOIN LATERAL (
 			pb.unit_name AS division
 		FROM gis.police_boundary AS pb
 		WHERE
-			ST_Intersects(pb.geom, ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326))
-			AND pb.geom && ST_Expand(ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326), 0.005)
+			ST_Intersects(pb.geom, events_geom)
+			AND pb.geom && ST_Expand(events_geom, 0.005)
 		ORDER BY
-			pb.geom <-> ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326)
-		LIMIT 1
-	) AS police_u ON TRUE
+			pb.geom <-> events_geom
+		LIMIT 1) AS police_u ON TRUE
 LEFT JOIN LATERAL (
 		SELECT
 			ward.area_name  AS wardname
 		FROM gis_core.city_ward AS ward
 		WHERE
-			ST_Intersects(ward.geom, ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326))
-			AND ward.geom && ST_Expand(ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326), 0.005)
+			ST_Intersects(ward.geom, events_geom)
+			AND ward.geom && ST_Expand(events_geom, 0.005)
 		ORDER BY
-			ward.geom <-> ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326)
+			ward.geom <-> events_geom
 		LIMIT 1
 	) AS ward ON TRUE
 LEFT JOIN LATERAL (
@@ -111,25 +137,12 @@ LEFT JOIN LATERAL (
 			neighbourhood_table.area_name  AS neighbourhood
 		FROM gis.neighbourhood AS neighbourhood_table
 		WHERE
-			ST_Intersects(neighbourhood_table.geom, ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326))
-			AND neighbourhood_table.geom && ST_Expand(ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326), 0.005)
+			ST_Intersects(neighbourhood_table.geom, events_geom)
+			AND neighbourhood_table.geom && ST_Expand(events_geom, 0.005)
 		ORDER BY
-			neighbourhood_table.geom <-> ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326)
+			neighbourhood_table.geom <-> events_geom
 		LIMIT 1
 	) AS neighbourhood_table ON TRUE
-WHERE 
-	events.accdate >= '2000-01-01' AND -- only 2000 and above 
-	events.ksi IS true -- only killed or seriously injuried
 ORDER BY accdate;
-
-CREATE UNIQUE INDEX ksi_uid_idx
-    ON open_data_staging.ksi USING btree
-    (uid);
-
-ALTER MATERIALIZED VIEW open_data_staging.ksi
-    OWNER to od_admins;
-
-REVOKE ALL ON  open_data_staging.ksi FROM bdit_humans;
-
-COMMENT ON MATERIALIZED VIEW open_data_staging.ksi
-    IS 'Staging materialized view for open_data.ksi, refreshes daily through airflow DAG ksi_opendata on ec2.';
+-- 18 secs
+-- 13 secs
