@@ -1,7 +1,7 @@
 CREATE MATERIALIZED VIEW open_data_staging.ksi AS
 SELECT
     ROW_NUMBER() OVER (
-        ORDER BY accdate, per_no
+        ORDER BY events.accdate, involved.per_no
     ) AS uid,
     events.collision_id,
     events.accdate,
@@ -16,8 +16,8 @@ SELECT
     visible.description AS visible,
     light.description AS light,
     rdsfcond.description AS rdsfcond,
-    changed,
-    road_class,
+    events.changed,
+    events.road_class,
     events.failtorem,
     events.longitude,
     events.latitude,
@@ -95,51 +95,51 @@ LEFT JOIN collision_factors.acclass ON events.acclass = acclass.acclass::int
 LEFT JOIN
     collision_factors.accloc
     ON events.accloc = accloc.accloc::int
-    AND (accdate > accloc.date_valid OR accloc.date_valid IS NULL)
+    AND (events.accdate > accloc.date_valid OR accloc.date_valid IS NULL)
 LEFT JOIN
     collision_factors.traffictl
     ON events.traffictl = traffictl.traffictl::int
-    AND (accdate > traffictl.date_valid OR traffictl.date_valid IS NULL)
+    AND (events.accdate > traffictl.date_valid OR traffictl.date_valid IS NULL)
 LEFT JOIN
     collision_factors.visible
     ON events.visible = visible.visible::int
-    AND (accdate > visible.date_valid OR visible.date_valid IS NULL)
+    AND (events.accdate > visible.date_valid OR visible.date_valid IS NULL)
 LEFT JOIN collision_factors.light ON events.light = light.light::int
 LEFT JOIN
     collision_factors.rdsfcond
     ON events.rdsfcond = rdsfcond.rdsfcond::int
-    AND (accdate > rdsfcond.date_valid OR rdsfcond.date_valid IS NULL)
+    AND (events.accdate > rdsfcond.date_valid OR rdsfcond.date_valid IS NULL)
 LEFT JOIN
     collision_factors.vehtype
     ON involved.vehtype = vehtype.vehtype::int
-    AND (accdate > vehtype.date_valid OR vehtype.date_valid IS NULL)
+    AND (events.accdate > vehtype.date_valid OR vehtype.date_valid IS NULL)
 LEFT JOIN collision_factors.initdir ON involved.initdir = initdir.initdir::int
 LEFT JOIN collision_factors.injury ON involved.injury = injury.injury::int
 LEFT JOIN
     collision_factors.safequip
     ON involved.safequip = safequip.safequip::int
-    AND (accdate > safequip.date_valid OR safequip.date_valid IS NULL)
+    AND (events.accdate > safequip.date_valid OR safequip.date_valid IS NULL)
 LEFT JOIN collision_factors.drivact ON involved.drivact = drivact.drivact::int
 LEFT JOIN
     collision_factors.drivcond
     ON involved.drivcond = drivcond.drivcond::int
-    AND (accdate > drivcond.date_valid OR drivcond.date_valid IS NULL)
+    AND (events.accdate > drivcond.date_valid OR drivcond.date_valid IS NULL)
 LEFT JOIN collision_factors.pedact ON involved.pedact = pedact.pedact::int
 LEFT JOIN
     collision_factors.pedcond
     ON involved.pedcond = pedcond.pedcond::int
-    AND (accdate > pedcond.date_valid OR pedcond.date_valid IS NULL)
+    AND (events.accdate > pedcond.date_valid OR pedcond.date_valid IS NULL)
 LEFT JOIN
     collision_factors.manoeuver
     ON involved.manoeuver = manoeuver.manoeuver::int
-    AND (accdate > manoeuver.date_valid OR manoeuver.date_valid IS NULL)
+    AND (events.accdate > manoeuver.date_valid OR manoeuver.date_valid IS NULL)
 LEFT JOIN collision_factors.pedtype ON involved.pedtype = pedtype.pedtype::int
 LEFT JOIN collision_factors.cyclistype ON involved.cyclistype = cyclistype.cyclistype::int
 LEFT JOIN collision_factors.cycact ON involved.cycact = cycact.cycact::int
 LEFT JOIN
     collision_factors.cyccond
     ON involved.cyccond = cyccond.cyccond::int
-    AND (accdate > cyccond.date_valid OR cyccond.date_valid IS NULL)
+    AND (events.accdate > cyccond.date_valid OR cyccond.date_valid IS NULL)
 LEFT JOIN LATERAL (
     SELECT
         CASE
