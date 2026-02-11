@@ -8,12 +8,11 @@ import pendulum
 from functools import partial
 from datetime import datetime, timedelta
 
-from airflow.sdk import dag, task, task_group
+from airflow.sdk import dag, task, task_group, Variable
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.operators.hitl import ApprovalOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.sdk import Variable
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -51,6 +50,16 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 
 def ksi_opan_data():
 
+    refresh_ksi_staging = SQLExecuteQueryOperator(
+        sql='''
+            REFRESH MATERIALIZED VIEW CONCURRENTLY open_data_staging.ksi;
+            ''',
+        task_id='refresh_ksi_staging',
+        conn_id='collisions_bot',
+        autocommit=True,
+        retries = 0
+    )
+
     @task_group()
     def data_checks():
         check_deleted_collision = SQLExecuteQueryOperator(
@@ -60,17 +69,17 @@ def ksi_opan_data():
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id FROM open_data.ksi
-                    except all
+                    EXCEPT ALL
                     SELECT DISTINCT collision_id FROM open_data_staging.ksi) AS diff;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
         check_missing_person = SQLExecuteQueryOperator(
-            task_id="check_dup_collision",
+            task_id="check_missing_person",
             sql='''
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated.  '||
-                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||', '||per_no), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id, per_no FROM open_data.ksi
                     except all
@@ -98,7 +107,7 @@ def ksi_opan_data():
                     FROM(
                     SELECT 
                     collision_id, 
-                    (accdate, stname1, streetype1, dir1, stname2, streetype2, dir2, stname3, streetype3, dir3, per_inv, acclass, accloc, traffictl, impactype, visible, light, rdsfcond, changed, road_class, failtorem, longitude, latitude, veh_no, vehtype, initdir, per_no, invage, injury, safequip, drivact, drivcond, pedact, pedcond, manoeuver, pedtype, cyclistype, cycact, cyccond, road_user, fatal_no, wardname, division, neighbourhood, aggressive, distracted, city_damage, cyclist, motorcyclist, other_micromobility, older_adult, pedestrian, red_light, school_child, heavy_truck)::text AS records, 
+                    (accdate, stname1, stname2, stname3, per_inv, acclass, accloc, traffictl, impactype, visible, light, rdsfcond, changed, road_class, failtorem, longitude, latitude, veh_no, vehtype, initdir, per_no, invage, injury, safequip, drivact, drivcond, pedact, pedcond, manoeuver, pedtype, cyclistype, cycact, cyccond, road_user, fatal_no, wardname, division, neighbourhood, aggressive, distracted, city_damage, cyclist, motorcyclist, other_micromobility, older_adult, pedestrian, red_light, school_child, heavy_truck)::text AS records, 
                     count(1)
                     FROM open_data_staging.ksi
                     group by collision_id, records
@@ -110,40 +119,6 @@ def ksi_opan_data():
         )
         return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions
     
-    check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions = data_checks()
-
-    @task
-    def summarize_checks(*check_results):
-        errors = []
-
-        for results in check_results:
-            ok, missing = results[0]
-            # grab the list of errored collision_ids if False
-            if ok is False: 
-                errors.append(missing)
-
-        return {
-            "has_errors": bool(errors),
-            "details": "\n".join(errors) if errors else "No issues found."
-        }
-
-    checks_summary = summarize_checks(
-        check_deleted_collision.output,
-        check_missing_person.output,
-        check_null_fatal_no.output,
-        check_dup_collisions.output
-    )
-
-    refresh_ksi_staging = SQLExecuteQueryOperator(
-        sql='''
-            REFRESH MATERIALIZED VIEW CONCURRENTLY open_data_staging.ksi;
-            ''',
-        task_id='refresh_ksi_staging',
-        conn_id='collisions_bot',
-        autocommit=True,
-        retries = 0
-    )
-
     truncate_and_copy = SQLExecuteQueryOperator(
         sql='''
             TRUNCATE open_data.ksi;
@@ -159,27 +134,46 @@ def ksi_opan_data():
     )
 
     @task()
-    def checks_failed_message(summary: dict,  **context):
+    def checks_failed_message(**context):
         slack_ids = Variable.get("slack_member_id", deserialize_json=True)
         owners = context.get('dag').owner.split(',')
         list_names = " ".join([slack_ids.get(name, name) for name in owners])
         ti = context["ti"]
-        url = ti.log_url
-        url = url.replace(
-                'checks_failed_message', "approve_refresh/required_actions"
-            )
+        url = ti.log_url.replace(
+                'checks_failed_message', "approve_refresh/required_actions")
+        
+        summary = ti.xcom_pull(task_ids='decide_approval', key='summary')
+        details = summary.get("details")
+        
         send_slack_msg(
             context=context,
             msg=(
                 f"{list_names}:cat_yell: KSI open data checks failed, refresh paused for approval. Table will not be refreshed until manual approval.\n"
-                f"{summary['details']}\n"
+                f"{details}\n"
                 f"Approve/reject *<{url}|here>*."
             ),
             channel="slack_data_pipeline_dev",
         )
+
     @task.branch
-    def decide_approval(summary: dict):
+    def decide_approval(*check_results, ti=None):
+        errors = []
+
+        for results in check_results:
+            ok, missing = results[0]
+            # grab the list of errored collision_ids if False
+            if ok is False: 
+                errors.append(missing)
+
+        summary = {
+            "has_errors": bool(errors),
+            "details": "\n".join(errors) if errors else "No issues found."
+        }
+        
+        ti.xcom_push(key="summary", value=summary)
+
         return "checks_failed_message" if summary["has_errors"] else "skip_approval"
+    
 
     skip_approval = EmptyOperator(task_id="skip_approval")
 
@@ -188,7 +182,7 @@ def ksi_opan_data():
         subject="Refresh has been paused because of the following errors:",
         body=(
             "The following data checks failed:\n\n"
-            "{{ ti.xcom_pull(task_ids='summarize_checks')['details'] }}"
+            "{{ ti.xcom_pull(task_ids='decide_approval', key='summary')['details'] }}"
             ),
         defaults="Approve",
         assigned_users=[
@@ -197,25 +191,25 @@ def ksi_opan_data():
                 {"id": "44", "name": "dmcelroy"},
             ])
 
-
     @task()
     def status_message(**context):
         send_slack_msg(
             context=context,
-            msg=f"KSI table successfully refreshed :white_check_mark:. ",
+            msg=f"KSI table successfully refreshed :white_check_mark:.",
             channel='slack_data_pipeline_dev'
             )
-        
-    branch = decide_approval(checks_summary)
+    
+    checks = data_checks()
+    branch = decide_approval(*(c.output for c in checks))
 
-    refresh_ksi_staging >> [check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions]  >> checks_summary >> branch
+    refresh_ksi_staging >> checks >> branch
 
     # if no data checks failed
     # continue with refresh
     branch >> skip_approval >> truncate_and_copy
     # If data checks failed, prompt for approval
     # Then only refresh when approved
-    branch >> checks_failed_message(checks_summary) >> approve_refresh >> truncate_and_copy
+    branch >> checks_failed_message() >> approve_refresh >> truncate_and_copy
 
     truncate_and_copy >> status_message()
 
