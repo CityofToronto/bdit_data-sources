@@ -79,7 +79,7 @@ def ksi_opan_data():
             task_id="check_missing_person",
             sql='''
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated.  '||
-                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||', '||per_no), ', ')||'```' AS missing
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||' ['||per_no||']'), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id, per_no FROM open_data.ksi
                     except all
@@ -121,7 +121,7 @@ def ksi_opan_data():
             task_id="check_dup_person",
             sql='''
                     SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' duplicated collision + person pair,  '||
-                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||': '||per_no), ', ')||'```' AS missing
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||' ['||per_no||']'), ', ')||'```' AS missing
                     FROM(
                     SELECT collision_id, per_no, count(1)
                     FROM open_data_staging.ksi
