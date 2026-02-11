@@ -102,7 +102,7 @@ def ksi_opan_data():
         check_dup_collisions = SQLExecuteQueryOperator(
             task_id="check_dup_collisions",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' of duplicated collision record,  '||
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' duplicated collision record,  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
                     SELECT 
@@ -117,7 +117,22 @@ def ksi_opan_data():
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions
+        check_dup_person = SQLExecuteQueryOperator(
+            task_id="check_dup_person",
+            sql='''
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' duplicated collision + person pair,  '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id||': '||per_no), ', ')||'```' AS missing
+                    FROM(
+                    SELECT collision_id, per_no, count(1)
+                    FROM open_data_staging.ksi
+                    group by collision_id, per_no
+                    having count(1) >1
+                    ) AS diff;                    
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions, check_dup_person
     
     truncate_and_copy = SQLExecuteQueryOperator(
         sql='''
