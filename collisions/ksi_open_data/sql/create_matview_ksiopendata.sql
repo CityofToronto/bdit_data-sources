@@ -182,7 +182,7 @@ LEFT JOIN LATERAL (
         neighbourhood_table.geom <-> neighbourhood_table.events_geom
     LIMIT 1
 ) AS neighbourhood_table ON TRUE
-ORDER BY accdate;
+ORDER BY events.accdate;
 
 CREATE UNIQUE INDEX ksi_uid_idx
 ON open_data_staging.ksi USING btree
