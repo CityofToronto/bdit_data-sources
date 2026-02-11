@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
 );
 
 ALTER TABLE IF EXISTS open_data.ksi
-    OWNER to od_admins;
+OWNER TO od_admins;
 
 GRANT SELECT ON TABLE open_data.ksi TO od_extract_svc;
 
@@ -64,4 +64,4 @@ GRANT ALL ON TABLE open_data.ksi TO collisions_bot;
 REVOKE ALL ON TABLE open_data.ksi FROM bdit_humans;
 
 COMMENT ON TABLE open_data.ksi
-    IS 'Table for KSI open data, link: ';
+IS 'Table for KSI open data, link: ';
