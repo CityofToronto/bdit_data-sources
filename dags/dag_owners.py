@@ -39,5 +39,5 @@ owners = {
     "wys_check": ["david", "gabe"],
     "wys_monthly_summary": ["natalie", "gabe"],
     "wys_pull": ["gabe", "natalie"],
-    "ksi_open_data": ["natalie"]
+    "ksi_open_data": ["natalie", "david"]
 }
