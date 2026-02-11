@@ -187,12 +187,12 @@ DAGS = {
         "conn": "gcc_bot_bigdata",
         "deployments": ["DEV"],
         "downstream_aggs": {
-            "centreline_latest": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis_core.centreline_latest;",
-            "centreline_latest_all_feature": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis_core.centreline_latest_all_feature;",
-            "centreline_intersection_point_latest": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis_core.centreline_intersection_point_latest;",
-            "intersection_latest": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis_core.intersection_latest;",
-            "centreline_leg_directions": "REFRESH MATERIALIZED VIEW CONCURRENTLY gis_core.centreline_leg_directions;",
-            "svc_centreline_directions": "REFRESH MATERIALIZED VIEW CONCURRENTLY traffic.svc_centreline_directions;"
+            "centreline_latest": "SELECT gis_core.refresh_centreline_latest();",
+            "centreline_latest_all_feature": "SELECT gis_core.refresh_centreline_latest_all_feature();",
+            "centreline_intersection_point_latest": "SELECT gis_core.refresh_centreline_intersection_point_latest();",
+            "intersection_latest": "SELECT gis_core.refresh_intersection_latest();",
+            "centreline_leg_directions": "SELECT gis_core.refresh_centreline_leg_directions();",
+            "svc_centreline_directions": "SELECT traffic.refresh_svc_centreline_directions();"
         }
     },
     "ptc": {
