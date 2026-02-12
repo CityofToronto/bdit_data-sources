@@ -43,7 +43,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
 @dag(
     dag_id=DAG_NAME,
     default_args=default_args,
-    schedule='0 0 * * *',
+    schedule='30 7 * * *',
     catchup=False,
     tags=["collision", "open_data"]
 )
