@@ -42,17 +42,17 @@ SELECT
     ward.wardname,
     police_u.division,
     neighbourhood_table.neighbourhood,
-    events.aggressive,
-    events.distracted,
-    events.city_damage,
-    events.cyclist,
-    events.motorcyclist,
-    events.other_micromobility,
-    events.older_adult,
-    events.pedestrian,
-    events.red_light,
-    events.school_child,
-    events.heavy_truck
+    events.aggressive::text,
+    events.distracted::text,
+    events.city_damage::text,
+    events.cyclist::text,
+    events.motorcyclist::text,
+    events.other_micromobility::text,
+    events.older_adult::text,
+    events.pedestrian::text,
+    events.red_light::text,
+    events.school_child::text,
+    events.heavy_truck::text
 FROM (
     SELECT
         events.collision_id,
@@ -143,7 +143,7 @@ LEFT JOIN
 LEFT JOIN LATERAL (
     SELECT
         CASE
-            WHEN impactype.accdate - impactype.date_valid > interval '0 days' THEN 'Y'
+            WHEN events.accdate - impactype.date_valid > interval '0 days' THEN 'Y'
         END AS orders,
         impactype.description,
         impactype.impactype
@@ -156,30 +156,30 @@ LEFT JOIN LATERAL (
     SELECT pb.unit_name AS division
     FROM gis.police_boundary AS pb
     WHERE
-        ST_Intersects(pb.geom, pb.events_geom)
-        AND pb.geom && ST_Expand(pb.events_geom, 0.005)
+        ST_Intersects(pb.geom, events.events_geom)
+        AND pb.geom && ST_Expand(events.events_geom, 0.005)
     ORDER BY
-        pb.geom <-> pb.events_geom
+        pb.geom <-> events.events_geom
     LIMIT 1
 ) AS police_u ON TRUE
 LEFT JOIN LATERAL (
     SELECT ward.area_name AS wardname
     FROM gis_core.city_ward AS ward
     WHERE
-        ST_Intersects(ward.geom, ward.events_geom)
-        AND ward.geom && ST_Expand(ward.events_geom, 0.005)
+        ST_Intersects(ward.geom, events.events_geom)
+        AND ward.geom && ST_Expand(events.events_geom, 0.005)
     ORDER BY
-        ward.geom <-> ward.events_geom
+        ward.geom <-> events.events_geom
     LIMIT 1
 ) AS ward ON TRUE
 LEFT JOIN LATERAL (
     SELECT neighbourhood_table.area_name AS neighbourhood
     FROM gis.neighbourhood AS neighbourhood_table
     WHERE
-        ST_Intersects(neighbourhood_table.geom, neighbourhood_table.events_geom)
-        AND neighbourhood_table.geom && ST_Expand(neighbourhood_table.events_geom, 0.005)
+        ST_Intersects(neighbourhood_table.geom, events.events_geom)
+        AND neighbourhood_table.geom && ST_Expand(events.events_geom, 0.005)
     ORDER BY
-        neighbourhood_table.geom <-> neighbourhood_table.events_geom
+        neighbourhood_table.geom <-> events.events_geom
     LIMIT 1
 ) AS neighbourhood_table ON TRUE
 ORDER BY events.accdate;
