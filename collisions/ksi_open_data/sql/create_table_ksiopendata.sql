@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
     rdsfcond text,
     changed smallint,
     road_class text,
-    failtorem boolean,
+    failtorem text,
     longitude double precision,
     latitude double precision,
     veh_no smallint,

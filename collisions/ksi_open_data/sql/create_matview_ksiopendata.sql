@@ -15,7 +15,7 @@ SELECT
     rdsfcond.description AS rdsfcond,
     events.changed,
     events.road_class,
-    events.failtorem,
+    events.failtorem::text,
     events.longitude,
     events.latitude,
     involved.veh_no,
