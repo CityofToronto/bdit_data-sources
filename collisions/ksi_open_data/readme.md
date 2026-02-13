@@ -21,7 +21,7 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 | rdsfcond | text | Road surface condition |
 | changed | smallint | Indicator if record was verified |
 | road_class | text | Road classification |
-| failtorem | boolean | Failure to remain at scene |
+| failtorem | text | Failure to remain at scene |
 | longitude | double precision | Longitude|
 | latitude | double precision | Latitude |
 | veh_no | smallint | Vehicle number |
@@ -45,17 +45,16 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 | wardname | text | Ward name |
 | division | varchar | Police division |
 | neighbourhood | text | Neighbourhood name |
-| aggressive | boolean | Aggressive driving involved |
-| distracted | boolean | Distracted driving involved |
-| city_damage | boolean | City property damage involved |
-| cyclist | boolean | Cyclist involved |
-| motorcyclist | boolean | Motorcyclist involved |
-| other_micromobility | boolean | Other micromobility involved |
-| older_adult | boolean | Older adult involved |
-| pedestrian | boolean | Pedestrian involved |
-| red_light | boolean | Red light running involved |
-| school_child | boolean | School child involved |
-| heavy_truck | boolean | Heavy truck involved |
+| aggressive | text | Aggressive driving involved |
+| distracted | text | Distracted driving involved |
+| cyclist | text | Cyclist involved |
+| motorcyclist | text | Motorcyclist involved |
+| other_micromobility | text | Other micromobility involved |
+| older_adult | text | Older adult involved |
+| pedestrian | text | Pedestrian involved |
+| red_light | text | Red light running involved |
+| school_child | text | School child involved |
+| heavy_truck | text | Heavy truck involved |
 
 ## Data checks in place
 
