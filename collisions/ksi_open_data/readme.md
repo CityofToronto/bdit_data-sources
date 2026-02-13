@@ -6,7 +6,6 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 
 | Column | Type | Description |
 |------|------|-------------|
-| uid | integer | Unique record identifier (primary key) |
 | collision_id | text | Collision identifier |
 | accdate | timestamp | Date and time of the collision |
 | stname1 | text | Primary street name |
