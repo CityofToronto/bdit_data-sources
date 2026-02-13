@@ -181,12 +181,14 @@ LEFT JOIN LATERAL (
 ) AS neighbourhood_table ON TRUE
 ORDER BY events.accdate;
 
-CREATE UNIQUE INDEX ksi_uid_idx
+CREATE UNIQUE INDEX collisions_id_per_no_idx
 ON open_data_staging.ksi USING btree
-(uid);
+(collision_id, per_no);
 
 ALTER MATERIALIZED VIEW open_data_staging.ksi
 OWNER TO collisions_bot;
+
+GRANT SELECT ON open_data_staging.ksi TO collision_admins;
 
 REVOKE ALL ON open_data_staging.ksi FROM bdit_humans;
 
