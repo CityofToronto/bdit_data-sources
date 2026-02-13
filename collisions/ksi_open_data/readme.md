@@ -1,6 +1,6 @@
 # KSI Open Data Refresh Process
 
-We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a daily basis. The process includes refreshing the dataset, applying data checks, and ping for human decision when needed. When any data checks fails, an alert will be send to slack and refresh will pause until a human can verify that the discrepancy is either expected or fixed. 
+We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a daily basis. The process includes refreshing the dataset, applying data checks, and ping for human decision when needed. When any data checks fails, an alert will be send to slack and refresh will pause until a human can verify that the discrepancy is either expected or fixed. This dataset only includes data from 2006 to present.
 
 ## Published Columns
 

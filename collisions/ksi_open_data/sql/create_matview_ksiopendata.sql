@@ -1,8 +1,5 @@
 CREATE MATERIALIZED VIEW open_data_staging.ksi AS
 SELECT
-    ROW_NUMBER() OVER (
-        ORDER BY events.accdate, involved.per_no
-    ) AS uid,
     events.collision_id,
     events.accdate,
     events.stname1,
@@ -87,7 +84,7 @@ FROM (
         ST_Setsrid(ST_makepoint(events.longitude, events.latitude), 4326) AS events_geom
     FROM collisions.events
     WHERE
-        events.accdate >= '2000-01-01' -- only 2000 and above 
+        events.accdate >= '2006-01-01' -- only 2006 and above 
         AND events.ksi IS TRUE
 ) AS events -- only killed or seriously injuried
 INNER JOIN collisions.involved USING (collision_id)

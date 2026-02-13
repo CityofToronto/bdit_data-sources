@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS open_data.ksi
 (
-    uid int,
     collision_id text NOT NULL,
     accdate timestamp without time zone NOT NULL,
     stname1 text,
@@ -51,7 +50,7 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
     red_light text,
     school_child text,
     heavy_truck text,
-    CONSTRAINT ksi_pkey PRIMARY KEY (uid)
+    CONSTRAINT collision_id_per_no UNIQUE (collision_id, per_no)
 );
 
 ALTER TABLE IF EXISTS open_data.ksi
