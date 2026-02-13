@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
     neighbourhood text,
     aggressive text,
     distracted text,
-    city_damage text,
     cyclist text,
     motorcyclist text,
     other_micromobility text,
