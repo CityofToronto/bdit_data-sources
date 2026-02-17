@@ -158,7 +158,7 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) AS police_u ON TRUE
 LEFT JOIN LATERAL (
-    SELECT ward.area_name AS wardname
+    SELECT ward.area_desc AS wardname
     FROM gis_core.city_ward AS ward
     WHERE
         ST_Intersects(ward.geom, events.events_geom)
