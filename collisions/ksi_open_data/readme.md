@@ -19,7 +19,6 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 | visible | text | Environment conditions |
 | light | text | Light conditions |
 | rdsfcond | text | Road surface condition |
-| changed | smallint | Indicator if record was verified |
 | road_class | text | Road classification |
 | failtorem | text | Failure to remain at scene |
 | longitude | double precision | Longitude|

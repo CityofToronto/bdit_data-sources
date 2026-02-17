@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
     visible text,
     light text,
     rdsfcond text,
-    changed smallint,
     road_class text,
     failtorem text,
     longitude double precision,

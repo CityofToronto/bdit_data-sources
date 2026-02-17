@@ -107,7 +107,7 @@ def ksi_opan_data():
                     FROM(
                     SELECT 
                     collision_id, 
-                    (accdate, stname1, stname2, stname3, per_inv, acclass, accloc, traffictl, impactype, visible, light, rdsfcond, changed, road_class, failtorem, longitude, latitude, veh_no, vehtype, initdir, per_no, invage, injury, safequip, drivact, drivcond, pedact, pedcond, manoeuvre, pedtype, cyclistype, cycact, cyccond, road_user, fatal_no, wardname, division, neighbourhood, aggressive, distracted, cyclist, motorcyclist, other_micromobility, older_adult, pedestrian, red_light, school_child, heavy_truck)::text AS records, 
+                    (accdate, stname1, stname2, stname3, per_inv, acclass, accloc, traffictl, impactype, visible, light, rdsfcond, road_class, failtorem, longitude, latitude, veh_no, vehtype, initdir, per_no, invage, injury, safequip, drivact, drivcond, pedact, pedcond, manoeuvre, pedtype, cyclistype, cycact, cyccond, road_user, fatal_no, wardname, division, neighbourhood, aggressive, distracted, cyclist, motorcyclist, other_micromobility, older_adult, pedestrian, red_light, school_child, heavy_truck)::text AS records, 
                     count(1)
                     FROM open_data_staging.ksi
                     group by collision_id, records
