@@ -29,7 +29,7 @@ SELECT
     drivcond.description AS drivcond,
     pedact.description AS pedact,
     pedcond.description AS pedcond,
-    manoeuver.description AS manoeuver,
+    manoeuver.description AS manoeuvre,
     pedtype.description AS pedtype,
     cyclistype.description AS cyclistype,
     cycact.description AS cycact,

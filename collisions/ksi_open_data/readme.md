@@ -35,7 +35,7 @@ We publish KSI data (Killed or Seriously Injuried) to Open Data (add link) on a 
 | drivcond | text | Driver condition |
 | pedact | text | Pedestrian action |
 | pedcond | text | Pedestrian condition |
-| manoeuver | text | Vehicle manoeuver |
+| manoeuvre | text | Vehicle manoeuver |
 | pedtype | text | Pedestrian type |
 | cyclistype | text | Cyclist type |
 | cycact | text | Cyclist action |

@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS open_data.ksi
     drivcond text,
     pedact text,
     pedcond text,
-    manoeuver text,
+    manoeuvre text,
     pedtype text,
     cyclistype text,
     cycact text,
