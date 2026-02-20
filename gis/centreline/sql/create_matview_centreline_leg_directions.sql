@@ -33,13 +33,13 @@ node_edges AS (
 ),
 
 nodes AS (
-    -- find nodes with a degree > 2
-    -- i.e. a legit intersection with three or more legs
+    -- find nodes with a degree of either 3 or 4
+    -- i.e. a legit intersection with three or four legs
     SELECT node_id
     FROM node_edges
     GROUP BY node_id
     HAVING
-        COUNT(DISTINCT edge_id) > 2
+        COUNT(DISTINCT edge_id) IN (3, 4)
         -- no 'intersections' that are just ramps crossing eachother
         AND ARRAY_AGG(DISTINCT feature_code_desc) != ARRAY['Expressway Ramp']
 ),
