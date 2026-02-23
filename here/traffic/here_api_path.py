@@ -49,24 +49,23 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
                             "daysOfWeek":{"U":True,"M":True,"T":True,"W":True,"R":True,"F":True,"S":True},
                             },
             "outputFormat":{"mean":True,
+                            "harmonicMean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
                             "percentiles":[50,85],
                             "minMax":True,
                             "stdDev":True,
-                            "confidence":True,
+                            "confidence":False,
                             "freeFlow":False,
-                            "length_":True,
+                            "length_":False,
                             "gapFilling":False,
                             "speedLimit":False,
                             "sampleCount":True},
             "estimatedSize":0,
             "userId":user_id,
             'userEmail':user_email}
-
     LOGGER.info('Querying data from %s to %s', str(start_date), str(end_date))
     query_header = {'Authorization':'Bearer '+ access_token, 'Content-Type': 'application/json'}
-
     query_response = requests.post(query_url, headers=query_header, json=query)
     try:
         query_response.raise_for_status()
