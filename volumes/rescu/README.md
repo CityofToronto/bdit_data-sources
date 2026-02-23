@@ -1,9 +1,17 @@
 
-# RESCU Vehicle Detector Stations <!-- omit in toc -->
+# *The RESCU schema is now deprecated. Please refer to [`vds` schema](../vds/readme.md).* <!-- omit in toc -->
+- Use `vds.counts_15min` instead of `rescu.volumes_15min`
+- Identify RESCU sensors in the new schema using `vds.detector_inventory WHERE det_type = 'RESCU Detectors'`
+
+<br>  
+<br>  
+<br>  
+<br>
+<br>  
+
+# ~~RESCU Vehicle Detector Stations~~ <!-- omit in toc -->
 
 Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
-
-This README file was created on 2023-04-04 by [@ShahrzadBorjian2](https://github.com/ShahrzadBorjian2).
 
 - [Keywords](#keywords)
 - [Description:](#description)
@@ -33,6 +41,7 @@ This README file was created on 2023-04-04 by [@ShahrzadBorjian2](https://github
   - [3- How are data gaps/incomplete data addressed?](#3--how-are-data-gapsincomplete-data-addressed)
   - [4- Who is responsible for addressing data gaps/incomplete data?](#4--who-is-responsible-for-addressing-data-gapsincomplete-data)
   - [5- Are there data quality assessment processes for the data?](#5--are-there-data-quality-assessment-processes-for-the-data)
+  - [6- How often are data quality assessment processes for the data undertaken?](#6--how-often-are-data-quality-assessment-processes-for-the-data-undertaken)
 - [Data Maintenance](#data-maintenance)
   - [1- Who is responsible for the status of data functionality and the overall maintenance of the data collection?](#1--who-is-responsible-for-the-status-of-data-functionality-and-the-overall-maintenance-of-the-data-collection)
   - [2- Who should be notified if something goes wrong/ there are changes to data?](#2--who-should-be-notified-if-something-goes-wrong-there-are-changes-to-data)
@@ -327,6 +336,30 @@ Gaps are handled / addressed using a variety of strategies, depending on the int
 ### 5- Are there data quality assessment processes for the data?
 
 There is a daily check run in Airflow [`check_rescu.py`](#check_rescupy) to see if a threshold of data points is met - if there are fewer than 7,000 rows, an alert is raised (almost daily as of 2023-05-10).
+
+### 6- How often are data quality assessment processes for the data undertaken? 
+D&A process done daily. QA process counts the number of rows that have data with 7000 rows being the threshold.   
+ 
+There have also been analyses completed to check which non-ramp detectors were recording valid data in 2021 using the following methodology:
+1. Count the daily bins per detector. Filter out detectors with fewer than 96 15-minute bins in a 24 hour period (since they must be missing data)
+2. Calculate daily volume counts for the valid detectors
+3. Calculate the median weekday and weekend daily volume count per detector
+4. Group the median weekday daily volumes by corridor and graph them
+5. Visually determine a minimum threshold based on the graphs.
+
+ The 2021 minimum thresholds were as follows:
+ - Allen Expressway - Weekday: 4000 per lane
+ - Allen Expressway - Weekend: 3000 per lane
+ - Don Valley Parkway - Weekday: 15000 per lane
+ - Don Valley Parkway - Weekend: 10000 per lane
+ - Gardiner Expressway - Weekday: 10000 per lane
+ - Gardiner Expressway - Weekend: 10000 per lane
+ - Lakeshore Boulevard - Weekday: 2000 per lane
+ - Lakeshore Boulevard - Weekend: 2000 per lane
+
+RESCU data were then extracted for the detectors and dates that met these thresholds.
+
+The code used to complete these checks can be found in the [date_evaluation folder](#date_evaluation).
 
 <!---#### 6- Are external contractors or consultants responsible for checking data quality?
 > Unsure. 

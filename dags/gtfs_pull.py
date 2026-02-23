@@ -1,0 +1,157 @@
+"""### gtfs_pull DAG
+
+- Pulls TTC GTFS from Toronto Open Data (id = ttc-routes-and-schedules)
+- Checks daily to see if OD `last_refreshed` flag has been updated, if so uploads to bigdata
+"""
+
+import os
+import io
+import re
+import sys
+import zipfile
+import logging
+import requests
+import psycopg2
+from datetime import datetime, timedelta
+
+from airflow.sdk import dag, task
+from airflow.exceptions import AirflowFailException, AirflowSkipException
+from airflow.models.taskinstance import TaskInstance
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+from dags.dag_owners import owners
+
+DAG_NAME = 'gtfs_pull'
+DAG_OWNERS  = owners.get(DAG_NAME, ["Unknown"])
+
+default_args = {
+    'owner': ','.join(DAG_OWNERS),
+    'depends_on_past': False,
+    'start_date': datetime(2025, 8, 3),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retry_delay': timedelta(minutes=5),
+    'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
+    'on_failure_callback': task_fail_slack_alert,
+}
+
+@dag(
+    dag_id=DAG_NAME,
+    default_args=default_args,
+    max_active_runs=1,
+    template_searchpath=os.path.join(repo_path,'ttc/gtfs'),
+    doc_md=__doc__,
+    tags=['bdit_data-sources', 'open_data', 'data_check'],
+    schedule='@daily',
+    catchup=False,
+)
+
+def gtfs_pull():
+    @task()
+    def download_url(ti: TaskInstance | None = None):
+        """Gets download_url and tries to insert `last_refreshed` attribute to feed_info table.
+        
+        If `last_refreshed` insert fails on duplicate, DAG is marked as skipped.
+        Otherwise, proceed to download files and insert.
+        """
+        #get open data metadata
+        url = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show"
+        od_id = 'ttc-routes-and-schedules'
+        params = { "id": od_id}
+        package = requests.get(url, params = params).json()
+        
+        #get last_refreshed and url attributes
+        try:
+            result = package.get('result')
+            download_url = result['resources'][0].get('url')
+            last_refreshed = result.get('last_refreshed')
+            ti.xcom_push(key="last_refreshed", value=last_refreshed)
+        except KeyError as e:
+            LOGGER.error("Problem retrieving Open Data portal info.")
+            raise AirflowFailException(e)
+        LOGGER.info("`%s` last_refreshed: %s", od_id, last_refreshed)
+        
+        #try inserting `last_refreshed` into feed_info table. Skips DAG on UniqueViolation
+        query="INSERT INTO gtfs.feed_info(insert_date) SELECT %s RETURNING feed_id;"
+        con = PostgresHook("gtfs_bot").get_conn()
+        try:
+            with con.cursor() as cur:
+                cur.execute(query, (last_refreshed, ))
+                feed_id = cur.fetchone()[0]
+                con.commit()
+        except psycopg2.errors.UniqueViolation:
+            raise AirflowSkipException(f'This feed (last_refreshed = {last_refreshed}) has already been loaded into the database.')
+            
+        #feed_id is needed to update tables in `update_feed_id`
+        ti.xcom_push(key="feed_id", value=feed_id)
+        
+        return download_url
+
+    @task()
+    def download_gtfs(download_url, ti: TaskInstance | None = None):
+        """Downloads data and saves in `open_data/gtfs` folder inside Airflow home directory."""
+        
+        #download file
+        try:
+            gtfs_download=requests.get(download_url)
+            gtfs_download.raise_for_status()
+        except requests.exceptions.HTTPError as err_h:
+            LOGGER.error("Invalid HTTP response: %s", err_h)
+        except requests.exceptions.ConnectionError as err_c:
+            LOGGER.error("Network problem: %s", err_c)
+        except requests.exceptions.Timeout as err_t:
+            LOGGER.error("Timeout: %s", err_t)
+        except requests.exceptions.RequestException as err:
+            LOGGER.error("Error: %s", err)
+        else:
+            if gtfs_download.status_code != 200:
+                LOGGER.error("Query was not successful. Response: %s", gtfs_download)
+    
+        #create new folder
+        last_refreshed = str(ti.xcom_pull(key='last_refreshed', task_ids='download_url'))
+        last_refreshed_folder = re.sub(':|-', '', last_refreshed)
+        last_refreshed_folder = last_refreshed_folder.replace(' ', '_')
+        dir = "/data/airflow/open_data/gtfs/" + last_refreshed_folder
+        try:
+            os.makedirs(dir)
+        except FileExistsError:
+            raise AirflowFailException(f'Directory already exists: {dir}')
+        
+        #unzip download
+        z = zipfile.ZipFile(io.BytesIO(gtfs_download.content))
+        z.extractall(dir)
+        return dir
+    
+    @task.bash(
+        env = {
+            'HOST': '{{ conn.gtfs_bot.host }}',
+            'LOGIN': '{{ conn.gtfs_bot.login }}',
+            'PGPASSWORD': '{{ conn.gtfs_bot.password }}'
+        }
+    )
+    def upload_feed(dir):
+        """Copies data into database. Fails on any errors."""
+        script_path = os.path.join(repo_path, 'ttc/gtfs/upload_feed.sh')
+        return f"{script_path} {dir}"
+
+    #Update feed_id attribute across all the tables
+    update_feed_id = SQLExecuteQueryOperator(
+        task_id='update_feed_id',
+        conn_id='gtfs_bot',
+        sql="sql/update_feed_id.sql",
+        autocommit=True,
+        retries = 0
+    )
+    
+    download_url = download_url()
+    output_dir = download_gtfs(download_url)
+    upload_feed(output_dir) >> update_feed_id
+
+gtfs_pull()

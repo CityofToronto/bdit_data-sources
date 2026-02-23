@@ -39,7 +39,10 @@ def default_end_date():
     dt = datetime.today() - timedelta(days=3)
     return dt.date().strftime('%Y%m%d')
 
-def get_access_token(key_id, key_secret, token_url):
+def get_access_token(api_conn):
+    key_id = api_conn.password
+    key_secret = api_conn.extra_dejson['client_secret']
+    token_url = api_conn.extra_dejson['token_url']
     '''Uses Oauth1 to get an access token using the key_id and client_secret'''
     oauth1 = OAuth1(key_id, client_secret=key_secret)
     headers = {'content-type': 'application/json'}
@@ -64,18 +67,18 @@ def get_access_token(key_id, key_secret, token_url):
     return access_token
 
 def query_dates(access_token, start_date, end_date, query_url, user_id, user_email,
-                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5, mapversion = "2018Q3"):
+                request_type = 'PROBE_PATH', vehicle_type = 'ALL', epoch_type = 5): 
     query= {"queryFilter": {"requestType":request_type,
                             "vehicleType":vehicle_type,
                             "adminId":21055226,
                             "adminLevel":3,
                             "isoCountryCode":"CAN",
-                            "startDate":str(start_date.date()),
-                            "endDate":str(end_date.date()),
+                            "startDate":datetime.strptime(start_date, '%Y%m%d').date().strftime("%Y-%m-%d"),
+                            "endDate":datetime.strptime(end_date, '%Y%m%d').date().strftime("%Y-%m-%d"),
                             "timeIntervals":[],
                             "locationFilter":{"tmcs":[]},
                             "daysOfWeek":{"U":True,"M":True,"T":True,"W":True,"R":True,"F":True,"S":True},
-                            "mapVersion": mapversion},
+                            },
             "outputFormat":{"mean":True,
                             "tmcBased":False,
                             "epochType":epoch_type,
@@ -92,7 +95,7 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             "userId":user_id,
             'userEmail':user_email}
 
-    LOGGER.info('Querying data from %s to %s', str(start_date.date()), str(end_date.date()))
+    LOGGER.info('Querying data from %s to %s', str(start_date), str(end_date))
     query_header = {'Authorization':'Bearer '+ access_token, 'Content-Type': 'application/json'}
 
     query_response = requests.post(query_url, headers=query_header, json=query)
@@ -109,21 +112,35 @@ def query_dates(access_token, start_date, end_date, query_url, user_id, user_ema
             raise HereAPIException(err_msg)
     return str(query_response.json()['requestId'])
 
-def get_download_url(request_id, status_base_url, access_token, user_id):
+def get_download_url(request_id, status_base_url, access_token, user_id, api_conn):
     '''Pings to get status of request and then returns the download URL when it has successfully completed'''
 
     status='Pending'
     status_url = status_base_url + str(user_id) + '/requests/' + str(request_id)
-    status_header = {'Authorization': 'Bearer ' +  access_token}
-
-    while status != "Completed Successfully":
+    
+    #try polling same request_id for up to max_tokens hrs
+    token_counter=0
+    max_tokens=16
+    while status != "Completed Successfully" and token_counter < max_tokens:
         sleep(60)
         LOGGER.info('Polling status of query request: %s', request_id)
+        status_header = {'Authorization': 'Bearer ' +  access_token}
         query_status = requests.get(status_url, headers = status_header)
         try:
             query_status.raise_for_status()
             status = str(query_status.json()['status'])
-        except (requests.exceptions.HTTPError, KeyError) as err:
+        except requests.exceptions.HTTPError as err:
+            error_desc = query_status.json()['error_description']
+            if error_desc.startswith('Token Validation Failure'):
+                #access token expires after 1 hr, try to generate up to max_tokens times.
+                LOGGER.info('Token expired; refreshing.')
+                access_token = get_access_token(api_conn)
+                token_counter+=1
+            else:
+                LOGGER.error("HTTP error in query status response.")
+                LOGGER.error(query_status.text)
+                raise HereAPIException(err)
+        except KeyError as err:
             error = 'Error in polling status of query request \n'
             error += 'err\n'
             error += 'Response was:\n'
@@ -139,18 +156,20 @@ def get_download_url(request_id, status_base_url, access_token, user_id):
             LOGGER.warning("JSON error in query status response.")
             LOGGER.warning(query_status.text)
             continue
-
-    LOGGER.info('Requested query completed')
     
+    if token_counter==max_tokens:
+        LOGGER.error("Maximum number of token retries used.")
+        raise HereAPIException
+    
+    LOGGER.info('Requested query completed')
     return query_status.json()['outputUrl']
 
 @click.group(invoke_without_command=True)
 @click.option('-s','--startdate', default=default_start_date())
 @click.option('-e','--enddate', default=default_end_date())
 @click.option('-d','--config', type=click.Path(exists=True))
-@click.option('-m','--mapversion', default='2018Q3')
 @click.pass_context
-def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg', mapversion=''):
+def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config='db.cfg'):
     '''Pull data from the HERE Traffic Analytics API from --startdate to --enddate (inclusive)
 
     The default is to process the previous week of data, with a 1+ day delay (running Monday-Sunday from the following Tuesday).
@@ -160,7 +179,7 @@ def cli(ctx, startdate=default_start_date(), enddate=default_end_date(), config=
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     ctx.obj['config'] = config
     if ctx.invoked_subcommand is None:
-        pull_here_data(ctx, startdate, enddate, mapversion)
+        pull_here_data(ctx, startdate, enddate)
 
 @cli.command('download')
 @click.argument('download_url')
@@ -210,7 +229,7 @@ def send_data_to_database(ctx=None, datafile = None, dbsetting=None):
         LOGGER.critical('Error sending data to database')
         raise HereAPIException(err.stderr)
 
-def pull_here_data(ctx, startdate, enddate, mapversion):
+def pull_here_data(ctx, startdate, enddate):
 
     configuration = configparser.ConfigParser()
     configuration.read(ctx.obj['config'])
@@ -221,7 +240,7 @@ def pull_here_data(ctx, startdate, enddate, mapversion):
     try:
         access_token = get_access_token(apis['key_id'], apis['client_secret'], apis['token_url'])
 
-        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'], mapversion=mapversion)
+        request_id = query_dates(access_token, _get_date_yyyymmdd(startdate), _get_date_yyyymmdd(enddate), apis['query_url'], apis['user_id'], apis['user_email'])
 
         download_url = get_download_url(request_id, apis['status_base_url'], access_token, apis['user_id'])
 

@@ -5,10 +5,10 @@ A maintenance workflow that you can deploy into Airflow to periodically clean ou
 to avoid those getting too big.
 """
 # pylint: disable=pointless-statement,anomalous-backslash-in-string
-from datetime import datetime
 import os
 import sys
-from airflow import DAG
+import pendulum
+from airflow.sdk import DAG, Variable
 
 AIRFLOW_DAGS = os.path.dirname(os.path.realpath(__file__))
 AIRFLOW_ROOT = os.path.dirname(AIRFLOW_DAGS)
@@ -16,39 +16,19 @@ AIRFLOW_TASKS = os.path.join(AIRFLOW_ROOT, 'tasks')
 AIRFLOW_TASKS_LIB = os.path.join(AIRFLOW_TASKS, 'lib')
 
 from airflow.configuration import conf
-from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.models import Variable 
+from airflow.providers.standard.operators.bash import BashOperator
 
 dag_name = 'log_cleanup'
 
 # Slack alert
-SLACK_CONN_ID = 'slack_data_pipeline'
+repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.insert(0, repo_path)
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+
 dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
 
 names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
 
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
-
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    task_msg = ':broom: {slack_name}.  {task_id} in log clean up DAG failed.'.format(
-        task_id=context.get('task_instance').task_id, 
-        slack_name = ' '.join(list_names),)   
-    slack_msg = task_msg + """(<{log_url}|log>)""".format(
-            log_url=context.get('task_instance').log_url,)
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        )
-    return failed_alert.execute(context=context)
 
 def create_dag(filepath, doc, start_date, schedule_interval):
     """
@@ -80,7 +60,8 @@ def create_dag(filepath, doc, start_date, schedule_interval):
       catchup=False,
       # Prevent the same DAG from running concurrently more than once.
       max_active_runs=1,
-      schedule_interval=schedule_interval,
+      schedule=schedule_interval,
+      tags=['bdit_data-sources', 'maintenance'],
       # This allows us to simplify `create_bash_task` below.
       template_searchpath=AIRFLOW_TASKS
     )
@@ -88,7 +69,7 @@ def create_dag(filepath, doc, start_date, schedule_interval):
     dag.doc_md = doc
     return dag
     
-START_DATE = datetime(2020, 2, 25)
+START_DATE = pendulum.datetime(2020, 2, 25, tz="America/Toronto")
 SCHEDULE_INTERVAL = '@daily'
 DAG = create_dag(__file__, __doc__, START_DATE, SCHEDULE_INTERVAL)
 
@@ -118,10 +99,10 @@ echo "Running Cleanup Process..."
 if [ $TYPE == file ];
 then
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type f -mtime +${MAX_LOG_AGE_IN_DAYS}"
-    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -exec rm -f {} \\;"
 else
     FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type d -empty"
-    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \;"
+    DELETE_STMT="${FIND_STATEMENT} -prune -exec rm -rf {} \\;"
 fi
 echo "Executing Find Statement: ${FIND_STATEMENT}"
 FILES_MARKED_FOR_DELETE=`eval ${FIND_STATEMENT}`

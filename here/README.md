@@ -20,7 +20,7 @@
 
 ## What is HERE data?
 
-HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](traffic/README.md) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/grid/congestion_grid) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/data_aggregation/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index.
+HERE data is travel time data provided by HERE Technologies from a mix of vehicle probes. We have a daily [automated airflow pipeline](traffic/README.md) that pulls 5-min aggregated speed data for each link in the city from the here API. For streets classified collectors and above, we aggregate up to segments using the [congestion network](https://github.com/CityofToronto/bdit_congestion/tree/network_grid_v2/congestion_network_creation) and produce [summary tables](https://github.com/CityofToronto/bdit_congestion/blob/master/archived/congestion_network_depreciated/congestion_data_aggregation/sql/generate_segments_tti_weekly.sql) with indices such as Travel Time Index and Buffer Index.
 
 <details>
     <summary>Travel Time Index</summary>
@@ -66,7 +66,13 @@ HERE updates their maps on an annual basis (usually) to keep up with Toronto's e
 
 Refer to table `here.street_valid_range` for which street version correspond to what range of data in `here.ta`. This table updates annually along with the HERE map refresh, when we receive new `here_gis.streets_##_#` and `here_gis.streets_att_##_#` tables.
 
-For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`.
+For `here.ta_path`, refer to table `here.street_valid_range_path` for the corresponding street version. This is different than the `here.street_valid_range` table for `here.ta` because we pulled the data at a different time, meaning the data is mapped to a different version.
+
+> [!NOTE]  
+> A one-day gap on 2024-10-28 in the 23_4 map version is due to a repull in 2025 using map version 24_4, creating one day range for 24_4 inserted within the original 23_4 range.
+
+
+For example, if you are selecting speed data from 2017-09-01 to 2022-08-15, the corresponding street version is `21_1` in `here.ta`. Relevant tables for your use case will have a `21_1` suffix, e.g. `here.routing_streets_21_1`. However, if you are pulling data from `here.ta_path`, the corresponding street version is `22_2`, relevant table will be `here.routing_streets_22_2`.
 
 # HERE data at a glance
 
@@ -103,11 +109,11 @@ Historical data are acquired through the Traffic Analytics download portal. Data
 | tod | time | ✓ | Time of 5-minute observation bin; matches `tx` |
 | length | integer | | Link length in meters, rounded to integer |
 | mean | numeric(4,1) | | Arithmetic mean of observed speed(s) in the 5-minute bin weighted by the amount of data coming from the probe |
-| stddev | numeric(4,1) | | standard deviation of the observed speed(s) |
+| stddev | numeric(4,1) | | Sample standard deviation of the observed speed(s). A value of `0` is given where the sample_size is `1`, though strictly speaking the sample standard deviation is undefined in this case. |
 | min_spd | integer | | Observed minimum speed |
 | max_spd | integer | | Observed maximum speed |
-| pct_50 | integer | | Observed median speed |
-| pct_85 | integer | | Observed 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins |
+| pct_50 | integer | | Median speed. Likely to have been interpolated between adjacent values rather than actually observed in the sample! |
+| pct_85 | integer | | 85th percentile speed - use with caution as sample sizes (of vehicles) are very small within 5-minute bins. This value may also be interpolated. |
 | confidence | integer | | proprietary measure derived from `stddev` and `sample_size`; higher values mean greater 'confidence' in reliability of `mean` |
 | sample_size | integer | | the number of probe vehicles traversing a segment within a 5-minute bin **plus** the number of 'probe samples' |
 
@@ -115,11 +121,40 @@ For an exploratory description of coverage (or how much probe data there is) for
 
 #### Getting link attributes
 
-The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link_id` and a `travel direction` character (F,T). `F` and `T` represent "From" and "To" relative to each link's reference node, which is *always* the node with the lowest latitude. In the case of two nodes with equal latitude, the node with the lowest longitude is the reference node. To join `ta` data to the `here_gis.streets_att` table use the following:
+The Traffic Analytics `link_dir` is a concatenation of the `streets` layer `link_id` and a `travel direction` character (F,T). `F` and `T` represent "From" and "To" relative to each link's reference or start node.
+
+The geometries associated with a `link_id` are only given in one direction, so may need to be reversed. To join `link_dir`s to the `streets` table and get the correctly directed link geometries, you may do like:
 
 ```sql
-JOIN here_gis.streets_att_16_1 gis ON gis.link_id = LEFT(ta.link_dir, -1)::numeric
+SELECT
+    ta.link_dir, -- directed ID with 'T|F' character
+    streets.link_id, -- undirected ID, numeric
+    attributes.st_name,
+    CASE
+        -- F: From reference/start node
+        WHEN ta.link_dir ~ 'F' THEN streets.geom
+        -- T: To reference/start node 
+        ELSE ST_Reverse(streets.geom)
+    END AS geom 
+FROM here.ta
+JOIN here_gis.streets_22_2 AS streets ON
+    -- left(...,-1) removes the "T/F" character from the right of the string
+    left(ta.link_dir,-1)::numeric = streets.link_id
+-- attributes tables have things like names, lanes, speed limits, etc
+JOIN here_gis.streets_att_22_2 AS attributes USING (link_id)
 ```
+
+There is also a set of versioned tables for routing `here.routing_streets_xx_x`, which contain the directed geometries:
+
+```sql
+SELECT
+    link_dir,
+    geom AS directed_geom
+FROM here.ta
+JOIN here.routing_streets_22_2 USING (link_dir)
+```
+
+See also: [Routing with traffic data](#routing-with-traffic-data)
 
 #### Functional classes
 

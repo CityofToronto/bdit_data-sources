@@ -1,0 +1,8 @@
+certifi==2025.8.3
+charset-normalizer==3.4.2
+click==8.1.7
+idna==3.10
+psycopg2-binary==2.9.9
+requests==2.32.4
+typing-extensions==4.14.1
+urllib3==2.6.3

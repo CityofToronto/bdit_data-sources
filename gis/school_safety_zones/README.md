@@ -1,114 +1,93 @@
-# Vision Zero Google Sheets API 
-This folder contains scripts to read Vision Zero google spreadsheets and put them into two postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
+# Vision Zero Google Sheets API <!-- omit in toc -->
 
-**Notes:** 
-- Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
-- A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
+This folder contains scripts to read Vision Zero Google spreadsheets and put them into the appropriate Postgres tables using Google Sheets API. This process is then automated using Airflow for it to run daily.
 
-## 1. Data source
-The School Safety Zone data are read in from separate Google Sheets for 2018, 2019, 2020, 2021, and 2022 which are maintained internally.
+## Table of Contents <!-- omit in toc -->
 
-## 2. Get started
-In order to get started, a few things have to be done first.
+- [1. Data Source](#1-data-source)
+- [2. The Automated Data Pipeline](#2-the-automated-data-pipeline)
+- [3. Sheets Credentials](#3-sheets-credentials)
+- [4. Adding a new year](#4-adding-a-new-year)
+  - [4.1 Create a New PostgreSQL Table](#41-create-a-new-postgresql-table)
+  - [4.2 Request sharing permission to the new sheet](#42-request-sharing-permission-to-the-new-sheet)
+  - [4.3 Add the New Google Sheet to Airflow](#43-add-the-new-google-sheet-to-airflow)
+  - [4.4 Check the airflow logs and the data in the database](#44-check-the-airflow-logs-and-the-data-in-the-database)
+  - [4.5 Wait overnight for the data to appear on the vision zero map](#45-wait-overnight-for-the-data-to-appear-on-the-vision-zero-map)
+- [5. Table generated](#5-table-generated)
+- [6. Pulling data with the command-line interface](#6-pulling-data-with-the-command-line-interface)
+  - [6.1 Database Configuration File](#61-database-configuration-file)
+  - [6.2 Local Google API key](#62-local-google-api-key)
 
-### 2.1 Pip install
-Run the following command to install the Google Client Library using pip:
-`pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
+> **Notes:** 
+> - Introduction to Google Sheets API can be found at [Intro](https://developers.google.com/sheets/api/guides/concepts).
+> - A guide on how to get started can be found at [Quickstart](https://developers.google.com/sheets/api/quickstart/python).
 
-### 2.2 Prepare credentials file
-A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data. The google account used to read the Sheets is `bdittoronto@gmail.com`. First, Google Sheets API have to be enabled on the google account. Then, a service account is created so that we are not prompted to sign in every single time we run the script. Instructions on how to do that can be found at [Creating a service account](https://github.com/googleapis/google-api-python-client/blob/master/docs/oauth-server.md#creating-a-service-account). Go to the `Service accounts` page from there, select the `Quickstart` project and click on the `Search for APIs and Services` bar to generate credentials. Copy the credentials and paste it on a `key.json` file located in the same directory as the script. The `key.json` file should look something like this:
+## 1. Data Source
 
-    "type": "service_account",
-    "project_id": "quickstart-1568664221624",
-    "private_key_id": 
-    "private_key":
-    "client_email":
-    "client_id": 
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": 
+The School Safety Zone data are loaded from individual Google Sheets for every year since 2018. Those Google sheets are maintained by [Vision Zero](mailto:VisionZeroTO@toronto.ca). The data is pulled daily by an Airflow pipeline (DAG) and can be also pulled manually by running the script `gis.school_safety_zones.schools.py` with the appropriate arguments. The data are stored in a partitioned table structure under the `vz_safety_programs_staging.school_safety_zone_raw_parent` and then transformed via downstream views.
 
-### 2.3 Prepare connection file
-A configuration file named `db.cfg` is required to connect to pgAdmin to push data aka to create postgres table. The `db.cfg` file should look like this:
+The following sections describe the two approaches in more details. 
 
-```
-[DBSETTINGS]
-host=xx.xxx.xx.xx
-database=databasename
-user=database username
-password=database password
-```
+## 2. The Automated Data Pipeline
 
-## 3. Adding a new year
+A daily Airflow pipeline (DAG) runs to pull the data from Google sheets into the BigData database. The `vz_google_sheets` DAG loads the Google sheets configurations from the Airflow variable `ssz_spreadsheets`. This variable is a Json list of dictionaries with the following keys:
+
+* year: The year of the data included in this spreadsheet.
+* spreadsheet_id: The spreadsheet Id used to access the data
+* spreadsheet_range: The sheet and cell range of data within the spreadsheet.
+
+The DAG consists of two main tasks as shown in the below figure:
+
+1. get_list_of_years: A Python operator that extracts the required details out of `ssz_spreadsheets` and filters to specific years: 
+   - Defaults to current year and previous year based on execution date.
+   - Can override to pull past years by triggering DAG with `years` parameter specified.
+2. pull_data: An array of mapped tasks dynamically created based on the number of years retreived by the previous (upstream) task. Each of these mapped tasks pull the data of a specific year from the corresponding Google spreadsheet by calling the helper function `gis.school_safety_zones.schools.pull_from_sheet`. The Google spreadsheet credentials and the database connection details are stored encrypted in Airflow connections.
+
+![vz_google_sheets DAG structure](dag_structure.png)
+
+## 3. Sheets Credentials
+
+A credential file (named `key.json` in the script) is required to connect to the Google Sheets to pull data, the contents of this file can be downloaded from [the google console](https://console.cloud.google.com/iam-admin/serviceaccounts/details/) if you're logged in to the right google account. This is currently stored in an encrypted Airflow connection: `google_sheets_api`.
+
+## 4. Adding a new year
+
 Follow these steps to read in another spreadsheet for year `yyyy`.
 
-### 3.1 Create empty table in database to store spreadsheet
+### 4.1 Create a New PostgreSQL Table
+
 Create an empty table `vz_safety_programs_staging.school_safety_zone_yyyy_raw`, where `yyyy` is the year to be stored, as a child of parent table `vz_safety_programs_staging.school_safety_zone_raw_parent`. Follow the format of the existing child tables (e.g. `vz_safety_programs_staging.school_safety_zone_2018_raw`) and declare the inheritance:
 
-```
+```SQL
 CREATE TABLE vz_safety_programs_staging.school_safety_zone_yyyy_raw (
    	like vz_safety_programs_staging.school_safety_zone_2018_raw 
 	including all
 ) INHERITS (vz_safety_programs_staging.school_safety_zone_raw_parent);
-
 ```
 
-### 3.2 Add id of google sheet to Airflow variable
-In Airflow is already defined a dictionary containing key-value pairs to store the sheet `id` for each sheet. Go to Admin -> Variables in the Airflow GUI and edit `ssz_spreadsheet_ids` to add a new key `sszyyyy` for year `yyyy` and the `id` of the Google sheet for that year.
+### 4.2 Request sharing permission to the new sheet
 
+The sheet must be shared with `sheets-puller@bubbly-fuze-182523.iam.gserviceaccount.com`. This ought to be View-only. This email is associated with the `terrestrial.wherever@gmail.com` email and saved in the `google_sheets_api` Airflow connection.
 
+### 4.3 Add the New Google Sheet to Airflow
 
-### 3.3 Edit script that reads in the spreadsheets
-The `id` for each sheet is then called in `vz_google_sheets.py` by reading from the stored dictionary. Add a new call statement for the year to be added:
+Add the new year details to the Airflow variable `ssz_spreadsheets` as described [above](#2-the-automated-data-pipeline) so that the DAG would start pulling its data.
 
-```
-from airflow.models import Variable
-dag_config = Variable.get('ssz_spreadsheet_ids', deserialize_json=True)
-ssz2018 = dag_config['ssz2018']
-...
-sszyyyy = dag_config['sszyyyy']
-```
+### 4.4 Check the airflow logs and the data in the database
 
-Next, add to the `sheets` dictionary just below the variable calls the details about the sheet for the new year:
+The logs produce a WARNING when a line is skipped because it is missing the end of line marker.
 
-```
-sheets = {
-           2018: {'spreadsheet_id' : ssz2018,
-                  'range_name' : 'Master List!A4:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_2018_raw'},
-                  ...
-           yyyy: {'spreadsheet_id' : sszyyyy,
-                  'range_name' : 'Master Sheet!A3:AC180',
-                  'schema_name': 'vz_safety_programs_staging',
-                  'table_name' : 'school_safety_zone_yyyy_raw'}
-         }
-```
+Also check the downstream VIEWS to see if dates (`dt`) & geometries are properly transformed
+*  `vz_safety_programs.polygons_school_safety_zones`: for school zone polygons
+*  `vz_safety_programs.points_wyss`: for the Watch Your Speed Signs locations
 
-Finally, at the end of `schools.py`, add a new call to pull from the sheet for year `yyyy`:
+⚠ If there's any problems look at [5. Table generated](#5-table-generated) below to see how the contents of the sheet is mapped to the tables.
 
-```
-pull_from_sheet(con, service, yyyy)
-```
+### 4.5 Wait overnight for the data to appear on the vision zero map
 
-### 3.4 Edit the dag
-Follow the general instructions in the `bdit_data-sources` [README](https://github.com/CityofToronto/bdit_data-sources/tree/master/dags).
+The Geographic Competency Centre (GCC) has a process to pull the map data nightly from our database and expose it via ESRI API.
 
-Add a new task in `bdit_data-sources/dags/vz_google_sheets.py`:
-e.g.:
+## 5. Table generated
 
-```
-task<number> = PythonOperator(
-    task_id='yyyy',
-    python_callable=pull_from_sheet,
-    dag=dag,
-    op_args=[con, service, yyyy, sheets[yyyy]]
-    )
-```
-
-
-## 4. Table generated
 The script reads information from columns A, B, E, F, Y, Z, AA, AB which are as shown below
 
 |SCHOOL NAME|ADDRESS|FLASHING BEACON W/O|WYSS W/O|School Coordinate (X,Y)|Final Sign Installation Date|FB Locations (X,Y)|WYS Locations (X,Y)|
@@ -125,8 +104,44 @@ from the Google Sheets and put them into postgres tables with the following fiel
 * The Google Sheets API do not read any row with empty cells at the beginning or end of the row or just an entire row of empty cells. It will log an error when that happens.
 * The script being used reads up to line 180 although the actual data is less than that. This is to anticipate extra schools which might be added into the sheets in the future.
 
-## 5. Airflow
-The Airflow is set up to run daily. A bot has to first be set up on pgAdmin to connect to Airflow. Connect to `/etc/airflow` on EC2 to create a dag file which contains the script for Airflow. More information on that can be found on [Credential management](https://www.notion.so/bditto/Automating-Stuff-5440feb635c0474d84ea275c9f72c362#dcb7f4b37eae48cba5c290dee5a6ef68). The Airflow uses PythonOperator and run tasks for each Google Sheet (curently 2018, 2019, 2020, 2021).
+## 6. Pulling data with the command-line interface 
 
-**Note:** An empty `__init__.py` file then has to be created to run Airflow. 
+The data can be loaded into the database from the appropriate Google sheet(s) using the Linux Command Line Interface (CLI). The script `gis.school_safety_zones.schools.py` requires some mandatory and optional arguments to load these data. The below table describes the script's arguments. For more details, run `./gis/school_safety_zones/schools.py --help`.
 
+| Argument          | Description   | Default Value |
+| :---              | :---          | :---          |
+| db-config         | The configuration file containing the database connection parameters. | N/A   |
+| year              | The year to pull. | N/A   |
+| spreadsheet-id    | The Id of the Google spreadsheet containing the raw data.  | N/A   |
+| spreadsheet-range | The range of cells containing the raw data.   | N/A   |
+| schema            | The PostgreSQL schema to load the data into.  | `vz_safety_programs_staging`  |
+| table             | The PostgreSQL table to load the data into.  | `school_safety_zone_{year}_raw`    |
+
+### 6.1 Database Configuration File
+
+To be able to run the data puller script from the CLI, you need to save the database parameters in a file in the following format:
+
+```ini
+[DBSETTINGS]
+host=HOSTNAME
+database=DATABASENAME
+username=USERNAME
+password=PASSWORD
+```
+
+### 6.2 Local Google API key
+
+First, Google Sheets API was enabled on the google account. Then, a service account was created so that we are not prompted to sign in every single time we run the script. Instructions on how to do that can be found at [Creating a service account](https://github.com/googleapis/google-api-python-client/blob/master/docs/oauth-server.md#creating-a-service-account). Go to the `Service accounts` page from there, select the `Quickstart` project and click on the `Search for APIs and Services` bar to generate credentials. Copy the credentials and paste it into a `key.json` file located in the same directory as the script. The `key.json` file should look something like this:
+
+```json
+"type": "service_account",
+"project_id": "quickstart-1568664221624",
+"private_key_id": 
+"private_key":
+"client_email":
+"client_id": 
+"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+"token_uri": "https://oauth2.googleapis.com/token",
+"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+"client_x509_cert_url":
+```

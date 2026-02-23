@@ -1,150 +1,250 @@
 # The official new GCC puller DAG file
 import sys
 import os
-repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-sys.path.insert(0,os.path.join(repo_path,'gis/gccview'))
-from gcc_puller_functions import get_layer
+from functools import partial
+import pendulum
 
-from datetime import datetime
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
-from airflow.models import Variable
+from airflow.sdk import dag, task, task_group, get_current_context, Variable, Param
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowFailException
 
-# Credentials - to be passed through PythonOperator
-from airflow.hooks.postgres_hook import PostgresHook
-# bigdata connection credentials
-bigdata_cred = PostgresHook("gcc_bot_bigdata")
-# On-prem server connection credentials
-ptc_cred = PostgresHook("gcc_bot")
+try:
+    repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    sys.path.insert(0, repo_path)
+    from dags.dag_owners import owners
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    from gis.gccview.gcc_puller_functions import (
+        get_layer, mapserver_name, get_src_row_count, get_dest_row_count
+    )
+except:
+    raise ImportError("Cannot import DAG helper functions.")
 
-dag_name = 'pull_gcc_layers'
 
-SLACK_CONN_ID = 'slack_data_pipeline'
-# Slack IDs of data pipeline admins
-dag_owners = Variable.get('dag_owners', deserialize_json=True)
-slack_ids = Variable.get('slack_member_id', deserialize_json=True)
+# the DAG runs at 7 am on the first day of January, April, July, and October
+def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
+    @dag(
+        dag_id=dag_id,
+        default_args=default_args,
+        catchup=False,
+        tags=["bdit_data-sources", "gcc", name, "quarterly"],
+        params={
+            "layer_name": Param(
+                default='',
+                type=["null", "string"],
+                title="Layer name.",
+                description="Layer name for custom pull. Example: city_ward",
+            ),
+            "is_audited": Param(
+                default=False,
+                type=["null", "boolean"],
+                title="is_audited",
+                description="Is the layer audited?",
+            ),
+            "include_additional_feature": Param(
+                default=False,
+                type=["null", "boolean"],
+                title="Include additional feature",
+                description="Flag to include additional feature type",
+            ),
+            "layer_id": Param(
+                default=0,
+                type=["null", "integer"],
+                title="layer_id.",
+                description="layer_id for custom pull. Example: 0",
+            ),
+            "mapserver": Param(
+                default=0,
+                type=["null", "integer"],
+                title="mapserver",
+                description="mapserver for custom pull. Example: 0",
+            ),
+            "pk": Param(
+                default='',
+                type=["null", "string"],
+                title="Primary Key.",
+                description="(Optional) primary key for custom pull. Example: area_id",
+                examples=['area_id', 'objectid'],
+            ),
+            "schema_name": Param(
+                default='',
+                type=["null", "string"],
+                title="schema_name.",
+                description="schema_name for custom pull",
+                examples=['gis', 'gis_core'],
+            )
+        },
+        schedule='0 7 1 * *' #first day of each month
+    )
+    def gcc_layers_dag():
+        
+        @task()
+        def get_layers(name, **context):
+            layer_name = context["params"]["layer_name"]
+            if layer_name == "":
+                tables = Variable.get('gcc_layers', deserialize_json=True)
+                return tables[name]
+            #if layer_name param was used to trigger, return only the custom layer.
+            layer = dict({
+                'is_audited': context["params"]["is_audited"],
+                'layer_id': context["params"]["layer_id"],
+                'mapserver': context["params"]["mapserver"],
+                'pk': context["params"]["pk"],
+                'schema_name': context["params"]["schema_name"],
+                'include_additional_feature':context["params"]["include_additional_feature"],
+            })
+            return dict({layer_name:layer})
+            
+        @task_group
+        def pull_and_check(conn_id, layer):
+            
+            @task(map_index_template="{{ table_name }}")
+            def pull_layer(conn_id, layer):
+                #name mapped task
+                context = get_current_context()
+                context["table_name"] = layer[0]
+                #get db connection
+                conn = PostgresHook(conn_id).get_conn()
+                #pull and insert layer
+                get_layer(
+                    mapserver_n = layer[1].get("mapserver"),
+                    layer_id = layer[1].get("layer_id"),
+                    schema_name = layer[1].get("schema_name"),
+                    is_audited = layer[1].get("is_audited"),
+                    include_additional_feature = layer[1].get("include_additional_feature"),
+                    primary_key = layer[1].get("pk"),
+                    con = conn
+                )
 
-names = dag_owners.get(dag_name, ['Unknown']) #find dag owners w/default = Unknown    
+            @task(map_index_template="{{ table_name }}")
+            def compare_row_counts(conn_id, layer):
+                
+                mapserver = mapserver_name(layer[1].get("mapserver"))
+                schema = layer[1].get("schema_name")
+                is_audited = layer[1].get("is_audited")
+                include_additional_feature = layer[1].get("include_additional_feature")
+                layer_id = layer[1].get("layer_id")
+                table_name = layer[0]
 
-list_names = []
-for name in names:
-    list_names.append(slack_ids.get(name, '@Unknown Slack ID')) #find slack ids w/default = Unkown
+                #name mapped task
+                context = get_current_context()
+                context["table_name"] = table_name
 
-def task_fail_slack_alert(context):
-    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-    slack_msg = """
-            :red_circle: Task Failed. 
-            *Hostname*: {hostname}
-            *Task*: {task}
-            *Dag*: {dag}
-            *Execution Time*: {exec_date}
-            *Log Url*: {log_url}
-            {slack_name} please check.
-            """.format(
-            hostname=context.get('task_instance').hostname,
-            task=context.get('task_instance').task_id,
-            dag=context.get('task_instance').dag_id,
-            ti=context.get('task_instance'),
-            exec_date=context.get('execution_date'),
-            log_url=context.get('task_instance').log_url,
-            slack_name=' '.join(list_names),
-        )
-    failed_alert = SlackWebhookOperator(
-        task_id='slack_test',
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        message=slack_msg,
-        username='airflow',
-        proxy='http://'+BaseHook.get_connection('slack').password+'@137.15.73.132:8080')
-    return failed_alert.execute(context=context)
+                src_count = get_src_row_count(
+                        mapserver = mapserver,
+                        layer_id = layer_id,
+                        include_additional_feature = include_additional_feature
+                    )
+                conn = PostgresHook(conn_id).get_conn()
+                today = pendulum.today().to_date_string()
+                dest_count = get_dest_row_count(conn, schema, table_name, is_audited, today)
+                if src_count != dest_count:
+                    msg = f"`{schema}.{table_name}` - Source count: `{src_count}`, Bigdata count: `{dest_count}`"
+                    context.get("task_instance").xcom_push(key="extra_msg", value=msg)
+                    raise AirflowFailException(msg)
+                return True
+                
+            pull = pull_layer(conn_id, layer)
+            check = compare_row_counts(conn_id, layer)
+            pull >> check
 
-DEFAULT_ARGS = {
- 'owner': ','.join(names),
- 'depends_on_past': False,
- 'start_date': datetime(2022, 11, 3),
- 'email_on_failure': False, 
- 'retries': 0,
- 'on_failure_callback': task_fail_slack_alert
+        # Create a task group for triggering the aggs
+        @task_group(group_id='trigger_agg_tasks')
+        def trigger_aggs(conn_id, downstream_aggs):
+            # Define SQLExecuteQueryOperator for each agg to trigger
+
+            prev_task=None
+            for task_id in downstream_aggs:
+                sql_operator = SQLExecuteQueryOperator(
+                    task_id=task_id,
+                    sql=downstream_aggs[task_id],
+                    conn_id=conn_id,
+                    autocommit=True,
+                    retries = 0
+                )
+                # Create sequential dependency chain
+                if prev_task:
+                    prev_task >> sql_operator
+                prev_task = sql_operator
+                
+        layers = get_layers(name)
+        [
+            pull_and_check.partial(conn_id = conn_id).expand(layer = layers) >>
+            trigger_aggs(conn_id, downstream_aggs)
+        ]
+        
+    generated_dag = gcc_layers_dag()
+
+    return generated_dag
+
+#A dictionary of GCC DAGs to create using dynamic DAG generation.
+#Dictionary keys correspond to keys in `gcc_layers` variable.
+#"conn": Postgres connection ID.
+#"deployment": A list of the deployments to deploy this DAG on.
+#"downstream_aggs": An ordered list of sqls to run after layers are finished pulling.
+DAGS = {
+    "bigdata": {
+        "conn": "gcc_bot_bigdata",
+        "deployments": ["DEV"],
+        "downstream_aggs": {
+            "centreline_latest": "SELECT gis_core.refresh_centreline_latest();",
+            "centreline_latest_all_feature": "SELECT gis_core.refresh_centreline_latest_all_feature();",
+            "centreline_intersection_point_latest": "SELECT gis_core.refresh_centreline_intersection_point_latest();",
+            "intersection_latest": "SELECT gis_core.refresh_intersection_latest();",
+            "centreline_leg_directions": "SELECT gis_core.refresh_centreline_leg_directions();",
+            "svc_centreline_directions": "SELECT traffic.refresh_svc_centreline_directions();"
+        }
+    },
+    "ptc": {
+        "conn": "gcc_bot",
+        "deployments": ["DEV", "PROD"],
+        "downstream_aggs": {
+            "ibms_joined": "SELECT gis.refresh_mat_view_ibms_joined();",
+            "centreline_version_date": "SELECT gis.refresh_mat_view_centreline_version_date();",
+            "intersection_version_date": "SELECT gis.refresh_mat_view_intersection_version_date();",
+            "centreline_intersection_point_version_date": "SELECT gis.refresh_mat_view_centreline_intersection_point_version_date();",
+            "municipalities_abbr": "SELECT gis.refresh_mat_view_municipalities_abbr();"           
+        }
+    },
+    "sirius": {
+        "conn": "gcc_bot_sirius",
+        "deployments": ["DEV"],
+        "downstream_aggs": {
+            "centreline_latest": "SELECT gis.refresh_mat_view_centreline_latest();",
+            "centreline_version_date": "SELECT gis.refresh_mat_view_centreline_version_date();",
+            "intersection_version_date": "SELECT gis.refresh_mat_view_intersection_version_date();",
+            "municipalities_abbr": "SELECT gis.refresh_mat_view_municipalities_abbr();"           
+        }
+    }
 }
 
-#-------------------------------------------------------------------------------------------------------
-bigdata_layers = {"city_ward": [0, 0, 'gis_core', True], # VFH Layers
-              "centreline": [0, 2, 'gis_core', False], # VFH Layers
-              "ibms_grid": [11, 25, 'gis_core', True], # VFH Layers
-              "centreline_intersection_point": [0, 19, 'gis_core', False], # VFH Layers
-              
-              #"intersection": [12, 42, 'gis_core', False],
-              "census_tract": [26, 7, 'gis_core', True],
-              "neighbourhood_improvement_area": [26, 11, 'gis_core', True],
-              "priority_neighbourhood_for_investment": [26, 13, 'gis_core', True],
-              
-              #"bikeway": [2, 2, 'gis', True], #replaced by cycling_infrastructure
-              "cycling_infrastructure": [2, 49, 'gis', True], 
-              "traffic_camera": [2, 3, 'gis', True],
-              "permit_parking_area": [2, 11, 'gis', True],
-              "prai_transit_shelter": [2, 35, 'gis', True],
-              "traffic_bylaw_point": [2, 38, 'gis', True],
-              "traffic_bylaw_line": [2, 39, 'gis', True],
-              "loop_detector": [2, 46, 'gis', True],
-              "electrical_vehicle_charging_station": [20, 1, 'gis', True],
-              "day_care_centre": [22, 1, 'gis', True],
-              "middle_childcare_centre": [22, 2, 'gis', True],
-              "business_improvement_area": [23, 1, 'gis', True],
-              "proposed_business_improvement_area": [23, 13, 'gis', True],
-              "film_permit_all": [23, 9, 'gis', True],
-              "film_permit_parking_all": [23, 10, 'gis', True],
-              "hotel": [23, 12, 'gis', True],
-              "convenience_store": [26, 1, 'gis', True],
-              "supermarket": [26, 4, 'gis', True],
-              "place_of_worship": [26, 5, 'gis', True],
-              "ymca": [26, 6, 'gis', True],
-              "aboriginal_organization": [26, 45, 'gis', True],
-              "attraction": [26, 46, 'gis', True],
-              "dropin": [26, 47, 'gis', True],
-              "early_years_centre": [26, 48, 'gis', True],
-              "family_resource_centre": [26, 49, 'gis', True],
-              "food_bank": [26, 50, 'gis', True],
-              "longterm_care": [26, 53, 'gis', True],
-              "parenting_family_literacy": [26, 54, 'gis', True],
-              "retirement_home": [26, 58, 'gis', True],
-              "senior_housing": [26, 59, 'gis', True],
-              "shelter": [26, 61, 'gis', True],
-              "social_housing": [26, 62, 'gis', True],
-              "private_road": [27, 13, 'gis', True],
-              "school": [28, 17, 'gis', True],
-              "library": [28, 28, 'gis', True]
-             }
+#identify the appropriate pullers based on deployment
+dep = os.environ.get("DEPLOYMENT", "PROD")
+filtered_dags = [
+    key for key, facts in DAGS.items() if dep in facts['deployments']
+]
 
+for item in filtered_dags:
+    DAG_NAME = 'gcc_pull_layers'
+    DAG_OWNERS  = owners.get(DAG_NAME, ["Unknown"])
+    downstream_aggs = DAGS[item].get('downstream_aggs', [])
 
-ptc_layers = {"city_ward": [0, 0, 'gis', True],
-                  "centreline": [0, 2, 'gis', False],
-                  "intersection": [12, 42, 'gis', False],
-                  "centreline_intersection_point": [0, 19, 'gis', False],
-                  "ibms_grid": [11, 25, 'gis', True],
-                  "ibms_district": [11, 23, 'gis', True]
-                 }
+    DEFAULT_ARGS = {
+        'owner': ','.join(DAG_OWNERS),
+        'depends_on_past': False,
+        'start_date': pendulum.datetime(2022, 11, 3, tz="America/Toronto"),
+        'email_on_failure': False, 
+        'retries': 0,
+        'on_failure_callback': partial(task_fail_slack_alert, use_proxy=True)
+    }
 
-# the DAG runs at 7 am on the first day of March, June, September, and December
-with DAG(
-    dag_id = dag_name,
-    default_args=DEFAULT_ARGS,
-    schedule_interval='0 7 1 */3 *' #'@quarterly'
-) as gcc_layers_dag:
-    deployment = os.environ.get("DEPLOYMENT", "PROD")
-
-    if deployment == "DEV":
-        for layer in bigdata_layers:
-            pull_bigdata_layer = PythonOperator(
-                task_id = 'bigdata_task_'+ str(layer),
-                python_callable = get_layer,
-                op_args = bigdata_layers[layer] + [bigdata_cred]
-            )
-
-    for layer in ptc_layers:
-        pull_ptc_layer = PythonOperator(
-            task_id = 'VFH_task_'+ str(layer),
-            python_callable = get_layer,
-            op_args = ptc_layers[layer] + [ptc_cred]
+    dag_name = f"{DAG_NAME}_{item}"
+    globals()[dag_name] = (
+        create_gcc_puller_dag(
+            dag_id=dag_name,
+            default_args=DEFAULT_ARGS,
+            name=item,
+            conn_id=DAGS[item]['conn'],
+            aggs_to_trigger=downstream_aggs
         )
+    )

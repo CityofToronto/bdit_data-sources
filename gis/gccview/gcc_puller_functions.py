@@ -1,13 +1,13 @@
 # The official new GCC puller functions file
 import configparser
 import requests
-import datetime
+from datetime import datetime
+import pendulum
+from functools import partial
 from psycopg2 import connect
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 import logging
-from time import sleep
-from airflow.exceptions import AirflowFailException
 import click
 CONFIG = configparser.ConfigParser()
 
@@ -16,51 +16,6 @@ if they are of logging level equal to or greater than INFO"""
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-#-------------------------------------------------------------------------------------------------------
-pk_dict = {
-	"city_ward": "area_id",
-    "census_tract": "area_id",
-    "cycling_infrastructure": "objectid", 
-    "neighbourhood_improvement_area": "area_id",
-    "priority_neighbourhood_for_investment": "area_id",
-    "ibms_district": "area_id",
-    "ibms_grid": "area_id",
-    "bikeway": "centreline_id",
-    "traffic_camera": "rec_id",
-    "permit_parking_area": "area_long_code",
-    "prai_transit_shelter": "id",
-    "traffic_bylaw_point": "objectid",
-    "traffic_bylaw_line": "objectid",
-    "loop_detector": "id",
-    "electrical_vehicle_charging_station": "id",
-    "day_care_centre": "loc_id",
-    "middle_childcare_centre": "id",
-    "business_improvement_area": "area_id",
-    "proposed_business_improvement_area": "objectid",
-    "film_permit_all": "objectid",
-    "film_permit_parking_all": "objectid",
-    "hotel": "id",
-    "convenience_store": "objectid",
-    "supermarket": "objectid",
-    "place_of_worship": "objectid",
-    "ymca": "objectid",
-    "aboriginal_organization": "id",
-    "attraction": "objectid",
-    "dropin": "objectid",
-    "early_years_centre": "id",
-    "family_resource_centre": "objectid",
-    "food_bank": "objectid",
-    "longterm_care": "id",
-    "parenting_family_literacy": "id",
-    "retirement_home": "id",
-    "senior_housing": "objectid",
-    "shelter": "objectid",
-    "social_housing": "objectid",
-    "private_road": "objectid",
-    "school": "objectid",
-    "library": "id",
-	}
-#-------------------------------------------------------------------------------------------------------
 def mapserver_name(mapserver_n):
     """
     Function to return the mapserver name from integer
@@ -89,10 +44,10 @@ def get_tablename(mapserver, layer_id):
 
     Parameters
     -----------
-    mapserver: string
+    mapserver : string
         The name of the mapserver we are accessing, returned from function mapserver_name
     
-    layer_id: integer
+    layer_id : integer
         Unique layer id that represent a single layer in the mapserver
     
     Returns
@@ -150,7 +105,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
     primary_key : string
         Primary key for this layer, returned from dictionary pk_dict
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -213,7 +168,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     schema_name : string
         The schema in which the table will be inserted into
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -232,24 +187,93 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     insert_column = sql.SQL(',').join(insert_column_list)
     
     # Date format YYYY-MM-DD, for the SQL query
-    today_string = datetime.date.today().strftime('%Y-%m-%d')
+    partition_date = pendulum.today()
+    today_string = partition_date.to_date_string()
+    
+    # Date format _YYYY, to be attached at the end of output_table name
+    yr_attachment = '_' + today_string[0:4]
+    yr_partition_start = partition_date.start_of('year')
+    yr_partition_end = yr_partition_start + pendulum.duration(years=1)
+    output_table_with_yr = output_table + yr_attachment
+    
     # Date format _YYYYMMDD, to be attached at the end of output_table name
-    date_attachment = datetime.date.today().strftime('_%Y%m%d')
+    date_attachment = partition_date.strftime('_%Y%m%d')
     output_table_with_date = output_table + date_attachment
     index_name = output_table_with_date + '_idx'
+    
     
     with con:
         with con.cursor() as cur:
             
-            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)").format(schema_child_table = sql.Identifier(schema_name, output_table_with_date),
-                                                                                                                                            schema_parent_table = sql.Identifier(schema_name, output_table))
+            yr_partition_sql = sql.SQL(
+                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES FROM (%s) TO (%s) PARTITION BY LIST (version_date);"
+            ).format(
+                schema_child_table = sql.Identifier(schema_name, output_table_with_yr),
+                schema_parent_table = sql.Identifier(schema_name, output_table)
+            )
+            cur.execute(yr_partition_sql, (yr_partition_start.to_date_string(), yr_partition_end.to_date_string()))
+            
+            create_sql = sql.SQL(
+                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)"
+            ).format(
+                schema_child_table = sql.Identifier(schema_name, output_table_with_date),
+                schema_parent_table = sql.Identifier(schema_name, output_table_with_yr)
+            )
             cur.execute(create_sql, (today_string, ))
 
-            index_sql = sql.SQL("CREATE INDEX {idx_name} ON {schema_child_table} USING gist (geom)").format(idx_name=sql.Identifier(index_name),
-                                                                                                                schema_child_table=sql.Identifier(schema_name, output_table_with_date))
+            index_sql = sql.SQL(
+                "CREATE INDEX IF NOT EXISTS {idx_name} ON {schema_child_table} USING gist (geom)"
+            ).format(
+                idx_name=sql.Identifier(index_name),
+                schema_child_table=sql.Identifier(schema_name, output_table_with_date)
+            )
             cur.execute(index_sql)
             
-    return insert_column, output_table_with_date
+    return insert_column, output_table
+
+def create_table(output_table, return_json, schema_name, con):
+    """
+    Function to create a new table in postgresql for the layer (for regular table)
+
+    Parameter
+    ---------
+    output_table : string
+        Table name for postgresql, returned from function get_tablename
+
+    return_json : json
+        Resulted json response from calling the api, returned from function get_data
+    
+    schema_name : string
+        The schema in which the table will be inserted into
+        
+    con : Connection
+        Could be the connection to bigdata or to on-prem server
+
+    Returns
+    --------
+    insert_columm : SQL composed
+        Composed object of column name and types use for creating a new postgresql table
+    """
+    
+    fields = return_json['fields']
+    insert_column_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) for field in fields]
+    insert_column_list.append(sql.Identifier('geom'))
+    insert_column = sql.SQL(',').join(insert_column_list)
+    
+    with con:
+        with con.cursor() as cur:
+            
+            col_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) + sql.SQL(' ') + sql.SQL(get_fieldtype(field["type"])) for field in fields]
+            col_list.append(sql.Identifier('geom') + sql.SQL(' ') + sql.SQL('geometry'))
+            col_list_string = sql.SQL(',').join(col_list)
+            
+            LOGGER.info(col_list_string.as_string(con))
+            create_sql = sql.SQL("CREATE TABLE IF NOT EXISTS {schema_table} ({columns})").format(schema_table = sql.Identifier(schema_name, output_table),
+                                                                      columns = col_list_string)
+            LOGGER.info(create_sql.as_string(con))
+            cur.execute(create_sql)
+
+    return insert_column
 
 # Geometry Switcher 
 def line(geom):
@@ -267,7 +291,10 @@ def get_geometry(geometry_type, geom):
         'esriGeometryPolygon': polygon
     }
     func = switcher.get(geometry_type)
-    geometry = (func(geom)) 
+    try:
+        geometry = (func(geom))
+    except IndexError:
+        geometry = None
     return geometry
 
 def to_time(input):
@@ -285,10 +312,10 @@ def to_time(input):
         Time in the type of postgresql timestamp without time zone
     """
     
-    time = datetime.datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
+    time = datetime.fromtimestamp(abs(input)/1000).strftime('%Y-%m-%d %H:%M:%S')
     return time
 
-def get_data(mapserver, layer_id, max_number = None, record_max = None):
+def get_data(mapserver, layer_id, include_additional_feature, max_number = None, record_max = None, row_count_only: bool = False):
     """
     Function to retreive layer data from GCCView rest api
 
@@ -305,6 +332,12 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
 
     record_max : integer
         Number for parameter `resultRecordCount` in the query, indicating the number of rows this query is going to fetch
+    
+    include_additional_feature : bool
+        Boolean flag to include additional 5 feature codes (Trails, Busway, Laneway, Acess Road, and Other Ramp)
+        
+    row_count_only: bool
+        Use True to get row count only for data check.
 
     Returns
     --------
@@ -312,60 +345,83 @@ def get_data(mapserver, layer_id, max_number = None, record_max = None):
         Resulted json response from calling the GCCView rest api
     """
     return_json = None
-    base_url = "https://insideto-gis.toronto.ca/arcgis/rest/services/{}/MapServer/{}/query".format(mapserver, layer_id)
-    
-    # If the data we want to get is centreline
+    base_url = f"https://insideto-gis.toronto.ca/arcgis/rest/services/{mapserver}/MapServer/{layer_id}/query"
+    # Exclude negative objectids from ALL layers based on recommendation from GCC (#1138)
+    where = "OBJECTID>0"
+    # Exception if the data we want to get is centreline
     if mapserver == 'cot_geospatial' and layer_id == 2:
-        query = {"where": "\"FEATURE_CODE_DESC\" IN ('Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending')",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
-    else:
-        query = {"where":"1=1",
-             "outFields": "*",
-             "outSR": '4326',
-             "returnGeometry": "true",
-             "returnTrueCurves": "false",
-             "returnIdsOnly": "false",
-             "returnCountOnly": "false",
-             "returnZ": "false",
-             "returnM": "false",
-             "orderByFields": "OBJECTID", 
-             "returnDistinctValues": "false",
-             "returnExtentsOnly": "false",
-             "resultOffset": "{}".format(max_number),
-             "resultRecordCount": "{}".format(record_max),
-             "f":"json"}
+        feature_list = ['Collector','Collector Ramp','Expressway','Expressway Ramp','Local','Major Arterial','Major Arterial Ramp','Minor Arterial','Minor Arterial Ramp','Pending', 'Other']
+        if include_additional_feature: # Then add the additional 5 roadclasses
+            feature_list += ['Trail', 'Busway', 'Laneway', 'Other Ramp', 'Access Road']
+        where += " AND FEATURE_CODE_DESC IN ('{}')".format("','".join(feature_list))
+        
+    query = {"where": where,
+            "outFields": "*",
+            "outSR": '4326',
+            "returnGeometry": "true",
+            "returnTrueCurves": "false",
+            "returnIdsOnly": "false",
+            "returnCountOnly": f"{row_count_only}",
+            "returnZ": "false",
+            "returnM": "false",
+            "orderByFields": "OBJECTID", 
+            "returnDistinctValues": "false",
+            "returnExtentsOnly": "false",
+            "resultOffset": f"{max_number}",
+            "resultRecordCount": f"{record_max}",
+            "f":"json"}
     
-    for retry in range(3):
+    for _ in range(3):
         try:
             r = requests.get(base_url, params = query, verify = False, timeout = 300)
             r.raise_for_status()
         except requests.exceptions.HTTPError as err_h:
-            LOGGER.error("Invalid HTTP response: ", err_h)
+            LOGGER.error("Invalid HTTP response: %s", err_h)
         except requests.exceptions.ConnectionError as err_c:
-            LOGGER.error("Network problem: ", err_c)
-            sleep(10)
+            LOGGER.error("Network problem: %s", err_c)
         except requests.exceptions.Timeout as err_t:
-            LOGGER.error("Timeout: ", err_t)
+            LOGGER.error("Timeout: %s", err_t)
         except requests.exceptions.RequestException as err:
-            LOGGER.error("Error: ", err)
+            LOGGER.error("Error: %s", err)
         else:
+            if r.status_code != 200:
+                LOGGER.error("Query was not successful. Response: %s", r)
             return_json = r.json()
             break
     
+    if row_count_only:
+        try:
+            return return_json['count']
+        except KeyError:
+            LOGGER.info('return_json %', return_json)
+            raise KeyError(f"Return json missing count field.")
+    
+    #check neccessary fields are contained in the return json.
+    keys = ['fields', 'features', 'geometryType']
+    for k in keys:
+        if not(k in return_json.keys()):
+            LOGGER.error("return_json: %s", return_json)
+            raise KeyError(f"Return json missing field: {k}")
+    
     return return_json
+
+get_src_row_count = partial(get_data, max_number = None, record_max = None, row_count_only = True)
+
+def get_dest_row_count(conn, schema, table, is_audited, version_date):
+    with conn.cursor() as cur:
+        if is_audited:
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table};").format(
+                schema = sql.Identifier(schema),
+                table = sql.Identifier(table)
+            ))
+        else:
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date};").format(
+                schema = sql.Identifier(schema),
+                table = sql.Identifier(table),
+                version_date = sql.Literal(version_date)
+            ))
+        result = cur.fetchone()[0]
+        return result
 
 def find_limit(return_json):
     """
@@ -381,39 +437,38 @@ def find_limit(return_json):
     keep_adding : Boolean
         boolean 'keep_adding' indicating if last query returned all rows in the layer
     """
-    
-    if return_json.get('exceededTransferLimit', False) == True:
-        keep_adding = True
-    else:
-        keep_adding = False
-    return keep_adding
+    return return_json.get('exceededTransferLimit', False)
 
-def insert_audited_data(output_table, insert_column, return_json, schema_name, con):
+def insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned):
     """
-    Function to insert data to our postgresql database, the data is inserted into a temp table (for audited tables)
-
+    Function to insert data to our postgresql database
     Parameters
     ----------
     output_table : string
         Table name for postgresql, returned from function get_tablename
-
     insert_column : SQL composed
         Composed object of column name and types use for creating a new postgresql table
-
     return_json : json
         Resulted json response from calling the api, returned from function get_data
     
     schema_name : string
         The schema in which the table will be inserted into
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
+        
+    is_audited : Boolean
+        Whether we want to have the table be audited (true) or be non-audited (false)
+
+    is_partitioned : Boolean
+        Whether we want to have the table be partitioned (true) or neither audited nor partitioned(false)
     """
     rows = []
     features = return_json['features']
     fields = return_json['fields']
     trials = [[field['name'], field['type']] for field in fields]
-
+    today_string = pendulum.today().strftime('%Y-%m-%d')
+    
     for feature in features:
         geom = feature['geometry']
         geometry_type = return_json['geometryType']
@@ -425,77 +480,25 @@ def insert_audited_data(output_table, insert_column, return_json, schema_name, c
                 row.append(to_time(feature['attributes'][trial[0]]))
             else:
                 row.append(feature['attributes'][trial[0]])
-
+                
+        if (not is_audited) and is_partitioned:
+            row.insert(0, today_string)
         row.append(geometry)
         
         rows.append(row)
     
-    # Since this is a temporary table, name it '_table' as opposed to 'table' for now (for audited tables)
-    temp_table_name = '_' + output_table
-    
+    if is_audited:
+        output_table = '_' + output_table
+
     insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, temp_table_name), 
+        schema_table = sql.Identifier(schema_name, output_table), 
         columns = insert_column
     )
+        
     with con:
         with con.cursor() as cur:
                execute_values(cur, insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
-
-def insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con):
-    """
-    Function to insert data to our postgresql database (for partitioned tables)
-
-    Parameters
-    ----------
-    output_table_with_date : string
-        Table name for postgresql, returned from function create_partitioned_table
-
-    insert_column : SQL composed
-        Composed object of column name and types use for creating a new postgresql table
-
-    return_json : json
-        Resulted json response from calling the api, returned from function get_data
-    
-    schema_name : string
-        The schema in which the table will be inserted into
-    
-    con: Airflow Connection
-        Could be the connection to bigdata or to on-prem server
-    """   
-    
-    today_string = datetime.date.today().strftime('%Y-%m-%d')
-    
-    rows = []
-    features = return_json['features']
-    fields = return_json['fields']
-    trials = [[field['name'], field['type']] for field in fields]
-    for feature in features:
-        geom = feature['geometry']
-        geometry_type = return_json['geometryType']
-        geometry = get_geometry(geometry_type, geom)
-        
-        row = []
-        for trial in trials:
-            if trial[1] == 'esriFieldTypeDate' and feature['attributes'][trial[0]] != None:
-                row.append(to_time(feature['attributes'][trial[0]]))
-            else:
-                row.append(feature['attributes'][trial[0]])
-
-        row.insert(0, today_string)
-        row.append(geometry)
-        
-        rows.append(row)
-
-    
-    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, output_table_with_date), 
-        columns = insert_column
-    )
-    with con:
-        with con.cursor() as cur:
-               execute_values(cur, insert, rows)
-    LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table_with_date)
 
 def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
     """
@@ -519,7 +522,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     schema_name : string
         The schema in which the table will be inserted into
     
-    con: Airflow Connection
+    con : Airflow Connection
         Could be the connection to bigdata or to on-prem server
     
     Returns
@@ -534,8 +537,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     # Name the temporary table '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
-    now = datetime.datetime.now()
-    date = (str(now.year)+str(now.month)+str(now.day))
+    date = pendulum.today().strftime('%Y-%m-%d')
     
     # Find if old table exists
     with con:
@@ -596,7 +598,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     return successful_execution
 #-------------------------------------------------------------------------------------------------------
 # base main function, also compatible with Airflow
-def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con = None):
+def get_layer(mapserver_n, layer_id, schema_name, is_audited, include_additional_feature, cred = None, con = None, primary_key = None, is_partitioned = True):
     """
     This function calls to the GCCview rest API and inserts the outputs to the output table in the postgres database.
 
@@ -611,19 +613,21 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
     schema_name : string
         The schema in which the table will be inserted into
     
-    is_audited: Boolean
-        Whether we want to have the table be audited (true) or be partitioned (false)
+    is_audited : Boolean
+        Whether we want to have the table be audited (true) or be non-audited (false)
     
-    cred: Airflow PostgresHook
+    cred : Airflow PostgresHook
         Contains credentials to enable a connection to a database
         Expects a valid cred input when running Airflow DAG
     
-    con: connection to database
+    con : connection to database
         Connection object that can connect to a particular database
         Expects a valid con object if using command prompt
-    """
-    successful_task_run = True
 
+    is_partitioned : Boolean
+        Whether we want to have the table be partitioned (true) or neither audited nor partitioned(false)
+    """
+        
     # For Airflow DAG
     if cred is not None:
         con = cred.get_conn()
@@ -639,57 +643,40 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
         LOGGER.error("Invalid mapserver and/or layer Id")
         return
     #--------------------------------
-    if is_audited:
-        primary_key = pk_dict.get(output_table)
-    #--------------------------------
     keep_adding = True
-    counter = 0
+    total = 0
+    #--------------------------------
+    if is_audited and primary_key is None:
+            LOGGER.error("Audited tables should have a primary key.")
+    if not(is_audited) and primary_key is not None:
+        LOGGER.error("Non-audited tables do not use the primary key.")
+    #--------------------------------
+    #get first data pull (no offset), create tables.
+    return_json = get_data(mapserver, layer_id, include_additional_feature)
+    if is_audited:
+        (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
+    elif is_partitioned:
+        (insert_column, output_table) = create_partitioned_table(output_table, return_json, schema_name, con)
+    else:
+        insert_column = create_table(output_table, return_json, schema_name, con)
     
-    while keep_adding == True:
-        
-        if counter == 0:
-            return_json = get_data(mapserver, layer_id)
-            if is_audited:
-                (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
-            else:
-                (insert_column, output_table_with_date) = create_partitioned_table(output_table, return_json, schema_name, con)
-            
-            features = return_json['features']
-            record_max=(len(features))
-            max_number = record_max
-            
-            if is_audited:
-                insert_audited_data(output_table, insert_column, return_json, schema_name, con)
-            else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
-            
-            counter += 1
-            keep_adding = find_limit(return_json)
-            if keep_adding == False:
-                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
-        else:
-            return_json = get_data(mapserver, layer_id, max_number = max_number, record_max = record_max)
-            if is_audited:
-                insert_audited_data(output_table, insert_column, return_json, schema_name, con)
-            else:
-                insert_partitioned_data(output_table_with_date, insert_column, return_json, schema_name, con)
-            
-            counter += 1
-            keep_adding = find_limit(return_json)
-            if keep_adding == True:
-                max_number = max_number + record_max
-            else:
-                LOGGER.info('All records from [mapserver: %s, layerID: %d] have been inserted into %s', mapserver, layer_id, output_table)
+    while keep_adding:
+        insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned)
+        record_count = len(return_json['features'])
+        total += record_count
+        keep_adding = find_limit(return_json) #checks if all records fetched
+        if keep_adding:
+            #get next batch using offset (max_number)
+            return_json = get_data(mapserver, layer_id, include_additional_feature,  max_number = total, record_max = record_count)
+    LOGGER.info('%s records from [mapserver: %s, layerID: %d] have been inserted into %s', total, mapserver, layer_id, output_table)
     
     if is_audited:
-        successful_task_run = update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
-
-    '''
-    # Raise error if UPSERT failed
-    if not successful_task_run:
-        raise AirflowFailException
-    '''
-
+        try:
+            update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
+        except Exception as err:
+            LOGGER.exception("Unable to update table %s", err)
+    
+        
 @click.command()
 @click.option('--mapserver', '-ms', type = int, required = True, 
                 help = 'Mapserver number, e.g. cotgeospatial_2 will be 2')
@@ -698,10 +685,16 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, cred = None, con =
 @click.option('--schema-name', '-s', type = str, required = True
                 , help = 'Name of destination schema')
 @click.option('--is-audited', '-a', is_flag=True, show_default=True, default=False, 
-                help = 'Whether the table is supposed to be audited (T) or partitioned (F)')
+                help = 'Whether the table is supposed to be audited (T) or non-audited(F)')
+@click.option('--primary-key', '-pk', type = str, default=None, required = False,
+                help = 'Primary key. Only include if table is audited.')
 @click.option('--con', '-c', type = str, required = True, 
                 help = 'The path to the credential config file')
-def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
+@click.option('--is-partitioned', '-p', is_flag=True, show_default=True, default=False, 
+                help = 'Whether the table is supposed to be partitioned (T) or not partitioned (F)')
+@click.option('--include_additional_feature', '-a', is_flag=True, show_default=True, default=False,
+                help = 'Whether additional layer should be pulled (only applicable for centreline')
+def manual_get_layer(mapserver, layer_id, schema_name, is_audited, include_additional_feature, primary_key, con, is_partitioned=True):
     """
     This script pulls a GIS layer from GCC servers into the databases of
     the Data and Analytics Unit.
@@ -715,7 +708,17 @@ def manual_get_layer(mapserver, layer_id, schema_name, is_audited, con):
     dbset = CONFIG['DBSETTINGS']
     connection_obj = connect(**dbset)
     # get_layer function
-    get_layer(mapserver, layer_id, schema_name, is_audited, con=connection_obj)
+
+    get_layer(
+        mapserver_n = mapserver,
+        layer_id = layer_id,
+        schema_name = schema_name,
+        is_audited = is_audited,
+        include_additional_feature = include_additional_feature,
+        primary_key = primary_key,
+        con=connection_obj,
+        is_partitioned = is_partitioned
+    )
 
 if __name__ == '__main__':
     manual_get_layer()

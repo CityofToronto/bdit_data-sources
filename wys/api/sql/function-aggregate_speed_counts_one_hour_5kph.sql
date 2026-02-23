@@ -1,85 +1,67 @@
--- FUNCTION: wys.aggregate_speed_counts_one_hour()
+-- FUNCTION: wys.aggregate_speed_counts_one_hour_5kph()
 
--- DROP FUNCTION wys.aggregate_speed_counts_one_hour();
+-- DROP FUNCTION wys.aggregate_speed_counts_one_hour_5kph();
 
-CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph( _start_date date, _end_date date
-	)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-
-    COST 100
-    VOLATILE SECURITY DEFINER 
+CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph(
+    _start_date date,
+    _end_date date
+)
+RETURNS void
+LANGUAGE 'plpgsql'
+COST 100
+VOLATILE SECURITY DEFINER
 AS $BODY$
 
 BEGIN
-	
-
-	WITH insert_data AS (
-		--Aggregated into speed bins and 1 hour bin
-		INSERT INTO 	wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
-		SELECT 			api_id, date_trunc('hour', datetime_bin) hr, speed_id, sum(count) AS volume
-		FROM 			wys.raw_data
-		INNER JOIN 		wys.speed_bins_old ON speed <@ speed_bin
-		WHERE			speed_count_uid IS NULL AND 
-                        "count" IS NOT NULL AND 
-                        datetime_bin >= _start_date AND datetime_bin < _end_date
-        
-		GROUP BY 		api_id, hr,  speed_id 
-		RETURNING 		speed_counts_agg_5kph_id, api_id, datetime_bin, speed_id
-		)
-	
-	UPDATE 	wys.raw_data A
-	SET 	speed_count_uid=B.speed_counts_agg_5kph_id
-	FROM 	insert_data B
-	WHERE 	A.speed_count_uid IS NULL AND
-	 		A.api_id=B.api_id AND
-	 		A.datetime_bin >= B.datetime_bin AND 
-            A.datetime_bin < B.datetime_bin + INTERVAL '1 hour';
+    
+    WITH insert_data AS (
+        --Aggregated into speed bins and 1 hour bin
+        INSERT INTO wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
+        SELECT
+            raw.api_id,
+            date_trunc('hour', raw.datetime_bin) AS hr,
+            sbo.speed_id,
+            sum(raw.count) AS volume
+        FROM wys.raw_data AS raw
+        JOIN wys.speed_bins_old AS sbo ON raw.speed <@ sbo.speed_bin
+        WHERE 
+            raw.speed_count_uid IS NULL
+            AND raw.count IS NOT NULL
+            AND raw.datetime_bin >= _start_date
+            AND raw.datetime_bin < _end_date
+        GROUP BY
+            raw.api_id,
+            hr, 
+            sbo.speed_id 
+        RETURNING 
+            speed_counts_agg_5kph_id,
+            api_id,
+            datetime_bin,
+            speed_id
+        )
+    
+    UPDATE wys.raw_data AS raw
+    SET speed_count_uid = ins.speed_counts_agg_5kph_id
+    FROM insert_data AS ins
+    JOIN wys.speed_bins_old AS sbo USING (speed_id)
+    WHERE
+        raw.api_id = ins.api_id
+        AND raw.speed <@ sbo.speed_bin
+        AND raw.datetime_bin >= ins.datetime_bin
+        AND raw.datetime_bin < ins.datetime_bin + interval '1 hour'
+        --select the correct partitions
+        AND raw.datetime_bin >= _start_date
+        AND raw.datetime_bin < _end_date;
 
 END;
 
 $BODY$;
 
 ALTER FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date)
-    OWNER TO wys_admins;
+OWNER TO wys_admins;
 
 GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) TO dbadmin;
 
 GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) TO wys_bot;
 
-REVOKE EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) FROM PUBLIC;
-
-CREATE OR REPLACE FUNCTION wys.aggregate_speed_counts_one_hour_5kph(_mon DATE
-	)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-
-    COST 100
-    VOLATILE SECURITY DEFINER 
-AS $BODY$
-
-BEGIN
-	
-
-		--Aggregated into speed bins and 1 hour bin
-		INSERT INTO wys.speed_counts_agg_5kph (api_id, datetime_bin, speed_id, volume)
-		SELECT api_id, date_trunc('hour', datetime_bin) dt, speed_id, sum(count) AS volume
-		FROM wys.raw_data
-		INNER JOIN wys.speed_bins_old ON speed <@ speed_bin
-		WHERE	datetime_bin >= _mon AND datetime_bin < _mon + INTERVAL '1 month'
-		GROUP BY api_id, dt,  speed_id
-		ON CONFLICT DO NOTHING;
-		
- 
-END;
-
-$BODY$;
-
-ALTER FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date)
-    OWNER TO rdumas;
-
-GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date) TO dbadmin;
-
-GRANT EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date) TO wys_bot;
-
-REVOKE EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION wys.aggregate_speed_counts_one_hour_5kph(date, date) FROM public;

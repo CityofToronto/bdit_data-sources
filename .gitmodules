@@ -1,3 +1,6 @@
-[submodule "ttc/nextbus_scraper"]
-	path = ttc/nextbus_scraper/retro-gtfs
-	url = https://github.com/SAUSy-Lab/retro-gtfs.git
+[submodule "bdit_dag_utils"]
+	path = bdit_dag_utils
+	url = https://github.com/CityofToronto/bdit_dag_utils.git
+[submodule "airflow3_bdit_dag_utils"]
+	path = airflow3_bdit_dag_utils
+	url = https://github.com/CityofToronto/bdit_dag_utils.git

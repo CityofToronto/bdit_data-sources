@@ -1,6 +1,10 @@
 from __future__ import print_function
+import os
+import re
+import json
+
 from google.oauth2 import service_account
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 
 import configparser
@@ -12,139 +16,146 @@ from psycopg2 import Error
 from datetime import datetime
 import logging 
 from time import sleep
-import socket
+
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+SQL_DIR = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), 'sql')
+
 def read_masterlist(con, service):
     dict_table = {}
     ward_list = []
-    with con:
-        with con.cursor() as cur:
-            read_table='''SELECT spreadsheet_id, range_name, schema_name, table_name FROM wys.ward_masterlist ORDER BY ward_no'''
-            cur.execute(read_table)
-            ward_list=cur.fetchall()
-            LOGGER.debug(ward_list)
+    with con.cursor() as cur:
+        read_table='''SELECT spreadsheet_id, range_name, schema_name, table_name FROM wys.ward_masterlist ORDER BY ward_no'''
+        cur.execute(read_table)
+        ward_list=cur.fetchall()
+        LOGGER.debug(ward_list)
 
+    empty_wards = []
     for i in range(25):
         dict_table.update({i+1:ward_list[i]})
         LOGGER.info('Working on ward %s', i+1)
-        pull_from_sheet(con, service, dict_table, dict_table[i+1])
-    
+        if not pull_from_sheet(con, service, dict_table[i+1]):
+            empty_wards.append(i+1)
     LOGGER.info('Completed')
+    
+    return empty_wards
 
-def pull_from_sheet(con, service, dict_table, ward, *args):
+def pull_from_sheet(
+    con: PostgresHook,
+    service: Resource,
+    ward: list,
+    context
+) -> bool:
+    """Pulls WYS data of a ward and insert into the database
+    
+    This function calls the Google Sheets API, pulls values from the Sheet using ``service``
+    and pushes them into the postgres table ``wys.ward_<ward_no>`` using ``con``.
+
+    Args:
+        con: Connection details to bigdata database.
+        service: Credentials to access google sheets.
+        ward: Ward's details of spreadsheet_id, range_name, schema_name, and table_name
+
+    Returns:
+        True if it succeeds to pull/insert data for the given ward; otherwise, False.
+    """
     spreadsheet_id = str(ward[0])
     range_name = str(ward[1])
-    schema_name = str(ward[2])
-    table_name = str(ward[3])
-    ward_no = (str(ward[3])).split('_',1)[1]
+    ward_no = ward[3]
+    table_name = f"ward_{ward_no}"
     
-    for attempt in range(3):
+    values = None
+    for _ in range(3):
         try:
             sheet = service.spreadsheets()
-            result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
+            request = sheet.values().get(spreadsheetId=spreadsheet_id, range=range_name)
+            result = request.execute()
             values = result.get('values', [])
-        except socket.timeout:
-            sleep(120)
+        except TimeoutError:
+            LOGGER.error("Cannot access: " + json.loads(request.to_json())["uri"])
         except HttpError as err3:
+            LOGGER.warning(str(err3))
             sleep(120)
         else:
             break
-    else: 
+    else:
         LOGGER.warning('Attempts exceeded.')
-
+        raise AirflowFailException('Attempts exceeded trying to access google sheet %s', spreadsheet_id)
+        
+    match = re.search(r'\d+', range_name)  # Find the first number in the string
+    row_num = int(match.group(0))-1
     rows = []
     badrows = []
     if not values:
-        LOGGER.warning('No data found.')
+        LOGGER.warning(f"No data was found for ward {ward_no}")
+        return False
     else:
-        for row in values:           
-            try:             
-                if row[6] and row[8] and row[10]:
+        for row in values:
+            row_num+=1
+            if len(row) < 14:
+                error = f">Row `{row_num}` ({row}): " + "`End of Row` missing"
+                badrows.append(error)
+                continue
+            try:
+                #check installation_date and new_sign_number
+                if row[6] and row[10]:
                     try: 
                         installation = datetime.strptime(row[6], '%m/%d/%Y').date()
-                        removal = datetime.strptime(row[8], '%m/%d/%Y').date()
-                        i = (ward_no, row[0], row[1], row[2], row[3], installation, removal, row[10], row[11], row[13])
-                        rows.append(i)
-                        LOGGER.debug(row)
-                    except:
-                        i = (ward_no, row[0], row[1], row[2], row[3], row[6], row[8], row[10], row[11], row[13])
-                        badrows.append(i)
-                        LOGGER.warning('Date format is not MM/DD/YYYY')
+                    except ValueError as e:
+                        error = f">Row `{row_num}`, error with installation date: `" + str(e) + '`'
+                        badrows.append(error)
+                    #error catching for optional work order field.
+                    try:
+                        work_order = int(row[7])
+                    except ValueError as e:
+                        work_order = None
+                    #change: add records even without removal date. 
+                    if row[8]:
+                        try:
+                            removal = datetime.strptime(row[8], '%m/%d/%Y').date()
+                        except ValueError as e:
+                            error = f">Row `{row_num}`, error with removal date: `" + str(e) + '`'
+                            badrows.append(error)
+                    else:
+                        removal = None
+                    i = (
+                        ward_no, row[0], row[1], row[2], row[3], installation,
+                        removal, row[10], row[11], work_order, row[13])
+                    rows.append(i)
+                    LOGGER.debug(row)
                 else:
                     LOGGER.debug('This row is not included: %s', row)
             except (IndexError, KeyError) as err1:
-                LOGGER.error('An error occurs at %s', row)
-                LOGGER.error(err1)
+                error = f">Row `{row_num}` ({row}): `" + str(err1) + '`'
+                badrows.append(error)
         if len(badrows) > 0:
-            LOGGER.warning('Please fix date formats for %s rows in %s at %s', len(badrows), table_name, badrows)
+            LOGGER.warning('%s rows need fixing in %s', len(badrows), table_name)
+            context.get("task_instance").xcom_push(key="badrows", value=badrows)
         else:
             LOGGER.info('%s does not have any row with different date format', table_name)
-
-    insert = sql.SQL('''
-        WITH new_data (ward_no, location, from_street, to_street, direction, 
-                    installation_date, removal_date, new_sign_number, comments, 
-                    confirmed) 
-                    AS (
-                VALUES %s) 
-        , dupes AS(
-            /*Identify rows that will violate the unique constraint in the 
-            upsert*/
-            INSERT INTO wys.mobile_sign_installations_dupes
-            SELECT ward_no::INT, location, from_street, to_street, direction, 
-            installation_date, removal_date, new_sign_number, comments
-            FROM new_data
-            NATURAL JOIN (SELECT new_sign_number, installation_date
-                    FROM new_data
-                    GROUP BY new_sign_number, installation_date
-                    HAVING COUNT(*)> 1) dupes
-            ON CONFLICT ( location, from_street, to_street, direction, 
-                        installation_date, removal_date, new_sign_number, 
-                        comments)
-            DO NOTHING
-            RETURNING new_sign_number, installation_date
-        )
-        INSERT INTO {}.{} AS existing (ward_no, location, from_street, to_street, 
-                           direction, installation_date, removal_date, 
-                           new_sign_number, comments, confirmed) 
-        SELECT new_data.ward_no::INT, location, from_street, to_street, 
-                direction, installation_date, removal_date, 
-                new_sign_number, comments, confirmed
-        FROM new_data
-        LEFT JOIN dupes USING (new_sign_number, installation_date)
-        --Don't try to insert dupes
-        WHERE dupes.new_sign_number IS NULL
-        ON CONFLICT (installation_date, new_sign_number)
-        DO UPDATE SET 
-            removal_date=EXCLUDED.removal_date,
-            comments=EXCLUDED.comments,
-            direction=EXCLUDED.direction,
-            location=EXCLUDED.location,
-            from_street=EXCLUDED.from_street,
-            to_street=EXCLUDED.to_street
-        -- Prevent unnecessary update if data are unchanged
-        WHERE existing.removal_date!=EXCLUDED.removal_date 
-            OR existing.comments!=EXCLUDED.comments
-            OR existing.direction!=EXCLUDED.direction
-            OR existing.location!=EXCLUDED.location
-            OR existing.from_street!=EXCLUDED.from_street
-            OR existing.to_street!=EXCLUDED.to_street
-        ''').format(sql.Identifier(schema_name), sql.Identifier(table_name)) 
+    
+    fpath = os.path.join(SQL_DIR, 'insert-mobile_sign_installations.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        insert = sql.SQL(file.read())
     
     LOGGER.debug(rows)
 
     try:
-        with con:
-            with con.cursor() as cur:
-                execute_values(cur, insert, rows)
+        with con.cursor() as cur:
+            execute_values(cur, insert, rows)
         LOGGER.info('Table %s is done', table_name)
     except Error as err2:
         LOGGER.error('There was an error inserting into %s', table_name)
         LOGGER.error(err2)
+        LOGGER.error(rows)
+        return False
     
     LOGGER.info('Uploaded %s rows to PostgreSQL for %s', len(rows), table_name)
+    return True
 
 if __name__ == '__main__':
     CONFIG = configparser.ConfigParser()

@@ -15,7 +15,7 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [Bluetooth Detectors](#bluetooth-detectors)
 - [Collisions](#collisions)
 - [Cycling App (inactive)](#cycling-app-inactive)
-- [Events (inactive)](#events-inactive)
+- [Events](#events)
 - [GIS - Geographic Data](#gis---geographic-data)
   - [Assets](#assets)
     - [Red Light Cameras](#red-light-cameras)
@@ -26,11 +26,12 @@ For those curious about what data we manage is released on OpenData, see the [Op
 - [Incidents (inactive)](#incidents-inactive)
 - [INRIX (inactive)](#inrix-inactive)
 - [Parking (inactive)](#parking-inactive)
-- [Road Closure (inactive)](#road-closure-inactive)
 - [TTC (inactive)](#ttc-inactive)
 - [Volume Data](#volume-data)
   - [Miovision - Multi-modal Permanent Video Counters](#miovision---multi-modal-permanent-video-counters)
-  - [RESCU - Loop Detectors](#rescu---loop-detectors)
+  - [RESCU - Loop Detectors (inactive)](#rescu---loop-detectors-inactive)
+  - [Short-term Counting Program](#short-term-counting-program)
+  - [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds)
 - [Watch Your Speed signs](#watch-your-speed-signs)
 - [Weather](#weather)
 - [Open Data Releases](#open-data-releases)
@@ -58,11 +59,13 @@ The collisions dataset consists of data on individuals involved in traffic colli
 
 The Cycling App collected OD and trip data until 2016.
 
-## Events (inactive)
+## Events
 
 [`events/`](events/)
 
-How do special events impact traffic in the city? Data sources include the City's Open Data and TicketMaster.
+How does construction and special events impact traffic in the city?
+- City road permitting data (RoDARs)
+- (oudated) Special events from City's Open Data and TicketMaster
 
 ## GIS - Geographic Data
 
@@ -96,6 +99,8 @@ Contains SQL used to transform text description of street (in bylaws) into centr
 
 ## HERE Travel Time Data
 
+[`here/`](here/)
+
 Travel time data provided by HERE Technologies from a mix of vehicle probes. Daily extracts of 5-min aggregated speed data for each link in the city (where data are available).
 
 ## Incidents (inactive)
@@ -113,11 +118,6 @@ Data collected from a variety of traffic probes from 2007 to 2016 for major stre
 
 This contains R and SQL files for pulling parking lots and parking tickets from Open Data. They might be useful but haven't been documented or automated.
 
-## Road Closure (inactive)
-[`road_closure/`](road_closure/)
-
-This directory contains a Python file to pull and parse the XML feed of road closures. This process hasn't been automated (and more recent versions of the API use JSON).
-
 ## TTC (inactive)
 [`ttc/`](ttc/) 
 
@@ -132,14 +132,24 @@ This contains some valiant attempts at transforming CIS vehicle location data pr
 
 Miovision currently provides volume counts gathered by cameras installed at specific intersections. There are 32 intersections in total. Miovision then processes the video footage and provides volume counts in aggregated 1 minute bins. Data stored in 1min bin (TMC) is available in `miovision_api.volumes` whereas data stored in 15min bin for TMC is available in `miovision_api.volumes_15min_tmc` and data stored in 15min for ATR is available in `miovision_api.volumes_15min`. 
 
-### RESCU - Loop Detectors
+### RESCU - Loop Detectors (inactive)
 [`volumes/rescu/`](volumes/rescu/)
 
-AKA Vehicle Detector Station (VDS)
+Deprecated. See [Vehicle Detector Station (VDS)](#vehicle-detector-station-vds). 
 
-Road Emergency Services Communication Unit (RESCU) data tracks traffic volume on expressways using loop detectors. 
-More information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
+### Short-term Counting Program
+[`volumes/short_term_counting_program/`](volumes/short_term_counting_program/)
+
+Short-term traffic counts are conducted on an ad-hoc basis as the need arises, and may be done throughout the year both at intersections and mid-block. Much of this dataset is also available through the internal application MOVE and data go as far back as 1994. As of January 2025, The bulk of this data is now available to the public on the Open Data pages:
+- [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/) 
+- [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/)
+
+### Vehicle Detector Station (VDS)
+[`volumes/vds/`](volumes/vds/)
+
+The city operates various permanent Vehicle Detector Stations (VDS), employing different technologies, including RESCU, intersection detectors, Blue City and Smartmicro. The most frequently used for D&A context is the RESCU network which tracks traffic volumes on Toronto expressways, about which more information can be found on the [city's website](https://www.toronto.ca/services-payments/streets-parking-transportation/road-restrictions-closures/rescu-traffic-cameras/) 
 or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_Unit).
+
 
 ## Watch Your Speed signs
 [`wys/`](wys/)
@@ -147,7 +157,7 @@ or [here](https://en.wikipedia.org/wiki/Road_Emergency_Services_Communications_U
 The city has installed [Watch Your Speed signs](https://www.toronto.ca/services-payments/streets-parking-transportation/road-safety/vision-zero/safety-initiatives/initiatives/watch-your-speed-program/) that display the speed a vehicle is travelling at and flashes if the vehicle is travelling over the speed limit. Installation of the sign was done as part of 2 programs: the mobile watch your speed which has signs mounted on existing poles, moved every few weeks, and school watch your speed which has signs installed at high priority schools. The signs also collect continuous speed data.
 
 ## Weather
-[`weather/](weather/)
+[`weather/`](weather/)
 
 Daily historical weather conditions and predictions from Environment Canada.
 
@@ -155,6 +165,8 @@ Daily historical weather conditions and predictions from Environment Canada.
 
 - [Travel Times - Bluetooth](https://open.toronto.ca/dataset/travel-times-bluetooth/) contains data for all the bluetooth segments collected by the city. The travel times are 5 minute average travel times. The real-time feed is currently not operational. See [the Bluetooth README](bluetooth#8-open-data-releases) for more info.
 - [Watch Your Speed Signs](#watch-your-speed-signs) give feedback to drivers to encourage them to slow down, they also record speed of vehicles passing by the sign. Semi-aggregated and monthly summary data are available for the two programs (Stationary School Safety Zone signs and Mobile Signs) and are updated monthly.  [see the WYS README for links to these datasets](wys/#open-data)
+- [Traffic Volumes - Midblock Vehicle Speed, Volume and Classification Counts](https://open.toronto.ca/dataset/traffic-volumes-midblock-vehicle-speed-volume-and-classification-counts/): ad-hoc counts of motor vehicle, bicycle, and pedestrian volumes at intersections. [see the Short Term Counting Program documentation for more info](volumes/short_term_counting_program/)
+- [Traffic Volumes - Multimodal Intersection Turning Movement Counts](https://open.toronto.ca/dataset/traffic-volumes-at-intersections-for-all-modes/): ad-hoc observations of volumes, speeds, and vehicle classification of motor vehicles travelling along a section of road. [see the Short Term Counting Program documentation for more info](volumes/short_term_counting_program/)
 
 For the [King St. Transit Pilot](toronto.ca/kingstreetpilot), the team has released the following datasets, which are typically a subset of larger datasets specific to the pilot:
 

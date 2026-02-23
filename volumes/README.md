@@ -10,8 +10,12 @@ The catalogue of the volume datasets owned, managed, and used by Transportation 
   - [Automatic Traffic Recorder (ATR) Counts](#automatic-traffic-recorder-atr-counts)
   - [Turning Movement Counts (TMC)](#turning-movement-counts-tmc)
   - [Other Methods](#other-methods)
+  - [Cycling Counts](#cycling-counts)
 - [Permanent Sources of Volume Data](#permanent-sources-of-volume-data)
-  - [RESCU Vehicle Detection Stations](#rescu-vehicle-detection-stations)
+  - [Vehicle Detector Stations (VDS)](#vds)
+    - [RESCU Vehicle Detection Stations](#rescu-vehicle-detection-stations)
+    - [Intersection Detectors](#intersection-detection)
+    - [Blue City / Smartmicro](#blue-city--smartmicro-sensors)
   - [Miovision Cameras](#miovision-cameras)
   - [Watch Your Speed (WYS) Signs](#watch-your-speed-wys-signs)
 - [What the Data are Used For](#what-the-data-are-used-for)
@@ -48,7 +52,7 @@ Short term traffic count programs are traffic monitoring programs that collect t
 - **Description:** One of the most sought-after traffic data types is the TMC, also known as an Intersection Count. In a TMC, vehicle movements (e.g., left, through, and right turns) and volumes for all legs of the intersection are captured, for a specific period of time.
 - **Data collection method:** Turning movement counts traditionally were conducted using person-recorders that manually observe and record the data or by deploying technology such a cameras. Now, they are collected using video-based collection.
 - The use of any technology or innovative methods should be tested for accuracy prior to being an acceptable method to collect turning movement count data
-- **Collected data**: vehicles and bicycles are counted by their turning movements (left, through, right, u-turn) by direction of approach; pedestrians are counted by the leg of the intersection crossed
+- **Collected data**: vehicles are counted by their turning movements (left, through, right, u-turn) by direction of approach; bicycles (both street and on crosswalk) are counted by their turning movements (through only) by direction of approach; pedestrians are counted by the leg of the intersection crossed
   - **Bins**: counted in 15-minute increments
   - **Modes**: vehicles (cars, trucks, busses), cyclists, pedestrians, other active transportation modes 
  - **Date range and updates:** January 5, 1993 to present; ad hoc updates
@@ -65,27 +69,40 @@ Here are some examples of other short term traffic counting programs conducted b
 - **Pedestrian Delay and Classification Study:** Through manual observation, this study captures pedestrians crossing a road within defined zones.
 - **Pedestrian Crossover Observation Study (PXO):** This study observes the behaviour of pedestrians using a crosswalk.
 
+### Cycling Counts
+
+The Cycling & Pedestrian Projects Unit (formerly Cycling Team) conducted their own short term counts. The data structure is documented in the [`cycling_unit`](cycling_unit/) folder. 
+
 ## Permanent Sources of Volume Data
 
 Permanent traffic counts refer to the process of continuously monitoring and recording the volume and characteristics of vehicular traffic on a particular road, highway or at intersection using a permanent automated counting system. These systems typically consist of sensors, cameras, or other devices that are installed along the roadway or at intersections to collect data on traffic volumes, speed, classification, and other parameters.
 
-### RESCU Vehicle Detection Stations
+### VDS
+
+The city operates various permanent Vehicle Detector Stations (VDS), employing different technologies, including RESCU, intersection detectors, Blue City and Smartmicro:
+
+#### RESCU Vehicle Detection Stations
 
 - **Description:** Road Emergency Services Communication Unit (RESCU) track traffic volume mostly on expressways using loop detectors and radar. 
-- **Data collection method:** Loop detectors installed on the ground of the road surface.
-- Radar detectors (which function the same way as loop detectors) placed on the roadside. 
-- The city data is collected using loop detector
--**Collected data:**
-  - **Bins**: Raw data is recorded in 20 second increments. Data handled by D&A is aggregated to 15 minute increments and produced as reports out of Oracle. 
+- **Data collection method:** Loop detectors installed on the ground of the road surface OR Radar detectors (which function the same way as loop detectors) placed on the roadside.  
+- **Collected data:**
+  - **Bins**: Raw data is recorded in 20 second increments and stored both as raw and 15 minute aggregated bins by D&A. 
   - **Modes:** Vehicular traffic is detected by RESCU.
  - **Date range and updates:** January 2017 to present; daily updates
 - **Geographic coverage:** Highways and Expressways managed by the City of Toronto
-- **Format available:** Custom data extract in CSV
+- **Format available:** Transnomis Postgres Database
 - **Data management and access:** Data is managed and coordinated by ITS Central.
-- Active Traffic Management- ITS central and Data & Analytics units are the main contacts .
-- Aggregated data is available in rescu schema.
-- More information can be found on [RESCU Readme](rescu/README.md)
+  - Active Traffic Management- ITS central and Data & Analytics units are the main contacts.
+  - Aggregated data is available in vds schema.
+  - More information can be found on [VDS Readme](vds/readme.md#division_id2).
 
+#### Intersection Detection
+- Geographically disperse intersection detectors located throughout the city with questionable data quality. 
+- More information can be found in the VDS Readme under the [division_id 8001](vds/readme.md#division_id8001) heading.
+
+#### Blue City / Smartmicro Sensors
+- Two different sensor technologies installed as a limited pilot along Yonge St and around the Rogers Centre (Lakeshore/Spadina).
+- More information can be found on [VDS Readme](vds/readme.md#division_id2).
 
 ### Miovision Cameras
 

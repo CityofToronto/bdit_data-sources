@@ -1,4 +1,4 @@
-DROP MATERIALIZED VIEW wys.stationary_signs CASCADE;
+DROP MATERIALIZED VIEW wys.stationary_signs;
 
 CREATE MATERIALIZED VIEW wys.stationary_signs
 TABLESPACE pg_default

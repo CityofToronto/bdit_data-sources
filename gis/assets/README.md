@@ -1,6 +1,6 @@
 # Assets
 
-An [airflow process](../../../dags/assets_pull.py) to automatically extract Open Data on assets by pulling GeoJSON files from City of Toronto Open Data. Currently pulling two datasets
+An [airflow process](../../dags/assets_pull.py) to automatically extract Open Data on assets by pulling GeoJSON files from City of Toronto Open Data. Currently pulling two datasets
 
 - Red Light Cameras: https://open.toronto.ca/dataset/red-light-cameras/
 - Traffic signals: https://open.toronto.ca/dataset/traffic-signals-tabular/
@@ -35,7 +35,16 @@ https://secure.toronto.ca/opendata/cart/traffic_signals/v3?format=json
 This is one of the [datasets managed by the Traffic Control group](https://github.com/CityofToronto/bdit_vz_programs#datasets-and-their-owners). 
  Traffic Signals data from Open and update the relevant tables in the bigdata RDS. 
 
-Every record from this URL will end up in `gis.traffic_signal` and `vz_safety_programs_staging.signals_cart`. For `signals_cart`, existing records of traffic signals will first be deleted and then new ones inserted. For `traffic_signal`, the script will perform upsert instead so that the changes could be audited.
+Records from this URL are inserted into `gis.traffic_signal` and `vz_safety_programs_staging.signals_cart` as follows: 
+
+`gis.traffic_signal`
+- rows are upserted so that the changes can be audited.
+- `removed_date` field notes when the row was removed from the Open Dataset. Note the field was first populated on 2024-10-09 so signals removed before that date will be rounded up to that date.
+- `temp_signal` field notes temporary (px = '31XX', to be replaced by a permanent signal) and temporary (portable, typically for a work zone, and will be removed) (px = '33XX') traffic signals.
+
+`signals_cart`
+- existing records of traffic signals will first be deleted and then new ones inserted
+- Temporary (portable) (px = '33XX') signals are exlcuded based on request from VZ Team. 
 
 ### APS and LPI
 
