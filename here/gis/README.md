@@ -35,6 +35,15 @@ It prompts for:
 - your bigdata postgres username
 - your bigdata posrgres password
 - revision number (e.g. 25_1)
+- directory of the shapefiles
+  
+Example entry:
+```
+What is your bigdata username?username
+What is your bigdata password?password
+Which map version are you trying to import?25_1
+What directory are the shapefiles in?ON_2025_Q4_HERE_SHAPEFILES.zip/2EAM251G0N2E000AACU8
+```
 
 Prior to running `ogr2ogr` the script remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
 
