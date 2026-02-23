@@ -23,18 +23,25 @@ There are three shapefiles in the unzipped folder that we need to import:
 
 ### Current way of importing 
 
-[`batch_upload.sh`](batch_upload.sh) shell script loops over the three shapefiles, and directly import the layers into the `here_gis` schema using `ogr2ogr`. `ogr2ogr` allows direct import from zipped or compressed files using `vsitar`. Note that this shortened use of `psql` assumes the current Ubuntu username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory. Edit the `rev` variable at the start to specify the revision of the geographies. This will be appended to the uploaded tables' names.
+[`batch_upload.sh`](batch_upload.sh) locates in `/data/here/gis`, is a shell script that loops over the three shapefiles, and directly import the layers into the `here_gis` schema using `ogr2ogr`. `ogr2ogr` allows direct import from zipped or compressed files using `vsitar` or `vsizip`(You might have to update the bash script base on the type of file received, `vsitar` for `tar` and `vsizip` for `zip`). Note that this shortened use of `psql` assumes the prompted username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory. 
 
-Prior to running `ogr2ogr` the script performs some manipulation of the `$f` filename variable in order to lowercase it and remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
+Run the bash script with:
+
+```shell
+nohup bash batch_upload.sh > batch_upload.log& tail -f batch_upload.log
+```
+
+It prompts for:
+- your bigdata postgres username
+- your bigdata posrgres password
+- revision number (e.g. 25_1)
+
+Prior to running `ogr2ogr` the script remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
 
 After the data is loaded, `psql` is called again to alter each table's owner to the here_admins group and then run [`here_gis.clip_to(tablename, revision)`](clip_to.sql) to clip the layer to within the City's boundary. `Adminbndy3` layer will be imported first as we use the Toronto municipalites boundary defined in this layer for clipping purposes.
 
 Subsequently [`split_streets_att.sql`](split_streets_att.sql) can be run to split the streets layer into a GIS layer and an attributes table (there are a lot of columns in the attributes table) in order to reduce the size of the streets layer when loading it in QGIS.
 
-
-```shell
-nohup bash batch_upload.sh > batch_upload.log& tail -f batch_upload.log
-```
 
 **Note:** Please add a [`COMMENT`](https://devdocs.io/postgresql~9.6/sql-comment) to the `streets_YY_R` layer explaining which years of traffic data should use that layer.
 
