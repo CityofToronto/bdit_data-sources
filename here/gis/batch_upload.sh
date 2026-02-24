@@ -14,7 +14,7 @@ do
         tablename="$(echo ${f_lower%.*}_$rev)"
         ogr2ogr -f "PostgreSQL" PG:"host=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com dbname=bigdata user=$your_username password=$your_password" -nlt PROMOTE_TO_MULTI  /vsizip/$filename/$f.shp -nln "here_gis.$tablename" -progress
         psql -h trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com -d bigdata -U $your_username -c "ALTER TABLE here_gis.$tablename OWNER TO here_admins; SELECT here_gis.clip_to('$tablename', '$rev');"
-
+        psql -h trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com -d bigdata -U $your_username -c "SELECT here_gis.update_geom_column('$tablename');"
 done
 
 psql -h trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com -d bigdata -U $your_username -c "SELECT here_gis.split_streets_att('$rev');"

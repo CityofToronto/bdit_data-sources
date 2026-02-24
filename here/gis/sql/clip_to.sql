@@ -2,7 +2,6 @@
 
 -- DROP FUNCTION IF EXISTS here_gis.clip_to(text, text);
 
-
 CREATE OR REPLACE FUNCTION here_gis.clip_to(
 	tablename text,
 	revision text)
