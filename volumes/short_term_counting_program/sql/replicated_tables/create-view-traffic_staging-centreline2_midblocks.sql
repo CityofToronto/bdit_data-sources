@@ -20,7 +20,8 @@ SELECT
     centreline2_midblocks.lng,
     centreline2_midblocks.geom,
     centreline2_midblocks.centreline_id_array,
-    centreline2_midblocks.shape_length
+    centreline2_midblocks.shape_length,
+    centreline2_midblocks.oneway_dir_code
 FROM traffic.centreline2_midblocks;
 
 ALTER TABLE traffic_staging.centreline2_midblocks
