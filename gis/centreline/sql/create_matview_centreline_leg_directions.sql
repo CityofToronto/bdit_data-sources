@@ -1,6 +1,9 @@
---DROP MATERIALIZED VIEW gis_core.centreline_leg_directions;
+--DROP FUNCTION gis_core.refresh_centreline_leg_directions;
 
-CREATE MATERIALIZED VIEW gis_core.centreline_leg_directions AS
+CREATE FUNCTION gis_core.refresh_centreline_leg_directions()
+RETURNS VOID AS $$
+
+TRUNCATE gis_core.centreline_leg_directions;
 
 WITH toronto_cardinal (d, leg_label) AS (
     -- define cardinal directions in degrees, but rotated
@@ -278,27 +281,13 @@ ORDER BY
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
-ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO gis_admins;;
+COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions
+IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190'
+|| ' Last updated: ' || CURRENT_DATE;
 
-CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (
-    intersection_centreline_id, leg_centreline_id
-);
-CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_full_geom);
-CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_stub_geom);
+ALTER FUNCTION gis_core.refresh_centreline_leg_directions OWNER TO gis_admins;;
 
-CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
+REVOKE ALL ON FUNCTION gis_core.refresh_centreline_leg_directions FROM public;
 
-COMMENT ON MATERIALIZED VIEW gis_core.centreline_leg_directions
-IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190';
-
-COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
-IS 'cardinal direction, one of (north, east, south, west)';
-
-COMMENT ON COLUMN gis_core.centreline_leg_directions.angular_offset_from_cardinal_direction
-IS 'absolute degrees difference from ideal cardinal direction (oriented to Toronto grid)';
-
-COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
-IS 'first (up to) 30m of the centreline segment geometry pointing *inbound* toward the reference intersection';
-
-COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_full_geom
-IS 'complete geometry of the centreline segment geometry, pointing *inbound* toward the reference intersection';
+COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions
+IS 'Function to refresh gis_core.centreline_leg_directions with truncate/insert.';

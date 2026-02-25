@@ -1,6 +1,9 @@
-CREATE MATERIALIZED VIEW gis_core.centreline_latest AS
+CREATE OR REPLACE FUNCTION gis_core.refresh_centreline_latest() AS
+RETURNS VOID AS $$
+TRUNCATE gis_core.centreline_latest;
 
-SELECT *
+INSERT INTO gis_core.centreline_latest (version_date, centreline_id, linear_name_id, linear_name_full, linear_name_full_legal, address_l, address_r, parity_l, parity_r, lo_num_l, hi_num_l, lo_num_r, hi_num_r, begin_addr_point_id_l, end_addr_point_id_l, begin_addr_point_id_r, end_addr_point_id_r, begin_addr_l, end_addr_l, begin_addr_r, end_addr_r, linear_name, linear_name_type, linear_name_dir, linear_name_desc, linear_name_label, from_intersection_id, to_intersection_id, oneway_dir_code, oneway_dir_code_desc, feature_code, feature_code_desc, jurisdiction, centreline_status, shape_length, objectid, shape_len, mi_prinx, low_num_odd, high_num_odd, low_num_even, high_num_even, geom)
+SELECT version_date, centreline_id, linear_name_id, linear_name_full, linear_name_full_legal, address_l, address_r, parity_l, parity_r, lo_num_l, hi_num_l, lo_num_r, hi_num_r, begin_addr_point_id_l, end_addr_point_id_l, begin_addr_point_id_r, end_addr_point_id_r, begin_addr_l, end_addr_l, begin_addr_r, end_addr_r, linear_name, linear_name_type, linear_name_dir, linear_name_desc, linear_name_label, from_intersection_id, to_intersection_id, oneway_dir_code, oneway_dir_code_desc, feature_code, feature_code_desc, jurisdiction, centreline_status, shape_length, objectid, shape_len, mi_prinx, low_num_odd, high_num_odd, low_num_even, high_num_even, geom
 FROM gis_core.centreline
 WHERE
     version_date = (
@@ -24,16 +27,16 @@ WHERE
         'Pending'
     );
 
-CREATE INDEX gis_core_centreline_latest_geom ON gis_core.centreline_latest USING gist (geom);
+COMMENT ON TABLE gis_core.centreline_latest
+IS 'Table containing the latest version of centreline, derived from gis_core.centreline, excluding Busway and Trail.'
+|| ' Last updated: ' || CURRENT_DATE;
+$$ LANGUAGE sql
 
-CREATE UNIQUE INDEX centreline_latest_unique
-ON gis_core.centreline_latest USING btree (
-    centreline_id ASC
-);
+ALTER FUNCTION gis_core.refresh_centreline_latest OWNER TO gis_admins;
 
-ALTER MATERIALIZED VIEW gis_core.centreline_latest OWNER TO gis_admins;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_latest TO gcc_bot;
 
-GRANT SELECT ON gis_core.centreline_latest TO bdit_humans, bdit_bots;
+REVOKE ALL ON FUNCTION gis_core.refresh_centreline_latest FROM public;
 
-COMMENT ON MATERIALIZED VIEW gis_core.centreline_latest IS E''
-'Materialized view containing the latest version of centreline, derived from gis_core.centreline, excluding Busway and Trail.';
+COMMENT ON FUNCTION gis_core.refresh_centreline_latest
+IS 'Function to refresh gis_core.centreline_latest with truncate/insert.';
