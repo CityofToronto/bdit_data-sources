@@ -14,27 +14,52 @@ mkdir HERE_GIS_DATA_R/
 tar --wildcards "2E*/*" -xf HERE_GIS_DATA.tar -C HERE_GIS_DATA_R/
 ```
 
-The [`batch_upload.sh`](batch_upload.sh) shell script loops over each shape file and pipes the output of [`shp2pgsql`](http://postgis.net/docs/manual-2.1/using_postgis_dbmanagement.html#shp2pgsql_usage) to psql ([inspiration](http://gis.stackexchange.com/a/7806/36886)) to upload into the `here_gis` schema. Not that this shortened use of `psql` assumes the current Ubuntu username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory. Edit the `rev` variable at the start to specify the revision of the geographies. This will be appended to the uploaded tables' names.
+## Importing New GIS layers
 
-Prior to running `shp2pgsql` the script performs some manipulation of the `$f` filename variable in order to lowercase it and remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
+There are three shapefiles in the unzipped folder that we need to import:
+1) `Streets.shp`` - Shapefile of all new here links
+2) `Zlevels.shp`` - Zlevels of all new nodes
+3) `Adminbndy3.shp`` - Admin boundary of municipalities
 
-After the data is loaded, `psql` is called again to alter each table's owner to the here_admins group and then run [`here_gis.clip_to(tablename, revision)`](clip_to.sql) to clip the layer to within the City's boundary.
+### Current way of importing 
 
-Subsequently [`split_streets_att.sql`](split_streets_att.sql) can be run to split the streets layer into a GIS layer and an attributes table (there are a lot of columns in the attributes table) in order to reduce the size of the streets layer when loading it in QGIS.
+[`batch_upload.sh`](batch_upload.sh) locates in `/data/here/gis`, is a shell script that loops over the three shapefiles, and directly import the layers into the `here_gis` schema using `ogr2ogr`. `ogr2ogr` allows direct import from zipped or compressed files using `vsitar` or `vsizip`(You might have to update the bash script base on the type of file received, `vsitar` for `tar` and `vsizip` for `zip`). Note that this shortened use of `psql` assumes the prompted username and that the password for that user is stored in a [`.pgpass`](https://www.postgresql.org/docs/current/static/libpq-pgpass.html) file in your home directory. 
 
-Run the shell script in the background with nohup with the following command. The `tail -f` piece will continually display the tail of the log in the terminal. To cancel the command do `CTRL-C` to stop `tail` and then `fg` to return the job to the foreground and then `CTRL-C` again.
+Run the bash script with:
 
 ```shell
 nohup bash batch_upload.sh > batch_upload.log& tail -f batch_upload.log
 ```
 
+It prompts for:
+- your bigdata postgres username
+- your bigdata posrgres password
+- revision number (e.g. 25_1)
+- directory of the shapefiles
+  
+Example entry:
+```
+What is your bigdata username?username
+What is your bigdata password?password
+Which map version are you trying to import?25_1
+What directory are the shapefiles in?ON_2025_Q4_HERE_SHAPEFILES.zip/2EAM251G0N2E000AACU8
+```
+
+Prior to running `ogr2ogr` the script remove the `.shp` string to turn it into a compatible tablename for PostgreSQL. Tables are versioned by appending `YY_R` to their names where YY is the year and R is the revision number.
+
+After the data is loaded, `psql` is called again to alter each table's owner to the here_admins group and then run [`here_gis.clip_to(tablename, revision)`](clip_to.sql) to clip the layer to within the City's boundary. `Adminbndy3` layer will be imported first as we use the Toronto municipalites boundary defined in this layer for clipping purposes.
+
+Subsequently [`split_streets_att.sql`](split_streets_att.sql) can be run to split the streets layer into a GIS layer and an attributes table (there are a lot of columns in the attributes table) in order to reduce the size of the streets layer when loading it in QGIS.
+
+
 **Note:** Please add a [`COMMENT`](https://devdocs.io/postgresql~9.6/sql-comment) to the `streets_YY_R` layer explaining which years of traffic data should use that layer.
+
 
 ### Derivative gis layers to update
 
 There are a few additional things to create based on the new map layer:
 
-- [`create_here_routing.sql`](https://github.com/CityofToronto/bdit_data-sources/blob/master/here/traffic/sql/create_here_routing.sql): two layers for routing with HERE data.
+- [`function_create_routing_tables.sql`](sql/function_create_routing_tables.sql): creates routing nodes, traffic streets, and routing streets layers. Run `SELECT here.function_create_routing_tables(ref_yr)` to create layers.
 - `here_gis.traffic_streets`
 
 ## Reference Node
