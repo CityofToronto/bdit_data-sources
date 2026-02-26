@@ -1,7 +1,11 @@
 --DROP FUNCTION gis_core.refresh_centreline_leg_directions;
 
 CREATE FUNCTION gis_core.refresh_centreline_leg_directions()
-RETURNS VOID AS $$
+RETURNS void
+LANGUAGE sql
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+AS $$
 
 TRUNCATE gis_core.centreline_leg_directions;
 
@@ -259,6 +263,7 @@ The final select adds names from the edge table, and also removes
 (via DISTINCT ON) legs assigned to more than one direction
 (this will happen in the fourth pass for intersections with 3 legs).
 */
+INSERT INTO gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id, leg, intersection_geom, street_name, leg_stub_geom, leg_full_geom)
 SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id
@@ -285,7 +290,9 @@ COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions
 IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190'
 || ' Last updated: ' || CURRENT_DATE;
 
-ALTER FUNCTION gis_core.refresh_centreline_leg_directions OWNER TO gis_admins;;
+$$;
+
+ALTER FUNCTION gis_core.refresh_centreline_leg_directions OWNER TO gis_admins;
 
 REVOKE ALL ON FUNCTION gis_core.refresh_centreline_leg_directions FROM public;
 

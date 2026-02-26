@@ -1,5 +1,9 @@
 CREATE FUNCTION gis_core.refresh_intersection_latest()
-RETURNS VOID AS $$
+RETURNS void
+LANGUAGE sql
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+AS $$
 
 TRUNCATE gis_core.intersection_latest;
 
@@ -24,7 +28,7 @@ COMMENT ON FUNCTION gis_core.refresh_intersection_latest IS E''
 'derived from gis_core.intersection.'
 || ' Last updated: ' || CURRENT_DATE;
 
-$$ LANGUAGE sql;
+$$;
 
 ALTER FUNCTION gis_core.refresh_intersection_latest OWNER TO gis_admins;
 

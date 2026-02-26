@@ -1,5 +1,9 @@
 CREATE OR REPLACE FUNCTION gis_core.refresh_centreline_latest_all_feature()
-RETURNS VOID AS $$
+RETURNS void
+LANGUAGE sql
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+AS $$
 
     TRUNCATE gis_core.centreline_latest_all_feature;
 
@@ -17,7 +21,7 @@ RETURNS VOID AS $$
     COMMENT ON TABLE gis_core.centreline_latest_all_feature
     IS 'Table containing the latest version of centreline with all feature code, derived from gis_core.centreline.'
     || ' Last updated: ' || CURRENT_DATE;
-$$ LANGUAGE sql;
+$$;
 
 ALTER FUNCTION gis_core.refresh_centreline_latest_all_feature OWNER TO gis_admins;
 
