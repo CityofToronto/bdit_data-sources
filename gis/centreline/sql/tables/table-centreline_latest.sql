@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS gis_core.centreline_latest (
 ALTER TABLE IF EXISTS gis_core.centreline_latest
 OWNER TO gis_admins;
 
+--comment gets updated on refresh by refresh_centreline_latest
 COMMENT ON TABLE gis_core.centreline_latest
 IS 'Table containing the latest version of centreline, derived from gis_core.centreline, excluding Busway and Trail.';
 

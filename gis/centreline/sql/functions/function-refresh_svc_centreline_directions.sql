@@ -87,7 +87,7 @@ COMMENT ON TABLE traffic.svc_centreline_directions
 IS 'Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto '
 'specific directions of travel along edges of the `gis_core.centreline_latest` network. '
 'Refreshed automatically by `gcc_layers_pull_bigdata` DAG after inserts into '
-'`gis_core.centreline_latest`.' || ' Last updated: ' || CURRENT_DATE;
+'`gis_core.centreline_latest`.' || ' Last refreshed: ' || CURRENT_DATE || '.';
 
 $BODY$;
 

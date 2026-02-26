@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS gis_core.centreline_leg_directions
 ALTER TABLE IF EXISTS gis_core.centreline_leg_directions
 OWNER TO gis_admins;
 
+--comment gets updated on refresh by refresh_centreline_leg_directions
 COMMENT ON TABLE gis_core.centreline_leg_directions
 IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190';
 

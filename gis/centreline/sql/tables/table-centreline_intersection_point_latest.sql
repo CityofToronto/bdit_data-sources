@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS gis_core.centreline_intersection_point_latest (
 ALTER TABLE IF EXISTS gis_core.centreline_intersection_point_latest
 OWNER TO gis_admins;
 
+--comment gets updated on refresh by refresh_centreline_intersection_point_latest
 COMMENT ON TABLE gis_core.centreline_intersection_point_latest
 IS 'Table containing the latest version of centreline intersection point,derived from gis_core.centreline_intersection_point. Removes some (rare) duplicate intersection_ids.';
 

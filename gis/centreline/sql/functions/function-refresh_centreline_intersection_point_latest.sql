@@ -28,8 +28,9 @@ ORDER BY
     objectid DESC;
 
 COMMENT ON TABLE gis_core.centreline_intersection_point_latest IS E''
-'Materialized view containing the latest version of centreline intersection point,'
+'Table containing the latest version of centreline intersection point,'
 'derived from gis_core.centreline_intersection_point. Removes some (rare) duplicate intersection_ids.'
+|| ' Last refreshed: ' || CURRENT_DATE || '.';
 
 $$;
 

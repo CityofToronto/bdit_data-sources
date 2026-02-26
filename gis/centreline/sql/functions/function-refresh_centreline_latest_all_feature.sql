@@ -20,7 +20,8 @@ AS $$
 
     COMMENT ON TABLE gis_core.centreline_latest_all_feature
     IS 'Table containing the latest version of centreline with all feature code, derived from gis_core.centreline.'
-    || ' Last updated: ' || CURRENT_DATE;
+    || ' Last refreshed: ' || CURRENT_DATE || '.';
+
 $$;
 
 ALTER FUNCTION gis_core.refresh_centreline_latest_all_feature OWNER TO gis_admins;

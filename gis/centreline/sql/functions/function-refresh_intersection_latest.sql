@@ -23,10 +23,10 @@ WHERE
         FROM gis_core.intersection
     );
 
-COMMENT ON FUNCTION gis_core.refresh_intersection_latest IS E''
-'Materialized view containing the latest version of intersection,'
+COMMENT ON TABLE gis_core.intersection_latest IS E''
+'Table containing the latest version of intersection,'
 'derived from gis_core.intersection.'
-|| ' Last updated: ' || CURRENT_DATE;
+|| ' Last refreshed: ' || CURRENT_DATE || '.';
 
 $$;
 

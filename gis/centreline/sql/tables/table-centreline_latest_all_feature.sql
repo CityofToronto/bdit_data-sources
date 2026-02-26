@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS gis_core.centreline_latest_all_feature (
 ALTER TABLE IF EXISTS gis_core.centreline_latest_all_feature
 OWNER TO gis_admins;
 
+--comment gets updated on refresh by refresh_centreline_latest_all_feature
 COMMENT ON TABLE gis_core.centreline_latest_all_feature
 IS 'Table containing the latest version of centreline with all feature code, derived from gis_core.centreline.';
 

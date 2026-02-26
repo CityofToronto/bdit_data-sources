@@ -286,13 +286,15 @@ ORDER BY
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
-COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions
+COMMENT ON TABLE gis_core.centreline_leg_directions
 IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190'
-|| ' Last updated: ' || CURRENT_DATE;
+|| ' Last refreshed: ' || CURRENT_DATE || '.';
 
 $$;
 
 ALTER FUNCTION gis_core.refresh_centreline_leg_directions OWNER TO gis_admins;
+
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_leg_directions TO gcc_bot;
 
 REVOKE ALL ON FUNCTION gis_core.refresh_centreline_leg_directions FROM public;
 

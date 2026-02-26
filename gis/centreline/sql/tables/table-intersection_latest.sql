@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS gis_core.intersection_latest(
 ALTER TABLE IF EXISTS gis_core.intersection_latest
 OWNER TO gis_admins;
 
+--comment gets updated on refresh by refresh_intersection_latest
 COMMENT ON TABLE gis_core.intersection_latest
 IS 'Table containing the latest version of intersection , derived from gis_core.intersection.';
 

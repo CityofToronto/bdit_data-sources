@@ -34,7 +34,8 @@ WHERE
 
 COMMENT ON TABLE gis_core.centreline_latest
 IS 'Table containing the latest version of centreline, derived from gis_core.centreline, excluding Busway and Trail.'
-|| ' Last updated: ' || CURRENT_DATE;
+|| ' Last refreshed: ' || CURRENT_DATE || '.';
+
 $$;
 
 ALTER FUNCTION gis_core.refresh_centreline_latest OWNER TO gis_admins;
