@@ -266,7 +266,7 @@ SELECT DISTINCT ON (
     -- last node of the leg is the intersection
     ST_PointN(unified_legs.stub_geom, -1) AS intersection_geom,
     edges.linear_name_full_legal AS street_name,
-    unified_legs.angular_distance AS angular_offset_from_cardinal_direction,
+    unified_legs.angular_distance::real AS angular_offset_from_cardinal_direction,
     unified_legs.stub_geom AS leg_stub_geom,
     unified_legs.full_geom AS leg_full_geom
 FROM unified_legs
