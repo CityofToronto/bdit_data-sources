@@ -263,7 +263,7 @@ The final select adds names from the edge table, and also removes
 (via DISTINCT ON) legs assigned to more than one direction
 (this will happen in the fourth pass for intersections with 3 legs).
 */
-INSERT INTO gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id, leg, intersection_geom, street_name, leg_stub_geom, leg_full_geom)
+INSERT INTO gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id, leg, intersection_geom, street_name, angular_offset_from_cardinal_direction, leg_stub_geom, leg_full_geom)
 SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id

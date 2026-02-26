@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS gis_core.centreline_leg_directions
     leg text,
     intersection_geom geometry,
     street_name text,
-    angular_distance real,
+    angular_offset_from_cardinal_direction real,
     leg_stub_geom geometry,
     leg_full_geom geometry,
     CONSTRAINT centreline_leg_directions_pkey PRIMARY KEY (intersection_centreline_id, leg_centreline_id)
