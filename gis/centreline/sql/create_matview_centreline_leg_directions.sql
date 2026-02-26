@@ -295,7 +295,7 @@ COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
 IS 'cardinal direction, one of (north, east, south, west)';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.angular_offset_from_cardinal_direction
-IS 'degrees difference from ideal cardinal direction (oriented to Toronto grid)';
+IS 'absolute degrees difference from ideal cardinal direction (oriented to Toronto grid)';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
 IS 'first (up to) 30m of the centreline segment geometry pointing *inbound* toward the reference intersection';
