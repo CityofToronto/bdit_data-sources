@@ -68,6 +68,7 @@ def rodars_dag():
             task_id="check_src_issue_count",
             sql='select-check_src_issue_count.sql',
             conn_id="itsc_postgres",
+            trigger_rule="none_failed", #in case pull_rodar_locations is marked as skipped (zero rows fetched)
             retries=0
         )
         check_src_issue_count.doc_md = "Check the source issue count."

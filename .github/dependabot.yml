@@ -16,3 +16,13 @@ updates:
     reviewers:
       - "radumas"
     target-branch: "master"
+    #only security updates and exclude version updates
+    open-pull-requests-limit: 0
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-name: "airflow"

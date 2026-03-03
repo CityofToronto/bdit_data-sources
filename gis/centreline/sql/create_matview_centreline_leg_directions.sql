@@ -33,13 +33,13 @@ node_edges AS (
 ),
 
 nodes AS (
-    -- find nodes with a degree > 2
-    -- i.e. a legit intersection with three or more legs
+    -- find nodes with a degree of either 3 or 4
+    -- i.e. a legit intersection with three or four legs
     SELECT node_id
     FROM node_edges
     GROUP BY node_id
     HAVING
-        COUNT(DISTINCT edge_id) > 2
+        COUNT(DISTINCT edge_id) IN (3, 4)
         -- no 'intersections' that are just ramps crossing eachother
         AND ARRAY_AGG(DISTINCT feature_code_desc) != ARRAY['Expressway Ramp']
 ),
@@ -112,7 +112,9 @@ distances AS (
         legs.leg_centreline_id,
         toronto_cardinal.leg_label,
         -- *MATH*
-        abs(180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)) AS angular_distance,
+        abs(
+            180 - abs((toronto_cardinal.d - legs.azimuth)::numeric % 360 - 180)
+        ) AS angular_distance,
         legs.stub_geom,
         legs.full_geom
     FROM legs
@@ -133,7 +135,7 @@ leg1 AS (
         full_geom
     FROM distances
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -160,7 +162,7 @@ leg2 AS (
                 AND distances.leg_label = leg1.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -194,7 +196,7 @@ leg3 AS (
                 AND distances.leg_label = leg2.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -234,7 +236,7 @@ leg4 AS (
                 AND distances.leg_label = leg3.leg_label
         )
     ORDER BY
-        intersection_centreline_id,
+        intersection_centreline_id ASC,
         angular_distance ASC
 ),
 
@@ -264,22 +266,25 @@ SELECT DISTINCT ON (
     -- last node of the leg is the intersection
     ST_PointN(unified_legs.stub_geom, -1) AS intersection_geom,
     edges.linear_name_full_legal AS street_name,
+    unified_legs.angular_distance::real AS angular_offset_from_cardinal_direction,
     unified_legs.stub_geom AS leg_stub_geom,
     unified_legs.full_geom AS leg_full_geom
 FROM unified_legs
 JOIN gis_core.centreline_latest AS edges
     ON unified_legs.leg_centreline_id = edges.centreline_id
 ORDER BY
-    unified_legs.intersection_centreline_id,
-    unified_legs.leg_centreline_id,
+    unified_legs.intersection_centreline_id ASC,
+    unified_legs.leg_centreline_id ASC,
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
 ALTER MATERIALIZED VIEW gis_core.centreline_leg_directions OWNER TO gis_admins;;
 
-CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id);
-CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_full_geom);
-CREATE INDEX ON gis_core.centreline_leg_directions USING GIST (leg_stub_geom);
+CREATE UNIQUE INDEX ON gis_core.centreline_leg_directions (
+    intersection_centreline_id, leg_centreline_id
+);
+CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_full_geom);
+CREATE INDEX ON gis_core.centreline_leg_directions USING gist (leg_stub_geom);
 
 CREATE INDEX ON gis_core.centreline_leg_directions (intersection_centreline_id);
 
@@ -288,6 +293,9 @@ IS 'Automated mapping of centreline intersection legs onto the four cardinal dir
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg
 IS 'cardinal direction, one of (north, east, south, west)';
+
+COMMENT ON COLUMN gis_core.centreline_leg_directions.angular_offset_from_cardinal_direction
+IS 'absolute degrees difference from ideal cardinal direction (oriented to Toronto grid)';
 
 COMMENT ON COLUMN gis_core.centreline_leg_directions.leg_stub_geom
 IS 'first (up to) 30m of the centreline segment geometry pointing *inbound* toward the reference intersection';

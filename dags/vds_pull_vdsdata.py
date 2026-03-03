@@ -35,7 +35,11 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(
+        task_fail_slack_alert,
+        use_proxy = True,
+        troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds"
+    ),
     'catchup': True,
 }
 
@@ -200,7 +204,11 @@ def vdsdata_dag():
         divisions = [2, ] #div8001 is never summarized and the query on the view is not optimized
         for divid in divisions:
             check_avg_rows = SQLCheckOperatorWithReturnValue(
-                on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
+                on_failure_callback=partial(
+                    slack_alert_data_quality,
+                    use_proxy=True,
+                    troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds#nolow-data-system-wide"
+                ),
                 task_id=f"check_rows_vdsdata_div{divid}",
                 sql="select-row_count_lookback.sql",
                 conn_id='vds_bot',

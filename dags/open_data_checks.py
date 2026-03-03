@@ -111,7 +111,7 @@ def od_check_dag():
     @task()
     def usage_stats(ids, **context):
         # file clicks are also available under a different non-datastore resource
-        resource_id = "eb98a22e-b9d2-4b30-ab1c-fdc9c3fcf8d3" #'Page Views and Time Based Metrics.csv'
+        resource_id = "3f5d6284-0e9f-43d3-979e-01cefcc92f72" #'Page Views and Time Based Metrics.csv'
         datastore_search_url = BASE_URL + "/api/3/action/datastore_search"
         last_month = pendulum.now().subtract(months=1)
         page_urls = [f"open.toronto.ca/dataset/{id}/" for id in ids]

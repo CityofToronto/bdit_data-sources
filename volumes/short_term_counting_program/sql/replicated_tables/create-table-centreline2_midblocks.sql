@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS traffic.centreline2_midblocks
     lng double precision NOT NULL,
     geom geometry NOT NULL,
     centreline_id_array bigint [],
-    shape_length numeric
+    shape_length numeric,
+    oneway_dir_code smallint
 )
 
 TABLESPACE pg_default;

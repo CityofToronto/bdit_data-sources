@@ -3,25 +3,25 @@ CREATE MATERIALIZED VIEW gis_core.centreline_intersection_point_latest AS
 --in case of duplicate intersection_id (rare), only take the latest by objectid
 SELECT DISTINCT ON (intersection_id) *
 FROM gis_core.centreline_intersection_point
-WHERE 
+WHERE
     intersection_id IN (
-        SELECT from_intersection_id
-        FROM gis_core.centreline_latest
+        SELECT cent_f.from_intersection_id
+        FROM gis_core.centreline_latest AS cent_f
         UNION
-        SELECT to_intersection_id
-        FROM gis_core.centreline_latest
+        SELECT cent_t.to_intersection_id
+        FROM gis_core.centreline_latest AS cent_t
     )
     AND version_date = (
-        SELECT MAX(version_date)
+        SELECT MAX(centreline_intersection_point.version_date)
         FROM gis_core.centreline_intersection_point
     )
-ORDER BY intersection_id, objectid DESC;
+ORDER BY intersection_id ASC, objectid DESC;
 
 CREATE INDEX gis_core_centreline_intersection_point_latest_geom
 ON gis_core.centreline_intersection_point_latest USING gist (geom);
 
 CREATE UNIQUE INDEX centreline_intersection_point_latest_unique
-ON gis_core.centreline_intersection_point_latest USING btree(
+ON gis_core.centreline_intersection_point_latest USING btree (
     intersection_id ASC
 );
 

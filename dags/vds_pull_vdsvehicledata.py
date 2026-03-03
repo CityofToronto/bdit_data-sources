@@ -32,7 +32,11 @@ default_args = {
     'retries': 5,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(
+        task_fail_slack_alert,
+        use_proxy = True,
+        troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds"
+    ),
     'catchup': True,
 }
 
@@ -123,7 +127,11 @@ def vdsvehicledata_dag():
         "Data quality checks which may warrant re-running the DAG."
 
         check_avg_rows = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True),
+            on_failure_callback=partial(
+                slack_alert_data_quality,
+                use_proxy=True,
+                troubleshooting_tips="https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/vds#nolow-data-system-wide"
+            ),
             task_id=f"check_rows_veh_speeds",
             sql="select-row_count_lookback.sql",
             conn_id='vds_bot',
