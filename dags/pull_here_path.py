@@ -82,8 +82,15 @@ def pull_here_path():
         'DOWNLOAD_URL': download_url
     })
     def load_data()->str:
-        return '''curl $DOWNLOAD_URL | gunzip | psql -h $HOST -U $LOGIN -d bigdata -c "\\COPY here.ta_path_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);" '''
-
-    load_data()
-
+        return '''
+            curl --progress-bar --no-buffer -S $DOWNLOAD_URL \
+                2> >(tr '\\r' '\\n' >&2) \
+            | gunzip \
+            | psql -h $HOST -U $LOGIN -d bigdata \
+                -c "\\COPY here.ta_path_hm_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);"
+        '''
+    
+    clear_ta_path.set_upstream(request_id)
+    clear_ta_path >> load_data()
+    
 pull_here_path()
