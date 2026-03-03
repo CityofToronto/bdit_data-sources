@@ -28,7 +28,7 @@ GRANT SELECT ON TABLE here.ta_path_hm TO bdit_humans;
 GRANT SELECT ON TABLE here.ta_path_hm TO congestion_bot;
 GRANT SELECT ON TABLE here.ta_path_hm TO covid_admins;
 GRANT ALL ON TABLE here.ta_path_hm TO here_admins;
-GRANT SELECT ON TABLE here.ta_path_hm TO here_bot;
+GRANT INSERT, SELECT, DELETE ON TABLE here.ta_path_hm TO here_bot;
 GRANT SELECT ON TABLE here.ta_path_hm TO tt_request_bot;
 
 COMMENT ON TABLE here.ta_path_hm
