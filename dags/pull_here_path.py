@@ -13,7 +13,6 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
-    from bdit_dag_utils.utils.common_tasks import check_jan_1st
     from here.traffic.here_api import get_access_token, get_download_url
     from here.traffic.here_api_path import query_dates
 except:
@@ -71,18 +70,8 @@ default_args = {'owner': ','.join(names),
      )
 
 def pull_here_path():
-    create_annual_partition = SQLExecuteQueryOperator(
-        task_id='create_annual_partitions',
-        pre_execute=check_jan_1st,
-        sql="""SELECT here.create_weekly_partitions(
-                yr := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int,
-                schem := 'here',
-                tbl := 'ta_path_hm'
-            )""",
-        conn_id='here_bot',
-    )
 
-    @task(trigger_rule='none_failed')
+    @task
     def send_request():
         api_conn = BaseHook.get_connection('here_api_key')
         access_token = get_access_token(api_conn)
@@ -107,6 +96,16 @@ def pull_here_path():
             "end_date": end_date,
         }
     
+    create_annual_partition = SQLExecuteQueryOperator(
+        task_id='create_annual_partitions',
+        sql="""SELECT here.create_weekly_partitions(
+                yr := date_part('year', '{{ ti.xcom_pull(task_ids='get_request_id', key='start_date') }}'::date)::int,
+                schem := 'here',
+                tbl := 'ta_path_hm'
+            )""",
+        conn_id='here_bot',
+    )
+
     clear_ta_path = SQLExecuteQueryOperator(
         sql="""DELETE FROM here.ta_path_hm
             WHERE tx >= '{{ ti.xcom_pull(task_ids='get_request_id', key='start_date') }}'::date
@@ -123,7 +122,6 @@ def pull_here_path():
         return download_url
     
     access_token = send_request()
-    create_annual_partition >> access_token
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id["request_id"], access_token)
     
@@ -143,7 +141,8 @@ def pull_here_path():
                 -c "\\COPY here.ta_path_hm_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);"
         '''
     
-    clear_ta_path.set_upstream(request_id)
+    create_annual_partition.set_upstream(request_id)
+    create_annual_partition >> clear_ta_path
     clear_ta_path >> load_data()
     
 pull_here_path()

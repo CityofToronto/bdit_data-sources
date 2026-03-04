@@ -22,7 +22,7 @@ BEGIN
 
     -- annual partition
     EXECUTE format(
-        'CREATE TABLE %1$I.%2$I PARTITION OF %1$I.%3$I
+        'CREATE TABLE IF NOT EXISTS %1$I.%2$I PARTITION OF %1$I.%3$I
             FOR VALUES FROM (%4$L) TO (%4$L::date + interval ''52 weeks'') PARTITION BY RANGE (tx)',
         schem,
         v_partition_yr,
@@ -44,7 +44,7 @@ BEGIN
 
         -- weekly partition
         EXECUTE format(
-            'CREATE TABLE %1$I.%2$I PARTITION OF %1$I.%3$I
+            'CREATE TABLE IF NOT EXISTS %1$I.%2$I PARTITION OF %1$I.%3$I
                 FOR VALUES FROM (%4$L) TO (%4$L::date + 7)',
             schem,
             v_partition_week,
