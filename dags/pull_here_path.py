@@ -13,6 +13,7 @@ try:
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
+    from bdit_dag_utils.utils.common_tasks import check_jan_1st
     from here.traffic.here_api import get_access_token, get_download_url
     from here.traffic.here_api_path import query_dates
 except:
@@ -45,13 +46,13 @@ default_args = {'owner': ','.join(names),
 
 @dag(dag_id = dag_name,
      default_args=default_args,
-     #schedule='0 17 * * * ',
+     schedule='0 17 * * * ',
      catchup=False,
      max_active_runs=10,
      doc_md = doc_md,
      tags=["HERE", "data_pull"],
-     #can also use params via cli:
-     #airflow dags trigger --conf '{"start_date": "2024-02-01", "end_date": "2024-02-29"}' pull_here_path_hm
+     #can also use params via cli. A max of 1 week is recommended.
+     #airflow dags trigger --conf '{"start_date": "2024-02-01", "end_date": "2024-02-07"}' pull_here_path_hm
      params={
             "start_date": Param(
                 default=f"{datetime.date.today()}",
@@ -70,8 +71,18 @@ default_args = {'owner': ','.join(names),
      )
 
 def pull_here_path():
+    create_annual_partition = SQLExecuteQueryOperator(
+        task_id='create_annual_partitions',
+        pre_execute=check_jan_1st,
+        sql="""SELECT here.create_weekly_partitions(
+                yr := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int,
+                schem := 'here',
+                tbl := 'ta_path_hm'
+            )""",
+        conn_id='here_bot',
+    )
 
-    @task
+    @task(trigger_rule='none_failed')
     def send_request():
         api_conn = BaseHook.get_connection('here_api_key')
         access_token = get_access_token(api_conn)
@@ -112,6 +123,7 @@ def pull_here_path():
         return download_url
     
     access_token = send_request()
+    create_annual_partition >> access_token
     request_id =  get_request_id(access_token)
     download_url = get_download_link(request_id["request_id"], access_token)
     
