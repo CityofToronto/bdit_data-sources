@@ -44,15 +44,15 @@ EXECUTE FORMAT(
             ROW_NUMBER() OVER w AS bin_rank,
             SUM(seg.length) / seg.segment_length AS sum_length,
             SUM(seg.length) AS length_w_data,
-            SUM(seg.length / ta.mean * 3.6) AS unadjusted_tt,
+            SUM(seg.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
             SUM(sample_size) AS num_obs,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
             ARRAY_AGG(lat.tt ORDER BY ta.link_dir) AS tts,
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
-        FROM here.ta_path AS ta
+        FROM here.ta_path_hm AS ta
         JOIN congestion.%1$I AS seg USING (link_dir),
         LATERAL (
-            SELECT seg.length / ta.mean * 3.6 AS tt
+            SELECT seg.length / ta.harmonic_mean * 3.6 AS tt
         ) AS lat
         WHERE
             ta.dt >= %2$L::date
@@ -120,7 +120,7 @@ EXECUTE FORMAT(
             unnested.link_dir,
             unnested.len,
             AVG(unnested.tt) AS tt, --avg TT for each link_dir
-            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path sample_size for each link_dir
+            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each link_dir
         FROM dynamic_bin_options AS dbo
         LEFT JOIN segment_5min_bins AS s5b
             ON s5b.segment_id = dbo.segment_id
@@ -154,7 +154,7 @@ EXECUTE FORMAT(
         segment_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
+        SUM(num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each segment
     FROM unnested_db_options
     GROUP BY
         segment_id,
