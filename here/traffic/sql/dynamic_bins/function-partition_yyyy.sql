@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.partition_yyyy(
+CREATE OR REPLACE FUNCTION here_agg.partition_yyyy(
     base_table text,
     year_ integer,
     partition_owner text,
@@ -35,11 +35,11 @@ BEGIN
 END;
 $BODY$;
 
-COMMENT ON FUNCTION gwolofs.partition_yyyy(text, integer, text, text) IS
+COMMENT ON FUNCTION here_agg.partition_yyyy(text, integer, text, text) IS
 'Create new partition by year under the parent table `base_table`.
 Can be used accross schemas when partitioning by year. 
-Example: SELECT gwolofs.partition_yyyy(base_table := ''congestion_raw_segments'', year_ := 2026, partition_owner := ''gwolofs'', schema_ := ''gwolofs'')';
+Example: SELECT here_agg.partition_yyyy(base_table := ''congestion_raw_segments'', year_ := 2026, partition_owner := ''here_agg'', schema_ := ''here_agg'')';
 
-ALTER FUNCTION gwolofs.partition_yyyy(text, integer, text, text) OWNER TO gwolofs;
+ALTER FUNCTION here_agg.partition_yyyy(text, integer, text, text) OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.partition_yyyy(text, integer, text, text) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.partition_yyyy(text, integer, text, text) TO congestion_bot;

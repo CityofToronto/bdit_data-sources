@@ -1,8 +1,8 @@
--- Table: gwolofs.congestion_raw_corridors
+-- Table: here_agg.raw_corridors
 
--- DROP TABLE IF EXISTS gwolofs.congestion_raw_corridors;
+-- DROP TABLE IF EXISTS here_agg.raw_corridors;
 
-CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
+CREATE TABLE IF NOT EXISTS here_agg.raw_corridors
 (
     corridor_id smallint,
     time_grp timerange NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
     hr smallint,
     CONSTRAINT congestion_raw_corridors_pkey PRIMARY KEY (corridor_id, bin_range, time_grp),
     CONSTRAINT corridor_fkey FOREIGN KEY (corridor_id)
-    REFERENCES gwolofs.congestion_corridors (corridor_id) MATCH SIMPLE
+    REFERENCES here_agg.corridors (corridor_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE CASCADE
     NOT VALID
@@ -22,59 +22,57 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_raw_corridors
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.congestion_raw_corridors
-OWNER TO gwolofs;
+ALTER TABLE IF EXISTS here_agg.raw_corridors
+OWNER TO here_admins;
 
-REVOKE ALL ON TABLE gwolofs.congestion_raw_corridors FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.raw_corridors FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.congestion_raw_corridors TO bdit_humans;
-
-GRANT ALL ON TABLE gwolofs.congestion_raw_corridors TO gwolofs;
+GRANT SELECT ON TABLE here_agg.raw_corridors TO bdit_humans;
 
 -- Index: congestion_raw_corridors_dt_idx
 
--- DROP INDEX IF EXISTS gwolofs.congestion_raw_corridors_dt_idx;
+-- DROP INDEX IF EXISTS here_agg.raw_corridors_dt_idx;
 
 CREATE INDEX IF NOT EXISTS congestion_raw_corridors_dt_idx
-ON gwolofs.congestion_raw_corridors USING brin
+ON here_agg.raw_corridors USING brin
 (dt)
 TABLESPACE pg_default;
 -- Index: congestion_raw_corridors_uri_string
 
--- DROP INDEX IF EXISTS gwolofs.congestion_raw_corridors_uri_string;
+-- DROP INDEX IF EXISTS here_agg.raw_corridors_uri_string;
 
 CREATE INDEX IF NOT EXISTS congestion_raw_corridors_uri_string
-ON gwolofs.congestion_raw_corridors USING btree
+ON here_agg.raw_corridors USING btree
 (uri_string COLLATE pg_catalog."default" ASC NULLS LAST)
 WITH (deduplicate_items = TRUE)
 TABLESPACE pg_default;
 -- Index: dynamic_binning_results_time_grp_corridor_id_idx
 
--- DROP INDEX IF EXISTS gwolofs.dynamic_binning_results_time_grp_corridor_id_idx;
+-- DROP INDEX IF EXISTS here_agg.dynamic_binning_results_time_grp_corridor_id_idx;
 
 CREATE INDEX IF NOT EXISTS dynamic_binning_results_time_grp_corridor_id_idx
-ON gwolofs.congestion_raw_corridors USING btree
+ON here_agg.raw_corridors USING btree
 (time_grp ASC NULLS LAST, corridor_id ASC NULLS LAST, dt ASC NULLS LAST)
 WITH (deduplicate_items = TRUE)
 TABLESPACE pg_default;
 
-COMMENT ON TABLE gwolofs.congestion_raw_corridors IS
+COMMENT ON TABLE here_agg.raw_corridors IS
 'Stores dynamic binning results for custom corridor based travel time requests.';
 
-COMMENT ON TABLE gwolofs.congestion_raw_corridors
+COMMENT ON TABLE here_agg.raw_corridors
 IS 'Stores dynamic binning results from standard HERE congestion network travel time aggregations.';
 
-COMMENT ON COLUMN gwolofs.congestion_raw_corridors.bin_range
+COMMENT ON COLUMN here_agg.raw_corridors.bin_range
 IS 'Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.';
 
-COMMENT ON COLUMN gwolofs.congestion_raw_corridors.tt
+COMMENT ON COLUMN here_agg.raw_corridors.tt
 IS 'Travel time in seconds.';
 
-COMMENT ON COLUMN gwolofs.congestion_raw_corridors.num_obs
+COMMENT ON COLUMN here_agg.raw_corridors.num_obs
 IS 'The sum of the sample size from here.ta_path.';
 
-COMMENT ON COLUMN gwolofs.congestion_raw_corridors.dt
+COMMENT ON COLUMN here_agg.raw_corridors.dt
 IS 'The date of aggregation for the record. Records may not overlap dates.';
 
-COMMENT ON COLUMN gwolofs.congestion_raw_corridors.hr
+COMMENT ON COLUMN here_agg.raw_corridors.hr
 IS 'The hour the majority of the record occured in. Ties are rounded up.';

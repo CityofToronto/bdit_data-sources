@@ -1,7 +1,7 @@
 --these time periods should be scrutinized more.
 --structure may also need changes if we want different weekday and weekend time periods.
 
-CREATE VIEW gwolofs.congestion_time_grps AS
+CREATE VIEW here_agg.time_grps AS
 
 SELECT
     start_tod,
@@ -26,10 +26,9 @@ ORDER BY
     start_tod,
     end_tod;
 
-COMMENT ON VIEW gwolofs.congestion_time_grps
+COMMENT ON VIEW here_agg.time_grps
 IS 'Hours and time periods for congestion aggregation.';
 
-ALTER VIEW gwolofs.congestion_time_grps OWNER TO gwolofs;
+ALTER VIEW here_agg.time_grps OWNER TO here_admins;
 
-GRANT SELECT ON TABLE gwolofs.congestion_time_grps TO bdit_humans;
-GRANT ALL ON TABLE gwolofs.congestion_time_grps TO gwolofs;
+GRANT SELECT ON TABLE here_agg.time_grps TO bdit_humans;

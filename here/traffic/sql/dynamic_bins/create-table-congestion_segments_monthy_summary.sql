@@ -1,8 +1,8 @@
--- Table: gwolofs.congestion_segments_monthy_summary
+-- Table: here_agg.segments_monthy_summary
 
--- DROP TABLE IF EXISTS gwolofs.congestion_segments_monthy_summary;
+-- DROP TABLE IF EXISTS here_agg.segments_monthy_summary;
 
-CREATE TABLE IF NOT EXISTS gwolofs.congestion_segments_monthy_summary
+CREATE TABLE IF NOT EXISTS here_agg.segments_monthy_summary
 (
     segment_id integer,
     mnth date,
@@ -20,11 +20,9 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_segments_monthy_summary
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.congestion_segments_monthy_summary
-OWNER TO gwolofs;
+ALTER TABLE IF EXISTS here_agg.segments_monthy_summary
+OWNER TO here_admins;
 
-REVOKE ALL ON TABLE gwolofs.congestion_segments_monthy_summary FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.segments_monthy_summary FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.congestion_segments_monthy_summary TO bdit_humans;
-
-GRANT ALL ON TABLE gwolofs.congestion_segments_monthy_summary TO gwolofs;
+GRANT SELECT ON TABLE here_agg.segments_monthy_summary TO bdit_humans;

@@ -1,6 +1,6 @@
 WITH distinct_days AS (
     SELECT DISTINCT dt
-    FROM gwolofs.congestion_raw_segments
+    FROM here_agg.raw_segments
     WHERE
         dt >= '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date --noqa: TMP
         AND dt < '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month' --noqa: TMP

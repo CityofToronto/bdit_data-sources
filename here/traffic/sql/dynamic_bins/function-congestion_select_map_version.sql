@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_select_map_version(date, date)
+-- FUNCTION: here_agg.select_map_version(date, date)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_select_map_version(date, date);
+-- DROP FUNCTION IF EXISTS here_agg.select_map_version(date, date);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_select_map_version(
+CREATE OR REPLACE FUNCTION here_agg.select_map_version(
     start_date date,
     end_date date,
     agg_type text DEFAULT NULL, --null or 'path'
@@ -33,14 +33,14 @@ EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_select_map_version(date, date, text)
-OWNER TO gwolofs;
+ALTER FUNCTION here_agg.select_map_version(date, date, text)
+OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_select_map_version(date, date, text) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.select_map_version(date, date, text) TO congestion_bot;
 
-COMMENT ON FUNCTION gwolofs.congestion_select_map_version IS
+COMMENT ON FUNCTION here_agg.select_map_version IS
 'Implement TT App selectMapVersion.py';
 
 --test cases
-SELECT * FROM gwolofs.congestion_select_map_version('2022-01-01', '2023-01-01');
-SELECT * FROM gwolofs.congestion_select_map_version('2022-01-01', '2023-01-01', 'path');
+SELECT * FROM here_agg.select_map_version('2022-01-01', '2023-01-01');
+SELECT * FROM here_agg.select_map_version('2022-01-01', '2023-01-01', 'path');
