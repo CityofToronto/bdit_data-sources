@@ -52,7 +52,7 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
 SELECT here_agg.select_map_version(
     return_dynamic_bins.start_date,
     return_dynamic_bins.end_date,
-    'path'
+    'path_hm'
 ) INTO map_version;
 
 RETURN QUERY EXECUTE FORMAT(
@@ -76,8 +76,8 @@ RETURN QUERY EXECUTE FORMAT(
             ta.tx,
             seg.total_length,
             tsrange(
-                ta.dt + %4$L::time,
-                ta.dt + %5$L::time, '[)') AS time_grp,
+                ta.tx::date + %4$L::time,
+                ta.tx::date + %5$L::time, '[)') AS time_grp,
             RANK() OVER w AS bin_rank,
             SUM(seg.length) / seg.total_length AS sum_length,
             SUM(seg.length) AS length_w_data,
@@ -91,21 +91,21 @@ RETURN QUERY EXECUTE FORMAT(
         LEFT JOIN ref.holiday USING (dt)
         WHERE
             (
-                ta.tod >= %4$L
+                ta.tx::time >= %4$L
                 AND --{ToD_and_or}
-                ta.tod < %5$L
+                ta.tx::time < %5$L
             )
-            AND date_part('isodow', ta.dt) = ANY(%6$L::int[])
-            AND ta.dt >= %7$L
-            AND ta.dt < %8$L
+            AND date_part('isodow', ta.tx::date) = ANY(%6$L::int[])
+            AND ta.tx::date >= %7$L
+            AND ta.tx::date < %8$L
             AND (%9$L OR holiday.dt IS NULL) --holiday clause
         GROUP BY
             seg.corridor_id,
             ta.tx,
-            ta.dt,
+            ta.tx::date,
             seg.total_length
        WINDOW w AS (
-            PARTITION BY seg.corridor_id, ta.dt
+            PARTITION BY seg.corridor_id, ta.tx::date
             ORDER BY ta.tx
        )
     ),
