@@ -72,7 +72,7 @@ COMMENT ON COLUMN here_agg.raw_segments.tt
 IS 'Travel time in seconds.';
 
 COMMENT ON COLUMN here_agg.raw_segments.num_obs
-IS 'The sum of the sample size from here.ta_path.';
+IS 'The sum of the sample size from here.ta_path_hm.';
 
 COMMENT ON COLUMN here_agg.raw_segments.hr
 IS 'The hour the majority of the record occured in. Ties are rounded up.';
