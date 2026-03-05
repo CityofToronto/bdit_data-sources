@@ -74,7 +74,7 @@ def here_dynamic_binning_agg():
     
     check_not_empty = SQLCheckOperatorWithReturnValue(
         task_id="check_not_empty",
-        sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path WHERE dt = '{{ ds }}'",
+        sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path_hm WHERE dt = '{{ ds }}'",
         conn_id=CONN_ID,
         retries=1,
         retry_delay=duration(days=1),
