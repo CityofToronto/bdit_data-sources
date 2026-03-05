@@ -17,7 +17,7 @@ INSERT INTO here_agg.segments_monthy_summary (
 )
 SELECT
     segment_id,
-    congestion_segment_monthly_agg.mon AS mnth,
+    segment_monthly_agg.mon AS mnth,
     date_part('isodow', dt) <= 5 AS is_wkdy,
     hr,
     AVG(tt) AS avg_tt,
@@ -31,8 +31,8 @@ SELECT
 FROM here_agg.raw_segments
 LEFT JOIN ref.holiday USING (dt)
 WHERE
-    dt >= congestion_segment_monthly_agg.mon
-    AND dt < congestion_segment_monthly_agg.mon + interval '1 month'
+    dt >= segment_monthly_agg.mon
+    AND dt < segment_monthly_agg.mon + interval '1 month'
     AND holiday.holiday IS NULL
 GROUP BY
     segment_id,
