@@ -21,6 +21,8 @@ REVOKE ALL ON TABLE here_agg.raw_segments FROM bdit_humans;
 
 GRANT SELECT ON TABLE here_agg.raw_segments TO bdit_humans;
 
+GRANT ALL ON TABLE here_agg.raw_segments TO congestion_bot;
+
 -- Index: congestion_raw_segments_dt_idx
 
 -- DROP INDEX IF EXISTS here_agg.raw_segments_dt_idx;
