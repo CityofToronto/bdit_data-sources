@@ -55,8 +55,8 @@ EXECUTE FORMAT(
             SELECT seg.length / ta.harmonic_mean * 3.6 AS tt
         ) AS lat
         WHERE
-            ta.dt >= %2$L::date
-            AND ta.dt < %2$L::date + interval '1 day'
+            ta.tx::date >= %2$L::date
+            AND ta.tx::date < %2$L::date + interval '1 day'
         GROUP BY
             seg.segment_id,
             ta.tx,

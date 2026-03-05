@@ -15,7 +15,10 @@ STABLE PARALLEL SAFE
 AS $BODY$
 
 DECLARE
-    svr text := 'street_valid_range' || CASE agg_type WHEN 'path' THEN '_path' ELSE '' END;
+    svr text := 'street_valid_range' || CASE agg_type
+        WHEN 'path' THEN '_path'
+        WHEN 'path_hm' THEN '_path_hm'
+        ELSE '' END;
 
 BEGIN
 EXECUTE FORMAT(
