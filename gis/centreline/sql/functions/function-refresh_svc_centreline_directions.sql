@@ -1,3 +1,12 @@
+-- DROP FUNCTION IF EXISTS traffic.refresh_svc_centreline_directions();
+
+CREATE OR REPLACE FUNCTION traffic.refresh_svc_centreline_directions()
+RETURNS void
+LANGUAGE sql
+COST 100
+VOLATILE SECURITY DEFINER PARALLEL UNSAFE
+AS $BODY$
+
 /*
 A mid-block SVC/ATR count is assigned two of the four cardinal directions.
 These will be opposites (N/S or E/W), but a given centreline segment isn't
@@ -14,7 +23,7 @@ As such, this view should be joined on the actual directions assigned to SVCs
 rather than used on its own. Such a join *should* filter out most silly values.
 */
 
-CREATE MATERIALIZED VIEW traffic.svc_centreline_directions AS
+TRUNCATE traffic.svc_centreline_directions;
 
 WITH to_cardinal (bearing, direction) AS (
     -- define cardinal directions in degrees, but rotated
@@ -26,6 +35,7 @@ WITH to_cardinal (bearing, direction) AS (
     (radians(270 - 17), 'WB')
 )
 
+INSERT INTO traffic.svc_centreline_directions (centreline_id, from_node, to_node, direction, centreline_geom_directed, absolute_angular_distance)
 SELECT
     cl.centreline_id,
     CASE
@@ -73,18 +83,22 @@ WHERE
     ad.angular_distance < radians(80)
     OR ad.angular_distance > radians(100);
 
-CREATE UNIQUE INDEX ON traffic.svc_centreline_directions (centreline_id, direction);
-
-ALTER MATERIALIZED VIEW traffic.svc_centreline_directions OWNER TO gis_admins;
-
-COMMENT ON MATERIALIZED VIEW traffic.svc_centreline_directions
+COMMENT ON TABLE traffic.svc_centreline_directions
 IS 'Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto '
 'specific directions of travel along edges of the `gis_core.centreline_latest` network. '
 'Refreshed automatically by `gcc_layers_pull_bigdata` DAG after inserts into '
-'`gis_core.centreline_latest`.';
+'`gis_core.centreline_latest`.' || ' Last refreshed: ' || CURRENT_DATE || '.';
 
-COMMENT ON COLUMN traffic.svc_centreline_directions.geom_directed
-IS 'centreline segment geom drawn in the direction of `direction`';
+$BODY$;
 
-COMMENT ON COLUMN traffic.svc_centreline_directions.absolute_angular_distance
-IS 'Minimum absolute angular distance in degrees between centreline as drawn in `centreline_geom_directed` and the ideal of the stated direction. To be used as a measure of confidence for the match.';
+ALTER FUNCTION traffic.refresh_svc_centreline_directions()
+OWNER TO gis_admins;
+
+GRANT EXECUTE ON FUNCTION traffic.refresh_svc_centreline_directions() TO gcc_bot;
+
+GRANT EXECUTE ON FUNCTION traffic.refresh_svc_centreline_directions() TO traffic_admins;
+
+REVOKE ALL ON FUNCTION traffic.refresh_svc_centreline_directions() FROM public;
+
+COMMENT ON FUNCTION traffic.refresh_svc_centreline_directions()
+IS 'Function to refresh traffic.svc_centreline_directions, to gcc_bot permission to refresh.';
