@@ -28,7 +28,7 @@ EXECUTE FORMAT(
     WHERE UPPER(lat.overlap) - LOWER(lat.overlap) IS NOT NULL
     ORDER BY UPPER(lat.overlap) - LOWER(lat.overlap) DESC NULLS LAST
     LIMIT 1;
-    $$, svr, congestion_select_map_version.start_date, congestion_select_map_version.end_date
+    $$, svr, select_map_version.start_date, select_map_version.end_date
 ) INTO selected_version;
 END;
 $BODY$;

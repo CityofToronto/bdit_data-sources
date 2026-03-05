@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS here_agg.corridors
     lengths numeric [],
     geom geometry,
     total_length numeric,
-    corridor_id smallint NOT NULL DEFAULT nextval('congestion_corridors_uid_seq'::regclass),
+    corridor_id smallint NOT NULL DEFAULT nextval('here_agg.congestion_corridors_uid_seq'::regclass),
     node_start bigint NOT NULL,
     node_end bigint NOT NULL,
     map_version text COLLATE pg_catalog."default" NOT NULL,
@@ -36,3 +36,22 @@ GRANT SELECT ON TABLE here_agg.corridors TO bdit_humans;
 
 COMMENT ON TABLE here_agg.corridors IS
 'Stores cached travel time corridors to reduce routing time.';
+
+-- SEQUENCE: here_agg.congestion_corridors_uid_seq
+
+-- DROP SEQUENCE IF EXISTS here_agg.congestion_corridors_uid_seq;
+
+CREATE SEQUENCE IF NOT EXISTS here_agg.congestion_corridors_uid_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 32767
+    CACHE 1;
+
+ALTER SEQUENCE here_agg.congestion_corridors_uid_seq
+    OWNED BY here_agg.congestion_corridors.corridor_id;
+
+ALTER SEQUENCE here_agg.congestion_corridors_uid_seq
+    OWNER TO here_admins;
+
+GRANT ALL ON SEQUENCE here_agg.congestion_corridors_uid_seq TO tt_request_bot;

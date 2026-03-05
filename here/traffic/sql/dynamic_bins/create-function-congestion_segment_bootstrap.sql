@@ -23,9 +23,9 @@ AS $BODY$
             COUNT(*) AS n
         FROM here_agg.raw_segments
         WHERE -- same params as the above aggregation
-            dt >= congestion_segment_bootstrap.mnth
-            AND dt < congestion_segment_bootstrap.mnth + interval '1 month'
-            AND segment_id = congestion_segment_bootstrap.segment_id
+            dt >= segment_bootstrap.mnth
+            AND dt < segment_bootstrap.mnth + interval '1 month'
+            AND segment_id = segment_bootstrap.segment_id
         GROUP BY
             segment_id,
             is_wkdy,
@@ -44,7 +44,7 @@ AS $BODY$
         FROM raw_obs
         CROSS JOIN generate_series(1, n)
         -- 200 resamples (could be any number)
-        CROSS JOIN generate_series(1, congestion_segment_bootstrap.n_resamples) AS sample_group(group_id)
+        CROSS JOIN generate_series(1, segment_bootstrap.n_resamples) AS sample_group(group_id)
         GROUP BY
             raw_obs.is_wkdy,
             raw_obs.hr,
@@ -57,8 +57,8 @@ AS $BODY$
         segment_id, mnth, is_wkdy, hr, avg_tt, n, n_resamples, ci_lower, ci_upper
     )
     SELECT
-        congestion_segment_bootstrap.segment_id,
-        congestion_segment_bootstrap.mnth,
+        segment_bootstrap.segment_id,
+        segment_bootstrap.mnth,
         is_wkdy,
         hr,
         avg_tt::real,
