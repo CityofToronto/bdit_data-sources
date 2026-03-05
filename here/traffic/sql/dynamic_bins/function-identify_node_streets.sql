@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION gwolofs.identify_node_streets(
+CREATE OR REPLACE FUNCTION here_agg.identify_node_streets(
     node bigint,
     map_version text,
     exclude_streets text [],
@@ -35,9 +35,9 @@ RETURN;
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.identify_node_streets(bigint, text, text [])
-OWNER TO gwolofs;
+ALTER FUNCTION here_agg.identify_node_streets(bigint, text, text [])
+OWNER TO here_admins;
 
-COMMENT ON FUNCTION gwolofs.identify_node_streets IS
+COMMENT ON FUNCTION here_agg.identify_node_streets IS
 'Identifies the streets intersecting with a HERE node_id, given a node, map_version,
 and a list of streets to exclude (generally those which form the corridor).';

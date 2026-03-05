@@ -59,8 +59,8 @@ def here_dynamic_binning_monthly_agg():
     
     aggregate_monthly = SQLExecuteQueryOperator(
         sql=[
-            "DELETE FROM gwolofs.congestion_segments_monthy_summary WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date",
-            "SELECT gwolofs.congestion_segment_monthly_agg('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date)"
+            "DELETE FROM here_agg.segments_monthy_summary WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date",
+            "SELECT here_agg.segment_monthly_agg('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date)"
         ],
         task_id='aggregate_monthly',
         conn_id=CONN_ID,
@@ -77,7 +77,7 @@ def here_dynamic_binning_monthly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM gwolofs.congestion_segments_monthly_bootstrap WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resamples = 300",
+        sql="DELETE FROM here_agg.segments_monthly_bootstrap WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resamples = 300",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
@@ -98,7 +98,7 @@ def here_dynamic_binning_monthly_agg():
         query="""SELECT *
             FROM UNNEST(%s::bigint[]) AS unnested(segment_id),
             LATERAL (
-                SELECT gwolofs.congestion_segment_bootstrap(
+                SELECT here_agg.segment_bootstrap(
                                 mnth := date_trunc('month', %s::date)::date,
                                 segment_id := segment_id,
                                 n_resamples := 300)

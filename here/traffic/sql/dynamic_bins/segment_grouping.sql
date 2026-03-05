@@ -1,7 +1,7 @@
 WITH segments AS (
     --segments active in relevant month
     SELECT DISTINCT segment_id
-    FROM gwolofs.congestion_raw_segments
+    FROM here_agg.raw_segments
     WHERE
         dt >= '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date --noqa: TMP
         AND dt < '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + '1 month'::interval --noqa: TMP

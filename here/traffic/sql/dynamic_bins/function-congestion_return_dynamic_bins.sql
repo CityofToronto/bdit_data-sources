@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
+-- FUNCTION: here_agg.return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
+-- DROP FUNCTION IF EXISTS here_agg.return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_return_dynamic_bins(
+CREATE OR REPLACE FUNCTION here_agg.return_dynamic_bins(
     start_date date,
     end_date date,
     start_tod time without time zone,
@@ -49,7 +49,7 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
     )
 );
 
-SELECT gwolofs.congestion_select_map_version(
+SELECT here_agg.select_map_version(
     congestion_return_dynamic_bins.start_date,
     congestion_return_dynamic_bins.end_date,
     'path'
@@ -63,7 +63,7 @@ RETURN QUERY EXECUTE FORMAT(
             unnested.link_dir,
             unnested.length,
             ccc.total_length
-        FROM gwolofs.congestion_cache_corridor(%1$L, %2$L, %3$L) AS ccc,
+        FROM here_agg.cache_corridor(%1$L, %2$L, %3$L) AS ccc,
         UNNEST(
             ccc.link_dirs,
             ccc.lengths
@@ -169,7 +169,7 @@ RETURN QUERY EXECUTE FORMAT(
             AND s5b_end.bin_rank = dbo.end_bin,
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
         UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
-        --dynamic bins should not exceed one hour (dt_end <= dt_start + 1 hr)
+        --dynamic bins should not exceed 30 minutes (dt_end <= dt_start + 30 min)
         WHERE s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '30 minutes'
         GROUP BY
             s5b.corridor_id,
@@ -220,17 +220,17 @@ RETURN QUERY EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_return_dynamic_bins(
+ALTER FUNCTION here_agg.return_dynamic_bins(
     date, date, time without time zone,
     time without time zone, integer [], bigint, bigint, boolean
 )
-OWNER TO gwolofs;
+OWNER TO here_admins;
 
-COMMENT ON FUNCTION gwolofs.congestion_return_dynamic_bins IS
+COMMENT ON FUNCTION here_agg.return_dynamic_bins IS
 'Returns the dynamic binning results for a request.';
 
 -- overload the function for more straightforward situation of daily corridor agg
-CREATE OR REPLACE FUNCTION gwolofs.congestion_return_dynamic_bins_daily(
+CREATE OR REPLACE FUNCTION here_agg.return_dynamic_bins_daily(
     start_date date,
     node_start bigint,
     node_end bigint
@@ -241,7 +241,7 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS
 $BODY$
-SELECT gwolofs.congestion_return_dynamic_bins(
+SELECT here_agg.return_dynamic_bins(
     start_date := congestion_return_dynamic_bins_daily.start_date,
     end_date := congestion_return_dynamic_bins_daily.start_date + 1,
     start_tod := '00:00'::time without time zone,
@@ -252,5 +252,5 @@ SELECT gwolofs.congestion_return_dynamic_bins(
     holidays := True)
 $BODY$;
 
-COMMENT ON FUNCTION gwolofs.congestion_return_dynamic_bins_daily
+COMMENT ON FUNCTION here_agg.return_dynamic_bins_daily
 IS 'A simplified version of `congestion_return_dynamic_bins` for aggregating entire days of data.'

@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_segment_monthly_agg(date)
+-- FUNCTION: here_agg.segment_monthly_agg(date)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_segment_monthly_agg(date);
+-- DROP FUNCTION IF EXISTS here_agg.segment_monthly_agg(date);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_segment_monthly_agg(
+CREATE OR REPLACE FUNCTION here_agg.segment_monthly_agg(
     mon date
 )
 RETURNS void
@@ -11,7 +11,7 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
-INSERT INTO gwolofs.congestion_segments_monthy_summary (
+INSERT INTO here_agg.segments_monthy_summary (
     segment_id, mnth, is_wkdy, hr, avg_tt, stdev, percentile_05, percentile_15,
     percentile_50, percentile_85, percentile_95, num_quasi_obs
 )
@@ -28,7 +28,7 @@ SELECT
     PERCENTILE_CONT(0.85) WITHIN GROUP (ORDER BY tt) AS percentile_85,
     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY tt) AS percentile_95,
     COUNT(*) AS num_quasi_obs
-FROM gwolofs.congestion_raw_segments
+FROM here_agg.raw_segments
 LEFT JOIN ref.holiday USING (dt)
 WHERE
     dt >= congestion_segment_monthly_agg.mon
@@ -41,12 +41,10 @@ GROUP BY
 
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_segment_monthly_agg(date)
-OWNER TO gwolofs;
+ALTER FUNCTION here_agg.segment_monthly_agg(date)
+OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION here_agg.segment_monthly_agg(date) TO public;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO CONGESTION_BOT;
-
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_monthly_agg(date) TO GWOLOFS;
+GRANT EXECUTE ON FUNCTION here_agg.segment_monthly_agg(date) TO congestion_bot;
 
