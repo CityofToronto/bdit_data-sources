@@ -35,7 +35,7 @@ DAG_OWNERS = "Gabe"
 CONN_ID = "congestion_bot"
 
 default_args = {
-    'owner': ','.join(DAG_OWNERS),
+    'owner': DAG_OWNERS,
     'depends_on_past':False,
     'start_date': datetime(2019, 1, 1, tz="America/Toronto"),
     'email_on_failure': False,
@@ -62,11 +62,11 @@ def here_dynamic_binning_agg():
             task_id='create_partitions',
             pre_execute=check_jan_1st,
             sql=#partition by year
-                """SELECT gwolofs.partition_yyyy(
-                    base_table := ''congestion_raw_segments'',
+                """SELECT here_agg.partition_yyyy(
+                    base_table := 'raw_segments',
                     year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int,
-                    partition_owner := 'gwolofs',
-                    schema_ := 'gwolofs'
+                    partition_owner := 'here_admins',
+                    schema_ := 'here_agg'
                 );""",
             conn_id=CONN_ID,
             autocommit=True
