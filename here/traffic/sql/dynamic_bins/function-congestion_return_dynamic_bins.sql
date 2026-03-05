@@ -50,8 +50,8 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
 );
 
 SELECT here_agg.select_map_version(
-    congestion_return_dynamic_bins.start_date,
-    congestion_return_dynamic_bins.end_date,
+    return_dynamic_bins.start_date,
+    return_dynamic_bins.end_date,
     'path'
 ) INTO map_version;
 
@@ -81,12 +81,12 @@ RETURN QUERY EXECUTE FORMAT(
             RANK() OVER w AS bin_rank,
             SUM(seg.length) / seg.total_length AS sum_length,
             SUM(seg.length) AS length_w_data,
-            SUM(seg.length / ta.mean * 3.6) AS unadjusted_tt,
+            SUM(seg.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
             SUM(sample_size) AS num_obs,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
-            ARRAY_AGG(seg.length / ta.mean * 3.6 ORDER BY ta.link_dir) AS tts,
+            ARRAY_AGG(seg.length / ta.harmonic_mean * 3.6 ORDER BY ta.link_dir) AS tts,
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
-        FROM here.ta_path AS ta
+        FROM here.ta_path_hm AS ta
         JOIN corridor AS seg USING (link_dir)
         LEFT JOIN ref.holiday USING (dt)
         WHERE
@@ -157,7 +157,7 @@ RETURN QUERY EXECUTE FORMAT(
             unnested.link_dir,
             unnested.len,
             AVG(unnested.tt) AS tt, --avg TT for each link_dir
-            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path sample_size for each link_dir
+            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each link_dir
         FROM dynamic_bin_options AS dbo
         LEFT JOIN segment_5min_bins AS s5b
             ON s5b.time_grp = dbo.time_grp
@@ -192,7 +192,7 @@ RETURN QUERY EXECUTE FORMAT(
         corridor_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
+        SUM(num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each segment
     FROM unnested_db_options
     GROUP BY
         time_grp,
@@ -242,15 +242,15 @@ VOLATILE PARALLEL UNSAFE
 AS
 $BODY$
 SELECT here_agg.return_dynamic_bins(
-    start_date := congestion_return_dynamic_bins_daily.start_date,
-    end_date := congestion_return_dynamic_bins_daily.start_date + 1,
+    start_date := return_dynamic_bins_daily.start_date,
+    end_date := return_dynamic_bins_daily.start_date + 1,
     start_tod := '00:00'::time without time zone,
     end_tod := '24:00'::time without time zone,
-    dow_list := ARRAY[extract('isodow' from congestion_return_dynamic_bins_daily.start_date)]::int[],
-    node_start := congestion_return_dynamic_bins_daily.node_start,
-    node_end := congestion_return_dynamic_bins_daily.node_end,
+    dow_list := ARRAY[extract('isodow' from return_dynamic_bins_daily.start_date)]::int[],
+    node_start := return_dynamic_bins_daily.node_start,
+    node_end := return_dynamic_bins_daily.node_end,
     holidays := True)
 $BODY$;
 
 COMMENT ON FUNCTION here_agg.return_dynamic_bins_daily
-IS 'A simplified version of `congestion_return_dynamic_bins` for aggregating entire days of data.'
+IS 'A simplified version of `return_dynamic_bins` for aggregating entire days of data.'
