@@ -17,7 +17,7 @@ WITH segments AS (
 ```
 
 ### segment_5min_bins
-In this step we pull the relevant data from `here.ta_path` for each segment / time_grp (here_agg.time_grps). We save the disaggregate travel time data by link in 3 arrays (link_dirs, tts, lengths), so that in future steps we can reaggregate average segment travel time and distinct length over different ranges without referring back to the here.ta_path table. The time bins (`tx`) are also ranked to make it easier to enumerate possible bin extents using `generate_series` in the next step. 
+In this step we pull the relevant data from `here.ta_path_hm` for each segment / time_grp (here_agg.time_grps). We save the disaggregate travel time data by link in 3 arrays (link_dirs, tts, lengths), so that in future steps we can reaggregate average segment travel time and distinct length over different ranges without referring back to the here.ta_path_hm table. The time bins (`tx`) are also ranked to make it easier to enumerate possible bin extents using `generate_series` in the next step. 
 
 ```sql
 segment_5min_bins AS (
@@ -29,12 +29,12 @@ segment_5min_bins AS (
         links.total_length,
         SUM(links.length) / links.total_length AS sum_length,
         SUM(links.length) AS length_w_data,
-        SUM(links.length / ta.mean * 3.6) AS unadjusted_tt,
+        SUM(links.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
         SUM(sample_size) AS num_obs,
         ARRAY_AGG(ta.link_dir ORDER BY link_dir) AS link_dirs,
-        ARRAY_AGG(links.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
+        ARRAY_AGG(links.length / ta.harmonic_mean * 3.6 ORDER BY link_dir) AS tts,
         ARRAY_AGG(links.length ORDER BY link_dir) AS lengths
-    FROM here.ta_path AS ta
+    FROM here.ta_path_hm AS ta
     JOIN here_agg.time_grps AS tg ON
         ta.tx >= %1$L::date + tg.start_tod
         AND ta.tx < %1$L::date + tg.end_tod
@@ -142,7 +142,7 @@ unnested_db_options AS (
         unnested.link_dir,
         unnested.len,
         AVG(unnested.tt) AS tt, --avg TT for each link_dir
-        SUM(s5b.num_obs) AS num_obs --sum of here.ta_path sample_size for each link_dir
+        SUM(s5b.num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each link_dir
     FROM dynamic_bin_options AS dbo
     LEFT JOIN segment_5min_bins AS s5b
         ON s5b.time_grp = dbo.time_grp
@@ -202,7 +202,7 @@ Here we find bins with sufficient length, for the two cases:
         segment_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(num_obs) AS num_obs --sum of here.ta_path sample_size for each segment
+        SUM(num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each segment
     FROM unnested_db_options
     GROUP BY
         time_grp,

@@ -69,7 +69,7 @@ COMMENT ON COLUMN here_agg.raw_corridors.tt
 IS 'Travel time in seconds.';
 
 COMMENT ON COLUMN here_agg.raw_corridors.num_obs
-IS 'The sum of the sample size from here.ta_path.';
+IS 'The sum of the sample size from here.ta_path_hm.';
 
 COMMENT ON COLUMN here_agg.raw_corridors.dt
 IS 'The date of aggregation for the record. Records may not overlap dates.';
