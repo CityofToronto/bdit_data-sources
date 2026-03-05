@@ -1,8 +1,8 @@
--- Table: gwolofs.congestion_corridors
+-- Table: here_agg.corridors
 
--- DROP TABLE IF EXISTS gwolofs.congestion_corridors;
+-- DROP TABLE IF EXISTS here_agg.corridors;
 
-CREATE TABLE IF NOT EXISTS gwolofs.congestion_corridors
+CREATE TABLE IF NOT EXISTS here_agg.corridors
 (
     link_dirs text [] COLLATE pg_catalog."default",
     lengths numeric [],
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_corridors
     CONSTRAINT congestion_corridors_pkey PRIMARY KEY (node_start, node_end, map_version),
     CONSTRAINT corridor_pkey UNIQUE NULLS NOT DISTINCT (corridor_id),
     CONSTRAINT project_id_fk FOREIGN KEY (project_id)
-    REFERENCES gwolofs.congestion_projects (project_id) MATCH SIMPLE
+    REFERENCES here_agg.projects (project_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID
@@ -27,14 +27,12 @@ CREATE TABLE IF NOT EXISTS gwolofs.congestion_corridors
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.congestion_corridors
-OWNER TO gwolofs;
+ALTER TABLE IF EXISTS here_agg.corridors
+OWNER TO here_admins;
 
-REVOKE ALL ON TABLE gwolofs.congestion_corridors FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.corridors FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.congestion_corridors TO bdit_humans;
+GRANT SELECT ON TABLE here_agg.corridors TO bdit_humans;
 
-GRANT ALL ON TABLE gwolofs.congestion_corridors TO gwolofs;
-
-COMMENT ON TABLE gwolofs.congestion_corridors IS
+COMMENT ON TABLE here_agg.corridors IS
 'Stores cached travel time corridors to reduce routing time.';

@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_cache_corridor(bigint, bigint, text)
+-- FUNCTION: here_agg.cache_corridor(bigint, bigint, text)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_corridor(bigint, bigint, text);
+-- DROP FUNCTION IF EXISTS here_agg.cache_corridor(bigint, bigint, text);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_corridor(
+CREATE OR REPLACE FUNCTION here_agg.cache_corridor(
     node_start bigint,
     node_end bigint,
     map_version text,
@@ -32,7 +32,7 @@ BEGIN
         tt.lengths,
         tt.total_length
         INTO corridor_id, link_dirs, lengths, total_length
-    FROM gwolofs.congestion_corridors AS tt
+    FROM here_agg.corridors AS tt
     WHERE
         tt.node_start = congestion_cache_corridor.node_start
         AND tt.node_end = congestion_cache_corridor.node_end
@@ -49,7 +49,7 @@ EXECUTE format (
             UNNEST (links) WITH ORDINALITY AS unnested (link_dir, seq)
         )
         
-        INSERT INTO gwolofs.congestion_corridors (
+        INSERT INTO here_agg.corridors (
             node_start, node_end, map_version, link_dirs, lengths, geom,
             total_length, corridor_streets, corridor_start, corridor_end
         )
@@ -64,9 +64,9 @@ EXECUTE format (
             SUM(ST_Length(ST_Transform(streets.geom, 2952))) AS total_length,
             string_agg(DISTINCT initcap(traffic_streets.st_name),
                 ' / ' ORDER BY initcap(traffic_streets.st_name)) AS corridor_streets,
-            gwolofs.identify_node_streets(%2$L, %4$L,
+            here_agg.identify_node_streets(%2$L, %4$L,
                 array_agg(DISTINCT initcap(traffic_streets.st_name))) AS corridor_start,
-            gwolofs.identify_node_streets(%3$L, %4$L,
+            here_agg.identify_node_streets(%3$L, %4$L,
                 array_agg(DISTINCT initcap(traffic_streets.st_name))) AS corridor_end
         FROM routed_links AS rl
         JOIN here.%5$I AS streets USING (link_dir)
@@ -93,11 +93,11 @@ RETURN;
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_cache_corridor(bigint, bigint, text)
-OWNER TO gwolofs;
+ALTER FUNCTION here_agg.cache_corridor(bigint, bigint, text)
+OWNER TO here_admins;
 
-COMMENT ON FUNCTION gwolofs.congestion_cache_corridor IS
+COMMENT ON FUNCTION here_agg.cache_corridor IS
 'Returns definition of a HERE corridor, given input nodes and map_version.
 First checks if corridor has already been cached and if so retrieves the
-cached values. If not, a new entry is added to gwolofs.congestion_corridors
+cached values. If not, a new entry is added to here_agg.corridors
 table and returned.';

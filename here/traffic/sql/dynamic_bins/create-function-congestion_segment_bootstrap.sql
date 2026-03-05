@@ -1,6 +1,6 @@
---DROP FUNCTION gwolofs.congestion_segment_bootstrap(date,bigint,integer);
+--DROP FUNCTION here_agg.segment_bootstrap(date,bigint,integer);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_segment_bootstrap(
+CREATE OR REPLACE FUNCTION here_agg.segment_bootstrap(
     mnth date,
     segment_id bigint,
     n_resamples int
@@ -21,7 +21,7 @@ AS $BODY$
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
             COUNT(*) AS n
-        FROM gwolofs.congestion_raw_segments
+        FROM here_agg.raw_segments
         WHERE -- same params as the above aggregation
             dt >= congestion_segment_bootstrap.mnth
             AND dt < congestion_segment_bootstrap.mnth + interval '1 month'
@@ -53,7 +53,7 @@ AS $BODY$
             sample_group.group_id
     )
     
-    INSERT INTO gwolofs.congestion_segments_monthly_bootstrap (
+    INSERT INTO here_agg.segments_monthly_bootstrap (
         segment_id, mnth, is_wkdy, hr, avg_tt, n, n_resamples, ci_lower, ci_upper
     )
     SELECT
@@ -75,7 +75,7 @@ AS $BODY$
 
     $BODY$;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(
+GRANT EXECUTE ON FUNCTION here_agg.segment_bootstrap(
     date, bigint, integer
 ) TO congestion_bot;
 
@@ -83,7 +83,7 @@ GRANT EXECUTE ON FUNCTION gwolofs.congestion_segment_bootstrap(
 SELECT *
 FROM UNNEST('{1,2,3,4,5,6,7,8,9}'::bigint[]) AS unnested(segment_id)
 LATERAL (
-    SELECT gwolofs.congestion_segment_bootstrap(
+    SELECT here_agg.segment_bootstrap(
                     mnth := '2025-06-01'::date,
                     segment_ids := segment_id,
                     n_resamples := 300)

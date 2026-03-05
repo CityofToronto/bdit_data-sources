@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
+-- FUNCTION: here_agg.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
+-- DROP FUNCTION IF EXISTS here_agg.cache_tt_results(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results(
+CREATE OR REPLACE FUNCTION here_agg.cache_tt_results(
     uri_string text,
     start_date date,
     end_date date,
@@ -20,13 +20,13 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
     --insert into the final table
-    INSERT INTO gwolofs.congestion_raw_corridors (
+    INSERT INTO here_agg.raw_corridors (
         uri_string, dt, time_grp, corridor_id,  bin_range, tt, num_obs, hr
     )
     SELECT
         congestion_cache_tt_results.uri_string,
         dt, time_grp, corridor_id, bin_range, tt, num_obs, hr
-    FROM gwolofs.congestion_return_dynamic_bins(
+    FROM here_agg.return_dynamic_bins(
         congestion_cache_tt_results.start_date,
         congestion_cache_tt_results.end_date,
         congestion_cache_tt_results.start_tod,
@@ -40,17 +40,17 @@ AS $BODY$
     
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_cache_tt_results(
+ALTER FUNCTION here_agg.cache_tt_results(
     text, date, date, time without time zone,
     time without time zone, integer [], bigint, bigint, boolean
 )
-OWNER TO gwolofs;
+OWNER TO here_admins;
 
-COMMENT ON FUNCTION gwolofs.congestion_cache_tt_results IS
+COMMENT ON FUNCTION here_agg.cache_tt_results IS
 'Caches the dynamic binning results for a request.';
 
 -- overload the function for more straightforward situation of daily corridor agg
-CREATE OR REPLACE FUNCTION gwolofs.congestion_cache_tt_results_daily(
+CREATE OR REPLACE FUNCTION here_agg.cache_tt_results_daily(
     start_date date,
     node_start bigint,
     node_end bigint
@@ -61,7 +61,7 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS
 $BODY$
-SELECT gwolofs.congestion_cache_tt_results(
+SELECT here_agg.cache_tt_results(
     uri_string := NULL::text,
     start_date := congestion_cache_tt_results_daily.start_date,
     end_date := congestion_cache_tt_results_daily.start_date + 1,
@@ -73,5 +73,5 @@ SELECT gwolofs.congestion_cache_tt_results(
     holidays := True)
 $BODY$;
 
-COMMENT ON FUNCTION gwolofs.congestion_cache_tt_results_daily
+COMMENT ON FUNCTION here_agg.cache_tt_results_daily
 IS 'A simplified version of `congestion_cache_tt_results` for aggregating entire days of data.';
