@@ -12,9 +12,9 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE
-    map_version text := here_agg.select_map_version(start_date, start_date + 1, 'path');
-    congestion_network_table text := 'network_links_' || map_version
-    || CASE map_version WHEN '23_4' THEN '_geom' ELSE '' END; --temp fix version
+    map_version text := here_agg.select_map_version(start_date, start_date + 1, 'path_hm');
+    congestion_network_table text := CASE map_version
+    WHEN '24_4' THEN 'temp_network_links_24_4' WHEN '23_4' THEN 'network_links_23_4_geom' END;
 
 BEGIN
 
