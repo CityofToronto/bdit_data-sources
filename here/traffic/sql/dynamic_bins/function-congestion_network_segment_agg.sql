@@ -1,8 +1,8 @@
--- FUNCTION: gwolofs.congestion_network_segment_agg(date)
+-- FUNCTION: here_agg.network_segment_agg(date)
 
--- DROP FUNCTION IF EXISTS gwolofs.congestion_network_segment_agg(date);
+-- DROP FUNCTION IF EXISTS here_agg.network_segment_agg(date);
 
-CREATE OR REPLACE FUNCTION gwolofs.congestion_network_segment_agg(
+CREATE OR REPLACE FUNCTION here_agg.network_segment_agg(
     start_date date
 )
 RETURNS void
@@ -12,7 +12,7 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE
-    map_version text := gwolofs.congestion_select_map_version(start_date, start_date + 1, 'path');
+    map_version text := here_agg.select_map_version(start_date, start_date + 1, 'path');
     congestion_network_table text := 'network_links_' || map_version
     || CASE map_version WHEN '23_4' THEN '_geom' ELSE '' END; --temp fix version
 
@@ -172,7 +172,7 @@ EXECUTE FORMAT(
     
     ANALYZE congestion_raw_segments_temp;
     
-    INSERT INTO gwolofs.congestion_raw_segments (
+    INSERT INTO here_agg.raw_segments (
         dt, bin_start, segment_id, bin_range, tt, num_obs, hr
     )
     SELECT
@@ -191,11 +191,11 @@ EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION gwolofs.congestion_network_segment_agg(date)
-OWNER TO gwolofs;
+ALTER FUNCTION here_agg.network_segment_agg(date)
+OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION gwolofs.congestion_network_segment_agg(date) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.network_segment_agg(date) TO congestion_bot;
 
-COMMENT ON FUNCTION gwolofs.congestion_network_segment_agg(date)
+COMMENT ON FUNCTION here_agg.network_segment_agg(date)
 IS 'Dynamic bin aggregation of the congestion network by hour and time periods. 
 Takes around 10 minutes to run for one day (hourly and period based aggregation)';

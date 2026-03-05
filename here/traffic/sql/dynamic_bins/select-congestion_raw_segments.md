@@ -17,7 +17,7 @@ WITH segments AS (
 ```
 
 ### segment_5min_bins
-In this step we pull the relevant data from `here.ta_path` for each segment / time_grp (gwolofs.congestion_time_grps). We save the disaggregate travel time data by link in 3 arrays (link_dirs, tts, lengths), so that in future steps we can reaggregate average segment travel time and distinct length over different ranges without referring back to the here.ta_path table. The time bins (`tx`) are also ranked to make it easier to enumerate possible bin extents using `generate_series` in the next step. 
+In this step we pull the relevant data from `here.ta_path` for each segment / time_grp (here_agg.time_grps). We save the disaggregate travel time data by link in 3 arrays (link_dirs, tts, lengths), so that in future steps we can reaggregate average segment travel time and distinct length over different ranges without referring back to the here.ta_path table. The time bins (`tx`) are also ranked to make it easier to enumerate possible bin extents using `generate_series` in the next step. 
 
 ```sql
 segment_5min_bins AS (
@@ -35,7 +35,7 @@ segment_5min_bins AS (
         ARRAY_AGG(links.length / ta.mean * 3.6 ORDER BY link_dir) AS tts,
         ARRAY_AGG(links.length ORDER BY link_dir) AS lengths
     FROM here.ta_path AS ta
-    JOIN gwolofs.congestion_time_grps AS tg ON
+    JOIN here_agg.time_grps AS tg ON
         ta.tx >= %1$L::date + tg.start_tod
         AND ta.tx < %1$L::date + tg.end_tod
     JOIN segments AS links USING (link_dir)
@@ -55,7 +55,7 @@ segment_5min_bins AS (
 ),
 ```
 
-`SELECT * FROM gwolofs.congestion_raw_segments WHERE segment_id = 1 AND dt = '2025-01-10' AND time_grp = '[00:00:00,01:00:00)';`
+`SELECT * FROM here_agg.raw_segments WHERE segment_id = 1 AND dt = '2025-01-10' AND time_grp = '[00:00:00,01:00:00)';`
 
 | segment_id | time_grp            | tx                      | bin_rank | total_length | sum_length             | length_w_data | unadjusted_tt            | num_obs | link_dirs                                                     | tts                                                                                           | lengths                        |
 |------------|---------------------|-------------------------|----------|--------------|------------------------|---------------|--------------------------|---------|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------|--------------------------------|
@@ -192,7 +192,7 @@ Here we find bins with sufficient length, for the two cases:
 ```sql
     --this query contains overlapping values which get eliminated
     --via on conflict with the exclusion constraint on congestion_raw_segments table.
-    INSERT INTO gwolofs.congestion_raw_segments (
+    INSERT INTO here_agg.raw_segments (
         dt, time_grp, segment_id, bin_range, tt, num_obs
     )
     --distinct on ensures only the shortest option gets proposed for insert
@@ -237,7 +237,7 @@ Here we find bins with sufficient length, for the two cases:
 | 2025-01-10 | [00:00:00,06:00:00) |          1 | ["2025-01-10 05:55:00","2025-01-10 06:00:00") |  39.36 |      50 |
 
 After insert against exclusion constraint, only 6 remain (of 10 above), since rows #3,5,8,9 overlap other records. 
-`SELECT segment_id, bin_range, round(tt, 2) AS tt, total_length, length_w_data FROM gwolofs.congestion_raw_segments WHERE segment_id = 29 AND time_grp = '["2025-01-04 00:00:00","2025-01-04 06:00:00")'::tsrange`
+`SELECT segment_id, bin_range, round(tt, 2) AS tt, total_length, length_w_data FROM here_agg.raw_segments WHERE segment_id = 29 AND time_grp = '["2025-01-04 00:00:00","2025-01-04 06:00:00")'::tsrange`
 
 Constraint: 
 ```sql
