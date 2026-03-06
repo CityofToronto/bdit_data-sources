@@ -2,7 +2,7 @@ import os
 import logging
 import pandas as pd
 from numpy import nan
-from psycopg2 import sql, Error
+from psycopg2 import sql, Error, OperationalError, DatabaseError
 from psycopg2.extras import execute_values
 import struct
 from datetime import datetime, timedelta
@@ -82,11 +82,15 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
         with itsc_conn.get_conn() as con, con.cursor() as cur:
             LOGGER.info("Fetching %s", 'vdsvehicledata')
             cur.execute(raw_sql)
-            data = cur.fetchmany(batch_size)
-            batch = 1
+            batch = 0
             running_total_1=0
             running_total_2=0
-            while not len(data) == 0:
+            while True:
+                data = cur.fetchmany(batch_size)
+                if not data:
+                    LOGGER.info("No more rows available from cursor. Exiting loop.")
+                    break
+                batch += 1
                 running_total_1 += len(data)
                 LOGGER.info(f"Batch {batch} -- {len(data)} rows fetched from vdsdata.")
                 data = pd.DataFrame(data)
@@ -107,16 +111,17 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
                 #insert data 
                 data_tuples = [tuple(x) for x in transformed_data.to_numpy()] #convert df back to tuples for inserting
                 insert_data(rds_conn, insert_query, 'raw_vdsdata', data_tuples)
-
-                #fetch next batch
-                data = cur.fetchmany(batch_size)
-                batch += 1
-            LOGGER.info(f"Total rows fetched: {running_total_1}. Total rows inserted (lanedata expanded): {running_total_2}.")
-    except Error as exc:
-            LOGGER.critical("Error fetching from %s.", 'vdsdata')
-            LOGGER.critical(exc)
-            raise Exception()
-    
+        LOGGER.info(f"Total rows fetched: {running_total_1}. Total rows inserted (lanedata expanded): {running_total_2}.")
+    except OperationalError as exc:
+        # Connection/server issues
+        LOGGER.critical("Database connection error fetching from %s.", 'vdsdata')
+        LOGGER.critical(exc)
+        raise
+    except DatabaseError as exc:
+        # Other database errors (integrity, syntax, etc.)
+        LOGGER.critical("Database error fetching from %s.", 'vdsdata')
+        LOGGER.critical(exc)
+        raise
 def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date): 
 #pulls data from ITSC table `vdsvehicledata` and inserts into RDS table `vds.raw_vdsvehicledata`
 #contains individual vehicle activations from highway sensors (speed, length)
