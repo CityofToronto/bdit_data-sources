@@ -21,6 +21,9 @@ IF wkbgeom_exists THEN
 	ELSE
 	RAISE NOTICE 'No wkb_geometry column.';
 END IF;
+
+EXECUTE FORMAT('ALTER TABLE here_gis.%I ALTER COLUMN geom SET DATA TYPE geometry(LineString,4326) USING ST_GeometryN(geom, 1);', tablename);
+
 RETURN 1;
 END;
 $BODY$;
@@ -28,7 +31,6 @@ $BODY$;
 ALTER FUNCTION here_gis.update_geom_column(text)
 OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION here_gis.update_geom_column(text) TO bdit_humans;
 
 GRANT EXECUTE ON FUNCTION here_gis.update_geom_column(text) TO here_admins;
 
