@@ -2,14 +2,14 @@
 
 -- DROP FUNCTION IF EXISTS here_gis.clip_to(text, text);
 
-
 CREATE OR REPLACE FUNCTION here_gis.clip_to(
-	tablename text,
-	revision text)
-    RETURNS integer
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE STRICT PARALLEL UNSAFE
+    tablename text,
+    revision text
+)
+RETURNS integer
+LANGUAGE plpgsql
+COST 100
+VOLATILE STRICT PARALLEL UNSAFE
 AS $BODY$
 DECLARE
     boundary_table TEXT := 'adminbndy3_'||revision;
@@ -47,10 +47,10 @@ END;
 $BODY$;
 
 ALTER FUNCTION here_gis.clip_to(text, text)
-    OWNER TO here_admins;
+OWNER TO here_admins;
 
 GRANT EXECUTE ON FUNCTION here_gis.clip_to(text, text) TO bdit_humans;
 
 GRANT EXECUTE ON FUNCTION here_gis.clip_to(text, text) TO here_admins;
 
-REVOKE ALL ON FUNCTION here_gis.clip_to(text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION here_gis.clip_to(text, text) FROM public;

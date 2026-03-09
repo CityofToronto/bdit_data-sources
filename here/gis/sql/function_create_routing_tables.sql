@@ -1,10 +1,10 @@
 -- For yearly maintenance
 -- Create routing tables when we get a new map version
 CREATE OR REPLACE FUNCTION here.create_rounting_tables(ref_yr text)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE STRICT SECURITY DEFINER PARALLEL UNSAFE
+RETURNS void
+LANGUAGE plpgsql
+COST 100
+VOLATILE STRICT SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE 
@@ -90,11 +90,10 @@ EXECUTE format($$
 			  _streets, _streets, _streets, _streets, _streets);
 						
 END;
-$BODY$;						
-						
+$BODY$;
+
 ALTER FUNCTION here.create_rounting_tables(text)
-    OWNER TO here_admins;
-    
+OWNER TO here_admins;
+
 COMMENT ON FUNCTION here.create_rounting_tables(text)
-    IS 'This function creates new (1) routing_nodes, (2) traffic_streets, and (3) routing_streets for the inputted map version. Run once during map version upgrade each year.';
-					
+IS 'This function creates new (1) routing_nodes, (2) traffic_streets, and (3) routing_streets for the inputted map version. Run once during map version upgrade each year.';
