@@ -37,7 +37,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'email_on_success': False,
                 'retries': 0,
                 'retry_delay': timedelta(minutes=5),
-                'on_failure_callback': partial(task_fail_slack_alert, channel="slack_data_pipeline_dev")
+                'on_failure_callback': partial(task_fail_slack_alert, channel="slack_data_pipeline")
                 }
 
 @dag(
@@ -167,7 +167,7 @@ def ksi_opan_data():
                 f"{details}\n"
                 f"Approve/reject *<{url}|here>*."
             ),
-            channel="slack_data_pipeline_dev",
+            channel="slack_data_pipeline",
         )
 
     @task.branch
@@ -211,7 +211,7 @@ def ksi_opan_data():
         send_slack_msg(
             context=context,
             msg=f"KSI table successfully refreshed :white_check_mark:.",
-            channel='slack_data_pipeline_dev'
+            channel='slack_data_pipeline'
             )
     
     checks = data_checks()
