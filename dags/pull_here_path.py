@@ -3,7 +3,7 @@ import os
 import pendulum
 import datetime
 
-from airflow.sdk import task, dag, Param
+from airflow.sdk import task, dag, Param, task_group, Variable
 from airflow.sdk.bases.hook import BaseHook
 from airflow.sdk.execution_time.macros import ds_add, ds_format
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
@@ -141,9 +141,25 @@ def pull_here_path():
             | psql -h $HOST -U $LOGIN -d bigdata \
                 -c "\\COPY here.ta_path_hm_view FROM STDIN WITH (FORMAT csv, HEADER TRUE);"
         '''
-    
+
+    # Create a task group for triggering the DAGs
+    # need to figure out how to backfill multiple days
+    @task_group
+    def trigger_dags_tasks():
+        # Define TriggerDagRunOperator for each DAG to trigger
+        trigger_operators = []
+        DAGS_TO_TRIGGER = Variable.get('here_path_dag_triggers', deserialize_json=True)
+        for dag_id in DAGS_TO_TRIGGER:
+            trigger_operator = TriggerDagRunOperator(
+                task_id=f'trigger_{dag_id}',
+                trigger_dag_id=dag_id,
+                logical_date='{{macros.ds_add(ds, -1)}}',
+                reset_dag_run=True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
+            )
+            trigger_operators.append(trigger_operator)
+
     create_annual_partition.set_upstream(request_id)
     create_annual_partition >> clear_ta_path
-    clear_ta_path >> load_data()
+    clear_ta_path >> load_data() >> trigger_dags_tasks()
     
 pull_here_path()
