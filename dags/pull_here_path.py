@@ -7,6 +7,7 @@ from airflow.sdk import task, dag, Param
 from airflow.sdk.bases.hook import BaseHook
 from airflow.sdk.execution_time.macros import ds_add, ds_format
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -54,14 +55,14 @@ default_args = {'owner': ','.join(names),
      #airflow dags trigger --conf '{"start_date": "2024-02-01", "end_date": "2024-02-07"}' pull_here_path_hm
      params={
             "start_date": Param(
-                default=f"{datetime.date.today()}",
+                default=None,
                 type=["null", "string"],
                 format="date",
                 title="Start Date",
                 description="Custom start date for use in backfilling.",
             ),
             "end_date": Param(
-                default=f"{datetime.date.today()}",
+                default=None,
                 type=["null", "string"],
                 format="date",
                 title="End Date",
@@ -81,7 +82,7 @@ def pull_here_path():
     def get_request_id(access_token: str, ds=None, **context):
         start_date = context["params"]["start_date"]
         end_date = context["params"]["end_date"]
-        if start_date == "":
+        if start_date is None:
             start_date = ds_format(ds_add(ds, -1), "%Y-%m-%d", "%Y%m%d")
             end_date = start_date
         else:
