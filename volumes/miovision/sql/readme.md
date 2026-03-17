@@ -620,7 +620,57 @@ WHERE
 
 ### Identifying new anomalies
 The `anomalous_ranges` table is populated in different ways:
-  - manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
-  - automatically by a [daily script](function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.
+  1. manually by `miovision_data_detectives` after visual inspection or prompting from an Airflow alert
+  2. initially some records were added after some manual QC work which can can be found in the [dev_notebooks readme.md](../dev_notebooks/readme.md) (including notebooks and code).
+  3. automatically by a [daily script](function/function-identify-zero-counts.sql) which identifys zero volume days by intersection/classification.  
     - There is an intention to eventually flag more unusual volumes automagically (see [Issue #630](https://github.com/CityofToronto/bdit_data-sources/issues/630)). 
-  - initially some records were added after some manual QC work which can can be found in the [dev_notebooks readme.md](../dev_notebooks/readme.md) (including notebooks and code).
+  
+[`miovision_api.identify_anomalous_ranges`](function/function-identify_anomalous_ranges.sql): performs `delete_anomalous_ranges` -> `identify_zero_counts` -> `merge_consecutive_anomalous_ranges`. These 3 functions should always be performed together in that sequence for most thorough result.
+
+[`miovision_api.delete_anomalous_ranges`](function/function-delete_anomalous_ranges.sql): Performs the complex job of clearing existing "auto flagged" anomalous ranges for a date. This is desired, because when we pull new data, we don't want an existing anomalous range (possibly no longer relevant on repulling) to prevent new data from showing up in the `_filtered` tables. This function handles the special case where we are deleting a day from a longer anomalous range (either in the middle or on the edge), and we need to replace it with 1-2 new anomalous ranges.
+
+```mermaid
+block
+columns 5
+  block:group1:2
+    columns 1
+      C["2 day anomalous range"]
+      blockArrowId6<["&nbsp;&nbsp;&nbsp;"]>(down)
+      block:ID
+        A["Day 1"]
+        B["Cleared day"]
+      end
+      style B fill:#969,stroke:#333,stroke-width:4px
+  end
+  block:group3:3
+    columns 1
+    E["3 day anomalous range"]
+    blockArrowId4<["&nbsp;&nbsp;&nbsp;"]>(down)
+    block:ID3
+      columns 3
+      F["Day 1"] 
+      G["Cleared day"]
+      H["Day 3"]
+    end
+    style G fill:#969,stroke:#333,stroke-width:4px
+  end
+```
+
+[`miovision_api.identify_zero_counts(start_date date)`](function/function-identify-zero-counts.sql): Identifies intersection / classification (only classification_uids 1,2,6,10) combos with zero volumes for the start_date called. Inserts or updates anomaly into anomalous_range table unless an existing, overlapping, manual entery exists. 
+
+[`miovision_api.merge_consecutive_anomalous_ranges`](function/function-merge_consecutive_anomalous_ranges.sql): This function handles the case where anomalous ranges have been broken up and then reinserted, or inserted out of order (day 2 inserted -> day 1 inserted) by merging any adjacent anomalous ranges together. 
+
+```mermaid
+block
+  block:group3:3
+    columns 1
+    block:ID3
+      columns 3
+      F["Day 1"] 
+      G["Day 2"]
+      H["Day 3"]
+    end
+    blockArrowId4<["&nbsp;&nbsp;&nbsp;"]>(down)
+    E["3 day anomalous range"]
+  end
+```
