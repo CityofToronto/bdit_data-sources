@@ -29,8 +29,6 @@ AS $BODY$
         HAVING
             --all datetime bins present, corrected for bin size
             COUNT(DISTINCT cc.datetime_bin) = (3600*24 / EXTRACT(epoch FROM bin_size))
-            --non-zero count days
-            AND SUM(cc.calibrated_volume) > 0
     )
 
     INSERT INTO ecocounter.open_data_15min_counts (
