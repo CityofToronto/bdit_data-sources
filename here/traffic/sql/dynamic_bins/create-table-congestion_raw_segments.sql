@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS here_agg.raw_segments
     bin_start timestamp without time zone NOT NULL,
     bin_range tsrange NOT NULL,
     tt real,
-    num_obs integer,
+    num_obs real,
     hr smallint,
     CONSTRAINT congestion_raw_segments_pkey PRIMARY KEY (segment_id, dt, bin_start)
 ) PARTITION BY RANGE (dt);
@@ -74,7 +74,7 @@ COMMENT ON COLUMN here_agg.raw_segments.tt
 IS 'Travel time in seconds.';
 
 COMMENT ON COLUMN here_agg.raw_segments.num_obs
-IS 'The sum of the sample size from here.ta_path_hm.';
+IS 'The vehicle-distance travelled (using sample_size from here.ta_path) divided by the segment length, for the approximate number of vehicles travelling the segment.';
 
 COMMENT ON COLUMN here_agg.raw_segments.hr
 IS 'The hour the majority of the record occured in. Ties are rounded up.';

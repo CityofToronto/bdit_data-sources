@@ -26,7 +26,7 @@ CREATE TEMPORARY TABLE congestion_raw_segments_temp (
     bin_start timestamp without time zone NOT NULL,
     bin_range tsrange NOT NULL,
     tt numeric,
-    num_obs integer,
+    num_obs numeric,
     CONSTRAINT congestion_raw_segments_exclude_temp EXCLUDE USING gist (
         bin_range WITH &&,
         segment_id WITH =
@@ -45,10 +45,10 @@ EXECUTE FORMAT(
             SUM(seg.length) / seg.segment_length AS sum_length,
             SUM(seg.length) AS length_w_data,
             SUM(seg.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
-            SUM(sample_size) AS num_obs,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
             ARRAY_AGG(lat.tt ORDER BY ta.link_dir) AS tts,
-            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
+            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths,
+            ARRAY_AGG(ta.sample_size ORDER BY ta.link_dir) AS sample_sizes
         FROM here.ta_path_hm AS ta
         JOIN congestion.%1$I AS seg USING (link_dir),
         LATERAL (
@@ -57,6 +57,8 @@ EXECUTE FORMAT(
         WHERE
             ta.tx::date >= %2$L::date
             AND ta.tx::date < %2$L::date + interval '1 day'
+            AND ta.tx >= %2$L::date
+            AND ta.tx < %2$L::date + interval '1 day'
         GROUP BY
             seg.segment_id,
             ta.tx,
@@ -118,9 +120,9 @@ EXECUTE FORMAT(
             --exclusive end bin
             s5b_end.tx + interval '5 minutes' AS dt_end,
             unnested.link_dir,
+            SUM(unnested.sample_size * unnested.len) AS length_travelled,
             unnested.len,
-            AVG(unnested.tt) AS tt, --avg TT for each link_dir
-            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each link_dir
+            AVG(unnested.tt) AS tt --avg TT for each link_dir
         FROM dynamic_bin_options AS dbo
         LEFT JOIN segment_5min_bins AS s5b
             ON s5b.segment_id = dbo.segment_id
@@ -131,7 +133,7 @@ EXECUTE FORMAT(
             ON s5b_end.segment_id = dbo.segment_id
             AND s5b_end.bin_rank = dbo.end_bin,
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
-        UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
+        UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts, s5b.sample_sizes) AS unnested(link_dir, len, tt, sample_size)
         --dynamic bins should not exceed 15 minutes (dt_end <= dt_start + 15 min)
         WHERE s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '15 minutes'
         GROUP BY
@@ -154,7 +156,7 @@ EXECUTE FORMAT(
         segment_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each segment
+        SUM(length_travelled) / total_length AS num_obs --approximate number of vehicles traversing full length
     FROM unnested_db_options
     GROUP BY
         segment_id,
