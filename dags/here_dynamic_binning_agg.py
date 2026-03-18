@@ -63,7 +63,7 @@ def here_dynamic_binning_agg():
             pre_execute=check_jan_1st,
             sql=#partition by year
                 """SELECT here_agg.partition_yyyy(
-                    base_table := 'raw_segments',
+                    base_table := ''congestion_raw_segments'',
                     year_ := '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y') }}'::int,
                     partition_owner := 'here_admins',
                     schema_ := 'here_agg'
@@ -74,7 +74,7 @@ def here_dynamic_binning_agg():
     
     check_not_empty = SQLCheckOperatorWithReturnValue(
         task_id="check_not_empty",
-        sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path_hm WHERE tx::date = '{{ ds }}'",
+        sql="SELECT COUNT(*), COUNT(*) FROM here.ta_path WHERE dt = '{{ ds }}'",
         conn_id=CONN_ID,
         retries=1,
         retry_delay=duration(days=1),
@@ -82,7 +82,7 @@ def here_dynamic_binning_agg():
     )
     
     delete_daily = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.raw_segments WHERE dt = '{{ ds }}'",
+        sql="DELETE FROM gwolofs.congestion_raw_segments WHERE dt = '{{ ds }}'",
         task_id='delete_daily',
         conn_id=CONN_ID,
         autocommit=True,
@@ -90,7 +90,7 @@ def here_dynamic_binning_agg():
     )
     
     aggregate_daily = SQLExecuteQueryOperator(
-        sql="SELECT here_agg.network_segment_agg('{{ ds }}'::date);",
+        sql="SELECT gwolofs.congestion_network_segment_agg('{{ ds }}'::date);",
         task_id='aggregate_daily',
         conn_id=CONN_ID,
         autocommit=True,
