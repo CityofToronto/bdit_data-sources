@@ -16,6 +16,7 @@
   - [Important Things to Remember](#important-things-to-remember)
     - [Data Accuracy Dates by Mode](#data-accuracy-dates-by-mode)
     - [Use `classification_uid = 10` for cyclists](#use-classification_uid--10-for-cyclists)
+    - [Aggregating motor vehicle data across multiple classifications](#aggregating-motor-vehicle-data-across-multiple-classifications)
 
 ## Where should I look for data?
 
@@ -180,11 +181,11 @@ WHERE
     AND datetime_bin >= '2020-03-13' 
     AND datetime_bin < '2020-03-20'
 ```
-If `leg <> dir` is eliminated from the `WHERE` clause, light vehicles will be counted:
+If `leg != left(dir, 1)` is eliminated from the `WHERE` clause, light vehicles will be counted:
 1) as they approach the intersection, AND,
 2) as they exit the intersection!
 
-If, for some strange reason, you need to count vehicles exiting an intersection, you can replace `leg <> dir` with `leg = dir`.
+If, for some strange reason, you need to count vehicles exiting an intersection, you can replace `leg != left(dir, 1)` with `leg = left(dir, 1)`.
 
 Here's what that looks like:
 
@@ -232,3 +233,97 @@ The `miovision_api.classifications` table has two entries for cyclists: `classif
 `classification_uid = 10` is used to track cyclist entrances (or approaches).
 
 At this time, `classification_uid = 2` does not appear to accurately capture cyclist movements, so do not use `classification_uid = 2` for cyclists - use `classification_uid = 10`.
+
+### Aggregating motor vehicle data across multiple classifications
+
+The `miovision_api.classifications` table has four entires for vehicles: `classification_uid = 1` (light autos), `classification_uid = 4` (single-unit trucks), `classification_uid = 5` (multi-unit trucks), and `classification_uid = 9` (buses).
+
+Of the four classes above, only counts with `classification_uid = 1` are explicitly flagged for filtering in `miovision_api.anomalous_ranges` (although in this table, if `classification_uid = NULL`, then all records relating to that date and `intersection_uid` are filtered out). This results in dates for the filtered views (`miovision_api.volumes_15min_atr_filtered` and `miovision_api.volumes_15min_mvt_filtered`) in which records for trucks and buses are present, but light autos (which make up the vast majority of all vehicles) are not.
+
+As a result, careful query design is required when summing total vehicle counts across days or time ranges. You may be including 15-minute bins in which only truck and bus data is available.
+
+**Example: Problematic Query**
+```
+SELECT
+	datetime_bin::date AS dt,
+	SUM(volume) AS vehicles_daily
+
+FROM miovision_api.volumes_15min_atr_filtered
+
+WHERE 
+	intersection_uid = 22 AND
+	leg != LEFT(dir, 1)	AND
+	datetime_bin >= '2024-01-01' AND
+	datetime_bin < '2024-02-01' AND
+	classification_uid IN (1,4,5,9)
+
+GROUP BY datetime_bin::date
+
+
+SELECT * FROM miovision_api.anomalous_ranges WHERE classification_uid = 1 AND leg IS NULL
+```
+
+Result Set: 31 rows (January 1 to 31, 2024), range = {44, 32793}
+
+**Option 1: Use a CTE to determine which days have light auto data filtered in, and then sum across vehicles**
+```
+WITH
+	valid_dates AS (
+		SELECT
+			datetime_bin::date AS dt,
+			intersection_uid
+
+		FROM miovision_api.volumes_15min_atr_filtered
+
+		WHERE
+			classification_uid = 1 AND
+			intersection_uid = 22 AND
+			datetime_bin >= '2024-01-01' AND
+			datetime_bin < '2024-02-01'
+		
+		GROUP BY datetime_bin::date, intersection_uid
+	)
+
+SELECT
+	vd.dt,
+	SUM(vf.volume) AS vehicles_daily
+
+FROM miovision_api.volumes_15min_atr_filtered vf
+INNER JOIN valid_dates vd
+    ON vf.intersection_uid = vd.intersection_uid
+    AND vf.datetime_bin::date = vd.dt
+
+WHERE 
+	vf.leg != LEFT(vf.dir, 1) AND
+	vf.classification_uid IN (1,4,5,9) AND
+	datetime_bin >= '2024-01-01' AND
+	datetime_bin < '2024-02-01'
+
+GROUP BY vd.dt
+```
+
+Result Set: 12 rows (January 20 to 31, 2024), range = {27176, 32793}
+
+
+**Option 2: Use the HAVING clause to ensure light autos are present**
+
+```
+SELECT
+	datetime_bin::date AS dt,
+	SUM(volume) AS vehicles_daily
+
+FROM miovision_api.volumes_15min_atr_filtered
+
+WHERE 
+	leg != LEFT(dir, 1) AND
+	intersection_uid = 22 AND
+	classification_uid IN (1,4,5,9) AND
+	datetime_bin >= '2024-01-01' AND
+	datetime_bin < '2024-02-01'
+
+GROUP BY datetime_bin::date
+
+HAVING MIN(classification_uid) = 1
+```
+
+Result Set: 12 rows (January 20 to 31, 2024), range = {27176, 32793}
