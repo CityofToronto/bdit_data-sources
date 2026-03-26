@@ -29,7 +29,10 @@ CREATE TABLE miovision_api.anomalous_ranges (
     ON DELETE NO ACTION,
     CONSTRAINT miovision_anomalous_ranges_range_order CHECK (
         range_start < range_end
-    )
+    ),
+    CONSTRAINT anomalous_ranges_check CHECK (
+    CASE WHEN investigation_level = 'auto_flagged'::text THEN notes = 'Zero counts, identified by a daily airflow process running function miovision_api.identify_zero_counts'::text
+    ELSE NULL::boolean END)
 );
 
 ALTER TABLE IF EXISTS miovision_api.anomalous_ranges
