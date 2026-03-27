@@ -23,6 +23,7 @@ EXECUTE format($$
 				FROM here_gis.%I
 				WHERE intrsect = 'Y';
 			   	ALTER TABLE here.%I OWNER TO here_admins;
+                GRANT SELECT ON TABLE here.%I TO tt_request_bot;
 			   -- Create traffic streets
 			   CREATE MATERIALIZED VIEW IF NOT EXISTS here_gis.%I AS
 				 SELECT streets_att.*
@@ -35,6 +36,7 @@ EXECUTE format($$
 				ALTER TABLE IF EXISTS here_gis.%I OWNER TO here_admins;
 				GRANT SELECT ON TABLE here_gis.%I TO bdit_humans;
 				GRANT ALL ON TABLE here_gis.%I TO here_admins;
+                GRANT SELECT ON TABLE here_gis.%I TO tt_request_bot;
 			   -- Create routing streets
 			   CREATE MATERIALIZED VIEW IF NOT EXISTS here.%I AS
 							 SELECT streets.link_dir,
@@ -79,14 +81,13 @@ EXECUTE format($$
 							;
 
 							ALTER TABLE IF EXISTS here.%I OWNER TO here_admins;
-
 							GRANT SELECT ON TABLE here.%I TO bdit_humans;
 							GRANT SELECT ON TABLE here.%I TO covid_admins;
 							GRANT ALL ON TABLE here.%I TO here_admins;
 							GRANT SELECT ON TABLE here.%I TO tt_request_bot;
                         $$
-              , _nodes, _zlevel, _nodes, _traffic, _streets_att, _traffic, _traffic, _traffic, 
-			  _streets, _traffic, _st, _nodes, _nodes, _traffic, _st, _nodes, _nodes,
+              , _nodes, _zlevel, _nodes, _nodes, _traffic, _streets_att, _traffic, _traffic, _traffic, 
+			  _traffic, _streets, _traffic, _st, _nodes, _nodes, _traffic, _st, _nodes, _nodes,
 			  _streets, _streets, _streets, _streets, _streets);
 						
 END;
