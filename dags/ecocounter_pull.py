@@ -126,7 +126,8 @@ def pull_ecocounter_dag():
             extra_msg = '\n'.join([str(item) for item in new_sites])
             send_slack_msg(
                 context=context,
-                msg=f"There were new site_ids when pulling ecocounter data :eco-counter:",
+                msg="There were new site_ids when pulling ecocounter data :eco-counter:",
+                channel="slack_prj_permanent_sensors",
                 attachments=[{"text": extra_msg}]
             )
         if len(new_flows) > 0:
@@ -134,7 +135,8 @@ def pull_ecocounter_dag():
             extra_msg = '\n'.join([str(item) for item in new_flows])
             send_slack_msg(
                 context=context,
-                msg=f"There were new flow_ids when pulling ecocounter data :eco-counter:",
+                msg="There were new flow_ids when pulling ecocounter data :eco-counter:",
+                channel="slack_prj_permanent_sensors",
                 attachments=[{"text": extra_msg}]
             )
         if new_flows == [] and new_sites == []:
