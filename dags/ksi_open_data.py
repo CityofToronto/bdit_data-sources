@@ -37,7 +37,7 @@ default_args = {'owner': ','.join(DAG_OWNERS),
                 'email_on_success': False,
                 'retries': 0,
                 'retry_delay': timedelta(minutes=5),
-                'on_failure_callback': partial(task_fail_slack_alert, channel="slack_data_pipeline")
+                'on_failure_callback': task_fail_slack_alert,
                 }
 
 @dag(
