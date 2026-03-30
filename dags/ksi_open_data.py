@@ -167,7 +167,6 @@ def ksi_opan_data():
                 f"{details}\n"
                 f"Approve/reject *<{url}|here>*."
             ),
-            channel="slack_data_pipeline",
         )
 
     @task.branch
@@ -211,7 +210,6 @@ def ksi_opan_data():
         send_slack_msg(
             context=context,
             msg=f"KSI table successfully refreshed :white_check_mark:.",
-            channel='slack_data_pipeline'
             )
     
     checks = data_checks()
