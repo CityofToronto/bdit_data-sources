@@ -111,7 +111,7 @@ def miovision_check_dag():
                 "SELECT miovision_api.assign_centrelines();",
             ],
             conn_id='miovision_api_bot',
-            autocommit=True
+            autocommit=False
         )
         
         check_missing_centreline_ids = SQLCheckOperatorWithReturnValue(
