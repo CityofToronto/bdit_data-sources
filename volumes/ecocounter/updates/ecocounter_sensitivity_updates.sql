@@ -25,4 +25,27 @@ VALUES
     (353341348, daterange('2025-05-14', NULL, '[)'), '2')
 );
 
--- 
+-- Newly repaired or reconfigured sensors
+
+-- Bloor St E, west of Castle Frank Rd
+-- re-installed sensors started producing good data on ~2025-03-01. after ~2 yr gap.
+INSERT INTO ecocounter.sensitivity_history (
+VALUES 
+    (353517542, daterange('2025-03-01', NULL, '[)'), 'initial config after repair'),
+    (353354428, daterange('2025-03-01', NULL, '[)'), 'initial config after repair')
+);
+
+-- Bloor St W, west of Huron St (site_id = 300028396) - 
+-- reconfigured sensors (8 in total for bike,scooter,main-flow,contra-flow,2 sides-of-the-road)
+-- started producing good data on 2025-06-27.
+INSERT INTO ecocounter.sensitivity_history (
+VALUES 
+    (353341333, daterange('2025-06-27', NULL, '[)'), 'initial config after reinstallation'),
+    (353554896, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353554897, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353554898, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353554899, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353554900, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353554901, daterange('2025-06-27', NULL, '[)'), 'initial config after install'),
+    (353341334, daterange('2025-06-27', NULL, '[)'), 'initial config after reinstallation')
+);
