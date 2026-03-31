@@ -159,7 +159,7 @@ def pull_ecocounter_dag():
     def pull_recent_outages():
         eco_postgres, token = get_connections()
         #get list of outages
-        outage_query = "SELECT flow_id, start_time, end_time FROM ecocounter.identify_outages('60 days'::interval);"
+        outage_query = "SELECT flow_id, start_time, end_time FROM ecocounter.identify_outages('6 months'::interval);"
         with eco_postgres.get_conn() as conn, conn.cursor() as curr:
             curr.execute(outage_query)
             recent_outages = curr.fetchall()
