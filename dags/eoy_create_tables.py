@@ -96,12 +96,26 @@ def eoy_create_table_dag():
                         conn_id='congestion_bot',
                         autocommit=True)
         
+        ptc_op_hrs_create = SQLExecuteQueryOperator(
+                        task_id='ptc_op_hrs_create',
+                        sql="SELECT ptc.create_annual_partition('open_data_operating_hours', '{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
+                        conn_id='ptc_bot',
+                        autocommit=True)
+        
+        ptc_trips_create = SQLExecuteQueryOperator(
+                        task_id='ptc_trips_create',
+                        sql="SELECT ptc.create_annual_partition('open_data_trips', '{{ ti.xcom_pull(task_ids='yr', key='return_value') }}')",
+                        conn_id='ptc_bot',
+                        autocommit=True)
+        
         bt_replace_trigger(yr=YR)
         insert_holidays(yr=YR)
         here_create_tables
         here_path_create_tables
         bt_create_tables
         congestion_create_table
+        ptc_op_hrs_create
+        ptc_trips_create
 
     @task(trigger_rule='none_failed')
     def success_alert(**context):
