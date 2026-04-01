@@ -1,9 +1,15 @@
+-- FUNCTION: gis_core.refresh_centreline_latest_all_feature()
+
+-- DROP FUNCTION IF EXISTS gis_core.refresh_centreline_latest_all_feature();
+
 CREATE OR REPLACE FUNCTION gis_core.refresh_centreline_latest_all_feature()
 RETURNS void
-LANGUAGE sql
+LANGUAGE 'plpgsql'
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
-AS $$
+AS $BODY$
+
+BEGIN
 
     TRUNCATE gis_core.centreline_latest_all_feature;
 
@@ -18,15 +24,23 @@ AS $$
             FROM gis_core.centreline
         );
 
-    COMMENT ON TABLE gis_core.centreline_latest_all_feature
-    IS 'Table containing the latest version of centreline with all feature code, derived from gis_core.centreline.'
-    || ' Last refreshed: ' || CURRENT_DATE || '.';
+EXECUTE format(
+    $msg$
+    COMMENT ON TABLE gis_core.centreline_latest_all_feature IS
+    'Table containing the latest version of centreline with all feature code, derived from gis_core.centreline. Last refreshed: %s.'
+    $msg$,
+    CURRENT_DATE
+);
 
-$$;
+END;
+$BODY$;
 
-ALTER FUNCTION gis_core.refresh_centreline_latest_all_feature OWNER TO gis_admins;
+ALTER FUNCTION gis_core.refresh_centreline_latest_all_feature()
+OWNER TO gis_admins;
 
-GRANT EXECUTE ON gis_core.refresh_centreline_latest_all_feature TO gcc_bot;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_latest_all_feature() TO gcc_bot;
+
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_latest_all_feature() TO gis_admins;
 
 REVOKE ALL ON FUNCTION gis_core.refresh_centreline_latest_all_feature() FROM public;
 

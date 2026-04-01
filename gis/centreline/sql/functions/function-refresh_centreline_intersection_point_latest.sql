@@ -1,10 +1,15 @@
-CREATE FUNCTION gis_core.refresh_centreline_intersection_point_latest()
+-- FUNCTION: gis_core.refresh_centreline_intersection_point_latest()
+
+-- DROP FUNCTION IF EXISTS gis_core.refresh_centreline_intersection_point_latest();
+
+CREATE OR REPLACE FUNCTION gis_core.refresh_centreline_intersection_point_latest()
 RETURNS void
-LANGUAGE sql
+LANGUAGE 'plpgsql'
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
-AS $$
+AS $BODY$
 
+BEGIN
 TRUNCATE gis_core.centreline_intersection_point_latest;
 
 --in case of duplicate intersection_id (rare), only take the latest by objectid
@@ -27,18 +32,25 @@ ORDER BY
     intersection_id ASC,
     objectid DESC;
 
-COMMENT ON TABLE gis_core.centreline_intersection_point_latest IS E''
-'Table containing the latest version of centreline intersection point,'
-'derived from gis_core.centreline_intersection_point. Removes some (rare) duplicate intersection_ids.'
-|| ' Last refreshed: ' || CURRENT_DATE || '.';
+EXECUTE format(
+    $msg$
+    COMMENT ON TABLE gis_core.centreline_intersection_point_latest IS
+    'Table containing the latest version of centreline intersection point, derived from gis_core.centreline_intersection_point. Removes some (rare) duplicate intersection_ids. Last refreshed: %s.'
+    $msg$,
+    CURRENT_DATE
+);
 
-$$;
+END;
+$BODY$;
 
-ALTER FUNCTION gis_core.refresh_centreline_intersection_point_latest OWNER TO gis_admins;
+ALTER FUNCTION gis_core.refresh_centreline_intersection_point_latest()
+OWNER TO gis_admins;
 
-GRANT EXECUTE ON gis_core.refresh_centreline_intersection_point_latest TO gcc_bot;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_intersection_point_latest() TO gcc_bot;
 
-REVOKE ALL ON FUNCTION gis_core.refresh_centreline_intersection_point_latest FROM public;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_intersection_point_latest() TO gis_admins;
 
-COMMENT ON FUNCTION gis_core.refresh_centreline_intersection_point_latest
+REVOKE ALL ON FUNCTION gis_core.refresh_centreline_intersection_point_latest() FROM public;
+
+COMMENT ON FUNCTION gis_core.refresh_centreline_intersection_point_latest()
 IS 'Function to refresh gis_core.centreline_intersection_point_latest with truncate/insert.';
