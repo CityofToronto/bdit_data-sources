@@ -1,11 +1,15 @@
---DROP FUNCTION gis_core.refresh_centreline_leg_directions;
+-- FUNCTION: gis_core.refresh_centreline_leg_directions()
 
-CREATE FUNCTION gis_core.refresh_centreline_leg_directions()
+-- DROP FUNCTION IF EXISTS gis_core.refresh_centreline_leg_directions();
+
+CREATE OR REPLACE FUNCTION gis_core.refresh_centreline_leg_directions()
 RETURNS void
-LANGUAGE sql
+LANGUAGE 'plpgsql'
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
-AS $$
+AS $BODY$
+
+BEGIN
 
 TRUNCATE gis_core.centreline_leg_directions;
 
@@ -263,7 +267,9 @@ The final select adds names from the edge table, and also removes
 (via DISTINCT ON) legs assigned to more than one direction
 (this will happen in the fourth pass for intersections with 3 legs).
 */
-INSERT INTO gis_core.centreline_leg_directions (intersection_centreline_id, leg_centreline_id, leg, intersection_geom, street_name, angular_offset_from_cardinal_direction, leg_stub_geom, leg_full_geom)
+INSERT INTO gis_core.centreline_leg_directions (
+    intersection_centreline_id, leg_centreline_id, leg, intersection_geom, street_name, angular_offset_from_cardinal_direction, leg_stub_geom, leg_full_geom
+)
 SELECT DISTINCT ON (
     unified_legs.intersection_centreline_id,
     unified_legs.leg_centreline_id
@@ -286,17 +292,25 @@ ORDER BY
     -- take the best match of any repeatedly assigned legs
     unified_legs.angular_distance ASC;
 
-COMMENT ON TABLE gis_core.centreline_leg_directions
-IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190'
-|| ' Last refreshed: ' || CURRENT_DATE || '.';
+EXECUTE format(
+    $msg$
+    COMMENT ON TABLE gis_core.centreline_leg_directions IS 'Automated mapping of centreline intersection legs onto the four cardinal directions. Please report any issues/inconsistencies with this view here: https://github.com/CityofToronto/bdit_data-sources/issues/1190. Last refreshed: %s.'
+    $msg$,
+    CURRENT_DATE
+);
 
-$$;
+END;
 
-ALTER FUNCTION gis_core.refresh_centreline_leg_directions OWNER TO gis_admins;
+$BODY$;
 
-GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_leg_directions TO gcc_bot;
+ALTER FUNCTION gis_core.refresh_centreline_leg_directions()
+OWNER TO gis_admins;
 
-REVOKE ALL ON FUNCTION gis_core.refresh_centreline_leg_directions FROM public;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_leg_directions() TO gcc_bot;
 
-COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions
-IS 'Function to refresh gis_core.centreline_leg_directions with truncate/insert.';
+GRANT EXECUTE ON FUNCTION gis_core.refresh_centreline_leg_directions() TO gis_admins;
+
+REVOKE ALL ON FUNCTION gis_core.refresh_centreline_leg_directions() FROM public;
+
+COMMENT ON FUNCTION gis_core.refresh_centreline_leg_directions()
+IS 'Function to refresh gis_core.refresh_centreline_leg_directions with truncate/insert.';

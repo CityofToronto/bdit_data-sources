@@ -1,9 +1,15 @@
-CREATE FUNCTION gis_core.refresh_intersection_latest()
+-- FUNCTION: gis_core.refresh_intersection_latest()
+
+-- DROP FUNCTION IF EXISTS gis_core.refresh_intersection_latest();
+
+CREATE OR REPLACE FUNCTION gis_core.refresh_intersection_latest()
 RETURNS void
-LANGUAGE sql
+LANGUAGE 'plpgsql'
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
-AS $$
+AS $BODY$
+
+BEGIN
 
 TRUNCATE gis_core.intersection_latest;
 
@@ -23,18 +29,24 @@ WHERE
         FROM gis_core.intersection
     );
 
-COMMENT ON TABLE gis_core.intersection_latest IS E''
-'Table containing the latest version of intersection,'
-'derived from gis_core.intersection.'
-|| ' Last refreshed: ' || CURRENT_DATE || '.';
+EXECUTE format(
+    $msg$
+    COMMENT ON TABLE gis_core.intersection_latest IS 'Table containing the latest version of intersection, derived from gis_core.intersection. Last refreshed: %s.'
+    $msg$,
+    CURRENT_DATE
+);
 
-$$;
+END;
+$BODY$;
 
-ALTER FUNCTION gis_core.refresh_intersection_latest OWNER TO gis_admins;
+ALTER FUNCTION gis_core.refresh_intersection_latest()
+OWNER TO gis_admins;
 
-GRANT EXECUTE ON gis_core.refresh_intersection_latest TO gcc_bot;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_intersection_latest() TO gcc_bot;
 
-REVOKE ALL ON FUNCTION gis_core.refresh_intersection_latest FROM public;
+GRANT EXECUTE ON FUNCTION gis_core.refresh_intersection_latest() TO gis_admins;
 
-COMMENT ON FUNCTION gis_core.refresh_intersection_latest
+REVOKE ALL ON FUNCTION gis_core.refresh_intersection_latest() FROM public;
+
+COMMENT ON FUNCTION gis_core.refresh_intersection_latest()
 IS 'Function to refresh gis_core.centreline_latest_all_feature with truncate/insert.';
