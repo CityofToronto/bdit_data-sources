@@ -1,8 +1,10 @@
+-- FUNCTION: traffic.refresh_svc_centreline_directions()
+
 -- DROP FUNCTION IF EXISTS traffic.refresh_svc_centreline_directions();
 
 CREATE OR REPLACE FUNCTION traffic.refresh_svc_centreline_directions()
 RETURNS void
-LANGUAGE sql
+LANGUAGE 'plpgsql'
 COST 100
 VOLATILE SECURITY DEFINER PARALLEL UNSAFE
 AS $BODY$
@@ -22,6 +24,8 @@ unlikely combinations are kept just in case.
 As such, this view should be joined on the actual directions assigned to SVCs
 rather than used on its own. Such a join *should* filter out most silly values.
 */
+
+BEGIN
 
 TRUNCATE traffic.svc_centreline_directions;
 
@@ -83,11 +87,18 @@ WHERE
     ad.angular_distance < radians(80)
     OR ad.angular_distance > radians(100);
 
-COMMENT ON TABLE traffic.svc_centreline_directions
-IS 'Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto '
-'specific directions of travel along edges of the `gis_core.centreline_latest` network. '
-'Refreshed automatically by `gcc_layers_pull_bigdata` DAG after inserts into '
-'`gis_core.centreline_latest`.' || ' Last refreshed: ' || CURRENT_DATE || '.';
+EXECUTE format(
+    $msg$
+    COMMENT ON TABLE traffic.svc_centreline_directions
+    IS 'Maps the four cardinal directions (NB, SB, EB, & WB) referenced by SVCs onto '
+    'specific directions of travel along edges of the `gis_core.centreline_latest` network. '
+    'Refreshed automatically by `gcc_layers_pull_bigdata` DAG after inserts into '
+    '`gis_core.centreline_latest`. Last refreshed: %s'
+    $msg$,
+    CURRENT_DATE
+);
+
+END;
 
 $BODY$;
 
@@ -95,6 +106,8 @@ ALTER FUNCTION traffic.refresh_svc_centreline_directions()
 OWNER TO gis_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.refresh_svc_centreline_directions() TO gcc_bot;
+
+GRANT EXECUTE ON FUNCTION traffic.refresh_svc_centreline_directions() TO gis_admins;
 
 GRANT EXECUTE ON FUNCTION traffic.refresh_svc_centreline_directions() TO traffic_admins;
 
