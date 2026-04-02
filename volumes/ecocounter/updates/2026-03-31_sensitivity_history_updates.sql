@@ -28,6 +28,12 @@ VALUES
 -- Newly repaired or reconfigured sensors
 
 -- Bloor St E, west of Castle Frank Rd
+-- end sensitivty range pre-repair
+UPDATE ecocounter.sensitivity_history
+SET 
+    date_range = daterange(lower(date_range), '2025-02-27', '[)')
+WHERE flow_id IN (353354429, 353354428) AND date_range = '[2023-01-19,)';
+
 -- re-installed sensors started producing good data on 2025-02-27. after ~2 yr gap.
 INSERT INTO ecocounter.sensitivity_history(flow_id, date_range, setting) (
 VALUES 

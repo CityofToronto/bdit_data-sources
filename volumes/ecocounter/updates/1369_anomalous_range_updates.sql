@@ -24,3 +24,13 @@ DELETE FROM ecocounter.anomalous_ranges WHERE flow_id = 353341347 AND uid = 86; 
 
 --Make the old Bloor and Huron AR not open-ended anymore.
 UPDATE ecocounter.anomalous_ranges SET time_range = tsrange('2021-02-09'::date, '2022-06-03'::date, '[)') WHERE uid = 2 AND site_id = 100042942;
+
+--update bloor and castle frank range (repaired).
+UPDATE ecocounter.anomalous_ranges
+SET
+    time_range = tsrange('2023-01-17'::date, '2025-02-27'::date, '[)'),
+    notes = 'This site had much lower volumes than the original Bloor/Castle Frank permanent counter (1994-2019), which was verifiable via TMCs. It was repaired and started producing good data on 2025-02-27 (Verified by Spectrum count).'
+WHERE site_id = 300030053 AND uid = 70;
+
+--duplicate with above range
+DELETE FROM ecocounter.anomalous_ranges WHERE site_id = 300030053 AND uid = 1;
