@@ -94,7 +94,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
         && tsrange(comms.start_timestamp, COALESCE(comms.end_timestamp, now()::timestamp without time zone)),
         LATERAL (
             SELECT CASE
-                WHEN c.detector_id::text ~~ 'QWS%'::text
+                WHEN c.detector_id::text ~~ '%QWS%'::text
                     THEN 'Smartmicro Sensors'::text
                 WHEN
                     c.division_id = 2 AND (c.detector_id::text ~ similar_to_escape('D\w{8}%'::text)
