@@ -1,5 +1,5 @@
 
-UPDATE ecocounter.test_flows_unfiltered
+UPDATE ecocounter.flows_unfiltered
 SET validated = TRUE
 WHERE flow_id IN (
 
