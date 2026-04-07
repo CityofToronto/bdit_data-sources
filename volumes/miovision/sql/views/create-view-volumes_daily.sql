@@ -23,7 +23,7 @@ CREATE VIEW miovision_api.volumes_daily AS (
         ) AND (
             ar.classification_uid = v.classification_uid
             --don't use any vehicle modes if lights are anomalous
-            OR (ar.classification_uid = 1 AND v.classification_uid IN (1,3,4,5,9))
+            OR (ar.classification_uid = 1 AND v.classification_uid IN (1, 3, 4, 5, 9))
             --issue affects all modes
             OR ar.classification_uid IS NULL
         )
