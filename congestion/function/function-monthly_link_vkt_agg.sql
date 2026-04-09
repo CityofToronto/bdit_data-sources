@@ -14,8 +14,8 @@ AS $BODY$
 
 DECLARE
     map_version text := here_agg.select_map_version(
-        start_date := '2025-01-01',
-        end_date := ('2025-01-01'::date + interval '1 month')::date,
+        start_date := monthly_link_vkt_agg.mnth,
+        end_date := (monthly_link_vkt_agg.mnth + interval '1 month')::date,
         agg_type := 'path_hm'
     );
     links_table text := 'network_links_' || map_version;
