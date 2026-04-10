@@ -22,10 +22,10 @@ BEGIN
     CREATE INDEX IF NOT EXISTS segment_list_idx
     ON segment_list (segment_id);
 
-    INSERT INTO here_agg.area_tti (area_name, highway, dt, hr, is_wkdy, tti, num_segments)
+    INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, is_wkdy, tti, num_segments)
     SELECT
         seg.area_name,
-        seg.highway,
+        CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
         overn.dt,
         hrly.hr,
         overn.is_wkdy, 
@@ -43,7 +43,7 @@ BEGIN
         AND hrly.is_wkdy = overn.is_wkdy
     GROUP BY
         seg.area_name,
-        seg.highway,
+        ROLLUP(seg.highway), --To get highway: T/F/All
         overn.dt,
         hrly.hr,
         overn.is_wkdy
