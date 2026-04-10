@@ -7,7 +7,6 @@ RETURNS TABLE (
     mnth date,
     ver_id text,
     highway boolean,
-    length double precision,
     sample_size numeric,
     vkt_km double precision,
     sqrt_vkt_km double precision
@@ -34,7 +33,6 @@ BEGIN
             vkt.mnth::date,
             vkt.ver_id,
             cs.highway,
-            vkt.length,
             SUM(vkt.sample_size) AS sample_size,
             SUM(vkt.sample_size::double precision * vkt.length) / 1000.0::double precision AS vkt_km,
             SUM(SQRT(vkt.sample_size::double precision) * vkt.length) / 1000.0::double precision AS sqrt_vkt_km
@@ -46,7 +44,6 @@ BEGIN
             vkt.mnth,
             vkt.ver_id,
             cs.highway,
-            vkt.length,
             nl.segment_id;
     $sql$, links_table, p_mnth);
 
