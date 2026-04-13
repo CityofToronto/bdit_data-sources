@@ -25,4 +25,4 @@ updates:
     cooldown:
       default-days: 7
     allow:
-      - dependency-name: "airflow"
+      - dependency-name: "apache-airflow"
