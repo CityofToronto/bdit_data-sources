@@ -32,7 +32,7 @@
     - [Aggregation Functions](#aggregation-functions)
     - [Clear Functions](#clear-functions)
     - [Helper Functions](#helper-functions)
-    - [centreline_miovision Functions](#centreline_miovision-functions)
+    - [ Functions](#-functions)
     - [Partitioning Functions](#partitioning-functions)
     - [Deprecated Functions](#deprecated-functions)
 - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
@@ -443,7 +443,8 @@ Since this reference table must be updated every time a new intersection is adde
 
 ### `centreline_miovision`
 
-This table maps all miovision intersection legs to centreline street segments. It needs to be updated manually using [this script](updates/update-centreline_miovision.sql) when intersections are added. 
+This table maps all Miovision intersection legs to centreline street segments. It is updated automagically each week by the `centreline.clean_miovision_centrelines` task of `miovision_check` DAG, which uses `gis_core.centreline_leg_directions` to assign centrelines based on leg and intersection_id.
+In case a leg is not in the centreline (private access), you can insert a `NULL` centreline_id value to stop `clean_miovision_centrelines` from trying to match to this leg. This also prevents unnecessary alerts from the `centreline.check_missing_centreline_ids` task. 
 
 **Field Name**|**Data Type**|**Description**|**Example**|
 :-----|:-----|:-----|:-----|
