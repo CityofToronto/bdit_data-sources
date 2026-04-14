@@ -1,4 +1,4 @@
---DROP FUNCTION here_agg.segment_bootstrap(date, date,bigint,integer);
+--DROP FUNCTION here_agg.segment_bootstrap(date, date, bigint, int, smallint[], smallint[]);
 
 
 CREATE OR REPLACE FUNCTION here_agg.segment_bootstrap(
@@ -17,10 +17,19 @@ RETURNS TABLE (
     hr_start smallint,
     hr_end smallint,
     avg_tt real,
+    avg_ci_lower real,
+    avg_ci_upper real,
+    q1_tt real,
+    q1_ci_lower real,
+    q1_ci_upper real,
+    median_tt real,
+    median_ci_lower real,
+    median_ci_upper real,
+    q3_tt real,
+    q3_ci_lower real,
+    q3_ci_upper real,
     n int,
-    n_resamples int,
-    ci_lower real,
-    ci_upper real
+    n_resample int
 )
 LANGUAGE SQL
 COST 100
@@ -36,7 +45,7 @@ AS $BODY$
         FROM UNNEST(
             segment_bootstrap.hr_starts,
             segment_bootstrap.hr_ends
-        ) AS unnested(hr_start, hr_end)       
+        ) AS unnested(hr_start, hr_end)
     ),
     
     raw_obs AS (
@@ -47,6 +56,9 @@ AS $BODY$
             hours.hr_end,
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
+            percentile_disc(0.25) WITHIN GROUP (ORDER BY tt::real)::real AS q1_tt,
+            percentile_disc(0.50) WITHIN GROUP (ORDER BY tt::real)::real AS q2_tt,
+            percentile_disc(0.75) WITHIN GROUP (ORDER BY tt::real)::real AS q3_tt,
             COUNT(*) AS n
         FROM here_agg.raw_segments AS rs
         JOIN hours ON
@@ -69,10 +81,16 @@ AS $BODY$
             raw_obs.hr_start,
             raw_obs.hr_end,
             raw_obs.avg_tt,
+            raw_obs.q1_tt,
+            raw_obs.q2_tt,
+            raw_obs.q3_tt,
             raw_obs.n,
             sample_group.group_id,
             --get a random observation from the array of tts
-            AVG(raw_obs.tt_array[ceiling(random() * raw_obs.n)]) AS rnd_avg_tt
+            AVG(raw_obs.tt_array[ceiling(random() * raw_obs.n)]) AS rnd_avg_tt,
+            percentile_disc(0.25) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q1_tt,
+            percentile_disc(0.5) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q2_tt,
+            percentile_disc(0.75) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q3_tt
         FROM raw_obs
         CROSS JOIN generate_series(1, n)
         -- 200 resamples (could be any number)
@@ -82,6 +100,9 @@ AS $BODY$
             raw_obs.hr_start,
             raw_obs.hr_end,
             raw_obs.avg_tt,
+            raw_obs.q1_tt,
+            raw_obs.q2_tt,
+            raw_obs.q3_tt,
             raw_obs.n,
             sample_group.group_id
     )
@@ -93,18 +114,31 @@ AS $BODY$
         is_wkdy,
         hr_start,
         hr_end,
-        avg_tt::real,
+        avg_tt::real AS avg_tt,
+        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_lower,
+        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_upper,
+        q1_tt,
+        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_lower,
+        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_upper,
+        q2_tt AS median_tt,
+        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_lower,
+        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_upper,
+        q3_tt,
+        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_lower,
+        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_upper,
         n,
-        n_resamples,
-        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_lower,
-        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS ci_upper
+        n_resamples
     FROM random_selections
     GROUP BY
         is_wkdy,
         hr_start,
         hr_end,
         avg_tt,
+        q1_tt,
+        q2_tt,
+        q3_tt,
         n;
+
 
     $BODY$;
 
