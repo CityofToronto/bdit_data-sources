@@ -1,41 +1,73 @@
---DROP FUNCTION here_agg.segment_bootstrap(date,bigint,integer);
+--DROP FUNCTION here_agg.segment_bootstrap(date, date,bigint,integer);
+
 
 CREATE OR REPLACE FUNCTION here_agg.segment_bootstrap(
-    mnth date,
+    start_date date,
+    end_date date,
     segment_id bigint,
-    n_resamples int
+    n_resamples int,
+    hr_starts smallint[] default array[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+    hr_ends smallint[] default array[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
 )
-RETURNS void
+RETURNS TABLE (
+    segment_id bigint,
+    start_date date,
+    end_date date,
+    is_wkdy boolean,
+    hr_start smallint,
+    hr_end smallint,
+    avg_tt real,
+    n int,
+    n_resamples int,
+    ci_lower real,
+    ci_upper real
+)
 LANGUAGE SQL
 COST 100
 VOLATILE PARALLEL SAFE
 AS $BODY$
 
-    SELECT setseed(('0.'||replace(mnth::text, '-', ''))::numeric);
+    SELECT setseed(('0.'||segment_id::text)::numeric);
+
+    WITH hours AS (
+        SELECT
+            unnested.hr_start,
+            unnested.hr_end
+        FROM UNNEST(
+            segment_bootstrap.hr_starts,
+            segment_bootstrap.hr_ends
+        ) AS unnested(hr_start, hr_end)       
+    ),
     
-    WITH raw_obs AS (
+    raw_obs AS (
         SELECT
             --segment_id and mnth don't need to be in group by until end
             EXTRACT('isodow' FROM dt) IN (1, 2, 3, 4, 5) AS is_wkdy,
-            hr,
+            hours.hr_start,
+            hours.hr_end,
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
             COUNT(*) AS n
-        FROM here_agg.raw_segments
+        FROM here_agg.raw_segments AS rs
+        JOIN hours ON
+            rs.hr >= hours.hr_start
+            AND rs.hr < hours.hr_end
         WHERE -- same params as the above aggregation
-            dt >= segment_bootstrap.mnth
-            AND dt < segment_bootstrap.mnth + interval '1 month'
+            dt >= segment_bootstrap.start_date
+            AND dt < segment_bootstrap.end_date
             AND segment_id = segment_bootstrap.segment_id
         GROUP BY
             segment_id,
             is_wkdy,
-            hr
+            hours.hr_start,
+            hours.hr_end
     ),
     
     random_selections AS (
         SELECT
             raw_obs.is_wkdy,
-            raw_obs.hr,
+            raw_obs.hr_start,
+            raw_obs.hr_end,
             raw_obs.avg_tt,
             raw_obs.n,
             sample_group.group_id,
@@ -47,20 +79,20 @@ AS $BODY$
         CROSS JOIN generate_series(1, segment_bootstrap.n_resamples) AS sample_group(group_id)
         GROUP BY
             raw_obs.is_wkdy,
-            raw_obs.hr,
+            raw_obs.hr_start,
+            raw_obs.hr_end,
             raw_obs.avg_tt,
             raw_obs.n,
             sample_group.group_id
     )
     
-    INSERT INTO here_agg.segments_monthly_bootstrap (
-        segment_id, mnth, is_wkdy, hr, avg_tt, n, n_resamples, ci_lower, ci_upper
-    )
     SELECT
         segment_bootstrap.segment_id,
-        segment_bootstrap.mnth,
+        segment_bootstrap.start_date,
+        segment_bootstrap.end_date,
         is_wkdy,
-        hr,
+        hr_start,
+        hr_end,
         avg_tt::real,
         n,
         n_resamples,
@@ -69,23 +101,28 @@ AS $BODY$
     FROM random_selections
     GROUP BY
         is_wkdy,
-        hr,
+        hr_start,
+        hr_end,
         avg_tt,
         n;
 
     $BODY$;
 
 GRANT EXECUTE ON FUNCTION here_agg.segment_bootstrap(
-    date, bigint, integer
+    date, date, bigint, int, smallint[], smallint[]
 ) TO congestion_bot;
 
 /*Usage example: (works best one segment at a time with Lateral)
-SELECT *
-FROM UNNEST('{1,2,3,4,5,6,7,8,9}'::bigint[]) AS unnested(segment_id)
+SELECT lat.*
+FROM UNNEST('{1,2,3,4,5,6,7,8,9}'::bigint[]) AS unnested(segment_id),
 LATERAL (
-    SELECT here_agg.segment_bootstrap(
-                    mnth := '2025-06-01'::date,
-                    segment_ids := segment_id,
-                    n_resamples := 300)
-)
+    SELECT * FROM here_agg.segment_bootstrap(
+                    start_date := '2025-12-01'::date,
+                    end_date := '2025-12-06'::date,
+                    segment_id := segment_id,
+                    n_resamples := 300,
+                    hr_starts := array[0,7,10,15,19]::smallint[],
+                    hr_ends := array[7,10,15,19,24]::smallint[]
+            )
+) AS lat
 */
