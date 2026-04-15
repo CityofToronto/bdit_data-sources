@@ -5,11 +5,11 @@
 CREATE TABLE IF NOT EXISTS here_agg.segment_overnight_tts
 (
     segment_id integer NOT NULL,
-    dt date NOT NULL,
+    mnth date NOT NULL,
     is_wkdy boolean NOT NULL,
     overnight_avg_tt real,
     rolling_6month_quasi_obs integer,
-    CONSTRAINT segment_overnight_tts_pkey PRIMARY KEY (segment_id, dt, is_wkdy)
+    CONSTRAINT segment_overnight_tts_pkey PRIMARY KEY (segment_id, mnth, is_wkdy)
 )
 
 TABLESPACE pg_default;

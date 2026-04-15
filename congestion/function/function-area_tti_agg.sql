@@ -23,10 +23,10 @@ BEGIN
     ON segment_list (segment_id);
 
     INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, is_wkdy, tti, num_segments)
-    SELECT
+        SELECT
         seg.area_name,
         CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
-        overn.dt,
+        hrly.dt,
         hrly.hr,
         overn.is_wkdy, 
         SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.vkt_km) / SUM(seg.vkt_km) AS tti,
@@ -35,24 +35,25 @@ BEGIN
     LEFT JOIN here_agg.segment_overnight_tts AS overn
     ON
         seg.segment_id = overn.segment_id
-        AND overn.dt >= area_tti_agg.mnth
-        AND overn.dt < area_tti_agg.mnth + interval '1 month'
+        AND overn.mnth = area_tti_agg.mnth
     JOIN here_agg.hourly_avg_tt AS hrly
         ON hrly.segment_id = overn.segment_id
-        AND hrly.dt = overn.dt
         AND hrly.is_wkdy = overn.is_wkdy
+        AND hrly.dt >= overn.mnth
+        AND hrly.dt < overn.mnth + interval '1 month'
     GROUP BY
         seg.area_name,
         ROLLUP(seg.highway), --To get highway: T/F/All
-        overn.dt,
+        overn.mnth,
         hrly.hr,
+        hrly.dt,
         overn.is_wkdy
     ORDER BY
         seg.area_name,
         seg.highway,
         overn.is_wkdy,
         hrly.hr,
-        overn.dt
+        hrly.dt
     ON CONFLICT ON CONSTRAINT area_tti_pkey
     DO UPDATE SET
         tti = EXCLUDED.tti,
