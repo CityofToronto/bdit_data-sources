@@ -30,7 +30,7 @@ BEGIN
     RETURN QUERY EXECUTE format($sql$
         SELECT
             nl.segment_id,
-            vkt.mnth::date,
+            %2$L::date,
             vkt.ver_id,
             cs.highway,
             SUM(vkt.sample_size) AS sample_size,
@@ -39,7 +39,7 @@ BEGIN
         FROM congestion.%1$I AS nl
         JOIN here_agg.monthly_link_vkt AS vkt USING (link_dir)
         JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
-        WHERE vkt.mnth = %2$L
+        WHERE vkt.mnth = %2$L::date - interval '1 month' --use the VKT for previous month (enable more frequent publishing)
         GROUP BY
             vkt.mnth,
             vkt.ver_id,

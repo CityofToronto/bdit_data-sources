@@ -59,7 +59,7 @@ def tti_dag():
     )
     
     aggregate_vkt = SQLExecuteQueryOperator(
-        sql="SELECT here_agg.monthly_link_vkt_agg('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date);",
+        sql="SELECT here_agg.monthly_link_vkt_agg(('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date - interval '1 month')::date);",
         task_id="aggregate_vkt",
         conn_id=CONN_ID,
         retries = 1
