@@ -56,9 +56,9 @@ AS $BODY$
             hours.hr_end,
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
-            percentile_disc(0.25) WITHIN GROUP (ORDER BY tt::real)::real AS q1_tt,
-            percentile_disc(0.50) WITHIN GROUP (ORDER BY tt::real)::real AS q2_tt,
-            percentile_disc(0.75) WITHIN GROUP (ORDER BY tt::real)::real AS q3_tt,
+            percentile_cont(0.25) WITHIN GROUP (ORDER BY tt::real)::real AS q1_tt,
+            percentile_cont(0.50) WITHIN GROUP (ORDER BY tt::real)::real AS q2_tt,
+            percentile_cont(0.75) WITHIN GROUP (ORDER BY tt::real)::real AS q3_tt,
             COUNT(*) AS n
         FROM here_agg.raw_segments AS rs
         JOIN hours ON
@@ -88,9 +88,9 @@ AS $BODY$
             sample_group.group_id,
             --get a random observation from the array of tts
             AVG(raw_obs.tt_array[ceiling(random() * raw_obs.n)]) AS rnd_avg_tt,
-            percentile_disc(0.25) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q1_tt,
-            percentile_disc(0.5) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q2_tt,
-            percentile_disc(0.75) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q3_tt
+            percentile_cont(0.25) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q1_tt,
+            percentile_cont(0.5) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q2_tt,
+            percentile_cont(0.75) WITHIN GROUP (ORDER BY raw_obs.tt_array[ceiling(random() * raw_obs.n)])::real AS rnd_q3_tt
         FROM raw_obs
         CROSS JOIN generate_series(1, n)
         -- 200 resamples (could be any number)
@@ -115,17 +115,17 @@ AS $BODY$
         hr_start,
         hr_end,
         avg_tt::real AS avg_tt,
-        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_lower,
-        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_upper,
+        percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_lower,
+        percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_upper,
         q1_tt,
-        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_lower,
-        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_upper,
+        percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_lower,
+        percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_q1_tt)::real AS q1_ci_upper,
         q2_tt AS median_tt,
-        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_lower,
-        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_upper,
+        percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_lower,
+        percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_q2_tt)::real AS median_ci_upper,
         q3_tt,
-        percentile_disc(0.025) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_lower,
-        percentile_disc(0.975) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_upper,
+        percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_lower,
+        percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_upper,
         n,
         n_resamples
     FROM random_selections
@@ -159,4 +159,5 @@ LATERAL (
                     hr_ends := array[7,10,15,19,24]::smallint[]
             )
 ) AS lat
+WHERE is_wkdy
 */
