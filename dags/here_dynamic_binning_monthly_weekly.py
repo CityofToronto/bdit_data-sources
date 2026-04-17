@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation."
-DAG_NAME = 'here_dynamic_binning_monthly_agg'
+DAG_NAME = 'here_dynamic_binning_weekly_agg'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
 CONN_ID = "congestion_bot"
 
@@ -38,7 +38,7 @@ default_args = {
 @dag(
     DAG_NAME,
     default_args=default_args,
-    schedule='0 16 3 * *', # 4pm, 3rd day of month
+    schedule='0 14 * * MON', # 2pm Monday
     template_searchpath=os.path.join(repo_path,'here/traffic/sql/dynamic_bins'),
     doc_md=doc_md,
     tags=["HERE", "aggregation"],
@@ -48,12 +48,12 @@ default_args = {
 
 #to add: catchup, one task at a time, depends on past.
 
-def here_dynamic_binning_monthly_agg():
+def here_dynamic_binning_weekly_agg():
     
     check_missing_dates = SQLCheckOperatorWithReturnValue(
         sql="""SELECT _check, _summary FROM here_agg.check_data_availability(
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+            '{{ macros.ds_add(ds, -1) }}',
+            '{{ macros.ds_add(ds, 6) }}',
         );""",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
@@ -62,8 +62,8 @@ def here_dynamic_binning_monthly_agg():
         
     create_groups = SQLExecuteQueryOperator(
         sql="""SELECT segments FROM here_agg.segment_grouping(
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+            '{{ macros.ds_add(ds, -1) }}',
+            '{{ macros.ds_add(ds, 6) }}',
         );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
@@ -72,7 +72,7 @@ def here_dynamic_binning_monthly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.segments_bootstrap_monthly WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
+        sql="DELETE FROM here_agg.segments_bootstrap_weekly WHERE week_start = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
@@ -90,7 +90,7 @@ def here_dynamic_binning_monthly_agg():
     def bootstrap_agg(segments, ds):
         batch_size = 10
         postgres_cred = PostgresHook(CONN_ID)
-        query = """SELECT here_agg.monthly_bootstrap(%s::date, %s::bigint[]);"""
+        query = """SELECT here_agg.weekly_bootstrap(%s::date, %s::bigint[]);"""
         segments_list = sorted(int(x) for x in segments.strip("{}").split(","))
         
         with postgres_cred.get_conn() as conn:
@@ -112,4 +112,4 @@ def here_dynamic_binning_monthly_agg():
     delete_data >> expand
     bootstrap_agg.expand(segments=expand) >> notify_on_upstream_failure()
 
-here_dynamic_binning_monthly_agg()
+here_dynamic_binning_weekly_agg()

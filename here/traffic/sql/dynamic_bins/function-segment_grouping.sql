@@ -1,10 +1,19 @@
+CREATE OR REPLACE FUNCTION here_agg.segment_grouping(
+    date_start date,
+    date_end date,
+    max_group_size int default 100
+)
+RETURNS TABLE (
+    segments text[]
+) AS $$
+
 WITH segments AS (
     --segments active in relevant month
     SELECT DISTINCT segment_id
     FROM here_agg.raw_segments
     WHERE
-        dt >= '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date --noqa: TMP
-        AND dt < '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + '1 month'::interval --noqa: TMP
+        dt >= date_start
+        AND dt < date_end
 ),
 
 group_size AS (
@@ -12,7 +21,7 @@ group_size AS (
     SELECT
         FLOOR(
             COUNT(*)
-            / CEIL((COUNT(*)) / {{ params.max_group_size }}::numeric) --noqa: TMP
+            / CEIL((COUNT(*)) / max_group_size::numeric)
         ) AS num_per_group
     FROM segments
 ),
@@ -37,4 +46,13 @@ groups_summarized AS (
 
 --return list of lists for xcom
 SELECT array_agg(segment_ids::text)
-FROM groups_summarized
+FROM groups_summarized;
+
+$$
+LANGUAGE sql
+SECURITY DEFINER;
+
+ALTER FUNCTION here_agg.segment_grouping OWNER TO here_admins;
+GRANT EXECUTE ON FUNCTION here_agg.segment_grouping TO here_bot;
+
+--SELECT segments FROM here_agg.segment_grouping('2025-01-01', '2026-01-01')
