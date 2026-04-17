@@ -43,7 +43,7 @@ default_args = {
     doc_md=doc_md,
     tags=["HERE", "aggregation"],
     max_active_runs=1,
-    catchup=True
+    catchup=False
 )
 
 #to add: catchup, one task at a time, depends on past.
@@ -51,25 +51,20 @@ default_args = {
 def here_dynamic_binning_monthly_agg():
     
     check_missing_dates = SQLCheckOperatorWithReturnValue(
-        sql="select-check_missing_days.sql",
+        sql="""SELECT _check, _summary FROM here_agg.check_data_availability(
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+        );""",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
         retries = 0
     )
-    
-    aggregate_monthly = SQLExecuteQueryOperator(
-        sql=[
-            "DELETE FROM here_agg.segments_monthy_summary WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date",
-            "SELECT here_agg.segment_monthly_agg('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date)"
-        ],
-        task_id='aggregate_monthly',
-        conn_id=CONN_ID,
-        autocommit=True,
-        retries = 1
-    )
-    
+        
     create_groups = SQLExecuteQueryOperator(
-        sql="segment_grouping.sql",
+        sql="""SELECT segments FROM here_agg.segment_grouping(
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+        );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
         retries = 0,
@@ -77,7 +72,7 @@ def here_dynamic_binning_monthly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.segments_monthly_bootstrap WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resamples = 300",
+        sql="DELETE FROM here_agg.segments_bootstrap_monthly WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
@@ -93,20 +88,18 @@ def here_dynamic_binning_monthly_agg():
         on_failure_callback=None #downstream task to notify
     )
     def bootstrap_agg(segments, ds):
-        print(f"segments: {segments}")
+        batch_size = 10
         postgres_cred = PostgresHook(CONN_ID)
-        query="""SELECT *
-            FROM UNNEST(%s::bigint[]) AS unnested(segment_id),
-            LATERAL (
-                SELECT here_agg.segment_bootstrap(
-                                mnth := date_trunc('month', %s::date)::date,
-                                segment_id := segment_id,
-                                n_resamples := 300)
-            ) AS lat"""
+        query = """SELECT here_agg.monthly_bootstrap(%s::date, %s::bigint[]);"""
+        segments_list = sorted(int(x) for x in segments.strip("{}").split(","))
+        
         with postgres_cred.get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (segments, ds))
-                conn.commit()
+                for i in range(0, len(segments_list), batch_size):
+                    batch = segments_list[i:i + batch_size]
+                    print(f"Processing batch {i // batch_size + 1}: {batch}")
+                    cur.execute(query, (ds, batch))
+                    conn.commit()
     
     @task(trigger_rule=TriggerRule.ONE_FAILED)
     def notify_on_upstream_failure():
@@ -115,7 +108,7 @@ def here_dynamic_binning_monthly_agg():
     
     expand = expand_groups()
     
-    check_missing_dates >> aggregate_monthly >> create_groups >> delete_data
+    check_missing_dates >> create_groups >> delete_data
     delete_data >> expand
     bootstrap_agg.expand(segments=expand) >> notify_on_upstream_failure()
 
