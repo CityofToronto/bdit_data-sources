@@ -8,8 +8,8 @@ CREATE OR REPLACE FUNCTION here_agg.segment_bootstrap(
     n_resamples int,
     isodows smallint[],
     include_holidays boolean,
-    hr_starts smallint[] default array[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
-    hr_ends smallint[] default array[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]    
+    hr_starts smallint,
+    hr_ends smallint
 )
 RETURNS TABLE (
     segment_id bigint,
@@ -39,21 +39,9 @@ AS $BODY$
 
     SELECT setseed(('0.'||segment_id::text)::numeric);
 
-    WITH hours AS (
-        SELECT
-            unnested.hr_start,
-            unnested.hr_end
-        FROM UNNEST(
-            segment_bootstrap.hr_starts,
-            segment_bootstrap.hr_ends
-        ) AS unnested(hr_start, hr_end)
-    ),
-  
-    raw_obs AS (
+    WITH raw_obs AS (
         SELECT
             --segment_id and mnth don't need to be in group by until end
-            hours.hr_start,
-            hours.hr_end,
             ARRAY_AGG(tt::real) AS tt_array,
             AVG(tt::real) AS avg_tt,
             percentile_cont(0.25) WITHIN GROUP (ORDER BY tt::real)::real AS q1_tt,
@@ -61,12 +49,11 @@ AS $BODY$
             percentile_cont(0.75) WITHIN GROUP (ORDER BY tt::real)::real AS q3_tt,
             COUNT(*) AS n
         FROM here_agg.raw_segments AS rs
-        JOIN hours ON
-            rs.hr >= hours.hr_start
-            AND rs.hr < hours.hr_end
         WHERE -- same params as the above aggregation
             dt >= segment_bootstrap.start_date
             AND dt < segment_bootstrap.end_date
+            AND rs.hr >= segment_bootstrap.hr_starts
+            AND rs.hr < segment_bootstrap.hr_ends
             AND segment_id = segment_bootstrap.segment_id
             AND EXTRACT('isodow' FROM dt) = ANY(segment_bootstrap.isodows)
             AND NOT (
@@ -75,16 +62,10 @@ AS $BODY$
                     SELECT 1 FROM ref.holiday WHERE rs.dt = holiday.dt
                 )
             )
-        GROUP BY
-            segment_id,
-            hours.hr_start,
-            hours.hr_end
     ),
     
     random_selections AS (
         SELECT
-            raw_obs.hr_start,
-            raw_obs.hr_end,
             raw_obs.avg_tt,
             raw_obs.q1_tt,
             raw_obs.q2_tt,
@@ -101,8 +82,6 @@ AS $BODY$
         -- 200 resamples (could be any number)
         CROSS JOIN generate_series(1, segment_bootstrap.n_resamples) AS sample_group(group_id)
         GROUP BY
-            raw_obs.hr_start,
-            raw_obs.hr_end,
             raw_obs.avg_tt,
             raw_obs.q1_tt,
             raw_obs.q2_tt,
@@ -115,8 +94,8 @@ AS $BODY$
         segment_bootstrap.segment_id,
         segment_bootstrap.start_date,
         segment_bootstrap.end_date,
-        hr_start,
-        hr_end,
+        segment_bootstrap.hr_starts,
+        segment_bootstrap.hr_ends,
         avg_tt::real AS avg_tt,
         percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_lower,
         percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_avg_tt)::real AS avg_ci_upper,
@@ -133,20 +112,20 @@ AS $BODY$
         n_resamples
     FROM random_selections
     GROUP BY
-        hr_start,
-        hr_end,
+        hr_starts,
+        hr_ends,
         avg_tt,
         q1_tt,
         q2_tt,
         q3_tt,
         n;
 
-
     $BODY$;
 
 GRANT EXECUTE ON FUNCTION here_agg.segment_bootstrap(
-    date, date, bigint, int, smallint[], smallint[]
+    date, date, bigint, int, smallint[], boolean, smallint, smallint
 ) TO congestion_bot;
+
 
 /*Usage example: (works best one segment at a time with Lateral)
 --16s 8 segments, 1 week
@@ -161,10 +140,10 @@ LATERAL (
     SELECT * FROM here_agg.segment_bootstrap(
                     start_date := '2025-12-01'::date,
                     end_date := '2025-12-07'::date,
-                    segment_id := segment_id,
-                    n_resamples := 300,
-                    hr_starts := array[0,7,10,15,19]::smallint[],
-                    hr_ends := array[7,10,15,19,24]::smallint[],
+                    segment_id := segment_id::bigint,
+                    n_resamples := 300::int,
+                    hr_starts := 0::smallint,
+                    hr_ends := 7::smallint,
                     isodows := wkdy_grps.isodows::smallint[],
                     include_holidays := wkdy_grps.include_holidays
             )
