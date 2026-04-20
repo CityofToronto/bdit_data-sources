@@ -7,9 +7,8 @@ CREATE TABLE IF NOT EXISTS here_agg.hourly_avg_tt
     segment_id integer NOT NULL,
     dt date NOT NULL,
     hr smallint NOT NULL,
-    is_wkdy boolean NOT NULL,
     avg_tt double precision,
-    CONSTRAINT hourly_avg_tt_pkey PRIMARY KEY (segment_id, dt, hr, is_wkdy)
+    CONSTRAINT hourly_avg_tt_pkey PRIMARY KEY (segment_id, dt, hr)
 );
 
 ALTER TABLE IF EXISTS here_agg.hourly_avg_tt OWNER TO here_admins;
