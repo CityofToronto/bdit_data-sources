@@ -52,8 +52,8 @@ def here_dynamic_binning_weekly_agg():
     
     check_missing_dates = SQLCheckOperatorWithReturnValue(
         sql="""SELECT _check, _summary FROM here_agg.check_data_availability(
-            '{{ macros.ds_add(ds, -1) }}',
-            '{{ macros.ds_add(ds, 6) }}',
+            '{{ ds }}'::date - 2,
+            '{{ ds }}'::date + 5 --exclusive end date
         );""",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
@@ -62,8 +62,8 @@ def here_dynamic_binning_weekly_agg():
         
     create_groups = SQLExecuteQueryOperator(
         sql="""SELECT segments FROM here_agg.segment_grouping(
-            '{{ macros.ds_add(ds, -1) }}',
-            '{{ macros.ds_add(ds, 6) }}',
+            '{{ ds }}'::date - 2,
+            '{{ ds }}'::date + 5 --exclusive end date
         );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
@@ -72,7 +72,7 @@ def here_dynamic_binning_weekly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.segments_bootstrap_weekly WHERE week_start = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
+        sql="DELETE FROM here_agg.segments_bootstrap_weekly WHERE week_start = '{{ ds }}'::date - 2;",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
@@ -90,7 +90,7 @@ def here_dynamic_binning_weekly_agg():
     def bootstrap_agg(segments, ds):
         batch_size = 10
         postgres_cred = PostgresHook(CONN_ID)
-        query = """SELECT here_agg.weekly_bootstrap(%s::date, %s::bigint[]);"""
+        query = """SELECT here_agg.weekly_bootstrap(%s::date - 2, %s::bigint[]);"""
         segments_list = sorted(int(x) for x in segments.strip("{}").split(","))
         
         with postgres_cred.get_conn() as conn:
