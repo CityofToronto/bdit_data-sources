@@ -39,7 +39,10 @@ BEGIN
         FROM congestion.%1$I AS nl
         JOIN here_agg.monthly_link_vkt AS vkt USING (link_dir)
         JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
-        WHERE vkt.mnth = %2$L::date - interval '1 month' --use the VKT for previous month (enable more frequent publishing)
+        WHERE
+            --use 6 month rolling vkt to align with overnight speeds
+            vkt.mnth >= %2$L::date - interval '6 month'
+            AND vkt.mnth < %2$L::date
         GROUP BY
             vkt.mnth,
             vkt.ver_id,
