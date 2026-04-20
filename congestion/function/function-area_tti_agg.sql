@@ -22,13 +22,12 @@ BEGIN
     CREATE INDEX IF NOT EXISTS segment_list_idx
     ON segment_list (segment_id);
 
-    INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, is_wkdy, tti, num_segments)
+    INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, tti, num_segments)
         SELECT
         seg.area_name,
         CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
         hrly.dt,
         hrly.hr,
-        overn.is_wkdy, 
         SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.vkt_km) / SUM(seg.vkt_km) AS tti,
         COUNT(DISTINCT hrly.segment_id) AS num_segments
     FROM segment_list AS seg
@@ -38,7 +37,6 @@ BEGIN
         AND overn.mnth = area_tti_agg.mnth
     JOIN here_agg.hourly_avg_tt AS hrly
         ON hrly.segment_id = overn.segment_id
-        AND hrly.is_wkdy = overn.is_wkdy
         AND hrly.dt >= overn.mnth
         AND hrly.dt < overn.mnth + interval '1 month'
     GROUP BY
@@ -46,12 +44,10 @@ BEGIN
         ROLLUP(seg.highway), --To get highway: T/F/All
         overn.mnth,
         hrly.hr,
-        hrly.dt,
-        overn.is_wkdy
+        hrly.dt
     ORDER BY
         seg.area_name,
         seg.highway,
-        overn.is_wkdy,
         hrly.hr,
         hrly.dt
     ON CONFLICT ON CONSTRAINT area_tti_pkey

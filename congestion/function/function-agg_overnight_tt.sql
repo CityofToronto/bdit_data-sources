@@ -6,11 +6,10 @@ SECURITY DEFINER
 AS $$
 
     INSERT INTO here_agg.segment_overnight_tts (
-        segment_id, is_wkdy, mnth, overnight_avg_tt, rolling_6month_quasi_obs
+        segment_id, mnth, overnight_avg_tt, rolling_6month_quasi_obs
     )
     SELECT
         segment_id,
-        date_part('isodow', dt) <= 5 AS is_wkdy,
         agg_overnight_tt.mnth AS mnth,
         AVG(tt) AS overnight_avg_tt,
         COUNT(*) AS rolling_6month_quasi_obs
@@ -27,7 +26,7 @@ AS $$
                 AND hr BETWEEN 1 AND 4
             )
         )
-    GROUP BY 1, 2
+    GROUP BY segment_id
     ON CONFLICT ON CONSTRAINT segment_overnight_tts_pkey
     DO UPDATE
     SET
