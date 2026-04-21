@@ -52,8 +52,8 @@ def here_dynamic_binning_monthly_agg():
     
     check_missing_dates = SQLCheckOperatorWithReturnValue(
         sql="""SELECT _check, _summary FROM here_agg.check_data_availability(
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date,
+            ('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month')::date
         );""",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
@@ -62,8 +62,8 @@ def here_dynamic_binning_monthly_agg():
         
     create_groups = SQLExecuteQueryOperator(
         sql="""SELECT segments FROM here_agg.segment_grouping(
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}',
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month'
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date,
+            ('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month')::date
         );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
@@ -84,7 +84,7 @@ def here_dynamic_binning_monthly_agg():
     
     @task(
         retries=0,
-        max_active_tis_per_dag=1,
+        max_active_tis_per_dag=3,
         on_failure_callback=None #downstream task to notify
     )
     def bootstrap_agg(segments, ds):
