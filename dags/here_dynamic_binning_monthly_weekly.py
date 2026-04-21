@@ -84,7 +84,7 @@ def here_dynamic_binning_weekly_agg():
     
     @task(
         retries=0,
-        max_active_tis_per_dag=1,
+        max_active_tis_per_dag=4,
         on_failure_callback=None #downstream task to notify
     )
     def bootstrap_agg(segments, ds):

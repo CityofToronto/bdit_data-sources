@@ -1,33 +1,47 @@
--- Table: here_agg.segments_monthly_bootstrap
+-- Table: here_agg.segments_bootstrap_monthly
 
--- DROP TABLE IF EXISTS here_agg.segments_monthly_bootstrap;
+-- DROP TABLE IF EXISTS here_agg.segments_bootstrap_monthly;
 
-CREATE TABLE IF NOT EXISTS here_agg.segments_monthly_bootstrap
+CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_monthly
 (
-    segment_id integer NOT NULL,
+    segment_id bigint NOT NULL,
+    dow_group text COLLATE pg_catalog."default" NOT NULL,
     mnth date NOT NULL,
-    is_wkdy boolean NOT NULL,
-    hr smallint NOT NULL,
+    holiday_exceptions date[],
+    hr_start smallint NOT NULL,
+    hr_end smallint NOT NULL,
     avg_tt real,
-    n smallint,
-    ci_lower real,
-    ci_upper real,
-    n_resamples smallint NOT NULL,
-    CONSTRAINT congestion_segments_monthly_bootstrap_pkey PRIMARY KEY (segment_id, mnth, is_wkdy, hr, n_resamples)
+    avg_ci_lower real,
+    avg_ci_upper real,
+    q1_tt real,
+    q1_ci_lower real,
+    q1_ci_upper real,
+    median_tt real,
+    median_ci_lower real,
+    median_ci_upper real,
+    q3_tt real,
+    q3_ci_lower real,
+    q3_ci_upper real,
+    n integer,
+    n_resample integer,
+    CONSTRAINT congestion_segments_monthly_bootstrap_pkey PRIMARY KEY (segment_id, dow_group, mnth, hr_start, hr_end),
+    CONSTRAINT mnth_check CHECK (date_part('day'::text, mnth) = 1::double precision)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS here_agg.segments_monthly_bootstrap
-OWNER TO here_admins;
+ALTER TABLE IF EXISTS here_agg.segments_bootstrap_monthly
+    OWNER to here_admins;
 
-REVOKE ALL ON TABLE here_agg.segments_monthly_bootstrap FROM bdit_humans;
-REVOKE ALL ON TABLE here_agg.segments_monthly_bootstrap FROM congestion_bot;
+REVOKE ALL ON TABLE here_agg.segments_bootstrap_monthly FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.segments_bootstrap_monthly FROM congestion_bot;
 
-GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segments_monthly_bootstrap TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segments_bootstrap_monthly TO bdit_humans WITH GRANT OPTION;
 
-GRANT INSERT, SELECT, DELETE ON TABLE here_agg.segments_monthly_bootstrap TO congestion_bot;
+GRANT INSERT, DELETE, SELECT ON TABLE here_agg.segments_bootstrap_monthly TO congestion_bot;
 
-GRANT ALL ON TABLE here_agg.segments_monthly_bootstrap TO dbadmin;
+GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO dbadmin;
 
-GRANT ALL ON TABLE here_agg.segments_monthly_bootstrap TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO here_admins;
+
+GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO rds_superuser WITH GRANT OPTION;
