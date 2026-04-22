@@ -1,0 +1,40 @@
+erDiagram
+    DISSEMINATION_BLOCK {
+        text dguid PK
+        text dbuid
+        numeric dbrplamx
+        numeric dbrplamy
+        numeric landarea
+        text pruid
+        geometry geom
+    }
+
+    DISSEMINATION_AREA {
+        text dguid PK
+        text dauid
+        numeric landarea
+        text pruid
+        geometry geom
+    }
+
+    DGRF_ONTARIO_GTHA {
+        text dbdguid_ididugd PK, FK
+        text dadguid_adidugd FK
+        text prdguid_pridugd
+        text cddguid_dridugd
+        text feddguid_cefidugd
+        text csddguid_sdridugd
+        text erdguid_reidugd
+        text cardguid_raridugd
+        text ccsdguid_sruidugd
+        text adadguid_adaidugd
+        text dpldguid_ldidugd
+        text cmapdguid_rmrpidugd
+        text cmadguid_rmridugd
+        text ctdguid_sridugd
+        text popctrpdguid_ctrpoppidugd
+        text popctrdguid_ctrpopidugd
+    }
+
+    DISSEMINATION_BLOCK ||--|| DGRF_ONTARIO_GTHA : "dbdguid_ididugd = dguid"
+    DISSEMINATION_AREA  ||--o{ DGRF_ONTARIO_GTHA : "dadguid_adidugd = dguid"
