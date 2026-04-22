@@ -29,3 +29,22 @@ CREATE INDEX idx_dgrf_ontario_gtha_da ON census2021.dgrf_ontario_gtha (dadguid_a
 
 -- Add comment for documentation
 COMMENT ON TABLE census2021.dgrf_ontario_gtha IS '2021 Census DGRF data filtered for Ontario and GTHA Census Divisions (Durham, York, Toronto, Peel, Halton, Hamilton).';
+
+-- Define relationships in the database
+ALTER TABLE census2021.dissemination_block
+ADD CONSTRAINT dissemination_block_pkey
+PRIMARY KEY (dguid);
+
+ALTER TABLE census2021.dissemination_area
+ADD CONSTRAINT dissemination_area_pkey
+PRIMARY KEY (dguid);
+
+ALTER TABLE census2021.dgrf_ontario_gtha
+ADD CONSTRAINT dgrf_db_fkey
+FOREIGN KEY (dbdguid_ididugd)
+REFERENCES census2021.dissemination_block(dguid);
+
+ALTER TABLE census2021.dgrf_ontario_gtha
+ADD CONSTRAINT dgrf_da_fkey
+FOREIGN KEY (dadguid_adidugd)
+REFERENCES census2021.dissemination_area(dguid);
