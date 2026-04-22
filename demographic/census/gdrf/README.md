@@ -38,3 +38,17 @@ The table has 16 columns, all defined as `VARCHAR(21)` to store DGUIDs (Dissemin
 - **Record Count**: Approximately 42,928 records for GTHA dissemination blocks (based on filtering results).
 - **NULL Values**: Some columns, such as `popctrpdguid_ctrpoppidugd`, `popctrdguid_ctrpopidugd`, `dpldguid_ldidugd`, `cmapdguid_rmrpidugd`, `cmadguid_rmridugd`, and `ctdguid_sridugd`, may contain `NULL` values. This is expected, as not all dissemination blocks map to these geographic levels (e.g., population centres or census tracts).
 - **Primary Key**: `dbdguid_ididugd` is unique and used as the primary key.
+
+### Useful practical notes on DB <-> DA  geography relationships
+
+- `dissemination_block.dguid` is the primary key for DB geography.
+- `dissemination_area.dguid` is the primary key for DA geography.
+- `dgrf_ontario_gtha.dbdguid_ididugd` is the primary key of the DGRF lookup table and also a foreign key to `dissemination_block(dguid)`.
+- `dgrf_ontario_gtha.dadguid_adidugd` is a foreign key to `dissemination_area(dguid)`.
+
+<img width="1168" height="609" alt="quick_visaul_rel" src="https://github.com/user-attachments/assets/c799a892-36e8-4625-95ac-1e25aeba3481" />
+
+This means:
+- each row in `dgrf_ontario_gtha` represents one DB
+- each DB maps to one DA through DGRF
+- one DA can contain many DBs
