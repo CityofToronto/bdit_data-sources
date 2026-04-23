@@ -2,7 +2,7 @@ INSERT INTO vds.config_comms_device AS e (
     division_id, fss_id, source_id, start_timestamp,
     end_timestamp, has_gps_unit, device_type, description
 )
-VALUES %s
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (division_id, fss_id, start_timestamp)
 DO UPDATE
 SET end_timestamp = EXCLUDED.end_timestamp

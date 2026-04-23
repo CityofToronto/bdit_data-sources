@@ -7,7 +7,7 @@ WITH locations (
     centreline_id, linear_name_id, lanesaffectedpattern, laneblocklevel,
     roadclosuretype, geom_text
 ) AS (
-    VALUES %s --noqa: PRS
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 )
 
 INSERT INTO congestion_events.rodars_issue_locations (

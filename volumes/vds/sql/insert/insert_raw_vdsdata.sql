@@ -2,7 +2,7 @@ WITH inserted AS (
     INSERT INTO vds.raw_vdsdata (
         division_id, vds_id, dt, datetime_15min, lane, speed_kmh, volume_veh_per_hr,
         occupancy_percent
-    ) VALUES %s
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING division_id, vdsconfig_uid, entity_location_uid, dt
 )
 
