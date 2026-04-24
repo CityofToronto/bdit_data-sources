@@ -2,8 +2,7 @@ import os
 import logging
 import pandas as pd
 from numpy import nan
-from psycopg2 import sql, Error
-from psycopg2.extras import execute_values
+from psycopg import sql, Error
 from datetime import datetime, timedelta
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -66,7 +65,7 @@ def fetch_and_insert_raw_tt_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df, page_size = 1000)
+        cur.executemany(insert_query, df)
 
 def fetch_and_insert_raw_tt_pathdata(
     start_date,
@@ -108,7 +107,7 @@ def fetch_and_insert_raw_tt_pathdata(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df, page_size = 1000)
+        cur.executemany(insert_query, df)
 
 def fetch_and_insert_tt_path_data(
     start_date,
@@ -149,4 +148,4 @@ def fetch_and_insert_tt_path_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df)
+        cur.executemany(insert_query, df)
