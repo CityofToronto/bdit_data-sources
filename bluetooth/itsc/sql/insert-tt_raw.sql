@@ -3,5 +3,5 @@ INSERT INTO bluetooth.itsc_tt_raw (
     congestion_start_meters, congestion_end_meters, min_speed_kmh, fifth_percentile_tt_s,
     nintyfifth_percentile_tt_s, unmatched 
 )
-VALUES %s
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 --ON CONFLICT (division_id, path_id, dt) DO NOTHING;

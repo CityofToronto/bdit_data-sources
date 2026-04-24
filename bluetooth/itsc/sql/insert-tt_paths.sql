@@ -9,6 +9,6 @@ INSERT INTO bluetooth.itsc_tt_paths (
     queue_detection_clearance_speed_kmh, severe_delay_clearance_speed_kmh, path_type,
     path_data_timeout_for_issue_creation_seconds, encoded_polyline, centreline_ids
 )
-VALUES %s
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (division_id, path_id, start_timestamp)
 DO NOTHING;
