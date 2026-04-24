@@ -7,7 +7,7 @@ import pendulum
 from airflow.sdk import dag, task, task_group, get_current_context, Variable, Param
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -103,8 +103,6 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                 #name mapped task
                 context = get_current_context()
                 context["table_name"] = layer[0]
-                #get db connection
-                conn = PostgresHook(conn_id).get_conn()
                 #pull and insert layer
                 get_layer(
                     mapserver_n = layer[1].get("mapserver"),
@@ -113,7 +111,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                     is_audited = layer[1].get("is_audited"),
                     include_additional_feature = layer[1].get("include_additional_feature"),
                     primary_key = layer[1].get("pk"),
-                    con = conn
+                    cred = PostgresHook(conn_id)
                 )
 
             @task(map_index_template="{{ table_name }}")
@@ -135,7 +133,7 @@ def create_gcc_puller_dag(dag_id, default_args, name, conn_id, aggs_to_trigger):
                         layer_id = layer_id,
                         include_additional_feature = include_additional_feature
                     )
-                conn = PostgresHook(conn_id).get_conn()
+                conn = PostgresHook(conn_id)
                 today = pendulum.today().to_date_string()
                 dest_count = get_dest_row_count(conn, schema, table_name, is_audited, today)
                 if src_count != dest_count:

@@ -4,9 +4,7 @@ import requests
 from datetime import datetime
 import pendulum
 from functools import partial
-from psycopg2 import connect
-from psycopg2 import sql
-from psycopg2.extras import execute_values
+from psycopg import connect, sql
 import logging
 import click
 CONFIG = configparser.ConfigParser()
@@ -87,7 +85,7 @@ def get_fieldtype(field):
         fieldtype = 'timestamp without time zone'
     return fieldtype
 
-def create_audited_table(output_table, return_json, schema_name, primary_key, con):
+def create_audited_table(output_table, return_json, schema_name, primary_key, conn_id):
     """
     Function to create a new table in postgresql for the layer (for audited tables only)
 
@@ -105,7 +103,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
     primary_key : string
         Primary key for this layer, returned from dictionary pk_dict
     
-    con : Airflow Connection
+    conn_id : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -130,7 +128,7 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
     # Since this is a temporary table, name it '_table' as opposed to 'table' for now
     temp_table_name = '_' + output_table
     
-    with con:
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
             
             col_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) + sql.SQL(' ') + sql.SQL(get_fieldtype(field["type"])) for field in fields]
@@ -147,13 +145,13 @@ def create_audited_table(output_table, return_json, schema_name, primary_key, co
             cur.execute(owner_sql)
     
     # Add a pk
-    with con:
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
             cur.execute(sql.SQL("ALTER TABLE {schema_table} ADD PRIMARY KEY ({pk})").format(schema_table = sql.Identifier(schema_name, temp_table_name),
                                                                                                pk = sql.Identifier(primary_key)))
     return insert_column, excluded_column
 
-def create_partitioned_table(output_table, return_json, schema_name, con):
+def create_partitioned_table(output_table, return_json, schema_name, conn_id):
     """
     Function to create a new table in postgresql for the layer (for partitioned tables only)
 
@@ -168,7 +166,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     schema_name : string
         The schema in which the table will be inserted into
     
-    con : Airflow Connection
+    conn_id : Airflow Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -188,10 +186,9 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     
     # Date format YYYY-MM-DD, for the SQL query
     partition_date = pendulum.today()
-    today_string = partition_date.to_date_string()
-    
+        
     # Date format _YYYY, to be attached at the end of output_table name
-    yr_attachment = '_' + today_string[0:4]
+    yr_attachment = '_' + str(partition_date.year)
     yr_partition_start = partition_date.start_of('year')
     yr_partition_end = yr_partition_start + pendulum.duration(years=1)
     output_table_with_yr = output_table + yr_attachment
@@ -202,7 +199,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
     index_name = output_table_with_date + '_idx'
     
     
-    with con:
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
             
             yr_partition_sql = sql.SQL(
@@ -211,15 +208,16 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
                 schema_child_table = sql.Identifier(schema_name, output_table_with_yr),
                 schema_parent_table = sql.Identifier(schema_name, output_table)
             )
-            cur.execute(yr_partition_sql, (yr_partition_start.to_date_string(), yr_partition_end.to_date_string()))
+            cur.execute(yr_partition_sql, (yr_partition_start.date(), yr_partition_end.date()))
             
             create_sql = sql.SQL(
-                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN (%s)"
+                "CREATE TABLE IF NOT EXISTS {schema_child_table} PARTITION OF {schema_parent_table} FOR VALUES IN ({vdate});"
             ).format(
                 schema_child_table = sql.Identifier(schema_name, output_table_with_date),
-                schema_parent_table = sql.Identifier(schema_name, output_table_with_yr)
+                schema_parent_table = sql.Identifier(schema_name, output_table_with_yr),
+                vdate = sql.Literal(partition_date.date())
             )
-            cur.execute(create_sql, (today_string, ))
+            cur.execute(create_sql)
 
             index_sql = sql.SQL(
                 "CREATE INDEX IF NOT EXISTS {idx_name} ON {schema_child_table} USING gist (geom)"
@@ -231,7 +229,7 @@ def create_partitioned_table(output_table, return_json, schema_name, con):
             
     return insert_column, output_table
 
-def create_table(output_table, return_json, schema_name, con):
+def create_table(output_table, return_json, schema_name, conn_id):
     """
     Function to create a new table in postgresql for the layer (for regular table)
 
@@ -246,7 +244,7 @@ def create_table(output_table, return_json, schema_name, con):
     schema_name : string
         The schema in which the table will be inserted into
         
-    con : Connection
+    conn_id : Connection
         Could be the connection to bigdata or to on-prem server
 
     Returns
@@ -260,7 +258,7 @@ def create_table(output_table, return_json, schema_name, con):
     insert_column_list.append(sql.Identifier('geom'))
     insert_column = sql.SQL(',').join(insert_column_list)
     
-    with con:
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
             
             col_list = [sql.Identifier((field['name'].lower()).replace('.', '_')) + sql.SQL(' ') + sql.SQL(get_fieldtype(field["type"])) for field in fields]
@@ -407,21 +405,22 @@ def get_data(mapserver, layer_id, include_additional_feature, max_number = None,
 
 get_src_row_count = partial(get_data, max_number = None, record_max = None, row_count_only = True)
 
-def get_dest_row_count(conn, schema, table, is_audited, version_date):
-    with conn.cursor() as cur:
-        if is_audited:
-            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table};").format(
-                schema = sql.Identifier(schema),
-                table = sql.Identifier(table)
-            ))
-        else:
-            cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date};").format(
-                schema = sql.Identifier(schema),
-                table = sql.Identifier(table),
-                version_date = sql.Literal(version_date)
-            ))
-        result = cur.fetchone()[0]
-        return result
+def get_dest_row_count(conn_id, schema, table, is_audited, version_date):
+    with conn_id.get_conn() as con:
+        with con.cursor() as cur:
+            if is_audited:
+                cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table};").format(
+                    schema = sql.Identifier(schema),
+                    table = sql.Identifier(table)
+                ))
+            else:
+                cur.execute(sql.SQL("SELECT COUNT(*) FROM {schema}.{table} WHERE version_date = {version_date};").format(
+                    schema = sql.Identifier(schema),
+                    table = sql.Identifier(table),
+                    version_date = sql.Literal(version_date)
+                ))
+            result = cur.fetchone()[0]
+            return result
 
 def find_limit(return_json):
     """
@@ -439,7 +438,7 @@ def find_limit(return_json):
     """
     return return_json.get('exceededTransferLimit', False)
 
-def insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned):
+def insert_data(output_table, insert_column, return_json, schema_name, conn_id, is_audited, is_partitioned):
     """
     Function to insert data to our postgresql database
     Parameters
@@ -454,7 +453,7 @@ def insert_data(output_table, insert_column, return_json, schema_name, con, is_a
     schema_name : string
         The schema in which the table will be inserted into
     
-    con : Airflow Connection
+    conn_id : Airflow Connection
         Could be the connection to bigdata or to on-prem server
         
     is_audited : Boolean
@@ -466,6 +465,7 @@ def insert_data(output_table, insert_column, return_json, schema_name, con, is_a
     rows = []
     features = return_json['features']
     fields = return_json['fields']
+    n_placeholders=len(return_json['fields'])+1 #+1 to account for geometry
     trials = [[field['name'], field['type']] for field in fields]
     today_string = pendulum.today().strftime('%Y-%m-%d')
     
@@ -489,18 +489,21 @@ def insert_data(output_table, insert_column, return_json, schema_name, con, is_a
     
     if is_audited:
         output_table = '_' + output_table
-
-    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES %s").format(
-        schema_table = sql.Identifier(schema_name, output_table), 
-        columns = insert_column
+    if (not is_audited) and is_partitioned:
+        n_placeholders+=1 #to account for today_string
+    
+    insert=sql.SQL("INSERT INTO {schema_table} ({columns}) VALUES ({placeholders});").format(
+        schema_table = sql.Identifier(schema_name, output_table),
+        columns = insert_column,
+        placeholders=sql.SQL(",").join([sql.Placeholder()] * n_placeholders),
     )
-        
-    with con:
+    
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
-               execute_values(cur, insert, rows)
+            cur.executemany(insert, rows)
     LOGGER.info('Successfully inserted %d records into %s', len(rows), output_table)
 
-def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con):
+def update_table(output_table, insert_column, excluded_column, primary_key, schema_name, conn_id):
     """
     Function to find differences between existing table and the newly created temp table, then UPSERT,
     the temp table will be dropped in the end (for audited tables only)
@@ -540,7 +543,7 @@ def update_table(output_table, insert_column, excluded_column, primary_key, sche
     date = pendulum.today().strftime('%Y-%m-%d')
     
     # Find if old table exists
-    with con:
+    with conn_id.get_conn() as con:
         with con.cursor() as cur:
             
             cur.execute(sql.SQL("SELECT COUNT(1) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s"), (schema_name, output_table))
@@ -628,15 +631,6 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, include_additional
         Whether we want to have the table be partitioned (true) or neither audited nor partitioned(false)
     """
         
-    # For Airflow DAG
-    if cred is not None:
-        con = cred.get_conn()
-    
-    # At this point, there should must be a con now
-    if con is None:
-        LOGGER.error("Unable to establish connection to the database, please pass in a valid con")
-        return
-    
     mapserver = mapserver_name(mapserver_n)
     output_table = get_tablename(mapserver, layer_id)
     if output_table is None:
@@ -654,14 +648,14 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, include_additional
     #get first data pull (no offset), create tables.
     return_json = get_data(mapserver, layer_id, include_additional_feature)
     if is_audited:
-        (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, con)
+        (insert_column, excluded_column) = create_audited_table(output_table, return_json, schema_name, primary_key, cred)
     elif is_partitioned:
-        (insert_column, output_table) = create_partitioned_table(output_table, return_json, schema_name, con)
+        (insert_column, output_table) = create_partitioned_table(output_table, return_json, schema_name, cred)
     else:
-        insert_column = create_table(output_table, return_json, schema_name, con)
+        insert_column = create_table(output_table, return_json, schema_name, cred)
     
     while keep_adding:
-        insert_data(output_table, insert_column, return_json, schema_name, con, is_audited, is_partitioned)
+        insert_data(output_table, insert_column, return_json, schema_name, cred, is_audited, is_partitioned)
         record_count = len(return_json['features'])
         total += record_count
         keep_adding = find_limit(return_json) #checks if all records fetched
@@ -672,7 +666,7 @@ def get_layer(mapserver_n, layer_id, schema_name, is_audited, include_additional
     
     if is_audited:
         try:
-            update_table(output_table, insert_column, excluded_column, primary_key, schema_name, con)
+            update_table(output_table, insert_column, excluded_column, primary_key, schema_name, cred)
         except Exception as err:
             LOGGER.exception("Unable to update table %s", err)
     
