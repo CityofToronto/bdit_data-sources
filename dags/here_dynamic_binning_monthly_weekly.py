@@ -62,8 +62,7 @@ def here_dynamic_binning_weekly_agg():
         
     create_groups = SQLExecuteQueryOperator(
         sql="""SELECT segments FROM here_agg.segment_grouping(
-            '{{ ds }}'::date - 2,
-            '{{ ds }}'::date + 5 --exclusive end date
+            '{{ ds }}'::date - 2
         );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
