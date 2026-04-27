@@ -78,6 +78,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     #pull data in batches and transform + insert.
     try:
         with itsc_conn.get_conn() as con, con.cursor() as cur:
+            con.autocommit = True
             LOGGER.info("Fetching %s", 'vdsvehicledata')
             cur.execute(raw_sql)
             data = cur.fetchmany(batch_size)
