@@ -1,19 +1,28 @@
 CREATE OR REPLACE FUNCTION here_agg.segment_grouping(
     date_start date,
-    date_end date,
-    max_group_size int default 100
+    max_group_size int DEFAULT 100
 )
 RETURNS TABLE (
-    segments text[]
-) AS $$
+    segments text []
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $BODY$
 
+DECLARE
+    map_version text := here_agg.select_map_version(date_start, date_start + 1, 'path_hm');
+    congestion_network_table text := CASE map_version
+    WHEN '25_1' THEN 'congestion_segments_25_1'
+    WHEN '24_4' THEN 'congestion_segments_24_4'
+    WHEN '23_4' THEN 'network_segments_23_4_geom' END;
+
+BEGIN
+
+RETURN QUERY EXECUTE FORMAT($sql$
 WITH segments AS (
     --segments active in relevant month
     SELECT DISTINCT segment_id
-    FROM here_agg.raw_segments
-    WHERE
-        dt >= date_start
-        AND dt < date_end
+    FROM congestion.%1$I
 ),
 
 group_size AS (
@@ -21,7 +30,7 @@ group_size AS (
     SELECT
         FLOOR(
             COUNT(*)
-            / CEIL((COUNT(*)) / max_group_size::numeric)
+            / CEIL((COUNT(*)) / %2$L::numeric)
         ) AS num_per_group
     FROM segments
 ),
@@ -48,11 +57,12 @@ groups_summarized AS (
 SELECT array_agg(segment_ids::text)
 FROM groups_summarized;
 
-$$
-LANGUAGE sql
-SECURITY DEFINER;
+$sql$, congestion_network_table, max_group_size);
+
+END;
+$BODY$;
 
 ALTER FUNCTION here_agg.segment_grouping OWNER TO here_admins;
 GRANT EXECUTE ON FUNCTION here_agg.segment_grouping TO here_bot;
 
---SELECT segments FROM here_agg.segment_grouping('2025-01-01', '2026-01-01')
+--SELECT segments FROM here_agg.segment_grouping('2026-01-01')
