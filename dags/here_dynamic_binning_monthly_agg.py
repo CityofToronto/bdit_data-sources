@@ -62,8 +62,7 @@ def here_dynamic_binning_monthly_agg():
         
     create_groups = SQLExecuteQueryOperator(
         sql="""SELECT segments FROM here_agg.segment_grouping(
-            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date,
-            ('{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date + interval '1 month')::date
+            '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}'::date
         );""",
         task_id="create_segment_groups",
         conn_id=CONN_ID,
@@ -90,7 +89,7 @@ def here_dynamic_binning_monthly_agg():
     def bootstrap_agg(segments, ds):
         batch_size = 10
         postgres_cred = PostgresHook(CONN_ID)
-        query = """SELECT here_agg.monthly_bootstrap(%s::date, %s::bigint[]);"""
+        query = """SELECT here_agg.monthly_bootstrap(date_trunc('month', %s::date)::date, %s::bigint[]);"""
         segments_list = sorted(int(x) for x in segments.strip("{}").split(","))
         
         with postgres_cred.get_conn() as conn:

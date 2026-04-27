@@ -5,7 +5,7 @@ for i in {0..5}; do
     airflow dags trigger -e "${end_date}" here_dynamic_binning_agg_hm
 done
 
-or trigger just one day: airflow dags trigger -e 2023-11-02 here_dynamic_binning_agg_hm
+or trigger just one day: airflow dags trigger -l 2026-01-01 here_dynamic_binning_agg_hm
 `airflow dags backfill ...` doesn't work because there are no scheduled run dates in that range.
 '''
 
