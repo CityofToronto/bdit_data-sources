@@ -14,7 +14,9 @@ AS $BODY$
 DECLARE
     map_version text := here_agg.select_map_version(start_date, start_date + 1, 'path_hm');
     congestion_network_table text := CASE map_version
-    WHEN '24_4' THEN 'temp_network_links_24_4' WHEN '23_4' THEN 'network_links_23_4_geom' END;
+    WHEN '25_1' THEN 'congestion_links_25_1'
+    WHEN '24_4' THEN 'congestion_links_24_4'
+    WHEN '23_4' THEN 'network_links_23_4_geom' END;
 
 BEGIN
 
@@ -37,12 +39,22 @@ EXECUTE FORMAT(
     $$
         DROP TABLE IF EXISTS segment_5min_bins;
         CREATE TEMP TABLE segment_5min_bins ON COMMIT DROP AS
+        
+        WITH seg AS (
+            SELECT
+                segment_id,
+                link_dir,
+                length,
+                SUM(length) OVER (PARTITION BY segment_id) AS total_length
+            FROM congestion.%1$I
+        )
+
         SELECT
             seg.segment_id,
             ta.tx,
-            seg.segment_length AS total_length,
+            seg.total_length,
             ROW_NUMBER() OVER w AS bin_rank,
-            SUM(seg.length) / seg.segment_length AS sum_length,
+            SUM(seg.length) / seg.total_length AS sum_length,
             SUM(seg.length) AS length_w_data,
             SUM(seg.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
@@ -50,7 +62,7 @@ EXECUTE FORMAT(
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths,
             ARRAY_AGG(ta.sample_size ORDER BY ta.link_dir) AS sample_sizes
         FROM here.ta_path_hm AS ta
-        JOIN congestion.%1$I AS seg USING (link_dir),
+        JOIN seg USING (link_dir),
         LATERAL (
             SELECT seg.length / ta.harmonic_mean * 3.6 AS tt
         ) AS lat
@@ -62,7 +74,7 @@ EXECUTE FORMAT(
         GROUP BY
             seg.segment_id,
             ta.tx,
-            seg.segment_length
+            seg.total_length
         WINDOW w AS (
             PARTITION BY seg.segment_id
             ORDER BY ta.tx
