@@ -28,6 +28,7 @@ def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, 
     running_total=0
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
+            con.autocommit = True
             LOGGER.info(f"Fetching {table_name}")
             cur.execute(select_query)
             data = cur.fetchmany(batch_size)
