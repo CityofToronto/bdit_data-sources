@@ -7,7 +7,7 @@ INSERT INTO congestion_events.rodars_issues (
     locationdescriptionoverwrite, startissueonplannedstarttime, startstatus,
     updateremindernoticeseconds
 )
-VALUES %s
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (divisionid, issueid)
 DO UPDATE SET
 divisionname = excluded.divisionname,

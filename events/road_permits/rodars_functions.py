@@ -5,11 +5,10 @@ from numpy import nan
 import struct
 import json
 from io import BytesIO
-from psycopg2 import sql, Error
-from psycopg2.extras import execute_values
+from psycopg import sql, Error
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowSkipException
+from airflow.sdk.exceptions import AirflowSkipException
 
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
@@ -109,7 +108,7 @@ def fetch_and_insert_issue_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df_final)
+        cur.executemany(insert_query, df_final)
 
 def fetch_and_insert_location_data(
     select_conn = PostgresHook('itsc_postgres'),
@@ -201,4 +200,4 @@ def fetch_and_insert_location_data(
         insert_query = sql.SQL(file.read())
         
     with insert_conn.get_conn() as con, con.cursor() as cur:
-        execute_values(cur, insert_query, df_no_geom, page_size = 1000)
+        cur.executemany(insert_query, df_no_geom)

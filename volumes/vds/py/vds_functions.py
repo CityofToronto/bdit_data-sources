@@ -2,8 +2,7 @@ import os
 import logging
 import pandas as pd
 from numpy import nan
-from psycopg2 import sql, Error
-from psycopg2.extras import execute_values
+from psycopg import sql, Error
 import struct
 from datetime import datetime, timedelta
 import pytz
@@ -29,6 +28,7 @@ def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, 
     running_total=0
     try:
         with select_conn.get_conn() as con, con.cursor() as cur:
+            con.autocommit = True
             LOGGER.info(f"Fetching {table_name}")
             cur.execute(select_query)
             data = cur.fetchmany(batch_size)
@@ -47,11 +47,10 @@ def fetch_and_insert_data(select_conn, insert_conn, select_query, insert_query, 
 def insert_data(conn, query, table_name, data):
     #generic function to insert data
     try:
-        with conn.get_conn() as con, con.cursor() as cur:                
+        with conn.get_conn() as con, con.cursor() as cur:
             # Insert cleaned data into the database
             LOGGER.info(f"Inserting into {table_name}.")
-            #Tested impact of page_size on insert: Default: >3 minutes w/100. 31s for 800k rows of vdsvehicledata w/10000. 41s w/1000. 
-            execute_values(cur, query, data, page_size = 1000) 
+            cur.executemany(query, data)
             LOGGER.info(f"Inserted {len(data)} rows into {table_name}.")
     except Error as exc:
         LOGGER.critical(f"Error inserting into {table_name}.")
@@ -80,6 +79,7 @@ def pull_raw_vdsdata(rds_conn, itsc_conn, start_date):
     #pull data in batches and transform + insert.
     try:
         with itsc_conn.get_conn() as con, con.cursor() as cur:
+            con.autocommit = True
             LOGGER.info("Fetching %s", 'vdsvehicledata')
             cur.execute(raw_sql)
             data = cur.fetchmany(batch_size)
@@ -134,7 +134,7 @@ def pull_raw_vdsvehicledata(rds_conn, itsc_conn, start_date):
 
     insert_query = sql.SQL("""INSERT INTO vds.raw_vdsvehicledata (
                                     division_id, vds_id, dt, lane, sensor_occupancy_ds, speed_kmh, length_meter
-                                    ) VALUES %s;""")
+                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s);""")
 
     fetch_and_insert_data(select_conn=itsc_conn, 
                           insert_conn=rds_conn,
@@ -214,43 +214,41 @@ def parse_lane_data(laneData):
 # Function adapted from SF's C# code stored at: "K:\tra\GM Office\Big Data Group\Data Sources\VDS\RE Back-end Connection to ITS Central data.msg"
 
     result = []
-
-    with memoryview(laneData) as mv:
-        i = 0 #index within memoryview
-        while i < len(mv):
-            # Get lane
-            lane = mv[i][0] #single byte
-
-            # Get speed
-            #Stored in km/h * 100. Null value represented by 65535. Convert 0 to null to maintain backward compatibility
-            speed = struct.unpack('<H', mv[i + 1] + mv[i + 2])[0] #two bytes. '<H' denotes stored in little-endian format
-            speedKmh = None if speed == 65535 or speed == 0 else speed / 100.0
-
-            # Get volume
-            #Stored in vehicles per hour. Null value represented by 65535.
-            volume = struct.unpack('<H', mv[i + 3] + mv[i + 4])[0] #two bytes
-            volumeVehiclesPerHour = None if volume == 65535 else volume
-
-            # Get occupancy
-            #Stored in percent * 100. Null value represented by 65535.
-            occupancy = struct.unpack('<H', mv[i + 5] + mv[i + 6])[0] #two bytes
-            occupancyPercent = None if occupancy == 65535 else occupancy / 100.0
-
-            #these columns were included in the example code but are empty in our data: 
-            #Each class stored in vehicles per hour. 65535 for null value.
-            #passengerVolume = struct.unpack('<H', mv[i + 7] + mv[i + 8])[0]
-            #volumePassengerVehiclesPerHour = None if passengerVolume == 65535 else passengerVolume
-            #singleUnitTrucksVolume = struct.unpack('<H', mv[i + 9] + mv[i + 10])[0]
-            #volumeSingleUnitTrucksPerHour = None if singleUnitTrucksVolume == 65535 else singleUnitTrucksVolume
-            #comboTrucksVolume = struct.unpack('<H', mv[i + 11] + mv[i + 12])[0]
-            #volumeComboTrucksPerHour = None if comboTrucksVolume == 65535 else comboTrucksVolume
-            #multiTrailerTrucksVolume = struct.unpack('<H', mv[i + 13] + mv[i + 14])[0]
-            #volumeMultiTrailerTrucksPerHour = None if multiTrailerTrucksVolume == 65535 else multiTrailerTrucksVolume
-
-            # Increment i by 15 to move to the next lane
-            i += 15
-
-            result.append([lane, speedKmh, volumeVehiclesPerHour, occupancyPercent])
+    
+    i = 0 #index within laneData
+    while i < len(laneData):
+        # Get lane
+        lane = laneData[i] #single byte
+        # Get speed
+        #Stored in km/h * 100. Null value represented by 65535. Convert 0 to null to maintain backward compatibility
+        speed = struct.unpack('<H', laneData[i+1:i+3])[0] #two bytes. '<H' denotes stored in little-endian format
+        speedKmh = None if speed == 65535 or speed == 0 else speed / 100.0
+        
+        # Get volume
+        #Stored in vehicles per hour. Null value represented by 65535.
+        volume = struct.unpack('<H', laneData[i+3:i+5])[0] #two bytes
+        volumeVehiclesPerHour = None if volume == 65535 else volume
+        
+        # Get occupancy
+        #Stored in percent * 100. Null value represented by 65535.
+        occupancy = struct.unpack('<H', laneData[i+5:i+7])[0] #two bytes
+        occupancyPercent = None if occupancy == 65535 else occupancy / 100.0
+        
+        #these columns were included in the example code but are empty in our data: 
+        #Each class stored in vehicles per hour. 65535 for null value.
+        #passengerVolume = struct.unpack('<H', laneData[i+7:i+9])
+        #volumePassengerVehiclesPerHour = None if passengerVolume == 65535 else passengerVolume
+        #singleUnitTrucksVolume = struct.unpack('<H', laneData[i+9:i+11])
+        #volumeSingleUnitTrucksPerHour = None if singleUnitTrucksVolume == 65535 else singleUnitTrucksVolume
+        #comboTrucksVolume = struct.unpack('<H', laneData[i+11:i+13])
+        #volumeComboTrucksPerHour = None if comboTrucksVolume == 65535 else comboTrucksVolume
+        #multiTrailerTrucksVolume = struct.unpack('<H', laneData[i+13:i+15])
+        #volumeMultiTrailerTrucksPerHour = None if multiTrailerTrucksVolume == 65535 else multiTrailerTrucksVolume
+        
+        # Increment i by 15 to move to the next lane
+        i += 15
+        
+        result.append([lane, speedKmh, volumeVehiclesPerHour, occupancyPercent])
                     #Extra columns, not used:, volumePassengerVehiclesPerHour, volumeSingleUnitTrucksPerHour, volumeComboTrucksPerHour, volumeMultiTrailerTrucksPerHour])
             
     return result
