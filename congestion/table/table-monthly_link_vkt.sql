@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS here_agg.monthly_link_vkt
     length double precision,
     sample_size bigint,
     ver_id text COLLATE pg_catalog."default",
-    CONSTRAINT mnth_link_pkey PRIMARY KEY (mnth, link_dir)
+    CONSTRAINT monthly_link_vkt_pkey PRIMARY KEY (mnth, link_dir)
 )
 
 TABLESPACE pg_default;

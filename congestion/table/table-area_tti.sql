@@ -7,11 +7,10 @@ CREATE TABLE IF NOT EXISTS here_agg.area_tti
     area_name text COLLATE pg_catalog."default" NOT NULL,
     dt date NOT NULL,
     hr smallint NOT NULL,
-    is_wkdy boolean NOT NULL,
     tti double precision,
     num_segments integer,
     road_category text COLLATE pg_catalog."default" NOT NULL,
-    CONSTRAINT area_tti_pkey PRIMARY KEY (area_name, dt, hr, is_wkdy, road_category)
+    CONSTRAINT area_tti_pkey PRIMARY KEY (area_name, dt, hr, road_category)
 );
 
 ALTER TABLE IF EXISTS here_agg.area_tti OWNER TO here_admins;

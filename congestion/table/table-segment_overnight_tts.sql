@@ -22,12 +22,8 @@ GRANT SELECT ON TABLE here_agg.segment_overnight_tts TO bdit_humans;
 
 GRANT ALL ON TABLE here_agg.segment_overnight_tts TO here_admins;
 
-GRANT ALL ON TABLE here_agg.segment_overnight_tts TO rds_superuser WITH GRANT OPTION;
-
 -- Index: segment_overnight_tts_dt_idx
-
 -- DROP INDEX IF EXISTS here_agg.segment_overnight_tts_dt_idx;
-
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_dt_idx
 ON here_agg.segment_overnight_tts USING btree
 (mnth ASC NULLS LAST)
@@ -35,19 +31,7 @@ WITH (fillfactor=100, deduplicate_items=True)
 TABLESPACE pg_default;
 
 -- Index: segment_overnight_tts_segment_id_dt_idx
-
 -- DROP INDEX IF EXISTS here_agg.segment_overnight_tts_segment_id_dt_idx;
-
-CREATE INDEX IF NOT EXISTS segment_overnight_tts_segment_id_dt_idx
-ON here_agg.segment_overnight_tts USING btree
-(segment_id ASC NULLS LAST, mnth ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
-TABLESPACE pg_default;
-
--- Index: segment_overnight_tts_segment_id_dt_idx
-
--- DROP INDEX IF EXISTS here_agg.segment_overnight_tts_segment_id_dt_idx;
-
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_segment_id_dt_idx
 ON here_agg.segment_overnight_tts USING btree
 (segment_id ASC NULLS LAST, mnth ASC NULLS LAST)
@@ -55,9 +39,7 @@ WITH (fillfactor=100, deduplicate_items=True)
 TABLESPACE pg_default;
 
 -- Index: segment_overnight_tts_segment_id_idx
-
 -- DROP INDEX IF EXISTS here_agg.segment_overnight_tts_segment_id_idx;
-
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_segment_id_idx
 ON here_agg.segment_overnight_tts USING btree
 (segment_id ASC NULLS LAST)
