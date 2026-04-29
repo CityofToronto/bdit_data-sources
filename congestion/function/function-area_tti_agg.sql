@@ -3,7 +3,7 @@
 -- DROP FUNCTION IF EXISTS here_agg.area_tti_agg(date);
 
 CREATE OR REPLACE FUNCTION here_agg.area_tti_agg(
-    mnth date
+    dt date
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -15,7 +15,7 @@ BEGIN
     DROP TABLE IF EXISTS segment_list;
     CREATE TEMP TABLE segment_list ON COMMIT DROP AS
     SELECT area_name, vkt.highway, vkt.segment_id, vkt.vkt_km
-    FROM here_agg.monthly_segment_vkt_agg(area_tti_agg.mnth) AS vkt
+    FROM here_agg.monthly_segment_vkt_agg(date_trunc('month', area_tti_agg.dt)) AS vkt
     JOIN here_agg.segment_areas AS area USING (segment_id) --this should have ver_id eventually
     ORDER BY segment_id;
 
@@ -23,7 +23,7 @@ BEGIN
     ON segment_list (segment_id);
 
     INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, tti, num_segments)
-        SELECT
+    SELECT
         seg.area_name,
         CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
         hrly.dt,
@@ -34,7 +34,7 @@ BEGIN
     LEFT JOIN here_agg.segment_overnight_tts AS overn
     ON
         seg.segment_id = overn.segment_id
-        AND overn.mnth = area_tti_agg.mnth
+        AND overn.mnth = date_trunc('month', area_tti_agg.dt)
     JOIN here_agg.hourly_avg_tt AS hrly
         ON hrly.segment_id = overn.segment_id
         AND hrly.dt >= overn.mnth
