@@ -12,7 +12,7 @@ RETURNS TABLE (
     sqrt_vkt_km double precision
 )
 SECURITY DEFINER
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
