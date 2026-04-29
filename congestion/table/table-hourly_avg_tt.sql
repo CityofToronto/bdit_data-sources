@@ -22,5 +22,5 @@ GRANT ALL ON TABLE here_agg.hourly_avg_tt TO here_admins;
 CREATE INDEX IF NOT EXISTS hourly_avg_tt_segment_id_dt_idx
 ON here_agg.hourly_avg_tt USING btree
 (segment_id ASC NULLS LAST, dt ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
+WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;

@@ -27,7 +27,7 @@ GRANT ALL ON TABLE here_agg.segment_overnight_tts TO here_admins;
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_dt_idx
 ON here_agg.segment_overnight_tts USING btree
 (mnth ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
+WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;
 
 -- Index: segment_overnight_tts_segment_id_dt_idx
@@ -35,7 +35,7 @@ TABLESPACE pg_default;
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_segment_id_dt_idx
 ON here_agg.segment_overnight_tts USING btree
 (segment_id ASC NULLS LAST, mnth ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
+WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;
 
 -- Index: segment_overnight_tts_segment_id_idx
@@ -43,5 +43,5 @@ TABLESPACE pg_default;
 CREATE INDEX IF NOT EXISTS segment_overnight_tts_segment_id_idx
 ON here_agg.segment_overnight_tts USING btree
 (segment_id ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
+WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;

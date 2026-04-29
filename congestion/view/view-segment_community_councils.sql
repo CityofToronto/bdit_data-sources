@@ -1,6 +1,6 @@
 CREATE INDEX IF NOT EXISTS network_segments_24_4_geom_idx
 ON congestion.network_segments_24_4
-USING GIST (geom);
+USING gist (geom);
 
 CREATE VIEW here_agg.segment_areas AS
 
