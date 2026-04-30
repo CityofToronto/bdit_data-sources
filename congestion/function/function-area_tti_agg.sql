@@ -15,8 +15,9 @@ BEGIN
     DROP TABLE IF EXISTS segment_list;
     CREATE TEMP TABLE segment_list ON COMMIT DROP AS
     SELECT area_name, vkt.highway, vkt.segment_id, vkt.vkt_km
-    FROM here_agg.monthly_segment_vkt_agg(date_trunc('month', area_tti_agg.dt)) AS vkt
-    JOIN here_agg.segment_areas AS area USING (segment_id) --this should have ver_id eventually
+    FROM here_agg.monthly_segment_vkt_agg(date_trunc('month', area_tti_agg.dt)::date) AS vkt
+    --gets the segment/area combos for the right map version, based on date
+    JOIN here_agg.segment_areas(area_tti_agg.dt) AS area USING (segment_id)
     ORDER BY segment_id;
 
     CREATE INDEX IF NOT EXISTS segment_list_idx
