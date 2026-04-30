@@ -5,7 +5,6 @@ CREATE OR REPLACE FUNCTION here_agg.monthly_segment_vkt_agg(
 RETURNS TABLE (
     segment_id bigint,
     mnth date,
-    ver_id text,
     highway boolean,
     sample_size numeric,
     vkt_km double precision,
@@ -23,32 +22,32 @@ DECLARE
         end_date := (monthly_segment_vkt_agg.p_mnth + interval '1 month')::date,
         agg_type := 'path_hm'
     );
-    links_table text := 'network_links_' || map_version;
 
 BEGIN
 
     RETURN QUERY EXECUTE format($sql$
         SELECT
-            nl.segment_id,
+            cl.segment_id,
             %2$L::date,
-            vkt.ver_id,
             cs.highway,
             SUM(vkt.sample_size) AS sample_size,
             SUM(vkt.sample_size::double precision * vkt.length) / 1000.0::double precision AS vkt_km,
             SUM(SQRT(vkt.sample_size::double precision) * vkt.length) / 1000.0::double precision AS sqrt_vkt_km
-        FROM congestion.%1$I AS nl
+        FROM congestion.congestion_links AS cl
+        JOIN congestion.congestion_segments AS cs USING (segment_id)
+        --no ver_id in this join, because when network changes, we need to use link_dir data from previous version as well.
         JOIN here_agg.monthly_link_vkt AS vkt USING (link_dir)
-        JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
         WHERE
+            cl.ver_id = %1$L
+            AND cs.ver_id = %1$L
             --use 6 month rolling vkt to align with overnight speeds
-            vkt.mnth >= %2$L::date - interval '6 month'
+            AND vkt.mnth >= %2$L::date - interval '6 month'
             AND vkt.mnth < %2$L::date
         GROUP BY
             vkt.mnth,
-            vkt.ver_id,
             cs.highway,
-            nl.segment_id;
-    $sql$, links_table, p_mnth);
+            cl.segment_id;
+    $sql$, map_version, p_mnth);
 
 END;
 $BODY$;

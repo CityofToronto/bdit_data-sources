@@ -18,7 +18,7 @@ DECLARE
         end_date := (monthly_link_vkt_agg.mnth + interval '1 month')::date,
         agg_type := 'path_hm'
     );
-    links_table text := 'network_links_' || map_version;
+    links_table text := 'congestion_links_' || map_version;
 
 BEGIN
 
@@ -39,7 +39,7 @@ BEGIN
             mnth,
             links.link_dir,
             links.length
-        ON CONFLICT ON CONSTRAINT mnth_link_pkey
+        ON CONFLICT ON CONSTRAINT monthly_link_vkt_pkey
         DO UPDATE SET
             length = EXCLUDED.length,
             sample_size = EXCLUDED.sample_size;
