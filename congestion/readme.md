@@ -34,7 +34,7 @@ Approx row count:           73,837,100
 | avg_tt        | double precision | 38.936590830485024 |            |
 
 ### `here_agg.monthly_link_vkt` (table)
-This table stores the monthly link_dir sample sizes for use in weighting segment level TTI. Segment level sample sizes are computed from this data using the function `here_agg.monthly_segment_vkt_agg` but not stored. 
+This table stores the monthly link_dir sample sizes for use in weighting segment level TTI. Segment level sample sizes are computed from this data using the function `here_agg.monthly_segment_vkt_agg` but not stored. Only links included in the congestion network are stored, which is about 1/4 of links in the full HERE network. 
 Note: We use the previous 6 months VKT to weight TTI, but we store each month's VKT separately to eliminate the need to query the entire previous 6 months, monthly.
 This table is populated by the function `here_agg.monthly_link_vkt_agg`. 
 
