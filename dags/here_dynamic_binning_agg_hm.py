@@ -14,8 +14,9 @@ import os
 import logging
 from pendulum import duration, datetime
 
-from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import dag
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -98,6 +99,13 @@ def here_dynamic_binning_agg_hm():
         hook_params={"options": "-c statement_timeout=10800000ms"} #3 hours
     )
     
-    create_partitions >> check_not_empty >> delete_daily >> aggregate_daily
+    trigger_operator = TriggerDagRunOperator(
+        task_id=f"trigger_tti",
+        trigger_dag_id="tti_dag",
+        logical_date='{{ ds }}',
+        reset_dag_run=True # Clear existing dag if already exists (for backfilling), old runs will not be in the logs
+    )
+    
+    create_partitions >> check_not_empty >> delete_daily >> aggregate_daily >> trigger_operator
 
 here_dynamic_binning_agg_hm()
