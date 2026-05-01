@@ -1,6 +1,7 @@
 --DROP FUNCTION here_agg.monthly_segment_vkt_agg;
 CREATE OR REPLACE FUNCTION here_agg.monthly_segment_vkt_agg(
-    p_mnth date
+    p_mnth date,
+    segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
 RETURNS TABLE (
     segment_id bigint,
@@ -36,6 +37,10 @@ AS $BODY$
         --use 6 month rolling vkt to align with overnight speeds
         AND vkt.mnth >= monthly_segment_vkt_agg.p_mnth - interval '6 month'
         AND vkt.mnth < monthly_segment_vkt_agg.p_mnth
+        AND (
+            monthly_segment_vkt_agg.segments IS NULL
+            OR cl.segment_id = ANY(monthly_segment_vkt_agg.segments)
+        )
     GROUP BY
         vkt.mnth,
         cs.highway,
@@ -43,7 +48,7 @@ AS $BODY$
 
 $BODY$;
 
-ALTER FUNCTION here_agg.monthly_segment_vkt_agg(date)
+ALTER FUNCTION here_agg.monthly_segment_vkt_agg(date, bigint [])
 OWNER TO here_admins;
 
 GRANT EXECUTE ON FUNCTION here_agg.monthly_segment_vkt_agg TO congestion_bot;

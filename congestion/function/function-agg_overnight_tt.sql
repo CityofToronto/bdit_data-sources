@@ -1,5 +1,6 @@
 CREATE OR REPLACE FUNCTION here_agg.agg_overnight_tt(
-    mnth date
+    mnth date,
+    segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
 RETURNS void
 SECURITY DEFINER
@@ -26,6 +27,10 @@ AS $$
                 AND hr BETWEEN 1 AND 4
             )
         )
+        AND (
+            agg_overnight_tt.segments IS NULL
+            OR segment_id = ANY(agg_overnight_tt.segments)
+        )
     GROUP BY segment_id
     ON CONFLICT ON CONSTRAINT segment_overnight_tts_pkey
     DO UPDATE
@@ -35,7 +40,10 @@ AS $$
        
 $$ LANGUAGE sql;
 
-COMMENT ON FUNCTION here_agg.agg_overnight_tt IS 'Aggregate a month worth of rolling 6 month overnight travel times. Uses an ON CONFLICT DO UPDATE clause - can be re-run when input data changes. Takes around 1-2 minutes per month.';
+COMMENT ON FUNCTION here_agg.agg_overnight_tt
+IS 'Aggregate a month worth of rolling 6 month overnight travel times.
+Uses an ON CONFLICT DO UPDATE clause - can be re-run when input data changes.
+Takes around 1-2 minutes per month.';
 
 ALTER FUNCTION here_agg.agg_overnight_tt OWNER TO here_admins;
 
