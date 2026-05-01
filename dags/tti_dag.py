@@ -28,8 +28,6 @@ default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
     'start_date': datetime(2024, 7, 1, tz="America/Toronto"),
-    #temporary end date while figuring out congestion network versions
-    #'end_date': datetime(2026, 1, 1, tz="America/Toronto"),
     'retries': 1,
     'retry_delay': duration(hours=1),
     'on_failure_callback': task_fail_slack_alert
@@ -52,11 +50,11 @@ default_args = {
 def tti_dag():
     
     check_missing_dates = SQLCheckOperatorWithReturnValue(
-        sql="SELECT _check, _summary FROM here_agg.check_month_present('{{ ds }}'::date - interval '1 month')",
+        sql="SELECT _check, _summary FROM here_agg.check_month_present(('{{ ds }}'::date - interval '1 month')::date)",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
         retries = 0,
-        pre_execute=check_1st_of_month,
+        pre_execute=check_1st_of_month, #agg previous month, only if 1st of month
     )
     
     aggregate_vkt = SQLExecuteQueryOperator(
@@ -64,7 +62,8 @@ def tti_dag():
         task_id="aggregate_vkt",
         conn_id=CONN_ID,
         retries = 1,
-        pre_execute=check_1st_of_month,
+        trigger_rule="none_failed",
+        pre_execute=check_1st_of_month, #agg previous month, only if 1st of month
     )
     
     aggregate_overnight = SQLExecuteQueryOperator(
@@ -72,7 +71,8 @@ def tti_dag():
         task_id="aggregate_overnight",
         conn_id=CONN_ID,
         retries = 1,
-        pre_execute=check_1st_of_month,
+        trigger_rule="none_failed",
+        pre_execute=check_1st_of_month, #agg previous month, only if 1st of month
     )
     
     aggregate_hrly = SQLExecuteQueryOperator(

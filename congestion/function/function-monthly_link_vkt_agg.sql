@@ -1,9 +1,10 @@
--- FUNCTION: here_agg.monthly_link_vkt_agg(date)
+-- FUNCTION: here_agg.monthly_link_vkt_agg(date, bigint [])
 
--- DROP FUNCTION IF EXISTS here_agg.monthly_link_vkt_agg(date);
+-- DROP FUNCTION IF EXISTS here_agg.monthly_link_vkt_agg(date, bigint []);
 
 CREATE OR REPLACE FUNCTION here_agg.monthly_link_vkt_agg(
-    mnth date
+    mnth date,
+    segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
 RETURNS void
 SECURITY DEFINER
@@ -29,6 +30,10 @@ AS $BODY$
             end_date := (monthly_link_vkt_agg.mnth + interval '1 month')::date,
             agg_type := 'path_hm'
         )
+        AND (
+            monthly_link_vkt_agg.segments IS NULL
+            OR links.segment_id = ANY(monthly_link_vkt_agg.segments)
+        )
     GROUP BY
         mnth,
         links.ver_id,
@@ -41,7 +46,7 @@ AS $BODY$
     
 $BODY$;
 
-ALTER FUNCTION here_agg.monthly_link_vkt_agg(date)
+ALTER FUNCTION here_agg.monthly_link_vkt_agg(date, bigint [])
 OWNER TO here_admins;
 
 GRANT EXECUTE ON FUNCTION here_agg.monthly_link_vkt_agg TO congestion_bot;
