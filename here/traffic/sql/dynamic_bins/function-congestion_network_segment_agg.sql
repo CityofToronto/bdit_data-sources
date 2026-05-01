@@ -1,9 +1,10 @@
--- FUNCTION: here_agg.network_segment_agg(date)
+-- FUNCTION: here_agg.network_segment_agg(date, bigint [])
 
--- DROP FUNCTION IF EXISTS here_agg.network_segment_agg(date);
+-- DROP FUNCTION IF EXISTS here_agg.network_segment_agg(date, bigint []);
 
 CREATE OR REPLACE FUNCTION here_agg.network_segment_agg(
-    start_date date
+    start_date date,
+    segment_ids bigint [] DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -13,10 +14,6 @@ AS $BODY$
 
 DECLARE
     map_version text := here_agg.select_map_version(start_date, start_date + 1, 'path_hm');
-    congestion_network_table text := CASE map_version
-    WHEN '25_1' THEN 'congestion_links_25_1'
-    WHEN '24_4' THEN 'congestion_links_24_4'
-    WHEN '23_4' THEN 'network_links_23_4_geom' END;
 
 BEGIN
 
@@ -40,13 +37,19 @@ EXECUTE FORMAT(
         DROP TABLE IF EXISTS segment_5min_bins;
         CREATE TEMP TABLE segment_5min_bins ON COMMIT DROP AS
         
-        WITH seg AS (
+        WITH segment_length_cte AS (
             SELECT
                 segment_id,
                 link_dir,
                 length,
                 SUM(length) OVER (PARTITION BY segment_id) AS total_length
-            FROM congestion.%1$I
+            FROM congestion.congestion_links
+            WHERE
+                ver_id = %1$L
+                AND (
+                    %3$L = NULL
+                    OR segment_id = ANY(%3$L)
+                )
         )
 
         SELECT
@@ -62,15 +65,15 @@ EXECUTE FORMAT(
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths,
             ARRAY_AGG(ta.sample_size ORDER BY ta.link_dir) AS sample_sizes
         FROM here.ta_path_hm AS ta
-        JOIN seg USING (link_dir),
+        JOIN segment_length_cte AS seg USING (link_dir),
         LATERAL (
             SELECT seg.length / ta.harmonic_mean * 3.6 AS tt
         ) AS lat
         WHERE
-            ta.tx::date >= %2$L::date
-            AND ta.tx::date < %2$L::date + interval '1 day'
-            AND ta.tx >= %2$L::date
+            ta.tx >= %2$L::date
             AND ta.tx < %2$L::date + interval '1 day'
+            AND ta.tx::date >= %2$L::date
+            AND ta.tx::date < %2$L::date + interval '1 day'
         GROUP BY
             seg.segment_id,
             ta.tx,
@@ -79,7 +82,7 @@ EXECUTE FORMAT(
             PARTITION BY seg.segment_id
             ORDER BY ta.tx
         );
-    $$, congestion_network_table, start_date);
+    $$, map_version, start_date, segment_ids);
 
     CREATE INDEX idx_s5b_segment_rank ON segment_5min_bins(segment_id, bin_rank);
     CREATE INDEX idx_s5b_segment_tx ON segment_5min_bins(segment_id, tx);
@@ -205,11 +208,11 @@ EXECUTE FORMAT(
 END;
 $BODY$;
 
-ALTER FUNCTION here_agg.network_segment_agg(date)
+ALTER FUNCTION here_agg.network_segment_agg(date, bigint[])
 OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION here_agg.network_segment_agg(date) TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.network_segment_agg(date, bigint[]) TO congestion_bot;
 
-COMMENT ON FUNCTION here_agg.network_segment_agg(date)
+COMMENT ON FUNCTION here_agg.network_segment_agg(date, bigint[])
 IS 'Dynamic bin aggregation of the congestion network by hour and time periods. 
 Takes around 10 minutes to run for one day (hourly and period based aggregation)';
