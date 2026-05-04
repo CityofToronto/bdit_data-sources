@@ -47,7 +47,7 @@ EXECUTE FORMAT(
             WHERE
                 ver_id = %1$L
                 AND (
-                    %3$L = NULL
+                    %3$L IS NULL
                     OR segment_id = ANY(%3$L)
                 )
         )
