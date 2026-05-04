@@ -13,14 +13,13 @@ BEGIN
 WITH temp AS (
     -- Cross product of dates, intersections, legal movement for cars, bikes, and peds to aggregate
     SELECT
-        im.intersection_uid,
+        NEW.intersection_uid,
         dt.datetime_bin,
-        im.classification_uid,
-        im.leg,
-        im.movement_uid,
+        NEW.classification_uid,
+        NEW.leg,
+        NEW.movement_uid,
         0 AS volume
-    FROM new_rows AS im
-    JOIN miovision_api.intersections AS i USING (intersection_uid)
+    FROM miovision_api.intersections AS i
     CROSS JOIN generate_series(
         GREATEST(i.date_installed, '2019-01-01'::date), --this schema only stores data >= 2019
         LEAST(
@@ -31,7 +30,8 @@ WITH temp AS (
     ) AS dt(datetime_bin)
     WHERE
         --0 padding for certain modes (padding)
-        im.classification_uid IN (1,2,6,10)
+        NEW.classification_uid IN (1,2,6,10)
+        AND i.intersection_uid = NEW.intersection_uid
         
     UNION ALL
     
@@ -44,9 +44,11 @@ WITH temp AS (
         v.movement_uid,
         SUM(volume)
     FROM miovision_api.volumes AS v
-    JOIN new_rows USING (
-        intersection_uid, classification_uid, leg, movement_uid
-    )
+    WHERE
+        v.intersection_uid = NEW.intersection_uid
+        AND v.classification_uid = NEW.classification_uid
+        AND v.leg = NEW.leg
+        AND v.movement_uid = NEW.movement_uid
     GROUP BY
         v.intersection_uid,
         datetime_bin_15(v.datetime_bin),
@@ -88,28 +90,47 @@ aggregate_insert AS (
         --select real value instead of padding value if available
         v.volume DESC
     RETURNING intersection_uid, volume_15min_mvt_uid, datetime_bin, classification_uid, leg, movement_uid, volume
+    
+),
+
+date_bounds AS (
+    SELECT
+        MIN(datetime_bin) AS min_bin,
+        MAX(datetime_bin) AS max_bin
+    FROM aggregate_insert
 ),
 
 updated AS (
     --To update foreign key for 1min bin table
     UPDATE miovision_api.volumes AS v
     SET volume_15min_mvt_uid = a_i.volume_15min_mvt_uid
-    FROM aggregate_insert AS a_i
+    FROM aggregate_insert AS a_i,
+    date_bounds AS db
     WHERE
         v.volume_15min_mvt_uid IS NULL
+        --the min/max date clause really helps to trim the search space
+        AND v.datetime_bin >= db.min_bin
+        AND v.datetime_bin < db.max_bin + interval '15 minutes'
         AND a_i.volume > 0
-        AND v.intersection_uid = a_i.intersection_uid
         AND v.datetime_bin >= a_i.datetime_bin
         AND v.datetime_bin < a_i.datetime_bin + interval '15 minutes'
-        AND v.classification_uid = a_i.classification_uid
-        AND v.leg = a_i.leg
-        AND v.movement_uid = a_i.movement_uid
+        AND v.intersection_uid = NEW.intersection_uid
+        AND v.classification_uid = NEW.classification_uid
+        AND v.leg = NEW.leg
+        AND v.movement_uid = NEW.movement_uid
 )
 
 SELECT COUNT(*) INTO n_inserted
 FROM aggregate_insert;
 
-RAISE NOTICE '% Done adding to 15min MVT bin based on intersection_movement new rows. % rows added.', timeofday(), n_inserted;
+RAISE NOTICE '% Done adding to 15min MVT bin based on intersection_movement for intersection_uid=% classification_uid=% leg=% movement_uid=% rows. % rows added.',
+timeofday(),
+NEW.intersection_uid,
+NEW.classification_uid,
+NEW.leg,
+NEW.movement_uid,
+n_inserted;
+
 RETURN NULL; 
 END;
 
