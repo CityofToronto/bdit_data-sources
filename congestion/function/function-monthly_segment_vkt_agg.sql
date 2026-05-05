@@ -19,6 +19,7 @@ AS $BODY$
 
     SELECT
         cl.segment_id,
+        cl.ver_id,
         monthly_segment_vkt_agg.p_mnth,
         cs.highway,
         SUM(vkt.sample_size) AS sample_size,
@@ -44,6 +45,7 @@ AS $BODY$
     GROUP BY
         vkt.mnth,
         cs.highway,
+        cl.ver_id,
         cl.segment_id;
 
 $BODY$;
