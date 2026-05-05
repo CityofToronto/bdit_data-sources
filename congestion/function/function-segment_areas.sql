@@ -25,12 +25,13 @@ WITH community_councils AS (
     FROM congestion.congestion_segments AS seg
     JOIN gis.community_council_2018 AS cc
         ON cc.the_geom && seg.geom --quick bounding box intersection using gist idx
-    --WHERE cc.area_name = 'North York Community Council'
-    WHERE seg.ver_id = here_agg.select_map_version(
-        start_date := segment_areas.mnth,
-        end_date := segment_areas.mnth + 1,
-        agg_type := 'path_hm'
-    )
+    WHERE
+        seg.ver_id = here_agg.select_map_version(
+            start_date := '2026-01-01'::date,
+            end_date := '2026-01-01'::date + 1,
+            agg_type := 'path_hm'
+        )
+        AND st_intersects(cc.the_geom, seg.geom)
     ORDER BY
         seg.segment_id,
         ST_length(ST_Intersection(cc.the_geom, seg.geom)) DESC
