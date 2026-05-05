@@ -1,8 +1,8 @@
--- FUNCTION: here_agg.monthly_link_vkt_agg(date, bigint [])
+-- FUNCTION: here_agg.monthly_link_sample_size_agg(date, bigint [])
 
--- DROP FUNCTION IF EXISTS here_agg.monthly_link_vkt_agg(date, bigint []);
+-- DROP FUNCTION IF EXISTS here_agg.monthly_link_sample_size_agg(date, bigint []);
 
-CREATE OR REPLACE FUNCTION here_agg.monthly_link_vkt_agg(
+CREATE OR REPLACE FUNCTION here_agg.monthly_link_sample_size_agg(
     mnth date,
     segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
@@ -13,7 +13,7 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
-    INSERT INTO here_agg.monthly_link_vkt (mnth, link_dir, ver_id, length, sample_size)
+    INSERT INTO here_agg.monthly_link_sample_size (mnth, link_dir, ver_id, length, sample_size)
     SELECT
         date_trunc('month', ta_path.tx) AS mnth,
         links.link_dir,
@@ -46,9 +46,9 @@ AS $BODY$
     
 $BODY$;
 
-ALTER FUNCTION here_agg.monthly_link_vkt_agg(date, bigint [])
+ALTER FUNCTION here_agg.monthly_link_sample_size_agg(date, bigint [])
 OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION here_agg.monthly_link_vkt_agg TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.monthly_link_sample_size_agg TO congestion_bot;
 
---SELECT here_agg.monthly_link_vkt_agg('2026-01-01')
+--SELECT here_agg.monthly_link_sample_size_agg('2026-01-01')
