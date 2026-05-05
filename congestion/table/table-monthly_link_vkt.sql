@@ -1,8 +1,8 @@
--- Table: here_agg.monthly_link_vkt
+-- Table: here_agg.monthly_link_sample_size
 
--- DROP TABLE IF EXISTS here_agg.monthly_link_vkt;
+-- DROP TABLE IF EXISTS here_agg.monthly_link_sample_size;
 
-CREATE TABLE IF NOT EXISTS here_agg.monthly_link_vkt
+CREATE TABLE IF NOT EXISTS here_agg.monthly_link_sample_size
 (
     mnth timestamp without time zone NOT NULL,
     link_dir text COLLATE pg_catalog."default" NOT NULL,
@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS here_agg.monthly_link_vkt
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS here_agg.monthly_link_vkt
+ALTER TABLE IF EXISTS here_agg.monthly_link_sample_size
 OWNER TO here_admins;
 
-REVOKE ALL ON TABLE here_agg.monthly_link_vkt FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.monthly_link_sample_size FROM bdit_humans;
 
-GRANT SELECT ON TABLE here_agg.monthly_link_vkt TO bdit_humans;
+GRANT SELECT ON TABLE here_agg.monthly_link_sample_size TO bdit_humans;

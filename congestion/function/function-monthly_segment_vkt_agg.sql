@@ -27,7 +27,7 @@ AS $BODY$
     FROM congestion.congestion_links AS cl
     JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
     --no ver_id in this join, because when network changes, we need to use link_dir data from previous version as well.
-    JOIN here_agg.monthly_link_vkt AS vkt USING (link_dir)
+    JOIN here_agg.monthly_link_sample_size AS vkt USING (link_dir)
     WHERE
         cl.ver_id = here_agg.select_map_version(
             start_date := monthly_segment_vkt_agg.p_mnth,
