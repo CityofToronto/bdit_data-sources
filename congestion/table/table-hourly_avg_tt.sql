@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS here_agg.hourly_avg_tt
 (
     segment_id integer NOT NULL,
+    ver_id text NOT NULL,
     dt date NOT NULL,
     hr smallint NOT NULL,
     avg_tt double precision,
