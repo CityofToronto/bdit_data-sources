@@ -1,7 +1,7 @@
 - [`here_agg` Tables](#here_agg-tables)
     - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
     - [`here_agg.hourly_avg_tt` (table)](#here_agghourly_avg_tt-table)
-    - [`here_agg.monthly_link_sample_size` (table)](#here_aggmonthly_link_vkt-table)
+    - [`here_agg.monthly_segment_vkt` (table)](#here_aggmonthly_segment_vkt-table)
     - [`here_agg.segment_overnight_tts` (table)](#here_aggsegment_overnight_tts-table)
     - [`here_agg.area_tti` (table)](#here_aggarea_tti-table)
 
@@ -33,19 +33,22 @@ Approx row count:           73,837,100
 | hr            | smallint         | 1                  |            |
 | avg_tt        | double precision | 38.936590830485024 |            |
 
-### `here_agg.monthly_link_sample_size` (table)
-This table stores the monthly link_dir sample sizes for use in weighting segment level TTI. Segment level sample sizes are computed from this data using the function `here_agg.monthly_segment_vkt_agg` but not stored. Only links included in the congestion network are stored, which is about 1/4 of links in the full HERE network. 
-Note: We use the previous 6 months VKT to weight TTI, but we store each month's VKT separately to eliminate the need to query the entire previous 6 months, monthly.
-This table is populated by the function `here_agg.monthly_link_sample_size_agg`. 
+### `here_agg.monthly_segment_vkt` (table)
+This table stores the monthly segment sample sizes for use in weighting segment level TTI. 
+Note: We use the previous 6 months VKT to weight TTI.
+This table is populated by the function `here_agg.monthly_segment_vkt_agg`. 
 
 Approx row count:            1,251,900
 | Column Name   | Data Type                   | Sample              | Comments   |
 |---------------|-----------------------------|---------------------|------------|
-| mnth          | timestamp without time zone | 2024-02-01 00:00:00 |            |
-| link_dir      | text                        | 994470855F          |            |
-| length        | double precision            | 48.1946737410464    |            |
-| sample_size   | bigint                      | 5634                |            |
+| mnth          | timestamp without time zone | 2024-02-01 00:00:00 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025           |
+| segment_id      | bigint                        | 7800          |            |
 | ver_id        | text                        | 24_4                |            |
+| highway        | boolean                        | False                |            |
+| sample_size   | numeric                      | 5634                |            |
+| vkt_km   | double precision                      | 5634                |            |
+| sqrt_vkt_km   | double precision                      | 5634                |            |
+
 
 ### `here_agg.segment_overnight_tts` (table)
 This table stores the segment level overnight average travel times for previous 6 months. The table is populated by the function `here_agg.agg_overnight_tt`. 

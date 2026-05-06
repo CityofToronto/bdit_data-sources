@@ -25,7 +25,7 @@ BEGIN
             RAISE NOTICE '[%] Aggregating the previous months lookback stats (overnight, vkt)', v_current_date;
 
             --add vkt for the segments
-            PERFORM here_agg.monthly_link_sample_size_agg(
+            PERFORM here_agg.monthly_segment_vkt_agg(
                 (v_current_date - interval '1 month')::date,
                 p_segments
             );
