@@ -132,7 +132,39 @@ def ksi_opan_data():
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions, check_dup_person
+        check_incorrect_fatalno = SQLExecuteQueryOperator(
+            task_id="check_incorrect_fatalno",
+            sql='''
+                SELECT COUNT(*) = 0 AS _check, 
+                    'There are '|| count(*) ||'collision_id with either repeated or skipped fatal_bno'||
+                                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing 
+                FROM (
+                SELECT collision_id, 
+                    fatal_no, 
+                    LAG(fatal_no, -1) OVER (partition by extract('year' from ksi.accdate) order by fatal_no) AS next_fatal_no,
+                    LAG(fatal_no, -1) OVER (partition by extract('year' from ksi.accdate) order by fatal_no) - fatal_no  AS diff
+                FROM open_data_staging.ksi
+                WHERE fatal_no IS NOT NULL) checks 
+                WHERE next_fatal_no is not null and diff != 1;                   
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        check_non_fatal = SQLExecuteQueryOperator(
+            task_id="check_non_fatal",
+            sql='''
+                SELECT COUNT(*) = 0 AS _check, 
+	            'There are '|| count(*) ||'collision_id with fatal_no for non fatal person. '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS false_fatal 
+                FROM (
+                SELECT collision_id
+                FROM open_data_staging.ksi
+                WHERE fatal_no IS NOT NULL and injury !='Fatal') checks;
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions, check_dup_person, check_incorrect_fatalno, check_non_fatal
     
     truncate_and_copy = SQLExecuteQueryOperator(
         sql='''
