@@ -19,9 +19,10 @@ BEGIN
         vkt.highway,
         vkt.segment_id,
         vkt.vkt_km
-    FROM here_agg.monthly_segment_vkt_agg(date_trunc('month', area_tti_agg.dt)::date) AS vkt
+    FROM here_agg.monthly_segment_vkt AS vkt
     --gets the segment/area combos for the right map version, based on date
     JOIN here_agg.segment_areas(area_tti_agg.dt) AS area USING (segment_id)
+    WHERE vkt.month = date_trunc('month', area_tti_agg.dt)
     ORDER BY segment_id;
 
     CREATE INDEX IF NOT EXISTS segment_list_idx
