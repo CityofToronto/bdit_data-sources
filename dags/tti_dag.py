@@ -58,7 +58,7 @@ def tti_dag():
     )
     
     aggregate_vkt = SQLExecuteQueryOperator(
-        sql="SELECT here_agg.monthly_link_sample_size_agg(('{{ ds }}'::date - interval '1 month')::date);",
+        sql="SELECT here_agg.monthly_segment_vkt_agg(('{{ ds }}'::date - interval '1 month')::date);",
         task_id="aggregate_vkt",
         conn_id=CONN_ID,
         retries = 1,
