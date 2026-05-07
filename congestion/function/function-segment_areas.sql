@@ -34,6 +34,7 @@ WITH community_councils AS (
         AND st_intersects(cc.the_geom, seg.geom)
     ORDER BY
         seg.segment_id,
+        --combined with distinct on, takes the community council with the highest overlap
         ST_length(ST_Intersection(cc.the_geom, seg.geom)) DESC
 )
 
@@ -62,7 +63,7 @@ SELECT
 FROM congestion.congestion_segments AS seg
 WHERE seg.ver_id = here_agg.select_map_version(
     start_date := segment_areas.mnth,
-    end_date := segment_areas.mnth + 1,
+    end_date := segment_areas.mnth + 1, --+ 1 day is OK, because map version should be the same for entire month.
     agg_type := 'path_hm'
 )
 
@@ -80,9 +81,11 @@ SELECT
 FROM congestion.congestion_segments AS seg
 JOIN gis.to_core_downtown AS dt
     ON st_intersects(st_transform(dt.geom, 4326), seg.geom)
+    --at least 50% length overlap
+    AND ST_Length(ST_Intersection(seg.geom, st_transform(dt.geom, 4326))) / ST_Length(seg.geom) >= 0.50
 WHERE seg.ver_id = here_agg.select_map_version(
     start_date := segment_areas.mnth,
-    end_date := segment_areas.mnth + 1,
+    end_date := segment_areas.mnth + 1, --+ 1 day is OK, because map version should be the same for entire month.
     agg_type := 'path_hm'
 );
 
