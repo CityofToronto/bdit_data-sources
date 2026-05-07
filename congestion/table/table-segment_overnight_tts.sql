@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS here_agg.segment_overnight_tts
     mnth date NOT NULL,
     overnight_avg_tt real,
     rolling_6month_quasi_obs integer,
-    CONSTRAINT segment_overnight_tts_pkey PRIMARY KEY (segment_id, mnth)
+    CONSTRAINT segment_overnight_tts_pkey PRIMARY KEY (segment_id, mnth),
+    CONSTRAINT segment_overnight_tts_mnth_check CHECK (date_trunc('month'::text, mnth) = mnth)
 )
 
 TABLESPACE pg_default;
