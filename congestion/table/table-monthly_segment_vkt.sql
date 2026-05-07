@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS here_agg.monthly_segment_vkt
     vkt_km double precision,
     sqrt_vkt_km double precision,
     CONSTRAINT monthly_segment_vkt_pkey PRIMARY KEY (mnth, segment_id)
+    CONSTRAINT monthly_segment_vkt_mnth_check CHECK (date_trunc('month'::text, mnth) = mnth)
 )
 
 TABLESPACE pg_default;
