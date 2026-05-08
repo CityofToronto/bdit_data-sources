@@ -24,8 +24,9 @@ CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_monthly
     q3_ci_upper real,
     n integer,
     n_resample integer,
+    length numeric,
     CONSTRAINT congestion_segments_monthly_bootstrap_pkey PRIMARY KEY (segment_id, dow_group, mnth, hr_start, hr_end),
-    CONSTRAINT mnth_check CHECK (date_part('day'::text, mnth) = 1::double precision)
+    CONSTRAINT segments_bootstrap_monthly_mnth_check CHECK (date_part('day'::text, mnth) = 1::double precision)
 )
 
 TABLESPACE pg_default;
