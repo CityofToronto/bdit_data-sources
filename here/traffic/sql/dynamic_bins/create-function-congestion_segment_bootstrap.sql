@@ -1,5 +1,4 @@
---DROP FUNCTION here_agg.segment_bootstrap(date, date, bigint, int, smallint[], smallint[]);
-
+--DROP FUNCTION here_agg.segment_bootstrap;
 
 CREATE OR REPLACE FUNCTION here_agg.segment_bootstrap(
     start_date date,
@@ -30,13 +29,14 @@ RETURNS TABLE (
     q3_ci_lower real,
     q3_ci_upper real,
     n int,
-    n_resample int
+    n_resample int,
+    length numeric
 )
-LANGUAGE SQL
+LANGUAGE sql
 COST 100
 VOLATILE PARALLEL SAFE
 AS $BODY$
-
+    
     SELECT setseed(('0.'||segment_id::text)::numeric);
 
     WITH raw_obs AS (
@@ -109,8 +109,12 @@ AS $BODY$
         percentile_cont(0.025) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_lower,
         percentile_cont(0.975) WITHIN GROUP (ORDER BY rnd_q3_tt)::real AS q3_ci_upper,
         n,
-        n_resamples
+        n_resamples,
+        cs.total_length
     FROM random_selections
+    JOIN congestion.congestion_segments AS cs
+        ON cs.segment_id = segment_bootstrap.segment_id
+        AND cs.ver_id = here_agg.select_map_version(start_date, start_date + 1, 'path_hm')
     GROUP BY
         hr_starts,
         hr_ends,
@@ -118,7 +122,8 @@ AS $BODY$
         q1_tt,
         q2_tt,
         q3_tt,
-        n;
+        n,
+        cs.total_length;
 
     $BODY$;
 
