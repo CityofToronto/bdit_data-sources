@@ -29,7 +29,7 @@ CONN_ID = "congestion_bot"
 default_args = {
     'owner': ','.join(DAG_OWNERS),
     'depends_on_past': False,
-    'start_date': datetime(2019, 1, 1, tz="America/Toronto"),
+    'start_date': datetime(2024, 1, 1, tz="America/Toronto"),
     'retries': 1,
     'retry_delay': duration(hours=1),
     'on_failure_callback': task_fail_slack_alert
@@ -43,7 +43,7 @@ default_args = {
     doc_md=doc_md,
     tags=["HERE", "aggregation"],
     max_active_runs=1,
-    catchup=False
+    catchup=True
 )
 
 #to add: catchup, one task at a time, depends on past.
