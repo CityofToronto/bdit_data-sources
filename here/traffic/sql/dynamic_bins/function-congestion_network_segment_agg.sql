@@ -190,7 +190,7 @@ EXECUTE FORMAT(
     ANALYZE congestion_raw_segments_temp;
     
     INSERT INTO here_agg.raw_segments (
-        dt, bin_start, segment_id, bin_range, tt, num_obs, hr
+        dt, bin_start, segment_id, bin_range, tt, num_obs, hr, ver_id
     )
     SELECT
         bin_start::date AS dt,
@@ -199,7 +199,8 @@ EXECUTE FORMAT(
         bin_range,
         tt::real,
         num_obs,
-        date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr
+        date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr,
+        map_version
     FROM congestion_raw_segments_temp
     ON CONFLICT DO NOTHING;
 

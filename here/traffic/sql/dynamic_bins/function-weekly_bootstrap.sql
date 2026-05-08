@@ -15,7 +15,7 @@ AS $$
             include_holidays,
             hrs.hr_start,
             hrs.hr_end,
-            ARRAY_AGG(holiday.dt) FILTER (WHERE (wkdy_grps.dow_group = 'Weekend/Holiday' OR date_part('isodow', holiday.dt) = ANY(wkdy_grps.isodows)) AND holiday.holiday IS NOT NULL) AS holiday_exceptions
+            ARRAY_AGG(holiday.dt ORDER BY holiday.dt) FILTER (WHERE (wkdy_grps.dow_group = 'Weekend/Holiday' OR date_part('isodow', holiday.dt) = ANY(wkdy_grps.isodows)) AND holiday.holiday IS NOT NULL) AS holiday_exceptions
         FROM (VALUES
             ('Weekend/Holiday', ARRAY[6, 7], True),
             ('Tue-Thu', ARRAY[2, 3, 4], False),
@@ -38,12 +38,13 @@ AS $$
     )
     
     INSERT INTO here_agg.segments_bootstrap_weekly (
-        segment_id, dow_group, week_start, holiday_exceptions, hr_start, hr_end, avg_tt, avg_ci_lower,
+        segment_id, ver_id, dow_group, week_start, holiday_exceptions, hr_start, hr_end, avg_tt, avg_ci_lower,
         avg_ci_upper, q1_tt, q1_ci_lower, q1_ci_upper, median_tt, median_ci_lower, median_ci_upper,
-        q3_tt, q3_ci_lower, q3_ci_upper, tti, n, n_resample
+        q3_tt, q3_ci_lower, q3_ci_upper, tti, n, n_resample, length
     )
     SELECT
         unnested.segment_id,
+        here_agg.select_map_version(weekly_bootstrap.week_start, weekly_bootstrap.week_start + 1, 'path_hm') AS ver_id,
         agg_grps.dow_group,
         agg_grps.week_start,
         agg_grps.holiday_exceptions,
@@ -63,7 +64,8 @@ AS $$
         lat.q3_ci_upper,
         lat.avg_tt / overn.overnight_avg_tt AS tti,
         lat.n,
-        300 AS n_resample
+        300 AS n_resample,
+        lat.length
     FROM UNNEST(weekly_bootstrap.segments) AS unnested(segment_id)
     CROSS JOIN agg_grps
     LEFT JOIN LATERAL here_agg.segment_bootstrap(
@@ -76,7 +78,7 @@ AS $$
         hr_starts := agg_grps.hr_start::smallint,
         hr_ends := agg_grps.hr_end::smallint
     ) AS lat ON true --return rows even when no result from segment_bootstrap
-    LEFT JOIN here_agg.segment_overnight_tts AS overn ON
+    LEFT JOIN here_agg.segment_6month_lookback AS overn ON
         overn.segment_id = unnested.segment_id
         AND overn.mnth = date_trunc('month', agg_grps.week_start);
 
