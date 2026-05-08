@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION here_agg.agg_overnight_tt(
+CREATE OR REPLACE FUNCTION here_agg.agg_segment_6month_lookback(
     mnth date,
     segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
@@ -9,8 +9,8 @@ AS $BODY$
 
 DECLARE
     map_version text := here_agg.select_map_version(
-        start_date := agg_overnight_tt.mnth,
-        end_date := agg_overnight_tt.mnth + 1,
+        start_date := agg_segment_6month_lookback.mnth,
+        end_date := agg_segment_6month_lookback.mnth + 1,
         agg_type := 'path_hm'
     );
 
@@ -21,27 +21,24 @@ BEGIN
         SELECT
             cs.segment_id,
             cs.ver_id,
-            rs.tt
+            AVG(rs.tt) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
+            COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
+            SUM(rs.num_obs * cs.total_length) / 1000.0::double precision AS vkt_km,
+            SUM(SQRT(rs.num_obs) * cs.total_length) / 1000.0::double precision AS sqrt_vkt_km
         FROM congestion.congestion_segments AS cs
         LEFT JOIN here_agg.raw_segments AS rs ON
             cs.segment_id = rs.segment_id
             AND cs.ver_id = rs.ver_id
             AND rs.dt >= %1$L::date - interval '6 months'
             AND rs.dt < %1$L::date
-            AND (
-                (
-                    rs.dt < '2024-01-01'::date
-                    AND rs.hr BETWEEN 0 AND 3
-                ) OR (
-                    rs.dt >= '2024-01-01'::date
-                    AND rs.hr BETWEEN 1 AND 4
-                )
-            )
         --for testing
         /*WHERE
             cs.segment_id IN (7808, 7809) --these are new in 25_1
             AND cs.segment_id = 2 --this one is in both 24_4, 25_1*/
-
+        GROUP BY
+            cs.segment_id,
+            cs.ver_id
+            
         UNION ALL
 
         --tt from retired segments
@@ -57,7 +54,11 @@ BEGIN
             */
             unnested.new_segment_id,
             cs_new.ver_id,
-            cs_new.total_length / cs_old.total_length * rs.tt AS tt --new tt, using old speed, new length
+            AVG(cs_new.total_length / cs_old.total_length * rs.tt) --new tt, using old speed, new length
+                FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
+            COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
+            SUM(rs.num_obs * cs_old.total_length) / 1000.0::double precision AS vkt_km,
+            SUM(SQRT(rs.num_obs) * cs_old.total_length) / 1000.0::double precision AS sqrt_vkt_km
         FROM congestion.congestion_retired_segments AS retired
         JOIN congestion.congestion_segments AS cs_old
             ON retired.old_ver = cs_old.ver_id
@@ -84,39 +85,44 @@ BEGIN
             --for testing
             --AND cs_new.segment_id IN (7808, 7809)
             --AND cs_new.segment_id = 2
+        GROUP BY
+            unnested.new_segment_id,
+            cs_new.ver_id
     )
 
-    INSERT INTO here_agg.segment_overnight_tts (
-        segment_id, ver_id, mnth, overnight_avg_tt, rolling_6month_quasi_obs
+    INSERT INTO here_agg.segment_6month_lookback (
+        segment_id, ver_id, mnth, overnight_avg_tt, vkt_km, sqrt_vkt_km
     )
     SELECT
         segment_id,
         MAX(ver_id) AS ver_id,
         %1$L::date AS mnth,
-        AVG(tt) AS overnight_avg_tt,
-        COUNT(*) AS rolling_6month_quasi_obs
+        SUM(overnight_avg_tt * overnight_count) / SUM(overnight_count) AS overnight_avg_tt,
+        SUM(vkt_km) AS vkt_km,
+        SUM(sqrt_vkt_km) AS sqrt_vkt_km
     FROM all_tts
     GROUP BY segment_id, ver_id, mnth
     HAVING MAX(ver_id) = %2$L
-    ON CONFLICT ON CONSTRAINT segment_overnight_tts_pkey
+    ON CONFLICT ON CONSTRAINT segment_6month_lookback_pkey
     DO UPDATE
     SET
         overnight_avg_tt = EXCLUDED.overnight_avg_tt,
-        rolling_6month_quasi_obs = EXCLUDED.rolling_6month_quasi_obs;
-    $sql$, agg_overnight_tt.mnth, map_version);
+        vkt_km = EXCLUDED.vkt_km,
+        sqrt_vkt_km = EXCLUDED.sqrt_vkt_km;
+    $sql$, agg_segment_6month_lookback.mnth, map_version);
     
 END;
 $BODY$;
 
-COMMENT ON FUNCTION here_agg.agg_overnight_tt
+COMMENT ON FUNCTION here_agg.agg_segment_6month_lookback
 IS 'Aggregate a month worth of rolling 6 month overnight travel times.
 Uses an ON CONFLICT DO UPDATE clause - can be re-run when input data changes.
 Takes around 1-2 minutes per month.';
 
-ALTER FUNCTION here_agg.agg_overnight_tt OWNER TO here_admins;
+ALTER FUNCTION here_agg.agg_segment_6month_lookback OWNER TO here_admins;
 
-REVOKE EXECUTE ON FUNCTION here_agg.agg_overnight_tt FROM public;
+REVOKE EXECUTE ON FUNCTION here_agg.agg_segment_6month_lookback FROM public;
 
-GRANT EXECUTE ON FUNCTION here_agg.agg_overnight_tt TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.agg_segment_6month_lookback TO congestion_bot;
 
---SELECT here_agg.agg_overnight_tt('2026-01-01')
+--SELECT here_agg.agg_segment_6month_lookback('2026-01-01')

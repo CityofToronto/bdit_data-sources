@@ -16,13 +16,14 @@ BEGIN
     CREATE TEMP TABLE segment_list ON COMMIT DROP AS
     SELECT
         area_name,
-        vkt.highway,
+        cs.highway,
         vkt.segment_id,
         vkt.vkt_km
-    FROM here_agg.monthly_segment_vkt AS vkt
+    FROM here_agg.segment_6month_lookback AS vkt
     --gets the segment/area combos for the right map version, based on date
     JOIN here_agg.segment_areas(area_tti_agg.dt) AS area USING (segment_id)
-    WHERE vkt.month = date_trunc('month', area_tti_agg.dt)
+    JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
+    WHERE vkt.mnth = date_trunc('month', area_tti_agg.dt)
     ORDER BY segment_id;
 
     CREATE INDEX IF NOT EXISTS segment_list_idx
@@ -37,7 +38,7 @@ BEGIN
         SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.vkt_km) / SUM(seg.vkt_km) AS tti,
         COUNT(DISTINCT hrly.segment_id) AS num_segments
     FROM segment_list AS seg
-    LEFT JOIN here_agg.segment_overnight_tts AS overn
+    LEFT JOIN here_agg.segment_6month_lookback AS overn
     ON
         seg.segment_id = overn.segment_id
         AND overn.mnth = date_trunc('month', area_tti_agg.dt)
