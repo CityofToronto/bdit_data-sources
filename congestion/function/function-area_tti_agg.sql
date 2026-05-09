@@ -16,9 +16,9 @@ BEGIN
     CREATE TEMP TABLE segment_list ON COMMIT DROP AS
     SELECT
         area_name,
-        cs.highway,
+        COALESCE(cs.highway, False) AS highway,
         vkt.segment_id,
-        vkt.vkt_km
+        COALESCE(vkt.vkt_km, 0) AS vkt_km
     FROM here_agg.segment_6month_lookback AS vkt
     --gets the segment/area combos for the right map version, based on date
     JOIN here_agg.segment_areas(area_tti_agg.dt) AS area USING (segment_id)
@@ -44,12 +44,10 @@ BEGIN
         AND overn.mnth = date_trunc('month', area_tti_agg.dt)
     JOIN here_agg.hourly_avg_tt AS hrly
         ON hrly.segment_id = overn.segment_id
-        AND hrly.dt >= overn.mnth
-        AND hrly.dt < overn.mnth + interval '1 month'
+        AND hrly.dt = area_tti_agg.dt
     GROUP BY
         seg.area_name,
         ROLLUP(seg.highway), --To get highway: T/F/All
-        overn.mnth,
         hrly.hr,
         hrly.dt
     ORDER BY
