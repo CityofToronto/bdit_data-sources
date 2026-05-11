@@ -1,9 +1,10 @@
 - [`here_agg` Tables](#here_agg-tables)
     - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
     - [`here_agg.hourly_avg_tt` (table)](#here_agghourly_avg_tt-table)
-    - [`here_agg.monthly_segment_vkt` (table)](#here_aggmonthly_segment_vkt-table)
-    - [`here_agg.segment_overnight_tts` (table)](#here_aggsegment_overnight_tts-table)
+    - [`here_agg.segment_6month_lookback` (table)](#here_aggsegment_6month_lookback-table)
     - [`here_agg.area_tti` (table)](#here_aggarea_tti-table)
+    - [`here_agg.segments_bootstrap_weekly` (table)](#here_aggsegments_bootstrap_weekly-table)
+    - [`here_agg.segments_bootstrap_monthly` (table)](#here_aggsegments_bootstrap_monthly-table)
 
 
 # `here_agg` Tables
@@ -31,45 +32,89 @@ Approx row count:           73,837,100
 | segment_id    | integer          | 1231               |            |
 | dt            | date             | 2024-12-01         |            |
 | hr            | smallint         | 1                  |            |
-| avg_tt        | double precision | 38.936590830485024 |            |
-
-### `here_agg.monthly_segment_vkt` (table)
-This table stores the monthly segment sample sizes for use in weighting segment level TTI. 
-Note: We use the previous 6 months VKT to weight TTI.
-This table is populated by the function `here_agg.monthly_segment_vkt_agg`. 
-
-Approx row count:            1,251,900
-| Column Name   | Data Type                   | Sample              | Comments   |
-|---------------|-----------------------------|---------------------|------------|
-| mnth          | timestamp without time zone | 2024-02-01 00:00:00 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025           |
-| segment_id      | bigint                        | 7800          |            |
-| ver_id        | text                        | 24_4                |            |
-| highway        | boolean                        | False                |            |
-| sample_size   | numeric                      | 5634                |            |
-| vkt_km   | double precision                      | 5634                |            |
-| sqrt_vkt_km   | double precision                      | 5634                |            |
+| avg_tt        | double precision | 38.9365 | A simple average of travel times on that dt/hr.  |
 
 
-### `here_agg.segment_overnight_tts` (table)
-This table stores the segment level overnight average travel times for previous 6 months. The table is populated by the function `here_agg.agg_overnight_tt`. 
+### `here_agg.segment_6month_lookback` (table)
+This table stores the 6 month lookback stats for the congestion network calculated from `here_agg.raw_segments`. 6 month lookback vehicle km travelled (VKT) and overnight average travel times are used in the calculation of the TTI. VKT is used to weight each segment as part of the area calculations, and overnight average speeds are used as the baseline for which to compare daily average speeds. This table is populated by the function `here_agg.agg_segment_6month_lookback`. 
 
 Approx row count:              111,000
 | Column Name              | Data Type   | Sample     | Comments   |
 |--------------------------|-------------|------------|------------|
 | segment_id               | integer     | 2          |            |
-| mnth                     | date        | 2024-07-01 |            |
-| overnight_avg_tt         | real        | 43.32359   |            |
-| rolling_6month_quasi_obs | integer     | 415        |            |
+| mnth                     | date        | 2024-07-01 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025 |
+| ver_id        | text                        | 24_4                | The map version effective in `mnth`. Note the lookback data could be on a different map version |
+| overnight_avg_tt         | real        | 43.32359   | 6 month lookback avg overnight<sup>1</sup> TT calculated from `here_agg.raw_segments` (dynamic binned) data. |
+| vkt_km   | double precision                      | 26593.41                | 6 month lookback VKT calculated from `here_agg.raw_segments` (dynamic binned) data. Calculated as number of obs * segment length in km. |
+| sqrt_vkt_km   | double precision                      | 5616249.350                | Another option for weighting segments. Not currently used in TTI calculation.          |
+
+<sup>1</sup> overnight definition: `WHEN dt < '2024-01-01' THEN hr BETWEEN 0 AND 3, WHEN dt >= '2024-01-01' THEN hr BETWEEN 1 AND 4`
 
 ### `here_agg.area_tti` (table)
 This table stores the daily-hourly TTI for different areas & road categories. The table is populated by the function `here_agg.area_tti_agg`. 
 
-Approx row count:              242,800
+Approx row count:              278,000
 | Column Name   | Data Type        | Sample             | Comments   |
 |---------------|------------------|--------------------|------------|
-| area_name     | text             | Citywide           |            |
+| area_name     | text             | Citywide           | "Citywide", "Downtown", and the four community councils: "Etobicoke York Community Council", "North York Community Council",  Scarborough Community Council", "Toronto and East York Community Council" |
 | dt            | date             | 2024-07-01         |            |
 | hr            | smallint         | 0                  |            |
-| tti           | double precision | 1.0812660631815794 |            |
-| num_segments  | integer          | 4777               |            |
-| road_category | text             | Non-Highway        |            |
+| tti           | double precision | 1.081 | avg_hourly_tt / overnight_avg_tt, weighted by segment vkt  |
+| num_segments  | integer          | 4777               | Number of segments used for TTI calculation |
+| road_category | text             | Non-Highway        | Highway / Non-Highway / All |
+
+
+### `here_agg.segments_bootstrap_weekly` (table)
+
+Approx row count:               93,600
+| Column Name        | Data Type   | Sample                                                     | Comments   |
+|--------------------|-------------|------------------------------------------------------------|------------|
+| segment_id         | bigint      | 2                                                          |            |
+| dow_group          | text        | Mon-Fri                                                    | "Mon-Fri" / "Tue-Thu" / "Weekend/Holiday" |
+| week_start         | date        | 2025-12-20                                                 | Weeks start on Saturday to enable quicker turnaround time for weekday data (published following Monday) |
+| holiday_exceptions | date[]      | ['2025-12-25', '2025-12-26'] | The holidays either included (for `dow_group = 'Weekend/Holiday'`) or excluded (for `dow_group != 'Weekend/Holiday'`) |
+| hr_start           | smallint    | 0                                                          | Start hour of group, inclusive of that hour. With `hr_end`, breaks are: 0-7, 7-10, 10-15, 15-19, 19-24. |
+| hr_end             | smallint    | 7                                                          | End hour of group, exclusive of that hour. |
+| avg_tt             | real        | 50.12379                                                   | Average TT |
+| avg_ci_lower       | real        | 44.516693                                                  | 2.5th percentile CI for avg_tt |
+| avg_ci_upper       | real        | 56.27924                                                   | 97.5th percentile CI for avg_tt |
+| q1_tt              | real        | 31.735876                                                  | 25th percentile TT |
+| q1_ci_lower        | real        | 26.444149                                                  | 2.5th percentile CI for q1_tt |
+| q1_ci_upper        | real        | 38.56499                                                   | 97.5h percentile CI for q1_tt |
+| median_tt          | real        | 48.170258                                                  | 50th percentile TT |
+| median_ci_lower    | real        | 37.537453                                                  | 2.5th percentile CI for median_tt |
+| median_ci_upper    | real        | 53.86244                                                   | 97.5h percentile CI for median_tt |
+| q3_tt              | real        | 64.13095                                                   | 75th percentile TT |
+| q3_ci_lower        | real        | 53.16368                                                   | 2.5th percentile CI for q3_tt |
+| q3_ci_upper        | real        | 77.111374                                                  | 97.5h percentile CI for q3_tt |
+| n                  | integer     | 52                                                         | Number of dynamic bin observations used |
+| n_resample         | integer     | 300                                                        | The number of random samples from the distrubtion used to determine the confidence intervals. |
+| tti                | real        | None                                                       | TTI based on avg_tt and average overnight speed from `segment_6month_lookback` for the month of `week_start` |
+
+### `here_agg.segments_bootstrap_monthly` (table)
+
+Approx row count:           11,448,800
+| Column Name        | Data Type   | Sample     | Comments   |
+|--------------------|-------------|------------|------------|
+| segment_id         | bigint      | 1297       |            |
+| dow_group          | text        | Tue-Thu    | "Mon-Fri" / "Tue-Thu" / "Weekend/Holiday" |
+| mnth               | date        | 2026-02-01 |            |
+| holiday_exceptions | date[]      | ['2025-12-25', '2025-12-26'] | The holidays either included (for `dow_group = 'Weekend/Holiday'`) or excluded (for `dow_group != 'Weekend/Holiday'`) |
+| hr_start           | smallint    | 12         | Start hour of group, inclusive of that hour. Hourly breaks. |
+| hr_end             | smallint    | 13         | End hour of group, exclusive of that hour. |
+| avg_tt             | real        | 55.732742  | Average TT |
+| avg_ci_lower       | real        | 46.975735  | 2.5th percentile CI for avg_tt |
+| avg_ci_upper       | real        | 66.82062   | 97.5th percentile CI for avg_tt |
+| q1_tt              | real        | 34.992104  | 25th percentile TT |
+| q1_ci_lower        | real        | 30.61651   | 2.5th percentile CI for q1_tt |
+| q1_ci_upper        | real        | 38.672913  | 97.5h percentile CI for q1_tt |
+| median_tt          | real        | 41.06233   | 50th percentile TT |
+| median_ci_lower    | real        | 37.118904  | 2.5th percentile CI for median_tt |
+| median_ci_upper    | real        | 50.194107  | 97.5h percentile CI for median_tt |
+| q3_tt              | real        | 62.15158   | 75th percentile TT |
+| q3_ci_lower        | real        | 49.18579   | 2.5th percentile CI for q3_tt |
+| q3_ci_upper        | real        | 88.22201   | 97.5h percentile CI for q3_tt |
+| n                  | integer     | 44         | Number of dynamic bin observations used |
+| n_resample         | integer     | 300        | The number of random samples from the distrubtion used to determine the confidence intervals. |
+| tti                | real        | None       | TTI based on avg_tt and average overnight speed from `segment_6month_lookback` for the month. |
+
