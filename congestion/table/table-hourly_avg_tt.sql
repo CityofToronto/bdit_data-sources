@@ -25,3 +25,6 @@ ON here_agg.hourly_avg_tt USING btree
 (segment_id ASC NULLS LAST, dt ASC NULLS LAST)
 WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;
+
+COMMENT ON TABLE here_agg.hourly_avg_tt
+IS 'Stores daily-hourly average travel times by segment for use in TTI calculation.';
