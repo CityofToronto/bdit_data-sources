@@ -46,3 +46,7 @@ ON here_agg.segment_6month_lookback USING btree
 (segment_id ASC NULLS LAST)
 WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;
+
+COMMENT ON TABLE here_agg.segment_6month_lookback
+IS 'Stores 6-month lookback segment overnight speed and vehicle km travelled (VKT) for TTI calculation.
+`mnth` represents analysis month (data is from prior 6 months).';

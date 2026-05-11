@@ -20,3 +20,7 @@ REVOKE ALL ON TABLE here_agg.area_tti FROM bdit_humans;
 GRANT SELECT ON TABLE here_agg.area_tti TO bdit_humans;
 
 GRANT ALL ON TABLE here_agg.area_tti TO here_admins;
+
+COMMENT ON TABLE here_agg.area_tti
+IS 'Stores daily-hourly TTI for each area_name/road_category.
+Areas are 4 community councils, downtown, and citywide.';
