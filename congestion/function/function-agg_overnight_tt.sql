@@ -20,7 +20,6 @@ BEGIN
         --No need to filter map versions here: if segment hasn't changed ids between versions, OK to use.
         SELECT
             cs.segment_id,
-            cs.ver_id,
             AVG(rs.tt) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
             COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
             SUM(rs.num_obs * cs.total_length) / 1000.0::double precision AS vkt_km,
@@ -35,9 +34,7 @@ BEGIN
         /*WHERE
             cs.segment_id IN (7808, 7809) --these are new in 25_1
             AND cs.segment_id = 2 --this one is in both 24_4, 25_1*/
-        GROUP BY
-            cs.segment_id,
-            cs.ver_id
+        GROUP BY cs.segment_id
             
         UNION ALL
 
@@ -53,7 +50,6 @@ BEGIN
             cs_new.total_length,
             */
             unnested.new_segment_id,
-            cs_new.ver_id,
             AVG(cs_new.total_length / cs_old.total_length * rs.tt) --new tt, using old speed, new length
                 FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
             COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
@@ -85,9 +81,7 @@ BEGIN
             --for testing
             --AND cs_new.segment_id IN (7808, 7809)
             --AND cs_new.segment_id = 2
-        GROUP BY
-            unnested.new_segment_id,
-            cs_new.ver_id
+        GROUP BY unnested.new_segment_id
     )
 
     INSERT INTO here_agg.segment_6month_lookback (
@@ -95,14 +89,13 @@ BEGIN
     )
     SELECT
         segment_id,
-        MAX(ver_id) AS ver_id,
+        %2$L AS ver_id,
         %1$L::date AS mnth,
         SUM(overnight_avg_tt * overnight_count) / SUM(overnight_count) AS overnight_avg_tt,
         SUM(vkt_km) AS vkt_km,
         SUM(sqrt_vkt_km) AS sqrt_vkt_km
     FROM all_tts
-    GROUP BY segment_id, ver_id, mnth
-    HAVING MAX(ver_id) = %2$L
+    GROUP BY segment_id, mnth
     ON CONFLICT ON CONSTRAINT segment_6month_lookback_pkey
     DO UPDATE
     SET
