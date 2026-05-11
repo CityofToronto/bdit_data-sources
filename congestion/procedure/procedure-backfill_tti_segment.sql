@@ -24,14 +24,8 @@ BEGIN
 
             RAISE NOTICE '[%] Aggregating the previous months lookback stats (overnight, vkt)', v_current_date;
 
-            --add vkt for the segments
-            PERFORM here_agg.monthly_segment_vkt_agg(
-                (v_current_date - interval '1 month')::date,
-                p_segments
-            );
-
-            --add overnight speeds for the segments
-            PERFORM here_agg.agg_overnight_tt(
+            --add vkt/overnight speeds for the segments
+            PERFORM here_agg.agg_segment_6month_lookback(
                 v_current_date,
                 p_segments
             );

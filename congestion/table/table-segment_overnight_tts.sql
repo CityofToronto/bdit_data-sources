@@ -7,9 +7,11 @@ CREATE TABLE IF NOT EXISTS here_agg.segment_6month_lookback
     segment_id integer NOT NULL,
     mnth date NOT NULL,
     overnight_avg_tt real,
-    rolling_6month_quasi_obs integer,
+    ver_id text COLLATE pg_catalog."default" NOT NULL,
+    vkt_km double precision,
+    sqrt_vkt_km double precision,
     CONSTRAINT segment_6month_lookback_pkey PRIMARY KEY (segment_id, mnth),
-    CONSTRAINT segment_6month_lookback_mnth_check CHECK (date_trunc('month'::text, mnth) = mnth)
+    CONSTRAINT segment_overnight_tts_mnth_check CHECK (date_trunc('month'::text, mnth::timestamp with time zone) = mnth)
 )
 
 TABLESPACE pg_default;
