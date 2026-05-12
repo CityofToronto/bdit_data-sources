@@ -25,7 +25,7 @@ Approx row count:              278,000
 | area_name     | text             | Citywide           | "Citywide", "Downtown", and the four community councils: "Etobicoke York Community Council", "North York Community Council",  Scarborough Community Council", "Toronto and East York Community Council" |
 | dt            | date             | 2024-07-01         |            |
 | hr            | smallint         | 0                  |            |
-| tti           | double precision | 1.081 | avg_hourly_tt / overnight_avg_tt, weighted by segment vkt  |
+| tti           | double precision | 1.081 | avg_hourly_tt / overnight_avg_tt, weighted by segment pkt  |
 | num_segments  | integer          | 4777               | Number of segments used for TTI calculation |
 | road_category | text             | Non-Highway        | Highway / Non-Highway / All |
 
@@ -102,7 +102,7 @@ Approx row count:          657,039,200
 | bin_start     | timestamp without time zone | 2023-12-13 05:15:00                        | The start of the observation. It is recommended to use `hr` to group the bin instead. This column is used in the primary key, although the main constraint occurs during insert (non overlapping ranges). |
 | bin_range     | tsrange                     | [2023-12-13 05:15:00, 2023-12-13 05:20:00) | Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.                                                                                                             |
 | tt            | real                        | 20.63033                                   | Travel time in seconds.                                                                                                                                                                                   |
-| num_obs       | real                        | 1.0                                        | The vehicle-distance travelled (using sample_size from here.ta_path) divided by the segment length, for the approximate number of vehicles travelling the segment.                                        |
+| num_obs       | real                        | 1.0                                        | The probe-distance travelled (using sample_size from here.ta_path) divided by the segment length, for the approximate number of probes travelling the segment.                                        |
 | hr            | smallint                    | 5                                          | The hour the majority of the record occured in. Ties are rounded up.                                                                                                                                      |
 
 ### `here_agg.hourly_avg_tt` (table)
@@ -118,7 +118,7 @@ Approx row count:           73,837,100
 
 
 ### `here_agg.segment_6month_lookback` (table)
-This table stores the 6 month lookback stats for the congestion network calculated from `here_agg.raw_segments`. 6 month lookback vehicle km travelled (VKT) and overnight average travel times are used in the calculation of the TTI. VKT is used to weight each segment as part of the area calculations, and overnight average speeds are used as the baseline for which to compare daily average speeds. This table is populated by the function `here_agg.agg_segment_6month_lookback`. 
+This table stores the 6 month lookback stats for the congestion network calculated from `here_agg.raw_segments`. 6 month lookback probe km travelled (PKT) and overnight average travel times are used in the calculation of the TTI. PKT (a VKT proxy) is used to weight each segment as part of the area calculations, and overnight average speeds are used as the baseline for which to compare daily average speeds. This table is populated by the function `here_agg.agg_segment_6month_lookback`. 
 
 Approx row count:              111,000
 | Column Name              | Data Type   | Sample     | Comments   |
@@ -127,8 +127,8 @@ Approx row count:              111,000
 | mnth                     | date        | 2024-07-01 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025 |
 | ver_id        | text                        | 24_4                | The map version effective in `mnth`. Note the lookback data could be on a different map version |
 | overnight_avg_tt         | real        | 43.32359   | 6 month lookback avg overnight<sup>1</sup> TT calculated from `here_agg.raw_segments` (dynamic binned) data. |
-| vkt_km   | double precision                      | 26593.41                | 6 month lookback VKT calculated from `here_agg.raw_segments` (dynamic binned) data. Calculated as number of obs * segment length in km. |
-| sqrt_vkt_km   | double precision                      | 5616249.350                | Another option for weighting segments. Not currently used in TTI calculation.          |
+| pkt_km   | double precision                      | 26593.41                | 6 month lookback PKT calculated from `here_agg.raw_segments` (dynamic binned) data. Calculated as number of obs * segment length in km. |
+| sqrt_pkt_km   | double precision                      | 5616249.350                | Another option for weighting segments. Not currently used in TTI calculation.          |
 
 <sup>1</sup> overnight definition: `WHEN dt < '2024-01-01' THEN hr BETWEEN 0 AND 3, WHEN dt >= '2024-01-01' THEN hr BETWEEN 1 AND 4`
 
@@ -182,7 +182,7 @@ SELECT
     cs.total_length AS segment_length,
     cs.dir,
     COALESCE(cs.highway, False) AS highway,
-    COALESCE(lb.vkt_km, 0) AS vkt_km,
+    COALESCE(lb.pkt_km, 0) AS pkt_km,
     lb.overnight_avg_tt
 FROM here_agg.segment_6month_lookback AS lb
 --gets the segment/area combos for the right map version, based on date

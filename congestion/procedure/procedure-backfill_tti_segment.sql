@@ -19,12 +19,12 @@ BEGIN
             p_segments
         );
 
-        -- On the first day of the month, aggregate the previous months lookback stats (overnight, vkt)
+        -- On the first day of the month, aggregate the previous months lookback stats (overnight, pkt)
         IF EXTRACT(DAY FROM v_current_date) = 1 THEN
 
-            RAISE NOTICE '[%] Aggregating the previous months lookback stats (overnight, vkt)', v_current_date;
+            RAISE NOTICE '[%] Aggregating the previous months lookback stats (overnight, pkt)', v_current_date;
 
-            --add vkt/overnight speeds for the segments
+            --add pkt/overnight speeds for the segments
             PERFORM here_agg.agg_segment_6month_lookback(
                 v_current_date,
                 p_segments

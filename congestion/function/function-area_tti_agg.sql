@@ -17,13 +17,13 @@ BEGIN
     SELECT
         area_name,
         COALESCE(cs.highway, False) AS highway,
-        vkt.segment_id,
-        COALESCE(vkt.vkt_km, 0) AS vkt_km
-    FROM here_agg.segment_6month_lookback AS vkt
+        pkt.segment_id,
+        COALESCE(pkt.pkt_km, 0) AS pkt_km
+    FROM here_agg.segment_6month_lookback AS pkt
     --gets the segment/area combos for the right map version, based on date
     JOIN here_agg.segment_areas(area_tti_agg.dt) AS area USING (segment_id)
     JOIN congestion.congestion_segments AS cs USING (segment_id, ver_id)
-    WHERE vkt.mnth = date_trunc('month', area_tti_agg.dt)
+    WHERE pkt.mnth = date_trunc('month', area_tti_agg.dt)
     ORDER BY segment_id;
 
     CREATE INDEX IF NOT EXISTS segment_list_idx
@@ -35,7 +35,7 @@ BEGIN
         CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
         hrly.dt,
         hrly.hr,
-        SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.vkt_km) / SUM(seg.vkt_km) AS tti,
+        SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.pkt_km) / SUM(seg.pkt_km) AS tti,
         COUNT(DISTINCT hrly.segment_id) AS num_segments
     FROM segment_list AS seg
     LEFT JOIN here_agg.segment_6month_lookback AS overn
