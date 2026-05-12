@@ -1,10 +1,12 @@
 - [`here_agg` Tables](#here_agg-tables)
-    - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
-    - [`here_agg.hourly_avg_tt` (table)](#here_agghourly_avg_tt-table)
-    - [`here_agg.segment_6month_lookback` (table)](#here_aggsegment_6month_lookback-table)
+  - [Open Data Tables](#open-data-tables)
     - [`here_agg.area_tti` (table)](#here_aggarea_tti-table)
     - [`here_agg.segments_bootstrap_weekly` (table)](#here_aggsegments_bootstrap_weekly-table)
     - [`here_agg.segments_bootstrap_monthly` (table)](#here_aggsegments_bootstrap_monthly-table)
+  - [Intermediate Aggregations](#intermediate-aggregations)
+    - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
+    - [`here_agg.hourly_avg_tt` (table)](#here_agghourly_avg_tt-table)
+    - [`here_agg.segment_6month_lookback` (table)](#here_aggsegment_6month_lookback-table)
   - [Sample Queries:](#sample-queries)
     - [Explore TTI Trends](#explore-tti-trends)
     - [Examine Segments Making up an Area](#examine-segments-making-up-an-area)
@@ -12,46 +14,7 @@
 
 # `here_agg` Tables
 
-### `here_agg.raw_segments` (partitioned table)
-This table stores raw dynamic bin observations for segments on the congestion network. It is populated each day by `here_dynamic_binning_agg_hm`. This data is still quite disaggregate and unlikely to be used much. The function `here_agg.segment_bootstrap` could be used to aggregate this data to different time/date ranges (in addition to those already calculated in `segments_bootstrap_weekly` and `segments_bootstrap_monthly`).
-
-Approx row count:          657,039,200
-| Column Name   | Data Type                   | Sample                                     | Comments                                                                                                                                                                                                  |
-|---------------|-----------------------------|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| segment_id    | integer                     | 2                                          |                                                                                                                                                                                                           |
-| dt            | date                        | 2023-12-13                                 | The date of aggregation for the record. Records may not overlap dates.                                                                                                                                    |
-| bin_start     | timestamp without time zone | 2023-12-13 05:15:00                        | The start of the observation. It is recommended to use `hr` to group the bin instead. This column is used in the primary key, although the main constraint occurs during insert (non overlapping ranges). |
-| bin_range     | tsrange                     | [2023-12-13 05:15:00, 2023-12-13 05:20:00) | Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.                                                                                                             |
-| tt            | real                        | 20.63033                                   | Travel time in seconds.                                                                                                                                                                                   |
-| num_obs       | real                        | 1.0                                        | The vehicle-distance travelled (using sample_size from here.ta_path) divided by the segment length, for the approximate number of vehicles travelling the segment.                                        |
-| hr            | smallint                    | 5                                          | The hour the majority of the record occured in. Ties are rounded up.                                                                                                                                      |
-
-### `here_agg.hourly_avg_tt` (table)
-This table stores the hourly average travel time, calculated from `here_agg.raw_segments`. It is used to calculate the TTI for each hour in `here_agg.area_tti_agg`. It is populated by the function `here_agg.hourly_avg_tt_agg`. 
-
-Approx row count:           73,837,100
-| Column Name   | Data Type        | Sample             | Comments   |
-|---------------|------------------|--------------------|------------|
-| segment_id    | integer          | 1231               |            |
-| dt            | date             | 2024-12-01         |            |
-| hr            | smallint         | 1                  |            |
-| avg_tt        | double precision | 38.9365 | A simple average of travel times on that dt/hr.  |
-
-
-### `here_agg.segment_6month_lookback` (table)
-This table stores the 6 month lookback stats for the congestion network calculated from `here_agg.raw_segments`. 6 month lookback vehicle km travelled (VKT) and overnight average travel times are used in the calculation of the TTI. VKT is used to weight each segment as part of the area calculations, and overnight average speeds are used as the baseline for which to compare daily average speeds. This table is populated by the function `here_agg.agg_segment_6month_lookback`. 
-
-Approx row count:              111,000
-| Column Name              | Data Type   | Sample     | Comments   |
-|--------------------------|-------------|------------|------------|
-| segment_id               | integer     | 2          |            |
-| mnth                     | date        | 2024-07-01 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025 |
-| ver_id        | text                        | 24_4                | The map version effective in `mnth`. Note the lookback data could be on a different map version |
-| overnight_avg_tt         | real        | 43.32359   | 6 month lookback avg overnight<sup>1</sup> TT calculated from `here_agg.raw_segments` (dynamic binned) data. |
-| vkt_km   | double precision                      | 26593.41                | 6 month lookback VKT calculated from `here_agg.raw_segments` (dynamic binned) data. Calculated as number of obs * segment length in km. |
-| sqrt_vkt_km   | double precision                      | 5616249.350                | Another option for weighting segments. Not currently used in TTI calculation.          |
-
-<sup>1</sup> overnight definition: `WHEN dt < '2024-01-01' THEN hr BETWEEN 0 AND 3, WHEN dt >= '2024-01-01' THEN hr BETWEEN 1 AND 4`
+## Open Data Tables
 
 ### `here_agg.area_tti` (table)
 This table stores the daily-hourly TTI for different areas & road categories. The table is populated by the function `here_agg.area_tti_agg`. 
@@ -125,6 +88,49 @@ Approx row count:           11,448,800
 | n                  | integer     | 44         | Number of dynamic bin observations used |
 | n_resample         | integer     | 300        | The number of random samples from the distrubtion used to determine the confidence intervals. |
 | tti                | real        | None       | TTI based on avg_tt and average overnight speed from `segment_6month_lookback` for the month. |
+
+## Intermediate Aggregations 
+
+### `here_agg.raw_segments` (partitioned table)
+This table stores raw dynamic bin observations for segments on the congestion network. It is populated each day by `here_dynamic_binning_agg_hm`. This data is still quite disaggregate and unlikely to be used much. The function `here_agg.segment_bootstrap` could be used to aggregate this data to different time/date ranges (in addition to those already calculated in `segments_bootstrap_weekly` and `segments_bootstrap_monthly`).
+
+Approx row count:          657,039,200
+| Column Name   | Data Type                   | Sample                                     | Comments                                                                                                                                                                                                  |
+|---------------|-----------------------------|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| segment_id    | integer                     | 2                                          |                                                                                                                                                                                                           |
+| dt            | date                        | 2023-12-13                                 | The date of aggregation for the record. Records may not overlap dates.                                                                                                                                    |
+| bin_start     | timestamp without time zone | 2023-12-13 05:15:00                        | The start of the observation. It is recommended to use `hr` to group the bin instead. This column is used in the primary key, although the main constraint occurs during insert (non overlapping ranges). |
+| bin_range     | tsrange                     | [2023-12-13 05:15:00, 2023-12-13 05:20:00) | Bin range. An exclusion constraint on a temp table prevents overlapping ranges during insert.                                                                                                             |
+| tt            | real                        | 20.63033                                   | Travel time in seconds.                                                                                                                                                                                   |
+| num_obs       | real                        | 1.0                                        | The vehicle-distance travelled (using sample_size from here.ta_path) divided by the segment length, for the approximate number of vehicles travelling the segment.                                        |
+| hr            | smallint                    | 5                                          | The hour the majority of the record occured in. Ties are rounded up.                                                                                                                                      |
+
+### `here_agg.hourly_avg_tt` (table)
+This table stores the hourly average travel time, calculated from `here_agg.raw_segments`. It is used to calculate the TTI for each hour in `here_agg.area_tti_agg`. It is populated by the function `here_agg.hourly_avg_tt_agg`. 
+
+Approx row count:           73,837,100
+| Column Name   | Data Type        | Sample             | Comments   |
+|---------------|------------------|--------------------|------------|
+| segment_id    | integer          | 1231               |            |
+| dt            | date             | 2024-12-01         |            |
+| hr            | smallint         | 1                  |            |
+| avg_tt        | double precision | 38.9365 | A simple average of travel times on that dt/hr.  |
+
+
+### `here_agg.segment_6month_lookback` (table)
+This table stores the 6 month lookback stats for the congestion network calculated from `here_agg.raw_segments`. 6 month lookback vehicle km travelled (VKT) and overnight average travel times are used in the calculation of the TTI. VKT is used to weight each segment as part of the area calculations, and overnight average speeds are used as the baseline for which to compare daily average speeds. This table is populated by the function `here_agg.agg_segment_6month_lookback`. 
+
+Approx row count:              111,000
+| Column Name              | Data Type   | Sample     | Comments   |
+|--------------------------|-------------|------------|------------|
+| segment_id               | integer     | 2          |            |
+| mnth                     | date        | 2024-07-01 | The month for which the 6 month lookback applies. January 2026 = July 2025 to December 2025 |
+| ver_id        | text                        | 24_4                | The map version effective in `mnth`. Note the lookback data could be on a different map version |
+| overnight_avg_tt         | real        | 43.32359   | 6 month lookback avg overnight<sup>1</sup> TT calculated from `here_agg.raw_segments` (dynamic binned) data. |
+| vkt_km   | double precision                      | 26593.41                | 6 month lookback VKT calculated from `here_agg.raw_segments` (dynamic binned) data. Calculated as number of obs * segment length in km. |
+| sqrt_vkt_km   | double precision                      | 5616249.350                | Another option for weighting segments. Not currently used in TTI calculation.          |
+
+<sup>1</sup> overnight definition: `WHEN dt < '2024-01-01' THEN hr BETWEEN 0 AND 3, WHEN dt >= '2024-01-01' THEN hr BETWEEN 1 AND 4`
 
 ## Sample Queries:
 
