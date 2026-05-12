@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS here_agg.segment_6month_lookback
     mnth date NOT NULL,
     overnight_avg_tt real,
     ver_id text COLLATE pg_catalog."default" NOT NULL,
-    vkt_km double precision,
-    sqrt_vkt_km double precision,
+    pkt_km double precision,
+    sqrt_pkt_km double precision,
     CONSTRAINT segment_6month_lookback_pkey PRIMARY KEY (segment_id, mnth),
     CONSTRAINT segment_overnight_tts_mnth_check CHECK (date_trunc('month'::text, mnth::timestamp with time zone) = mnth)
 )
@@ -50,5 +50,5 @@ WITH (fillfactor = 100, deduplicate_items = TRUE)
 TABLESPACE pg_default;
 
 COMMENT ON TABLE here_agg.segment_6month_lookback
-IS 'Stores 6-month lookback segment overnight speed and vehicle km travelled (VKT) for TTI calculation.
+IS 'Stores 6-month lookback segment overnight speed and probe km travelled (PKT) for TTI calculation.
 `mnth` represents analysis month (data is from prior 6 months).';

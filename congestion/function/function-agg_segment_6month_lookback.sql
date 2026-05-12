@@ -22,8 +22,8 @@ BEGIN
             cs.segment_id,
             AVG(rs.tt) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
             COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
-            SUM(rs.num_obs * cs.total_length) / 1000.0::double precision AS vkt_km,
-            SUM(SQRT(rs.num_obs) * cs.total_length) / 1000.0::double precision AS sqrt_vkt_km
+            SUM(rs.num_obs * cs.total_length) / 1000.0::double precision AS pkt_km,
+            SUM(SQRT(rs.num_obs) * cs.total_length) / 1000.0::double precision AS sqrt_pkt_km
         FROM congestion.congestion_segments AS cs
         LEFT JOIN here_agg.raw_segments AS rs ON
             cs.segment_id = rs.segment_id
@@ -53,8 +53,8 @@ BEGIN
             AVG(cs_new.total_length / cs_old.total_length * rs.tt) --new tt, using old speed, new length
                 FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_avg_tt,
             COUNT(*) FILTER (WHERE (rs.dt < '2024-01-01'::date AND rs.hr BETWEEN 0 AND 3) OR (rs.dt >= '2024-01-01'::date AND rs.hr BETWEEN 1 AND 4)) AS overnight_count,
-            SUM(rs.num_obs * cs_old.total_length) / 1000.0::double precision AS vkt_km,
-            SUM(SQRT(rs.num_obs) * cs_old.total_length) / 1000.0::double precision AS sqrt_vkt_km
+            SUM(rs.num_obs * cs_old.total_length) / 1000.0::double precision AS pkt_km,
+            SUM(SQRT(rs.num_obs) * cs_old.total_length) / 1000.0::double precision AS sqrt_pkt_km
         FROM congestion.congestion_retired_segments AS retired
         JOIN congestion.congestion_segments AS cs_old
             ON retired.old_ver = cs_old.ver_id
@@ -85,23 +85,23 @@ BEGIN
     )
 
     INSERT INTO here_agg.segment_6month_lookback (
-        segment_id, ver_id, mnth, overnight_avg_tt, vkt_km, sqrt_vkt_km
+        segment_id, ver_id, mnth, overnight_avg_tt, pkt_km, sqrt_pkt_km
     )
     SELECT
         segment_id,
         %2$L AS ver_id,
         %1$L::date AS mnth,
         SUM(overnight_avg_tt * overnight_count) / SUM(overnight_count) AS overnight_avg_tt,
-        SUM(vkt_km) AS vkt_km,
-        SUM(sqrt_vkt_km) AS sqrt_vkt_km
+        SUM(pkt_km) AS pkt_km,
+        SUM(sqrt_pkt_km) AS sqrt_pkt_km
     FROM all_tts
     GROUP BY segment_id, mnth
     ON CONFLICT ON CONSTRAINT segment_6month_lookback_pkey
     DO UPDATE
     SET
         overnight_avg_tt = EXCLUDED.overnight_avg_tt,
-        vkt_km = EXCLUDED.vkt_km,
-        sqrt_vkt_km = EXCLUDED.sqrt_vkt_km;
+        pkt_km = EXCLUDED.pkt_km,
+        sqrt_pkt_km = EXCLUDED.sqrt_pkt_km;
     $sql$, agg_segment_6month_lookback.mnth, map_version);
     
 END;
