@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS here_agg.hourly_avg_tt
     dt date NOT NULL,
     hr smallint NOT NULL,
     avg_tt double precision,
+    probe_count double precision,
     CONSTRAINT hourly_avg_tt_pkey PRIMARY KEY (segment_id, dt, hr)
 );
 
@@ -28,3 +29,13 @@ TABLESPACE pg_default;
 
 COMMENT ON TABLE here_agg.hourly_avg_tt
 IS 'Stores daily-hourly average travel times by segment for use in TTI calculation.';
+
+CREATE INDEX IF NOT EXISTS hourly_avg_tt_dt_idx
+ON here_agg.hourly_avg_tt USING brin
+(dt)
+TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS hourly_avg_tt_dt_btree_idx
+ON here_agg.hourly_avg_tt USING btree
+(dt)
+TABLESPACE pg_default;
