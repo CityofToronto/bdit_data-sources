@@ -13,13 +13,14 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
-        INSERT INTO here_agg.hourly_avg_tt (segment_id, ver_id, dt, hr, avg_tt)
+        INSERT INTO here_agg.hourly_avg_tt (segment_id, ver_id, dt, hr, avg_tt, probe_count)
         SELECT
             rs.segment_id,
             rs.ver_id,
             rs.dt,
             rs.hr,
-            AVG(rs.tt) AS avg_tt
+            AVG(rs.tt) AS avg_tt,
+            SUM(rs.num_obs) AS probe_count
         FROM here_agg.raw_segments AS rs
         WHERE
             rs.dt >= hourly_avg_tt_agg.dt

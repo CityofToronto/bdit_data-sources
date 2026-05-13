@@ -1,8 +1,8 @@
 - [`here_agg` Tables](#here_agg-tables)
   - [Open Data Tables](#open-data-tables)
     - [`here_agg.area_tti` (table)](#here_aggarea_tti-table)
-    - [`here_agg.segments_bootstrap_weekly` (table)](#here_aggsegments_bootstrap_weekly-table)
-    - [`here_agg.segments_bootstrap_monthly` (table)](#here_aggsegments_bootstrap_monthly-table)
+    - [`here_agg.segment_travel_times_weekly` (table)](#here_aggsegment_travel_times_weekly-table)
+    - [`here_agg.segment_travel_times_monthly` (table)](#here_aggsegment_travel_times_monthly-table)
   - [Intermediate Aggregations](#intermediate-aggregations)
     - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
     - [`here_agg.hourly_avg_tt` (table)](#here_agghourly_avg_tt-table)
@@ -30,7 +30,7 @@ Approx row count:              278,000
 | road_category | text             | Non-Highway        | Highway / Non-Highway / All |
 
 
-### `here_agg.segments_bootstrap_weekly` (table)
+### `here_agg.segment_travel_times_weekly` (table)
 
 Weekly-period based travel time stats by segment, with confidence intervals calculated through bootstrapping method. See `here_agg.segment_bootstrap` for bootstrapping methodology.
 Weekly data is aggregated at the time period level instead of hourly to accomodate the lower sample size (as little as two weekend days, or one to five weekdays depending on holiday exceptions).
@@ -60,7 +60,7 @@ Approx row count:                11,572,700
 | n_resample         | integer     | 300                                                        | The number of random samples from the distrubtion used to determine the confidence intervals. |
 | tti                | real        | None                                                       | TTI based on avg_tt and average overnight speed from `segment_6month_lookback` for the month of `week_start` |
 
-### `here_agg.segments_bootstrap_monthly` (table)
+### `here_agg.segment_travel_times_monthly` (table)
 
 Monthly-hourly travel time stats by segment, with confidence intervals calculated through bootstrapping method. See `here_agg.segment_bootstrap` for bootstrapping methodology.
 
@@ -92,7 +92,7 @@ Approx row count:           11,448,800
 ## Intermediate Aggregations 
 
 ### `here_agg.raw_segments` (partitioned table)
-This table stores raw dynamic bin observations for segments on the congestion network. It is populated each day by `here_dynamic_binning_agg_hm`. This data is still quite disaggregate and unlikely to be used much. The function `here_agg.segment_bootstrap` could be used to aggregate this data to different time/date ranges (in addition to those already calculated in `segments_bootstrap_weekly` and `segments_bootstrap_monthly`).
+This table stores raw dynamic bin observations for segments on the congestion network. It is populated each day by `here_dynamic_binning_agg_hm`. This data is still quite disaggregate and unlikely to be used much. The function `here_agg.segment_bootstrap` could be used to aggregate this data to different time/date ranges (in addition to those already calculated in `segment_travel_times_weekly` and `segment_travel_times_monthly`).
 
 Approx row count:          657,039,200
 | Column Name   | Data Type                   | Sample                                     | Comments                                                                                                                                                                                                  |
@@ -115,6 +115,7 @@ Approx row count:           73,837,100
 | dt            | date             | 2024-12-01         |            |
 | hr            | smallint         | 1                  |            |
 | avg_tt        | double precision | 38.9365 | A simple average of travel times on that dt/hr.  |
+| probe_count   | double precision | 2.5 | A probe count derived from `here_agg.raw_segments`, `num_obs` field. |
 
 
 ### `here_agg.segment_6month_lookback` (table)
