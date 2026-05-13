@@ -1,8 +1,8 @@
--- Table: here_agg.segments_bootstrap_monthly
+-- Table: here_agg.segment_travel_times_monthly
 
--- DROP TABLE IF EXISTS here_agg.segments_bootstrap_monthly;
+-- DROP TABLE IF EXISTS here_agg.segment_travel_times_monthly;
 
-CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_monthly
+CREATE TABLE IF NOT EXISTS here_agg.segment_travel_times_monthly
 (
     segment_id bigint NOT NULL,
     dow_group text COLLATE pg_catalog."default" NOT NULL,
@@ -26,23 +26,23 @@ CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_monthly
     n_resample integer,
     length numeric,
     CONSTRAINT congestion_segments_monthly_bootstrap_pkey PRIMARY KEY (segment_id, dow_group, mnth, hr_start, hr_end),
-    CONSTRAINT segments_bootstrap_monthly_mnth_check CHECK (date_part('day'::text, mnth) = 1::double precision)
+    CONSTRAINT segment_travel_times_monthly_mnth_check CHECK (date_part('day'::text, mnth) = 1::double precision)
 )
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS here_agg.segments_bootstrap_monthly
+ALTER TABLE IF EXISTS here_agg.segment_travel_times_monthly
     OWNER to here_admins;
 
-REVOKE ALL ON TABLE here_agg.segments_bootstrap_monthly FROM bdit_humans;
-REVOKE ALL ON TABLE here_agg.segments_bootstrap_monthly FROM congestion_bot;
+REVOKE ALL ON TABLE here_agg.segment_travel_times_monthly FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.segment_travel_times_monthly FROM congestion_bot;
 
-GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segments_bootstrap_monthly TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segment_travel_times_monthly TO bdit_humans WITH GRANT OPTION;
 
-GRANT INSERT, DELETE, SELECT ON TABLE here_agg.segments_bootstrap_monthly TO congestion_bot;
+GRANT INSERT, DELETE, SELECT ON TABLE here_agg.segment_travel_times_monthly TO congestion_bot;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO dbadmin;
+GRANT ALL ON TABLE here_agg.segment_travel_times_monthly TO dbadmin;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO here_admins;
+GRANT ALL ON TABLE here_agg.segment_travel_times_monthly TO here_admins;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_monthly TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE here_agg.segment_travel_times_monthly TO rds_superuser WITH GRANT OPTION;

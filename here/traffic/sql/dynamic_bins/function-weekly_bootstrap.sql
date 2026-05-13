@@ -37,7 +37,7 @@ AS $$
             hrs.hr_start
     )
     
-    INSERT INTO here_agg.segments_bootstrap_weekly (
+    INSERT INTO here_agg.segment_travel_times_weekly (
         segment_id, ver_id, dow_group, week_start, holiday_exceptions, hr_start, hr_end, avg_tt, avg_ci_lower,
         avg_ci_upper, q1_tt, q1_ci_lower, q1_ci_upper, median_tt, median_ci_lower, median_ci_upper,
         q3_tt, q3_ci_lower, q3_ci_upper, tti, n, n_resample, length

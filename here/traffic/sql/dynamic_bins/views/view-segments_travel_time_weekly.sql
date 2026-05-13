@@ -1,8 +1,8 @@
--- View: here_agg.segments_travel_time_weekly
+-- View: here_agg.segment_travel_times_weekly_view
 
--- DROP VIEW here_agg.segments_travel_time_weekly;
+-- DROP VIEW here_agg.segment_travel_times_weekly_view;
 
-CREATE OR REPLACE VIEW here_agg.segments_travel_time_weekly AS
+CREATE OR REPLACE VIEW here_agg.segment_travel_times_weekly_view AS
 SELECT
     sbm.segment_id,
     cc.streetname,
@@ -28,12 +28,12 @@ SELECT
     round(sbm.q3_ci_upper::numeric, 2) AS q3_ci_upper,
     sbm.n,
     round(sbm.tti::numeric, 2) AS tti
-FROM here_agg.segments_bootstrap_weekly sbm
+FROM here_agg.segment_travel_times_weekly sbm
 JOIN congestion.congestion_centreline cc USING (segment_id, ver_id)
 JOIN congestion.congestion_segments cs USING (segment_id, ver_id);
 
-ALTER TABLE here_agg.segments_travel_time_weekly
+ALTER TABLE here_agg.segment_travel_times_weekly_view
 OWNER TO here_admins;
 
-GRANT SELECT ON TABLE here_agg.segments_travel_time_weekly TO bdit_humans;
-GRANT ALL ON TABLE here_agg.segments_travel_time_weekly TO here_admins;
+GRANT SELECT ON TABLE here_agg.segment_travel_times_weekly_view TO bdit_humans;
+GRANT ALL ON TABLE here_agg.segment_travel_times_weekly_view TO here_admins;

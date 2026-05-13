@@ -71,7 +71,7 @@ def here_dynamic_binning_weekly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.segments_bootstrap_weekly WHERE week_start = '{{ ds }}'::date - 2;",
+        sql="DELETE FROM here_agg.segment_travel_times_weekly WHERE week_start = '{{ ds }}'::date - 2;",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0
