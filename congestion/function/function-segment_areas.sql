@@ -1,0 +1,96 @@
+CREATE OR REPLACE FUNCTION here_agg.segment_areas(
+    mnth date
+)
+RETURNS TABLE (
+    segment_id bigint,
+    start_vid bigint,
+    end_vid bigint,
+    geom geometry,
+    total_length double precision,
+    highway	boolean,
+    dir	character varying,
+    area_name character varying
+) AS $$
+
+WITH community_councils AS (
+    SELECT DISTINCT ON (seg.segment_id)
+        seg.segment_id,
+        seg.start_vid,
+        seg.end_vid,
+        seg.geom,
+        seg.total_length,
+        seg.highway,
+        seg.dir,
+        cc.area_name
+    FROM congestion.congestion_segments AS seg
+    JOIN gis.community_council_2018 AS cc
+        ON cc.the_geom && seg.geom --quick bounding box intersection using gist idx
+    WHERE
+        seg.ver_id = here_agg.select_map_version(
+            start_date := '2026-01-01'::date,
+            end_date := '2026-01-01'::date + 1,
+            agg_type := 'path_hm'
+        )
+        AND st_intersects(cc.the_geom, seg.geom)
+    ORDER BY
+        seg.segment_id,
+        --combined with distinct on, takes the community council with the highest overlap
+        ST_length(ST_Intersection(cc.the_geom, seg.geom)) DESC
+)
+
+SELECT
+    segment_id,
+    start_vid,
+    end_vid,
+    geom,
+    total_length,
+    highway,
+    dir,
+    area_name
+FROM community_councils
+
+UNION
+
+SELECT
+    seg.segment_id,
+    seg.start_vid,
+    seg.end_vid,
+    seg.geom,
+    seg.total_length,
+    seg.highway,
+    seg.dir,
+    'Citywide' AS area_name
+FROM congestion.congestion_segments AS seg
+WHERE seg.ver_id = here_agg.select_map_version(
+    start_date := segment_areas.mnth,
+    end_date := segment_areas.mnth + 1, --+ 1 day is OK, because map version should be the same for entire month.
+    agg_type := 'path_hm'
+)
+
+UNION
+
+SELECT
+    seg.segment_id,
+    seg.start_vid,
+    seg.end_vid,
+    seg.geom,
+    seg.total_length,
+    seg.highway,
+    seg.dir,
+    'Downtown' AS area_name
+FROM congestion.congestion_segments AS seg
+JOIN gis.to_core_downtown AS dt
+    ON st_intersects(st_transform(dt.geom, 4326), seg.geom)
+    --at least 50% length overlap
+    AND ST_Length(ST_Intersection(seg.geom, st_transform(dt.geom, 4326))) / ST_Length(seg.geom) >= 0.50
+WHERE seg.ver_id = here_agg.select_map_version(
+    start_date := segment_areas.mnth,
+    end_date := segment_areas.mnth + 1, --+ 1 day is OK, because map version should be the same for entire month.
+    agg_type := 'path_hm'
+);
+
+$$ LANGUAGE sql;
+
+ALTER FUNCTION here_agg.segment_areas OWNER TO here_admins;
+
+GRANT EXECUTE ON FUNCTION here_agg.segment_areas TO congestion_bot;
