@@ -42,7 +42,7 @@ BEGIN
     ON
         seg.segment_id = overn.segment_id
         AND overn.mnth = date_trunc('month', area_tti_agg.dt)
-    JOIN here_agg.hourly_avg_tt AS hrly
+    JOIN here_agg.segment_travel_times_hrly_avg AS hrly
         ON hrly.segment_id = overn.segment_id
         AND hrly.dt = area_tti_agg.dt
     GROUP BY
