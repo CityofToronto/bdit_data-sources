@@ -36,7 +36,7 @@ BEGIN
         RAISE NOTICE '[%] Running daily aggregations', v_current_date;
 
         --store hourly avg speeds
-        PERFORM here_agg.hourly_avg_tt_agg(
+        PERFORM here_agg.segment_travel_times_hrly_avg_agg(
             v_current_date,
             p_segments
         );
@@ -56,5 +56,7 @@ BEGIN
     RAISE NOTICE 'Completed aggregations from % to %', p_start_date, p_end_date;
 END;
 $$;
+
+ALTER PROCEDURE here_agg.surgical_segment_backfill OWNER TO here_admins;
 
 --CALL here_agg.surgical_segment_backfill('2026-01-01', '2026-02-01', ARRAY[6805]::bigint [])

@@ -1,8 +1,8 @@
--- FUNCTION: here_agg.hourly_avg_tt_agg(date, bigint [])
+-- FUNCTION: here_agg.segment_travel_times_hrly_agg(date, bigint [])
 
--- DROP FUNCTION IF EXISTS here_agg.hourly_avg_tt_agg(date, bigint []);
+-- DROP FUNCTION IF EXISTS here_agg.segment_travel_times_hrly_agg(date, bigint []);
 
-CREATE OR REPLACE FUNCTION here_agg.hourly_avg_tt_agg(
+CREATE OR REPLACE FUNCTION here_agg.segment_travel_times_hrly_agg(
     dt date,
     segments bigint [] DEFAULT NULL -- NULL = "all segments"
 )
@@ -13,7 +13,7 @@ COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
-        INSERT INTO here_agg.hourly_avg_tt (segment_id, ver_id, dt, hr, avg_tt, probe_count)
+        INSERT INTO here_agg.segment_travel_times_hrly_avg (segment_id, ver_id, dt, hr, avg_tt, probe_count)
         SELECT
             rs.segment_id,
             rs.ver_id,
@@ -23,11 +23,11 @@ AS $BODY$
             SUM(rs.num_obs) AS probe_count
         FROM here_agg.raw_segments AS rs
         WHERE
-            rs.dt >= hourly_avg_tt_agg.dt
-            AND rs.dt < hourly_avg_tt_agg.dt::date + 1
+            rs.dt >= segment_travel_times_hrly_agg.dt
+            AND rs.dt < segment_travel_times_hrly_agg.dt::date + 1
             AND (
-                hourly_avg_tt_agg.segments IS NULL
-                OR rs.segment_id = ANY(hourly_avg_tt_agg.segments)
+                segment_travel_times_hrly_agg.segments IS NULL
+                OR rs.segment_id = ANY(segment_travel_times_hrly_agg.segments)
             )
         GROUP BY
             rs.segment_id,
@@ -40,7 +40,7 @@ AS $BODY$
 
 $BODY$;
 
-ALTER FUNCTION here_agg.hourly_avg_tt_agg(date, bigint [])
+ALTER FUNCTION here_agg.segment_travel_times_hrly_agg(date, bigint [])
 OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION here_agg.hourly_avg_tt_agg TO congestion_bot;
+GRANT EXECUTE ON FUNCTION here_agg.segment_travel_times_hrly_agg TO congestion_bot;
