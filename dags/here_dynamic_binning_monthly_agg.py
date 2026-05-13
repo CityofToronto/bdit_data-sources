@@ -71,7 +71,7 @@ def here_dynamic_binning_monthly_agg():
     )
     
     delete_data = SQLExecuteQueryOperator(
-        sql="DELETE FROM here_agg.segments_bootstrap_monthly WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
+        sql="DELETE FROM here_agg.segment_travel_times_monthly WHERE mnth = '{{ macros.ds_format(ds, '%Y-%m-%d', '%Y-%m-01') }}' AND n_resample = 300",
         task_id="delete_bootstrap_results",
         conn_id=CONN_ID,
         retries=0

@@ -1,8 +1,8 @@
--- Table: here_agg.segments_bootstrap_weekly
+-- Table: here_agg.segment_travel_times_weekly
 
--- DROP TABLE IF EXISTS here_agg.segments_bootstrap_weekly;
+-- DROP TABLE IF EXISTS here_agg.segment_travel_times_weekly;
 
-CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_weekly
+CREATE TABLE IF NOT EXISTS here_agg.segment_travel_times_weekly
 (
     segment_id bigint NOT NULL,
     dow_group text COLLATE pg_catalog."default" NOT NULL,
@@ -30,18 +30,18 @@ CREATE TABLE IF NOT EXISTS here_agg.segments_bootstrap_weekly
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS here_agg.segments_bootstrap_weekly
+ALTER TABLE IF EXISTS here_agg.segment_travel_times_weekly
     OWNER to here_admins;
 
-REVOKE ALL ON TABLE here_agg.segments_bootstrap_weekly FROM bdit_humans;
-REVOKE ALL ON TABLE here_agg.segments_bootstrap_weekly FROM congestion_bot;
+REVOKE ALL ON TABLE here_agg.segment_travel_times_weekly FROM bdit_humans;
+REVOKE ALL ON TABLE here_agg.segment_travel_times_weekly FROM congestion_bot;
 
-GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segments_bootstrap_weekly TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, TRIGGER, REFERENCES ON TABLE here_agg.segment_travel_times_weekly TO bdit_humans WITH GRANT OPTION;
 
-GRANT INSERT, DELETE, SELECT ON TABLE here_agg.segments_bootstrap_weekly TO congestion_bot;
+GRANT INSERT, DELETE, SELECT ON TABLE here_agg.segment_travel_times_weekly TO congestion_bot;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_weekly TO dbadmin;
+GRANT ALL ON TABLE here_agg.segment_travel_times_weekly TO dbadmin;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_weekly TO here_admins;
+GRANT ALL ON TABLE here_agg.segment_travel_times_weekly TO here_admins;
 
-GRANT ALL ON TABLE here_agg.segments_bootstrap_weekly TO rds_superuser WITH GRANT OPTION;
+GRANT ALL ON TABLE here_agg.segment_travel_times_weekly TO rds_superuser WITH GRANT OPTION;
