@@ -33,6 +33,8 @@ CREATE TABLE bluetooth.itsc_tt_paths (
     encoded_polyline character varying,
     centreline_ids bigint [],
     geom geometry,
+    start_node geometry,
+    end_node geometry,
     CONSTRAINT tt_paths_pkey PRIMARY KEY (
         division_id,
         path_id,

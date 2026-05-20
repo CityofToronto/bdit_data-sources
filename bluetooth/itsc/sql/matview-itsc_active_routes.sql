@@ -26,13 +26,15 @@ SELECT DISTINCT ON (itsc_tt_paths.path_id, itsc_tt_paths.division_id)
     itsc_tt_paths.source_id,
     itsc_tt_paths.length_m,
     itsc_tt_paths.centreline_ids,
-    st_linemerge(itsc_tt_paths.geom) AS geom,
+    ST_LineFromEncodedPolyline(itsc_tt_paths.encoded_polyline) AS geom,
     itsc_tt_paths.length_m / active_paths.avg_tt * 3.6 AS avg_kph,
     itsc_tt_paths.length_m / active_paths.avg_tt_5_6pm * 3.6 AS avg_kph_5_6pm,
     --itsc_tt_paths.length_m / active_paths.weighted_avg_tt * 3.6 AS weighted_avg_kph,
     active_paths.avg_tt,
     --active_paths.weighted_avg_tt,
-    active_paths.num_samples
+    active_paths.num_samples,
+    itsc_tt_paths.start_node,
+    itsc_tt_paths.end_node
 FROM bluetooth.itsc_tt_paths
 JOIN active_paths USING (path_id, division_id)
 WHERE itsc_tt_paths.end_timestamp IS NULL
@@ -49,7 +51,9 @@ SELECT
     length / AVG(tt) * 3.6 AS avg_kph,
     length / AVG(tt) FILTER (WHERE date_part('hour', datetime_bin) IN (16, 17)) * 3.6 AS avg_kph_5_6pm,
      AVG(tt),
-    SUM(obs) AS num_samples
+    SUM(obs) AS num_samples,
+    st_startpoint(geom) AS start_node,
+    st_endpoint(geom) AS end_node
 FROM bluetooth.aggr_5min
 JOIN bluetooth.routes_temp USING (analysis_id)
 WHERE datetime_bin >= CURRENT_DATE - 7
