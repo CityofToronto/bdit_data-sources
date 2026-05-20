@@ -12,6 +12,8 @@
 - [Data Ops](#data-ops)
   - [`bluetooth_itsc_pull` DAG](#bluetooth_itsc_pull-dag)
   - [Path Geoms](#path-geoms)
+- [Sample Queries](#sample-queries)
+  - [Query Hourly Avg Speed and Sample Size](#query-hourly-avg-speed-and-sample-size)
 
 # Introcution
 This folder contains Bluetooth travel time data pulled from ITS Central, including data from TPANA, Stinson and Miovision networks.
@@ -165,4 +167,48 @@ More exploration is required...
 <!-- bluetooth_itsc_pull_doc_md -->
 
 ## Path Geoms
-The `itsc_tt_path` geoms are created on insert using a [trigger](./sql/function-add_bluetooth_path_geom.sql), using the centreline_ids from ITSC `traveltimepathfeature`. They may become outdated as the centreline changes. 
+The `itsc_tt_path` geoms are created on insert using a [trigger](./sql/function-add_bluetooth_path_geom.sql), using the `encoded_polyline` column from ITSC. They may become outdated as the centreline changes. 
+It is a known issue that `division_id=8026` geoms are incorrect, as they are drawn using a naive shortest path algorithm and not provided by the vendor.
+
+# Sample Queries
+
+## Query Hourly Avg Speed and Sample Size
+
+A sample query for a single path; find the average hourly speed and sample size over the last 30 days.
+
+```sql
+WITH route AS (
+    SELECT DISTINCT ON (division_id, path_id) *
+    FROM bluetooth.itsc_tt_paths
+    WHERE
+        path_id = 10805343 --Lake Shore Blvd from Strachan Ave to Jameson Ave
+        AND division_id = 2 --Stinson
+    ORDER BY
+        division_id,
+        path_id,
+        --the most recent update for that path_id
+        start_timestamp DESC
+),
+
+daily AS (
+    SELECT
+        dt::date AS ds,
+        date_part('hour', dt) AS hr,
+        length_m / AVG(travel_time_s) * 3.6 AS kph,
+        SUM(num_samples) AS num_samples
+    FROM bluetooth.itsc_tt_raw_pathdata_2026 AS tt
+    JOIN route USING (path_id, division_id)
+    WHERE dt >= CURRENT_DATE - 30
+    --optionally filter for only weekdays here
+    --AND date_part('isodow', dt) <= 5
+    GROUP BY hr, ds, length_m
+)
+
+SELECT
+    hr,
+    AVG(kph) AS avg_kph,
+    AVG(num_samples) AS avg_sample,
+    COUNT(*) AS num_days
+FROM daily
+GROUP BY hr ORDER BY hr
+```
