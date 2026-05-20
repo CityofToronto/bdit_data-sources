@@ -49,8 +49,6 @@ $BODY$;
 ALTER FUNCTION here_gis.clip_to(text, text)
 OWNER TO here_admins;
 
-GRANT EXECUTE ON FUNCTION here_gis.clip_to(text, text) TO bdit_humans;
-
 GRANT EXECUTE ON FUNCTION here_gis.clip_to(text, text) TO here_admins;
 
 REVOKE ALL ON FUNCTION here_gis.clip_to(text, text) FROM public;
