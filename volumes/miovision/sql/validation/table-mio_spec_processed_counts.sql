@@ -33,3 +33,7 @@ ALTER TABLE IF EXISTS miovision_validation.mio_spec_processed_counts OWNER TO mi
 REVOKE ALL ON TABLE miovision_validation.mio_spec_processed_counts FROM bdit_humans;
 
 GRANT SELECT ON TABLE miovision_validation.mio_spec_processed_counts TO bdit_humans;
+
+COMMENT ON TABLE miovision_validation.spectrum_studies
+IS 'Joined Spectrum-Miovision count data for days with Spectrum studies.
+Updated daily by `miovision_validation` Airflow DAG.';

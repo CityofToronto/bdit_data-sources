@@ -1,4 +1,5 @@
---
+--script to insert valid intersections into parallel table for faster analytics queries
+
 INSERT INTO miovision_validation.valid_intersections (
     intersection_uid, intersection_name, start_date,
     end_date, classification, classification_uids

@@ -19,3 +19,7 @@ ALTER TABLE IF EXISTS miovision_validation.spectrum_studies OWNER TO miovision_v
 REVOKE ALL ON TABLE miovision_validation.spectrum_studies FROM bdit_humans;
 
 GRANT SELECT ON TABLE miovision_validation.spectrum_studies TO bdit_humans;
+
+COMMENT ON TABLE miovision_validation.spectrum_studies
+IS 'Spectrum studies at Miovision intersections.
+Updated daily by `miovision_validation` Airflow DAG.';

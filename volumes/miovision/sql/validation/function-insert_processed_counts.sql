@@ -84,3 +84,8 @@ TRUNCATE miovision_validation.mio_spec_processed_counts;
 --Popualtes 500 studies/1M rows in 2min
 SELECT miovision_validation.insert_processed_counts()
 */
+
+COMMENT ON FUNCTION miovision_validation.insert_processed_counts
+IS 'Inserts any new Spectrum data into `miovision_validation.mio_spec_processed_counts` table.
+Only tries to process studies from `spectrum_studies` which are not already marked as processed.
+Run daily by `miovision_validation` Airflow DAG.';

@@ -27,3 +27,7 @@ GRANT SELECT ON TABLE miovision_validation.valid_intersections TO bdit_humans;
 GRANT INSERT, SELECT, UPDATE ON TABLE miovision_validation.valid_intersections TO miovision_validation_bot;
 
 GRANT ALL ON TABLE miovision_validation.valid_intersections TO miovision_validators;
+
+COMMENT ON TABLE miovision_validation.valid_intersections
+IS 'Contains intersection level validation results from Miovision golden counts.
+Results cached from `valid_intersections_view`.';
