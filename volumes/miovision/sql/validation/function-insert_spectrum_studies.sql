@@ -28,3 +28,7 @@ SECURITY DEFINER;
 ALTER FUNCTION miovision_validation.insert_spectrum_studies OWNER TO miovision_validators;
 
 GRANT EXECUTE ON FUNCTION miovision_validation.insert_spectrum_studies TO miovision_validation_bot;
+
+COMMENT ON FUNCTION miovision_validation.insert_spectrum_studies
+IS 'Inserts any new Spectrum studies into `miovision_validation.spectrum_studies` table.
+Run daily by `miovision_validation` Airflow DAG.';

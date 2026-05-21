@@ -1,3 +1,5 @@
+--script to insert valid legs into parallel table for faster analytics queries
+
 INSERT INTO miovision_validation.valid_legs (
     intersection_uid, intersection_name, leg, start_date,
     end_date, classification, classification_uids
