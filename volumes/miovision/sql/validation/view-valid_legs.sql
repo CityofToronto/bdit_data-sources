@@ -79,3 +79,7 @@ OWNER TO miovision_validators;
 GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO bdit_humans;
 GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO miovision_validation_bot;
 GRANT ALL ON TABLE miovision_validation.valid_legs_view TO miovision_validators;
+
+COMMENT ON VIEW miovision_validation.valid_legs_view
+IS 'Contains leg level validation results from Miovision golden counts.
+See table `miovision_validation.valid_legs` for cached (faster) results.';

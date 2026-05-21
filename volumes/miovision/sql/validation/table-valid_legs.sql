@@ -28,3 +28,7 @@ GRANT SELECT ON TABLE miovision_validation.valid_legs TO bdit_humans;
 GRANT INSERT, SELECT, UPDATE ON TABLE miovision_validation.valid_legs TO miovision_validation_bot;
 
 GRANT ALL ON TABLE miovision_validation.valid_legs TO miovision_validators;
+
+COMMENT ON TABLE miovision_validation.valid_legs
+IS 'Contains leg level validation results from Miovision golden counts.
+Results cached from `valid_legs_view`.';

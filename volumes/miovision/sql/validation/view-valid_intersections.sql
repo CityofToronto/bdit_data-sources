@@ -28,3 +28,7 @@ OWNER TO miovision_validators;
 GRANT SELECT ON TABLE miovision_validation.valid_intersections_view TO bdit_humans;
 GRANT SELECT ON TABLE miovision_validation.valid_intersections_view TO miovision_validation_bot;
 GRANT ALL ON TABLE miovision_validation.valid_intersections_view TO miovision_validators;
+
+COMMENT ON VIEW miovision_validation.valid_intersections_view
+IS 'Contains intersection level validation results from Miovision golden counts.
+See table `miovision_validation.valid_intersections` for cached (faster) results.';
