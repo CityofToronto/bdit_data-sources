@@ -17,6 +17,7 @@ RETURNS void
 LANGUAGE SQL
 COST 100
 VOLATILE PARALLEL UNSAFE
+SECURITY DEFINER
 AS $BODY$
 
     --insert into the final table
@@ -59,6 +60,7 @@ RETURNS void
 LANGUAGE sql
 COST 100
 VOLATILE PARALLEL UNSAFE
+SECURITY DEFINER
 AS
 $BODY$
 SELECT here_agg.cache_tt_results(
@@ -72,6 +74,8 @@ SELECT here_agg.cache_tt_results(
     node_end := cache_tt_results_daily.node_end,
     holidays := True)
 $BODY$;
+
+ALTER FUNCTION here_agg.cache_tt_results_daily OWNER TO here_admins;
 
 COMMENT ON FUNCTION here_agg.cache_tt_results_daily
 IS 'A simplified version of `cache_tt_results` for aggregating entire days of data.';
