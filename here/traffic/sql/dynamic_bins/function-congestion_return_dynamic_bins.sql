@@ -88,7 +88,7 @@ RETURN QUERY EXECUTE FORMAT(
             ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
         FROM here.ta_path_hm AS ta
         JOIN corridor AS seg USING (link_dir)
-        LEFT JOIN ref.holiday USING (dt)
+        LEFT JOIN ref.holiday ON ta.tx::date = holiday.dt
         WHERE
             (
                 ta.tx::time >= %4$L

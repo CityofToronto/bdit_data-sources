@@ -34,9 +34,9 @@ BEGIN
         INTO corridor_id, link_dirs, lengths, total_length
     FROM here_agg.corridors AS tt
     WHERE
-        tt.node_start = congestion_cache_corridor.node_start
-        AND tt.node_end = congestion_cache_corridor.node_end
-        AND tt.map_version = congestion_cache_corridor.map_version;
+        tt.node_start = cache_corridor.node_start
+        AND tt.node_end = cache_corridor.node_end
+        AND tt.map_version = cache_corridor.map_version;
     IF FOUND THEN
         RETURN;
     END IF;
