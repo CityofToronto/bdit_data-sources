@@ -22,6 +22,7 @@ owners = {
     "open_data_checks": ["gabe"],
     "pull_here": ["natalie"],
     "pull_here_path": ["natalie"],
+    "pull_here_path_hm": ["natalie", "gabe"],
     "queens_park_aggregation": ["natalie"],
     "rapidto_aggregation": ["natalie"],
     "replicator_table_check": ["gabe", "peter"],
