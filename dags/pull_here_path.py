@@ -48,11 +48,14 @@ default_args = {'owner': ','.join(names),
      default_args=default_args,
      schedule='0 17 * * * ',
      catchup=False,
-     max_active_runs=10,
+     max_active_runs=5,
      doc_md = doc_md,
      tags=["HERE", "data_pull"],
      #can also use params via cli. A max of 1 week is recommended.
-     #airflow dags trigger --conf '{"start_date": "2024-02-01", "end_date": "2024-02-07"}' pull_here_path_hm
+     #SQL script for generating backfilling commands:
+     # SELECT string_agg('airflow dags trigger -l "' || ds || '" --run-id  "manual__' || ds::date || 'T' || ds::time || '"'
+     # || ' --conf ''{"start_date": "' || ds::date || '", "end_date": "' || (ds + interval '6 day')::date || '"}''' || ' pull_here_path_hm', chr(10))
+     # FROM generate_series('2025-01-01 12:00'::timestamp, '2025-03-14 12:00', '7 day'::interval) AS ds
      params={
             "start_date": Param(
                 default=None,
@@ -148,7 +151,7 @@ def pull_here_path():
     def trigger_dags_tasks():
         # Define TriggerDagRunOperator for each DAG to trigger
         trigger_operators = []
-        DAGS_TO_TRIGGER = Variable.get('here_path_dag_triggers', deserialize_json=True)
+        DAGS_TO_TRIGGER = Variable.get('here_path_hm_dag_triggers', deserialize_json=True)
         for dag_id in DAGS_TO_TRIGGER:
             trigger_operator = TriggerDagRunOperator(
                 task_id=f'trigger_{dag_id}',
