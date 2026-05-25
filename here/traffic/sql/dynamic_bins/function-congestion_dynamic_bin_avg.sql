@@ -19,14 +19,14 @@ VOLATILE PARALLEL UNSAFE
 AS $BODY$
 
 DECLARE uri_string_func text :=
-    congestion_dynamic_bin_avg.node_start::text || '/' ||
-    congestion_dynamic_bin_avg.node_end::text  || '/' ||
-    congestion_dynamic_bin_avg.start_tod::text || '/' ||
-    congestion_dynamic_bin_avg.end_tod::text || '/' ||
-    congestion_dynamic_bin_avg.start_date::text || '/' ||
-    congestion_dynamic_bin_avg.end_date::text || '/' ||
-    congestion_dynamic_bin_avg.holidays::text || '/' ||
-    congestion_dynamic_bin_avg.dow_list::text;
+    dynamic_bin_avg.node_start::text || '/' ||
+    dynamic_bin_avg.node_end::text  || '/' ||
+    dynamic_bin_avg.start_tod::text || '/' ||
+    dynamic_bin_avg.end_tod::text || '/' ||
+    dynamic_bin_avg.start_date::text || '/' ||
+    dynamic_bin_avg.end_date::text || '/' ||
+    dynamic_bin_avg.holidays::text || '/' ||
+    dynamic_bin_avg.dow_list::text;
     res numeric;
 
 BEGIN
@@ -34,14 +34,14 @@ BEGIN
 --caches the dynamic binning results for this query
 PERFORM here_agg.cache_tt_results(
     uri_string := uri_string_func,
-    start_date := congestion_dynamic_bin_avg.start_date,
-    end_date := congestion_dynamic_bin_avg.end_date,
-    start_tod := congestion_dynamic_bin_avg.start_tod,
-    end_tod := congestion_dynamic_bin_avg.end_tod,
-    dow_list := congestion_dynamic_bin_avg.dow_list,
-    node_start := congestion_dynamic_bin_avg.node_start,
-    node_end := congestion_dynamic_bin_avg.node_end,
-    holidays := congestion_dynamic_bin_avg.holidays
+    start_date := dynamic_bin_avg.start_date,
+    end_date := dynamic_bin_avg.end_date,
+    start_tod := dynamic_bin_avg.start_tod,
+    end_tod := dynamic_bin_avg.end_tod,
+    dow_list := dynamic_bin_avg.dow_list,
+    node_start := dynamic_bin_avg.node_start,
+    node_end := dynamic_bin_avg.node_end,
+    holidays := dynamic_bin_avg.holidays
 );
 
 --the way we currently do it; find daily averages and then average.
