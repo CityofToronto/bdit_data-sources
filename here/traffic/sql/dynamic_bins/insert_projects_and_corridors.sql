@@ -5,7 +5,7 @@ WITH named_corridors AS (
         corridor_id,
         string_agg(DISTINCT initcap(st_name), ' / ') AS corridor_streets
     FROM here_agg.corridors,
-        UNNEST(congestion_corridors.link_dirs) AS unnested (link_dir)
+        UNNEST(corridors.link_dirs) AS unnested (link_dir)
     LEFT JOIN here_gis.traffic_streets_24_4 ON link_id = trim(TRAILING 'T|F' FROM link_dir)::int
     WHERE map_version = '24_4'
     GROUP BY corridor_id
@@ -41,8 +41,8 @@ WHERE corridor_id IN (SELECT corridor_id FROM corridors)
 RETURNING corridor_id;
 
 --examine the projects
-SELECT congestion_corridors.*
+SELECT corridors.*
 FROM here_agg.corridors
 JOIN here_agg.projects USING (project_id)
-WHERE congestion_projects.description IN ('bluetooth_corridors', 'scrutinized-cycleway-corridors')
+WHERE projects.description IN ('bluetooth_corridors', 'scrutinized-cycleway-corridors')
 
