@@ -77,7 +77,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
     After identifying the Px number, you can grab some additional columns from `gis.traffic_signal`:
 
 	```sql
-	UPDATE miovision_api.intersections
+	UPDATE miovision_api.intersections AS i
 	SET
 		lat = ts.latitude,
 		lng = ts.longitude,
@@ -87,7 +87,9 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 		int_id = ts.node_id,
 		px = ts.px::integer
 	FROM gis.traffic_signal AS ts
-	WHERE ts.px = '0539' AND intersection_uid = 122
+	WHERE i.px = ts.px::int
+		--set intersections here
+		AND i.intersection_uid IN (150, 151);
 	```
 
 8. **Update geojson**  
