@@ -33,8 +33,8 @@ BEGIN
 
 --using a temp table to aply the exclusion constraint should prevent the
 --insert from getting bogged down by large constraint on main table over time
-DROP TABLE IF EXISTS congestion_raw_corridors_temp;
-CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
+DROP TABLE IF EXISTS raw_corridors_temp;
+CREATE TEMPORARY TABLE raw_corridors_temp (
     dt date GENERATED ALWAYS AS (lower(bin_range)) STORED,
     corridor_id smallint,
     time_grp timerange NOT NULL,
@@ -42,7 +42,7 @@ CREATE TEMPORARY TABLE congestion_raw_corridors_temp (
     tt real,
     num_obs integer,
     hr smallint GENERATED ALWAYS AS (date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2)) STORED,
-    CONSTRAINT congestion_raw_corridors_exclude_temp EXCLUDE USING gist (
+    CONSTRAINT raw_corridors_exclude_temp EXCLUDE USING gist (
         bin_range WITH &&,
         corridor_id WITH =,
         time_grp WITH =
@@ -182,8 +182,8 @@ RETURN QUERY EXECUTE FORMAT(
     )
     
     --this query contains overlapping values which get eliminated
-    --via on conflict with the exclusion constraint on congestion_raw_segments table.
-    INSERT INTO congestion_raw_corridors_temp AS inserted (
+    --via on conflict with the exclusion constraint on raw_segments table.
+    INSERT INTO raw_corridors_temp AS inserted (
         time_grp, corridor_id, bin_range, tt, num_obs
     )
     --distinct on ensures only the shortest option gets proposed for insert
@@ -205,7 +205,7 @@ RETURN QUERY EXECUTE FORMAT(
         dt_start,
         dt_end
     --exclusion constraint + ordered insert to prevent overlapping bins
-    ON CONFLICT ON CONSTRAINT congestion_raw_corridors_exclude_temp
+    ON CONFLICT ON CONSTRAINT raw_corridors_exclude_temp
     DO NOTHING
     RETURNING
         inserted.dt, inserted.time_grp, inserted.corridor_id,
@@ -251,6 +251,8 @@ SELECT here_agg.return_dynamic_bins(
     node_end := return_dynamic_bins_daily.node_end,
     holidays := True)
 $BODY$;
+
+ALTER FUNCTION here_agg.return_dynamic_bins_daily OWNER TO here_admins;
 
 COMMENT ON FUNCTION here_agg.return_dynamic_bins_daily
 IS 'A simplified version of `return_dynamic_bins` for aggregating entire days of data.'

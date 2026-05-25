@@ -17,7 +17,7 @@ WITH distinct_days AS (
 
 SELECT
     COUNT(*) = 0 AS _check,
-    'The following days are missing from `congestion_raw_segments`: '
+    'The following days are missing from `raw_segments`: '
     || string_agg(dates.dt::date::text, ', ') AS _summary
 FROM generate_series(date_start, date_end - 1, '1 day') AS dates (dt)
 LEFT JOIN distinct_days USING (dt)

@@ -19,14 +19,14 @@ BEGIN
 
 --using a temp table to aply the exclusion constraint should prevent the
 --insert from getting bogged down by large constraint on main table over time
-DROP TABLE IF EXISTS congestion_raw_segments_temp;
-CREATE TEMPORARY TABLE congestion_raw_segments_temp (
+DROP TABLE IF EXISTS raw_segments_temp;
+CREATE TEMPORARY TABLE raw_segments_temp (
     segment_id integer NOT NULL,
     bin_start timestamp without time zone NOT NULL,
     bin_range tsrange NOT NULL,
     tt numeric,
     num_obs numeric,
-    CONSTRAINT congestion_raw_segments_exclude_temp EXCLUDE USING gist (
+    CONSTRAINT raw_segments_exclude_temp EXCLUDE USING gist (
         bin_range WITH &&,
         segment_id WITH =
     )
@@ -161,8 +161,8 @@ EXECUTE FORMAT(
     )
 
     --this query contains overlapping values which get eliminated
-    --via on conflict with the exclusion constraint on congestion_raw_segments table.
-    INSERT INTO congestion_raw_segments_temp AS inserted (
+    --via on conflict with the exclusion constraint on raw_segments table.
+    INSERT INTO raw_segments_temp AS inserted (
         bin_start, segment_id, bin_range, tt, num_obs
     )
     --distinct on ensures only the shortest option gets proposed for insert
@@ -184,10 +184,10 @@ EXECUTE FORMAT(
         dt_start,
         dt_end --uses the option that ends first
     --exclusion constraint + ordered insert to prevent overlapping bins
-    ON CONFLICT ON CONSTRAINT congestion_raw_segments_exclude_temp
+    ON CONFLICT ON CONSTRAINT raw_segments_exclude_temp
     DO NOTHING;
     
-    ANALYZE congestion_raw_segments_temp;
+    ANALYZE raw_segments_temp;
     
     INSERT INTO here_agg.raw_segments (
         dt, bin_start, segment_id, bin_range, tt, num_obs, hr, ver_id
@@ -201,10 +201,10 @@ EXECUTE FORMAT(
         num_obs,
         date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2) AS hr,
         map_version
-    FROM congestion_raw_segments_temp
+    FROM raw_segments_temp
     ON CONFLICT DO NOTHING;
 
-    DROP TABLE congestion_raw_segments_temp;
+    DROP TABLE raw_segments_temp;
 
 END;
 $BODY$;
