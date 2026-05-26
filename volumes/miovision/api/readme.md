@@ -130,6 +130,7 @@ In command prompt, navigate to the folder where the python file is [located](../
 |intersection|integer|Specifies the `intersection_uid` from the `miovision_api.intersections` table to pull data for. Multiple allowed. |12|Pulls data for all intersection|
 |pull|BOOLEAN flag|Use flag to run data pull.|--pull|false|
 |agg|BOOLEAN flag|Use flag to run data processing.|--agg|false|
+|path|path|Specifies the directory where the config.cfg file is.|config.cfg|/data/airflow/data_scripts/bdit_data-sources/volumes/miovision/api/config.cfg|
 
 `python3 intersection_tmc.py run-api-cli --pull --agg --start_date=2018-08-01 --end_date=2018-08-05 --intersection=10 --intersection=12` is an example with all the options specified:  
 - both data pulling and aggregation specified
