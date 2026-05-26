@@ -295,7 +295,6 @@ def process_data(conn, start_time, end_time, intersections):
     find_gaps(conn, time_period, intersections)
     aggregate_15_min_mvt(conn, time_period, intersections)
     agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
-    aggregate_15_min(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period, intersections)
 
 def find_gaps(conn, time_period, intersections = None):
@@ -345,38 +344,6 @@ def aggregate_15_min_mvt(
                 cur.execute(update, query_params)
                 logger.info('Aggregated intersections %s to 15 minute movement bins',
                             [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
-        logger.exception(exc)
-        sys.exit(1)
-
-def aggregate_15_min(
-        conn, time_period, intersections = None
-):
-    """Aggregate into miovision_api.volumes_15min.
-
-    First clears previous inserts for the date range and
-    sets processed column to null for corresponding values in
-    volumes_15min_mvt. Takes optional intersection param to 
-    specify certain intersections to clear/aggregate.
-    """
-    try:
-        with conn.cursor() as cur:
-            if intersections is None:
-                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp);"
-                cur.execute(delete_sql, time_period)
-                atr_aggregation="SELECT miovision_api.aggregate_15_min(%s::date, %s::date)"
-                cur.execute(atr_aggregation, time_period)
-                logger.info('Completed aggregating into miovision_api.volumes_15min for %s to %s',
-                            time_period[0], time_period[1])
-            else:
-                query_params = time_period + ([x.uid for x in intersections], )
-                delete_sql="SELECT miovision_api.clear_volumes_15min(%s::timestamp, %s::timestamp, %s::integer []);"
-                cur.execute(delete_sql, query_params)
-                update="""SELECT miovision_api.aggregate_15_min(
-                            %s::date, %s::date, %s::integer []);"""
-                cur.execute(update, query_params)
-                logger.info('Completed aggregating intersections %s into miovision_api.volumes_15min for %s to %s',
-                            [x.uid for x in intersections], time_period[0], time_period[1])
     except psycopg2.Error as exc:
         logger.exception(exc)
         sys.exit(1)
