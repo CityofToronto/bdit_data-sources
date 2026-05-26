@@ -22,7 +22,7 @@ try:
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     from bdit_dag_utils.utils.common_tasks import check_jan_1st, check_1st_of_month, wait_for_weather_timesensor
     from volumes.miovision.api.intersection_tmc import (
-        run_api, find_gaps, aggregate_15_min_mvt, aggregate_15_min, aggregate_volumes_daily,
+        run_api, find_gaps, aggregate_15_min_mvt, aggregate_volumes_daily,
         get_intersection_info, agg_zero_volume_anomalous_ranges
     )
     from volumes.miovision.api.pull_alert import run_alerts_api
