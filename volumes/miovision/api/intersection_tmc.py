@@ -11,9 +11,11 @@ import click
 import traceback
 from time import sleep
 from collections import namedtuple
+import configparser
 
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowNotFoundException
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
@@ -68,21 +70,19 @@ def cli():
 @click.option('--intersection' , multiple=True, help='enter the intersection_uid of the intersection')
 @click.option('--pull' , is_flag=True, help='Use flag to run data pull.')
 @click.option('--agg' , is_flag=True, help='Use flag to run data processing.')
+@click.option('--path' , default='/data/airflow/data_scripts/bdit_data-sources/volumes/miovision/api/config.cfg', help='enter the path/directory of the config.cfg file')
 
-def run_api_cli(start_date, end_date, intersection, pull, agg):
-    return run_api(start_date, end_date, intersection, pull, agg)
+def run_api_cli(start_date, end_date, intersection, pull, agg, path):
+    return run_api(start_date, end_date, intersection, pull, agg, path)
 
-def run_api(start_date, end_date, intersection, pull, agg):
-    api_key = BaseHook.get_connection('miovision_api_key')
-    key = api_key.extra_dejson['key']
-    mio_postgres = PostgresHook("miovision_api_bot")
+def run_api(start_date, end_date, intersection, pull, agg, path):
+    conn, key = get_connection(path=path)
     start_date = dateutil.parser.parse(str(start_date))
     end_date = dateutil.parser.parse(str(end_date))
     if pull:
         try:
             logger.info('Pulling from %s to %s' %(start_date, end_date))
-            with mio_postgres.get_conn() as conn:
-                pull_data(conn, start_date, end_date, intersection, key)
+            pull_data(conn, start_date, end_date, intersection, key)
         except Exception as e:
             logger.critical(traceback.format_exc())
             sys.exit(1)
@@ -90,9 +90,8 @@ def run_api(start_date, end_date, intersection, pull, agg):
         logger.info('Skipping pulling volume data.')
     if agg:
         logger.info('Aggregating data from %s to %s' %(start_date, end_date))
-        with mio_postgres.get_conn() as conn:
-            intersections = get_intersection_info(conn, intersection)
-            process_data(conn, start_date, end_date, intersections=intersections)
+        intersections = get_intersection_info(conn, intersection)
+        process_data(conn, start_date, end_date, intersections=intersections)
     else:
         logger.info('Skipping aggregating and processing volume data')
 
@@ -636,6 +635,30 @@ def pull_data(conn, start_time, end_time, intersection, key):
             logger.exception(exc)
             sys.exit(1)
     logger.info('Done pulling data.')
+
+def get_connection(path=None):
+    """
+    Returns (conn, key). Uses Airflow hooks if running in Airflow,
+    otherwise falls back to a local config file.
+    """
+    try:
+        api_key = BaseHook.get_connection('miovision_api_key')
+        key = api_key.extra_dejson['key']
+        mio_postgres = PostgresHook("miovision_api_bot")
+        conn = mio_postgres.get_conn()
+        return conn, key
+
+    except AirflowNotFoundException:
+        if path is None:
+            raise ValueError("Must provide a config path when running locally.")
+
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read(path)
+        key = CONFIG['API']['key']
+        dbset = CONFIG['DBSETTINGS']
+        conn = psycopg2.connect(**dbset)
+        conn.autocommit = True
+        return conn, key
 
 if __name__ == '__main__':
     cli()
