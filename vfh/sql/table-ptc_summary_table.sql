@@ -39,3 +39,7 @@ REVOKE ALL ON TABLE ptc.open_data_summary FROM bdit_humans;
 GRANT SELECT ON TABLE ptc.open_data_summary TO bdit_humans;
 
 GRANT SELECT, INSERT, DELETE ON TABLE ptc.open_data_summary TO ptc_bot;
+
+COMMENT ON TABLE ptc.open_data_summary
+IS 'Private Transportation Companies - Summary Data
+For documentation refer to: https://open.toronto.ca/dataset/private-transportation-companies-summary-and-trip-data/';
