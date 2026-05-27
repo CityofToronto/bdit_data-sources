@@ -67,3 +67,7 @@ FOR VALUES FROM ('2025-01-01 00:00:00') TO ('2026-01-01 00:00:00')
 TABLESPACE pg_default;
 ALTER TABLE IF EXISTS ptc.open_data_operating_hours_2025
 OWNER TO ptc_admins;
+
+COMMENT ON TABLE ptc.open_data_operating_hours
+IS 'Private Transportation Companies – Vehicle Operating Data 
+For documentation refer to: https://open.toronto.ca/dataset/private-transportation-companies-vehicle-operating-data/';
