@@ -75,7 +75,7 @@ def cli():
 def run_api_cli(start_date, end_date, intersection, pull, agg, path):
     return run_api(start_date, end_date, intersection, pull, agg, path)
 
-def run_api(start_date, end_date, intersection, pull, agg, path):
+def run_api(start_date, end_date, intersection, pull, agg, path=None):
     conn, key = get_connection(path=path)
     start_date = dateutil.parser.parse(str(start_date))
     end_date = dateutil.parser.parse(str(end_date))
