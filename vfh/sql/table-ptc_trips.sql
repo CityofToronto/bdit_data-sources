@@ -36,58 +36,62 @@ FOR VALUES FROM ('2016-01-01') TO ('2017-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2016
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2017 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2017-01-01') TO ('2018-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2017
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2018 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2018-01-01') TO ('2019-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2018
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2019 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2019-01-01') TO ('2020-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2019
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2020 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2020-01-01') TO ('2021-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2020
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2021 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2021-01-01') TO ('2022-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2021
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2022 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2022-01-01') TO ('2023-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2022
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2023 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2023-01-01') TO ('2024-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2023
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2024 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2024
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
 CREATE TABLE ptc.open_data_trips_2025 PARTITION OF ptc.open_data_trips
 FOR VALUES FROM ('2025-01-01') TO ('2026-01-01')
 TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS ptc.open_data_trips_2025
-OWNER to ptc_admins;
+OWNER TO ptc_admins;
+
+COMMENT ON TABLE ptc.open_data_trips
+IS 'Private Transportation Companies - Trip Data
+For documentation refer to: https://open.toronto.ca/dataset/private-transportation-companies-summary-and-trip-data/';
