@@ -613,6 +613,7 @@ def get_connection(path=None):
         key = api_key.extra_dejson['key']
         mio_postgres = PostgresHook("miovision_api_bot")
         conn = mio_postgres.get_conn()
+        conn.autocommit = True
         return conn, key
 
     except AirflowNotFoundException:
