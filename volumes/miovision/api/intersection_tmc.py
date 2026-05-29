@@ -293,6 +293,7 @@ def process_data(conn, start_time, end_time, intersections):
     """
     time_period = (start_time, end_time)
     find_gaps(conn, time_period, intersections)
+    aggregate_15_min_atr(conn, time_period, intersections)
     aggregate_15_min_mvt(conn, time_period, intersections)
     agg_zero_volume_anomalous_ranges(conn, time_period, intersections)
     aggregate_volumes_daily(conn, time_period, intersections)
@@ -313,6 +314,36 @@ def find_gaps(conn, time_period, intersections = None):
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp, %s::integer []);"
                 cur.execute(invalid_gaps, query_params)
                 logger.info('Updated gapsize table and found gaps exceeding allowable size for intersections %s',
+                            [x.uid for x in intersections]) 
+    except psycopg2.Error as exc:
+        logger.exception(exc)
+        sys.exit(1)
+
+def aggregate_15_min_atr(
+        conn, time_period, intersections = None
+):
+    """Process data from raw volumes table into miovision_api.volumes_15min_atr.
+    
+    First clears previous inserts.
+    Separate branches for single intersection or all intersection data. 
+    """
+    try:
+        with conn.cursor() as cur:
+            #if intersections specified, clear/aggregate only those intersections.
+            if intersections is None:
+                delete_sql="SELECT miovision_api.clear_15_min_atr(%s::timestamp, %s::timestamp);"
+                cur.execute(delete_sql, time_period)
+                update="SELECT miovision_api.aggregate_15_min_atr(%s::date, %s::date);"
+                cur.execute(update, time_period)
+                logger.info('Aggregated to 15 minute ATR bins')
+            else:
+                query_params = time_period + ([x.uid for x in intersections], )
+                delete_sql="SELECT miovision_api.clear_15_min_atr(%s::timestamp, %s::timestamp, %s::integer []);"
+                cur.execute(delete_sql, query_params)
+                update="""SELECT miovision_api.aggregate_15_min_atr(
+                            %s::date, %s::date, %s::integer []);"""
+                cur.execute(update, query_params)
+                logger.info('Aggregated intersections %s to 15 minute ATR bins',
                             [x.uid for x in intersections]) 
     except psycopg2.Error as exc:
         logger.exception(exc)
