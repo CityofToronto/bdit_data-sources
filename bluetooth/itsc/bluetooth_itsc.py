@@ -6,7 +6,7 @@ from psycopg import sql, Error
 from datetime import datetime, timedelta
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowFailException, AirflowSkipException
+from airflow.sdk.exceptions import AirflowFailException, AirflowSkipException
 
 SQL_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'sql')
 
