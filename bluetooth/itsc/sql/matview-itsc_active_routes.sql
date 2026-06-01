@@ -10,7 +10,7 @@ WITH active_paths AS (
         itsc_tt_raw_pathdata.path_id,
         itsc_tt_raw_pathdata.division_id,
         AVG(travel_time_s) AS avg_tt,
-        AVG(travel_time_s) FILTER (WHERE date_part('hour', dt) IN (16, 17)) AS avg_tt_5_6pm,
+        AVG(travel_time_s) FILTER (WHERE date_part('hour', dt) IN (16, 17)) AS avg_tt_4_6pm,
         --CASE WHEN SUM(num_samples) > 0 THEN SUM(num_samples * travel_time_s)/SUM(num_samples) END AS weighted_avg_tt,
         SUM(num_samples) AS num_samples
     FROM bluetooth.itsc_tt_raw_pathdata
@@ -26,7 +26,7 @@ SELECT DISTINCT ON (itsc_tt_paths.path_id, itsc_tt_paths.division_id)
     itsc_tt_paths.source_id,
     itsc_tt_paths.length_m,
     itsc_tt_paths.centreline_ids,
-    ST_LineFromEncodedPolyline(itsc_tt_paths.encoded_polyline) AS geom,
+    itsc_tt_paths.geom,
     itsc_tt_paths.length_m / active_paths.avg_tt * 3.6 AS avg_kph,
     itsc_tt_paths.length_m / active_paths.avg_tt_5_6pm * 3.6 AS avg_kph_5_6pm,
     --itsc_tt_paths.length_m / active_paths.weighted_avg_tt * 3.6 AS weighted_avg_kph,
@@ -50,7 +50,7 @@ SELECT
     geom,
     length / AVG(tt) * 3.6 AS avg_kph,
     length / AVG(tt) FILTER (WHERE date_part('hour', datetime_bin) IN (16, 17)) * 3.6 AS avg_kph_5_6pm,
-     AVG(tt),
+    AVG(tt) AS avg_tt,
     SUM(obs) AS num_samples,
     st_startpoint(geom) AS start_node,
     st_endpoint(geom) AS end_node
