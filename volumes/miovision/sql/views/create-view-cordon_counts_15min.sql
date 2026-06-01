@@ -4,10 +4,11 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         c.camera_group,
         c.label,
         atr.datetime_bin,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9)) AS auto_mode_share,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_mode_share,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_mode_share,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_mode_share
+        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
+        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_volume,
+        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_volume,
+        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_volume,
+        SUM(lat.adjusted_volume) AS total_volume
     FROM miovision_api.volumes_15min_atr_unfiltered_table AS atr
     JOIN miovision_api.cordons_long AS c ON
         atr.intersection_uid = c.intersection_uid
