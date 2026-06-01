@@ -2,9 +2,9 @@ CREATE OR REPLACE FUNCTION bluetooth.itsc_add_bluetooth_path_geom()
 RETURNS trigger AS $$
 BEGIN
 
-    NEW.geom := ST_LineFromEncodedPolyline(NEW.encoded_polyline);
-    NEW.start_node := st_startpoint(ST_LineFromEncodedPolyline(NEW.encoded_polyline));
-    NEW.end_node := st_endpoint(ST_LineFromEncodedPolyline(NEW.encoded_polyline));
+    NEW.geom := ST_SetSRID(ST_LineFromEncodedPolyline(NEW.encoded_polyline), 4326);
+    NEW.start_node := ST_SetSRID(st_startpoint(ST_LineFromEncodedPolyline(NEW.encoded_polyline)), 4326);
+    NEW.end_node := ST_SetSRID(st_endpoint(ST_LineFromEncodedPolyline(NEW.encoded_polyline)), 4326);
 
     RETURN NEW;
 END;

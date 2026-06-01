@@ -50,3 +50,5 @@ FOR EACH ROW
 EXECUTE FUNCTION bluetooth.itsc_add_bluetooth_path_geom();
 
 GRANT SELECT, UPDATE, INSERT ON bluetooth.itsc_tt_paths TO events_bot;
+
+GRANT SELECT ON bluetooth.itsc_tt_paths TO bdit_humans;

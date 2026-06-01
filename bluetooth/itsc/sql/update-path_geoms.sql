@@ -4,9 +4,9 @@ DROP TRIGGER IF EXISTS add_bluetooth_path_geom_trigger ON bluetooth.itsc_tt_path
 --use this script to initially populated itsc_tt_paths.geom column, or for mass updates.
 UPDATE bluetooth.itsc_tt_paths
 SET
-    geom := ST_LineFromEncodedPolyline(encoded_polyline),
-    start_node := st_startpoint(ST_LineFromEncodedPolyline(encoded_polyline)),
-    end_node := st_endpoint(ST_LineFromEncodedPolyline(encoded_polyline));
+    geom = ST_SetSRID(ST_LineFromEncodedPolyline(encoded_polyline), 4326),
+    start_node = ST_SetSRID(st_startpoint(ST_LineFromEncodedPolyline(encoded_polyline)), 4326),
+    end_node = ST_SetSRID(st_endpoint(ST_LineFromEncodedPolyline(encoded_polyline)), 4326);
 
 --readd geom update trigger
 CREATE OR REPLACE TRIGGER add_bluetooth_path_geom_trigger
