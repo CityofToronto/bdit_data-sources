@@ -42,11 +42,9 @@ $BODY$;
 ALTER FUNCTION bluetooth.create_yyyy_volumes_partition(text, integer, text)
 OWNER TO bt_admins;
 
-GRANT EXECUTE ON FUNCTION bluetooth.create_yyyy_volumes_partition(text, integer, text) TO public;
+REVOKE ALL ON FUNCTION bluetooth.create_yyyy_volumes_partition(text, integer, text) FROM public;
 
 GRANT EXECUTE ON FUNCTION bluetooth.create_yyyy_volumes_partition(text, integer, text) TO bt_admins;
-
-GRANT EXECUTE ON FUNCTION bluetooth.create_yyyy_volumes_partition(text, integer, text) TO bt_bot;
 
 GRANT EXECUTE ON FUNCTION bluetooth.create_yyyy_volumes_partition(
     text, integer, text
