@@ -1,4 +1,4 @@
-- [Introcution](#introcution)
+- [Introduction](#Introduction)
 - [Data structure](#data-structure)
   - [`division_id`](#division_id)
     - [8026: TPANA Bluetooth](#8026-tpana-bluetooth)
@@ -15,7 +15,7 @@
 - [Sample Queries](#sample-queries)
   - [Query Hourly Avg Speed and Sample Size](#query-hourly-avg-speed-and-sample-size)
 
-# Introcution
+# Introduction
 This folder contains Bluetooth travel time data pulled from ITS Central, including data from TPANA, Stinson and Miovision networks.
 
 # Data structure
