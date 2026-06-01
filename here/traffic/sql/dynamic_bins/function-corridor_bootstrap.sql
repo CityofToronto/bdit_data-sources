@@ -47,7 +47,7 @@ AS $BODY$
             percentile_cont(0.25) WITHIN GROUP (ORDER BY tt::real)::real AS q1_tt,
             percentile_cont(0.50) WITHIN GROUP (ORDER BY tt::real)::real AS q2_tt,
             percentile_cont(0.75) WITHIN GROUP (ORDER BY tt::real)::real AS q3_tt,
-            COUNT(*) AS n
+            SUM(num_obs) AS n
         FROM here_agg.raw_corridors AS rs
         WHERE -- same params as the above aggregation
             dt >= corridor_bootstrap.start_date
@@ -125,6 +125,8 @@ AS $BODY$
         cs.total_length;
 
     $BODY$;
+
+ALTER FUNCTION here_agg.corridor_bootstrap OWNER TO here_admins;
 
 GRANT EXECUTE ON FUNCTION here_agg.corridor_bootstrap(
     date, date, bigint, int, smallint[], boolean, smallint, smallint
