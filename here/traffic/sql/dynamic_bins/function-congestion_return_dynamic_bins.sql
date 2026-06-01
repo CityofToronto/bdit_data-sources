@@ -82,10 +82,10 @@ RETURN QUERY EXECUTE FORMAT(
             SUM(seg.length) / seg.total_length AS sum_length,
             SUM(seg.length) AS length_w_data,
             SUM(seg.length / ta.harmonic_mean * 3.6) AS unadjusted_tt,
-            SUM(sample_size) AS num_obs,
             ARRAY_AGG(ta.link_dir ORDER BY ta.link_dir) AS link_dirs,
             ARRAY_AGG(seg.length / ta.harmonic_mean * 3.6 ORDER BY ta.link_dir) AS tts,
-            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths
+            ARRAY_AGG(seg.length ORDER BY ta.link_dir) AS lengths,
+            ARRAY_AGG(ta.sample_size ORDER BY ta.link_dir) AS sample_sizes
         FROM here.ta_path_hm AS ta
         JOIN corridor AS seg USING (link_dir)
         LEFT JOIN ref.holiday ON ta.tx::date = holiday.dt
@@ -155,9 +155,9 @@ RETURN QUERY EXECUTE FORMAT(
             --exclusive end bin
             s5b_end.tx + interval '5 minutes' AS dt_end,
             unnested.link_dir,
+            SUM(unnested.sample_size * unnested.len) AS length_travelled,
             unnested.len,
-            AVG(unnested.tt) AS tt, --avg TT for each link_dir
-            SUM(s5b.num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each link_dir
+            AVG(unnested.tt) AS tt --avg TT for each link_dir
         FROM dynamic_bin_options AS dbo
         LEFT JOIN segment_5min_bins AS s5b
             ON s5b.time_grp = dbo.time_grp
@@ -168,7 +168,7 @@ RETURN QUERY EXECUTE FORMAT(
             ON s5b_end.time_grp = dbo.time_grp
             AND s5b_end.bin_rank = dbo.end_bin,
         --unnest all the observations from individual link_dirs to reaggregate them within new dynamic bin
-        UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts) AS unnested(link_dir, len, tt)
+        UNNEST(s5b.link_dirs, s5b.lengths, s5b.tts, s5b.sample_sizes) AS unnested(link_dir, len, tt, sample_size)
         --dynamic bins should not exceed 30 minutes (dt_end <= dt_start + 30 min)
         WHERE s5b_end.tx + interval '5 minutes' <= dbo.tx + interval '30 minutes'
         GROUP BY
@@ -192,7 +192,7 @@ RETURN QUERY EXECUTE FORMAT(
         corridor_id,
         tsrange(dt_start, dt_end, '[)') AS bin_range,
         total_length / SUM(len) * SUM(tt) AS tt,
-        SUM(num_obs) AS num_obs --sum of here.ta_path_hm sample_size for each segment
+        SUM(length_travelled) / total_length AS num_obs --approximate number of vehicles traversing full length
     FROM unnested_db_options
     GROUP BY
         time_grp,
