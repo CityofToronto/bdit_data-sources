@@ -47,6 +47,8 @@ ALTER FUNCTION here_agg.cache_tt_results(
 )
 OWNER TO here_admins;
 
+GRANT EXECUTE ON FUNCTION here_agg.cache_tt_results TO bdit_humans;
+
 COMMENT ON FUNCTION here_agg.cache_tt_results IS
 'Caches the dynamic binning results for a request.';
 
@@ -76,6 +78,8 @@ SELECT here_agg.cache_tt_results(
 $BODY$;
 
 ALTER FUNCTION here_agg.cache_tt_results_daily OWNER TO here_admins;
+
+GRANT EXECUTE ON FUNCTION here_agg.cache_tt_results_daily TO bdit_humans;
 
 COMMENT ON FUNCTION here_agg.cache_tt_results_daily
 IS 'A simplified version of `cache_tt_results` for aggregating entire days of data.';
