@@ -3,10 +3,11 @@ WITH ooo_sites AS (
         site_id,
         site_description,
         last_active
-    FROM ecocounter.sites
+    FROM ecocounter.sites_unfiltered
     WHERE
         last_active < CURRENT_DATE - 1
         AND date_decommissioned IS NULL
+        AND site_description NOT LIKE 'Mobile %'
 ),
 
 ooo_flows_and_sites AS (
@@ -15,14 +16,15 @@ ooo_flows_and_sites AS (
         s.site_description,
         f.flow_id,
         f.last_active
-    FROM ecocounter.flows AS f
-    JOIN ecocounter.sites AS s USING (site_id)
+    FROM ecocounter.flows_unfiltered AS f
+    JOIN ecocounter.sites_unfiltered AS s USING (site_id)
     --anti join ooo_sites
     LEFT JOIN ooo_sites USING (site_id)
     WHERE
         ooo_sites.site_id IS NULL
         AND f.last_active < CURRENT_DATE - 1
         AND f.date_decommissioned IS NULL
+        AND s.site_description NOT LIKE 'Mobile %'
     UNION
     SELECT
         site_id,
