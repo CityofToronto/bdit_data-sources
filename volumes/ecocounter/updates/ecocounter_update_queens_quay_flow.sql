@@ -13,7 +13,7 @@ FROM (
     (353706302, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
     (353706303, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
     (353706304, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
-    (353706305, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
-    (353706306, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter')
+    (353706305, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353706306, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter')
 ) AS vals(flow_id, flow_direction, direction_main, mode_counted)
 WHERE vals.flow_id = fu.flow_id;
