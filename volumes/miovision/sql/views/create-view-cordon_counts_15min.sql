@@ -4,11 +4,11 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         c.camera_group,
         c.label,
         atr.datetime_bin,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_volume,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_volume,
-        SUM(lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_volume,
-        SUM(lat.adjusted_volume) AS total_volume
+        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_volume,
+        SUM(atr.volume * lat.adjusted_volume) AS total_volume
     FROM miovision_api.volumes_15min_atr_unfiltered_table AS atr
     JOIN miovision_api.cordons_long AS c ON
         atr.intersection_uid = c.intersection_uid
@@ -26,7 +26,7 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
                 --peak hour adjustment for bus/streetcar occupancy
                 CASE WHEN date_part('hour', atr.datetime_bin) IN (7,8,9,16,17,18) THEN 70
                 ELSE 30 END
-            ELSE volume END AS adjusted_volume
+            ELSE 1 END AS adjusted_volume
     ) AS lat
     WHERE classification_uid <> 2 --use bike approaches instead
     GROUP BY
