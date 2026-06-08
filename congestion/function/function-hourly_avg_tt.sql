@@ -8,11 +8,11 @@ CREATE OR REPLACE FUNCTION here_agg.segment_travel_times_hrly_agg(
 )
 RETURNS void
 SECURITY DEFINER
-LANGUAGE sql
+LANGUAGE plpgsql
 COST 100
 VOLATILE PARALLEL UNSAFE
 AS $BODY$
-
+BEGIN
         INSERT INTO here_agg.segment_travel_times_hrly_avg (segment_id, ver_id, dt, hr, avg_tt, probe_count)
         SELECT
             rs.segment_id,
@@ -38,6 +38,7 @@ AS $BODY$
         DO UPDATE SET
             avg_tt = EXCLUDED.avg_tt;
 
+END;
 $BODY$;
 
 ALTER FUNCTION here_agg.segment_travel_times_hrly_agg(date, bigint [])

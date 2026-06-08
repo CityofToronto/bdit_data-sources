@@ -10,8 +10,8 @@ DECLARE
 BEGIN
     WHILE v_current_date < p_end_date LOOP
 
-        RAISE NOTICE 'Processing date: %', v_current_date;
-        RAISE NOTICE '[%] Running dynamic binning', v_current_date;
+        RAISE NOTICE '[%] Processing date: %', clock_timestamp(), v_current_date;
+        RAISE NOTICE '[%] [%] Running dynamic binning', clock_timestamp(), v_current_date;
 
         DELETE FROM here_agg.raw_segments WHERE segment_id = ANY(p_segments) AND dt = v_current_date::date;
         
@@ -27,8 +27,8 @@ BEGIN
             --this would have to be for the previous month, and have a delete statement preceding.
             --PERFORM here_agg.monthly_bootstrap(date_trunc('month', v_current_date::date)::date, p_segments);
             
-            RAISE NOTICE '[%] Aggregating the previous months lookback stats (overnight, pkt)', v_current_date;
-
+            RAISE NOTICE '[%] [%] Aggregating the previous months lookback stats (overnight, pkt)', clock_timestamp(), v_current_date;
+            
             --add pkt/overnight speeds for the segments
             PERFORM here_agg.agg_segment_6month_lookback(
                 v_current_date,
@@ -44,13 +44,17 @@ BEGIN
         END IF;*/
 
         -- Every day
-        RAISE NOTICE '[%] Running daily aggregations', v_current_date;
+        RAISE NOTICE '[%] [%] Running segment_travel_times_hrly_agg', clock_timestamp(), v_current_date;
+
+        DELETE FROM here_agg.segment_travel_times_hrly_avg WHERE segment_id = ANY(p_segments) AND dt = v_current_date::date;
 
         --store hourly avg speeds
         PERFORM here_agg.segment_travel_times_hrly_agg(
             v_current_date,
             p_segments
         );
+        
+        RAISE NOTICE '[%] [%] Running area_tti_agg', clock_timestamp(), v_current_date;
 
         --refresh tt for the entire day
         PERFORM here_agg.area_tti_agg(
@@ -64,7 +68,7 @@ BEGIN
 
     END LOOP;
 
-    RAISE NOTICE 'Completed aggregations from % to %', p_start_date, p_end_date;
+    RAISE NOTICE '[%] Completed aggregations from % to %', clock_timestamp(), p_start_date, p_end_date;
 END;
 $$;
 
