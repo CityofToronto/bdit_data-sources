@@ -14,7 +14,7 @@ import pendulum
 
 # pylint: disable=import-error
 from airflow.sdk import dag, task, Variable
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
 from airflow.models.taskinstance import TaskInstance

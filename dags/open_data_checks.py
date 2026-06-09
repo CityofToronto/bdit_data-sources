@@ -17,7 +17,7 @@ import dateutil.parser
 
 from airflow.sdk import dag, task, Variable
 from airflow.models.taskinstance import TaskInstance
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

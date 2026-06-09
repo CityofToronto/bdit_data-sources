@@ -18,7 +18,7 @@ from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk.execution_time.macros import ds_add
-from airflow.exceptions import AirflowSkipException
+from airflow.sdk.exceptions import AirflowSkipException
 from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 
 try:

@@ -14,7 +14,7 @@ import configparser
 
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowNotFoundException
+from airflow.sdk.exceptions import AirflowNotFoundException
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""

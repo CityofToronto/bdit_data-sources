@@ -15,7 +15,7 @@ import logging
 from time import sleep
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

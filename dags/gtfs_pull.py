@@ -15,7 +15,7 @@ import psycopg2
 from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
-from airflow.exceptions import AirflowFailException, AirflowSkipException
+from airflow.sdk.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models.taskinstance import TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator

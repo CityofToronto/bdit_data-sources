@@ -13,7 +13,7 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.external_task import ExternalTaskMarker
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sdk.execution_time.macros import ds_add
-from airflow.exceptions import AirflowSkipException
+from airflow.sdk.exceptions import AirflowSkipException
 
 try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
