@@ -4,8 +4,7 @@ from typing import Callable
 from configparser import ConfigParser
 from psycopg import connect
 from datetime import datetime, timedelta
-from airflow.exceptions import AirflowFailException
-import time
+from airflow.sdk.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 

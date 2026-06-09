@@ -50,7 +50,7 @@ AIRFLOW_CONNECTIONS = {
     'os.environ',
     AIRFLOW_VARIABLES | AIRFLOW_CONNECTIONS
 )
-@mock.patch("psycopg2.connect")
+@mock.patch("psycopg.connect")
 @mock.patch("airflow.providers.google.common.hooks.base_google.GoogleBaseHook.get_credentials")
 def get_dagbag(mock_connect, mock_google_hook):
     return DagBag(include_examples=False, dag_folder=DAG_FOLDER)
