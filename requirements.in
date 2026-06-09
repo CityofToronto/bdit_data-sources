@@ -26,3 +26,6 @@ ruff
 # testing
 pytest
 pytest-mock
+
+#enable testing of airflow 3.2.1
+psycopg
