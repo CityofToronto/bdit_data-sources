@@ -19,94 +19,79 @@ Ocasionally, new segments need to be added to the `bluetooth` schema. This docum
 
 ## Data Updating
 
-In this update, there exists an Excel Sheet template that contains details of newly added bluetooth detectors. The details include proposed routes `Name`, `Description`, intersection name as `Name` (according to BDIT convention), four digit bluetooth sensor identification number  as `Sensor` and `latitude/longitude` at start point and the end points along with numerous other fields. 
-
-This template was used to include all the details of the routes that can be useful for future analysis. The routes that were updated by adding this batch of new detectors were named with a prefix "DT3_" . 
+To update segments, the vendor will provide an excel file containing the details of newly added bluetooth detectors, which includes proposed routes `Name`, `Description`, intersection name as `Name`, four digit bluetooth sensor identification number as `Sensor` and `latitude/longitude` as start point and the end points along with numerous other fields. 
 
 
 ## Adding Readers
 
-New readers were added manually in the Excel template and saved as .csv file. In addition to the lat/lon, the street names at each intersection where the readers are located is also needed in two columns for each route as the `from_street` and `to_street`. The `Description` field contains this information. For each proposed route, the excel sheet is populated and assigned a unique `analysis_id`. For this batch of new readers, analysis id starting from 1600000 with increment of 10 were added. 
+New readers were added manually to the database. In addition to the lat/lon, street names at each intersection where the readers are located is also needed in two columns for each route as the `from_street` and `to_street`. The `Description` field contains this information. For each proposed route, the excel sheet is populated and assigned a unique `analysis_id`. 
 
 Therefore the new reader table had the following fields populated: 
 
 `analysis_id` 		- Unique ID for each route
 `street` 			- Name of the street along the route
-`direction` 		- Route direction(East bound, West Bound, North Bound or South Bound)
+`direction` 		- Route direction(Eastbound, WestBound, NorthBound or SouthBound)
 `from_street` 		- Name of the intersecting street where the route begins.
 `to_street`			- Name of the intersecting street where the route ends 
-`from_name`			- The reader name (bdit convention) at the start point of the route
+`from_name`			- The reader name  at the start point of the route
 `from_id` 			- The four digit Unique bluetooth id at the start point
 `from_lat` 			- Latitude at the start point of the route
 `from_lon` 			- Longitude at the start point of the route
-`to_name` 			- The reader name (bdit convention) at the end point of the route
+`to_name` 			- The reader name  at the end point of the route
 `to_id`				- The four digit Unique bluetooth id at the end point
 `to_lat`			- Latitude at the end point of the route
 `to_lon`			- Longitude at the end point of the route
 `length`			- Length of the route in metres 
-
 
 ## Preparatory Tables and Steps
 The following steps are utilized to create segments
 1. Get start and end geom for each analysis_id using the provided lat and lon 
 2. Create table with detector_id, detector_geom, centreline_int_id
 3. Join the detector's geometry to the closest centreline intersection
-4. Route the segments using centreline's intersection with the base network of `gis.centreline_both_dir` using [pgr_dijkstra].
+4. Route the segments using centreline's intersection with the base network of `gis_core.routing_centreline_directional` using [pgr_dijkstra].
 
-
-This .csv file was then imported into our postgresql database. The geometry column was created by adding a column using 
-```sql
-ALTER TABLE mohan.new_added_detectors ADD COLUMN from_geom GEOMETRY;
-ALTER TABLE mohan.new_added_detectors ADD COLUMN to_geom GEOMETRY;
-```
-Then create the geometry using lon and lat
-```sql
-UPDATE mohan.new_added_detectors 
-SET to_geom = ST_SetSRID(ST_MakePoint(to_lon, to_lat), 4326)
-SET from_geom = ST_SetSRID(ST_MakePoint(from_lon, from_lat), 4326)
-```
 
 ## Finding Nearest Intersection IDs
 
 To get the intersection ids that are the closest to the newly added detectors location, create a table named `bluetooth_nodes`. This table has four fields:
 `bluetooth_id`, `geom` (geometry of bluetooth detectors), `int_id` (nearest intersection id) and `int_geom` (geometry of the nearest intersection to the bluetooth detector)
 
-This table is created using the following query:
+This table can be created using the following query:
 ```SQL
-CREATE TABLE mohan.bluetooth_nodes AS(
-SELECT DISTINCT mohan.new_added_detectors.from_id::integer AS bluetooth_id,
-    			mohan.new_added_detectors.from_geom,
+CREATE TABLE your_schema.bluetooth_nodes AS(
+SELECT DISTINCT your_schema.new_added_detectors.from_id::integer AS bluetooth_id,
+    			your_schema.new_added_detectors.from_geom,
     			nodes.int_id,
     			st_transform(nodes.node_geom, 4326) AS int_geom
-   	FROM 		mohan.new_added_detectors
+   	FROM 		your_schema.new_added_detectors
  	CROSS JOIN LATERAL (SELECT 		z.int_id,
-            						st_transform(z.geom, 98012) AS node_geom
-           				FROM 		gis.centreline_intersection z
-          				ORDER BY 	(z.geom <-> mohan.new_added_detectors.from_geom)
+            						st_transform(z.geom, 2952) AS node_geom
+           				FROM 		gis_core.centreline_intersection_point_latest z
+          				ORDER BY 	(z.geom <-> your_schema.new_added_detectors.from_geom)
          				LIMIT 1) nodes);
 ```
-Check that correct intersections are returned from this query especially for oblique intersections with an offset. If required, correct the intersection_id and geom for such intersections and finalize the table `mohan.bluetooth_nodes`. An example is shown below. The intersection between Dundas St W, Roncesvalles Ave and Boustead Ave is oblique with an offset. The BT reader 5263 (red dot) picked up intersection_id `13466305` (greed dot) as nearest intersection to the reader. But the planned route does not go through this intersection_id. The correct intersection_id for this reader is `13466258`. The intersection_id and geom for this reader was therefore corrected manually.  
+Check that correct intersections are returned from this query especially for oblique intersections with an offset. If required, correct the intersection_id and geom for such intersections and finalize the table `your_schema.bluetooth_nodes`. 
  
 
 ## Using pg_routing
-Once the nearest centreline intersection nodes are linked to the bluetooth readers geom in `mohan.bluetooth_nodes`, we are ready to run the following Query to create new routes by routing. 
+Once the nearest centreline intersection nodes are linked to the bluetooth readers geom in `your_schema.bluetooth_nodes`, we are ready to run the following Query to create new routes by routing. 
 
 ```SQL
-CREATE table mohan.bt_segments_new AS (
+CREATE table your_schema.bt_segments_new AS (
 WITH lookup AS (
 	SELECT 		analysis_id, 
 				from_id, 
 				origin.int_id AS source, 
 				to_id, 
 				dest.int_id AS target
-	FROM 		mohan.new_added_detectors 
-	INNER JOIN 	mohan.bluetooth_nodes origin ON from_id = origin.bluetooth_id 
-	INNER JOIN 	mohan.bluetooth_nodes dest ON to_id = dest.bluetooth_id)
+	FROM 		your_schema.new_added_detectors 
+	INNER JOIN 	your_schema.bluetooth_nodes origin ON from_id = origin.bluetooth_id 
+	INNER JOIN 	your_schema.bluetooth_nodes dest ON to_id = dest.bluetooth_id)
 
 , results AS (
 	SELECT * 
 	FROM lookup
-	CROSS JOIN LATERAL pgr_dijkstra('SELECT id, source, target, cost FROM gis.centreline_routing_directional inner join gis.centreline on geo_id = id
+	CROSS JOIN LATERAL pgr_dijkstra('SELECT id, source, target, cost FROM gis_core.routing_centreline_directional inner join gis_core.centreline_latest on geo_id = id
 where fcode != 207001', source::int, target::int, TRUE))
 
 , lines as (
@@ -118,8 +103,8 @@ where fcode != 207001', source::int, target::int, TRUE))
 				edge AS geo_id, 
 				geom 
 	FROM 		results			 
-	INNER JOIN 	gis.centreline ON edge=geo_id
-	INNER JOIN 	mohan.new_added_detectors USING (analysis_id)
+	INNER JOIN 	gis_core.centreline_latest ON edge=geo_id
+	INNER JOIN 	your_schema.new_added_detectors USING (analysis_id)
 	ORDER BY 	analysis_id)
 
 SELECT analysis_id, street, direction, from_street, to_street,
