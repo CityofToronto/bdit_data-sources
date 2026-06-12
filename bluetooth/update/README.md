@@ -1,21 +1,18 @@
-# Updating Bluetooth Segments
+# Updating Bluetooth Segments <!-- omit in toc -->
 
-## Overview
+## Overview <!-- omit in toc -->
 
 Ocasionally, new segments need to be added to the `bluetooth` schema. This document will go over the steps and the general process to add new routes along the newly installed bluetooth reader locations. It assumes that bluetooth.all_analyses table does not have rows already created for the proposed new routes. The steps listed here are followed to create an entirely new routes for newly installed bluetooth readers in the city.
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-- [Updating Bluetooth Segments](#updating-bluetooth-segments)
-	- [Overview](#overview)
-	- [Table of Contents](#table-of-contents)
-	- [Data Updating](#data-updating)
-	- [Adding Readers](#adding-readers)
-	- [Preparatory Tables and Steps](#preparatory-tables-and-steps)
-	- [Finding Nearest Intersection IDs](#finding-nearest-intersection-ids)
-	- [Using pg_routing](#using-pg_routing)
-	- [Things to note](#things-to-note)
-	- [Validating Output](#validating-output)
+- [Data Updating](#data-updating)
+- [Adding Readers](#adding-readers)
+- [Preparatory Tables and Steps](#preparatory-tables-and-steps)
+- [Finding Nearest Intersection IDs](#finding-nearest-intersection-ids)
+- [Using pg\_routing](#using-pg_routing)
+- [Things to note](#things-to-note)
+- [Validating Output](#validating-output)
 
 ## Data Updating
 
@@ -44,7 +41,9 @@ Therefore the new reader table had the following fields populated:
 `length`			- Length of the route in metres 
 
 ## Preparatory Tables and Steps
-The following steps are utilized to create segments
+
+The following steps are utilized to create segments: 
+
 1. Get start and end geom for each analysis_id using the provided lat and lon 
 2. Create table with detector_id, detector_geom, centreline_int_id
 3. Join the detector's geometry to the closest centreline intersection
@@ -133,15 +132,16 @@ WHERE fcode_desc IN ('Collector','Collector Ramp','Expressway','Expressway Ramp'
 Validate the length of the segments with length `ST_length(geom)` and direction using `gis.direction_from_line(geom)` functions. If the detectors are located very close to the centerline intersections, it is not necessary to do the centreline cutting. If any bluetooth detectors are not located at the start or end point of a centreline, we will need to cut the centreline using `ST_linesubstring()` as explained in [here.](https://github.com/CityofToronto/bdit_data-sources/issues/234).  
 
 Steps to cut centreline using `ST_linesubstring()`:
-1) Find the closest point of the detector on the centreline with [ST_closespoint()](https://postgis.net/docs/ST_ClosestPoint.html).   
+
+1. Find the closest point of the detector on the centreline with [ST_closespoint()](https://postgis.net/docs/ST_ClosestPoint.html).   
 ```sql
 ST_closestpoint(detector_geom, centreline_geom)
 ```
-2) Return the location of the point relative to the centreline using [`ST_linelocatepoint()`](https://postgis.net/docs/ST_LineLocatePoint.html)
+2. Return the location of the point relative to the centreline using [`ST_linelocatepoint()`](https://postgis.net/docs/ST_LineLocatePoint.html)
 ```sql
 ST_linelocatepoint(geom, closest_point_geom)
 ```
-3) Cut the line using [`ST_linesubstring()`](https://postgis.net/docs/ST_LineSubstring.html) 
+3. Cut the line using [`ST_linesubstring()`](https://postgis.net/docs/ST_LineSubstring.html) 
 ```sql
 ST_linesubstring(geom, 0, st_linelocatepoint)
 ```
