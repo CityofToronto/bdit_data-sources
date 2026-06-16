@@ -100,15 +100,7 @@ def ecocounter_open_data_dag():
         prev_mnth = mnth.subtract(months=1)
         yrs = [mnth.year, prev_mnth.year]
         return list(set(yrs)) #unique
-
-    update_locations = SQLExecuteQueryOperator(
-        sql=f"SELECT ecocounter.open_data_locations_insert()",
-        task_id='update_locations',
-        conn_id='ecocounter_bot',
-        autocommit=True,
-        retries = 0
-    )
-
+    
     @task_group()
     def insert_and_download_data(yr):
         @task(map_index_template="{{ yr }}")
@@ -168,22 +160,35 @@ def ecocounter_open_data_dag():
         insert_daily(yr) >> download_daily_open_data()
         insert_15min(yr) >> download_15min_open_data(yr)
     
-    @task.bash(env = BASH_ENV)
-    def download_locations_open_data()->str:
-        return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-                "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
-                    longitude, latitude, centreline_id, bin_size, latest_calibration_study,
-                    first_active, last_active, date_decommissioned, technology
-                FROM open_data.cycling_permanent_counts_locations
-                ORDER BY location_dir_id;" \
-                --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
-                
-    @task.bash(env = BASH_ENV)
-    def download_locations_open_data_geojson()->str:
-        return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-    "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
-    --tuples-only -o "$EXPORT_PATH/cycling_permanent_counts_locations.geojson"'''
-            
+    @task_group()
+    def update_locations_tg():
+        #this task depends on insert_daily
+        update_locations = SQLExecuteQueryOperator(
+            sql=f"SELECT ecocounter.open_data_locations_insert()",
+            task_id='update_locations',
+            conn_id='ecocounter_bot',
+            autocommit=True,
+            retries = 0
+        )
+
+        @task.bash(env = BASH_ENV)
+        def download_locations_open_data()->str:
+            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+                    "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
+                        longitude, latitude, centreline_id, bin_size, latest_calibration_study,
+                        first_active, last_active, date_decommissioned, technology
+                    FROM open_data.cycling_permanent_counts_locations
+                    ORDER BY location_dir_id;" \
+                    --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
+                    
+        @task.bash(env = BASH_ENV)
+        def download_locations_open_data_geojson()->str:
+            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+        "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
+        --tuples-only -o "$EXPORT_PATH/cycling_permanent_counts_locations.geojson"'''
+        
+        update_locations >> download_locations_open_data() >> download_locations_open_data_geojson()
+
     @task.bash()
     def output_readme()->str:
         source=f'{repo_path}/volumes/open_data/sql/cycling_permanent_counts_readme.md'
@@ -208,13 +213,11 @@ def ecocounter_open_data_dag():
     (
         check_data_availability >>
         reminder_message() >>
-        wait_till_10th >> 
-        update_locations >> [
+        wait_till_10th >> [
             insert_and_download_data.expand(yr = yrs),
-            download_locations_open_data(),
-            download_locations_open_data_geojson(),
             output_readme()
         ] >>
+        update_locations_tg() >>
         status_message()
     )
         
