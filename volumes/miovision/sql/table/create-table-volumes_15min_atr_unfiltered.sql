@@ -21,6 +21,7 @@ REVOKE ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table FROM bdit_h
 GRANT SELECT ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO bdit_humans;
 
 GRANT ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO miovision_admins;
+GRANT ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO miovision_api_bot
 
 COMMENT ON TABLE miovision_api.volumes_15min_atr_unfiltered_table
 IS '(IN DEVELOPMENT) ATR Table to improve ATR query speeds.';

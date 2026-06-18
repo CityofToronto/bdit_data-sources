@@ -7,7 +7,7 @@ SELECT
     v15.leg,
     v15.dir,
     v15.volume
-FROM miovision_api.volumes_15min_atr_unfiltered AS v15
+FROM miovision_api.volumes_15min_atr_unfiltered_table AS v15
 LEFT JOIN miovision_api.unacceptable_gaps USING (datetime_bin, intersection_uid)
 WHERE
     unacceptable_gaps.datetime_bin IS NULL
