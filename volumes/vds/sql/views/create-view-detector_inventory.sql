@@ -126,6 +126,7 @@ CREATE OR REPLACE VIEW vds.detector_inventory AS (
                     --new lakeshore smartmicro sensors
                     OR c.vds_id >= 7011490 AND c.vds_id <= 7011519
                     THEN 'Smartmicro Sensors'::text
+                WHEN lower(comms.source_id::text) ~ similar_to_escape('%smartmicro%'::text) THEN 'Smartmicro Sensors'::text
                 ELSE NULL::text
             END AS det_type
         ) AS dtypes
