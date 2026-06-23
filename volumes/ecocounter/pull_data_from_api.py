@@ -11,35 +11,20 @@ LOGGER = logging.getLogger(__name__)
 default_start = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)-timedelta(days=1)
 default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microsecond = 0)
 
-URL = 'https://apieco.eco-counter-tools.com'
-
-# get an authentication token for accessing the API
-def getToken(url: str, login: str, pw: str, secret: str):
-    response = requests.post(
-        f'{url}/token',
-        headers={
-            'Authorization': 'Basic ' + secret
-        },
-        data={
-            'grant_type': 'password',
-            'username': login,
-            'password': pw
-        }
-    )
-    return response.json()['access_token']
+URL = 'https://api.eco-counter.com/api/v2/'
 
 # get a list of all sites from the API
-def getSites(token: str, sites: any = ()):
+def getSites(pw: str, sites: any = ()):
     response = requests.get(
-        f'{URL}/api/site',
-        headers={'Authorization': f'Bearer {token}'}
+        f'{URL}/sites',
+        headers={'X-API-KEY': f'{pw}'}
     )
     if response.status_code!=200:
         raise AirflowFailException(f"{response.status_code}: {response.reason}")
     if sites == ():
         return response.json()
     
-    #otherwise filter sites using optional param.        
+    #otherwise filter sites using optional param.
     result = []
     for site in response.json():
         if site['id'] in sites:
@@ -47,15 +32,15 @@ def getSites(token: str, sites: any = ()):
     return result        
 
 # get all of a flows ("channel") data from the API
-def getFlowData(token: str, flow_id: int, startDate: datetime, endDate: datetime):
+def getFlowData(pw: str, flow_id: int, startDate: datetime, endDate: datetime):
     requestChunkSize = timedelta(days=100)
     requestStart = startDate
     data = []
     while requestStart < endDate:
         requestEnd = min(requestStart + requestChunkSize, endDate)
         response = requests.get(
-            f'{URL}/api/data/site/{flow_id}',
-            headers={'Authorization': f'Bearer {token}'},
+            f'{URL}/history/traffic/raw/site/{flow_id}',
+            headers={'X-API-KEY': pw},
             params={
                 'begin': requestStart.isoformat(timespec='seconds'),
                 'end':  requestEnd.isoformat(timespec='seconds'),
@@ -172,18 +157,13 @@ def run_api(
         end_date: datetime = default_end,
         sites: any = ()
 ):
-    CONFIG_PATH = 'volumes/ecocounter/.api-credentials.config'
+    CONFIG_PATH = '/data/airflow/data_scripts/bdit_data-sources/volumes/ecocounter/.api-v2-credentials.config'
     config = ConfigParser()
     config.read(CONFIG_PATH)
     conn = connect(**config['DBSETTINGS'])
     conn.autocommit = True
-    token = getToken(
-        URL,
-        config['API']['username'],
-        config['API']['password'],
-        config['API']['secret_api_hash']
-    )
-    for site in getSites(token, sites=sites): #optionally specify site_ids here. 
+    pw = config['API']['password']
+    for site in getSites(pw, sites=sites): #optionally specify site_ids here. 
         # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary
         if not siteIsKnownToUs(site['id'], conn):
@@ -195,4 +175,4 @@ def run_api(
             if not flowIsKnownToUs(flow_id, conn):
                 print('unknown flow', flow_id)
                 continue
-            truncate_and_insert(conn, token, flow_id, start_date, end_date)
+            truncate_and_insert(conn, pw, flow_id, start_date, end_date)
