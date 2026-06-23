@@ -88,9 +88,9 @@ def pull_ecocounter_dag():
     
     def get_connections():
         api_conn = BaseHook.get_connection('ecocounter_api_key_v2')
-        pw = api_conn.password
+        password_getter = lambda: api_conn.password
         eco_postgres = PostgresHook("ecocounter_bot")
-        return eco_postgres, pw
+        return eco_postgres, password_getter
 
     @task(trigger_rule='none_failed')
     def update_sites_and_flows(**context):
