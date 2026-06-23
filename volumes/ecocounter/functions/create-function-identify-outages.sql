@@ -1,8 +1,8 @@
-CREATE OR REPLACE FUNCTION ecocounter.identify_outages(
+CREATE OR REPLACE FUNCTION ecocounter.identify_site_outages(
     num_days interval
 )
 RETURNS TABLE (
-    flow_id numeric,
+    site_id numeric,
     start_time timestamp,
     end_time timestamp
 )
@@ -17,7 +17,6 @@ BEGIN
 RETURN QUERY
 WITH ongoing_outages AS (
     SELECT
-        f.flow_id,
         f.site_id,
         dates.dt::date,
         dates.dt - lag(dates.dt) OVER w = interval '1 day' AS consecutive
@@ -39,8 +38,8 @@ WITH ongoing_outages AS (
         f.validated
         AND dates.dt < COALESCE(f.date_decommissioned, now()::date - interval '1 day')
     GROUP BY
-        f.flow_id,
         f.site_id,
+        f.bin_size,
         f.validated,
         f.last_active,
         f.date_decommissioned,
@@ -49,39 +48,39 @@ WITH ongoing_outages AS (
         SUM(c.volume) IS NULL
         --not all datetime bins present, corrected for bin size
         OR COUNT(DISTINCT c.datetime_bin) <> (3600*24 / EXTRACT(epoch FROM f.bin_size))
-    WINDOW w AS (PARTITION BY f.flow_id ORDER BY dates.dt)
+    WINDOW w AS (PARTITION BY f.site_id ORDER BY dates.dt)
     ORDER BY
-        f.flow_id,
+        f.site_id,
         dates.dt
 ),
 
 group_ids AS (
     SELECT
-        oo.flow_id,
+        oo.site_id,
         oo.dt,
         SUM(CASE WHEN oo.consecutive IS TRUE THEN 0 ELSE 1 END) OVER w AS group_id
     FROM ongoing_outages AS oo
-    WINDOW w AS (PARTITION BY oo.flow_id ORDER BY oo.dt)
+    WINDOW w AS (PARTITION BY oo.site_id ORDER BY oo.dt)
 )
 
 SELECT
-    gi.flow_id,
+    gi.site_id,
     MIN(gi.dt)::timestamp AS start_time,
     MAX(gi.dt) + interval '1 day' AS end_time
 FROM group_ids AS gi
 GROUP BY
-    gi.flow_id,
+    gi.site_id,
     gi.group_id;
 
 END;
 $BODY$;
 
-ALTER FUNCTION ecocounter.identify_outages(interval) OWNER TO ecocounter_admins;
-GRANT ALL ON FUNCTION ecocounter.identify_outages(interval) TO ecocounter_admins;
+ALTER FUNCTION ecocounter.identify_site_outages(interval) OWNER TO ecocounter_admins;
+GRANT ALL ON FUNCTION ecocounter.identify_site_outages(interval) TO ecocounter_admins;
 
-GRANT EXECUTE ON FUNCTION ecocounter.identify_outages(interval) TO bdit_humans;
-GRANT EXECUTE ON FUNCTION ecocounter.identify_outages(interval) TO ecocounter_bot;
+GRANT EXECUTE ON FUNCTION ecocounter.identify_site_outages(interval) TO bdit_humans;
+GRANT EXECUTE ON FUNCTION ecocounter.identify_site_outages(interval) TO ecocounter_bot;
 
-COMMENT ON FUNCTION ecocounter.identify_outages(interval)
+COMMENT ON FUNCTION ecocounter.identify_site_outages(interval)
 IS 'A function to identify day level outages (null volume) in Ecocounter data and group
 them into runs for ease of pulling. Used by Airflow ecocounter_pull.pull_recent_outages task.';
