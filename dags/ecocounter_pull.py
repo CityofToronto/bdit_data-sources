@@ -32,7 +32,7 @@ try:
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
         getSites, siteIsKnownToUs, insertSite, insertFlow,
-        flowIsKnownToUs, getKnownSites, getKnownFlows, truncate_and_insert
+        flowIsKnownToUs, getKnownSites, truncate_and_insert
     )
 except:
     raise ImportError("Cannot import DAG helper functions.")
@@ -98,18 +98,17 @@ def pull_ecocounter_dag():
         new_sites, new_flows = [], []
         with eco_postgres.get_conn() as conn:
             for site in getSites(pw):
-                site_id, site_name, counter = site['id'], site['name'], site['counter']
+                site_id, site_name = site['id'], site['name']
                 if not siteIsKnownToUs(site_id, conn):
-                    insertSite(conn, site_id, site_name, counter, site['longitude'], site['latitude'])
+                    insertSite(conn, site_id, site_name, site['longitude'], site['latitude'])
                     new_sites.append({
                         'site_id': site_id,
                         'site_name': site_name
                     })
-                # what we refer to as a flow is known as a "channel" in ecocounter API.
-                for flow in site['channels']:
+                for flow in site['flows']:
                     flow_id, flow_name = flow['id'], flow['name']
                     if not flowIsKnownToUs(flow_id, conn):
-                        insertFlow(conn, flow_id, site_id, flow_name, flow['granularity'])
+                        insertFlow(conn, flow_id, site_id, flow_name, site['granularity'])
                         new_flows.append({
                             'site_id': site_id,
                             'flow_id': flow_id,
@@ -147,22 +146,21 @@ def pull_ecocounter_dag():
         with eco_postgres.get_conn() as conn:
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
-                for flow_id in getKnownFlows(conn, site_id):
-                    truncate_and_insert(conn, pw, flow_id, start_date, end_date)
+                truncate_and_insert(conn, pw, site_id, start_date, end_date)
 
     @task(trigger_rule='none_failed')
     def pull_recent_outages():
         eco_postgres, pw = get_connections()
         #get list of outages
-        outage_query = "SELECT flow_id, start_time, end_time FROM ecocounter.identify_outages('6 months'::interval);"
+        outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('6 months'::interval);"
         with eco_postgres.get_conn() as conn, conn.cursor() as curr:
             curr.execute(outage_query)
             recent_outages = curr.fetchall()
         #for each outage, try to pull data
         with eco_postgres.get_conn() as conn:
             for outage in recent_outages:
-                flow_id, start_date, end_date = outage
-                truncate_and_insert(conn, pw, flow_id, start_date, end_date)
+                site_id, start_date, end_date = outage
+                truncate_and_insert(conn, pw, site_id, start_date, end_date)
 
     t_done = ExternalTaskMarker(
         task_id="done",
@@ -195,9 +193,9 @@ def pull_ecocounter_dag():
         wait_for_weather_timesensor() >> check_volume
 
     (
-        pull_recent_outages(),
         check_partitions() >>
         update_sites_and_flows() >>
+        pull_recent_outages() >> #move inline to prevent too many concurrent requests
         pull_ecocounter() >>
         t_done >>
         data_checks()
