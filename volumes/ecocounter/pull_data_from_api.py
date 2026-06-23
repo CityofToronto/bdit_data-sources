@@ -1,5 +1,6 @@
 import requests
 import logging
+from typing import Callable
 from configparser import ConfigParser
 from psycopg2 import connect
 from psycopg2.extras import execute_values
@@ -14,7 +15,8 @@ default_end = datetime.now().replace(hour = 0, minute = 0, second = 0, microseco
 URL = 'https://api.eco-counter.com/api/v2/'
 
 # get a list of all sites from the API
-def getSites(pw: str, sites: any = ()):
+def getSites(password_getter: Callable[[], str], sites: any = ()):
+    pw = password_getter() # Retrieve only when needed
     response = requests.get(
         f'{URL}/sites',
         headers={'X-API-KEY': f'{pw}'}
@@ -29,10 +31,11 @@ def getSites(pw: str, sites: any = ()):
     for site in response.json():
         if site['id'] in sites:
             result.append(site)
-    return result        
+    return result
 
 # get all of a flows ("channel") data from the API
-def getFlowData(pw: str, flow_id: int, startDate: datetime, endDate: datetime):
+def getFlowData(password_getter: Callable[[], str], flow_id: int, startDate: datetime, endDate: datetime):
+    pw = password_getter() # Retrieve only when needed
     requestChunkSize = timedelta(days=100)
     requestStart = startDate
     data = []
@@ -162,8 +165,8 @@ def run_api(
     config.read(CONFIG_PATH)
     conn = connect(**config['DBSETTINGS'])
     conn.autocommit = True
-    pw = config['API']['password']
-    for site in getSites(pw, sites=sites): #optionally specify site_ids here. 
+    password_getter = lambda: config['API']['password']
+    for site in getSites(password_getter, sites=sites): #optionally specify site_ids here. 
         # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary
         if not siteIsKnownToUs(site['id'], conn):
@@ -175,4 +178,4 @@ def run_api(
             if not flowIsKnownToUs(flow_id, conn):
                 print('unknown flow', flow_id)
                 continue
-            truncate_and_insert(conn, pw, flow_id, start_date, end_date)
+            truncate_and_insert(conn, password_getter, flow_id, start_date, end_date)
