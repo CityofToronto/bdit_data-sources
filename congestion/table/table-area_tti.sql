@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS here_agg.area_tti
     tti double precision,
     num_segments integer,
     road_category text COLLATE pg_catalog."default" NOT NULL,
+    num_segments_total integer,
     CONSTRAINT area_tti_pkey PRIMARY KEY (area_name, dt, hr, road_category)
 );
 
