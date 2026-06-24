@@ -29,36 +29,63 @@ BEGIN
     CREATE INDEX IF NOT EXISTS segment_list_idx
     ON segment_list (segment_id);
 
-    INSERT INTO here_agg.area_tti (area_name, road_category, dt, hr, tti, num_segments)
+    INSERT INTO here_agg.area_tti_segments (
+        area_name, segment_id, highway, dt, hr, tti, pkt_km, weighted_tti
+    )
     SELECT
         seg.area_name,
-        CASE seg.highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
-        hrly.dt,
-        hrly.hr,
-        SUM(hrly.avg_tt / overn.overnight_avg_tt * seg.pkt_km) / SUM(seg.pkt_km) AS tti,
-        COUNT(DISTINCT hrly.segment_id) AS num_segments
+        seg.segment_id,
+        seg.highway,
+        area_tti_agg.dt AS dt,
+        gs.hr,
+        hrly.avg_tt / overn.overnight_avg_tt AS tti,
+        seg.pkt_km,
+        hrly.avg_tt / overn.overnight_avg_tt * seg.pkt_km AS weighted_tti
     FROM segment_list AS seg
     LEFT JOIN here_agg.segment_6month_lookback AS overn
     ON
         seg.segment_id = overn.segment_id
         AND overn.mnth = date_trunc('month', area_tti_agg.dt)
-    JOIN here_agg.segment_travel_times_hrly_avg AS hrly
-        ON hrly.segment_id = overn.segment_id
+    --ensure missing segment-hours are retained
+    CROSS JOIN generate_series(0, 23) AS gs(hr)
+    LEFT JOIN here_agg.segment_travel_times_hrly_avg AS hrly
+        ON seg.segment_id = hrly.segment_id
+        AND hrly.hr = gs.hr
         AND hrly.dt = area_tti_agg.dt
+    ON CONFLICT ON CONSTRAINT area_tti_segments_pkey
+    DO UPDATE SET
+        tti = EXCLUDED.tti,
+        pkt_km = EXCLUDED.pkt_km,
+        weighted_tti = EXCLUDED.weighted_tti;
+
+    INSERT INTO here_agg.area_tti (
+        area_name, dt, hr, road_category, tti, num_segments, num_segments_total
+    )
+    SELECT
+        area_name,
+        seg.dt,
+        hr,
+        CASE highway WHEN True THEN 'Highway' WHEN False THEN 'Non-Highway' ELSE 'All' END AS road_category,
+        SUM(tti * pkt_km) / SUM(pkt_km) AS tti,
+        COUNT(*) FILTER (WHERE weighted_tti IS NOT NULL) AS num_segments,
+        COUNT(*) AS num_segments_total
+    FROM here_agg.area_tti_segments AS seg
+    WHERE seg.dt = area_tti_agg.dt
     GROUP BY
-        seg.area_name,
-        ROLLUP(seg.highway), --To get highway: T/F/All
-        hrly.hr,
-        hrly.dt
+        area_name,
+        seg.dt,
+        hr,
+        ROLLUP(highway) --To get highway: T/F/All
     ORDER BY
-        seg.area_name,
-        seg.highway,
-        hrly.hr,
-        hrly.dt
+        area_name,
+        highway,
+        hr,
+        seg.dt
     ON CONFLICT ON CONSTRAINT area_tti_pkey
     DO UPDATE SET
         tti = EXCLUDED.tti,
-        num_segments = EXCLUDED.num_segments;
+        num_segments = EXCLUDED.num_segments,
+        num_segments_total = EXCLUDED.num_segments_total;
 
 END;
 $BODY$;
