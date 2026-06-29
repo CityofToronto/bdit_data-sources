@@ -10,7 +10,6 @@ CREATE OR REPLACE VIEW ecocounter.sites AS (
         first_active,
         last_active,
         date_decommissioned,
-        counter,
         linear_name_full,
         side_street,
         technology
