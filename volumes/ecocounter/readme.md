@@ -186,7 +186,6 @@ When you want to update new rows with missing `centreline_id`s, use [this script
 | first_active | timestamp without time zone | | First timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | last_active | timestamp without time zone | | Last timestamp site_id appears in ecocounter.counts_unfiltered. Updated using trigger with each insert on ecocounter.counts_unfiltered. |
 | date_decommissioned  | timestamp without time zone | | |
-| counter              | character varying           | ECO09063082 | This field is pulled from the API and is another unique ID frequently referred to by Ecocounter in communications. |
 | linear_name_full     | text                        | | Main road name taken from centreline. Useful for filtering all sensors on one corridor. |
 | side_street          | text                        | | Side street name | 
 | technology           | text                        | | Technology description, useful when unioning with other data sources. | 
