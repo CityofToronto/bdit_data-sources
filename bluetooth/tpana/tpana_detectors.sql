@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS bluetooth.tpana_detectors (
-    detector_id varchar primary key,
+    detector_id varchar PRIMARY KEY,
     detector_name varchar,
     short_name varchar,
     equipment_type varchar,

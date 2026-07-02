@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS bluetooth.tpana_links (
-    link_id varchar primary key,
+    link_id varchar PRIMARY KEY,
     link_name varchar,
     short_name varchar,
     additional_info text,
-    src_detector_id varchar references bluetooth.tpana_detectors(detector_id),
-    dest_detector_id varchar references bluetooth.tpana_detectors(detector_id),
+    src_detector_id varchar REFERENCES bluetooth.tpana_detectors (detector_id),
+    dest_detector_id varchar REFERENCES bluetooth.tpana_detectors (detector_id),
     line_distance_m float,
     path_distance_m float,
     route_direction_name varchar,
