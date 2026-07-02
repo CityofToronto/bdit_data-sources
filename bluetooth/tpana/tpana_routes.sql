@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS bluetooth.tpana_routes (
     end_offset_m float,
     comments text,
     extra_info text,
-    links text[], -- array of link ids
+    links text [], -- array of link ids
     additional_info text
 );
 
