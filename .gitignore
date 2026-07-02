@@ -209,3 +209,4 @@ volumes/miovision/update_intersections/new_intersection_activation_dates.ipynb
 parking/tickets/data/*
 parking/tickets/connect/connect.R
 
+volumes/ecocounter/.api-v2-credentials.config
