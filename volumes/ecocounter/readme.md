@@ -375,5 +375,6 @@ Row count: 3,072
 > We typically do not proceed with the following  publishing sites if the calibration factor (`ecocounter.calibration_factors`) is outside of [0.8, 1.4], but instead proceed to adjust sensitivity and redo validation counts.
 
 3. Check `validated` column is set to `True` in both `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`.
-4. Clear anomalous ranges from `ecocounter.anomalous_ranges` if any, which are sometimes used to hold back data which is undergoing validation. Remember to check both the `site_id` and `flow_id`. 
-5. The `ecocounter_open_data` pipeline will run at the start of each month, which will insert any new locations into `open_data.cycling_permanent_counts_locations` and the data into `ecocounter.open_data_15min_counts`, `ecocounter.open_data_daily_counts`.
+4. Clear anomalous ranges from `ecocounter.anomalous_ranges` if any, which are sometimes used to hold back data which is undergoing validation. Remember to check both the `site_id` and `flow_id`.
+5. Make sure all the fields used by `ecocounter.open_data_locations` for the new sites are populated in `ecocounter.sites`. This includes street names and `centreline_id`. 
+6. The `ecocounter_open_data` pipeline will run at the start of each month, which will insert any new locations into `open_data.cycling_permanent_counts_locations` and the data into `ecocounter.open_data_15min_counts`, `ecocounter.open_data_daily_counts`.
