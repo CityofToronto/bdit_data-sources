@@ -32,7 +32,7 @@
     - [Aggregation Functions](#aggregation-functions)
     - [Clear Functions](#clear-functions)
     - [Helper Functions](#helper-functions)
-    - [ Functions](#-functions)
+    - [centreline_miovision Functions](#centreline_miovision-functions)
     - [Partitioning Functions](#partitioning-functions)
     - [Deprecated Functions](#deprecated-functions)
 - [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
@@ -165,7 +165,7 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   erDiagram
   volumes }|--|| volumes_15min_mvt_unfiltered : "aggregate into 15min TMC bins"
   volumes 
-  volumes_15min_mvt_unfiltered ||--|{ volumes_15min_atr_unfiltered : "transform into ATR style (VIEW)"
+  volumes ||--|{ volumes_15min_atr_unfiltered_table : "Transform raw volumes into ATR style"
   volumes_15min_mvt_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -192,7 +192,7 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
-  volumes_15min_atr_unfiltered ||--|{ volumes_15min_atr_filtered : "filtered"
+  volumes_15min_atr_unfiltered_table ||--|{ volumes_15min_atr_filtered : "filtered"
   volumes_15min_mvt_unfiltered ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
@@ -206,11 +206,12 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         date dt
         integer volume
     }
-  volumes_15min_atr_unfiltered {
+  volumes_15min_atr_unfiltered_table {
         integer intersection_uid
         integer classification_uid
         date datetime_bin
         text leg
+        text dir
         integer volume
   }
   volumes_15min_atr_filtered {
