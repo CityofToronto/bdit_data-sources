@@ -1,5 +1,6 @@
 CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
     intersection_uids int[],
+    classification_uids int[],
     date_start date,
     date_end date
 )
@@ -23,9 +24,11 @@ BEGIN
             v15.dir,
             v15.volume
         FROM miovision_api.volumes_15min_atr_unfiltered_table AS v15
-        WHERE v15.intersection_uid = ANY(volumes_15min_atr_filtered.intersection_uids)
-        AND v15.datetime_bin >= volumes_15min_atr_filtered.date_start
-        AND v15.datetime_bin < volumes_15min_atr_filtered.date_end
+        WHERE
+            v15.intersection_uid = ANY(volumes_15min_atr_filtered.intersection_uids)
+            AND v15.classification_uid = ANY(volumes_15min_atr_filtered.classification_uids)
+            AND v15.datetime_bin >= volumes_15min_atr_filtered.date_start
+            AND v15.datetime_bin < volumes_15min_atr_filtered.date_end
     )
     
     SELECT
@@ -66,14 +69,60 @@ BEGIN
 
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION miovision_api.volumes_15min_atr_filtered OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered TO bdit_humans;
+ALTER FUNCTION miovision_api.volumes_15min_atr_filtered (int[], int[], date, date) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered (int[], int[], date, date) TO bdit_humans;
+
+/*
+--5s
+SELECT * FROM miovision_api.volumes_15min_atr_filtered(
+    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int[],
+    classification_uids := '{1}'::int[],
+    date_start := '2026-05-01',
+    date_end := CURRENT_DATE
+)
+*/
+
+CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
+    intersection_uids int[],
+    date_start date,
+    date_end date
+)
+RETURNS TABLE (
+intersection_uid integer,
+datetime_bin timestamp without time zone,
+classification_uid integer,
+leg text,
+dir text,
+volume integer
+) AS $$
+BEGIN
+    
+    RETURN QUERY
+    SELECT
+        v15.intersection_uid,
+        v15.datetime_bin,
+        v15.classification_uid,
+        v15.leg,
+        v15.dir,
+        v15.volume
+    FROM miovision_api.volumes_15min_atr_filtered(
+        intersection_uids := volumes_15min_atr_filtered.intersection_uids,
+        classification_uids := (SELECT array_agg(classifications.classification_uid) FROM miovision_api.classifications),
+        date_start := volumes_15min_atr_filtered.date_start,
+        date_end := volumes_15min_atr_filtered.date_end
+    ) AS v15;
+    END;
+
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION miovision_api.volumes_15min_atr_filtered (int[], date, date) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered (int[], date, date) TO bdit_humans;
 
 /*
 --35s, vs 2.5 minutes with view
 SELECT * FROM miovision_api.volumes_15min_atr_filtered(
-    '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int[],
-    '2026-05-01',
-    CURRENT_DATE
+    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int[],
+    date_start := '2026-05-01',
+    date_end := CURRENT_DATE
 )
 */
