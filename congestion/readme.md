@@ -5,7 +5,7 @@
     - [`here_agg.segment_travel_times_monthly` (table)](#here_aggsegment_travel_times_monthly-table)
   - [Intermediate Aggregations](#intermediate-aggregations)
     - [`here_agg.raw_segments` (partitioned table)](#here_aggraw_segments-partitioned-table)
-    - [`here_agg.segment_travel_times_hrly_avg` (table)](#here_agghourly_avg_tt-table)
+    - [`here_agg.segment_travel_times_hrly_avg` (table)](#here_aggsegment_travel_times_hrly_avg-table)
     - [`here_agg.segment_6month_lookback` (table)](#here_aggsegment_6month_lookback-table)
   - [Sample Queries:](#sample-queries)
     - [Explore TTI Trends](#explore-tti-trends)
@@ -106,7 +106,7 @@ Approx row count:          657,039,200
 | hr            | smallint                    | 5                                          | The hour the majority of the record occured in. Ties are rounded up.                                                                                                                                      |
 
 ### `here_agg.segment_travel_times_hrly_avg` (table)
-This table stores the hourly average travel time, calculated from `here_agg.raw_segments`. It is used to calculate the TTI for each hour in `here_agg.area_tti_agg`. It is populated by the function `here_agg.segment_travel_times_hrly_avg_agg`. 
+This table stores the hourly average travel time, calculated from `here_agg.raw_segments`. It is used to calculate the TTI for each hour in `here_agg.area_tti_agg`. It is populated by the function `here_agg.segment_travel_times_hrly_agg`. 
 
 Approx row count:           73,837,100
 | Column Name   | Data Type        | Sample             | Comments   |
