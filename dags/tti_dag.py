@@ -36,8 +36,8 @@ default_args = {
 @dag(
     DAG_NAME,
     default_args=default_args,
-    schedule='0 16 * * *', # 4pm daily
-    #schedule=None, #triggered daily by here_dynamic_binning_agg_hm
+    #schedule='0 16 * * *', # 4pm daily
+    schedule=None, #triggered daily by here_dynamic_binning_agg_hm
     template_searchpath=os.path.join(repo_path, 'congestion'),
     doc_md=doc_md,
     tags=["HERE", "aggregation", "congestion", "TTI"],
@@ -53,7 +53,7 @@ def tti_dag():
         sql="SELECT _check, _summary FROM here_agg.check_month_present(('{{ ds }}'::date - interval '1 month')::date)",
         task_id="check_missing_dates",
         conn_id=CONN_ID,
-        retries = 0,
+        retries = 3,
         pre_execute=check_1st_of_month, #agg previous month, only if 1st of month
     )
     
@@ -67,7 +67,7 @@ def tti_dag():
     )
     
     aggregate_hrly = SQLExecuteQueryOperator(
-        sql="SELECT here_agg.hourly_avg_tt_agg('{{ ds }}'::date);",
+        sql="SELECT here_agg.segment_travel_times_hrly_agg('{{ ds }}'::date);",
         task_id="aggregate_hrly",
         conn_id=CONN_ID,
         retries = 1,
