@@ -1,7 +1,7 @@
 INSERT INTO miovision_api.alerts AS n (
     alert_id, start_time, end_time, intersection_id, alert
 )
-VALUES %s
+VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (alert_id)
 DO UPDATE
 SET

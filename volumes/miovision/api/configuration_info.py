@@ -6,8 +6,7 @@ import pytz
 import os
 from requests import Session
 import pandas as pd
-from psycopg2 import sql
-from psycopg2.extras import execute_values
+from psycopg import sql
 from datetime import datetime
 import logging
 
@@ -66,7 +65,7 @@ def get_cameras(conn):
 
     # Get intersections currently stored in `miovision_api` on Postgres.
     with conn.cursor() as cur:
-        execute_values(cur, insert_query, final)
+        cur.executemany(insert_query, final)
         
 def get_configuration_dates(conn):
     intersections = get_intersection_info(conn)
@@ -92,7 +91,7 @@ def get_configuration_dates(conn):
         else:
             #don't need to fail this non-critical pipeline
             LOGGER.info(f"Intersection {intersection.id1} recieved {response.status_code} error: {response.reason}")
-    sql='''INSERT INTO miovision_api.configuration_updates (intersection_uid, updated_time) VALUES %s
+    sql='''INSERT INTO miovision_api.configuration_updates (intersection_uid, updated_time) VALUES (%s, %s)
         ON CONFLICT (intersection_uid, updated_time) DO NOTHING'''
     with conn.cursor() as cur:
-        execute_values(cur, sql, configs)
+        cur.executemany(sql, configs)

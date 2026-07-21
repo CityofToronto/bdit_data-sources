@@ -8,8 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 import click
-from psycopg2 import sql
-from psycopg2.extras import execute_values
+from psycopg import sql
 
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -161,7 +160,7 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
 
     logger.info('Inserting values into `miovision_api.alerts`.')
     with conn.cursor() as cur:
-        execute_values(cur, insert_query, values)
+        cur.executemany(insert_query, values)
 
 if __name__ == '__main__':
     cli()
