@@ -3,7 +3,7 @@ WITH new_data (
     installation_date, removal_date, new_sign_number, comments,
     work_order, confirmed
 ) AS (
-    VALUES %s --noqa: PRS
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) --noqa: PRS
 ),
 
 dupes AS (

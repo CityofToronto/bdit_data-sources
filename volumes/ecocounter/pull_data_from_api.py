@@ -2,8 +2,7 @@ import requests
 import logging
 from typing import Callable
 from configparser import ConfigParser
-from psycopg2 import connect
-from psycopg2.extras import execute_values
+from psycopg import connect
 from datetime import datetime, timedelta
 from airflow.exceptions import AirflowFailException
 import time
@@ -112,9 +111,9 @@ def truncateSiteSince(site_id: int, conn: any, startDate: datetime, endDate: dat
 
 # insert records
 def insertSiteCounts(conn: any, volume: any):
-    insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES %s"
+    insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES (%s, %s, %s)"
     with conn.cursor() as cur:
-        execute_values(cur, insert_query, volume)
+        cur.executemany(insert_query, volume)
     return cur.query
 
 # insert new site record

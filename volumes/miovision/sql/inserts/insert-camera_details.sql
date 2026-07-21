@@ -1,7 +1,7 @@
 WITH camera_details (
     camera_id, camera_label, id
 ) AS (
-    VALUES %s --noqa: PRS
+    VALUES (%s, %s, %s) --noqa: PRS
 )
 
 INSERT INTO miovision_api.camera_details (
