@@ -13,12 +13,11 @@ import env_canada
 #other packages
 import datetime
 import pandas as pd
-from psycopg2.extras import execute_values
 
 """
 # Uncomment when running script directly
 from configparser import ConfigParser
-from psycopg2 import connect
+from psycopg import connect
 CONFIG=ConfigParser()
 CONFIG.read('config.cfg') # Change DB Settings in db.cfg
 dbset=CONFIG['DBSETTINGS']
@@ -64,12 +63,12 @@ def insert_weather(conn, weather_df):
         with conn.cursor() as cur:
             insert_sql = '''INSERT INTO weather.prediction_daily
                                 (dt, temp_max, temp_min, precip_prob_day, precip_prob_night, text_summary_day, text_summary_night, date_pulled)
-                            VALUES %s
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (dt)
                             DO UPDATE
                             SET (temp_max, temp_min, precip_prob_day, precip_prob_night, text_summary_day, text_summary_night, date_pulled)
                                 = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.precip_prob_day, EXCLUDED.precip_prob_night, EXCLUDED.text_summary_day, EXCLUDED.text_summary_night, EXCLUDED.date_pulled)'''
-            execute_values(cur, insert_sql, weather_df[weather_fields].values)
+            cur.executemany(insert_sql, weather_df[weather_fields].values)
 
 #if __name__ == '__main__':
 def prediction_upsert(cred):

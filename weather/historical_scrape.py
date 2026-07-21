@@ -3,8 +3,7 @@
 import requests
 from bs4 import BeautifulSoup
 import logging
-from psycopg2 import sql
-from psycopg2.extras import execute_values
+from psycopg import sql
 import datetime
 import pandas as pd
 
@@ -13,7 +12,7 @@ logging.basicConfig(level = logging.INFO)
 
 # Uncomment when running script directly
 #from configparser import ConfigParser
-#from psycopg2 import connect
+#from psycopg import connect
 #CONFIG=ConfigParser()
 #CONFIG.read(str(Path.home().joinpath('db.cfg')))
 #dbset = CONFIG['DBSETTINGS']
@@ -136,13 +135,13 @@ def upsert_weather(conn, weather_df, stationid):
             upsert_sql = sql.SQL(
                 '''
                 INSERT INTO {table} (dt, temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip)
-                VALUES %s
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (dt)
                 DO UPDATE
                 SET (temp_max, temp_min, mean_temp, total_rain, total_snow, total_precip)
                     = (EXCLUDED.temp_max, EXCLUDED.temp_min, EXCLUDED.mean_temp, EXCLUDED.total_rain, EXCLUDED.total_snow, EXCLUDED.total_precip);
                 ''').format(table = sql.Identifier(schema_name, station_table_name))
-            execute_values(cur, upsert_sql, weather_df[weather_fields].values)
+            cur.executemany(upsert_sql, weather_df[weather_fields].values)
 
 #if __name__ == '__main__':
 def historical_upsert(cred, run_date, station_id):

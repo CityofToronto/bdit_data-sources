@@ -12,7 +12,8 @@ CREATE TEMP TABLE daily_intersections (
 
 INSERT INTO daily_intersections (
     api_id, address, sign_name, dir, start_date, loc
-) VALUES %s;
+)
+VALUES (%s, %s, %s, %s, %s, %s);
 
 UPDATE daily_intersections
 SET geom = ST_Transform(
