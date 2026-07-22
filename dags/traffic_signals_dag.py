@@ -19,9 +19,8 @@ Updated on 2022-09-12
 
 import os
 import sys
-from psycopg2 import sql
+from psycopg import sql
 import requests
-from psycopg2.extras import execute_values
 from dateutil.parser import parse
 import pendulum
 
@@ -92,15 +91,16 @@ def pull_rlc(vz_cred):
         rows.append(tuple(one_rlc))
     
     # truncate and insert into the local table
-    insert = """INSERT INTO vz_safety_programs_staging.rlc ({columns}) VALUES %s"""
+    insert = """INSERT INTO vz_safety_programs_staging.rlc ({columns}) VALUES ({placeholders});"""
     insert_query = sql.SQL(insert).format(
-        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names]),
+        placeholders = sql.SQL(",").join([sql.Placeholder()] * len(col_names))
     )
     
     with conn:
         with conn.cursor() as cur:
             cur.execute("TRUNCATE {}".format(local_table))
-            execute_values(cur, insert_query, rows)
+            cur.executemany(insert_query, rows)
 
 # ------------------------------------------------------------------------------
 def insert_data(conn, col_names, rows, ts_type):
@@ -117,10 +117,10 @@ def insert_data(conn, col_names, rows, ts_type):
     ts_type: a string that indicates the type of traffic signal
     
     '''
-    
-    insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES %s"""
+    insert = """INSERT INTO vz_safety_programs_staging.signals_cart ({columns}) VALUES ({placeholders});"""
     insert_query = sql.SQL(insert).format(
-        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names])
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in col_names]),
+        placeholders = sql.SQL(",").join([sql.Placeholder()] * len(col_names))
     )
     
     delete = """DELETE FROM vz_safety_programs_staging.signals_cart WHERE asset_type = %s"""
@@ -129,7 +129,7 @@ def insert_data(conn, col_names, rows, ts_type):
     with conn:
         with conn.cursor() as cur:
             cur.execute(delete_query, (ts_type,))
-            execute_values(cur, insert_query, rows)
+            cur.executemany(insert_query, rows)
 
 # ------------------------------------------------------------------------------
 def pull_aps(vz_cred):
@@ -392,13 +392,14 @@ def pull_traffic_signal(vz_cred):
         complete_rows.append(one_complete_ts)
     
     # Upsert query to update gis.traffic_signal
-    upsert_gis = """INSERT INTO gis.traffic_signal ({columns}) VALUES %s ON CONFLICT (px) DO UPDATE SET """
+    upsert_gis = """INSERT INTO gis.traffic_signal ({columns}) VALUES ({placeholders}) ON CONFLICT (px) DO UPDATE SET """
     for col in column_names:
         upsert_gis += (col + '=EXCLUDED.' + col + ',')
     upsert_gis = upsert_gis.rstrip(",") # delete the trailing comma
 
     upsert_query_gis = sql.SQL(upsert_gis).format(
-        columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names])
+        columns = sql.SQL(',').join([sql.Identifier(col) for col in column_names]),
+        placeholders = sql.SQL(",").join([sql.Placeholder()] * len(column_names))
     )
 
     #label traffic signals removed from open data.
@@ -410,7 +411,7 @@ def pull_traffic_signal(vz_cred):
     
     with conn:
         with conn.cursor() as cur:
-            execute_values(cur, upsert_query_gis, complete_rows)
+            cur.executemany(upsert_query_gis, complete_rows)
             cur.execute(update_deleted)
     
 # ------------------------------------------------------------------------------
