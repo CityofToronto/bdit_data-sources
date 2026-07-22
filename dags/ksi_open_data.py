@@ -60,6 +60,16 @@ def ksi_opan_data():
         retries = 0
     )
 
+    refresh_ksi_vz_staging = SQLExecuteQueryOperator(
+        sql='''
+            REFRESH MATERIALIZED VIEW CONCURRENTLY open_data_staging.ksi_vz;
+            ''',
+        task_id='refresh_ksi_staging',
+        conn_id='collisions_bot',
+        autocommit=True,
+        retries = 0
+    )
+
     @task_group()
     def data_checks():
         check_deleted_collision = SQLExecuteQueryOperator(
@@ -164,15 +174,47 @@ def ksi_opan_data():
             conn_id="collisions_bot",
             do_xcom_push=True,
         )
-        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions, check_dup_person, check_incorrect_fatalno, check_non_fatal
+        # Check number of collisions in ksi_vz and ksi
+        # To see if they are the same
+        # (only >=2006 cause ksi open data only includes post 2006)
+        check_num_collision_op_vz = SQLExecuteQueryOperator(
+            task_id="check_non_fatal",
+            sql='''
+                SELECT COUNT(*) = 0 AS _check, 
+	            'There are '|| count(*) ||'collision_id with fatal_no for non fatal person. '||
+                    '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS false_fatal 
+                FROM (
+                select CONCAT(accident_year, ':', accident_number) as collision_id
+                FROM open_data_staging.ksi_vz
+                left join open_data_staging.ksi on (collision_id = CONCAT(accident_year, ':', accident_number))
+                where ksi.collision_id is null and accident_date >='2006-01-01') checks;
+                    ''',
+            conn_id="collisions_bot",
+            do_xcom_push=True,
+        )
+        return check_deleted_collision, check_missing_person, check_null_fatal_no, check_dup_collisions, check_dup_person, check_incorrect_fatalno, check_non_fatal, check_num_collision_op_vz
     
-    truncate_and_copy = SQLExecuteQueryOperator(
+    truncate_and_copy_open_data = SQLExecuteQueryOperator(
         sql='''
             TRUNCATE open_data.ksi;
             INSERT INTO open_data.ksi 
             SELECT * FROM open_data_staging.ksi;
             ''',
-        task_id='truncate_and_copy',
+        task_id='truncate_and_copy_open_data',
+        conn_id='collisions_bot',
+        autocommit=True,
+        retries = 0,
+        # so it doesnt get skipped
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
+    )
+
+    truncate_and_copy_vz = SQLExecuteQueryOperator(
+        sql='''
+            TRUNCATE open_data.ksi_vz;
+            INSERT INTO open_data.ksi_vz 
+            SELECT * FROM open_data_staging.ksi_vz;
+            ''',
+        task_id='truncate_and_copy_vz',
         conn_id='collisions_bot',
         autocommit=True,
         retries = 0,
@@ -247,15 +289,15 @@ def ksi_opan_data():
     checks = data_checks()
     branch = decide_approval(*(c.output for c in checks))
 
-    refresh_ksi_staging >> checks >> branch
+    refresh_ksi_staging >> refresh_ksi_vz_staging >> checks >> branch
 
     # if no data checks failed
     # continue with refresh
-    branch >> skip_approval >> truncate_and_copy
+    branch >> skip_approval >> [truncate_and_copy_open_data, truncate_and_copy_vz]
     # If data checks failed, prompt for approval
     # Then only refresh when approved
-    branch >> checks_failed_message() >> approve_refresh >> truncate_and_copy
+    branch >> checks_failed_message() >> approve_refresh >> [truncate_and_copy_open_data, truncate_and_copy_vz]
 
-    truncate_and_copy >> status_message()
+    [truncate_and_copy_open_data, truncate_and_copy_vz] >> status_message()
 
 ksi_opan_data()
