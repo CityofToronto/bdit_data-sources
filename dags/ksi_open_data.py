@@ -181,13 +181,15 @@ def ksi_opan_data():
             task_id="check_non_fatal",
             sql='''
                 SELECT COUNT(*) = 0 AS _check, 
-	            'There are '|| count(*) ||'collision_id with fatal_no for non fatal person. '||
+	            'There are '|| count(*) ||'collision_id in KSI VZ but not in KSI open data,or vice versa. '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS false_fatal 
                 FROM (
                 select CONCAT(accident_year, ':', accident_number) as collision_id
-                FROM open_data_staging.ksi_vz
-                left join open_data_staging.ksi on (collision_id = CONCAT(accident_year, ':', accident_number))
-                where ksi.collision_id is null and accident_date >='2006-01-01') checks;
+                FROM open_data_staging.ksi_vz -- 70723
+                FULL OUTER JOIN open_data_staging.ksi on (collision_id = CONCAT(accident_year, ':', accident_number))
+                where 
+                (ksi.collision_id is null or ksi_vz.accident_number is null) and (
+                accident_date >='2006-01-01'  OR ksi_vz.accident_date IS NULL)) checks;
                     ''',
             conn_id="collisions_bot",
             do_xcom_push=True,
