@@ -299,9 +299,17 @@ def update_locations(loc_table, conn):
     update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
     with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
-        
+    
+    #cannot execute multiple statements in one executemany with psycopg3 - separate create/insert
+    insert_sql = sql.SQL("""INSERT INTO daily_intersections (
+            api_id, address, sign_name, dir, start_date, loc
+        )
+        VALUES (%s, %s, %s, %s, %s, %s);
+    """)
+
     with conn.cursor() as cur:
-        cur.executemany(daily_intersections_sql, loc_table)
+        cur.execute(daily_intersections_sql)
+        cur.executemany(insert_sql, loc_table)
         logger.info('Create and populated daily_intersections temp table.')
         cur.execute(update_locations_sql)
         logger.info('Finished updating intersections.')

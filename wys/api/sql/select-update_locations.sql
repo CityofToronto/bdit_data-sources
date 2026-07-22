@@ -1,3 +1,14 @@
+UPDATE daily_intersections
+SET geom = ST_Transform(
+    ST_SetSRID(
+        ST_MakePoint(
+            split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 2)::double precision,
+            split_part(regexp_replace(loc, '[()]'::text, ''::text, 'g'::text), ','::text, 1)::double precision
+        ),
+        4326),
+    2952
+);
+
 -- most recent record of each sign
 WITH locations AS (
     SELECT DISTINCT ON (api_id)
