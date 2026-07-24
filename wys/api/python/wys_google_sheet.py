@@ -8,17 +8,14 @@ from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 
 import configparser
-from psycopg2 import connect
-from psycopg2.extras import execute_values
-from psycopg2 import sql
-from psycopg2 import Error
+from psycopg import sql, connect, Error
 
 from datetime import datetime
 import logging 
 from time import sleep
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -146,7 +143,7 @@ def pull_from_sheet(
 
     try:
         with con.cursor() as cur:
-            execute_values(cur, insert, rows)
+            cur.executemany(insert, rows)
         LOGGER.info('Table %s is done', table_name)
     except Error as err2:
         LOGGER.error('There was an error inserting into %s', table_name)
