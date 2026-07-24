@@ -478,7 +478,12 @@ def add_new_intersections(conn):
     '''
     
     with conn.cursor() as cur:
-        new_ints = cur.executemany(insert_sql, rows, fetch=True)
+        cur.executemany(insert_sql, rows, returning=True)
+        new_ints = []
+        while True:
+            new_ints.extend(row[0] for row in cur.fetchall())
+            if not cur.nextset():
+                break
         logger.info('New rows %s', new_ints)
     return new_ints
 
