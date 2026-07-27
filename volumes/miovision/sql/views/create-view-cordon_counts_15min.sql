@@ -8,7 +8,27 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_volume,
         SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_volume,
         SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_volume,
-        SUM(atr.volume * lat.adjusted_volume) AS total_volume
+        SUM(atr.volume * lat.adjusted_volume) AS total_volume,
+        array_diff(
+            cc.intersection_uids,
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9))
+        ) AS auto_intersections_missing,
+        array_diff(
+            cc.intersection_uids,
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (3))
+        ) AS surface_transit_intersections_missing,
+        array_diff(
+            cc.intersection_uids,
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (6))
+        ) AS ped_intersections_missing,
+        array_diff(
+            cc.intersection_uids,
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (10))
+        ) AS bike_intersections_missing,
+        array_diff(
+            cc.intersection_uids,
+            ARRAY_AGG(DISTINCT atr.intersection_uid)
+        ) AS total_intersections_missing
     FROM miovision_api.volumes_15min_atr_unfiltered_table AS atr
     JOIN miovision_api.cordons_long AS c ON
         atr.intersection_uid = c.intersection_uid
@@ -18,7 +38,9 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
             atr.leg = c.exit_leg
             --count active modes wherever they are, if they are travelling in right direction
             OR atr.classification_uid IN (6, 10)
-        ),
+        )
+    --used for the array intersection
+    JOIN miovision_api.cordons AS cc USING (camera_group, label),
     LATERAL (
         SELECT CASE
             WHEN classification_uid = 1 THEN 1.2
@@ -28,11 +50,14 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
                 ELSE 30 END
             ELSE 1 END AS adjusted_volume
     ) AS lat
-    WHERE classification_uid <> 2 --use bike approaches instead
+    WHERE
+        classification_uid <> 2 --use bike approaches instead
+        AND classification_uid <> 7 --generally not in use
     GROUP BY
         c.camera_group,
         c.label,
-        atr.datetime_bin
+        atr.datetime_bin,
+        cc.intersection_uids
 );
 
 ALTER VIEW miovision_api.cordon_counts_15min OWNER TO miovision_admins;
