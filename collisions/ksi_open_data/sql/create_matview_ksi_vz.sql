@@ -35,7 +35,7 @@ SELECT
 	wardnum AS "WARD_NUMBER",
 	accdate::date as "ACCIDENT_DATE",
 	invtype as "INVOLVEMENT_TYPE",
-	latitude,
+	latitude AS "LATITUDE",
 	CASE
 	        WHEN ((case when INVAGE ~ '[^0-9]' THEN null else INVAGE::int end) <= 4) THEN '0 to 4'
 	        WHEN ((case when INVAGE ~ '[^0-9]' THEN null else INVAGE::int end) >= 5 AND case when INVAGE ~ '[^0-9]' THEN null else INVAGE::int end <= 9) THEN '5 to 9'
