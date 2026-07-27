@@ -1,18 +1,18 @@
--- DROP FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], int[], date, date);
+-- DROP FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], int [], date, date);
 
 CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_mvt_filtered(
-    intersection_uids int[],
-    classification_uids int[],
+    intersection_uids int [],
+    classification_uids int [],
     date_start date,
     date_end date
 )
 RETURNS TABLE (
-intersection_uid integer,
-datetime_bin timestamp without time zone,
-classification_uid integer,
-leg text,
-movement_uid int,
-volume numeric
+    intersection_uid integer,
+    datetime_bin timestamp without time zone,
+    classification_uid integer,
+    leg text,
+    movement_uid int,
+    volume numeric
 ) AS $$
 BEGIN
     
@@ -72,23 +72,23 @@ BEGIN
 
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], int[], date, date) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], int[], date, date) TO bdit_humans;
+ALTER FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], int [], date, date) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], int [], date, date) TO bdit_humans;
 
 /*
 --7s, vs 2.5 minutes with view
 SELECT * FROM miovision_api.volumes_15min_mvt_filtered(
-    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int[],
-    classification_uids := '{1}'::int[],
+    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int [],
+    classification_uids := '{1}'::int [],
     date_start := '2026-05-01',
     date_end := CURRENT_DATE
 )
 */
 
--- DROP FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], date, date);
+-- DROP FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], date, date);
 
 CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_mvt_filtered(
-    intersection_uids int[],
+    intersection_uids int [],
     date_start date,
     date_end date
 )
@@ -115,14 +115,14 @@ BEGIN
 
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], date, date) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_mvt_filtered (int[], date, date) TO bdit_humans;
+ALTER FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], date, date) OWNER TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_mvt_filtered(int [], date, date) TO bdit_humans;
 
 /*
 --54s function, vs 11s with view.
 --1s for 1 intersection with both methods
 SELECT * FROM miovision_api.volumes_15min_mvt_filtered(
-    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int[],
+    intersection_uids := '{159,164,162,161,160,158,163,151,152,153,154,155,156,157}'::int [],
     date_start := '2026-05-01',
     date_end := CURRENT_DATE
 )
