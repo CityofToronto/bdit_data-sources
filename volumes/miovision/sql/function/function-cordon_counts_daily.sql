@@ -1,5 +1,7 @@
+--DROP FUNCTION miovision_api.cordon_counts_daily(date, date, text[]);
+
 CREATE OR REPLACE FUNCTION miovision_api.cordon_counts_daily(
-    p_start date, p_end date
+    p_start date, p_end date, camera_groups text[]
 )
 RETURNS TABLE (
     camera_group text,
@@ -35,6 +37,10 @@ AS $$
     WHERE
         datetime_bin >= p_start
         AND datetime_bin < p_end
+        AND (
+            camera_group = ANY(camera_groups)
+            OR camera_groups IS NULL
+        )
     GROUP BY
         camera_group,
         label,
@@ -43,4 +49,7 @@ $$ LANGUAGE sql STABLE;
 
 ALTER FUNCTION miovision_api.cordon_counts_daily OWNER TO miovision_admins;
 
-GRANT SELECT ON FUNCTION miovision_api.cordon_counts_daily TO bdit_humans;
+GRANT EXECUTE ON FUNCTION miovision_api.cordon_counts_daily TO bdit_humans;
+
+--example:
+--SELECT * FROM miovision_api.cordon_counts_daily('2026-04-27', '2026-05-27', ARRAY['Bloor/Danforth', 'Eglinton'])
