@@ -4,7 +4,7 @@
 
 CREATE OR REPLACE FUNCTION miovision_api.update_cordon_geom()
 RETURNS trigger
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 COST 100
 VOLATILE NOT LEAKPROOF
 AS $BODY$
