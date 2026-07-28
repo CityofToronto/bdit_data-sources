@@ -235,6 +235,8 @@ def pull_miovision_dag():
             retries=0,
             params=data_check_params | {
                     "id_col": "classification_uid",
+                    "table": "miovision_api.volumes",
+                    "lookback": "7 days",
                     "threshold": 0.999 #dif is floored, so this will catch a dif of 1. 
                 },
         )
