@@ -32,6 +32,8 @@ GRANT ALL ON TABLE open_data.ksi_vz TO collisions_bot;
 
 GRANT ALL ON TABLE open_data.ksi_vz TO od_admins;
 
+GRANT SELECT ON TABLE open_data.ksi TO vz_readonly;
+
 GRANT SELECT ON TABLE open_data.ksi_vz TO od_extract_svc;
 
 COMMENT ON TABLE open_data.ksi_vz
