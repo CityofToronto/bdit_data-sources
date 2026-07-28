@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS miovision_api.cordons
     label text COLLATE pg_catalog."default",
     exit_legs text [] COLLATE pg_catalog."default",
     geoms geography,
-    start_date date
+    start_date date,
+    CONSTRAINT cordons_unique UNIQUE (camera_group, label, exit_legs)
 )
 
 TABLESPACE pg_default;
