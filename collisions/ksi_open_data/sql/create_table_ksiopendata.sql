@@ -58,6 +58,8 @@ GRANT SELECT ON TABLE open_data.ksi TO od_extract_svc;
 
 GRANT ALL ON TABLE open_data.ksi TO collisions_bot;
 
+GRANT SELECT ON TABLE open_data.ksi TO vz_readonly;
+
 REVOKE ALL ON TABLE open_data.ksi FROM bdit_humans;
 
 COMMENT ON TABLE open_data.ksi
