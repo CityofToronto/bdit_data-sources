@@ -91,12 +91,12 @@ CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
     date_end date
 )
 RETURNS TABLE (
-intersection_uid integer,
-datetime_bin timestamp without time zone,
-classification_uid integer,
-leg text,
-dir text,
-volume integer
+    intersection_uid integer,
+    datetime_bin timestamp without time zone,
+    classification_uid integer,
+    leg text,
+    dir text,
+    volume integer
 ) AS $$
 BEGIN
     
@@ -118,8 +118,11 @@ BEGIN
 
 $$ LANGUAGE plpgsql;
 
-ALTER FUNCTION miovision_api.volumes_15min_atr_filtered(int [], date, date) OWNER TO miovision_admins;
-GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered(int [], date, date) TO bdit_humans;
+ALTER FUNCTION miovision_api.volumes_15min_atr_filtered(int [], date, date)
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered(int [], date, date)
+TO bdit_humans;
 
 /*
 --35s, vs 2.5 minutes with view
