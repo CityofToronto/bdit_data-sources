@@ -1,40 +1,19 @@
-select accident_year, 
-count(distinct accident_number) filter(where injury = 3) as serious,
-count(distinct accident_number) filter(where injury = 4) as fatal,
-count(distinct accident_number) FROM open_data_staging.ksi_vz
-where injury in (3,4)
-group by accident_year
-order by accident_year
-
-
-select * FROM open_data_staging.ksi
-left join  natalie.ksi_2025 on "REC_ID" = rec_id
-where ksi_2025."REC_ID" is null and accident_year = 2025 and injury in (3,4)
-
-select * FROM open_data_staging.ksi_vz
-where accident_year = 2025 and injury in (3,4)
-
-group by accident_year
-order by accident_year
-
-refresh  materialized view  open_data_staging.ksi_vz 
-drop 
-create materialized view  open_data_staging.ksi_vz AS 
+CREATE MATERIALIZED VIEW open_data_staging.ksi_vz AS 
 SELECT 
 	rec_id AS "REC_ID", 
-	accnb as "ACCIDENT_NUMBER", 
-	year::int as "ACCIDENT_YEAR",
+	accnb AS "ACCIDENT_NUMBER", 
+	year::int AS "ACCIDENT_YEAR",
 	longitude AS "LONGITUDE",
 	injury::int AS "INJURY",
-	light as "LIGHT_CONDITION",
-	visible as "VISIBILITY_CONDITION",
+	light AS "LIGHT_CONDITION",
+	visible AS "VISIBILITY_CONDITION",
 	stname1||' '||streetype1||' '||dir1 as "STREET1",
 	stname2||' '||streetype2||' '||dir2 as "STREET2",
-	to_timestamp(acctime, 'HH24MI')::time  as "ACCIDENT_TIME",
-	rdsfcond as "ROAD_SURFACE_CONDITION",
+	to_timestamp(acctime, 'HH24MI')::time  AS "ACCIDENT_TIME",
+	rdsfcond AS "ROAD_SURFACE_CONDITION",
 	wardnum AS "WARD_NUMBER",
-	accdate::date as "ACCIDENT_DATE",
-	invtype as "INVOLVEMENT_TYPE",
+	accdate::date AS "ACCIDENT_DATE",
+	invtype AS "INVOLVEMENT_TYPE",
 	latitude AS "LATITUDE",
 	CASE
 	        WHEN ((case when INVAGE ~ '[^0-9]' THEN null else INVAGE::int end) <= 4) THEN '0 to 4'
@@ -63,7 +42,7 @@ SELECT
 	accdate +  to_timestamp(acctime, 'HH24MI')::time  as "DATETIME"
 
 FROM collisions.acc 
-where injury in ('3','4') AND road_class != 'Private Property';
+WHERE injury IN ('3','4', '03', '04') AND (road_class IS NULL OR road_class != 'Private Property');
 
 ALTER TABLE IF EXISTS open_data_staging.ksi_vz
     OWNER TO collisions_bot;
