@@ -4,26 +4,30 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         c.camera_group,
         c.label,
         atr.datetime_bin,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (3)) AS surface_transit_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (6)) AS ped_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (WHERE classification_uid IN (10)) AS bike_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (
+            WHERE atr.classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (
+            WHERE atr.classification_uid IN (3)) AS surface_transit_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (
+            WHERE atr.classification_uid IN (6)) AS ped_volume,
+        SUM(atr.volume * lat.adjusted_volume) FILTER (
+            WHERE atr.classification_uid IN (10)) AS bike_volume,
         SUM(atr.volume * lat.adjusted_volume) AS total_volume,
         array_diff(
             cc.intersection_uids,
-            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (1, 4, 5, 8, 9))
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (1, 4, 5, 8, 9))
         ) AS auto_intersections_missing,
         array_diff(
             cc.intersection_uids,
-            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (3))
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (3))
         ) AS surface_transit_intersections_missing,
         array_diff(
             cc.intersection_uids,
-            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (6))
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (6))
         ) AS ped_intersections_missing,
         array_diff(
             cc.intersection_uids,
-            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE classification_uid IN (10))
+            ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (10))
         ) AS bike_intersections_missing,
         array_diff(
             cc.intersection_uids,
@@ -41,15 +45,15 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         )
     --used for the array intersection
     JOIN miovision_api.cordons AS cc USING (camera_group, label),
-    LATERAL (
-        SELECT CASE
-            WHEN classification_uid = 1 THEN 1.2
-            WHEN classification_uid = 3 THEN
-                --peak hour adjustment for bus/streetcar occupancy
-                CASE WHEN date_part('hour', atr.datetime_bin) IN (7,8,9,16,17,18) THEN 70
-                ELSE 30 END
-            ELSE 1 END AS adjusted_volume
-    ) AS lat
+        LATERAL (
+            SELECT CASE
+                WHEN classification_uid = 1 THEN 1.2
+                WHEN classification_uid = 3 THEN
+                    --peak hour adjustment for bus/streetcar occupancy
+                    CASE WHEN date_part('hour', atr.datetime_bin) IN (7,8,9,16,17,18) THEN 70
+                    ELSE 30 END
+                ELSE 1 END AS adjusted_volume
+        ) AS lat
     WHERE
         classification_uid <> 2 --use bike approaches instead
         AND classification_uid <> 7 --generally not in use
