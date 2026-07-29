@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS miovision_api.cordons
     camera_group text COLLATE pg_catalog."default",
     label text COLLATE pg_catalog."default",
     exit_legs text [] COLLATE pg_catalog."default",
-    geoms geography
+    geoms geography,
+    start_date date
 )
 
 TABLESPACE pg_default;
