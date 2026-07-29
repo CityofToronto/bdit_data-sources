@@ -6,16 +6,17 @@
     - [`classifications`](#classifications)
     - [`movements`](#movements)
     - [`volumes`](#volumes)
-    - [`miovision_api.cordons` (table)](#miovision_apicordons-table)
   - [Aggregated Data](#aggregated-data)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
     - [`miovision_api.volumes_15min_atr_unfiltered_table` (table)](#miovision_apivolumes_15min_atr_unfiltered_table-table)
     - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
-    - [`miovision_api.volumes_daily`](#miovision_apivolumes_daily)
-    - [`miovision_api.cordon_counts_15min` (None)](#miovision_apicordon_counts_15min-none)
-    - [`miovision_api.cordon_counts_daily` (None)](#miovision_apicordon_counts_daily-none)
+    - [`miovision_api.volumes_daily` (View)](#miovision_apivolumes_daily-view)
     - [`unacceptable_gaps`](#unacceptable_gaps)
     - [`gapsize_lookup`](#gapsize_lookup)
+  - [Cordons](#cordons)
+    - [`miovision_api.cordons` (table)](#miovision_apicordons-table)
+    - [`miovision_api.cordon_counts_15min` (View)](#miovision_apicordon_counts_15min-view)
+    - [`miovision_api.cordon_counts_daily()` (Function)](#miovision_apicordon_counts_daily-function)
   - [Reference Tables](#reference-tables)
     - [`miovision_api.breaks`](#miovision_apibreaks)
     - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
@@ -161,20 +162,6 @@ volume_15min_mvt_uid|serial|Unenforced foreign key to [`volumes_15min_mvt`](#vol
 
 - A *Unique constraint* exists on `miovision_api.volumes` based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg`, and `movement_uid`.
 
-### `miovision_api.cordons` (table)
-Groups of Miovision cameras+legs for Cordon/Area reporting. Use VIEW `miovision_api.cordons_long` for easier joins.
-- When adding new groups, you do not need to insert the geom. This will be updated by a trigger.
-- There can be multiple rows with the same camera group + label. This is for when different intersections as part of the group need different legs included (ie. East side of downtown have `W` leg and West side of downtown have `E` leg for downtown exit volumes)
-
-Approx row count:                    10
-| Column Name       | Data Type   | Sample                                                                           | Comments   |
-|-------------------|-------------|----------------------------------------------------------------------------------|------------|
-| intersection_uids | integer[]   | [1, 5, 10, 22, 26, 69, 70, 94, 95, 98, 101, 102, 103, 104, 110, 111, 112]        |            |
-| camera_group      | text        | Bathurst - South of Dupont                                                       |            |
-| label             | text        | East                                                                             |            |
-| exit_legs         | text[]      | ['E']                                                                            |            |
-| geoms             | geography   | 0104000020E6100000110000000101000000AC8C5DDA84DA53C0209759002AD6454001010000004A |            |
-
 ## Aggregated Data
 
 Data are aggregated from 1-minute volume data into two types of 15-minute volume products: Turning Movement Count (TMC) [(in `volumes_15min_mvt`)](#volumes_15min_mvt) and Automatic Traffic Recorder (ATR) [(in `volumes_15min_atr_filtered`)](#volumes_15min_atr_filtered) equivalents. Have a look at [Understanding Legs, Movement and Direction of Travel in `getting_started.md`](../getting_started.md#understanding-legs-movement-and-direction-of-travel) for a visual explanation of the differences between the two tables. The diagram below briefly describes the flow of data between key aggregate tables. 
@@ -314,7 +301,7 @@ volume|integer|Total 15-minute volume|107|
 
 [`miovision_api.movement_map`](#movement_map) is a lookup table used to convert the TMC data to the ATR data. 
 
-### `miovision_api.volumes_daily`
+### `miovision_api.volumes_daily` (View)
 
 Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
 Note the table `volumes_daily_unfiltered` can be used (with caution) to include data labelled as anomalous. 
@@ -330,45 +317,6 @@ Note the table `volumes_daily_unfiltered` can be used (with caution) to include 
 | datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
 | unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable based on avg intersection volume in that hour.                   | smallint    | 0          |
 | avg_historical_gap_vol   | Avg historical volume for that classification and gap duration based on averages from a 60 day lookback in that hour.             | integer     |            |
-
-### `miovision_api.cordon_counts_15min` (None)
-
-Approx row count:                    0
-| Column Name                           | Data Type                   | Sample                                                                       | Comments   |
-|---------------------------------------|-----------------------------|------------------------------------------------------------------------------|------------|
-| camera_group                          | text                        | Eglinton                                                                     |            |
-| label                                 | text                        | All Directions                                                               |            |
-| datetime_bin                          | timestamp without time zone | 2026-05-22 00:00:00                                                          |            |
-| auto_volume                           | numeric                     | 4888.6                                                                       |            |
-| surface_transit_volume                | numeric                     | 5700.0                                                                       |            |
-| ped_volume                            | numeric                     | 338.0                                                                        |            |
-| bike_volume                           | numeric                     | 5.0                                                                          |            |
-| total_volume                          | numeric                     | 10931.6                                                                      |            |
-| auto_intersections_missing            | integer[]                   | []                                                                           |            |
-| surface_transit_intersections_missing | integer[]                   | []                                                                           |            |
-| ped_intersections_missing             | integer[]                   | [59, 113]                                                                    |            |
-| bike_intersections_missing            | integer[]                   | [36, 45, 59, 80, 106, 107, 108, 109, 113, 114, 117, 118, 153, 155, 156, 157] |            |
-| total_intersections_missing           | integer[]                   | []                                                                           |            |
-
-### `miovision_api.cordon_counts_daily` (None)
-
-Approx row count:                    0
-| Column Name                           | Data Type   | Sample         | Comments   |
-|---------------------------------------|-------------|----------------|------------|
-| camera_group                          | text        | Eglinton       |            |
-| label                                 | text        | All Directions |            |
-| dt                                    | date        | 2026-05-22     |            |
-| auto_volume                           | numeric     | 1060156.4      |            |
-| surface_transit_volume                | numeric     | 1063910.0      |            |
-| ped_volume                            | numeric     | 150497.0       |            |
-| bike_volume                           | numeric     | 4025.0         |            |
-| total_volume                          | numeric     | 2278588.4      |            |
-| auto_intersections_missing            | integer[]   | []             |            |
-| surface_transit_intersections_missing | integer[]   | []             |            |
-| ped_intersections_missing             | integer[]   | []             |            |
-| bike_intersections_missing            | integer[]   | [36]           |            |
-| total_intersections_missing           | integer[]   | []             |            |
-
 
 ### `unacceptable_gaps`
 
@@ -400,6 +348,94 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 | weekend            | True if Saturday/Sunday or holiday (based on ref.holiday table).                    | boolean     | False              |
 | avg_hour_vol       | The average volume for this hour/intersection/weekend combination based on a 60 day lookback.                  | numeric     | 1.6666666666666667 |
 | gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid for the overall intersection volume (classification_uid IS NULL).           | smallint    |                    |
+
+## Cordons
+
+Miovision Cordons are bundles of cameras arranged usually in either an area, screenline, or bounding box. They can be used to quickly track broader multi-modal movement trends. 
+
+![Example Cordon plot from FIFA Monitoring](<../img/Downtown Cordon - Inbound.png>)
+
+> [!CAUTION]
+> - Volumes are currently raw/unfiltered. Care should be taken to pick dates and camera groups without known issues.
+>   - Since these volumes are unvalidated, they are best used for within-mode trends (ped volumes are up x%) and not for modeshare calculations.
+> - [Adjusted Volumes](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/sql/views/create-view-cordon_counts_15min.sql#L49-L55) are used to account for vehicle occpancy:
+>   - 1.2 for vehicles
+>   - 70 for transit vehicles during peak periods, 30 otherwise. Consider whether this approximation is appropriate for your use. In particular it makes transit mode share look very high overnight.
+
+
+### `miovision_api.cordons` (table)
+Groups of Miovision cameras+legs for Cordon/Area reporting. Use VIEW `miovision_api.cordons_long` for easier joins.
+- When adding new groups, you do not need to insert the geom. This column will be updated by the `trg_cordon_geom` trigger.
+- There can be multiple rows with the same camera group + label. This is for when different intersections as part of the group need different legs included (ie. East side of downtown have `W` leg and West side of downtown have `E` leg for downtown exit volumes)
+
+Approx row count:                    10
+| Column Name       | Data Type   | Sample                                                                           | Comments   |
+|-------------------|-------------|----------------------------------------------------------------------------------|------------|
+| intersection_uids | integer[]   | [1, 5, 10, 22, 26, 69, 70, 94, 95, 98, 101, 102, 103, 104, 110, 111, 112]        |            |
+| camera_group      | text        | Bathurst - South of Dupont                                                       |            |
+| label             | text        | East                                                                             |            |
+| exit_legs         | text[]      | ['E']                                                                            |            |
+| geoms             | geography   | 0104000020E6100000110000000101000000AC8C5DDA84DA53C0209759002AD6454001010000004A |            |
+| start_date        | date        | 2024-10-28                                                                       | The latest date where one of the cameras was installed. Can be adjusted for other data quality reasons. |
+
+### `miovision_api.cordon_counts_15min` (View)
+
+A 15 minute cordon view, which looks good on daily graphs.
+- Note: the `*_intersections_missing` columns are very volatile on a 15 minute basis. They are better used at the daily level, which this view feeds into. 
+
+> [!CAUTION]
+> - A naive query like `SELECT * FROM miovision_api.cordon_counts_15min LIMIT 10` will be very slow. To see a data sample, filter for a specific `camera_group` and date range: 
+> ```sql
+> SELECT * FROM miovision_api.cordon_counts_15min WHERE datetime_bin >= CURRENT_DATE - 7 AND camera_group = 'Bathurst - South of Dupont' LIMIT 10
+> ```
+
+| Column Name                           | Data Type                   | Sample                                                                       | Comments   |
+|---------------------------------------|-----------------------------|------------------------------------------------------------------------------|------------|
+| camera_group                          | text                        | Eglinton                                                                     |            |
+| label                                 | text                        | All Directions                                                               |            |
+| datetime_bin                          | timestamp without time zone | 2026-05-22 00:00:00                                                          |            |
+| auto_volume                           | numeric                     | 4888.6                                                                       | Miovision volume * 1.2        |
+| surface_transit_volume                | numeric                     | 5700.0                                                                       | Miovision volume * 70 during peak hours & * 30 during off-peak hours. |
+| ped_volume                            | numeric                     | 338.0                                                                        |            |
+| bike_volume                           | numeric                     | 5.0                                                                          |            |
+| total_volume                          | numeric                     | 10931.6                                                                      |            |
+| auto_intersections_missing            | integer[]                   | []                                                                           |            |
+| surface_transit_intersections_missing | integer[]                   | []                                                                           |            |
+| ped_intersections_missing             | integer[]                   | [59, 113]                                                                    |            |
+| bike_intersections_missing            | integer[]                   | [36, 45, 59, 80, 106, 107, 108, 109, 113, 114, 117, 118, 153, 155, 156, 157] |            |
+| total_intersections_missing           | integer[]                   | []                                                                           |            |
+
+### `miovision_api.cordon_counts_daily()` (Function)
+
+Daily cordon counts (function). Creating a daily view was not efficient, because query engine couldn't push down a filter on a date column to the timestamp `datetime_bin` column of 15 minute data.
+
+Example usage:
+```sql
+--Total rows: 45
+--Query complete 00:00:07.172
+--Notice the Eglinton cordon only starts after 2026-05-12 based on last camera install date, but bikes are missing from most intersections until 2026-05-20
+SELECT * FROM miovision_api.cordon_counts_daily(
+    p_start := '2026-04-27'::date,
+    p_end := '2026-05-27'::date,
+    camera_groups := ARRAY['Bloor/Danforth', 'Eglinton']::text[])
+```
+
+Approx row count:                    0
+| Column Name                           | Data Type   | Sample         | Comments   |
+|---------------------------------------|-------------|----------------|------------|
+| camera_group                          | text        | Eglinton       |            |
+| label                                 | text        | All Directions |            |
+| dt                                    | date        | 2026-05-22     |            |
+| auto_volume                           | numeric     | 1060156.4      |            |
+| surface_transit_volume                | numeric     | 1063910.0      |            |
+| ped_volume                            | numeric     | 150497.0       |            |
+| bike_volume                           | numeric     | 4025.0         |            |
+| total_volume                          | numeric     | 2278588.4      |            |
+| auto_intersections_missing            | integer[]   | []             |            |
+| surface_transit_intersections_missing | integer[]   | []             |            |
+| ped_intersections_missing             | integer[]   | []             |            |
+| bike_intersections_missing            | integer[]   | [36]           |            |
+| total_intersections_missing           | integer[]   | []             |            |
 
 
 ## Reference Tables
