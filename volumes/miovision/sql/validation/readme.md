@@ -1,117 +1,38 @@
 ```mermaid
 %%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
 flowchart TD
-    subgraph miovision_validation
-        miovision_validation.summary_golden_count_info[[summary_golden_count_info]]
-        miovision_validation.golden_data_matched_grouped[[golden_data_matched_grouped]]
-        miovision_validation.golden_summary_table_step1[[golden_summary_table_step1]]
-        miovision_validation.golden_summary_table_step2[[golden_summary_table_step2]]
-        miovision_validation.miovision_golden_data[[miovision_golden_data]]
-        miovision_validation.golden_error_agg_intersection[[golden_error_agg_intersection]]
-        miovision_validation.golden_error_percentile_leg[[golden_error_percentile_leg]]
-        miovision_validation.valid_legs_view[[valid_legs_view]]
-        miovision_validation.golden_error_agg_leg[[golden_error_agg_leg]]
-        miovision_validation.valid_intersections_view[[valid_intersections_view]]
-        miovision_validation.golden_error_percentile_mvmt[[golden_error_percentile_mvmt]]
-        miovision_validation.golden_data_matched[[golden_data_matched]]
-        miovision_validation.summary_intersection_count[[summary_intersection_count]]
-        miovision_validation.golden_disagg_bin_errors[[golden_disagg_bin_errors]]
-    end
-    miovision_validation.miovision_golden_data --> miovision_validation.summary_golden_count_info
-    miovision_validation.miovision_golden_data --> miovision_validation.summary_intersection_count
-    miovision_validation.miovision_golden_data --> miovision_validation.golden_data_matched
-    miovision_validation.golden_data_matched --> miovision_validation.golden_data_matched_grouped
-    miovision_validation.golden_data_matched_grouped --> miovision_validation.golden_disagg_bin_errors
-    miovision_validation.golden_data_matched_grouped --> miovision_validation.golden_error_agg_leg
-    miovision_validation.golden_data_matched_grouped --> miovision_validation.golden_error_agg_intersection
-    miovision_validation.golden_disagg_bin_errors --> miovision_validation.golden_error_percentile_mvmt
-    miovision_validation.golden_disagg_bin_errors --> miovision_validation.golden_error_percentile_leg
-    miovision_validation.golden_disagg_bin_errors --> miovision_validation.golden_summary_table_step1
-    miovision_validation.golden_error_agg_intersection --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_agg_leg --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_percentile_leg --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_percentile_mvmt --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_agg_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_mvmt --> miovision_validation.valid_legs_view
-    miovision_validation.valid_legs_view --> miovision_validation.valid_intersections_view
-        style miovision_validation.miovision_golden_data fill:#f9f,stroke:#333,stroke-width:4px
-```
 
-```mermaid
-%%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
-flowchart TD
-    subgraph miovision_api
-        miovision_api.intersections[intersections]
+    subgraph "Identify Spectrum Studies"
+        insert_spectrum_studies@{ shape: braces, label: "miovision_validation.insert_spectrum_studies()"}
+        traffic.tmc_metadata@{ shape: card} --> insert_spectrum_studies
+        intersections@{label: "miovision_api.intersections", shape: card}
+        insert_spectrum_studies -->|Log studies| miovision_validation.spectrum_studies@{ shape: card}
     end
-    subgraph traffic
-        traffic.tmc_metadata[tmc_metadata]
-        traffic.tmc_study_data[tmc_study_data]
-    end
-    subgraph miovision_validation
-        miovision_validation.mio_spec_intersections[mio_spec_intersections]
-    end
-    miovision_api.intersections ----> miovision_validation.mio_spec_intersections
-    traffic.tmc_metadata ----> miovision_validation.mio_spec_intersections
-    traffic.tmc_study_data ----> miovision_validation.mio_spec_intersections
-        style miovision_validation.mio_spec_intersections fill:#f9f,stroke:#333,stroke-width:4px,color:black
-```
 
-```sql
-SELECT gwolofs.mermaid_dependency_diagram('miovision_validation', 'valid_legs_view')
-```
+    subgraph "Miovision Validation"
 
-```mermaid
-%%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
-flowchart TD
-    subgraph miovision_validation
-        miovision_validation.golden_error_percentile_leg[golden_error_percentile_leg]
-        miovision_validation.valid_legs_view[valid_legs_view]
-        miovision_validation.golden_error_agg_leg[golden_error_agg_leg]
-        miovision_validation.valid_intersections_view[valid_intersections_view]
-        miovision_validation.golden_error_percentile_mvmt[golden_error_percentile_mvmt]
+        v15@{ shape: procs, label: "miovision_api.volumes_15min_mvt_unfiltered" }
+        insert_processed_counts@{ shape: braces, label: "miovision_validation.insert_processed_counts()"}
+        
+        insert_processed_counts -->|Cache counts to improve query speeds| miovision_validation.mio_spec_processed_counts@{ shape: card}
+        v15 --> insert_processed_counts
+        intersections --> insert_spectrum_studies
+        miovision_validation.spectrum_studies --> insert_processed_counts
+        miovision_validation.spec_class_move_map@{ shape: card} --> insert_processed_counts
+        insert_processed_counts ----> |Log if data| miovision_validation.spectrum_studies
+        miovision_validation.mio_spec_processed_counts --> DC_Views@{ shape: manual, label: "Data Collection spectrum_miovision_validation views" }
+        DC_Views --> miovision_validation.valid_legs_view@{ shape: manual} --> |Cache to improve speeds and reduce dependencies| miovision_validation.valid_legs@{ shape: card}
+        DC_Views --> miovision_validation.valid_intersections_view@{ shape: manual} --> |Cache to improve speeds and reduce dependencies| miovision_validation.valid_intersections@{ shape: card}
+        miovision_validation.spectrum_studies -->|Anti-join already processed studies| insert_spectrum_studies
+        traffic.tmc_study_data@{ shape: card} --> insert_processed_counts
+        
     end
-    miovision_validation.golden_error_agg_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_mvmt --> miovision_validation.valid_legs_view
-    miovision_validation.valid_legs_view --> miovision_validation.valid_intersections_view
-        style miovision_validation.valid_legs_view fill:#f9f,stroke:#333,stroke-width:4px,color:black
-```
 
-```mermaid
-%%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
-flowchart TD
-    subgraph miovision_api
-        miovision_api.intersections[intersections]
+    subgraph Legend
+        Partition@{ shape: procs, label: "Partitioned Tables" }
+        Table@{ shape: card}
+        Function@{ shape: braces, label: Function}
+        View@{ shape: manual}        
+        Partition --> Function --> Table
     end
-    subgraph dmcelroy
-        dmcelroy.miovision_golden_qc_excel_file_output[miovision_golden_qc_excel_file_output]
-    end
-    subgraph miovision_validation
-        miovision_validation.golden_data_matched_grouped[golden_data_matched_grouped]
-        miovision_validation.golden_summary_table_step2[golden_summary_table_step2]
-        miovision_validation.golden_error_agg_intersection[golden_error_agg_intersection]
-        miovision_validation.golden_error_percentile_leg[golden_error_percentile_leg]
-        miovision_validation.valid_legs_view[valid_legs_view]
-        miovision_validation.golden_error_agg_leg[golden_error_agg_leg]
-        miovision_validation.valid_intersections_view[valid_intersections_view]
-        miovision_validation.golden_error_percentile_mvmt[golden_error_percentile_mvmt]
-        miovision_validation.error_thresholds[error_thresholds]
-        miovision_validation.golden_disagg_bin_errors[golden_disagg_bin_errors]
-    end
-    miovision_validation.error_thresholds --> miovision_validation.golden_error_percentile_leg
-    miovision_validation.golden_disagg_bin_errors --> miovision_validation.golden_error_percentile_leg
-    miovision_validation.golden_error_agg_intersection --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_agg_leg --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_percentile_leg --> miovision_validation.golden_summary_table_step2
-    miovision_validation.golden_error_percentile_mvmt --> miovision_validation.golden_summary_table_step2
-    miovision_api.intersections ----> dmcelroy.miovision_golden_qc_excel_file_output
-    miovision_validation.golden_data_matched_grouped ----> dmcelroy.miovision_golden_qc_excel_file_output
-    miovision_validation.golden_error_percentile_leg ----> dmcelroy.miovision_golden_qc_excel_file_output
-    miovision_validation.golden_error_percentile_mvmt ----> dmcelroy.miovision_golden_qc_excel_file_output
-    miovision_validation.golden_error_agg_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_leg --> miovision_validation.valid_legs_view
-    miovision_validation.golden_error_percentile_mvmt --> miovision_validation.valid_legs_view
-    miovision_validation.valid_legs_view --> miovision_validation.valid_intersections_view
-        style miovision_validation.golden_error_percentile_leg fill:#f9f,stroke:#333,stroke-width:4px,color:black
 ```
