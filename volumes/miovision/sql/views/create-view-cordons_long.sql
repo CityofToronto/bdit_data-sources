@@ -4,7 +4,8 @@ SELECT
     cordons.camera_group,
     cordons.label,
     intersection_uid,
-    exit_leg
+    exit_leg,
+    start_date
 FROM miovision_api.cordons,
 UNNEST(intersection_uids) AS intersection_uid,
 UNNEST(exit_legs) AS exit_leg;
