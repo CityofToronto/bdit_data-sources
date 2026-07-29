@@ -1,3 +1,4 @@
+
 DROP VIEW miovision_api.cordon_counts_15min;
 CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
     SELECT
@@ -43,20 +44,21 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
             --count active modes wherever they are, if they are travelling in right direction
             OR atr.classification_uid IN (6, 10)
         )
+        AND atr.datetime_bin >= c.start_date
     --used for the array intersection
     JOIN miovision_api.cordons AS cc USING (camera_group, label),
         LATERAL (
             SELECT CASE
-                WHEN classification_uid = 1 THEN 1.2
-                WHEN classification_uid = 3 THEN
+                WHEN atr.classification_uid = 1 THEN 1.2
+                WHEN atr.classification_uid = 3 THEN
                     --peak hour adjustment for bus/streetcar occupancy
                     CASE WHEN date_part('hour', atr.datetime_bin) IN (7,8,9,16,17,18) THEN 70
                     ELSE 30 END
                 ELSE 1 END AS adjusted_volume
         ) AS lat
     WHERE
-        classification_uid <> 2 --use bike approaches instead
-        AND classification_uid <> 7 --generally not in use
+        atr.classification_uid <> 2 --use bike approaches instead
+        AND atr.classification_uid <> 7 --generally not in use
     GROUP BY
         c.camera_group,
         c.label,
