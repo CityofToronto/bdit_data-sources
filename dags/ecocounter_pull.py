@@ -14,8 +14,6 @@ import dateutil.parser
 import logging
 
 from airflow.sdk import dag, task, task_group
-from airflow.sdk.bases.hook import BaseHook
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk.execution_time.macros import ds_add
 from airflow.sdk.exceptions import AirflowSkipException
@@ -31,7 +29,7 @@ try:
     from bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
     from volumes.ecocounter.pull_data_from_api import (
-        getSites, siteIsKnownToUs, insertSite, insertFlow,
+        getSites, siteIsKnownToUs, insertSite, insertFlow, get_connections,
         flowIsKnownToUs, getKnownSites, truncate_and_insert
     )
 except:
@@ -86,12 +84,6 @@ def pull_ecocounter_dag():
       
         create_annual_partition
     
-    def get_connections():
-        api_conn = BaseHook.get_connection('ecocounter_api_key_v2')
-        password_getter = lambda: api_conn.password
-        eco_postgres = PostgresHook("ecocounter_bot")
-        return eco_postgres, password_getter
-
     @task(trigger_rule='none_failed')
     def update_sites_and_flows(**context):
         eco_postgres, pw = get_connections()
@@ -150,17 +142,16 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def pull_recent_outages():
-        eco_postgres, pw = get_connections()
+        conn, pw = get_connections()
         #get list of outages
-        outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('6 months'::interval);"
-        with eco_postgres.get_conn() as conn, conn.cursor() as curr:
+        outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('2 years'::interval);"
+        with conn.cursor() as curr:
             curr.execute(outage_query)
             recent_outages = curr.fetchall()
         #for each outage, try to pull data
-        with eco_postgres.get_conn() as conn:
-            for outage in recent_outages:
-                site_id, start_date, end_date = outage
-                truncate_and_insert(conn, pw, site_id, start_date, end_date)
+        for outage in recent_outages:
+            site_id, start_date, end_date = outage
+            truncate_and_insert(conn, pw, site_id, start_date, end_date)
 
     t_done = ExternalTaskMarker(
         task_id="done",
