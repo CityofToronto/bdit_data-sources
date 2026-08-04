@@ -35,8 +35,7 @@ WITH ongoing_outages AS (
         AND c.datetime_bin >= now()::date - num_days
         AND c.datetime_bin < now()::date - interval '1 day'
     WHERE
-        f.validated
-        AND dates.dt < COALESCE(f.date_decommissioned, now()::date - interval '1 day')
+        dates.dt < COALESCE(f.date_decommissioned, now()::date - interval '1 day')
     GROUP BY
         f.site_id,
         f.bin_size,
@@ -47,7 +46,9 @@ WITH ongoing_outages AS (
     HAVING
         SUM(c.volume) IS NULL
         --not all datetime bins present, corrected for bin size
-        OR COUNT(DISTINCT c.datetime_bin) <> (3600*24 / EXTRACT(epoch FROM f.bin_size))
+        OR CASE WHEN f.bin_size <> '00:00'::interval --prevent divide by zero
+            THEN COUNT(DISTINCT c.datetime_bin) <> (3600*24 / EXTRACT(epoch FROM f.bin_size))
+            ELSE False END
     WINDOW w AS (PARTITION BY f.site_id ORDER BY dates.dt)
     ORDER BY
         f.site_id,
