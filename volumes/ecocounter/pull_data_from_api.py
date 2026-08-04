@@ -5,6 +5,12 @@ from configparser import ConfigParser
 from psycopg import connect
 from datetime import datetime, timedelta
 from airflow.sdk.exceptions import AirflowFailException
+import time
+
+from airflow.exceptions import AirflowFailException
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.sdk.bases.hook import BaseHook
+from airflow.exceptions import AirflowNotFoundException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -167,12 +173,7 @@ def run_api(
         end_date: datetime = default_end,
         sites: any = ()
 ):
-    CONFIG_PATH = '/data/airflow/data_scripts/bdit_data-sources/volumes/ecocounter/.api-v2-credentials.config'
-    config = ConfigParser()
-    config.read(CONFIG_PATH)
-    conn = connect(**config['DBSETTINGS'])
-    conn.autocommit = True
-    password_getter = lambda: config['API']['password']
+    conn, password_getter = get_connections()
     for site in getSites(password_getter, sites=sites): #optionally specify site_ids here. 
         # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary
@@ -180,3 +181,17 @@ def run_api(
             print('unknown site', site['id'], site['name'])
             continue
         truncate_and_insert(conn, password_getter, site['id'], start_date, end_date)
+
+def get_connections(path='/data/airflow/data_scripts/bdit_data-sources/volumes/ecocounter/.api-v2-credentials.config'):
+    try:
+        api_conn = BaseHook.get_connection('ecocounter_api_key_v2')
+        password_getter = lambda: api_conn.password
+        eco_postgres = PostgresHook("ecocounter_bot")
+        conn = eco_postgres.get_conn()
+    except AirflowNotFoundException:
+        config = ConfigParser()
+        config.read(path)
+        password_getter = lambda: config['API']['password']
+        conn = connect(**config['DBSETTINGS'])
+    conn.autocommit = True
+    return conn, password_getter
