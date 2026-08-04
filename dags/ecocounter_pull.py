@@ -86,10 +86,10 @@ def pull_ecocounter_dag():
     
     @task(trigger_rule='none_failed')
     def update_sites_and_flows(**context):
-        eco_postgres, pw = get_connections()
+        eco_postgres, password_getter = get_connections()
         new_sites, new_flows = [], []
         with eco_postgres.get_conn() as conn:
-            for site in getSites(pw):
+            for site in getSites(password_getter):
                 site_id, site_name, location = site['id'], site['name'], site['location']
                 if not siteIsKnownToUs(site_id, conn):
                     insertSite(conn, site_id, site_name, location['lon'], location['lat'])
@@ -131,18 +131,18 @@ def pull_ecocounter_dag():
 
     @task(trigger_rule='none_failed')
     def pull_ecocounter(ds):
-        eco_postgres, pw = get_connections()
+        eco_postgres, password_getter = get_connections()
         start_date = dateutil.parser.parse(str(ds))
         end_date = dateutil.parser.parse(str(ds_add(ds, 1)))
         LOGGER.info(f'Pulling data from {start_date} to {end_date}.')
         with eco_postgres.get_conn() as conn:
             for site_id in getKnownSites(conn):
                 LOGGER.debug(f'Starting on site {site_id}.')
-                truncate_and_insert(conn, pw, site_id, start_date, end_date)
+                truncate_and_insert(conn, password_getter, site_id, start_date, end_date)
 
     @task(trigger_rule='none_failed')
     def pull_recent_outages():
-        conn, pw = get_connections()
+        conn, password_getter = get_connections()
         #get list of outages
         outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('2 years'::interval);"
         with conn.cursor() as curr:
@@ -151,7 +151,7 @@ def pull_ecocounter_dag():
         #for each outage, try to pull data
         for outage in recent_outages:
             site_id, start_date, end_date = outage
-            truncate_and_insert(conn, pw, site_id, start_date, end_date)
+            truncate_and_insert(conn, password_getter, site_id, start_date, end_date)
 
     t_done = ExternalTaskMarker(
         task_id="done",
