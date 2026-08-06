@@ -14,6 +14,7 @@ JOIN ecocounter.counts_unfiltered AS cu1 USING (flow_id)
 WHERE
     su.site_description LIKE 'Mobile%';
 
+--view used to give humans access to unfiltered data they wouldn't otherwise have access to.
 GRANT SELECT ON TABLE ecocounter.mobile_site_volumes TO bdit_humans;
 
 COMMENT ON VIEW ecocounter.mobile_site_volumes
