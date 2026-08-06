@@ -9,10 +9,10 @@ SELECT
     cu1.volume
 FROM
     ecocounter.sites_unfiltered AS su
-    JOIN ecocounter.flows_unfiltered AS fu USING (site_id)
-    JOIN ecocounter.counts_unfiltered AS cu1 USING (flow_id)
+JOIN ecocounter.flows_unfiltered AS fu USING (site_id)
+JOIN ecocounter.counts_unfiltered AS cu1 USING (flow_id)
 WHERE
-    site_description LIKE 'Mobile%';
+    su.site_description LIKE 'Mobile%';
 
 GRANT SELECT ON TABLE ecocounter.mobile_site_volumes TO bdit_humans;
 
