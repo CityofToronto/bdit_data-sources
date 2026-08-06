@@ -1,6 +1,3 @@
 [submodule "bdit_dag_utils"]
 	path = bdit_dag_utils
 	url = https://github.com/CityofToronto/bdit_dag_utils.git
-[submodule "airflow3_bdit_dag_utils"]
-	path = airflow3_bdit_dag_utils
-	url = https://github.com/CityofToronto/bdit_dag_utils.git
