@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS miovision_validation.spectrum_studies
     count_date date NOT NULL,
     count_id bigint NOT NULL,
     processed boolean DEFAULT false,
-    CONSTRAINT miovision_validation_spectrum_studies_pkey PRIMARY KEY (intersection_uid, count_date)
+    CONSTRAINT miovision_validation_spectrum_studies_pkey PRIMARY KEY (intersection_uid, count_date, count_id)
 )
 
 TABLESPACE pg_default;
