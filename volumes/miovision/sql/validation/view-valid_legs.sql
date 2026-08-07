@@ -1,6 +1,6 @@
---DROP VIEW miovision_validation.valid_legs_view;
+--DROP VIEW miovision_validation.valid_legs_golden_view;
 
-CREATE OR REPLACE VIEW miovision_validation.valid_legs_view AS
+CREATE OR REPLACE VIEW miovision_validation.valid_legs_golden_view AS
 
 WITH individual_tests AS (
     SELECT
@@ -71,15 +71,15 @@ GROUP BY
     classification_uids,
     leg;
 
-SELECT * FROM miovision_validation.valid_legs_view WHERE all_pass;
+SELECT * FROM miovision_validation.valid_legs_golden_view WHERE all_pass;
 
-ALTER TABLE miovision_validation.valid_legs_view
+ALTER TABLE miovision_validation.valid_legs_golden_view
 OWNER TO miovision_validators;
 
-GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO bdit_humans;
-GRANT SELECT ON TABLE miovision_validation.valid_legs_view TO miovision_validation_bot;
-GRANT ALL ON TABLE miovision_validation.valid_legs_view TO miovision_validators;
+GRANT SELECT ON TABLE miovision_validation.valid_legs_golden_view TO bdit_humans;
+GRANT SELECT ON TABLE miovision_validation.valid_legs_golden_view TO miovision_validation_bot;
+GRANT ALL ON TABLE miovision_validation.valid_legs_golden_view TO miovision_validators;
 
-COMMENT ON VIEW miovision_validation.valid_legs_view
+COMMENT ON VIEW miovision_validation.valid_legs_golden_view
 IS 'Contains leg level validation results from Miovision golden counts.
 See table `miovision_validation.valid_legs` for cached (faster) results.';
