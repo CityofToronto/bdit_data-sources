@@ -1,3 +1,50 @@
+- [`miovision_validation.spectrum_studies` (table)](#miovision_validationspectrum_studies-table)
+- [`miovision_validation.mio_spec_processed_counts` (table)](#miovision_validationmio_spec_processed_counts-table)
+- [Validation Flow Chart](#validation-flow-chart)
+
+### `miovision_validation.spectrum_studies` (table)
+Spectrum studies at Miovision intersections. Updated daily by `miovision_validation` Airflow DAG.
+- Vehicle approach counts are stored in order to identify when a spectrum study has been updated (by comparing to what's in `traffic.tmc_summary_stats`)
+
+Approx row count:                    640
+| Column Name      | Data Type   | Sample     | Comments   |
+|------------------|-------------|------------|------------|
+| intersection_uid | integer     | 20         |            |
+| int_id           | integer     | 13466630   |            |
+| count_date       | date        | 2019-03-02 |            |
+| count_id         | bigint      | 38407      |            |
+| processed        | boolean     | True       |            |
+| count_veh_n_appr | numeric     | 4571.0     |            |
+| count_veh_s_appr | numeric     | 3819.0     |            |
+| count_veh_e_appr | numeric     | 828.0      |            |
+| count_veh_w_appr | numeric     | 532.0      |            |
+
+### `miovision_validation.mio_spec_processed_counts` (table)
+
+Stores Miovision and Spectrum study results in order to make downstream calculations quicker. Updated daily by `miovision_validation` Airflow DAG.
+
+Approx row count:            1,195,300
+| Column Name          | Data Type                   | Sample                               | Comments   |
+|----------------------|-----------------------------|--------------------------------------|------------|
+| intersection_uid     | integer                     | 1                                    |            |
+| count_id             | bigint                      | 38677                                |            |
+| count_date           | date                        | 2019-04-09                           |            |
+| datetime_bin         | timestamp without time zone | 2019-04-09 13:00:00                  |            |
+| spec_movements       | text[]                      | ['s_bus_t', 's_cars_t', 's_truck_t'] |            |
+| leg                  | text                        | S                                    |            |
+| spec_class           | text                        | vehicle_all                          |            |
+| movement_name        | text                        | Thru                                 |            |
+| spec_count           | numeric                     | 101.0                                |            |
+| miovision_api_volume | numeric                     | 102.0                                |            |
+| bin_error            | numeric                     | 0.0099                               |            |
+| classification_uids  | integer[]                   | [1, 3, 4, 5, 8]                      |            |
+| movement_uids        | integer[]                   | [1]                                  |            |
+
+### Validation Flow Chart
+
+This flow chart shows the data flows involved in the Miovision validation pipeline.
+The `Data Collection spectrum_miovision_validation views` which implement sensor acceptance criteria are stored [here](https://github.com/Toronto-Big-Data-Innovation-Team/data_validation/tree/main/miovision).
+
 ```mermaid
 %%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
 flowchart TD
