@@ -358,9 +358,7 @@ Miovision Cordons are bundles of cameras arranged usually in either an area, scr
 > [!CAUTION]
 > - Volumes are currently raw/unfiltered. Care should be taken to pick dates and camera groups without known issues.
 >   - Since these volumes are unvalidated, they are best used for within-mode trends (ped volumes are up x%) and not for modeshare calculations.
-> - [Adjusted Volumes](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/miovision/sql/views/create-view-cordon_counts_15min.sql#L49-L55) are used to account for vehicle occpancy:
->   - 1.2 for vehicles
->   - 70 for transit vehicles during peak periods, 30 otherwise. Consider whether this approximation is appropriate for your use. In particular it makes transit mode share look very high overnight.
+> - If analyzing mode share, you may want to adjust the expected occupancy of transit (and auto) vehicles. Currently, 1 transit vehicle and 1 personal auto are treated the same. 
 
 
 ### `miovision_api.cordons` (table)
@@ -404,6 +402,11 @@ A 15 minute cordon view, which looks good on daily graphs.
 | ped_intersections_missing             | integer[]                   | [59, 113]                                                                    |            |
 | bike_intersections_missing            | integer[]                   | [36, 45, 59, 80, 106, 107, 108, 109, 113, 114, 117, 118, 153, 155, 156, 157] |            |
 | total_intersections_missing           | integer[]                   | []                                                                           |            |
+| auto_intersections_present            | integer     | 20             |            |
+| surface_transit_intersections_present | integer     | 20             |            |
+| ped_intersections_present             | integer     | 18             |            |
+| bike_intersections_present            | integer     | 4             |            |
+| total_intersections_present           | integer     | 20             |            |
 
 ### `miovision_api.cordon_counts_daily()` (Function)
 
@@ -436,6 +439,11 @@ Approx row count:                    0
 | ped_intersections_missing             | integer[]   | []             |            |
 | bike_intersections_missing            | integer[]   | [36]           |            |
 | total_intersections_missing           | integer[]   | []             |            |
+| auto_intersections_present            | integer     | 20             |            |
+| surface_transit_intersections_present | integer     | 20             |            |
+| ped_intersections_present             | integer     | 19             |            |
+| bike_intersections_present            | integer     | 20             |            |
+| total_intersections_present           | integer     | 20             |            |
 
 
 ## Reference Tables

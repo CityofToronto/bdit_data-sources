@@ -5,15 +5,15 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         c.camera_group,
         c.label,
         atr.datetime_bin,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (
+        SUM(atr.volume) FILTER (
             WHERE atr.classification_uid IN (1, 4, 5, 8, 9)) AS auto_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (
+        SUM(atr.volume) FILTER (
             WHERE atr.classification_uid IN (3)) AS surface_transit_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (
+        SUM(atr.volume) FILTER (
             WHERE atr.classification_uid IN (6)) AS ped_volume,
-        SUM(atr.volume * lat.adjusted_volume) FILTER (
+        SUM(atr.volume) FILTER (
             WHERE atr.classification_uid IN (10)) AS bike_volume,
-        SUM(atr.volume * lat.adjusted_volume) AS total_volume,
+        SUM(atr.volume) AS total_volume,
         array_diff(
             cc.intersection_uids,
             ARRAY_AGG(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (1, 4, 5, 8, 9))
@@ -33,7 +33,12 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         array_diff(
             cc.intersection_uids,
             ARRAY_AGG(DISTINCT atr.intersection_uid)
-        ) AS total_intersections_missing
+        ) AS total_intersections_missing,
+        COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (1, 4, 5, 8, 9)) AS auto_intersections_present,
+        COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (3)) AS surface_transit_intersections_present,
+        COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (6)) AS ped_intersections_present,
+        COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (10)) AS bike_intersections_present,
+        COUNT(DISTINCT atr.intersection_uid) AS total_intersections_present
     FROM miovision_api.volumes_15min_atr_unfiltered_table AS atr
     JOIN miovision_api.cordons_long AS c ON
         atr.intersection_uid = c.intersection_uid
@@ -46,16 +51,7 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         )
         AND atr.datetime_bin >= c.start_date
     --used for the array intersection
-    JOIN miovision_api.cordons AS cc USING (camera_group, label),
-        LATERAL (
-            SELECT CASE
-                WHEN atr.classification_uid = 1 THEN 1.2
-                WHEN atr.classification_uid = 3 THEN
-                    --peak hour adjustment for bus/streetcar occupancy
-                    CASE WHEN date_part('hour', atr.datetime_bin) IN (7,8,9,16,17,18) THEN 70
-                    ELSE 30 END
-                ELSE 1 END AS adjusted_volume
-        ) AS lat
+    JOIN miovision_api.cordons AS cc USING (camera_group, label)
     WHERE
         atr.classification_uid <> 2 --use bike approaches instead
         AND atr.classification_uid <> 7 --generally not in use
@@ -72,3 +68,10 @@ GRANT SELECT ON TABLE miovision_api.cordon_counts_15min TO bdit_humans;
 COMMENT ON VIEW miovision_api.cordon_counts_15min
 IS '15 minute cordon counts, with occupancy adjustment of 1.2 for autos, and 70 (peak) / 30 (off-peak) for transit.
 Filter camera_group and leg';
+
+/*
+--test, 0.2s
+SELECT *
+FROM miovision_api.cordon_counts_15min
+WHERE datetime_bin >= '2026-08-09' AND datetime_bin < '2026-08-10' AND camera_group = 'Bathurst - South of Dupont'
+*/
