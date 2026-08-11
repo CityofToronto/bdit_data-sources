@@ -4,7 +4,7 @@
 
 CREATE OR REPLACE FUNCTION here.here_insert_trigger_hm_path()
 RETURNS trigger
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 COST 100
 VOLATILE NOT LEAKPROOF SECURITY DEFINER
 AS $BODY$
