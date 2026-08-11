@@ -6,9 +6,9 @@ CREATE TABLE IF NOT EXISTS here.ta_path_hm
 (
     link_dir text COLLATE pg_catalog."default" NOT NULL,
     tx timestamp NOT NULL,
-    mean numeric(4,1) NOT NULL,
-    harmonic_mean numeric(4,1),
-    stddev numeric(4,1) NOT NULL,
+    mean numeric(4, 1) NOT NULL,
+    harmonic_mean numeric(4, 1),
+    stddev numeric(4, 1) NOT NULL,
     min_spd integer NOT NULL,
     max_spd integer NOT NULL,
     pct_50 integer NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS here.ta_path_hm
     sample_size integer
 ) PARTITION BY RANGE (tx);
 
-ALTER TABLE IF EXISTS here.ta_path_hm OWNER to here_admins;
+ALTER TABLE IF EXISTS here.ta_path_hm OWNER TO here_admins;
 
 REVOKE ALL ON TABLE here.ta_path_hm FROM bdit_humans;
 REVOKE ALL ON TABLE here.ta_path_hm FROM congestion_bot;
@@ -37,7 +37,7 @@ IS '(In development) HERE Path data pulled from Traffic Analytics API. Includes 
 CREATE INDEX ta_path_hm_dt_idx
 ON here.ta_path_hm USING btree
 (dt ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True);
+WITH (fillfactor = 100, deduplicate_items = TRUE);
 -- Index: ta_path_hm_link_dir_idx
 
 -- DROP INDEX IF EXISTS here.ta_path_hm_link_dir_idx;
@@ -45,7 +45,7 @@ WITH (fillfactor=100, deduplicate_items=True);
 CREATE INDEX ta_path_hm_link_dir_idx
 ON here.ta_path_hm USING btree
 (link_dir COLLATE pg_catalog."default" ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True);
+WITH (fillfactor = 100, deduplicate_items = TRUE);
 -- Index: ta_path_hm_tod_idx
 
 -- DROP INDEX IF EXISTS here.ta_path_hm_tod_idx;
@@ -53,7 +53,7 @@ WITH (fillfactor=100, deduplicate_items=True);
 CREATE INDEX ta_path_hm_tod_idx
 ON here.ta_path_hm USING btree
 (tod ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True);
+WITH (fillfactor = 100, deduplicate_items = TRUE);
 
 ALTER TABLE here.ta_path_hm ADD
 CONSTRAINT ta_path_hm_dt_tod_link_dir_key UNIQUE (dt, tod, link_dir)
