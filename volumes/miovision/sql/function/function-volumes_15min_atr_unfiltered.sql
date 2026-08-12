@@ -121,7 +121,7 @@ temp AS (
     JOIN movements_to_pad AS m2p USING (intersection_uid),
     generate_series(
         greatest(i.date_installed, start_date),
-        least(i.date_decommissioned, end_date),
+        least(i.date_decommissioned, end_date) - interval '15 minutes',
         '15 minutes'::interval
     ) AS gs(datetime_bin)
     
