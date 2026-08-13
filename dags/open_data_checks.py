@@ -34,7 +34,7 @@ default_args = {
     'email_on_retry': False,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True, #Allow for progressive longer waits between retries
-    #'on_failure_callback': task_fail_slack_alert,
+    'on_failure_callback': task_fail_slack_alert,
 }
 
 @dag(
@@ -62,12 +62,16 @@ def od_check_dag():
         get_file_clicks(conn)
         
         
-    @task
+    @task(
+        trigger_rule='all_done' #file clicks is optional
+    )
     def api_usage():
         conn=get_connection()
         get_api_usage(conn)
         
-    @task
+    @task(
+        trigger_rule='all_done' #api_usage is optional, currently down
+    )
     def resources():
         conn=get_connection()
         get_resources(conn)
