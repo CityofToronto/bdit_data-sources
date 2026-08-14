@@ -157,10 +157,14 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     fpath = os.path.join(SQL_DIR, 'inserts/insert-miovision_alerts.sql')
     with open(fpath, 'r', encoding='utf-8') as file:
         insert_query = sql.SQL(file.read())
+    fpath = os.path.join(SQL_DIR, 'updates/update-miovision_alerts.sql')
+    with open(fpath, 'r', encoding='utf-8') as file:
+        update_query = sql.SQL(file.read())
 
     logger.info('Inserting values into `miovision_api.alerts`.')
     with conn.cursor() as cur:
         cur.executemany(insert_query, values)
+        cur.execute(update_query)
 
 if __name__ == '__main__':
     cli()
