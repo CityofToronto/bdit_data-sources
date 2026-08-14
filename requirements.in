@@ -1,7 +1,7 @@
 -c constraints.txt
 
 # Airflow
-apache-airflow[google,postgres,slack,ftp,http,fab,standard]==3.1.5
+apache-airflow[postgres,slack,ftp,http,fab,standard]==3.2.2
 
 # Airflow dag list
 graphviz
@@ -26,6 +26,3 @@ ruff
 # testing
 pytest
 pytest-mock
-
-#enable testing of airflow 3.2.1
-psycopg
