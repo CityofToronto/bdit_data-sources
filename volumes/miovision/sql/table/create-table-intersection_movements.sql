@@ -36,15 +36,20 @@ ALTER TABLE IF EXISTS miovision_api.intersection_movements
 ADD CONSTRAINT intersecton_movements_exclude_xwalk_bikes
 CHECK (NOT (classification_uid = 7));
 
---insert padding values into volumes_15min_mvt_unfiltered
-CREATE TRIGGER miovision_intersection_movements_pad
-AFTER INSERT ON miovision_api.intersection_movements
-FOR EACH ROW
-EXECUTE FUNCTION miovision_api.fn_add_intersection_movement_padding_values();
-
 --insert other vehicle modes besides light autos upon insert of light autos
 CREATE OR REPLACE TRIGGER miovision_intersection_movements_insert_other_modes
 AFTER INSERT
 ON miovision_api.intersection_movements
 FOR EACH ROW
 EXECUTE FUNCTION miovision_api.intersection_movements_insert_other_modes();
+
+CREATE TRIGGER miovision_intersection_movements_mvt_pad
+AFTER INSERT ON miovision_api.intersection_movements
+FOR EACH ROW
+EXECUTE FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values();
+
+CREATE OR REPLACE TRIGGER miovision_intersection_movements_atr_pad
+AFTER INSERT
+ON miovision_api.intersection_movements
+FOR EACH ROW
+EXECUTE FUNCTION miovision_api.fn_add_intersection_movement_atr_padding_values();
