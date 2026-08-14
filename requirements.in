@@ -2,6 +2,7 @@
 
 # Airflow
 apache-airflow[postgres,slack,ftp,http,fab,standard]==3.2.2
+apache-airflow-providers-google==19.2.0
 
 # Airflow dag list
 graphviz
