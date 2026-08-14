@@ -15,67 +15,7 @@ DECLARE
 
 BEGIN
 
-WITH movements_to_pad AS (
-    --vehicle & bike entries
-    SELECT DISTINCT
-        im.intersection_uid,
-        im.classification_uid,
-        mm.entry_dir AS dir,
-        im.leg
-    FROM miovision_api.intersection_movements AS im
-    JOIN miovision_api.movement_map AS mm USING (movement_uid, leg)
-    WHERE
-        im.movement_uid <= 4
-        AND im.classification_uid IN (1, 2)
-    
-    UNION
-
-    --vehicle & bike exits
-    SELECT DISTINCT
-        im.intersection_uid,
-        im.classification_uid,
-        mm.exit_dir,
-        mm.exit_leg
-    FROM miovision_api.intersection_movements AS im
-    JOIN miovision_api.movement_map AS mm USING (movement_uid, leg)
-    WHERE
-        im.movement_uid <= 4
-        AND im.classification_uid IN (1, 2)
-       
-    UNION
-    
-    --pedestrian entries
-    SELECT DISTINCT
-        im.intersection_uid,
-        im.classification_uid,
-        mm.entry_dir,
-        mm.leg
-    FROM miovision_api.intersection_movements AS im
-    JOIN miovision_api.movement_map AS mm USING (movement_uid, leg)
-    WHERE
-        im.movement_uid IN (5, 6)
-        AND im.classification_uid = 6
-        
-    UNION
-    
-    --bike approach entries
-    SELECT DISTINCT
-        im.intersection_uid,
-        im.classification_uid,
-        mm.entry_dir,
-        mm.leg
-    FROM miovision_api.intersection_movements AS im
-    JOIN miovision_api.movement_map AS mm USING (movement_uid, leg)
-    WHERE
-        im.movement_uid = 7
-        AND im.classification_uid = 10
-    ORDER BY classification_uid, leg, dir  
-),
-
---check, this should be 28
---SELECT DISTINCT classification_uid, leg, dir FROM movements_to_pad
-
-temp AS (
+WITH temp AS (
     --real entries
     SELECT
         v.intersection_uid,
@@ -108,8 +48,10 @@ temp AS (
         AND v.datetime_bin > start_date
         AND v.datetime_bin < end_date
     GROUP BY v.intersection_uid, datetime_bin_15(v.datetime_bin), v.classification_uid, mmm.exit_leg, mmm.exit_dir
+    
     UNION ALL
-    --zero padding of valid entry/exit movements
+    
+    --zero padding of valid entry movements
     SELECT
         i.intersection_uid,
         gs.datetime_bin,
@@ -118,13 +60,41 @@ temp AS (
         m2p.dir,
         0 AS volume
     FROM miovision_api.intersections AS i
-    JOIN movements_to_pad AS m2p USING (intersection_uid),
+    JOIN miovision_api.atr_movements_to_pad AS m2p USING (intersection_uid)
+    JOIN miovision_api.movement_map AS mmm
+        ON m2p.leg = mmm.leg
+        AND m2p.dir = mmm.entry_dir,
     generate_series(
-        greatest(i.date_installed, start_date),
+        greatest(i.date_installed, start_date, '2019-01-01'::date), --this schema only stores data >= 2019
         least(i.date_decommissioned, end_date) - interval '15 minutes',
         '15 minutes'::interval
     ) AS gs(datetime_bin)
+    WHERE
+        i.intersection_uid = ANY(target_intersections)
     
+    UNION ALL
+
+    --zero padding of valid exit movements
+    SELECT
+        i.intersection_uid,
+        gs.datetime_bin,
+        m2p.classification_uid,
+        mmm.exit_leg,
+        mmm.exit_dir,
+        0 AS volume
+    FROM miovision_api.intersections AS i
+    JOIN miovision_api.atr_movements_to_pad AS m2p USING (intersection_uid)
+    JOIN miovision_api.movement_map AS mmm
+        ON m2p.leg = mmm.leg
+        AND m2p.dir = mmm.entry_dir,
+    generate_series(
+        greatest(i.date_installed, start_date, '2019-01-01'::date), --this schema only stores data >= 2019
+        least(i.date_decommissioned, end_date) - interval '15 minutes',
+        '15 minutes'::interval
+    ) AS gs(datetime_bin)
+    WHERE
+        i.intersection_uid = ANY(target_intersections)
+        AND exit_leg IS NOT NULL    
 )
 
 INSERT INTO miovision_api.volumes_15min_atr_unfiltered_table (
