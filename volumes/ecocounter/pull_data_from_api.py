@@ -119,7 +119,6 @@ def insertSiteCounts(conn: any, volume: any):
     insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES (%s, %s, %s)"
     with conn.cursor() as cur:
         cur.executemany(insert_query, volume)
-    return cur.query
 
 # insert new site record
 def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
