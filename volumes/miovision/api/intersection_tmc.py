@@ -305,7 +305,6 @@ def find_gaps(conn, time_period, intersections = None):
             if intersections is None:
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
                 cur.execute(invalid_gaps, time_period)
-                logger.info(conn.notices[-1])
                 logger.info('Updated gapsize table and found gaps exceeding allowable size')
             else:
                 query_params = time_period + ([x.uid for x in intersections], )
@@ -432,7 +431,6 @@ def insert_data(conn, time_period, table, intersections):
     with conn.cursor() as cur:
         invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
         cur.execute(invalid_movements, time_period)
-        logger.info(conn.notices[-1])
 
 def daterange(start_time, end_time, time_delta):
     """Generator for a sequence of regular time periods."""
