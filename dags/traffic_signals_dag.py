@@ -409,7 +409,7 @@ def pull_traffic_signal(vz_cred):
     current_pxs = [obj['px'] for obj in return_json]
     update_deleted = update_deleted.format(sql.SQL(',').join(map(sql.Literal, current_pxs)))
     
-    with conn:
+    with vz_cred.get_conn() as conn:
         with conn.cursor() as cur:
             cur.executemany(upsert_query_gis, complete_rows)
             cur.execute(update_deleted)
