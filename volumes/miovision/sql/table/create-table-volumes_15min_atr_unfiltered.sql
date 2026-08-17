@@ -1,42 +1,63 @@
--- Table: miovision_api.volumes_15min_atr_unfiltered_table
-
--- DROP TABLE IF EXISTS miovision_api.volumes_15min_atr_unfiltered_table;
-
-CREATE TABLE IF NOT EXISTS miovision_api.volumes_15min_atr_unfiltered_table
+CREATE TABLE miovision_api.volumes_15min_atr_unfiltered
 (
-    intersection_uid integer,
-    datetime_bin timestamp without time zone,
-    classification_uid integer,
-    leg text COLLATE pg_catalog."default",
-    dir text COLLATE pg_catalog."default",
-    volume integer
+    intersection_uid smallint NOT NULL,
+    datetime_bin timestamp without time zone NOT NULL,
+    classification_uid smallint NOT NULL,
+    leg "char" NOT NULL,
+    dir character(2) COLLATE pg_catalog."default" NOT NULL,
+    volume smallint,
+    CONSTRAINT volumes_15min_atr_unfiltered_pkey
+    PRIMARY KEY (dir, leg, classification_uid, datetime_bin, intersection_uid)
 )
-TABLESPACE pg_default;
+PARTITION BY RANGE (datetime_bin)
+WITH (
+    oids = FALSE
+);
 
-ALTER TABLE IF EXISTS miovision_api.volumes_15min_atr_unfiltered_table
-OWNER TO miovision_admins;
+ALTER TABLE miovision_api.volumes_15min_atr_unfiltered OWNER TO miovision_admins;
+GRANT SELECT, REFERENCES, TRIGGER ON TABLE miovision_api.volumes_15min_atr_unfiltered
+TO bdit_humans WITH GRANT OPTION;
+GRANT SELECT, INSERT, TRIGGER ON TABLE miovision_api.volumes_15min_atr_unfiltered
+TO miovision_api_bot;
 
-REVOKE ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table FROM bdit_humans;
+COMMENT ON TABLE miovision_api.volumes_15min_atr_unfiltered IS E''
+'NOTE: Refer instead to function volumes_15min_atr_filtered to exclude anomalous_ranges. '
+'ATR formatted Miovision data in 15 minute bins. 0-padded for classifications 1,2,6,10 to '
+'make averaging easier.';
 
-GRANT SELECT ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO bdit_humans;
+-- Index: miovision_api.volumes_15min_atr_unfiltered_classification_uid_idx
+-- DROP INDEX miovision_api.volumes_15min_atr_unfiltered_classification_uid_idx;
+CREATE INDEX volumes_15min_atr_classification_uid_idx
+ON miovision_api.volumes_15min_atr_unfiltered
+USING btree (classification_uid);
 
-GRANT ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO miovision_admins;
-GRANT ALL ON TABLE miovision_api.volumes_15min_atr_unfiltered_table TO miovision_api_bot
+-- Index: miovision_api.volumes_15min_atr_unfiltered_datetime_bin_idx
+-- DROP INDEX miovision_api.volumes_15min_atr_datetime_bin_idx;
+CREATE INDEX volumes_15min_atr_datetime_bin_idx
+ON miovision_api.volumes_15min_atr_unfiltered
+USING brin (datetime_bin);
 
-COMMENT ON TABLE miovision_api.volumes_15min_atr_unfiltered_table
-IS '(IN DEVELOPMENT) ATR Table to improve ATR query speeds.';
-CREATE INDEX IF NOT EXISTS volumes_15min_atr_unfiltered_intersection_uid_idx
-ON miovision_api.volumes_15min_atr_unfiltered_table USING btree
-(intersection_uid ASC NULLS LAST)
-WITH (fillfactor=100, deduplicate_items=True)
-TABLESPACE pg_default;
+-- Index: miovision_api.volumes_15min_atr_unfiltered_intersection_uid_idx
+-- DROP INDEX miovision_api.volumes_15min_atr_unfiltered_intersection_uid_idx;
+CREATE INDEX volumes_15min_atr_intersection_uid_idx
+ON miovision_api.volumes_15min_atr_unfiltered
+USING btree (intersection_uid);
 
-ALTER TABLE IF EXISTS miovision_api.volumes_15min_atr_unfiltered_table
-ADD CONSTRAINT volumes_15min_atr_unfiltered_int_dt_bin_class_leg_mvmt_uid_pkey
-PRIMARY KEY (intersection_uid, datetime_bin, classification_uid, leg, dir);
+-- Index: miovision_api.volumes_15min_atr_unfiltered_leg_movement_uid_idx
+-- DROP INDEX miovision_api.volumes_15min_atr_unfiltered_leg_movement_uid_idx;
+CREATE INDEX volumes_15min_atr_leg_movement_uid_idx
+ON miovision_api.volumes_15min_atr_unfiltered
+USING btree (
+    leg COLLATE pg_catalog."default",
+    movement_uid
+);
 
-CREATE INDEX IF NOT EXISTS volumes_15min_atr_unfiltered_datetime_bin_idx
-ON miovision_api.volumes_15min_atr_unfiltered_table USING brin
-(datetime_bin)
-WITH (pages_per_range=128, autosummarize=False)
-TABLESPACE pg_default;
+--create yearly partitions
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2019::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2020::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2021::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2022::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2023::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2024::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2025::int);
+SELECT miovision_api.create_yyyy_volumes_15min_partition('volumes_15min_atr_unfiltered', 2026::int);
