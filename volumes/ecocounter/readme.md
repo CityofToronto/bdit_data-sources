@@ -41,21 +41,21 @@ There are two types of sensors, which can be easily distinguished. The single se
 
 <figure>
     <img src='img/single-sensor.jpg' alt='A single ecocounter sensor installed in a one-way bike lane' width = 300 />
-    <figcaption>A single ecocounter sensor installed in a one-way bike lane</figcaption>
+    <figcaption style="font-style: italic">A single ecocounter sensor installed in a one-way bike lane</figcaption>
 </figure>
 
 Increasingly however newer installations are using a double sensor that can detect the direction of travel as well. In cases like the image below this allows us to measure contra-flow travel within the bike lane. 
 
 <figure>
-    <img src='img/double-sensor.jpg' alt='A double sensor installed in a one-way bike lane' width = 300 />
-    <figcaption>A double sensor installed in a one-way bike lane</figcaption>
+    <img src='img/double-sensor.png' alt='A double sensor installed in a one-way bike lane' width = 300 />
+    <figcaption style="font-style: italic">A double sensor installed in a one-way bike lane at Bloor & Old Mill</figcaption>
 </figure>
 
 Sometimes these paired sensors are themselves installed in pairs, giving four measured flows per site, two per lane. 
 
 <figure>
     <img src='img/double-double-sensor.jpg' alt='A pair of bidirectional sensors recently installed in a multi-use path' width = 300 />
-    <figcaption>A pair of bidirectional sensors recently installed in a multi-use path</figcaption>
+    <figcaption style="font-style: italic">A pair of bidirectional sensors recently installed in a multi-use path</figcaption>
 </figure>
 
 ## Ecocounter data
