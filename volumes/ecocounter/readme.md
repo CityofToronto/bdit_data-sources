@@ -39,15 +39,24 @@ Ecocounter is the vendor that manages our current sensor installations. There is
 ## Installation types
 There are two types of sensors, which can be easily distinguished. The single sensor installations, as below simply count the number of bikes that pass over the sensor. These are installed in one-way infrastructure such as a typical bike lane. 
 
-![a single ecocounter sensor installed in a one-way bike lane](./single-sensor.jpg)
+<figure>
+    <img src='img/single-sensor.jpg' alt='A single ecocounter sensor installed in a one-way bike lane' width = 300 />
+    <figcaption>A single ecocounter sensor installed in a one-way bike lane</figcaption>
+</figure>
 
 Increasingly however newer installations are using a double sensor that can detect the direction of travel as well. In cases like the image below this allows us to measure contra-flow travel within the bike lane. 
 
-![a double sensor installed in a one-way bike lane](./double-sensor.jpg)
+<figure>
+    <img src='img/double-sensor.jpg' alt='A double sensor installed in a one-way bike lane' width = 300 />
+    <figcaption>A double sensor installed in a one-way bike lane</figcaption>
+</figure>
 
 Sometimes these paired sensors are themselves installed in pairs, giving four measured flows per site, two per lane. 
 
-![a pair of bidirectional sensors recently installed in a multi-use path](double-double-sensor.jpg)
+<figure>
+    <img src='img/double-double-sensor.jpg' alt='A pair of bidirectional sensors recently installed in a multi-use path' width = 300 />
+    <figcaption>A pair of bidirectional sensors recently installed in a multi-use path</figcaption>
+</figure>
 
 ## Ecocounter data
 
@@ -69,9 +78,9 @@ Flows are not always clearly documented, making it hard at present to easily det
 
 Some of the newer sites have flows labelled in the system as "IN" and "OUT". Below are two site-specific flow diagrams provided by Ecocounter. Do not (yet) assume you know what these values mean at other sites. 
 
-![labelled flow diagram for a two lane path](labelled-flows-a.png)
+![labelled flow diagram for a two lane path](img/labelled-flows-a.png)
 
-![labelled flow diagram for a two lane path](labelled-flows-b.png)
+![labelled flow diagram for a two lane path](img/labelled-flows-b.png)
 
 From an email from Pierre, of Ecocounter:
 > The IN and OUT disparities are configured during the setup of the counter. With the Zelt system that you own, there can only be two directions: IN and OUT, but there can be several flows. In the case of Murray Ross Parkway, some details about the direction were left in the comments section: IN – Northbound. In the following two examples, both counting sites have four loops installed on the bike paths, but in one case, four flows were configured, and only two for the second site. In the first example, both IN flows have the same name, but they have different flowId.
@@ -372,7 +381,7 @@ Row count: 3,072
 2. If the sensitivity has changed or it is a new sensor, add a row to `ecocounter.sensitivity_history`.
 
 > [!IMPORTANT]
-> We typically do not proceed with the following  publishing sites if the calibration factor (`ecocounter.calibration_factors`) is outside of [0.8, 1.4], but instead proceed to adjust sensitivity and redo validation counts.
+> We typically do not proceed with the following steps to publish sites if the calibration factor (`ecocounter.calibration_factors`) is outside of [0.8, 1.4], but instead proceed to adjust sensitivity and redo validation counts. If the site is already marked as `validated` from a previous successful validation, we can use an anomalous range to temporarily restrict publishing of the data.
 
 3. Check `validated` column is set to `True` in both `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`.
 4. Clear anomalous ranges from `ecocounter.anomalous_ranges` if any, which are sometimes used to hold back data which is undergoing validation. Remember to check both the `site_id` and `flow_id`.
