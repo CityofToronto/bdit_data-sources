@@ -8,7 +8,7 @@
     - [`volumes`](#volumes)
   - [Aggregated Data](#aggregated-data)
     - [`volumes_15min_mvt`](#volumes_15min_mvt)
-    - [`miovision_api.volumes_15min_atr_unfiltered_table` (table)](#miovision_apivolumes_15min_atr_unfiltered_table-table)
+    - [`miovision_api.volumes_15min_atr_unfiltered` (table)](#miovision_apivolumes_15min_atr_unfiltered-table)
     - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
     - [`miovision_api.volumes_daily` (View)](#miovision_apivolumes_daily-view)
     - [`unacceptable_gaps`](#unacceptable_gaps)
@@ -265,9 +265,11 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `miovision_api.volumes_15min_atr_unfiltered_table` (table)
-(IN DEVELOPMENT) ATR Table to improve ATR query speeds.
-- Table is not zero padded - there could be missing entries for an intersection-datetime_bin-classification-leg, which could represent true zeroes or false zeroes (camera is down).
+### `miovision_api.volumes_15min_atr_unfiltered` (table)
+15 minute ATR aggregate table.
+- includes both entries and exits movements (Exception: no exits for pedestrians (`2`) and bike approaches (`10`))
+- zero padded for classifications 1,2,6,10 to make it easier to calculate averages.
+- Partitioned by year
 
 Approx row count:          479,945,300
 | Column Name        | Data Type                   | Sample              | Comments   |

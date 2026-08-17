@@ -125,28 +125,36 @@ WITH temp AS (
 ),
 
 inserted AS (
-    INSERT INTO miovision_api.volumes_15min_atr_unfiltered_table (
+    INSERT INTO miovision_api.volumes_15min_atr_unfiltered (
         intersection_uid, datetime_bin, classification_uid, leg, dir, volume
     )
-
     SELECT DISTINCT ON (
         intersection_uid, datetime_bin, classification_uid, leg, dir
     )
-        intersection_uid,
-        datetime_bin,
-        classification_uid,
-        leg,
-        dir,
-        volume
-    FROM temp
+        v.intersection_uid,
+        v.datetime_bin,
+        v.classification_uid,
+        v.leg,
+        v.dir,
+        v.volume
+    FROM temp AS v
+    JOIN miovision_api.intersections AS i USING (intersection_uid)
+    WHERE
+        -- Only include dates during which intersection is active 
+        -- (excludes entire day it was added/removed)
+        v.datetime_bin >= i.date_installed + interval '1 day'
+        AND (
+            i.date_decommissioned IS NULL
+            OR (v.datetime_bin < i.date_decommissioned - interval '1 day')
+        )
     ORDER BY 
-        intersection_uid,
-        datetime_bin,
-        classification_uid,
-        leg,
-        dir,
+        v.intersection_uid,
+        v.datetime_bin,
+        v.classification_uid,
+        v.leg,
+        v.dir,
         --select real value instead of padding value if available
-        volume DESC
+        v.volume DESC
     ON CONFLICT ON CONSTRAINT volumes_15min_atr_unfiltered_int_dt_bin_class_leg_mvmt_uid_pkey
     DO UPDATE SET volume = EXCLUDED.volume
     RETURNING *
