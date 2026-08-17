@@ -72,7 +72,6 @@ aggregate_insert AS (
         v.volume
     FROM temp AS v
     JOIN miovision_api.intersections AS i USING (intersection_uid)
-    --set unacceptable gaps as null
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
