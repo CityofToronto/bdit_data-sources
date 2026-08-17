@@ -39,7 +39,7 @@ CREATE OR REPLACE VIEW miovision_api.cordon_counts_15min AS (
         COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (6)) AS ped_intersections_present,
         COUNT(DISTINCT atr.intersection_uid) FILTER (WHERE atr.classification_uid IN (10)) AS bike_intersections_present,
         COUNT(DISTINCT atr.intersection_uid) AS total_intersections_present
-    FROM miovision_api.volumes_15min_atr_unfiltered_table AS atr
+    FROM miovision_api.volumes_15min_atr_unfiltered AS atr
     JOIN miovision_api.cordons_long AS c ON
         atr.intersection_uid = c.intersection_uid
         --travelling in the cordon direction

@@ -94,10 +94,10 @@ WITH temp AS (
     ) AS gs(datetime_bin)
     WHERE
         i.intersection_uid = ANY(target_intersections)
-        AND exit_leg IS NOT NULL    
+        AND exit_leg IS NOT NULL
 )
 
-INSERT INTO miovision_api.volumes_15min_atr_unfiltered_table (
+INSERT INTO miovision_api.volumes_15min_atr_unfiltered (
     intersection_uid, datetime_bin, classification_uid, leg, dir, volume
 )
 
@@ -111,6 +111,15 @@ SELECT DISTINCT ON (
     v.dir,
     v.volume
 FROM temp AS v
+JOIN miovision_api.intersections AS i USING (intersection_uid)
+WHERE
+    -- Only include dates during which intersection is active 
+    -- (excludes entire day it was added/removed)
+    v.datetime_bin >= i.date_installed + interval '1 day'
+    AND (
+        i.date_decommissioned IS NULL
+        OR (v.datetime_bin < i.date_decommissioned - interval '1 day')
+    )
 ORDER BY 
     v.intersection_uid,
     v.datetime_bin,
