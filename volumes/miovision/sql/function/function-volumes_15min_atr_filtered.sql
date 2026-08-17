@@ -23,7 +23,7 @@ BEGIN
             v15.leg,
             v15.dir,
             v15.volume
-        FROM miovision_api.volumes_15min_atr_unfiltered_table AS v15
+        FROM miovision_api.volumes_15min_atr_unfiltered AS v15
         WHERE
             v15.intersection_uid = ANY(volumes_15min_atr_filtered.intersection_uids)
             AND v15.classification_uid = ANY(volumes_15min_atr_filtered.classification_uids)
