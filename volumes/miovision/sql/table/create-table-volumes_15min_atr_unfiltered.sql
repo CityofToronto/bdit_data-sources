@@ -5,7 +5,7 @@ CREATE TABLE miovision_api.volumes_15min_atr_unfiltered
     classification_uid smallint NOT NULL,
     leg "char" NOT NULL, --noqa: RF06
     dir character(2) COLLATE pg_catalog."default" NOT NULL,
-    volume smallint,
+    volume smallint NOT NULL,
     CONSTRAINT volumes_15min_atr_unfiltered_pkey
     PRIMARY KEY (dir, leg, classification_uid, datetime_bin, intersection_uid)
 )
