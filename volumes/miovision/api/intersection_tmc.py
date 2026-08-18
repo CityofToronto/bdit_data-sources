@@ -343,7 +343,7 @@ def aggregate_15_min_atr(
                 cur.execute(update, query_params)
                 logger.info('Aggregated intersections %s to 15 minute ATR bins',
                             [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
 

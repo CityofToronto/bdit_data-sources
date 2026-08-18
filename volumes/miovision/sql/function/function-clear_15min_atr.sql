@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION miovision_api.clear_15_min_atr(
 )
 RETURNS void
 LANGUAGE plpgsql
-
+SECURITY DEFINER
 COST 100
 VOLATILE
 AS $BODY$
