@@ -21,9 +21,8 @@ WITH temp AS (
         v.leg,
         mmm.entry_dir AS dir,
         sum(v.volume)::integer AS volume
-    FROM miovision_api.volumes_2026 AS v
+    FROM miovision_api.volumes AS v
     JOIN miovision_api.movement_map AS mmm USING (movement_uid, leg)
-    JOIN miovision_api.atr_movements_to_pad USING (leg, classification_uid, intersection_uid)
     WHERE
         v.intersection_uid = NEW.intersection_uid
         AND v.classification_uid = NEW.classification_uid
@@ -45,23 +44,17 @@ WITH temp AS (
         mmm.exit_leg AS leg,
         mmm.exit_dir AS dir,
         sum(v.volume)::integer AS volume
-    --make sure to only get classifications we want to pad.
-    FROM miovision_api.atr_movements_to_pad AS m2p
     --find where this particular movement exits
-    JOIN miovision_api.movement_map AS mmm
-        ON m2p.leg = mmm.leg
-        AND m2p.dir = mmm.entry_dir
+    FROM miovision_api.movement_map AS mmm
     --then find all the movements that exit there
     JOIN miovision_api.movement_map AS mmm_exit USING (exit_leg, exit_dir)     
     JOIN miovision_api.volumes AS v ON
         v.movement_uid = mmm_exit.movement_uid
         AND v.leg = mmm_exit.leg
-        AND v.classification_uid = m2p.classification_uid
-        AND v.intersection_uid = m2p.intersection_uid
     WHERE
-        m2p.intersection_uid = NEW.intersection_uid
-        AND m2p.classification_uid = NEW.classification_uid
-        AND m2p.leg = NEW.leg
+        v.intersection_uid = NEW.intersection_uid
+        AND v.classification_uid = NEW.classification_uid
+        AND mmm.leg = NEW.leg
         AND mmm.movement_uid = NEW.movement_uid
     GROUP BY
         v.intersection_uid,
@@ -122,6 +115,7 @@ WITH temp AS (
         AND m2p.classification_uid = NEW.classification_uid
         AND m2p.leg = NEW.leg
         AND mmm.movement_uid = NEW.movement_uid
+        AND mmm.exit_leg IS NOT NULL
 ),
 
 inserted AS (
@@ -155,7 +149,7 @@ inserted AS (
         v.dir,
         --select real value instead of padding value if available
         v.volume DESC
-    ON CONFLICT ON CONSTRAINT volumes_15min_atr_unfiltered_int_dt_bin_class_leg_mvmt_uid_pkey
+    ON CONFLICT ON CONSTRAINT volumes_15min_atr_unfiltered_pkey
     DO UPDATE SET volume = EXCLUDED.volume
     RETURNING *
 )
