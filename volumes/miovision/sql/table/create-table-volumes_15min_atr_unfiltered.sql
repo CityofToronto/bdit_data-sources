@@ -3,7 +3,7 @@ CREATE TABLE miovision_api.volumes_15min_atr_unfiltered
     intersection_uid smallint NOT NULL,
     datetime_bin timestamp without time zone NOT NULL,
     classification_uid smallint NOT NULL,
-    leg "char" NOT NULL,
+    leg "char" NOT NULL, --noqa: RF06
     dir character(2) COLLATE pg_catalog."default" NOT NULL,
     volume smallint,
     CONSTRAINT volumes_15min_atr_unfiltered_pkey
