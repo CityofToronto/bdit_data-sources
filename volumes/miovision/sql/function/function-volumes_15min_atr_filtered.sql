@@ -132,3 +132,84 @@ SELECT * FROM miovision_api.volumes_15min_atr_filtered(
     date_end := CURRENT_DATE
 )
 */
+
+CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
+    intersection_uids int [],
+    classification_uids int [],
+    leg_in "char",
+    dir_in char(2),
+    date_start date,
+    date_end date
+)
+RETURNS TABLE (
+    intersection_uid smallint,
+    datetime_bin timestamp without time zone,
+    classification_uid smallint,
+    leg "char",
+    dir char(2),
+    volume smallint
+) AS $$
+BEGIN
+    
+    RETURN QUERY
+    WITH v15 AS (
+        SELECT
+            v15.intersection_uid,
+            v15.datetime_bin,
+            v15.classification_uid,
+            v15.leg,
+            v15.dir,
+            v15.volume
+        FROM miovision_api.volumes_15min_atr_unfiltered AS v15
+        WHERE
+            v15.intersection_uid = ANY(volumes_15min_atr_filtered.intersection_uids)
+            AND v15.classification_uid = ANY(volumes_15min_atr_filtered.classification_uids)
+            AND v15.datetime_bin >= volumes_15min_atr_filtered.date_start
+            AND v15.datetime_bin < volumes_15min_atr_filtered.date_end
+            AND v15.leg = volumes_15min_atr_filtered.leg_in
+            AND v15.dir = volumes_15min_atr_filtered.dir_in
+    )
+    
+    SELECT
+        v15.intersection_uid,
+        v15.datetime_bin,
+        v15.classification_uid,
+        v15.leg,
+        v15.dir,
+        v15.volume
+    FROM v15
+        LEFT JOIN miovision_api.unacceptable_gaps USING (datetime_bin, intersection_uid)
+    WHERE
+        unacceptable_gaps.datetime_bin IS NULL
+        AND NOT EXISTS ( --anti join anomalous_ranges
+            SELECT 1
+            FROM miovision_api.anomalous_ranges AS ar
+            WHERE
+                ar.problem_level IN ('do-not-use', 'questionable')
+                AND (
+                    ar.intersection_uid = v15.intersection_uid
+                    OR ar.intersection_uid IS NULL
+                ) AND (
+                    ar.classification_uid = v15.classification_uid
+                    --don't use any vehicle modes if lights are anomalous
+                    OR (ar.classification_uid = 1 AND v15.classification_uid IN (1, 3, 4, 5, 9))
+                    --issue affects all modes
+                    OR ar.classification_uid IS NULL
+                )
+                -- leg is ignored here
+                -- any anomalousness on a leg removes all ATR counts
+                AND v15.datetime_bin >= ar.range_start
+                AND (
+                    v15.datetime_bin <= ar.range_end
+                    OR ar.range_end IS NULL
+                )
+        );
+    END;
+
+$$ LANGUAGE plpgsql;
+
+ALTER FUNCTION miovision_api.volumes_15min_atr_filtered(int [], int [], "char", char(2), date, date)
+OWNER TO miovision_admins;
+
+GRANT EXECUTE ON FUNCTION miovision_api.volumes_15min_atr_filtered(int [], int [], "char", char(2), date, date)
+TO bdit_humans;
