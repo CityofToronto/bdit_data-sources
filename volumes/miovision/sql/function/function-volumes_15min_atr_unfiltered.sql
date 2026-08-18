@@ -30,8 +30,15 @@ WITH temp AS (
         v.intersection_uid = ANY(target_intersections)
         AND v.datetime_bin > start_date
         AND v.datetime_bin < end_date
-    GROUP BY v.intersection_uid, datetime_bin_15(v.datetime_bin), v.classification_uid, v.leg, mmm.entry_dir
+    GROUP BY
+        v.intersection_uid,
+        datetime_bin_15(v.datetime_bin),
+        v.classification_uid,
+        v.leg,
+        mmm.entry_dir
+        
     UNION ALL
+    
     --real exits
     SELECT
         v.intersection_uid,
@@ -47,7 +54,12 @@ WITH temp AS (
         AND mmm.exit_leg IS NOT NULL
         AND v.datetime_bin > start_date
         AND v.datetime_bin < end_date
-    GROUP BY v.intersection_uid, datetime_bin_15(v.datetime_bin), v.classification_uid, mmm.exit_leg, mmm.exit_dir
+    GROUP BY
+        v.intersection_uid,
+        datetime_bin_15(v.datetime_bin),
+        v.classification_uid,
+        mmm.exit_leg,
+        mmm.exit_dir
     
     UNION ALL
     
@@ -94,7 +106,7 @@ WITH temp AS (
     ) AS gs(datetime_bin)
     WHERE
         i.intersection_uid = ANY(target_intersections)
-        AND exit_leg IS NOT NULL
+        AND mmm.exit_leg IS NOT NULL
 )
 
 INSERT INTO miovision_api.volumes_15min_atr_unfiltered (
