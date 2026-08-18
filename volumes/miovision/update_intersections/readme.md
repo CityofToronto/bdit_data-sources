@@ -1,18 +1,10 @@
-<!-- TOC ignore:true -->
-# Miovision Intersection Update Resources  
-
-This readme contains information and resources on how to add/remove Miovision intersections from our data pipeline.  
-For the main Miovision readme, see [here](../readme.md). 
-
 <!-- TOC -->
 
-- [Miovision Intersection Update Resources](#miovision-intersection-update-resources)
 - [Removing Intersections](#removing-intersections)
 - [Adding Intersections](#adding-intersections)
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
 	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
-	- [Adding many intersections (Archived)](#adding-many-intersections-archived)
 	- [Alternate Method of finding `px` (Archived)](#alternate-method-of-finding-px-archived)
 
 <!-- /TOC -->
@@ -100,7 +92,8 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 cd ~/bdit_data-sources &&
 rm -f volumes/miovision/geojson/mio_intersections.geojson &&
 ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"host=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com dbname=bigdata" \
-	-sql "SELECT * FROM miovision_api.intersections WHERE date_installed IS NOT NULL ORDER BY date_installed" -nln miovision_installations
+	-sql "SELECT intersection_uid, intersection_name, date_installed, date_decommissioned, street_main, street_cross, int_id, px, n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, geom
+	FROM miovision_api.intersections WHERE date_installed IS NOT NULL ORDER BY intersection_uid" -nln miovision_installations
 ```
 
 9. **Update `miovision_api.centreline_miovision`**
