@@ -5,12 +5,12 @@ CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
     date_end date
 )
 RETURNS TABLE (
-    intersection_uid integer,
+    intersection_uid smallint,
     datetime_bin timestamp without time zone,
-    classification_uid integer,
-    leg text,
-    dir text,
-    volume integer
+    classification_uid smallint,
+    leg "char",
+    dir char(2),
+    volume smallint
 ) AS $$
 BEGIN
     
@@ -91,12 +91,12 @@ CREATE OR REPLACE FUNCTION miovision_api.volumes_15min_atr_filtered(
     date_end date
 )
 RETURNS TABLE (
-    intersection_uid integer,
+    intersection_uid smallint,
     datetime_bin timestamp without time zone,
-    classification_uid integer,
-    leg text,
-    dir text,
-    volume integer
+    classification_uid smallint,
+    leg "char",
+    dir char(2),
+    volume smallint
 ) AS $$
 BEGIN
     
