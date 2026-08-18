@@ -47,7 +47,7 @@ WITH temp AS (
     --find where this particular movement exits
     FROM miovision_api.movement_map AS mmm
     --then find all the movements that exit there
-    JOIN miovision_api.movement_map AS mmm_exit USING (exit_leg, exit_dir)     
+    JOIN miovision_api.movement_map AS mmm_exit USING (exit_leg, exit_dir)
     JOIN miovision_api.volumes AS v ON
         v.movement_uid = mmm_exit.movement_uid
         AND v.leg = mmm_exit.leg
