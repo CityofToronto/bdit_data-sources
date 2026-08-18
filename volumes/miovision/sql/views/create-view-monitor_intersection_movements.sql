@@ -22,6 +22,7 @@ CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
         ict.volume AS intersection_classification_total,
         SUM(v.volume) / ict.volume::numeric AS volume_frac
     FROM miovision_api.volumes AS v
+    JOIN miovision_api.intersections AS i USING (intersection_uid)
     --anti join intersection_movements_denylist
     LEFT JOIN miovision_api.intersection_movements_denylist AS im_dl
         USING (intersection_uid, classification_uid, leg, movement_uid)
@@ -33,7 +34,8 @@ CREATE OR REPLACE VIEW miovision_api.monitor_intersection_movements AS (
         AND v.datetime_bin >= CURRENT_DATE - 100
         AND NOT (v.classification_uid = 10 AND movement_uid = 8) --bike exit
         AND NOT (v.classification_uid = 7) --bikes in crosswalk
-        AND im_dl.intersection_uid IS NULL
+        AND im_dl.intersection_uid IS NULL --anti join
+        AND v.datetime_bin >= i.date_installed + 1 --don't include install date
     GROUP BY
         v.intersection_uid,
         v.classification_uid,
