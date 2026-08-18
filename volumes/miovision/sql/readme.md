@@ -376,7 +376,26 @@ Approx row count:                    10
 | label             | text        | East                                                                             |            |
 | exit_legs         | text[]      | ['E']                                                                            |            |
 | geoms             | geography   | 0104000020E6100000110000000101000000AC8C5DDA84DA53C0209759002AD6454001010000004A |            |
-| start_date        | date        | 2024-10-28                                                                       | The latest date where one of the cameras was installed. Can be adjusted for other data quality reasons. |
+| start_date        | date        | 2024-10-28                                                                       | The latest date where one of the cameras was installed. Can be adjusted for other data quality reasons. Example query below <sup>1</sup>. |
+
+<sup>1</sup> Example query for setting cordon `start_date`:
+```sql
+WITH max_dates AS (
+    SELECT camera_group, label, MAX(i.date_installed) AS max_date
+    FROM miovision_api.cordons AS c
+    JOIN miovision_api.intersections AS i ON i.intersection_uid = ANY(c.intersection_uids)
+    WHERE
+        camera_group = 'Downtown Cordon - Outbound'
+        AND label = 'Outbound'
+    GROUP BY camera_group, label
+)
+
+UPDATE miovision_api.cordons AS c
+SET start_date = i.max_date
+FROM max_dates AS i
+WHERE c.camera_group = i.camera_group
+AND i.label = i.label;
+```
 
 ### `miovision_api.cordon_counts_15min` (View)
 
