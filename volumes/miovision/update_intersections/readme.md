@@ -85,7 +85,10 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 		AND i.intersection_uid IN (150, 151);
 	```
 
-8. **Update geojson**  
+8. **Update `intersection_name`**
+Manually update `intersection_name` column in `intersections` table in format of [E / W street] / [N / S street] (ie. 'King / Bathurst'). 
+
+9. **Update geojson**  
 	Update the [geojson intersections file](../geojson/mio_intersections.geojson) using `ogr2ogr`. This geojson file is helpful as a publicly accessible record of our Miovision intersections. You will have to make an issue and commit this change. 
 
 ```bash
@@ -96,7 +99,7 @@ ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"hos
 	FROM miovision_api.intersections WHERE date_installed IS NOT NULL ORDER BY intersection_uid" -nln miovision_installations
 ```
 
-9. **Update `miovision_api.centreline_miovision`**
+10. **Update `miovision_api.centreline_miovision`**
 
 	[`miovision_api.centreline_miovision`](../sql/readme.md#centreline_miovision) links Miovision intersection legs to `gis_core.centreline` street segments. 
 
