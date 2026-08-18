@@ -1,7 +1,7 @@
 --DROP PROCEDURE IF EXISTS miovision_api.backfill_atr_agg;
 CREATE OR REPLACE PROCEDURE miovision_api.backfill_atr_agg(
-    p_start_date DATE,
-    p_end_date DATE
+    p_start_date date,
+    p_end_date date
 )
 LANGUAGE plpgsql
 AS $$
@@ -27,7 +27,8 @@ BEGIN
 END $$;
 
 COMMENT ON PROCEDURE miovision_api.backfill_atr_agg
-IS 'A procedure to backfill Miovision ATR aggregation for a range of dates, committing one day at a time.';
+IS 'A procedure to backfill Miovision ATR aggregation for a range of dates,
+committing one day at a time.';
 
 --example
 --CALL miovision_api.backfill_atr_agg('2019-01-27'::date, '2020-01-01'::date)

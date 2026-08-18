@@ -395,7 +395,7 @@ A 15 minute cordon view, which looks good on daily graphs.
 | label                                 | text                        | All Directions                                                               |            |
 | datetime_bin                          | timestamp without time zone | 2026-05-22 00:00:00                                                          |            |
 | auto_volume                           | numeric                     | 4888.6                                                                       | Miovision volume * 1.2        |
-| surface_transit_volume                | numeric                     | 5700.0                                                                       | Miovision volume * 70 during peak hours & * 30 during off-peak hours. |
+| surface_transit_volume                | numeric                     | 100                                                                       | Consider adjusting for expected transit occupancy if comparing mode share. |
 | ped_volume                            | numeric                     | 338.0                                                                        |            |
 | bike_volume                           | numeric                     | 5.0                                                                          |            |
 | total_volume                          | numeric                     | 10931.6                                                                      |            |
