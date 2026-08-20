@@ -142,7 +142,7 @@ def pull_ecocounter_dag():
     def pull_recent_outages():
         conn, password_getter = get_connections()
         #get list of outages
-        outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('2 years'::interval);"
+        outage_query = "SELECT site_id, start_time, end_time FROM ecocounter.identify_site_outages('1 year'::interval);"
         with conn.cursor() as curr:
             curr.execute(outage_query)
             recent_outages = curr.fetchall()
