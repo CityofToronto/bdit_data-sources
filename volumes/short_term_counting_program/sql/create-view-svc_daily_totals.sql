@@ -5,8 +5,9 @@ SELECT
     suv.count_date,
     suv.direction,
     meta.midblock_id,
-    cl.geom AS centreline_geom,
-    SUM(suv.volume) AS daily_volume
+    cl.geom AS midblock_geom,
+    SUM(suv.volume) AS daily_volume,
+    centreline_id_array
 FROM traffic.svc_unified_volumes AS suv
 JOIN traffic.svc_metadata AS meta USING (study_id)
 JOIN traffic.centreline2_midblocks AS cl USING (midblock_id)
@@ -15,6 +16,7 @@ GROUP BY
     suv.count_date,
     suv.direction,
     meta.midblock_id,
+    centreline_id_array,
     cl.geom
 HAVING COUNT(*) = 4 * 24; --15 minute bins
 
