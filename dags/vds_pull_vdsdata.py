@@ -77,6 +77,13 @@ def vdsdata_dag():
             vds_bot = PostgresHook('vds_bot')
             pull_commsdeviceconfig(rds_conn = vds_bot, itsc_conn=itsc_bot)
 
+        update_vds_detector_inventory = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=slack_alert_data_quality,
+            task_id="update_vds_detector_inventory",
+            sql="insert/new_vds_detectors.sql",
+            conn_id="vds_bot"
+        )
+        
         t_done = ExternalTaskMarker(
                 task_id="done",
                 external_dag_id="vds_pull_vdsvehicledata",
@@ -87,7 +94,7 @@ def vdsdata_dag():
             pull_and_insert_detector_inventory(),
             pull_and_insert_entitylocations(),
             pull_and_insert_commsdeviceconfig()
-        ] >> t_done
+        ] >> update_vds_detector_inventory >> t_done
 
     @task_group
     def check_partitions():
