@@ -3,12 +3,10 @@ Python script to backfill historical data for one station between
 a specified range of dates
 '''
 
-import os
-import sys
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from configparser import ConfigParser
 from historical_scrape import pull_weather, upsert_weather
-from psycopg2 import connect, sql
+from psycopg import connect
 from pathlib import Path
 import click
 
