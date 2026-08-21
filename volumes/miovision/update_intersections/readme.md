@@ -63,6 +63,10 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 5. **px**  
     `px` is a uid used to identify signalized intersections. In most cases, `px` is easiest to find manually by searching the intersection name (location) in `gis.traffic_signal` or ITS Central (https://itscentral.corp.toronto.ca/) and finding the corresponding intersection id (PX####). `px` id can be used to look up the rest of the information (`street_main`, `street_cross`, `geom`, `lat`, `lng` and `int_id`) from table `gis.traffic_signal` as in the query below (Step 7). Note that `px` is a zero padded text format in `gis.traffic_signal`, but stored as an integer in `miovision_api.intersections`. 
 
+<p align="center">
+	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
+</p>
+
 6. **Restricted legs**  
     In order to find out which leg of that intersection is restricted (**no cars approaching from that leg**), go to Google Map to find out the direction of traffic. Mark appropriate legs as `True`, and leave others as `null`.
 
@@ -230,6 +234,8 @@ Now that the intersection is configured and the raw volumes data is in the datab
 
 2. **Backfill additional tables**  
 	Next use the [api script](../api/intersection_tmc.py) with `--agg` to backfill the aggregate tables between the date_installed and current date (exclusive). **Skip pulling data by omitting `--pull` flag.** See readme [here](../api/readme.md#how-to-run-the-api). 
+	
+	**Note:** If you do not have `airflow` user access, you can prepare queries for an admin to run with the correct dates and intersection ids. 
 
 3. **QC Aggregate Tables**  
     Check the data pulled for the new intersections to see if you find anything weird in the data. As a starting point, the following sample query can be used to check that the volumes correspond between `volumes`, `volumes_15min`, `volumes_15min_mvmt`, making sure to adjust all the datetime_bin filters and the intersection_uid filter. 
@@ -319,6 +325,3 @@ LATERAL (
 LEFT JOIN gis.traffic_signal AS ts ON ts.node_id = _get_intersection_id[3]
 ```
  
-<p align="center">
-	<img src="image-1.png" alt="Identifying miovision `px` using ITS Central" width="50%"/>
-</p>
