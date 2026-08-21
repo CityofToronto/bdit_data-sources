@@ -17,7 +17,7 @@ Weather has an undeniable effect on the transportation network, influencing peop
 
 ## Historical Data
 
-We import the historical data for two locations on a daily basis, City of Toronto (Station_id = 31688) and Toronto Pearson Airport (Station_id = 51459). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
+We import the historical data for two locations on a daily basis, City of Toronto (Station_id = 6158355) and Toronto Pearson Airport (Station_id = 6158731). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
 
 **Please note** that the `total_rain` and `total_snow` fields for the city weather station are always `NULL`. All other fields can be accessed in the table `weather.historical_daily_city`. As an approximation, we import Toronto Pearson Airport's total rainfall and snowfall in a seperate table `weather.historical_daily_airport`. 
 
@@ -78,11 +78,11 @@ As mentioned before, only historical data can be backfilled. Other than backfill
 Input Params:
 1) `start_dt`: The start date of the date range you want to backfill historical data, inclusive. 
 2) `end_dt`: The end date of the date range you want to backfill historical data, exclusive.
-3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 31688 and Pearson Airport is station_id = 51459
+3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 6158355 and Pearson Airport is station_id = 6158731
 
 For example, if you want to backfill the entire month of 2022 March for Pearson Airport, you would run:
 ```
-python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 51459
+python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 6158731
 ```
 
 ## Manually Accessing Data
