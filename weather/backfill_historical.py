@@ -5,15 +5,13 @@ a specified range of dates
 
 from datetime import datetime, timedelta
 from configparser import ConfigParser
-from historical_scrape import pull_weather, upsert_weather
-from psycopg import connect
 from pathlib import Path
 import click
+from historical_scrape import pull_weather, upsert_weather
 
 CONFIG=ConfigParser()
 CONFIG.read(str(Path.home().joinpath('db.cfg')))
 dbset = CONFIG['DBSETTINGS']
-conn = connect(**dbset)
 
 @click.command()
 @click.option('--start_dt', '-s', type = str, required = True, 
@@ -21,7 +19,7 @@ conn = connect(**dbset)
 @click.option('--end_dt', '-e', type = str, required = True
                 , help = '''End date (text), exclusive lower bound. e.g. '2019-02-01' ''')
 @click.option('--station_id', '-i', type = int, required = True
-                , help = 'Station Id, toronto city centre = 31688, airport = 51459')
+                , help = 'Station Id, toronto city centre = 6158355, airport = 6158731')
 def backfill_historical(start_dt, end_dt, station_id):
     start_date = datetime.strptime(start_dt, '%Y-%m-%d')
     end_date = datetime.strptime(end_dt, '%Y-%m-%d')  - timedelta(days=1) ## Exclusive upper bound
@@ -40,8 +38,8 @@ def backfill_historical(start_dt, end_dt, station_id):
     
     # Pull historical data
     for i in dates:
-        weather_dict = pull_weather(i, station = station_id)
-        upsert_weather(conn, weather_dict, station_id)
+        weather_dict = pull_weather(i, stationid = station_id)
+        upsert_weather(dbset, weather_dict, station_id)
         
 if __name__ == '__main__':
-    backfill_historical()        
+    backfill_historical()
