@@ -11,7 +11,6 @@ import pendulum
 from datetime import timedelta, time
 
 from airflow.sdk import dag, task
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.standard.operators.latest_only import LatestOnlyOperator
 from airflow.providers.standard.sensors.time import TimeSensor
 
@@ -39,22 +38,9 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    #'on_failure_callback': task_fail_slack_alert
+    'on_failure_callback': task_fail_slack_alert
 }
 
-def _get_conn_params(conn_id: str) -> dict:
-    """Resolve an Airflow connection into plain psycopg-friendly kwargs.
-    Must be called from the main Airflow interpreter (has Airflow installed),
-    never from inside an external_python task.
-    """
-    conn = PostgresHook(conn_id).get_connection(conn_id)
-    return {
-        "host": conn.host,
-        "port": conn.port,
-        "dbname": conn.schema,
-        "user": conn.login,
-        "password": conn.password,
-    }
 
 @dag(
     dag_id=DAG_NAME,
@@ -82,17 +68,16 @@ def weather_pull_dag():
     when the forecast for next day evening becomes available.
     """
 
-    @task
-    def get_weather_bot_conn_params():
-        """Runs in the main Airflow env, where PostgresHook/Connection is available."""
-        return _get_conn_params("weather_bot")
-
     @task.external_python(python=PATH_TO_PYTHON_BINARY)
-    def pull_prediction(conn_params: dict):
+    def pull_prediction(repo_path):
         import sys
-        sys.path.insert(0, "/data/home/gwolofs/bdit_repos/bdit_data-sources/_")
+        import configparser
+        sys.path.insert(0, repo_path)
         # Imports happen here, inside the venv's interpreter
         from weather.prediction_import import prediction_upsert
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read('/data/airflow/data_scripts/bdit_data-sources/weather/db.cfg')
+        conn_params = CONFIG['DBSETTINGS']
         prediction_upsert(cred=conn_params)
     pull_prediction.doc_md = "Pull weather forcast for 5 days ahead of run date"
 
@@ -101,10 +86,14 @@ def weather_pull_dag():
         retries=1,
         retry_delay=pendulum.duration(hours=9) #late arriving data arrives 9 hours later: https://climate.weather.gc.ca/FAQ_e.html#Q17
     )
-    def pull_historical(conn_params: dict, station_id, ds=None):
+    def pull_historical(repo_path, station_id, ds=None):
         import sys
-        sys.path.insert(0, "/data/home/gwolofs/bdit_repos/bdit_data-sources/_")
+        import configparser
+        sys.path.insert(0, repo_path)
         from weather.historical_scrape import historical_upsert
+        CONFIG = configparser.ConfigParser()
+        CONFIG.read('/data/airflow/data_scripts/bdit_data-sources/weather/db.cfg')
+        conn_params = CONFIG['DBSETTINGS']
         historical_upsert(
             cred=conn_params,
             run_date=ds,
@@ -121,12 +110,10 @@ def weather_pull_dag():
     Checks if historical inputs do not exist or are all nulls.
     '''
 
-    conn_params = get_weather_bot_conn_params()
-
-    no_backfill >> wait_till_1030am >> pull_prediction(conn_params)
+    no_backfill >> wait_till_1030am >> pull_prediction(repo_path)
     [
-        pull_historical.override(task_id = 'pull_historical_city')(conn_params, station_id=6158355),
-        pull_historical.override(task_id = 'pull_historical_airport')(conn_params, station_id=6158731)
+        pull_historical.override(task_id = 'pull_historical_city')(repo_path, station_id=6158355),
+        pull_historical.override(task_id = 'pull_historical_airport')(repo_path, station_id=6158731)
     ] >> check_nulls
 
 weather_pull_dag()
