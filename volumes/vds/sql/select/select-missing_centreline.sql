@@ -1,11 +1,12 @@
 WITH missing AS (
     SELECT
-        vdsconfig_uid,
-        detector_id
-    FROM vds.detector_inventory
+        di.vdsconfig_uid,
+        di.detector_id
+    FROM vds.detector_inventory AS di
+    LEFT JOIN vds.centreline_vds AS c USING (vdsconfig_uid)
     WHERE
-        centreline_id IS NULL
-        AND division_id = 2
+        di.division_id = 2
+        AND c.vdsconfig_uid IS NULL --missing, but allowing for manual null centrelines
     ORDER BY vdsconfig_uid
 )
 
@@ -18,4 +19,4 @@ SELECT
         'vdsconfig_uid: `' || vdsconfig_uid
         || '`, detector_id: `' || detector_id || '`'
     ) AS gaps
-FROM missing
+FROM missing;
