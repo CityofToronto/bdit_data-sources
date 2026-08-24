@@ -1,0 +1,8 @@
+click
+env_canada==0.19.1
+numpy
+pandas
+psycopg
+datetime
+asyncio
+configparser
