@@ -2,7 +2,6 @@
 
 # Airflow
 apache-airflow[postgres,slack,ftp,http,fab,standard]==3.2.2
-apache-airflow-providers-google==19.2.0
 
 # Airflow dag list
 graphviz
@@ -12,7 +11,7 @@ pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce0
 pip-tools==7.6.2
 
 # pipelines
-geopandas==1.0.1
+pandas
 holidays==0.31
 requests-oauthlib
 
