@@ -88,29 +88,82 @@ FROM (
     (353722537, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     (353722538, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066610	"Shaw St, north of Essex St (South Intersection)"
-    
+    -- SB is anomalous (incorrect) prior to Wed 2026-07-29.
+    (353708690, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'bike'), -- no contraflow sensor apparent
+    (353708691, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'scooter'), -- no contraflow sensor apparent
+    (353708692, 'Southbound', 'Southbound'::gwolofs.travel_directions, 'bike'), -- no contraflow sensor apparent
+    (353708693, 'Southbound', 'Southbound'::gwolofs.travel_directions, 'scooter'), -- no contraflow sensor apparent
     -- 300066346	"Sheppard Ave E, east of Willowdale Ave"
+    (353705394, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353705395, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353705396, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353705397, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066351	"Sheppard Ave E, east of Willowdale Ave"
-    -- 300028589	"Sherbourne St, north of Wellesley St E"
+    (353705433, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353705434, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353749730, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353749733, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    -- 300028589	"Sherbourne St, north of Wellesley St E" --no data from these flows (353426291, 353426292)
     -- 300066608	"Shuter St, west of Sherbourne St"
+    (353708668, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353708669, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353708670, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353708671, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066609	"Shuter St, west of Sherbourne St"
+    (353708679, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353708680, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353708681, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353708682, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
     -- 300062142	"Steeles Ave E, east of McCowan Rd"
-    -- 300060828	"Steeles Ave E, east of Midland Ave"
-    -- 300062143	"Steeles Ave E, east of Midland Ave"
+    (353654112, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353654113, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353654114, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353654115, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     -- 300062141	"Steeles Ave E, west of McCowan Rd"
+    -- no data since 2026-06-16 (as of 2026-08-24)
+    (353654101, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353654102, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353654103, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353654104, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    -- 300060828	"Steeles Ave E, east of Midland Ave"
+    (353639946, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353639947, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353639948, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353639949, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    -- 300062143	"Steeles Ave E, east of Midland Ave"
+    (353654128, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353654129, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353654130, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353654131, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066511	"Wellesley St W, west of Queen's Park Cres E"
+    (353706581, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353706582, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'),
+    (353706583, 'Eastbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353706584, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'),
+    (353706585, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353706586, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'bike'),
+    (353706587, 'Eastbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
+    (353706588, 'Westbound', 'Westbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066423	"Woodbine Ave, north of Kingston Rd"
+    (353705998, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'bike'),
+    (353705999, 'Southbound', 'Northbound'::gwolofs.travel_directions, 'bike'),
+    (353706000, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'scooter'),
+    (353706001, 'Southbound', 'Northbound'::gwolofs.travel_directions, 'scooter'),
     -- 300066426	"Woodbine Ave, north of Kingston Rd"
-
+    (353705998, 'Southbound', 'Southbound'::gwolofs.travel_directions, 'bike'),
+    (353705999, 'Northbound', 'Southbound'::gwolofs.travel_directions, 'bike'),
+    (353706000, 'Southbound', 'Southbound'::gwolofs.travel_directions, 'scooter'),
+    (353706001, 'Northbound', 'Southbound'::gwolofs.travel_directions, 'scooter')
 
 ) AS vals(flow_id, flow_direction, direction_main, mode_counted)
 WHERE vals.flow_id = fu.flow_id;
 
--- 300066512	"Gerrard St, west of Yonge St" flows no longer used
--- These contain westbound cyclist main-flow and contraflow data from the installation date up to '2026-07-28 08:00:00’
-UPDATE ecocounter.flows_unfiltered AS fu
-SET date_decommissioned = '2026-07-28 08:00:00'
-WHERE flow_id IN (353750135, 353750136);
+-- waiting on ecocounter to respond to our question before making this change
+-- -- 300066512	"Gerrard St, west of Yonge St" flows no longer used
+-- -- These contain westbound cyclist main-flow and contraflow data from the installation date up to '2026-07-28 08:00:00’
+-- UPDATE ecocounter.flows_unfiltered AS fu
+-- SET date_decommissioned = '2026-07-28 08:00:00'
+-- WHERE flow_id IN (353750135, 353750136);
 
 -- 300066323	"Kipling Ave, north of Mt Olive Dr (multi-use path) " no contraflow sensor apparent
 UPDATE ecocounter.flows_unfiltered AS fu
@@ -119,5 +172,20 @@ WHERE flow_id IN (
     353705221,
     353705222,
     353705223,
-    353705224
+    353705224,
+    353708690,
+    353708691,
+    353708692,
+    353708693,
+);
+
+-- manually set bin_size for several sites where it is currently '00:00:00'
+UPDATE ecocounter.flows_unfiltered
+SET bin_size = INTERVAL '00:15:00'
+WHERE site_id IN (
+    300063317,
+    300066323,
+    300067687,
+    300066423,
+    300063314
 );
