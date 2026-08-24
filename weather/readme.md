@@ -11,6 +11,7 @@
   - [Backfill Data](#backfill-data)
   - [Manually Accessing Data](#manually-accessing-data)
     - [Uploading Manually Accessed Historical Data into the Database](#uploading-manually-accessed-historical-data-into-the-database)
+  - [Python Virtual Environment](#python-virtual-environment)
 
 ## Overview
 Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and also forecast data for City of Toronto. These data are stored in the `weather` schema, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
@@ -122,3 +123,22 @@ If the backfill process is not working, or cannot find the desired data, histori
 ![csvimport1](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/2b959cb9-e39e-417f-b6b6-2a6dddea67d9)
 
 1. Navigate to the script directory in a new terminal and run the script using `python csv_import.py`
+
+## Python Virtual Environment
+
+Python 3.10 currently used for EC2 Airflow is incompatible with the latest version of env-canada package used to pull weather. The solution was to create a separate virtual environment with a newer version of python and the latest version of env-canada.
+
+Installed python 3.11 on EC2:
+```
+sudo apt install python3.11 python3.11-venv
+```
+
+Steps to create virtual environment: 
+
+```
+su - airflow
+python3.11 -m venv weather_venv
+cd ~/data_scripts/bdit_data-sources/weather/
+pip-compile requirements.in
+pip-sync requirements.txt
+```
