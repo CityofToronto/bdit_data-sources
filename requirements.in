@@ -2,7 +2,6 @@
 
 # Airflow
 apache-airflow[postgres,slack,ftp,http,fab,standard]==3.2.2
-apache-airflow-providers-google==19.2.0
 
 # Airflow dag list
 graphviz
@@ -11,9 +10,7 @@ graphviz
 pip-tools==7.5.2
 
 # pipelines
-# bs4==0.0.1
-# env-canada
-geopandas==1.0.1
+pandas
 holidays==0.31
 requests-oauthlib
 
