@@ -82,7 +82,15 @@ def vdsdata_dag():
             itsc_bot = PostgresHook('itsc_postgres')
             vds_bot = PostgresHook('vds_bot')
             pull_commsdeviceconfig(rds_conn = vds_bot, itsc_conn=itsc_bot)
-
+        
+        refresh_centrelines = SQLExecuteQueryOperator(
+            sql="SELECT vds.refresh_centrelines();",
+            task_id='refresh_centrelines',
+            conn_id='vds_bot',
+            autocommit=True,
+            retries=1
+        )
+        
         t_done = TriggerDagRunOperator(
             task_id="done",
             trigger_dag_id="vds_pull_vdsvehicledata",
@@ -94,7 +102,7 @@ def vdsdata_dag():
             pull_and_insert_detector_inventory(),
             pull_and_insert_entitylocations(),
             pull_and_insert_commsdeviceconfig()
-        ] >> t_done
+        ] >> refresh_centrelines >> t_done
 
     @task_group
     def check_partitions():
