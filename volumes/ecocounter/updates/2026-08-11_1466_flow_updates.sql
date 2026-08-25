@@ -7,8 +7,8 @@ SET
     mode_counted = vals.mode_counted
 FROM (
     VALUES
-    (353706545, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'), -- correct adelaide: includes_contraflow should be FALSE
-    (353706547, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'), -- correct adelaide: includes_contraflow should be FALSE
+    (353706545, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'bike'), -- correct the existing value (includes_contraflow should be FALSE)
+    (353706547, 'Westbound', 'Eastbound'::gwolofs.travel_directions, 'scooter'), -- correct the existing value (includes_contraflow should be FALSE)
     -- 300063317    "Bayview Ave, south of Pottery Rd (multi-use path)" 
     (353665993, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'bike'),
     (353665994, 'Northbound', 'Northbound'::gwolofs.travel_directions, 'scooter'),
@@ -166,6 +166,7 @@ WHERE vals.flow_id = fu.flow_id;
 -- WHERE flow_id IN (353750135, 353750136);
 
 -- 300066323	"Kipling Ave, north of Mt Olive Dr (multi-use path) " no contraflow sensor apparent
+-- 300066610	"Shaw St, north of Essex St (South Intersection)" no contraflow sensor apparent
 UPDATE ecocounter.flows_unfiltered AS fu
 SET includes_contraflow = TRUE
 WHERE flow_id IN (
