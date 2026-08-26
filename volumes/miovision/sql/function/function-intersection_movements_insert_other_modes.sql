@@ -3,10 +3,10 @@
 -- DROP FUNCTION IF EXISTS miovision_api.intersection_movements_insert_other_modes();
 
 CREATE OR REPLACE FUNCTION miovision_api.intersection_movements_insert_other_modes()
-    RETURNS trigger
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE NOT LEAKPROOF
+RETURNS trigger
+LANGUAGE plpgsql
+COST 100
+VOLATILE NOT LEAKPROOF
 AS $BODY$
 
 BEGIN
@@ -40,11 +40,13 @@ $BODY$;
 ALTER FUNCTION miovision_api.intersection_movements_insert_other_modes()
 OWNER TO miovision_admins;
 
-REVOKE EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes() FROM public;
 
-GRANT EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes() TO miovision_admins;
+GRANT EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes()
+TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes() TO miovision_api_bot;
+GRANT EXECUTE ON FUNCTION miovision_api.intersection_movements_insert_other_modes()
+TO miovision_api_bot;
 
 COMMENT ON FUNCTION miovision_api.intersection_movements_insert_other_modes()
 IS 'Runs after insert into miovision_api.intersection_movements to insert non-light auto modes.';
