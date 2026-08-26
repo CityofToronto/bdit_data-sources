@@ -265,7 +265,7 @@ Row count: 666
 
 ### `vds.centreline_vds`
 Table to store VDS sensors - centreline equivalency. See `vds.detector_inventory` mat view for ease of use.
-Can be joined using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
+Centrelines are all matched to `centreline_latest` - join using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
 See update instructions [below](#updating-vdscentreline_vds). 
 
 Row count: 392
@@ -658,8 +658,10 @@ you may need to update those rows to add manually fkeys and then summarize those
 - There are occasional (usually annual) opportunities to repair RESCU detectors, for example: https://www.toronto.ca/services-payments/streets-parking-transportation/road-maintenance/bridges-and-expressways/expressways/gardiner-expressway/gardiner-expressway-maintenance-program/. Check with management.   
 
 ### Updating `vds.centreline_vds`
-See script [here](sql/adhoc_updates/update-missing_vds_centreline.sql) for an example of spatially joining sensors to the centreline.  
-Additionally, here is an example QGIS map used to verify results / manually identify centreline_ids. 
+~~See script [here](sql/adhoc_updates/update-missing_vds_centreline.sql) for an example of spatially joining sensors to the centreline.~~
+- This process now happens automatically for most detectors using [this function](./sql/functions/function-refresh_centrelines.sql) run daily via Airflow. 
+ 
+For other cases, you will need to use QGIS to manually identify centgreline ids and insert them manually into `vds.centreline_vds`.
 
 <div style="width: 75%";>
 
