@@ -1,9 +1,10 @@
 CREATE OR REPLACE FUNCTION vds.refresh_centrelines()
 RETURNS VOID AS $$
 
+--if the centreline has fallen out of centreline_latest, delete and reprocess.
 DELETE FROM vds.centreline_vds
 WHERE
-    centreline_id IS NOT NULL
+    centreline_id IS NOT NULL --allow for null placeholders
     AND centreline_id NOT IN (
         SELECT centreline_id FROM gis_core.centreline_latest
     );
@@ -40,14 +41,12 @@ WITH vds_centreline_temp AS (
         SELECT
             i.vdsconfig_uid,
             i.detector_id,
-            --v.direction, --this was only for rescu detectors, not boradly applicable
             UPPER(e.main_road_name) || ' and ' || UPPER(e.cross_road_name) AS detector_loc,
             i.sensor_geom,
             e.main_road_id AS linear_name_id
         FROM vds.detector_inventory AS i
         LEFT JOIN vds.entity_locations AS e ON e.uid = i.entity_location_uid
         LEFT JOIN vds.vdsconfig AS v ON v.uid = i.vdsconfig_uid
-        --fitler here
         WHERE
             (
                 i.centreline_id IS NULL
