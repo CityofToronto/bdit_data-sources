@@ -151,10 +151,10 @@ FROM (
     (353706000, 'Northbound', 'Northbound'::travel_directions, 'scooter'),
     (353706001, 'Southbound', 'Northbound'::travel_directions, 'scooter'),
     -- 300066426	"Woodbine Ave, north of Kingston Rd"
-    (353705998, 'Southbound', 'Southbound'::travel_directions, 'bike'),
-    (353705999, 'Northbound', 'Southbound'::travel_directions, 'bike'),
-    (353706000, 'Southbound', 'Southbound'::travel_directions, 'scooter'),
-    (353706001, 'Northbound', 'Southbound'::travel_directions, 'scooter')
+    (353706020, 'Southbound', 'Southbound'::travel_directions, 'bike'),
+    (353706021, 'Northbound', 'Southbound'::travel_directions, 'bike'),
+    (353706022, 'Southbound', 'Southbound'::travel_directions, 'scooter'),
+    (353706023, 'Northbound', 'Southbound'::travel_directions, 'scooter')
 
 ) AS vals(flow_id, flow_direction, direction_main, mode_counted)
 WHERE vals.flow_id = fu.flow_id;
