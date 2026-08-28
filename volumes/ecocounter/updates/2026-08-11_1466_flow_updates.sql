@@ -64,15 +64,15 @@ FROM (
     (353705223, 'Northbound', 'Northbound'::travel_directions, 'bike'), -- no contraflow sensor apparent
     (353705224, 'Northbound', 'Northbound'::travel_directions, 'scooter'), -- no contraflow sensor apparent
     -- 300066611	"Lake Shore Blvd W, east of First St (two-way cycle track)"
-    -- these are unclear. might need to be changed after comparing to validation count
-    (353708701, 'Eastbound', 'Eastbound'::travel_directions, 'bike'),
-    (353708702, 'Westbound', 'Eastbound'::travel_directions, 'bike'),
-    (353708703, 'Eastbound', 'Eastbound'::travel_directions, 'scooter'),
-    (353708704, 'Westbound', 'Eastbound'::travel_directions, 'scooter'),
-    (353708705, 'Westbound', 'Westbound'::travel_directions, 'bike'),
-    (353708706, 'Eastbound', 'Westbound'::travel_directions, 'bike'),
-    (353708707, 'Westbound', 'Westbound'::travel_directions, 'scooter'),
-    (353708708, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
+    -- reversed all directions after comparing the data to Spectrum's count
+    (353708701, 'Westbound', 'Westbound'::travel_directions, 'bike'),
+    (353708702, 'Eastbound', 'Westbound'::travel_directions, 'bike'),
+    (353708703, 'Westbound', 'Westbound'::travel_directions, 'scooter'),
+    (353708704, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
+    (353708705, 'Eastbound', 'Eastbound'::travel_directions, 'bike'),
+    (353708706, 'Westbound', 'Eastbound'::travel_directions, 'bike'),
+    (353708707, 'Eastbound', 'Eastbound'::travel_directions, 'scooter'),
+    (353708708, 'Westbound', 'Eastbound'::travel_directions, 'scooter'),
     -- 300067807	"Queens Quay W, west of Lower Simcoe St (two-way cycle track)"
     (353724474, 'Eastbound', 'Westbound'::travel_directions, 'bike'),
     (353724475, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
@@ -136,14 +136,15 @@ FROM (
     (353654130, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
     (353654131, 'Westbound', 'Westbound'::travel_directions, 'scooter'),
     -- 300066511	"Wellesley St W, west of Queen's Park Cres E"
-    (353706581, 'Eastbound', 'Eastbound'::travel_directions, 'bike'),
-    (353706582, 'Westbound', 'Eastbound'::travel_directions, 'bike'),
-    (353706583, 'Eastbound', 'Eastbound'::travel_directions, 'scooter'),
-    (353706584, 'Westbound', 'Eastbound'::travel_directions, 'scooter'),
-    (353706585, 'Eastbound', 'Westbound'::travel_directions, 'bike'),
-    (353706586, 'Westbound', 'Westbound'::travel_directions, 'bike'),
-    (353706587, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
-    (353706588, 'Westbound', 'Westbound'::travel_directions, 'scooter'),
+    -- reversed all directions after comparing the data to Spectrum's count
+    (353706581, 'Eastbound', 'Westbound'::travel_directions, 'bike'),
+    (353706582, 'Westbound', 'Westbound'::travel_directions, 'bike'),
+    (353706583, 'Eastbound', 'Westbound'::travel_directions, 'scooter'),
+    (353706584, 'Westbound', 'Westbound'::travel_directions, 'scooter'),
+    (353706585, 'Eastbound', 'Eastbound'::travel_directions, 'bike'),
+    (353706586, 'Westbound', 'Eastbound'::travel_directions, 'bike'),
+    (353706587, 'Eastbound', 'Eastbound'::travel_directions, 'scooter'),
+    (353706588, 'Westbound', 'Eastbound'::travel_directions, 'scooter'),
     -- 300066423	"Woodbine Ave, north of Kingston Rd"
     (353705998, 'Northbound', 'Northbound'::travel_directions, 'bike'),
     (353705999, 'Southbound', 'Northbound'::travel_directions, 'bike'),
