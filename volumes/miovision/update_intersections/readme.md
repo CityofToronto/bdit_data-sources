@@ -3,7 +3,9 @@
 - [Removing Intersections](#removing-intersections)
 - [Adding Intersections](#adding-intersections)
 	- [Update `miovision_api.intersections`:](#update-miovision_apiintersections)
-	- [Update `miovision_api.intersection_movements`](#update-miovision_apiintersection_movements)
+	- [Update `miovision_api.intersection_movements` and `miovision_api.intersection_movements_denylist`](#update-miovision_apiintersection_movements-and-miovision_apiintersection_movements_denylist)
+		- [`miovision_api.intersection_movements_denylist`](#miovision_apiintersection_movements_denylist)
+		- [`miovision_api.intersection_movements`](#miovision_apiintersection_movements)
 	- [Backfill/Aggregate new intersection data](#backfillaggregate-new-intersection-data)
 	- [Alternate Method of finding `px` (Archived)](#alternate-method-of-finding-px-archived)
 
@@ -112,7 +114,46 @@ ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"hos
 	- Segments intersect at odd angles (like Kingston Road and Eglinton Avenue)
 	- One or more "legs" is not a centreline segment (like the entrance to the shopping centre at Danforth and Jones) -> Add a `null` entry.
 
-## Update `miovision_api.intersection_movements`  
+## Update `miovision_api.intersection_movements` and `miovision_api.intersection_movements_denylist`
+
+### `miovision_api.intersection_movements_denylist`
+`miovision_api.intersection_movements_denylist` stores movements that should definitely not exist: either the leg does not exist or is one-way and therefore certain (illegal, wrong direction) movements should be negligible. Movements in the denylist are not aggregated, and also not allowed in `miovision_api.intersection_movements` (enforced via trigger).
+
+If you are adding an intersection with a one-way or non-existant leg, you can use these one or both of the scripts below (edit `restricted_leg` CTE) to come up with a list of denylist movements.
+
+```sql
+--all the vehicle entrance movements
+--use when no entrance movements
+INSERT INTO miovision_api.intersection_movements_denylist (
+    intersection_uid, classification_uid, movement_uid, leg
+)
+SELECT
+    restricted_leg.intersection_uid::integer,
+    c.classification_uid,
+    m.movement_uid,
+    restricted_leg.leg
+FROM (VALUES (95, 'W')) AS restricted_leg (intersection_uid, leg),
+UNNEST(ARRAY[1, 3, 4, 5, 9]) AS c (classification_uid), --all vehicle types
+UNNEST(ARRAY[1, 2, 3, 4]) AS m (movement_uid)
+
+--all the vehicle exit movements
+--if vehicle exits are not possible at the leg
+INSERT INTO miovision_api.intersection_movements_denylist (
+    intersection_uid, classification_uid, movement_uid, leg
+)
+SELECT
+    restricted_legs.intersection_uid::integer,
+    c.classification_uid,
+    mm.movement_uid,
+    mm.leg
+FROM (VALUES (180, 'W')) AS restricted_leg (intersection_uid, leg)
+--find the movements that correspond with exiting at the restricted leg
+JOIN miovision_api.movement_map AS mm
+    ON mm.exit_leg = restricted_legs.leg,
+UNNEST(ARRAY[1, 3, 4, 5, 9]) AS c (classification_uid) --all vehicle types
+```
+
+### `miovision_api.intersection_movements`
 
 Now that the updated table of [`miovision_api.intersections`](../readme.md#intersections) is ready, we have to update the table [`miovision_api.intersection_movements`](../readme.md#intersection_movements). Intersection movements determines which movements should be aggregated, by classification, typically for reporting purposes. Yes, we can see all kinds of wacky behaviour out there, but analyzing that is rarer than reporting on the main movements, so this makes basic analysis a little bit easier.
 
