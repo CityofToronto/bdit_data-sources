@@ -49,7 +49,9 @@ def pull_miovision_dag():
     def pull_config_dates():
         mio_postgres = PostgresHook("miovision_api_bot")
         with mio_postgres.get_conn() as conn:
-            get_configuration_dates(conn)
+            failure_responses = get_configuration_dates(conn)
+
+        return failure_responses
 
     @task(retries = 1)
     def pull_camera_details():
@@ -78,7 +80,7 @@ def pull_miovision_dag():
                        channel='slack_data_pipeline_data_quality')
 
     pull_camera_details()
-    failure_responses = pull_config_dates()
-    create_slack_message(response=failure_responses)
+    config_failure_responses = pull_config_dates()
+    create_slack_message(response=config_failure_responses)
 
 pull_miovision_dag()
