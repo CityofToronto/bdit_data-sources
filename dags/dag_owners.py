@@ -30,6 +30,7 @@ owners = {
     "traffic_signals_dag": ["natalie", "gabe"],
     "traffic_signal_pull": ["natalie"],
     "tti_aggregate": ["natalie"],
+    "tti_dag": ["gabe"],
     "vds_check": ["gabe"],
     "vds_pull_vdsdata": ["gabe"],
     "vds_pull_vdsvehicledata": ["gabe"],
