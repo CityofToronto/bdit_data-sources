@@ -10,7 +10,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
     from bdit_dag_utils.utils.common_tasks import check_1st_of_month
     from volumes.miovision.api.configuration_info import (
         get_cameras, get_configuration_dates
@@ -60,11 +60,9 @@ def pull_miovision_dag():
             get_cameras(conn)
 
     @task(pre_execute=check_1st_of_month)
-    def create_slack_message(response, **context):
+    def flag_missing_configs(response, **context):
         failure_count = len(response)
-        msg_str = f"Failure to pull_config_dates on {failure_count} intersections"
-
-        extra_msg = ""
+        msg_str = f"Failure to pull_config_dates on {failure_count} intersections \n"
 
         if failure_count > 0:
 
@@ -72,15 +70,13 @@ def pull_miovision_dag():
                 intersection_id = l['intersection_id']
                 status_code = l['status_code']
                 response =  l['reason']
-                extra_msg += f"Intersection {intersection_id} recieved {status_code} error: {response} \n"
+                msg_str += f"Intersection `{intersection_id}` recieved `{status_code}` error: `{response}` \n"
 
-        send_slack_msg(context=context,
-                       msg=msg_str,
-                       attachments=[{"text": extra_msg}],
-                       channel='slack_data_pipeline_data_quality')
+        slack_alert_data_quality(context=context,
+                       extra_msg=msg_str)
 
     pull_camera_details()
     config_failure_responses = pull_config_dates()
-    create_slack_message(response=config_failure_responses)
+    flag_missing_configs(response=config_failure_responses)
 
 pull_miovision_dag()
