@@ -25,8 +25,8 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
 dir.create('ecocounter_anomalous_ranges', showWarnings = FALSE)
 export_path <- file.path(getwd(), 'ecocounter_anomalous_ranges')
 
-flows = tbl(con, sql("SELECT * FROM ecocounter.flows")) %>% collect()
-sites = tbl(con, sql("SELECT * FROM ecocounter.sites ORDER BY site_description")) %>%
+flows = tbl(con, sql("SELECT * FROM ecocounter.flows_unfiltered")) %>% collect()
+sites = tbl(con, sql("SELECT * FROM ecocounter.sites_unfiltered ORDER BY site_description")) %>%
   mutate(site_title = paste0(site_description, " (site_id = ", site_id, ")")) %>% collect()
 
 # Define UI for the app
