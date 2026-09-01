@@ -75,13 +75,12 @@ def insert_weather(cred, weather_df):
 def prediction_upsert(cred):
     #Get current date to pull
     today = datetime.date.today()
-    pull_date = today + datetime.timedelta(days=1)
 
     # pull 5 days of forecasts 
-    for i in range(0,5):
+    for i in range(1,6):
+        pull_date = today + datetime.timedelta(days=i)
         day_forecast = (pull_prediction(today, pull_date))
         weather_df = pd.DataFrame.from_dict([day_forecast])
         insert_weather(cred, weather_df)
-        pull_date = pull_date + datetime.timedelta(days=1)
 
     print("Process Complete")

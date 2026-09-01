@@ -20,21 +20,18 @@ logging.basicConfig(level = logging.INFO)
 #dbset = CONFIG['DBSETTINGS']
 #conn = connect(**dbset)
 
-def pull_weather(run_date_ds, stationid):
+def pull_weather(run_date, stationid):
     '''
     Pull weather data for specified run_date and station
 
     run_date: Day of interested weather data
     station: station id to specify which station to pull weather data from
     '''
-    # Format Date
-    run_date = datetime.datetime.strptime(run_date_ds, '%Y-%m-%d')
-
     ec_en_csv = ECHistorical(station_id=stationid, year=run_date.year, language="english", format="csv")
     asyncio.run(ec_en_csv.update())
     df = pd.read_csv(ec_en_csv.station_data)
     df = df.replace({np.nan: None})
-    row = df[df['Date/Time'] == run_date_ds]
+    row = df[df['Date/Time'] == run_date.strftime("%Y-%m-%d")]
     return row
 
 def upsert_weather(cred, weather_df, stationid):

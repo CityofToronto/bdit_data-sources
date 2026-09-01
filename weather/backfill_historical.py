@@ -8,6 +8,7 @@ from configparser import ConfigParser
 from pathlib import Path
 import click
 from historical_scrape import pull_weather, upsert_weather
+from pandas import date_range
 
 CONFIG=ConfigParser()
 CONFIG.read(str(Path.home().joinpath('db.cfg')))
@@ -22,23 +23,11 @@ dbset = CONFIG['DBSETTINGS']
                 , help = 'Station Id, toronto city centre = 6158355, airport = 6158731')
 def backfill_historical(start_dt, end_dt, station_id):
     start_date = datetime.strptime(start_dt, '%Y-%m-%d')
-    end_date = datetime.strptime(end_dt, '%Y-%m-%d')  - timedelta(days=1) ## Exclusive upper bound
+    end_date = datetime.strptime(end_dt, '%Y-%m-%d') - timedelta(days=1) ## Exclusive upper bound
 
-    # difference between current and previous date
-    delta = timedelta(days=1)
-
-    # store the dates between two dates in a list
-    dates = []
-
-    while start_date <= end_date:
-        # add current date to list by converting  it to iso format
-        dates.append(start_date.strftime("%Y-%m-%d"))
-        # increment start date by timedelta
-        start_date += delta
-    
     # Pull historical data
-    for i in dates:
-        weather_dict = pull_weather(i, stationid = station_id)
+    for dt in date_range(start_date, end_date):
+        weather_dict = pull_weather(dt, stationid = station_id)
         upsert_weather(dbset, weather_dict, station_id)
         
 if __name__ == '__main__':
