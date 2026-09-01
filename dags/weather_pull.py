@@ -89,6 +89,7 @@ def weather_pull_dag():
     def pull_historical(repo_path, station_id, ds=None):
         import sys
         import configparser
+        from datetime import datetime
         sys.path.insert(0, repo_path)
         from weather.historical_scrape import historical_upsert
         CONFIG = configparser.ConfigParser()
@@ -96,7 +97,7 @@ def weather_pull_dag():
         conn_params = CONFIG['DBSETTINGS']
         historical_upsert(
             cred=conn_params,
-            run_date=ds,
+            run_date=datetime.strptime(ds, '%Y-%m-%d'),
             station_id=station_id
         )
     pull_historical.doc_md = "Pull yesterday's historical data for a given station id."
