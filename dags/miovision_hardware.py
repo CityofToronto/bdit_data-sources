@@ -10,7 +10,8 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+    from bdit_dag_utils.utils.common_tasks import check_1st_of_month
     from volumes.miovision.api.configuration_info import (
         get_cameras, get_configuration_dates
     )
@@ -48,7 +49,9 @@ def pull_miovision_dag():
     def pull_config_dates():
         mio_postgres = PostgresHook("miovision_api_bot")
         with mio_postgres.get_conn() as conn:
-            get_configuration_dates(conn)
+            failure_responses = get_configuration_dates(conn)
+
+        return failure_responses
 
     @task(retries = 1)
     def pull_camera_details():
@@ -56,7 +59,24 @@ def pull_miovision_dag():
         with mio_postgres.get_conn() as conn:
             get_cameras(conn)
 
-    pull_config_dates()
+    @task(pre_execute=check_1st_of_month)
+    def flag_missing_configs(response, **context):
+        failure_count = len(response)
+        msg_str = f"Failure to pull_config_dates on {failure_count} intersections \n"
+
+        if failure_count > 0:
+
+            for l in response:
+                intersection_id = l['intersection_id']
+                status_code = l['status_code']
+                response =  l['reason']
+                msg_str += f"Intersection `{intersection_id}` recieved `{status_code}` error: `{response}` \n"
+
+        slack_alert_data_quality(context=context,
+                       extra_msg=msg_str)
+
     pull_camera_details()
+    config_failure_responses = pull_config_dates()
+    flag_missing_configs(response=config_failure_responses)
 
 pull_miovision_dag()
