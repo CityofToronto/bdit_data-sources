@@ -55,7 +55,7 @@ CREATE TEMP TABLE temp_ecocounter_centrelines AS (
 -- Did a visual check in QGIS -looks  (almost) good!
 UPDATE temp_ecocounter_centrelines
 SET
-	centreline_id = 20040988,
+	centreline_id = 20040975,
 	linear_name_full = 'Sheppard Ave E'
 WHERE site_id = 300066351;
 
