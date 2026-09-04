@@ -11,9 +11,9 @@ CREATE TEMP TABLE ecocounter_new_sites AS (
     WHERE
         site_id IN
         (
-            SELECT site_id
-            FROM temp_ecocounter_changes
-            WHERE change = 'new_site'
+            SELECT t.site_id
+            FROM temp_ecocounter_changes AS t
+            WHERE t.change = 'new_site'
         )
 );
 
