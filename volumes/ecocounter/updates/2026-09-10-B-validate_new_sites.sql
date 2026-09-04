@@ -75,12 +75,17 @@ SELECT
     problem_level
 FROM temp_anomalous_sites;
 
---- This one was open ended but did not have the correct problem-level
+
+--- A final pass to change the comments (and the outstanding problem-level case)
 UPDATE ecocounter.anomalous_ranges
 SET
     problem_level = 'do-not-use',
     notes = 'unreasonable over/under counts'
-WHERE site_id = 300024652 AND upper(time_range) IS NULL;
+WHERE upper(time_range) IS NULL AND site_id IN
+    (SELECT site_id FROM temp_ecocounter_changes
+        WHERE change = 'anomalous_range');
+
+
 
 --- All done!
 

@@ -52,7 +52,12 @@ CREATE TEMP TABLE temp_ecocounter_centrelines AS (
         st_distance(det.geom, cl.geom)
 );
 
--- Did a visual check in QGIS -looks good! 
+-- Did a visual check in QGIS -looks  (almost) good!
+UPDATE temp_ecocounter_centrelines
+SET
+	centreline_id = 20040988,
+	linear_name_full = 'Sheppard Ave E'
+WHERE site_id = 300066351;
 
 -- Apply changes 
 UPDATE ecocounter.sites_unfiltered AS a
@@ -62,6 +67,12 @@ SET
     --its some unfancy regex, worth checking
     technology = 'Induction - Eco-Counter',
     side_street = TRIM(SPLIT_PART(site_description, ' of ', 2))
+FROM temp_ecocounter_centrelines AS b
+WHERE a.site_id = b.site_id;
+
+UPDATE ecocounter.sites_unfiltered AS a
+SET 
+    side_street = REGEXP_REPLACE(side_street, '\([^)]*\)', '')
 FROM temp_ecocounter_centrelines AS b
 WHERE a.site_id = b.site_id;
 
