@@ -55,8 +55,8 @@ CREATE TEMP TABLE temp_ecocounter_centrelines AS (
 -- Did a visual check in QGIS -looks  (almost) good!
 UPDATE temp_ecocounter_centrelines
 SET
-	centreline_id = 20040975,
-	linear_name_full = 'Sheppard Ave E'
+    centreline_id = 20040975,
+    linear_name_full = 'Sheppard Ave E'
 WHERE site_id = 300066351;
 
 -- Apply changes 
@@ -70,7 +70,7 @@ FROM temp_ecocounter_centrelines AS b
 WHERE a.site_id = b.site_id;
 
 UPDATE ecocounter.sites_unfiltered AS a
-SET 
+SET
     side_street = REGEXP_REPLACE(side_street, '\([^)]*\)', '')
 FROM temp_ecocounter_centrelines AS b
 WHERE a.site_id = b.site_id;
