@@ -1,46 +1,51 @@
 <!-- TOC -->
 
-- [miovision_api Table Structure](#miovision_api-table-structure)
-    - [Key Tables](#key-tables)
-        - [intersections](#intersections)
-        - [classifications](#classifications)
-        - [movements](#movements)
-        - [volumes](#volumes)
-    - [Aggregated Data](#aggregated-data)
-        - [volumes_15min_mvt](#volumes_15min_mvt)
-        - [volumes_15min_atr_filtered](#volumes_15min_atr_filtered)
-        - [miovision_api.volumes_daily](#miovision_apivolumes_daily)
-        - [unacceptable_gaps](#unacceptable_gaps)
-        - [gapsize_lookup](#gapsize_lookup)
-    - [Reference Tables](#reference-tables)
-        - [miovision_api.breaks](#miovision_apibreaks)
-        - [miovision_api.anomalous_ranges](#miovision_apianomalous_ranges)
-        - [miovision_api.open_issues](#miovision_apiopen_issues)
-        - [miovision_api.anomaly_investigation_levels and miovision_api.anomaly_problem_levels](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
-        - [movement_map](#movement_map)
-        - [periods](#periods)
-        - [intersection_movements](#intersection_movements)
-        - [centreline_miovision](#centreline_miovision)
-            - [centreline_miovision - Known Issues](#centreline_miovision---known-issues)
-        - [alerts](#alerts)
-        - [camera_details](#camera_details)
-        - [configuration_updates](#configuration_updates)
-    - [Primary and Foreign Keys](#primary-and-foreign-keys)
-        - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
-    - [Other Tables](#other-tables)
+- [2. `miovision_api` Table Structure](#2-miovision_api-table-structure)
+  - [Key Tables](#key-tables)
+    - [`intersections`](#intersections)
+    - [`classifications`](#classifications)
+    - [`movements`](#movements)
+    - [`volumes`](#volumes)
+  - [Aggregated Data](#aggregated-data)
+    - [`volumes_15min_mvt`](#volumes_15min_mvt)
+    - [`miovision_api.volumes_15min_atr_unfiltered` (table)](#miovision_apivolumes_15min_atr_unfiltered-table)
+    - [`volumes_15min_atr_filtered`](#volumes_15min_atr_filtered)
+    - [`miovision_api.volumes_daily` (View)](#miovision_apivolumes_daily-view)
+    - [`unacceptable_gaps`](#unacceptable_gaps)
+    - [`gapsize_lookup`](#gapsize_lookup)
+  - [Cordons](#cordons)
+    - [`miovision_api.cordons` (table)](#miovision_apicordons-table)
+    - [`miovision_api.cordon_counts_15min` (View)](#miovision_apicordon_counts_15min-view)
+    - [`miovision_api.cordon_counts_daily()` (Function)](#miovision_apicordon_counts_daily-function)
+  - [Reference Tables](#reference-tables)
+    - [`miovision_api.breaks`](#miovision_apibreaks)
+    - [`miovision_api.anomalous_ranges`](#miovision_apianomalous_ranges)
+    - [`miovision_api.open_issues`](#miovision_apiopen_issues)
+    - [`miovision_api.anomaly_investigation_levels` and `miovision_api.anomaly_problem_levels`](#miovision_apianomaly_investigation_levels-and-miovision_apianomaly_problem_levels)
+    - [`movement_map`](#movement_map)
+    - [`periods`](#periods)
+    - [`intersection_movements`](#intersection_movements)
+    - [`centreline_miovision`](#centreline_miovision)
+      - [`centreline_miovision` - Known Issues](#centreline_miovision---known-issues)
+    - [`alerts`](#alerts)
+    - [camera\_details](#camera_details)
+    - [configuration\_updates](#configuration_updates)
+  - [Primary and Foreign Keys](#primary-and-foreign-keys)
+    - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
+  - [Other Tables](#other-tables)
 - [PostgreSQL Functions](#postgresql-functions)
-    - [Aggregation Functions](#aggregation-functions)
-    - [Clear Functions](#clear-functions)
-    - [Helper Functions](#helper-functions)
-    - [ Functions](#-functions)
-    - [Partitioning Functions](#partitioning-functions)
-    - [Deprecated Functions](#deprecated-functions)
-- [Finding Gaps and Malfunctioning Camera](#finding-gaps-and-malfunctioning-camera)
-    - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
-    - [Part II - Working Machine](#part-ii---working-machine)
-    - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
-        - [An applied example](#an-applied-example)
-        - [Identifying new anomalies](#identifying-new-anomalies)
+  - [Aggregation Functions](#aggregation-functions)
+  - [Clear Functions](#clear-functions)
+  - [Helper Functions](#helper-functions)
+  - [centreline\_miovision Functions](#centreline_miovision-functions)
+  - [Partitioning Functions](#partitioning-functions)
+  - [Deprecated Functions](#deprecated-functions)
+- [3. Finding Gaps and Malfunctioning Camera](#3-finding-gaps-and-malfunctioning-camera)
+  - [Part I - Unacceptable Gaps](#part-i---unacceptable-gaps)
+  - [Part II - Working Machine](#part-ii---working-machine)
+  - [Identifying Questionable Data Quality](#identifying-questionable-data-quality)
+    - [An applied example](#an-applied-example)
+    - [Identifying new anomalies](#identifying-new-anomalies)
 
 <!-- /TOC -->
 This folder contains sql scripts used in both the API and the old data dump process. The [`csv_data/`](csv_data/) sub-folder contains `sql` files unique to processing the data from csv dumps.
@@ -165,7 +170,7 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
   erDiagram
   volumes }|--|| volumes_15min_mvt_unfiltered : "aggregate into 15min TMC bins"
   volumes 
-  volumes_15min_mvt_unfiltered ||--|{ volumes_15min_atr_unfiltered : "transform into ATR style (VIEW)"
+  volumes ||--|{ volumes_15min_atr_unfiltered_table : "Transform raw volumes into ATR style"
   volumes_15min_mvt_unfiltered {
         integer intersection_uid
         integer classification_uid
@@ -192,7 +197,7 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         datetime range_end
     }
   volumes_daily_unfiltered ||--|{ volumes_daily : "filtered"
-  volumes_15min_atr_unfiltered ||--|{ volumes_15min_atr_filtered : "filtered"
+  volumes_15min_atr_unfiltered_table ||--|{ volumes_15min_atr_filtered : "filtered"
   volumes_15min_mvt_unfiltered ||--|{ volumes_15min_mvt_filtered : "filtered"
   volumes_daily_unfiltered {
         integer intersection_uid
@@ -206,11 +211,12 @@ Data are aggregated from 1-minute volume data into two types of 15-minute volume
         date dt
         integer volume
     }
-  volumes_15min_atr_unfiltered {
+  volumes_15min_atr_unfiltered_table {
         integer intersection_uid
         integer classification_uid
         date datetime_bin
         text leg
+        text dir
         integer volume
   }
   volumes_15min_atr_filtered {
@@ -259,11 +265,24 @@ Please see [this diagram](../getting_started.md#Vehicle-Movements) for a visuali
 
 - A *Unique constraint* was added to `miovision_api.volumes_15min_mvt` table based on `intersection_uid`, `datetime_bin`, `classification_uid`, `leg` and `movement_uid`.
 
-### `volumes_15min_atr_filtered`  
-If you need ATR style Miovision data, use VIEW `miovision_api.volumes_15min_atr_filtered` which transforms TMC data from the `_mvt` tables to ATR style (entries and exits) and excludes anomalous_ranges. 
+### `miovision_api.volumes_15min_atr_unfiltered` (table)
+15 minute ATR aggregate table.
+- includes both entries and exits movements (Exception: no exits for pedestrians (`2`) and bike approaches (`10`))
+- zero padded for classifications 1,2,6,10 to make it easier to calculate averages.
+- Partitioned by year
 
-> [!TIP]
-> Ensure indices are being applied during queries on this View using F7: Explain. Add WHERE clauses on datetime_bin, intersection_uid, and classification_uid. Otherwise materiailizing the whole view could take hours.  
+Approx row count:          479,945,300
+| Column Name        | Data Type                   | Sample              | Comments   |
+|--------------------|-----------------------------|---------------------|------------|
+| intersection_uid   | integer                     | 34                  |            |
+| datetime_bin       | timestamp without time zone | 2026-04-28 00:30:00 |            |
+| classification_uid | integer                     | 2                   |            |
+| leg                | text                        | E                   |            |
+| dir                | text                        | EB                  |            |
+| volume             | integer                     | 3                   |            |
+
+### `volumes_15min_atr_filtered`
+If you need filtered ATR style Miovision data, use function `miovision_api.volumes_15min_atr_filtered(intersection_uids int [], classification_uids int [], date_start date, date_end date)` which  excludes `unacceptable_gaps` and `anomalous_ranges`. 
 
 **ATR movements define leg as the approach direction of vehicles (like TMCs)**,
 and **direction as the cardinal direction of traffic travelling through that
@@ -284,7 +303,7 @@ volume|integer|Total 15-minute volume|107|
 
 [`miovision_api.movement_map`](#movement_map) is a lookup table used to convert the TMC data to the ATR data. 
 
-### `miovision_api.volumes_daily`
+### `miovision_api.volumes_daily` (View)
 
 Daily volumes by intersection_uid, classification_uid. Excludes `anomalous_ranges` (use discouraged based on investigations) but does not exclude time around `unacceptable_gaps` (zero volume periods). 
 Note the table `volumes_daily_unfiltered` can be used (with caution) to include data labelled as anomalous. 
@@ -300,7 +319,6 @@ Note the table `volumes_daily_unfiltered` can be used (with caution) to include 
 | datetime_bins_missing    | Minutes with zero vehicle volumes out of a total of possible 1440 minutes. | smallint    | 69         |
 | unacceptable_gap_minutes | Periods of consecutive zero volumes deemed unacceptable based on avg intersection volume in that hour.                   | smallint    | 0          |
 | avg_historical_gap_vol   | Avg historical volume for that classification and gap duration based on averages from a 60 day lookback in that hour.             | integer     |            |
-
 
 ### `unacceptable_gaps`
 
@@ -332,6 +350,121 @@ Used to determine the maximum acceptable gap for use in `unacceptable_gaps` tabl
 | weekend            | True if Saturday/Sunday or holiday (based on ref.holiday table).                    | boolean     | False              |
 | avg_hour_vol       | The average volume for this hour/intersection/weekend combination based on a 60 day lookback.                  | numeric     | 1.6666666666666667 |
 | gap_tolerance      | The minimum gap duration to be considered an unacceptable_gap. Only valid for the overall intersection volume (classification_uid IS NULL).           | smallint    |                    |
+
+## Cordons
+
+Miovision Cordons are bundles of cameras arranged usually in either an area, screenline, or bounding box. They can be used to quickly track broader multi-modal movement trends. 
+
+![Example Cordon plot from FIFA Monitoring](<../img/Downtown Cordon - Inbound.png>)
+
+> [!CAUTION]
+> - Volumes are currently raw/unfiltered. Care should be taken to pick dates and camera groups without known issues.
+>   - Since these volumes are unvalidated, they are best used for within-mode trends (ped volumes are up x%) and not for modeshare calculations.
+> - If analyzing mode share, you may want to adjust the expected occupancy of transit (and auto) vehicles. Currently, 1 transit vehicle and 1 personal auto are treated the same. 
+
+
+### `miovision_api.cordons` (table)
+Groups of Miovision cameras+legs for Cordon/Area reporting. Use VIEW `miovision_api.cordons_long` for easier joins.
+- When adding new groups, you do not need to insert the geom. This column will be updated by the `trg_cordon_geom` trigger.
+- There can be multiple rows with the same camera group + label. This is for when different intersections as part of the group need different legs included (ie. East side of downtown have `W` leg and West side of downtown have `E` leg for downtown exit volumes)
+
+Approx row count:                    10
+| Column Name       | Data Type   | Sample                                                                           | Comments   |
+|-------------------|-------------|----------------------------------------------------------------------------------|------------|
+| intersection_uids | integer[]   | [1, 5, 10, 22, 26, 69, 70, 94, 95, 98, 101, 102, 103, 104, 110, 111, 112]        |            |
+| camera_group      | text        | Bathurst - South of Dupont                                                       |            |
+| label             | text        | East                                                                             |            |
+| exit_legs         | text[]      | ['E']                                                                            |            |
+| geoms             | geography   | 0104000020E6100000110000000101000000AC8C5DDA84DA53C0209759002AD6454001010000004A |            |
+| start_date        | date        | 2024-10-28                                                                       | The latest date where one of the cameras was installed. Can be adjusted for other data quality reasons. Example query below <sup>1</sup>. |
+
+<sup>1</sup> Example query for setting cordon `start_date`:
+```sql
+WITH max_dates AS (
+    SELECT camera_group, label, MAX(i.date_installed) AS max_date
+    FROM miovision_api.cordons AS c
+    JOIN miovision_api.intersections AS i ON i.intersection_uid = ANY(c.intersection_uids)
+    WHERE
+        camera_group = 'Downtown Cordon - Outbound'
+        AND label = 'Outbound'
+    GROUP BY camera_group, label
+)
+
+UPDATE miovision_api.cordons AS c
+SET start_date = i.max_date
+FROM max_dates AS i
+WHERE c.camera_group = i.camera_group
+AND i.label = i.label;
+```
+
+### `miovision_api.cordon_counts_15min` (View)
+
+A 15 minute cordon view, which looks good on daily graphs.
+- Note: the `*_intersections_missing` columns are very volatile on a 15 minute basis. They are better used at the daily level, which this view feeds into. 
+
+> [!CAUTION]
+> - A naive query like `SELECT * FROM miovision_api.cordon_counts_15min LIMIT 10` will be very slow. To see a data sample, filter for a specific `camera_group` and date range: 
+> ```sql
+> SELECT * FROM miovision_api.cordon_counts_15min WHERE datetime_bin >= CURRENT_DATE - 7 AND camera_group = 'Bathurst - South of Dupont' LIMIT 10
+> ```
+
+| Column Name                           | Data Type                   | Sample                                                                       | Comments   |
+|---------------------------------------|-----------------------------|------------------------------------------------------------------------------|------------|
+| camera_group                          | text                        | Eglinton                                                                     |            |
+| label                                 | text                        | All Directions                                                               |            |
+| datetime_bin                          | timestamp without time zone | 2026-05-22 00:00:00                                                          |            |
+| auto_volume                           | numeric                     | 4888.6                                                                       | Miovision volume * 1.2        |
+| surface_transit_volume                | numeric                     | 100                                                                       | Consider adjusting for expected transit occupancy if comparing mode share. |
+| ped_volume                            | numeric                     | 338.0                                                                        |            |
+| bike_volume                           | numeric                     | 5.0                                                                          |            |
+| total_volume                          | numeric                     | 10931.6                                                                      |            |
+| auto_intersections_missing            | integer[]                   | []                                                                           |            |
+| surface_transit_intersections_missing | integer[]                   | []                                                                           |            |
+| ped_intersections_missing             | integer[]                   | [59, 113]                                                                    |            |
+| bike_intersections_missing            | integer[]                   | [36, 45, 59, 80, 106, 107, 108, 109, 113, 114, 117, 118, 153, 155, 156, 157] |            |
+| total_intersections_missing           | integer[]                   | []                                                                           |            |
+| auto_intersections_present            | integer     | 20             |            |
+| surface_transit_intersections_present | integer     | 20             |            |
+| ped_intersections_present             | integer     | 18             |            |
+| bike_intersections_present            | integer     | 4             |            |
+| total_intersections_present           | integer     | 20             |            |
+
+### `miovision_api.cordon_counts_daily()` (Function)
+
+Daily cordon counts (function). Creating a daily view was not efficient, because query engine couldn't push down a filter on a date column to the timestamp `datetime_bin` column of 15 minute data.
+
+Example usage:
+```sql
+--Total rows: 45
+--Query complete 00:00:07.172
+--Notice the Eglinton cordon only starts after 2026-05-12 based on last camera install date, but bikes are missing from most intersections until 2026-05-20
+SELECT * FROM miovision_api.cordon_counts_daily(
+    p_start := '2026-04-27'::date,
+    p_end := '2026-05-27'::date,
+    camera_groups := ARRAY['Bloor/Danforth', 'Eglinton']::text[])
+```
+
+Approx row count:                    0
+| Column Name                           | Data Type   | Sample         | Comments   |
+|---------------------------------------|-------------|----------------|------------|
+| camera_group                          | text        | Eglinton       |            |
+| label                                 | text        | All Directions |            |
+| dt                                    | date        | 2026-05-22     |            |
+| auto_volume                           | numeric     | 1060156.4      |            |
+| surface_transit_volume                | numeric     | 1063910.0      |            |
+| ped_volume                            | numeric     | 150497.0       |            |
+| bike_volume                           | numeric     | 4025.0         |            |
+| total_volume                          | numeric     | 2278588.4      |            |
+| auto_intersections_missing            | integer[]   | []             |            |
+| surface_transit_intersections_missing | integer[]   | []             |            |
+| ped_intersections_missing             | integer[]   | []             |            |
+| bike_intersections_missing            | integer[]   | [36]           |            |
+| total_intersections_missing           | integer[]   | []             |            |
+| auto_intersections_present            | integer     | 20             |            |
+| surface_transit_intersections_present | integer     | 20             |            |
+| ped_intersections_present             | integer     | 19             |            |
+| bike_intersections_present            | integer     | 20             |            |
+| total_intersections_present           | integer     | 20             |            |
 
 
 ## Reference Tables
