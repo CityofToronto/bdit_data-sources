@@ -8,11 +8,14 @@ DROP TABLE IF EXISTS temp_ecocounter_centrelines;
 
 CREATE TEMP TABLE ecocounter_new_sites AS (
     SELECT * FROM ecocounter.sites_unfiltered
-		WHERE site_id IN
-		(SELECT site_id 
-			FROM temp_ecocounter_changes
-			WHERE change = 'new_site')
-    );
+    WHERE
+        site_id IN
+        (
+            SELECT site_id
+            FROM temp_ecocounter_changes
+            WHERE change = 'new_site'
+        )
+);
 
 CREATE TEMP TABLE temp_ecocounter_centrelines AS (
     WITH centrelines AS (
@@ -29,7 +32,9 @@ CREATE TEMP TABLE temp_ecocounter_centrelines AS (
     )
 
     SELECT DISTINCT ON (det.site_id)
-        rank() OVER (ORDER BY det.site_id) AS _rank, --uid needed for plotting in qgis
+        rank() OVER (
+            ORDER BY det.site_id
+        ) AS _rank, --uid needed for plotting in qgis
         det.site_id,
         cl.centreline_id,
         cl.linear_name_full,
@@ -54,7 +59,8 @@ UPDATE ecocounter.sites_unfiltered AS a
 SET
     centreline_id = b.centreline_id,
     linear_name_full = b.linear_name_full,
-    side_street = TRIM(SPLIT_PART(site_description, ' of ', 2)) --its some unfancy regex, worth checking
+    --its some unfancy regex, worth checking
+    side_street = TRIM(SPLIT_PART(site_description, ' of ', 2))
 FROM temp_ecocounter_centrelines AS b
 WHERE a.site_id = b.site_id;
 
