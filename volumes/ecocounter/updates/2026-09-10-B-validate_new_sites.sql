@@ -41,9 +41,9 @@ FROM temp_ecocounter_changes
 WHERE
     change = 'anomalous_range'
     AND site_id NOT IN (
-        SELECT site_id
-        FROM ecocounter.anomalous_ranges
-        WHERE upper(time_range) IS NULL
+        SELECT e.site_id
+        FROM ecocounter.anomalous_ranges AS e
+        WHERE upper(e.time_range) IS NULL
     ); -- did not realise there was only one until I made this table
 
 
