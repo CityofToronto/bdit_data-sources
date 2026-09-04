@@ -84,6 +84,3 @@ LEFT JOIN f
 DROP TABLE temp_ecocounter_changes;
 
 ALTER TABLE temp_joined_flow RENAME TO temp_ecocounter_changes;
-
-
-SELECT * FROM temp_ecocounter_changes;
