@@ -60,6 +60,7 @@ SET
     centreline_id = b.centreline_id,
     linear_name_full = b.linear_name_full,
     --its some unfancy regex, worth checking
+    technology = 'Induction - Eco-Counter',
     side_street = TRIM(SPLIT_PART(site_description, ' of ', 2))
 FROM temp_ecocounter_centrelines AS b
 WHERE a.site_id = b.site_id;
