@@ -48,7 +48,7 @@ WHERE
 
 
 ALTER TABLE temp_anomalous_sites
-ADD COLUMN uid smallint DEFAULT 110,
+-- ADD COLUMN uid smallint DEFAULT 110,
 ADD COLUMN time_range tsrange,
 ADD COLUMN flow_id numeric,
 ADD COLUMN notes text DEFAULT 'unreasonable over/under counts',
@@ -64,30 +64,43 @@ ALTER TABLE temp_anomalous_sites
 DROP count_date;
 
 -- Add to table -- 
-INSERT INTO ecocounter.anomalous_ranges
+INSERT INTO ecocounter.anomalous_ranges (flow_id, site_id, time_range, notes, investigation_level, problem_level)
 SELECT
-    uid,
+    
     flow_id,
     site_id,
     time_range,
     notes,
     investigation_level,
     problem_level
-FROM temp_anomalous_sites;
+FROM temp_anomalous_sites
+RETURNING     flow_id,
+    site_id,
+    time_range,
+    notes,
+    investigation_level,
+    problem_level;
 
+SELECT * FROM ecocounter.anomalous_ranges
+WHERE site_id = 300026120
 
 --- A final pass to change the comments (and the outstanding problem-level case)
+BEGIN;
 UPDATE ecocounter.anomalous_ranges
 SET
     problem_level = 'do-not-use',
     notes = 'unreasonable over/under counts'
 WHERE upper(time_range) IS NULL AND site_id IN
-    (SELECT site_id FROM temp_ecocounter_changes
-        WHERE change = 'anomalous_range');
+    (SELECT DISTINCT site_id FROM temp_ecocounter_changes
+        WHERE change = 'anomalous_range')
+		RETURNING     flow_id,
+    site_id,
+    time_range,
+    notes,
+    investigation_level,
+    problem_level;
+	COMMIT
 
 
 
 --- All done!
-
-
-
