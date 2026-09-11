@@ -105,7 +105,7 @@ WHERE upper(time_range) IS NULL AND site_id IN
 -- the data at site_id = 300026120 looks weird starting on 2026-01-01. 
 -- Modify the tsrange to start on this date instead of the date of the validation count
 UPDATE ecocounter.anomalous_ranges
-SET time_range = tsrange(count_date, NULL, '[)');
+SET time_range = tsrange('2026-01-01', NULL, '[)');
 WHERE 
     site_id = 300026120 
     AND time_range = tsrange('2026-06-27', NULL, '[)');
