@@ -110,4 +110,37 @@ WHERE
     site_id = 300026120 
     AND time_range = tsrange('2026-06-27', NULL, '[)');
 
+---- Modify sensitivity History ----
+------------------------------
+
+---- Create temp table to add
+DROP TABLE IF EXISTS temp_sensitivity_history;
+
+CREATE TABLE temp_sensitivity_history AS
+SELECT DISTINCT
+    flow_id,
+    count_date
+FROM temp_ecocounter_changes
+    WHERE change = 'new_site';
+
+ALTER TABLE temp_sensitivity_history
+ADD COLUMN setting text DEFAULT 'initial config after install',
+ADD COLUMN date_range daterange;
+
+-- use date_count for daterange
+UPDATE temp_sensitivity_history
+SET date_range = daterange(count_date, NULL, '[)');
+
+--- Drop unnecessary date column
+ALTER TABLE temp_sensitivity_history
+DROP count_date;
+
+-- Add to table -- 
+INSERT INTO ecocounter.sensitivity_history
+SELECT
+    flow_id,
+    date_range,
+    setting
+FROM temp_sensitivity_history;
+
 --- All done!
