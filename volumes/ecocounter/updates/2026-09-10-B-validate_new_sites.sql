@@ -66,7 +66,6 @@ DROP count_date;
 -- Add to table -- 
 INSERT INTO ecocounter.anomalous_ranges (flow_id, site_id, time_range, notes, investigation_level, problem_level)
 SELECT
-    
     flow_id,
     site_id,
     time_range,
@@ -74,7 +73,8 @@ SELECT
     investigation_level,
     problem_level
 FROM temp_anomalous_sites
-RETURNING     flow_id,
+RETURNING
+    flow_id,
     site_id,
     time_range,
     notes,
@@ -90,22 +90,26 @@ UPDATE ecocounter.anomalous_ranges
 SET
     problem_level = 'do-not-use',
     notes = 'unreasonable over/under counts'
-WHERE upper(time_range) IS NULL AND site_id IN
-    (SELECT DISTINCT site_id FROM temp_ecocounter_changes
-        WHERE change = 'anomalous_range')
-		RETURNING     flow_id,
+WHERE
+    upper(time_range) IS NULL AND site_id IN
+    (
+        SELECT DISTINCT site_id FROM temp_ecocounter_changes
+        WHERE change = 'anomalous_range'
+        )
+RETURNING
+    flow_id,
     site_id,
     time_range,
     notes,
     investigation_level,
     problem_level;
-	COMMIT
+COMMIT
 ;
 
 -- the data at site_id = 300026120 looks weird starting on 2026-01-01. 
 -- Modify the tsrange to start on this date instead of the date of the validation count
 UPDATE ecocounter.anomalous_ranges
-SET time_range = tsrange('2026-01-01', NULL, '[)');
+SET time_range = tsrange('2026-01-01', NULL, '[)')
 WHERE 
     site_id = 300026120 
     AND time_range = tsrange('2026-06-27', NULL, '[)');
@@ -127,9 +131,9 @@ ALTER TABLE temp_sensitivity_history
 ADD COLUMN setting text DEFAULT 'initial config after install',
 ADD COLUMN date_range daterange;
 
--- use date_count for daterange
+-- use first_active for daterange. declare first_active as date, as it is a timestamp
 UPDATE temp_sensitivity_history
-SET date_range = daterange(first_active, NULL, '[)');
+SET date_range = daterange(DATE(first_active), NULL, '[)');
 
 --- Drop unnecessary date column
 ALTER TABLE temp_sensitivity_history
