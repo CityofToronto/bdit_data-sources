@@ -59,7 +59,7 @@ WHERE m.ecocounter_site_id = e.site_id;
 --- OUTER leftJOIN FOR flow_id ----
 
 -- Drop if exists
-DROP TABLE IF EXISTS joined_flow;
+DROP TABLE IF EXISTS temp_joined_flow;
 
 CREATE TABLE temp_joined_flow AS
 WITH f AS (
@@ -76,6 +76,7 @@ WITH f AS (
 SELECT
     e.*,
     f.flow_id,
+    f.first_active,
     f.mode_counted
 FROM temp_ecocounter_changes AS e
 LEFT JOIN f
