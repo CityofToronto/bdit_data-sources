@@ -67,6 +67,7 @@ WITH f AS (
         flow_id,
         site_id,
         direction_main,
+        first_active,
         mode_counted
     FROM ecocounter.flows_unfiltered
     WHERE date_decommissioned IS NULL

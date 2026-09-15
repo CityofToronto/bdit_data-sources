@@ -119,7 +119,7 @@ DROP TABLE IF EXISTS temp_sensitivity_history;
 CREATE TABLE temp_sensitivity_history AS
 SELECT DISTINCT
     flow_id,
-    count_date
+    first_active
 FROM temp_ecocounter_changes
     WHERE change = 'new_site';
 
@@ -129,11 +129,11 @@ ADD COLUMN date_range daterange;
 
 -- use date_count for daterange
 UPDATE temp_sensitivity_history
-SET date_range = daterange(count_date, NULL, '[)');
+SET date_range = daterange(first_active, NULL, '[)');
 
 --- Drop unnecessary date column
 ALTER TABLE temp_sensitivity_history
-DROP count_date;
+DROP first_active;
 
 -- Add to table -- 
 INSERT INTO ecocounter.sensitivity_history
