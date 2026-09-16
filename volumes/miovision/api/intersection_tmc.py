@@ -53,7 +53,7 @@ TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
-URL_BASE = 'https://api.miovision.one/api/v1'
+URL_BASE = 'https://api.miovision.one/api/v2'
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -266,14 +266,13 @@ class MiovPuller:
                     + self.process_crosswalk_row(row) for row in data]
         return [(self.intersection_uid, )
                 + self.process_tmc_row(row) for row in data]
-    def process_timestamp(self, row):
-        """Miovision One API returns timestamps in UTC which needs converting to local TZ."""
-        utc_timestamp = row['timestamp']
-        if utc_timestamp is None:
+    def process_timestamp(row):
+        """Miovision One API returns timestamps in local TZ which need to be parsed."""
+        local_timestamp  = row['timestamp']
+        if local_timestamp is None:
             return None
-        utc_timestamp = dateutil.parser.parse(str(utc_timestamp))
-        #convert timestamp from utc to local TZ
-        local_timestamp = utc_timestamp.replace(tzinfo=pytz.utc).astimezone(TZ)
+        local_timestamp = dateutil.parser.parse(str(local_timestamp ))
+        # Remove TZ info and return
         return local_timestamp.replace(tzinfo=None)
     def get_intersection(self, start_time, end_time):
         """Get all data for one intersection between start and end time."""
