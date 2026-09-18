@@ -376,6 +376,8 @@ Row count: 3,072
 
 ## Validation Steps
 
+SQL scripts used to modify/validate sites are stored at [volumes/ecocounter/updates](https://github.com/CityofToronto/bdit_data-sources/tree/master/volumes/ecocounter/updates). Include your changes here, and use prior changes as a useful reference.
+
 1. Data Collection will follow the steps at [data_collection_automation/ecocounter_validation_counts](https://github.com/Toronto-Big-Data-Innovation-Team/data_collection_automation/blob/main/ecocounter_validation_counts/README.md) to load QC data into the database. At the end of this process there should be data for the study in `ecocounter.validation_results`.
 2. If the sensitivity has changed or it is a new sensor, add a row to `ecocounter.sensitivity_history`.
 
@@ -384,5 +386,18 @@ Row count: 3,072
 
 3. Check `validated` column is set to `True` in both `ecocounter.sites_unfiltered` and `ecocounter.flows_unfiltered`.
 4. Clear anomalous ranges from `ecocounter.anomalous_ranges` if any, which are sometimes used to hold back data which is undergoing validation. Remember to check both the `site_id` and `flow_id`.
-5. Make sure all the fields used by `ecocounter.open_data_locations` for the new sites are populated in `ecocounter.sites`. This includes street names and `centreline_id`. 
-6. The `ecocounter_open_data` pipeline will run at the start of each month, which will insert any new locations into `open_data.cycling_permanent_counts_locations` and the data into `ecocounter.open_data_15min_counts`, `ecocounter.open_data_daily_counts`.
+5. Make sure all the fields used by `ecocounter.open_data_locations` for the new sites are populated in `ecocounter.sites`. This includes street names and `centreline_id`. The `centreline_id` can be found with this [useful script](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/ecocounter/updates/ecocounter_centreline_updates.sql).
+6. The `ecocounter_open_data` pipeline will run at the start of each month, which will insert any new locations into `open_data.cycling_permanent_counts_locations` and the data into `ecocounter.open_data_15min_counts`, `ecocounter.open_data_daily_counts`. There is a wait_10_days task to give sufficient time to prepare the data prior to publishing.
+7. If there has been any changes which could affect the previous year (for instance, a site coming online with data existing in the previous year), you will need to trigger the dag run for January 1st of the current year. Otherwise, the previous year’s data will be excluded.
+8. Move the newly created csvs into the open data directory.
+
+## Adding Anomalous Ranges
+
+At times, we may need to add anomalous ranges for published data, effectively ‘unpublishing’ them. This can be managed through the `ecocounter.anomalous_ranges` table.
+
+1. Add or modify the table so that the identified `site_id` or `flow_id` has `problem_level` = do-not-use.
+    
+    If adding an anomalous range at the site level, use only the `site_id` and leave `flow_id` as NULL. If adding an anomalous range at the flow level, include `site_id` and `flow_id`.
+    
+2. Consider the reason for the anomalous range and include the detail in `notes`. It is possible to have two consecutive anomalous ranges with different reasons, and therefore `notes`. 
+3. If an anomalous range extends into the previous year, it is necessary to review the data and manually remove the data within the daterange if neccessary. This is documented in PR [#1489](https://github.com/CityofToronto/bdit_data-sources/pull/1489).
