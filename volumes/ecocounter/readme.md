@@ -393,11 +393,11 @@ SQL scripts used to modify/validate sites are stored at [volumes/ecocounter/upda
 
 ## Adding Anomalous Ranges
 
-At times, we may need to add anomalous ranges for published data, effectively ‘unpublishing’ them. This can be managed through the `ecocounter.anomalous_ranges` table.
+At times, we may need to add anomalous ranges for published data, effectively "unpublishing" them. This can be managed through the `ecocounter.anomalous_ranges` table.
 
-1. Add or modify the table so that the identified `site_id` or `flow_id` has `problem_level` = do-not-use.
+1. Add or modify the table so that the identified `site_id` or `flow_id` has `problem_level` = `do-not-use`.
     
-    If adding an anomalous range at the site level, use only the `site_id` and leave `flow_id` as NULL. If adding an anomalous range at the flow level, include `site_id` and `flow_id`.
+    If adding an anomalous range at the site level, use only the `site_id` and leave `flow_id` as `NULL`. If adding an anomalous range at the flow level, include `site_id` and `flow_id`.
     
-2. Consider the reason for the anomalous range and include the detail in `notes`. It is possible to have two consecutive anomalous ranges with different reasons, and therefore `notes`. 
-3. If an anomalous range extends into the previous year, it is necessary to review the data and manually remove the data within the daterange if neccessary. This is documented in PR [#1489](https://github.com/CityofToronto/bdit_data-sources/pull/1489).
+2. Consider the reason for the anomalous range and include the detail in `notes`. It is possible to have two consecutive anomalous ranges with different reasons or `problem_level`s, and therefore different `notes`. 
+3. If an anomalous range extends into the previous year, it is necessary to review the data and manually remove the data within the daterange from  `open_data_15min_counts` and `open_data_daily_counts` if neccessary. This is documented in PR [#1489](https://github.com/CityofToronto/bdit_data-sources/pull/1489).
