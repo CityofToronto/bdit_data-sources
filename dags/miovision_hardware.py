@@ -70,7 +70,7 @@ def pull_miovision_dag():
                 intersection_id = l['intersection_id']
                 status_code = l['status_code']
                 response =  l['reason']
-                msg_str += f"Intersection `{intersection_id}` recieved `{status_code}` error: `{response}` \n"
+                msg_str += f"Intersection `{intersection_id}` received `{status_code}` error: `{response}` \n"
 
         slack_alert_data_quality(context=context,
                        extra_msg=msg_str)
