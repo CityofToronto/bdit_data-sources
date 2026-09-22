@@ -55,7 +55,7 @@ def get_cameras(conn):
             cameras = pd.concat([cameras, cameras_i])
         else:
             #don't need to fail this non-critical pipeline
-            LOGGER.info(f"Intersection {intersection.id1} recieved {response.status_code} error: {response.reason}")
+            LOGGER.info(f"Intersection {intersection.id1} received {response.status_code} error: {response.reason}")
 
     final = [tuple(x) for x in cameras.to_numpy()] #convert to tuples for inserting
 
@@ -71,6 +71,7 @@ def get_configuration_dates(conn):
     intersections = get_intersection_info(conn)
     HEADERS=headers()
     configs = []
+    config_failure_responses = []
     for intersection in intersections:
         response = session.get(
             URL_BASE + f"/intersections/{intersection.id1}/hardware/detectionConfiguration",
@@ -89,9 +90,21 @@ def get_configuration_dates(conn):
                 )
                 configs.append(config_i)
         else:
-            #don't need to fail this non-critical pipeline
-            LOGGER.info(f"Intersection {intersection.id1} recieved {response.status_code} error: {response.reason}")
+            # Create a list to pass to slack_alert task
+            config_i = {
+                'intersection_id': intersection.uid,
+                'status_code': response.status_code,
+                'reason': response.reason                
+                }
+            
+            config_failure_responses.append(config_i)
+
+            LOGGER.info(f"Intersection {intersection.id1} received {response.status_code} error: {response.reason}")
+
     sql='''INSERT INTO miovision_api.configuration_updates (intersection_uid, updated_time) VALUES (%s, %s)
         ON CONFLICT (intersection_uid, updated_time) DO NOTHING'''
     with conn.cursor() as cur:
         cur.executemany(sql, configs)
+
+    # Return failures to use as XCOM
+    return config_failure_responses
