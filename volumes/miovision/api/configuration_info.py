@@ -55,7 +55,7 @@ def get_cameras(conn):
             cameras = pd.concat([cameras, cameras_i])
         else:
             #don't need to fail this non-critical pipeline
-            LOGGER.info(f"Intersection {intersection.id1} recieved {response.status_code} error: {response.reason}")
+            LOGGER.info(f"Intersection {intersection.id1} received {response.status_code} error: {response.reason}")
 
     final = [tuple(x) for x in cameras.to_numpy()] #convert to tuples for inserting
 
@@ -99,7 +99,7 @@ def get_configuration_dates(conn):
             
             config_failure_responses.append(config_i)
 
-            LOGGER.info(f"Intersection {intersection.id1} recieved {response.status_code} error: {response.reason}")
+            LOGGER.info(f"Intersection {intersection.id1} received {response.status_code} error: {response.reason}")
 
     sql='''INSERT INTO miovision_api.configuration_updates (intersection_uid, updated_time) VALUES (%s, %s)
         ON CONFLICT (intersection_uid, updated_time) DO NOTHING'''
