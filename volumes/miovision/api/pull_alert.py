@@ -8,6 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 import click
+from urllib.parse import urlparse, parse_qs
 from psycopg import sql
 
 from airflow.sdk.bases.hook import BaseHook
@@ -74,14 +75,17 @@ class MiovAlertPuller:
     """
     headers = {'Content-Type': 'application/json',
                'apikey': ''}
-    def __init__(self, url, start_time, end_time, key):
+    def __init__(self, url, start_time, end_time, page_number, key):
         self.url = url
         self.start_time = start_time.isoformat()
         self.end_time = end_time.isoformat()
+        self.page_number = page_number
         self.headers['apikey'] = key
     def get_response(self):
         """Requests data from API."""
-        params = {'startDateTime': self.start_time,
+        params = {'pageSize':100,
+                  'pageNumber': self.page_number,
+                  'startDateTime': self.start_time,
                   'endDateTime': self.end_time}
         response = session.get(
             url=self.url,
@@ -91,10 +95,8 @@ class MiovAlertPuller:
         # Return if we get a success response code, or raise an error if not.
         if response.status_code == 200:
             return response
-        elif response.status_code == 401:
-            raise Exception('Error' + str(response.status_code))
-        elif response.status_code == 404:
-            raise Exception('Error' + str(response.status_code))
+        else:
+            raise Exception(f"API response error code: {response.status_code}")
     def process_timestamp(self, utc_timestamp):
         if utc_timestamp is None:
             return None
@@ -111,7 +113,12 @@ class MiovAlertPuller:
     def process_response(self, response):
         """Process the output of self.get_response."""
         data = json.loads(response.content.decode('utf-8'))
-        return [self.process_alert(row) for row in data['alerts']], data['links']['next']
+        if data['links']['next']: # The returned url is unreliable, we just need to know if there is a next page
+                parsed_url =  parse_qs(urlparse(data['links']['next']).query)
+                page_number = parsed_url['pageNumber'][0]
+        else:
+            page_number = None
+        return [self.process_alert(row) for row in data['alerts']], page_number
 
 def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     """Miovision Alert Puller
@@ -137,12 +144,13 @@ def pull_alerts(conn: any, start_date: datetime, end_date: datetime, key: str):
     logger.info('Pulling Miovision alerts from %s to %s.', start_date, end_date)
     #pull alerts from each page and append to list
     dfs = []
-    pageSize = 100
-    url = f"{URL_BASE}/alerts?pageSize={pageSize}&pageNumber=0"
-    while url is not None: 
-        miovpull = MiovAlertPuller(url, start_date, end_date, key)
+    page_number = 0 # initiate on first page
+    url = f"{URL_BASE}/alerts"
+    while page_number is not None: # we return pagenumber as none to break the loop
+        miovpull = MiovAlertPuller(url, start_date, end_date, page_number, key)
         response = miovpull.get_response()
-        alerts, url = miovpull.process_response(response)
+        alerts, page_number = miovpull.process_response(response) # find next page from the returned url
+        logger.info(f"Pulled {len(alerts)} alerts.")
         df = pd.DataFrame(alerts)
         dfs.append(df)
     logger.info('Done pulling. Transforming alerts.')
