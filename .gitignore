@@ -210,3 +210,5 @@ parking/tickets/data/*
 parking/tickets/connect/connect.R
 
 volumes/ecocounter/.api-v2-credentials.config
+
+weather/db.cfg

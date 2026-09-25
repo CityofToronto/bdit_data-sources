@@ -11,8 +11,6 @@ graphviz
 pip-tools==7.5.2
 
 # pipelines
-# bs4==0.0.1
-# env-canada
 geopandas==1.0.1
 holidays==0.31
 requests-oauthlib
