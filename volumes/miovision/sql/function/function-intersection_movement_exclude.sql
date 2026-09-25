@@ -26,7 +26,7 @@ BEGIN
     ) INTO row_in_im USING NEW;
     
     IF (row_in_im) THEN
-        RAISE NOTICE 'Row % is not being inserted. Already in % table.', new, TG_TABLE_NAME::text;
+        RAISE NOTICE 'Row % is not being inserted. Already in % table.', new, opposing_table;
         --Return null to stop insert. 
         RETURN NULL;
     ELSE

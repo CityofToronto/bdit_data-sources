@@ -22,6 +22,7 @@ GRANT ALL ON TABLE miovision_api.intersection_movements TO miovision_admins;
 COMMENT ON TABLE miovision_api.intersection_movements
 IS 'Unique movements for each intersection by classification';
 
+--prevent insertion of movements that are in denylist
 CREATE OR REPLACE TRIGGER intersection_movements_denylist_exclusion
 BEFORE INSERT ON miovision_api.intersection_movements
 FOR EACH ROW
@@ -35,7 +36,15 @@ ALTER TABLE IF EXISTS miovision_api.intersection_movements
 ADD CONSTRAINT intersecton_movements_exclude_xwalk_bikes
 CHECK (NOT (classification_uid = 7));
 
+--insert padding values into volumes_15min_mvt_unfiltered
 CREATE TRIGGER miovision_intersection_movements_pad
 AFTER INSERT ON miovision_api.intersection_movements
 FOR EACH ROW
 EXECUTE FUNCTION miovision_api.fn_add_intersection_movement_padding_values();
+
+--insert other vehicle modes besides light autos upon insert of light autos
+CREATE OR REPLACE TRIGGER miovision_intersection_movements_insert_other_modes
+AFTER INSERT
+ON miovision_api.intersection_movements
+FOR EACH ROW
+EXECUTE FUNCTION miovision_api.intersection_movements_insert_other_modes();
