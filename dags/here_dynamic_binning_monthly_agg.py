@@ -21,7 +21,8 @@ except:
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation."
+doc_md = "This DAG is running off the `1132-here-aggregation-proposal` branch to test dynamic binning aggregation. " \
+"It runs monthly on a schedule using the output from `here_dynamic_binning_agg_hm` DAG."
 DAG_NAME = 'here_dynamic_binning_monthly_agg'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
 CONN_ID = "congestion_bot"
