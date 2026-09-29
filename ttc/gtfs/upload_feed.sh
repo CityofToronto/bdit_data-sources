@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e  # Exit on any error
 cd $1
+/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "SELECT gtfs.clear_null_values();"
 /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.calendar(service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday, start_date, end_date) FROM 'calendar.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
 if [ -f "calendar_dates.txt" ]; then
     /usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c "\COPY gtfs.calendar_dates(service_id, date_, exception_type) FROM 'calendar_dates.txt' WITH (FORMAT 'csv', HEADER TRUE) ;"
