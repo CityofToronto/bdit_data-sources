@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS gtfs.stop_times
     trip_id bigint NOT NULL,
     arrival_time interval NOT NULL,
     departure_time interval NOT NULL,
-    stop_id integer NOT NULL,
+    stop_id text NOT NULL,
     stop_sequence smallint NOT NULL,
     stop_headsign text COLLATE pg_catalog."default",
     pickup_type smallint NOT NULL,
