@@ -17,3 +17,6 @@ $$;
 
 ALTER FUNCTION gtfs.clear_null_values OWNER TO gtfs_admins;
 GRANT EXECUTE ON FUNCTION gtfs.clear_null_values TO gtfs_bot;
+
+COMMENT ON FUNCTION gtfs.clear_null_values
+IS 'Used to clear any output from previous failed gtfs_pull DAG runs.';
