@@ -116,7 +116,7 @@ class MiovPuller:
     headers = {'Content-Type': 'application/json',
                'apikey': ''}
     tmc_template = URL_BASE + "/v2" + "/intersections/{int_id1}/tmc"
-    ped_template = tmc_template + "/v2" + '/crosswalk'
+    ped_template = tmc_template + '/crosswalk'
     roaduser_class = {
         'Light': '1',
         'BicycleTMC': '2',
