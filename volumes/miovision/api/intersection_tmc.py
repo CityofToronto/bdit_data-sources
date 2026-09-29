@@ -53,7 +53,7 @@ TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
-URL_BASE = 'https://api.miovision.one/api/v2'
+URL_BASE = 'https://api.miovision.one/api'
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -115,8 +115,8 @@ class MiovPuller:
     """
     headers = {'Content-Type': 'application/json',
                'apikey': ''}
-    tmc_template = URL_BASE + "/intersections/{int_id1}/tmc"
-    ped_template = tmc_template + '/crosswalk'
+    tmc_template = URL_BASE + "/v2" + "/intersections/{int_id1}/tmc"
+    ped_template = tmc_template + "/v2" + '/crosswalk'
     roaduser_class = {
         'Light': '1',
         'BicycleTMC': '2',
@@ -445,7 +445,7 @@ def add_new_intersections(conn):
     headers = {'Content-Type': 'application/json',
            'apikey': api_key.extra_dejson['key']}
     response = session.get(
-        URL_BASE + "/intersections?pageSize=1000",
+        URL_BASE + "/v1" +"/intersections?pageSize=1000",
         params={},
         headers=headers,
         proxies=session.proxies
