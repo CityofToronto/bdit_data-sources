@@ -240,6 +240,8 @@ data during gaps. When our heuristics identify `unacceptable_gaps`, then the ent
 
 A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
+The zero-filled modes are defined by `classification_uid` in [`create-table-classifications.sql)`](volumes/miovision/sql/table/create-table-classifications.sql).
+
 The [`aggregate_15_min_mvt()`](function/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
