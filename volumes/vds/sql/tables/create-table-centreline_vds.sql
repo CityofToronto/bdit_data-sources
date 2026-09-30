@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS vds.centreline_vds
 (
-    centreline_id bigint NOT NULL,
+    centreline_id bigint, --allow centreline_id to be null to specify centrelines that do no exist
     vdsconfig_uid integer NOT NULL,
     CONSTRAINT centreline_vds_pkey PRIMARY KEY (vdsconfig_uid),
     CONSTRAINT centreline_vds_vdsconfig_uid_fkey FOREIGN KEY (vdsconfig_uid)
