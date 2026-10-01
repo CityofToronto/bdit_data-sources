@@ -10,14 +10,7 @@ DECLARE n_inserted numeric;
 
 BEGIN
 
-WITH zero_padded_classifications AS (
-    --- dynamically select zero-padded classifications
-    SELECT classification_uid
-    FROM miovision_api.classifications
-    WHERE zero_padded
-),
-
-temp AS (
+WITH temp AS (
     -- Cross product of dates, intersections, legal movement for cars, bikes, and peds to aggregate
     SELECT
         NEW.intersection_uid,
@@ -37,7 +30,7 @@ temp AS (
     ) AS dt(datetime_bin)
     WHERE
         --0 padding for certain modes (padding)
-        NEW.classification_uid IN zero_padded_classifications.classification_uid
+        NEW.classification_uid IN (SELECT classification_uid FROM miovision_api.classifications WHERE zero_padded)
         AND i.intersection_uid = NEW.intersection_uid
         
     UNION ALL
