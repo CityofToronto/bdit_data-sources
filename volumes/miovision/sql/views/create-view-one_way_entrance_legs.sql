@@ -26,3 +26,6 @@ ORDER BY intersection_uid;
 
 ALTER VIEW miovision_api.one_way_entrance_legs OWNER TO miovision_admins;
 GRANT SELECT ON TABLE miovision_api.one_way_entrance_legs TO bdit_humans;
+
+COMMENT ON VIEW miovision_api.one_way_entrance_legs
+IS 'A list of Miovision intersections legs which are one way inbound (no vehicle exits allowed).';
