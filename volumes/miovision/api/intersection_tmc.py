@@ -266,7 +266,7 @@ class MiovPuller:
                     + self.process_crosswalk_row(row) for row in data]
         return [(self.intersection_uid, )
                 + self.process_tmc_row(row) for row in data]
-    def process_timestamp(row):
+    def process_timestamp(self, row):
         """Miovision One API returns timestamps in local TZ which need to be parsed."""
         local_timestamp  = row['timestamp']
         if local_timestamp is None:
