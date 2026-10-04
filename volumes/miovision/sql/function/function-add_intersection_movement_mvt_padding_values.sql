@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION miovision_api.fn_add_intersection_movement_padding_values()
+CREATE OR REPLACE FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values()
 RETURNS trigger
 LANGUAGE plpgsql
 
@@ -72,7 +72,6 @@ aggregate_insert AS (
         v.volume
     FROM temp AS v
     JOIN miovision_api.intersections AS i USING (intersection_uid)
-    --set unacceptable gaps as null
     WHERE
         -- Only include dates during which intersection is active 
         -- (excludes entire day it was added/removed)
@@ -136,16 +135,16 @@ END;
 
 $BODY$;
 
-ALTER FUNCTION miovision_api.fn_add_intersection_movement_padding_values()
+ALTER FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values()
 OWNER TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.fn_add_intersection_movement_padding_values()
+GRANT EXECUTE ON FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values()
 TO miovision_admins;
 
-GRANT EXECUTE ON FUNCTION miovision_api.fn_add_intersection_movement_padding_values()
+GRANT EXECUTE ON FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values()
 TO miovision_api_bot;
 
-COMMENT ON FUNCTION miovision_api.fn_add_intersection_movement_padding_values() IS
+COMMENT ON FUNCTION miovision_api.fn_add_intersection_movement_mvt_padding_values() IS
 'This function is called using a trigger after each statement on insert into
 miovision_api.intersection_movements. It uses newly inserted rows to update the zero padding
 values in miovision_api.volumes_15min_mvt_unfiltered';
