@@ -72,8 +72,8 @@ def pull_miovision_dag():
                 response =  l['reason']
                 msg_str += f"Intersection `{intersection_id}` received `{status_code}` error: `{response}` \n"
 
-        slack_alert_data_quality(context=context,
-                       extra_msg=msg_str)
+            slack_alert_data_quality(context=context,
+                        extra_msg=msg_str)
 
     pull_camera_details()
     config_failure_responses = pull_config_dates()
