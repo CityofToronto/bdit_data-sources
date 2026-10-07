@@ -82,6 +82,7 @@ FROM (
     WHERE
         events.accdate >= '2006-01-01' -- only 2006 and above 
         AND events.ksi IS TRUE
+        AND (road_class IS NULL OR road_class != 'Private Property')
 ) AS events -- only killed or seriously injuried
 INNER JOIN collisions.involved USING (collision_id)
 LEFT JOIN collision_factors.acclass ON events.acclass = acclass.acclass::int
