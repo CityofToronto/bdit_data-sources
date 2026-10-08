@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION gis.text_to_centreline_geom(
     _street text,
     _from_loc text,
     _to_loc text,
-    _trim boolean
+    _trim boolean DEFAULT FALSE
 )
 RETURNS TABLE (
     _return_geom geometry,
@@ -49,7 +49,19 @@ ELSE
 	RETURN QUERY
 	SELECT
 		ST_LINEMERGE(ST_Union(line_geom)),
-		format('%s: %s%%', _cleaned_name, round(AVG( ( lf_name = _cleaned_name)::int) * 100, 0))
+		format(
+		    '%s: %s%%',
+		    _cleaned_name,
+		    to_char(
+		        100.0 * SUM(
+		            CASE
+		                WHEN lf_name = _cleaned_name THEN ST_LENGTH(line_geom)
+		                ELSE 0
+		            END
+		        ) / SUM(ST_LENGTH(line_geom)),
+		        'FM90.0000'
+		    )
+		)
 	FROM gis.text_to_centreline(0,
 	                                 _street ,
 	                                 _from_loc ,
@@ -67,4 +79,4 @@ COMMENT ON FUNCTION gis.text_to_centreline_geom(text, text, text, boolean) IS
 _street is the streetname
 _from_loc is the starting point, preferably a street name of an intersection
 _from_loc is the ending point, preferably a street name of an intersection
-_trim is a boolean input which determines whether to keep non-matching road segments (detours)';
+_trim is a boolean input which determines whether to keep non-matching road segments (detours) DEFAULT:FALSE';
