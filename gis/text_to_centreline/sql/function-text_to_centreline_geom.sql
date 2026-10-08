@@ -33,10 +33,17 @@ FROM gis._clean_bylaws_text(NULL, _street, NULL, NULL);
 --- trimmed option
 IF _trim THEN
 
-	RETURN QUERY
-	SELECT
-		ST_LINEMERGE(ST_Union(line_geom)),
-		format('%s: 100%% (forced)', _cleaned_name)
+    RETURN QUERY
+    SELECT
+        ST_LINEMERGE(ST_Union(line_geom)),
+        format(
+            '%s: %s%% (forced)',
+            _cleaned_name,
+            CASE
+                WHEN COUNT(line_geom) = 0 THEN '0.0000'
+                ELSE '100.0000'
+            END
+        )
 	FROM gis.text_to_centreline(0,
 	                                 _street ,
 	                                 _from_loc ,
@@ -48,25 +55,29 @@ ELSE
 
 	RETURN QUERY
 	SELECT
-		ST_LINEMERGE(ST_Union(line_geom)),
-		format(
-		    '%s: %s%%',
-		    _cleaned_name,
-		    to_char(
-		        100.0 * SUM(
-		            CASE
-		                WHEN lf_name = _cleaned_name THEN ST_LENGTH(line_geom)
-		                ELSE 0
-		            END
-		        ) / SUM(ST_LENGTH(line_geom)),
-		        'FM90.0000'
-		    )
-		)
-	FROM gis.text_to_centreline(0,
-	                                 _street ,
-	                                 _from_loc ,
-	                                 _to_loc);
-
+	    ST_LINEMERGE(ST_Union(line_geom)),
+	    format(
+	        '%s: %s%%',
+	        _cleaned_name,
+	        to_char(
+	            COALESCE(
+	                100.0 * SUM(
+	                    CASE
+	                        WHEN lf_name = _cleaned_name THEN ST_LENGTH(line_geom)
+	                        ELSE 0
+	                    END
+	                ) / NULLIF(SUM(ST_LENGTH(line_geom)), 0),
+	                0
+	            ),
+	            'FM900.0000'
+	        )
+	    )
+	FROM gis.text_to_centreline(
+	    0,
+	    _street,
+	    _from_loc,
+	    _to_loc
+	);
 END IF;
 END;
 $BODY$;
