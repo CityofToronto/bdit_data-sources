@@ -86,7 +86,8 @@ ALTER FUNCTION gis.text_to_centreline_geom(text, text, text, boolean) OWNER TO g
 
 GRANT EXECUTE ON FUNCTION gis.text_to_centreline_geom(text, text, text, boolean) TO bdit_humans;
 COMMENT ON FUNCTION gis.text_to_centreline_geom(text, text, text, boolean) IS
-'Wrapper function to the text to centreline functions to return only a single line geometry.
+'Wrapper function to the text to centreline functions to return (1) a single, merged line geometry, and 
+(2) a validation field indicating the percentage of that geometry belonging to the matched road.
 _street is the streetname
 _from_loc is the starting point, preferably a street name of an intersection
 _from_loc is the ending point, preferably a street name of an intersection
