@@ -118,13 +118,16 @@ SELECT * FROM gis.text_to_centreline
 
 ### Function text_to_centreline_geom
 
-There is also a wrapper function named [`gis.text_to_centreline_geom`](sql/function-text_to_centreline_geom.sql) which takes in 3 variable, namely `_street`, `_from_loc`, `_to_loc` and only returns geometry (`_return_geom`) found from the function `gis.text_to_centreline`. If one is only interested in finding the geometry from two intersections given in text-based descriptions, this is a really useful function.
+There is also a wrapper function named [`gis.text_to_centreline_geom`](sql/function-text_to_centreline_geom.sql) which takes in 4 variables, namely `_street`, `_from_loc`, `_to_loc`, `_trim` (optional) and returns the geometry (`_return_geom`) found from the function `gis.text_to_centreline`, as well as a validation field indicating the percentage of that geometry belonging to the matched `_street`. If one is only interested in finding the geometry from two intersections given in text-based descriptions, this is a really useful function.
+
+The optional `_trim` variable determines whether to keep segments which do not belong to the matched `_street`. If `_trim` is TRUE, the function will remove the segments (understood to be detours).
 
 #### Inputs
 The function takes four inputs:
 - `_street`: Street 
 - `_from_loc`: From cross street
 - `_to_loc`: To cross street
+- `_trim` (optional): Boolean (default:false);
 
 #### Outputs
 
