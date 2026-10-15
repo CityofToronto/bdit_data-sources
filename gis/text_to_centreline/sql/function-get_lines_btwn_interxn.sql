@@ -44,7 +44,7 @@ WITH results AS (
             WHERE cl.feature_code_desc IN (''Collector'', ''Expressway Ramp'', ''Pending'', ''Expressway'', ''Major Arterial'', ''Local'', ''Minor Arterial'')
             '::text, _highway2),
 		$$SELECT path, cost FROM gis_core.centreline_routing_restrictions $$,
-        _int_start::bigint, _int_end::bigint, true
+        _int_start::bigint, _int_end::bigint, FALSE
     ) AS pgr
 --or do pgr_dijkstra('SELECT id, source::int, target::int, 
     --CASE lf_name WHEN '''|| _highway2 ||''' THEN (0.3*cost)::float ELSE cost END AS cost from gis.centreline_routing_undirected_lfname'::text, ... )
