@@ -14,7 +14,7 @@ AS $BODY$
     SELECT
         s.site_id,
         s.site_description,
-        f.direction_main AS direction,
+        f.flow_direction AS direction,
         cc.datetime_bin::date AS dt,
         SUM(calibrated_volume) AS daily_volume
     --this view excludes anomalous ranges
@@ -27,7 +27,7 @@ AS $BODY$
     GROUP BY
         s.site_id,
         s.site_description,
-        f.direction_main,
+        f.flow_direction,
         cc.datetime_bin::date,
         f.bin_size
     HAVING
