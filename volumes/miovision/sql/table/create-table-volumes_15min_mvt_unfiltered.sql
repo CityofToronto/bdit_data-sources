@@ -28,8 +28,8 @@ TO miovision_api_bot;
 
 COMMENT ON TABLE miovision_api.volumes_15min_mvt_unfiltered IS E''
 'NOTE: Refer instead to view volumes_15min_mvt_filtered to exclude anomalous_ranges. '
-'TMC formatted Miovision data in 15 minute bins. 0-padded for classifications 1,2,6,10 to '
-'make averaging easier.';
+'TMC formatted Miovision data in 15 minute bins. 0-padded for frequently reported '
+'classifications (identified in miovision_api.classifications) to make averaging easier.';
 
 -- Index: miovision_api.volumes_15min_mvt_unfiltered_classification_uid_idx
 -- DROP INDEX miovision_api.volumes_15min_mvt_unfiltered_classification_uid_idx;
