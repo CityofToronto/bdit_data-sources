@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW miovision_api.restricted_entrance_legs AS
+CREATE OR REPLACE VIEW miovision_api.restricted_legs AS
 --which legs are "restricted"
 SELECT
     intersection_uid,
@@ -12,8 +12,8 @@ SELECT
 FROM miovision_api.active_intersections
 ORDER BY intersection_uid;
 
-ALTER VIEW miovision_api.restricted_entrance_legs OWNER TO miovision_admins;
-GRANT SELECT ON TABLE miovision_api.restricted_entrance_legs TO bdit_humans;
+ALTER VIEW miovision_api.restricted_legs OWNER TO miovision_admins;
+GRANT SELECT ON TABLE miovision_api.restricted_legs TO bdit_humans;
 
-COMMENT ON VIEW miovision_api.restricted_entrance_legs
+COMMENT ON VIEW miovision_api.restricted_legs
 IS 'A list of Miovision intersections legs with no entrances allowed (either leg does not exist or one way outbound).';
