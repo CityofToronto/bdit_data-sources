@@ -25,6 +25,9 @@
         - [alerts](#alerts)
         - [camera_details](#camera_details)
         - [configuration_updates](#configuration_updates)
+    - [Helpful Views](#helpful-views)
+        - [Restricted Legs](#miovision_apirestricted_legs)
+        - [One Way Legs](#miovision_apione_way_legs)
     - [Primary and Foreign Keys](#primary-and-foreign-keys)
         - [List of primary and foreign keys](#list-of-primary-and-foreign-keys)
     - [Other Tables](#other-tables)
@@ -82,11 +85,14 @@ street_cross|text|Name of secondary street|Bathurst|
 int_id|bigint|int_id linked to centrelines|13467722|
 px|integer|px linked to traffic lights|201|
 geom|geometry|Point geometry of that intersection|0101000020E61000006B0BCF4BC5D953C01CB62DCA6CD24540|
-n_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-e_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-s_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
-w_leg_restricted|boolean|Whether that leg is restricted to vehicles|NULL|
+n_leg_restricted|boolean|True if that leg does not exist for vehicles (no entries or exists)|NULL|
+e_leg_restricted|boolean|True if that leg does not exist for vehicles (no entries or exists)|NULL|
+s_leg_restricted|boolean|True if that leg does not exist for vehicles (no entries or exists)|NULL|
+w_leg_restricted|boolean|True if that leg does not exist for vehicles (no entries or exists)|NULL|
 api_name|text|Intersection name from API|Bathurst Street and King Street West|
+
+> [!TIP]
+> Use [`restricted_legs](#miovision_apirestricted_legs) for a long view of these legs which do not exist. See also [`one_way_legs`](#miovision_apione_way_legs) to identify one way legs. 
 
 ### `classifications`
 
@@ -507,6 +513,33 @@ This table stores the last updated date of Miovision detection configurations. T
 |:-----------------|:----------------------------|:---------------------------|
 | intersection_uid | integer                     | 97                         |
 | updated_time     | timestamp without time zone | 2024-02-23 03:09:36.684000 |
+
+## Helpful Views
+
+### `miovision_api.restricted_legs`
+This view transforms the `restricted_leg` columns in `miovision_api.intersections` into a more usable (long) format. These are legs that do not exist for vehicles (no entries or exits).
+
+| "column_name"       | "Datatype" | "Sample"              |
+|---------------------|------------|-----------------------|
+| "intersection_uid"  | "integer"  | "1"                   |
+| "intersection_name" | "text"     | "Adelaide / Bathurst" |
+| "leg"               | "text"     | "E"                   |
+
+### `miovision_api.one_way_legs`
+This view uses the `miovision_api.centreline_miovision` and `gis_core.centreline_latest` layer to determine which Miovision legs are one way, either `One way - exit` or `One way - entrance`.
+
+| "column_name"          | "Datatype" | "Sample"               |"Comments" |
+|------------------------|------------|------------------------|-----------|
+| "intersection_uid"     | "integer"  | "1"                    |           |
+| "intersection_name"    | "text"     | "Adelaide / Bathurst"  |           |
+| "int_id"               | "bigint"   | "13467569"             |           |
+| "leg"                  | "text"     | "E"                    |           |
+| "leg_direction"        | "text"     | "One way - exit"       |           |
+| "from_intersection_id" | "integer"  | "13467520"             |           |
+| "to_intersection_id"   | "integer"  | "13467569"             |           |
+| "oneway_dir_code"      | "integer"  | "-1"                   |           |
+| "oneway_dir_code_desc" | "text"     | "Against-Digitization" |           |
+
 
 ## Primary and Foreign Keys
 
