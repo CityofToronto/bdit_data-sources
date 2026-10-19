@@ -11,8 +11,8 @@ echo "Running aggregation with start_date=$start_date , end_date=$end_date and i
 start_date=2026-08-21
 
 echo "Running aggregation with start_date=$start_date , end_date=$end_date and intersections 174 181"
-    #python3 intersection_tmc.py run-api-cli --pull --agg --start_date=$start_date --end_date=$end_date \
-    #--intersection=174 --intersection=181
+#python3 intersection_tmc.py run-api-cli --pull --agg --start_date=$start_date --end_date=$end_date \
+#--intersection=174 --intersection=181
 done
 
 
