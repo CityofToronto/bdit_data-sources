@@ -43,7 +43,7 @@ WITH results AS (
             ON cr.centreline_id = cl.centreline_id
             WHERE cl.feature_code_desc IN (''Collector'', ''Expressway Ramp'', ''Pending'', ''Expressway'', ''Major Arterial'', ''Local'', ''Minor Arterial'')
             '::text, _highway2),
-		$$SELECT path, cost FROM gis_core.centreline_routing_restrictions $$,
+		$$SELECT path, cost FROM gis_core.centreline_turn_penalization $$,
         _int_start::bigint, _int_end::bigint, FALSE
     ) AS pgr
 --or do pgr_dijkstra('SELECT id, source::int, target::int, 
