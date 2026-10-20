@@ -67,6 +67,23 @@ AND i.intersection_uid IN (181, 166, 167, 168, 174, 175, 176, 177, 178);
 --	-sql "SELECT intersection_uid, intersection_name, date_installed, date_decommissioned, street_main, street_cross, int_id, px, n_leg_restricted, e_leg_restricted, s_leg_restricted, w_leg_restricted, geom
 --	FROM miovision_api.intersections WHERE date_installed IS NOT NULL ORDER BY intersection_uid" -nln miovision_installations
 
+ --Steeles Ave is the northern limit of centreline, therefore there are no geometries north of Steeles
+INSERT INTO  miovision_api.centreline_miovision (
+    centreline_id, intersection_uid, leg
+)
+SELECT
+	empty_geo.centreline_id,
+	i.intersection_uid,
+	empty_geo.leg	
+FROM (VALUES (NULL::integer, 'N'))
+	AS empty_geo (centreline_id, leg),
+UNNEST(ARRAY[181, 166, 167, 168, 174, 175, 176, 177, 178]) AS i (intersection_uid);
+
+--- centreline_miovision
+INSERT INTO  miovision.centreline_miovision --Steeles Ave is the northern limit of centreline
+SET centreline_id = NULL
+WHERE leg = 'N' AND intersection_uid IN (181, 166, 167, 168, 174, 175, 176, 177, 178);
+
 --- restricted legs (The two highway ramps)
 
 --- no entrance
