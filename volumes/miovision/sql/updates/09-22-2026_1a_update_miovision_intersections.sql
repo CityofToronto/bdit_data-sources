@@ -60,7 +60,7 @@ WHERE i.px = ts.px::int
 --set intersections here
 AND i.intersection_uid IN (181, 166, 167, 168, 174, 175, 176, 177, 178);
 
---- DO NOT FORGET TO UPDATE THE GEOJSON (looking at you, sysadmin)
+--- This geojson step was completed on ec2
 --cd ~/bdit_data-sources &&
 --rm -f volumes/miovision/geojson/mio_intersections.geojson &&
 --ogr2ogr -f "GeoJSON" volumes/miovision/geojson/mio_intersections.geojson PG:"host=trans-bdit-db-prod0-rds-smkrfjrhhbft.cpdcqisgj1fj.ca-central-1.rds.amazonaws.com dbname=bigdata" \
@@ -68,6 +68,8 @@ AND i.intersection_uid IN (181, 166, 167, 168, 174, 175, 176, 177, 178);
 --	FROM miovision_api.intersections WHERE date_installed IS NOT NULL ORDER BY intersection_uid" -nln miovision_installations
 
 --- restricted legs (The two highway ramps)
+
+--- no entrance
 INSERT INTO miovision_api.intersection_movements_denylist (
     intersection_uid, classification_uid, movement_uid, leg
 )
@@ -76,10 +78,25 @@ SELECT
     c.classification_uid,
     m.movement_uid,
     restricted_leg.leg
-FROM (VALUES (174, 'N'), (166, 'N'))
+FROM (VALUES (166, 'N')) -- Steeles Ave W / 400 Ramp
 	AS restricted_leg (intersection_uid, leg),
 UNNEST(ARRAY[1, 3, 4, 5, 9]) AS c (classification_uid),
 UNNEST(ARRAY[1, 2, 3, 4]) AS m (movement_uid);
+
+--- no exit
+INSERT INTO miovision_api.intersection_movements_denylist (
+    intersection_uid, classification_uid, movement_uid, leg
+)
+SELECT
+    restricted_legs.intersection_uid::integer,
+    c.classification_uid,
+    mm.movement_uid,
+    mm.leg
+FROM (VALUES (174, 'N')) -- Steeles / Norfinch Dr
+    AS restricted_leg (intersection_uid, leg)
+JOIN miovision_api.movement_map AS mm
+    ON mm.exit_leg = restricted_legs.leg,
+UNNEST(ARRAY[1, 3, 4, 5, 9]) AS c (classification_uid);
 
 --- Intersection movements (untested)
 
