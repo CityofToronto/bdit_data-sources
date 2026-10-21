@@ -388,11 +388,11 @@ SQL scripts used to modify/validate sites are stored at [volumes/ecocounter/upda
 4. Clear anomalous ranges from `ecocounter.anomalous_ranges` if any, which are sometimes used to hold back data which is undergoing validation. Remember to check both the `site_id` and `flow_id`.
 5. Make sure all the fields used by `ecocounter.open_data_locations` for the new sites are populated in `ecocounter.sites`. This includes street names and `centreline_id`. The `centreline_id` can be found with this [useful script](https://github.com/CityofToronto/bdit_data-sources/blob/master/volumes/ecocounter/updates/ecocounter_centreline_updates.sql).
 6. The `ecocounter_open_data` pipeline will run at the start of each month, which will insert any new locations into `open_data.cycling_permanent_counts_locations` and the data into `ecocounter.open_data_15min_counts`, `ecocounter.open_data_daily_counts`. There is a wait_10_days task to give sufficient time to review the data prior to publishing.
-7. If there have been any changes which would remove previously inserted data (ex. a new anomalous range), the existing data will need to be deleted for that time period, and reinserted by rerunning the `ecocounter_open_data` DAG.
-8. If there has been any changes which could affect the previous year (ex. a site coming online with data existing in the previous year), you will need to trigger the `ecocounter_open_data` DAG run for January 1st of the current year. Otherwise, the previous year’s data will be excluded. 
+7. If there has been any changes which could affect the previous year (ex. a site coming online with data existing in the previous year), you will need to trigger the `ecocounter_open_data` DAG run for January 1st of the current year. Otherwise, the previous year’s data will be excluded. 
 
-** NOTE: This includes anomalous ranges as described in step 7 if data in the previous year was deleted (first delete the data, then rerun the `ecocounter_open_data` DAG for the previous year). **
-9. Move the newly created csvs into the open data directory.
+** NOTE **: If you are adding anomalous ranges which extend to the previous year, please see step 3 in ** Adding Anomalous Ranges ** below prior to running the `ecocounter_open_data` DAG. 
+
+8. Move the newly created csvs into the open data directory.
 
 ## Adding Anomalous Ranges
 
@@ -403,4 +403,5 @@ At times, we may need to add anomalous ranges for published data, effectively "u
     If adding an anomalous range at the site level, use only the `site_id` and leave `flow_id` as `NULL`. If adding an anomalous range at the flow level, include `site_id` and `flow_id`.
     
 2. Consider the reason for the anomalous range and include the detail in `notes`. It is possible to have two consecutive anomalous ranges with different reasons or `problem_level`s, and therefore different `notes`. 
-3. If an anomalous range extends into the previous year, it is necessary to review the data and manually remove the data within the daterange from  `open_data_15min_counts` and `open_data_daily_counts` if neccessary. This is documented in PR [#1489](https://github.com/CityofToronto/bdit_data-sources/pull/1489#issuecomment-5702865133).
+3. If an anomalous range applies to previously validated data, it is necessary to review the data and manually remove the data within the daterange from  `open_data_15min_counts` and `open_data_daily_counts` if neccessary. This is documented in PR [#1489](https://github.com/CityofToronto/bdit_data-sources/pull/1489#issuecomment-5702865133).
+4. Should the new anomalous range extend into the previous year, complete step 3 and then re-run the `ecocounter_open_data` DAG for the previous year.
