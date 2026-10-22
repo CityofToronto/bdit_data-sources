@@ -11,7 +11,7 @@ AS $BODY$
     WITH complete_dates AS (
         SELECT
             s.site_id,
-            f.flow_direction,
+            CASE WHEN s.bidirectional THEN f.flow_direction ELSE f.direction_main END AS direction,
             cc.datetime_bin::date,
             COUNT(DISTINCT cc.datetime_bin) AS datetime_bin_unique
         --this view excludes anomalous ranges
@@ -37,7 +37,7 @@ AS $BODY$
     SELECT  
         s.site_id,
         s.site_description,
-        f.flow_direction AS direction,
+        cd.direction,
         cc.datetime_bin AS datetime_bin,
         SUM(cc.calibrated_volume) AS bin_volume
     --this view excludes anomalous ranges
@@ -47,7 +47,7 @@ AS $BODY$
     JOIN complete_dates AS cd
     ON
         cd.site_id = s.site_id
-        AND cd.flow_direction = f.flow_direction
+        AND cd.direction_main = f.direction_main
         AND cc.datetime_bin >= cd.datetime_bin
         AND cc.datetime_bin < cd.datetime_bin + interval '1 day'
     WHERE
@@ -56,7 +56,7 @@ AS $BODY$
     GROUP BY
         s.site_id,
         s.site_description,
-        f.flow_direction,
+        3, --- direction
         cc.datetime_bin
     ON CONFLICT (site_id, direction, datetime_bin)
     DO NOTHING;

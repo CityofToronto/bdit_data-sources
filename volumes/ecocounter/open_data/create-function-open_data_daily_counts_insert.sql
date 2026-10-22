@@ -14,7 +14,7 @@ AS $BODY$
     SELECT
         s.site_id,
         s.site_description,
-        f.flow_direction AS direction,
+        CASE WHEN s.bidirectional THEN f.flow_direction ELSE f.direction_main END AS direction,
         cc.datetime_bin::date AS dt,
         SUM(calibrated_volume) AS daily_volume
     --this view excludes anomalous ranges
