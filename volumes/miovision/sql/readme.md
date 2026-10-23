@@ -347,6 +347,9 @@ The breaks table contains `Moments in time when data collection methods changed 
 ### `miovision_api.anomalous_ranges`
 The `anomalous_ranges` table is used to log issues related to specific intersection / classification combos as identified either by a human or an automated process. See [below](#identifying-questionable-data-quality) for more information and examples of how to use this table. 
 
+> [!NOTE]
+> Automatically created anomalous ranges are now (via https://github.com/CityofToronto/bdit_data-sources/pull/1469) extended backward and forward from midnight to the exact minute the data stopped/resumed. This means you should write queries expecting `range_start` and `range_end` to have minute precision rather than daily level.
+
 | Column | Description |
 | ------ | ----------- |
 | uid    | simple incrementing primary key |
