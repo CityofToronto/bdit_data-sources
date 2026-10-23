@@ -90,11 +90,18 @@ def vdsdata_dag():
             reset_dag_run=True
         )
 
+        update_vds_detector_inventory = SQLCheckOperatorWithReturnValue(
+            task_id="update_vds_detector_inventory",
+            sql="insert/new_vds_detectors.sql",
+            conn_id="vds_bot",
+            on_failure_callback=slack_alert_data_quality
+        )
+        
         [
             pull_and_insert_detector_inventory(),
             pull_and_insert_entitylocations(),
             pull_and_insert_commsdeviceconfig()
-        ] >> t_done
+        ] >> update_vds_detector_inventory >> t_done
 
     @task_group
     def check_partitions():
