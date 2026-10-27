@@ -54,18 +54,18 @@ def miovision_validation_dag():
         conn_id="miovision_validation_bot"
     )
 
-    #insert_valid_legs = SQLExecuteQueryOperator(
-    #    task_id="insert_valid_legs",
-    #    sql="insert-valid_legs.sql",
-    #    conn_id="miovision_validation_bot"
-    #)
-    #
-    #insert_valid_intersections = SQLExecuteQueryOperator(
-    #    task_id="insert_valid_intersections",
-    #    sql="insert-valid_intersections.sql",
-    #    conn_id="miovision_validation_bot"
-    #)
+    spec_svc_validation_results = SQLExecuteQueryOperator(
+        task_id="spec_svc_validation_results",
+        sql="SELECT miovision_validation.spec_svc_validation_results();",
+        conn_id="miovision_validation_bot"
+    )
     
-    spectrum_studies >> api_counts # >> insert_valid_legs >> insert_valid_intersections
+    spec_tmc_validation_results = SQLExecuteQueryOperator(
+        task_id="spec_tmc_validation_results",
+        sql="SELECT miovision_validation.spec_tmc_validation_results();",
+        conn_id="miovision_validation_bot"
+    )
+    
+    spectrum_studies >> api_counts >> spec_svc_validation_results >> spec_tmc_validation_results
 
 miovision_validation_dag()
