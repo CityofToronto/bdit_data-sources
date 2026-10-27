@@ -10,7 +10,10 @@ DECLARE
 BEGIN
     PERFORM miovision_api.delete_anomalous_ranges(identify_anomalous_ranges.ds, target_intersections);
     PERFORM miovision_api.identify_zero_counts(identify_anomalous_ranges.ds, target_intersections);
+    --this function is quite fast so fine to run for all intersections
     PERFORM miovision_api.merge_consecutive_anomalous_ranges();
+    --this function is quite fast so fine to run for all intersections
+    PERFORM miovision_api.extend_anomalous_ranges(identify_anomalous_ranges.ds);
 END;
 
 $$
