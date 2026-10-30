@@ -141,7 +141,7 @@ def insertFlow(conn: any, flow_id: int, site_id: int, flow_name: str, granularit
     VALUES (
         %s::numeric,
         %s::numeric,
-        coalesce(lower(substring(%s::text, '(West|East|North|South)'))||'bound', 'unknown'),
+        lower(substring(%s::text, '(west|east|north|south)')) || 'bound',
         CASE %s WHEN 'PT1H' THEN '60 minutes'::interval WHEN 'PT15M' THEN '15 minutes'::interval ELSE NULL END,
         null::boolean --not validated
     )
