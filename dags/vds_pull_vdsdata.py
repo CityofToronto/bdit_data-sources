@@ -90,18 +90,33 @@ def vdsdata_dag():
             reset_dag_run=True
         )
 
-        update_vds_detector_inventory = SQLCheckOperatorWithReturnValue(
-            task_id="update_vds_detector_inventory",
-            sql="insert/new_vds_detectors.sql",
-            conn_id="vds_bot",
-            on_failure_callback=slack_alert_data_quality
-        )
-        
+        @task(retries=0)
+        def update_vds_detector_inventory(conn_id="vds_bot", **context):
+            fpath = os.path.join(repo_path, "volumes/vds/sql/insert/new_vds_detectors.sql")
+            with open(fpath, 'r', encoding='utf-8') as file:
+                query = file.read()
+            
+            with PostgresHook(conn_id).get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    new_sensors = cur.fetchall()
+                    
+            if new_sensors:
+                _check, summ, new = new_sensors[0]
+                if not _check:
+                    LOGGER.info('New VDS detectors added: %s', new)
+                    extra_msg = '\n'.join([str(item) for item in new])
+                    send_slack_msg(
+                        context=context,
+                        msg=summ,
+                        channel="slack_prj_permanent_sensors",
+                        attachments=[{"text": extra_msg}]
+                    )
         [
             pull_and_insert_detector_inventory(),
             pull_and_insert_entitylocations(),
             pull_and_insert_commsdeviceconfig()
-        ] >> update_vds_detector_inventory >> t_done
+        ] >> update_vds_detector_inventory() >> t_done
 
     @task_group
     def check_partitions():
