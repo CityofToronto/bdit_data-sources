@@ -47,7 +47,7 @@ COMMENT ON COLUMN ecocounter.sites_unfiltered.replaced_by_site_id IS E''
 'ideally treat the data as continuous with the replaced site. This field indicates the site_id '
 'of the new replacement site, if any.';
 
-COMMENT ON COLUMN ecocounter.sites_unfiltered.site_id
+COMMENT ON COLUMN ecocounter.sites_unfiltered.bidirectional
 IS 'Boolean which identifies whether we perfrom aggregation by flow_direction, as opposed to direction_main.'
 'It is understood that cases such as multi-use paths or two-way cycletracks where there is no physical'
 'barrier or distance between sensors should be identified as bidirectional.';

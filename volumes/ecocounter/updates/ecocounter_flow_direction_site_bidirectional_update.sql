@@ -1,11 +1,41 @@
 --- Query to modify flow_direction to conform to the standard of direction main
-ALTER TABLE temp_flows 
+
+--save and drop dependencies:
+SELECT dbadmin.deps_save_and_drop_dependencies(
+    p_view_schema:= 'ecocounter'::character varying COLLATE "C",
+    p_view_name:= 'flows_unfiltered'::character varying COLLATE "C", 
+    max_depth := 20::integer
+);
+
+UPDATE ecocounter.flows_unfiltered SET flow_direction = NULL WHERE initcap(flow_direction) = 'Unknown';
+
+ALTER TABLE ecocounter.flows_unfiltered
 ALTER COLUMN flow_direction TYPE travel_directions USING TRIM(REGEXP_REPLACE(flow_direction, '\s*\((In|Out)\)$', ''))::travel_directions;
-SELECT * FROM temp_flows;
+
+--now restore dependencies:
+SELECT dbadmin.deps_restore_dependencies(
+    p_view_schema:= 'ecocounter'::character varying COLLATE "C",
+    p_view_name:= 'flows_unfiltered'::character varying COLLATE "C"
+);
+
 
 --- Query to add and initiate values
+
+--save and drop dependencies:
+SELECT dbadmin.deps_save_and_drop_dependencies(
+    p_view_schema:= 'ecocounter'::character varying COLLATE "C",
+    p_view_name:= 'sites_unfiltered'::character varying COLLATE "C", 
+    max_depth := 20::integer
+);
+
 ALTER TABLE ecocounter.sites_unfiltered
 ADD COLUMN bidirectional BOOLEAN default FALSE;
+
+--now restore dependencies:
+SELECT dbadmin.deps_restore_dependencies(
+    p_view_schema:= 'ecocounter'::character varying COLLATE "C",
+    p_view_name:= 'sites_unfiltered'::character varying COLLATE "C"
+);
 
 UPDATE ecocounter.sites_unfiltered
 SET bidirectional = TRUE

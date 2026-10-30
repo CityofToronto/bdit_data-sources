@@ -3,6 +3,7 @@ CREATE OR REPLACE VIEW ecocounter.sites AS (
         site_id,
         site_description,
         geom,
+        bidirectional,
         facility_description,
         notes,
         replaced_by_site_id,
